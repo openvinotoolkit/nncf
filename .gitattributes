@@ -1,1 +1,2 @@
 /LICENSE filter=lfs diff=lfs merge=lfs -text
+/CODEOWNERS filter=lfs diff=lfs merge=lfs -text
