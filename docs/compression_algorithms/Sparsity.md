@@ -40,8 +40,8 @@ The method requires a long schedule of the training process in order to minimize
             "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
             "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model
             "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_steps": 3, // The default scheduler will do this many proportional target sparsity level adjustments, distributed evenly across 'sparsity_training_steps'.
-            "sparsity_training_steps": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
+            "sparsity_target_epoch": 3, // The target sparsity value will be reached after this many epoch steps
+            "sparsity_freeze_epoch": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },
@@ -71,8 +71,8 @@ The magnitude sparsity method implements a naive approach that is based on the a
             "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
             "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model
             "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_steps": 3, // The default scheduler will do this many proportional target sparsity level adjustments, distributed evenly across 'sparsity_training_steps'.
-            "sparsity_training_steps": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
+            "sparsity_target_epoch": 3, // The target sparsity value will be reached after this many epoch steps
+            "sparsity_freeze_epoch": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },

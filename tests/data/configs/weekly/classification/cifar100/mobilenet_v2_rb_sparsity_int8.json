@@ -33,7 +33,7 @@
                     0.4,
                     0.52
                 ],
-                "sparsity_training_steps": 45
+                "sparsity_freeze_epoch": 45
             },
             "ignored_scopes": [
                 "MobileNetV2/Sequential[features]/Sequential[0]/Conv2d[0]"
