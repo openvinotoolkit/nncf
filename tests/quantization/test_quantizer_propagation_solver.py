@@ -1050,23 +1050,51 @@ class TestQuantizerPropagationSolver:
                                         ('list_ops',
                                          'expected_retval',
                                          'expected_count_finished_quant',
-                                         'expected_count_active_quant'))
+                                         'expected_count_active_quant',
+                                         'ignored_scope'))
 
     RUN_ON_IP_GRAPH_TEST_CASES = [
         RunOnIpGraphTestStruct(
             list_ops=['conv2d', 'batch_norm'],
             expected_retval={},
             expected_count_finished_quant=0,
-            expected_count_active_quant=0
+            expected_count_active_quant=0,
+            ignored_scope=None
         ),
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'gelu', "conv2d"],
+            list_ops=['conv2d', 'gelu', 'conv2d'],
             expected_retval={
                 InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
                 InsertionInfo(OperationExecutionContext('gelu', Scope(), 0, [None])): [QuantizerConfig()]
             },
             expected_count_finished_quant=2,
-            expected_count_active_quant=0
+            expected_count_active_quant=0,
+            ignored_scope=None
+        ),
+        RunOnIpGraphTestStruct(
+            list_ops=['conv2d', 'matmul', 'gelu', 'softmax'],
+            expected_retval={
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
+            },
+            expected_count_finished_quant=1,
+            expected_count_active_quant=0,
+            ignored_scope=['/gelu_0', '/conv2d_0']
+        ),
+        RunOnIpGraphTestStruct(
+            list_ops=['conv2d', 'matmul'],
+            expected_retval={
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
+            },
+            expected_count_finished_quant=1,
+            expected_count_active_quant=0,
+            ignored_scope=['/conv2d_0']
+        ),
+        RunOnIpGraphTestStruct(
+            list_ops=['conv2d', 'matmul'],
+            expected_retval={},
+            expected_count_finished_quant=0,
+            expected_count_active_quant=0,
+            ignored_scope=['/conv2d_0', '/matmul_0']
         )
     ]
 
@@ -1093,8 +1121,9 @@ class TestQuantizerPropagationSolver:
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
-        quant_prop_solver = QuantizerPropagationSolver()
+        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scope)
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
+
 
         assert retval == expected_retval
 
