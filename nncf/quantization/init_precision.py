@@ -1,9 +1,9 @@
 import itertools
 from collections import OrderedDict
+from pathlib import Path
 from typing import List, Dict, Union
 
 import os
-import shutil
 import torch
 from torch import Tensor, nn
 from torch.nn.modules.loss import _Loss
@@ -16,6 +16,8 @@ from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
 from .hessian_trace import HessianTraceEstimator
 from .hw_precision_constraints import HWPrecisionConstraints
 from .quantizer_id import QuantizerId
+from ..dynamic_graph.graph import NNCFGraph
+from ..layers import NNCFConv2d
 from ..structures import QuantizationPrecisionInitArgs
 from ..utils import in_scope_list, get_all_modules_by_type
 
@@ -35,11 +37,18 @@ class ManualPrecisionInitializer:
         weight_module_dict = self._model.get_nncf_wrapped_model()
         ordered_weight_quantizers_per_scope = get_all_modules_by_type(weight_module_dict, quantization_types)
         ordered_weight_quantization_list = []
-        for quantizer in ordered_weight_quantizers_per_scope.values():
+        self._scopes_of_skipped_weight_quantizers = []
+        for scope, quantizer in ordered_weight_quantizers_per_scope.items():
             address = id(quantizer)
             if quantizer.is_weights:
-                ordered_weight_quantization_list.append((self._quantizer_address_to_id_mapping[address], quantizer))
+                quantizer_id = self._quantizer_address_to_id_mapping[address]
+                # no need to init quantizer with single precision constraint
+                if len(hw_precision_constraints.get(quantizer_id)) != 1:
+                    ordered_weight_quantization_list.append((quantizer_id, quantizer))
+                else:
+                    self._scopes_of_skipped_weight_quantizers.append(str(scope))
         self._ordered_weight_quantizations = OrderedDict(ordered_weight_quantization_list)
+
         self._all_quantizers_per_scope = get_all_modules_by_type(
             self._model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER), quantization_types)
         self._all_quantizers_per_scope.update(get_all_modules_by_type(
@@ -133,9 +142,6 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                  hw_precision_constraints: HWPrecisionConstraints,
                  init_args: QuantizationPrecisionInitArgs):
         super().__init__(algo, config, all_quantizers, hw_precision_constraints, init_args)
-        if not init_args:
-            raise ValueError('Arguments for precision initialization are not provided. '
-                             'Refer to `CompressionAlgorithmInitArgs` class')
         self._criterion = init_args.criterion
         self._data_loader = init_args.data_loader
         self._traces_per_layer_path = config.get('traces_per_layer_path', None)
@@ -149,7 +155,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     def apply_init(self):
         disabled_gradients = self.disable_quantizer_gradients(self._all_quantizers_per_scope,
                                                               self._algo.quantized_weight_modules_registry,
-                                                              self._model)
+                                                              self._model,
+                                                              self._scopes_of_skipped_weight_quantizers)
 
         traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
         if not traces_per_layer:
@@ -160,10 +167,10 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         num_weights = len(self._ordered_weight_quantizations)
         bits_configurations = self.get_configs_constrained_by_order(self._bits, num_weights)
         ordered_weight_quantization_ids = list(self._ordered_weight_quantizations.keys())
-        bits_configurations = self.filter_configs_by_precision_constraints(bits_configurations,
-                                                                           self._hw_precision_constraints,
-                                                                           ordered_weight_quantization_ids,
-                                                                           traces_per_layer.get_order_of_traces())
+        bits_configurations = self._filter_configs_by_precision_constraints(bits_configurations,
+                                                                            self._hw_precision_constraints,
+                                                                            ordered_weight_quantization_ids,
+                                                                            traces_per_layer.get_order_of_traces())
         if not bits_configurations:
             raise RuntimeError('All bits configurations are incompatible with HW Config!')
 
@@ -178,8 +185,13 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         ordered_metric_per_layer = self.get_metric_per_layer(chosen_config_per_layer, perturbations,
                                                              traces_per_layer)
         if is_debug():
-            self.HAWQDump(bits_configurations, configuration_metric, perturbations,
-                          weight_observers, traces_per_layer, self._bits).run()
+            hawq_debugger = HAWQDebugger(bits_configurations, perturbations,
+                                         weight_observers, traces_per_layer, self._bits)
+            hawq_debugger.dump_metric(configuration_metric)
+            hawq_debugger.dump_avg_traces()
+            hawq_debugger.dump_density_of_quantization_noise()
+            hawq_debugger.dump_perturbations_ratio()
+            hawq_debugger.dump_bitwidth_graph(self._algo, self._model)
 
         self._model.rebuild_graph()
         str_bw = [str(element) for element in self.get_bitwidth_per_scope()]
@@ -198,10 +210,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     @staticmethod
     def disable_quantizer_gradients(all_quantizations: Dict['Scope', BaseQuantizer],
-                                    quantized_weight_modules_registry: Dict['Scope', torch.nn.Module],
-                                    model: nn.Module) -> List[str]:
+                                    quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+                                    model: nn.Module,
+                                    scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
         """
-        Disables gradients of all parameters, except for layers that have quantizers for weights.
+        Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
+        because of single precision constraints.
         :param all_quantizations: all quantizers per quantizer id
         :param quantized_weight_modules_registry: modules with quantized weights per scope
         :param model: model to access all parameters
@@ -210,13 +224,22 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         for module in all_quantizations.values():
             module.init_stage = True
             module.disable_gradients()
+
+        disabled_gradients = []
+
         # remember gradients of quantized modules that were enabled
         gradients_to_enable = []
-        for quantized_module in quantized_weight_modules_registry.values():
+        for scope, quantized_module in quantized_weight_modules_registry.items():
+            is_skipped = bool(scopes_of_skipped_weight_quantizers) and (scope in scopes_of_skipped_weight_quantizers)
             for param_name, param in quantized_module.named_parameters():
                 if param.requires_grad:
-                    gradients_to_enable.append(param_name)
-        disabled_gradients = []
+                    # disable gradients for skipped module for optimization of Hessian Trace search
+                    if is_skipped:
+                        disabled_gradients.append(param_name)
+                        param.requires_grad = False
+                    else:
+                        gradients_to_enable.append(param_name)
+
         # disable all gradients, except already disabled
         for param_name, param in model.named_parameters():
             if not param.requires_grad:
@@ -273,10 +296,10 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         return bit_configs
 
     @staticmethod
-    def filter_configs_by_precision_constraints(bits_configurations: List[List[int]],
-                                                hw_precision_constraints: HWPrecisionConstraints,
-                                                ordered_weight_ids: List[QuantizerId],
-                                                traces_order: List[int]) -> List[List[int]]:
+    def _filter_configs_by_precision_constraints(bits_configurations: List[List[int]],
+                                                 hw_precision_constraints: HWPrecisionConstraints,
+                                                 ordered_weight_ids: List[QuantizerId],
+                                                 traces_order: List[int]) -> List[List[int]]:
         if not hw_precision_constraints:
             return bits_configurations
 
@@ -358,121 +381,187 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                                     sorted(enumerate(metric_per_layer), reverse=True, key=lambda x: x[1])]
         return ordered_metric_per_layer
 
-    class HAWQDump:
-        def __init__(self, bits_configurations: List[List[int]], configuration_metric: List[Tensor],
-                     perturbations: Perturbations, weight_observers: List[PerturbationObserver],
-                     traces_per_layer: TracesPerLayer, bits: List[int]):
-            self._bits_configurations = bits_configurations
-            self._configuration_metric = configuration_metric
-            self._num_weights = len(weight_observers)
-            self._perturbations = perturbations
-            self._weight_observers = weight_observers
 
-            self._dump_dir = "hawq_dumps"
-            if os.path.exists(self._dump_dir):
-                shutil.rmtree(self._dump_dir)
-            os.makedirs(self._dump_dir, exist_ok=True)
+class HAWQDebugger:
+    def __init__(self, bits_configurations: List[List[int]],
+                 perturbations: Perturbations,
+                 weight_observers: List[PerturbationObserver],
+                 traces_per_layer: TracesPerLayer, bits: List[int]):
+        self._bits_configurations = bits_configurations
+        self._num_weights = len(weight_observers)
+        self._perturbations = perturbations
 
-            self._traces_order = traces_per_layer.get_order_of_traces()
-            self._traces_per_layer = traces_per_layer.get_all()
+        from nncf.debug import DEBUG_LOG_DIR
+        self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
+        self._dump_dir.mkdir(parents=True, exist_ok=True)
 
-            num_of_weights = []
-            norm_of_weights = []
+        self._traces_order = traces_per_layer.get_order_of_traces()
+        self._traces_per_layer = traces_per_layer.get_all()
+
+        num_of_weights = []
+        norm_of_weights = []
+        for i in range(self._num_weights):
+            order = self._traces_order[i]
+            num_of_weights.append(weight_observers[order].get_numels())
+            norm_of_weights.append(weight_observers[order].get_input_norm())
+        self._num_weights_per_layer = torch.Tensor(num_of_weights)
+        self._norm_weights_per_layer = torch.Tensor(norm_of_weights)
+
+        bits_in_megabyte = 2 ** 23
+        self._model_sizes = []
+        for bits_config in self._bits_configurations:
+            size = torch.sum(torch.Tensor(bits_config) * self._num_weights_per_layer).item() / bits_in_megabyte
+            self._model_sizes.append(size)
+        self._bits = bits
+
+    @staticmethod
+    def get_all_quantizers_per_full_scope(model):
+        all_quantizations = OrderedDict()
+        for class_type in QUANTIZATION_MODULES.registry_dict.values():
+            quantization_type = class_type.__name__
+            all_quantizations.update(
+                get_all_modules_by_type(
+                    model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER),
+                    quantization_type))
+            all_quantizations.update(
+                get_all_modules_by_type(
+                    model.get_compression_modules_by_type(CompressionModuleType.FUNCTION_QUANTIZER),
+                    quantization_type))
+            all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
+        all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
+        return all_quantizations
+
+    @staticmethod
+    def get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope) -> NNCFGraph:
+        nncf_graph = model.get_graph()
+        for node_key in nncf_graph.get_all_node_keys():
+            node = nncf_graph.get_nx_node_by_key(node_key)
+            node_id = node[NNCFGraph.ID_NODE_ATTR]
+            color = ''
+            if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                operator_name = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                scope = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic.scope_in_model
+                module = model.get_module_by_scope(scope)
+                if isinstance(module, NNCFConv2d):
+                    color = 'blue'
+                    if module.groups == module.in_channels:
+                        operator_name = 'DW_Conv2d'
+                        color = 'purple'
+
+                node['label'] = '_#'.join([operator_name, str(node_id)])
+                if color:
+                    node['color'] = color
+
+        non_weight_quantizers = algo_ctrl.non_weight_quantizers
+        bits_color_map = {4: 'red', 8: 'green', 6: 'orange'}
+        for quantizer_id in non_weight_quantizers:
+            activation_iap_ctx = quantizer_id.ia_op_exec_context
+            post_hooked_nx_node_key = nncf_graph.get_node_id_by_iap_context(activation_iap_ctx)
+            post_hooked_module_node = nncf_graph.get_nx_node_by_key(post_hooked_nx_node_key)
+            operator_name = post_hooked_module_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+            node_id = post_hooked_module_node[NNCFGraph.ID_NODE_ATTR]
+            post_hooked_module_node['label'] = '_#'.join([operator_name, str(node_id)])
+
+            for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
+                activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
+                bits = non_weight_quantizers[quantizer_id].num_bits
+
+                activation_fq_node['color'] = bits_color_map[bits]
+                node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+                activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+
+        for scope, quantizer in all_quantizers_per_full_scope.items():
+            if quantizer.is_weights:
+                node = nncf_graph.find_node_in_nx_graph_by_scope(scope)
+                if not node:
+                    raise AttributeError('Failed to get node by scope={}'.format(str(scope)))
+                if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                    bits = quantizer.num_bits
+                    node_id = node[NNCFGraph.ID_NODE_ATTR]
+                    node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
+                    node['color'] = bits_color_map[bits]
+        return nncf_graph
+
+    def dump_avg_traces(self):
+        import matplotlib.pyplot as plt
+        dump_file = os.path.join(self._dump_dir, 'avg_traces_per_layer')
+        torch.save(self._traces_per_layer, dump_file)
+        fig = plt.figure()
+        fig.suptitle('Average Hessian Trace')
+        ax = fig.add_subplot(2, 1, 1)
+        ax.set_yscale('log')
+        ax.set_xlabel('weight quantizers')
+        ax.set_ylabel('average hessian trace')
+        ax.plot(self._traces_per_layer.cpu().numpy())
+        plt.savefig(dump_file)
+
+    def dump_metric(self, configuration_metric: List[Tensor]):
+        import matplotlib.pyplot as plt
+        list_to_plot = [cm.item() for cm in configuration_metric]
+        fig = plt.figure()
+        fig.suptitle('Pareto Frontier')
+        ax = fig.add_subplot(2, 1, 1)
+        ax.set_yscale('log')
+        ax.set_xlabel('Model Size (MB)')
+        ax.set_ylabel('Metric value (total perturbation)')
+        ax.scatter(self._model_sizes, list_to_plot, s=20, facecolors='none', edgecolors='r')
+        cm = torch.Tensor(configuration_metric)
+        cm_m = cm.median().item()
+        configuration_index = configuration_metric.index(cm_m)
+        ms_m = self._model_sizes[configuration_index]
+        ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
+        ax.legend()
+        plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
+        nncf_logger.info(
+            'Distribution of HAWQ metrics: min_value={:.3f}, max_value={:.3f}, median_value={:.3f}, '
+            'median_index={}, total_number={}'.format(cm.min().item(), cm.max().item(), cm_m,
+                                                      configuration_index,
+                                                      len(configuration_metric)))
+
+    def dump_density_of_quantization_noise(self):
+        noise_per_config = []  # type: List[Tensor]
+        for bits_config in self._bits_configurations:
+            qnoise = 0
             for i in range(self._num_weights):
+                layer_bits = bits_config[i]
                 order = self._traces_order[i]
-                num_of_weights.append(self._weight_observers[order].get_numels())
-                norm_of_weights.append(self._weight_observers[order].get_input_norm())
-            self._num_weights_per_layer = torch.Tensor(num_of_weights)
-            self._norm_weights_per_layer = torch.Tensor(norm_of_weights)
+                qnoise += self._perturbations.get(layer_id=order, bitwidth=layer_bits)
+            noise_per_config.append(qnoise)
 
-            bits_in_megabyte = 2 ** 23
-            self._model_sizes = []
-            for bits_config in self._bits_configurations:
-                size = torch.sum(torch.Tensor(bits_config) * self._num_weights_per_layer).item() / bits_in_megabyte
-                self._model_sizes.append(size)
-            self._bits = bits
+        list_to_plot = [cm.item() for cm in noise_per_config]
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        fig.suptitle('Density of quantization noise')
+        ax = fig.add_subplot(2, 1, 1)
+        ax.set_yscale('log')
+        ax.set_xlabel('Blocks')
+        ax.set_ylabel('Noise value')
+        ax.scatter(self._model_sizes, list_to_plot, s=20, alpha=0.3)
+        ax.legend()
+        plt.savefig(os.path.join(self._dump_dir, 'Density_of_quantization_noise'))
 
-        def run(self):
-            self._dump_avg_traces()
-            self._dump_density_of_quantization_noise()
-            self._dump_metric()
-            self._dump_perturbations_ratio()
+    def dump_perturbations_ratio(self):
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        fig.suptitle('Quantization noise vs Average Trace')
+        ax = fig.add_subplot(2, 1, 1)
+        ax.set_xlabel('Blocks')
+        ax.set_yscale('log')
+        b = max(self._bits)
+        perturb = [p[b] for p in self._perturbations.get_all().values()]
+        ax.plot(
+            [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
+            label='normalized {}-bit noise'.format(b))
+        ax.plot(perturb, label='{}-bit noise'.format(b))
+        ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
+        ax.plot([n * p for n, p in zip(self._traces_per_layer.cpu(), perturb)], label='trace * noise')
+        ax.legend()
+        plt.savefig(os.path.join(self._dump_dir, 'Quantization_noise_vs_Average_Trace'))
 
-        def _dump_avg_traces(self):
-            import matplotlib.pyplot as plt
-            dump_file = os.path.join(self._dump_dir, 'avg_traces_per_layer')
-            torch.save(self._traces_per_layer, dump_file)
-            fig = plt.figure()
-            fig.suptitle('Average Hessian Trace')
-            ax = fig.add_subplot(2, 1, 1)
-            ax.set_yscale('log')
-            ax.set_xlabel('weight quantizers')
-            ax.set_ylabel('average hessian trace')
-            ax.plot(self._traces_per_layer.cpu().numpy())
-            plt.savefig(dump_file)
-
-        def _dump_metric(self):
-            import matplotlib.pyplot as plt
-            list_to_plot = [cm.item() for cm in self._configuration_metric]
-            fig = plt.figure()
-            fig.suptitle('Pareto Frontier')
-            ax = fig.add_subplot(2, 1, 1)
-            ax.set_yscale('log')
-            ax.set_xlabel('Model Size (MB)')
-            ax.set_ylabel('Metric value (total perturbation)')
-            ax.scatter(self._model_sizes, list_to_plot, s=20, facecolors='none', edgecolors='r')
-            cm = torch.Tensor(self._configuration_metric)
-            cm_m = cm.median().item()
-            configuration_index = self._configuration_metric.index(cm_m)
-            ms_m = self._model_sizes[configuration_index]
-            ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
-            ax.legend()
-            plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
-            nncf_logger.info(
-                'Distribution of HAWQ metrics: min_value={:.3f}, max_value={:.3f}, median_value={:.3f}, '
-                'median_index={}, total_number={}'.format(cm.min().item(), cm.max().item(), cm_m,
-                                                          configuration_index,
-                                                          len(self._configuration_metric)))
-
-        def _dump_density_of_quantization_noise(self):
-            noise_per_config = []  # type: List[Tensor]
-            for bits_config in self._bits_configurations:
-                qnoise = 0
-                for i in range(self._num_weights):
-                    layer_bits = bits_config[i]
-                    order = self._traces_order[i]
-                    qnoise += self._perturbations.get(layer_id=order, bitwidth=layer_bits)
-                noise_per_config.append(qnoise)
-
-            list_to_plot = [cm.item() for cm in noise_per_config]
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
-            fig.suptitle('Density of quantization noise')
-            ax = fig.add_subplot(2, 1, 1)
-            ax.set_yscale('log')
-            ax.set_xlabel('Blocks')
-            ax.set_ylabel('Noise value')
-            ax.scatter(self._model_sizes, list_to_plot, s=20, alpha=0.3)
-            ax.legend()
-            plt.savefig(os.path.join(self._dump_dir, 'Density_of_quantization_noise'))
-
-        def _dump_perturbations_ratio(self):
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
-            fig.suptitle('Quantization noise vs Average Trace')
-            ax = fig.add_subplot(2, 1, 1)
-            ax.set_xlabel('Blocks')
-            ax.set_yscale('log')
-            b = max(self._bits)
-            perturb = [p[b] for p in self._perturbations.get_all().values()]
-            ax.plot(
-                [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
-                label='normalized {}-bit noise'.format(b))
-            ax.plot(perturb, label='{}-bit noise'.format(b))
-            ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
-            ax.plot([n * p for n, p in zip(self._traces_per_layer.cpu(), perturb)], label='trace * noise')
-            ax.legend()
-            plt.savefig(os.path.join(self._dump_dir, 'Quantization_noise_vs_Average_Trace'))
+    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: 'NNCFNetwork'):
+        all_quantizers_per_full_scope = self.get_all_quantizers_per_full_scope(model)
+        graph = self.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope)
+        graph.dump_graph(self._dump_dir / Path('bitwidth_graph.dot'))
 
 
 class PrecisionInitializerFactory:
