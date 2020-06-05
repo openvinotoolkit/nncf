@@ -11,87 +11,30 @@
  limitations under the License.
 """
 import pytest
-import re
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 from copy import deepcopy
-from functools import partial
-from pytest import approx
-from torch.utils.data import DataLoader
 from torchvision.models import resnet50
 
 from examples.common.models.classification import squeezenet1_1_custom
-from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler
-from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import ScopeElement, Scope
-from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
-from nncf.initialization import InitializingDataLoader
 from nncf.layers import NNCFConv2d
 from nncf.model_creation import create_compression_algorithm_builders
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_network import CompressionModuleType
 from nncf.quantization.algo import QuantizationController, QuantizationBuilder
-from nncf.quantization.layers import QuantizationMode, QuantizerConfig, SymmetricQuantizer, AsymmetricQuantizer, \
-    INITIALIZABLE_MODULES, BaseQuantizer, QUANTIZATION_MODULES
-from nncf.structures import QuantizationRangeInitArgs
-from nncf.utils import get_all_modules_by_type, safe_thread_call
+from nncf.quantization.layers import QuantizationMode, QuantizerConfig, SymmetricQuantizer, BaseQuantizer, \
+    QUANTIZATION_MODULES
+from nncf.utils import get_all_modules_by_type
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
+    get_squeezenet_quantization_config
 from tests.test_helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, MockModel, create_conv
-
-
-def get_basic_quantization_config(model_size=4):
-    config = NNCFConfig()
-    config.update({
-        "model": "basic_quant_conv",
-        "model_size": model_size,
-        "input_info":
-            {
-                "sample_size": [1, 1, model_size, model_size],
-            },
-        "compression":
-            {
-                "algorithm": "quantization",
-                "initializer": {
-                    "range": {
-                        "num_init_steps": 0
-                    }
-                }
-            }
-    })
-    return config
-
-
-def get_basic_asym_quantization_config(model_size=4):
-    config = get_basic_quantization_config(model_size)
-    config['compression']['activations'] = {"mode": "asymmetric"}
-    config['compression']['initializer']['range'] = {"num_init_steps": 0}
-    return config
-
-
-def get_squeezenet_quantization_config(model_size=32, batch_size=3):
-    config = get_basic_quantization_config(model_size)
-    config['model'] = 'squeezenet1_1_custom'
-    config['input_info'] = {
-        "sample_size": [batch_size, 3, model_size, model_size],
-    }
-    return config
-
-
-def split_quantizers(quant_model):
-    quantizers = get_all_modules_by_type(quant_model, list(INITIALIZABLE_MODULES.registry_dict.keys()))
-    weight_quantizers = []
-    activation_quantizers = []
-    for name, data in quantizers.items():
-        if 'UpdateWeight' in name:
-            weight_quantizers.append(data)
-        else:
-            activation_quantizers.append(data)
-    return weight_quantizers, activation_quantizers
 
 
 def compare_qconfigs(config: QuantizerConfig, quantizer: BaseQuantizer):
@@ -104,7 +47,7 @@ def compare_qconfigs(config: QuantizerConfig, quantizer: BaseQuantizer):
 
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
@@ -123,7 +66,7 @@ def test_quantization_configs__with_defaults():
 def test_quantization_configs__custom():
     model = BasicConvTestModel()
 
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     config['compression'].update({
         "weights": {
             "mode": "asymmetric",
@@ -161,56 +104,6 @@ def test_quantization_configs__custom():
         compare_qconfigs(ref_activation_qconfig, wq)
 
 
-#       fq_2
-#        \
-# fq_2 - conv_1 - fq_6
-#                   \
-#        fq_4       add
-#         \         /
-# fq_4 - conv_2 - fq_6
-#
-def test_quantization_configs__with_precisions_list():
-    class ModelForTest(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.conv1 = create_conv(1, 2, 2, -1, -2)
-            self.conv2 = create_conv(1, 2, 2, -1, -2)
-
-        def forward(self, x):
-            return self.conv1(x) + self.conv2(x)
-
-    model = ModelForTest()
-
-    config = get_basic_quantization_config()
-    config['compression']['initializer'].update({
-        "precision": {
-            "bitwidth_per_scope":
-                [[2, 'ModelForTest/NNCFConv2d[conv1]'],
-                 [4, 'ModelForTest/NNCFConv2d[conv2]']]
-        }})
-    config['compression']["activations"] = {"bits": 6}
-
-    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    ref_bits = [('ModelForTest/NNCFConv2d[conv1]module_weight', 2),
-                ('ModelForTest/NNCFConv2d[conv2]module_weight', 4),
-                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0', 6),
-                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0', 6),
-                ('ModelForTest/NNCFConv2d[conv1]module_input', 2),
-                ('ModelForTest/NNCFConv2d[conv2]module_input', 4)]
-
-    for key, quantizer in compression_ctrl.all_quantizations.items():
-        expected_bit = [ref_bit for (name, ref_bit) in ref_bits if name == str(key)][0]
-        assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(key)
-
-    ref_rows = [['2', '16.667', '16.667', '33.333'],
-                ['4', '16.667', '16.667', '33.333'],
-                ['6', '0', '33.333', '33.333']]
-    table = compression_ctrl.get_bit_stats()
-    # pylint: disable=protected-access
-    assert table._rows == ref_rows
-
-
 def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name):
     def get_name(name):
         return '/'.join([model_name, name])
@@ -235,7 +128,7 @@ def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_nam
 #
 def test_get_weight_activation_pairs():
     model_cls = TwoConvTestModel
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
 
     actual_pairs = algo.get_weights_activation_quantizers_pairs()
@@ -273,7 +166,7 @@ class DoubleWeightsPerActivation(nn.Module):
 def test_get_weight_activation_pairs__with_double_weights_per_activation():
     model_cls = DoubleWeightsPerActivation
     model_name = model_cls.__name__
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
 
     _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
 
@@ -301,7 +194,7 @@ class DoubleWeightsPerActivationWithExtraModule(DoubleWeightsPerActivation):
 def test_get_weight_activation_pairs__with_extra_module():
     model_cls = DoubleWeightsPerActivationWithExtraModule
     model_name = model_cls.__name__
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     config["compression"].update({
         "quantizable_subgraph_patterns": [["sigmoid", "conv2d"]],
         "quantize_inputs": False})
@@ -315,121 +208,9 @@ def test_get_weight_activation_pairs__with_extra_module():
     compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name)
 
 
-class RankDatasetMock:
-    def __init__(self, input_size, rank):
-        self.input_size = input_size
-        self.rank = rank
-        super().__init__()
-
-    def __getitem__(self, index):
-        dummy_input = torch.ones(self.input_size) * (self.rank - 1) * 3
-        return dummy_input, torch.ones(1)
-
-    def __len__(self):
-        return 100
-
-
-def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
-    config.batch_size = 3
-    config.workers = 3
-    config.gpu = gpu
-    config.ngpus_per_node = ngpus_per_node
-    config.rank = gpu
-    config.distributed = True
-
-    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8899',
-                                         world_size=config.world_size, rank=config.rank)
-
-    model = safe_thread_call(partial(squeezenet1_1_custom, pretrained=True))
-
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], config.rank),
-                                              batch_size=3,
-                                              num_workers=1,
-                                              shuffle=False)
-    config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-    quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    compression_scheduler = compression_ctrl.scheduler
-
-    torch.cuda.set_device(config.gpu)
-    quant_model.cuda(config.gpu)
-    config.batch_size = int(config.batch_size / ngpus_per_node)
-    config.workers = int(config.workers / ngpus_per_node)
-    quant_model = torch.nn.parallel.DistributedDataParallel(quant_model, device_ids=[config.gpu])
-
-    compression_ctrl.distributed()
-
-    criterion = torch.nn.MSELoss().cuda(config.gpu)
-    optimizer = torch.optim.Adam(quant_model.parameters(), lr=0.01)
-
-    torch.backends.cudnn.benchmark = True
-
-    # just to reproduce the same scale values without Dropout
-    quant_model.eval()
-
-    act_sum = 0
-    for layer in get_all_modules_by_type(quant_model, "SymmetricQuantizer").values():
-        act_sum += layer.scale
-    ref_sum = 3467.322
-    assert act_sum.item() == approx(ref_sum, 0.01), \
-        'sum of scales is not expected {} vs {} rank {}'.format(act_sum.item(), ref_sum, config.rank)
-
-    out_file_path = get_path_after_broadcast(tmp_path, config.rank)
-    save_params(quant_model, out_file_path)
-    compression_scheduler.step()
-    for i, (input_, _) in enumerate(data_loader):
-        if i > 5:
-            break
-        output = quant_model(input_)
-        optimizer.zero_grad()
-        dummy_target = torch.randn(1000).cuda(config.gpu, non_blocking=True)
-        loss = criterion(output, dummy_target)
-        compression_scheduler.step()
-        loss.backward()
-        optimizer.step()
-        compression_scheduler.step()
-
-    out_file_path = get_path_path_after_train_iters(tmp_path, config.rank)
-    save_params(quant_model, out_file_path)
-
-
-def get_path_path_after_train_iters(tmp_path, rank):
-    out_file_path = tmp_path / 'scale_signed_after_1_train_iter_gpu{}.pt'.format(rank)
-    return out_file_path
-
-
-def get_path_after_broadcast(tmp_path, rank):
-    out_file_path = tmp_path / 'scale_signed_after_broadcast_gpu{}.pt'.format(rank)
-    return out_file_path
-
-
-def save_params(model, out_file_path):
-    gpu_scale_signed_params = []
-    for _, layer in utils.get_all_modules_by_type(model, 'SymmetricQuantizer').items():
-        gpu_scale_signed_params.append((layer.scale.to(torch.device('cpu')),
-                                        layer.signed_tensor.to(torch.device('cpu'))))
-    with out_file_path.open('wb') as out_file:
-        torch.save(gpu_scale_signed_params, out_file)
-
-
-def compare_multi_gpu_dump(config, tmp_path, get_path_fn):
-    mismatching = False
-    ref_file_path = get_path_fn(tmp_path, 0)
-    with ref_file_path.open('rb') as ref_scale_file:
-        ref_scale_signed_params = torch.load(ref_scale_file)
-        for other_rank in range(1, config.world_size):
-            other_file_path = get_path_fn(tmp_path, other_rank)
-            with other_file_path.open('rb') as in_file:
-                gpu_scale_signed_params = torch.load(in_file)
-                if ref_scale_signed_params != gpu_scale_signed_params:
-                    mismatching = True
-    return mismatching
-
-
 def test_can_load_quant_algo__with_defaults():
     model = BasicConvTestModel()
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     compression_algo_builder_list = create_compression_algorithm_builders(config)
     assert len(compression_algo_builder_list) == 1
     assert isinstance(compression_algo_builder_list[0], QuantizationBuilder)
@@ -455,7 +236,7 @@ def test_can_load_quant_algo__with_defaults():
 
 
 def test_can_create_quant_loss_and_scheduler():
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
     loss = compression_ctrl.loss
@@ -463,169 +244,6 @@ def test_can_create_quant_loss_and_scheduler():
 
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, CompressionScheduler)
-
-
-def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path):
-    num_init_steps = 10
-
-    config = get_squeezenet_quantization_config()
-    config['compression']['initializer'] = {'range': {'num_init_steps': num_init_steps}}
-
-    ngpus_per_node = torch.cuda.device_count()
-    config.world_size = ngpus_per_node
-    torch.multiprocessing.spawn(scale_signed_dumping_worker,
-                                nprocs=ngpus_per_node,
-                                args=(ngpus_per_node, config, tmp_path),
-                                join=True)
-
-    assert not compare_multi_gpu_dump(config, tmp_path, get_path_after_broadcast)
-    assert not compare_multi_gpu_dump(config, tmp_path, get_path_path_after_train_iters)
-
-
-class OnesDatasetMock:
-    def __init__(self, input_size):
-        self.input_size = input_size
-        super().__init__()
-
-    def __getitem__(self, index):
-        return torch.ones(self.input_size), torch.ones(1)
-
-    def __len__(self):
-        return 1
-
-
-def create_empty_config_without_init_section():
-    config = get_empty_config()
-    config['compression'] = {'algorithm': 'quantization'}
-    return config
-
-
-def create_config():
-    config = get_empty_config()
-    config['compression'] = {'algorithm': 'quantization', 'initializer': {'range': {'num_init_steps': 1}}}
-    return config
-
-
-@pytest.mark.parametrize("wrap_dataloader",
-                         (True, False),
-                         ids=['wrapped_dataloader', 'standard_dataloader'])
-class TestInit:
-    @staticmethod
-    def create_algo_and_compressed_model(config):
-        model = TwoConvTestModel()
-        compressed_model, algo = create_compressed_model_and_algo_for_test(model, config)
-        return algo, compressed_model
-
-    @staticmethod
-    def create_dataloader(wrap_dataloader, config, device='cpu') -> DataLoader:
-        input_infos_list = create_input_infos(config)
-        input_sample_size = input_infos_list[0].shape
-        data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:]),
-                                                  batch_size=1,
-                                                  num_workers=1,
-                                                  shuffle=False)
-        if wrap_dataloader:
-            data_loader = InitializingDataLoader(data_loader=data_loader,
-                                                 device=device,
-                                                 kwargs={})
-        return data_loader
-
-    @staticmethod
-    def check_sign_and_scale(model, ref_table):
-        model_conv = get_all_modules_by_type(model, 'SymmetricQuantizer')
-        for scope, module in model_conv.items():
-            for pattern, ref_values in ref_table.items():
-                match = re.search(pattern, str(scope))
-                if match:
-                    assert isinstance(module, SymmetricQuantizer)
-                    assert module.signed == ref_values[0], 'sign is not matched for {}'.format(str(scope))
-                    assert module.scale == ref_values[1], 'scale is not matched for {}'.format(str(scope))
-
-    @pytest.mark.parametrize("config_creator", (create_config, create_empty_config_without_init_section))
-    def test_scale_and_sign_init_for_quant_algo__without_init_section(self, wrap_dataloader, config_creator):
-        config = config_creator()
-        data_loader = self.create_dataloader(wrap_dataloader, config)
-        config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-        _, compressed_model = self.create_algo_and_compressed_model(config)
-
-        self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (True, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 1),
-            '.*activation_quantizers.*Sequential\\[0\\].*': (True, 4),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (True, 24)
-        })
-
-    def test_scale_and_sign_init_for_quant_algo__with_zero_init_steps(self, wrap_dataloader):
-        config = create_config()
-        config['compression']['initializer']['range']['num_init_steps'] = 0
-
-        data_loader = self.create_dataloader(wrap_dataloader, config)
-        config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-        _, compressed_model = self.create_algo_and_compressed_model(config)
-
-        self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (False, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 1),
-            '.*activation_quantizers.*Sequential\\[0\\].*': (False, 1),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (False, 1)
-        })
-
-    def test_scale_and_sign_init_for_quant_algo__after_load_state(self, wrap_dataloader):
-        config = create_config()
-        data_loader = self.create_dataloader(wrap_dataloader, config)
-        config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-        _, compressed_model = self.create_algo_and_compressed_model(config)
-        load_state(compressed_model, {
-            'module.features.0.0.pre_ops.0.op.signed_tensor': torch.tensor([0.]),  # quantizer of 1st conv's weights
-            'module.features.1.0.pre_ops.0.op.scale': torch.tensor([100])  # quantizer of 2nd conv's weights
-        })
-
-        self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (False, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 100),
-            '.*activation_quantizers.*Sequential\\[0\\].*': (True, 4),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (True, 24)
-        })
-
-    def test_scope_overrides(self, wrap_dataloader):
-        config = create_config()
-        config["compression"]["scope_overrides"] = {
-            r"{re}NNCFConv2d\[[0-9]*\]$": {
-                "bits": 7,
-                "mode": "asymmetric",
-            },
-            r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
-                "bits": 7,
-                "signed": False,
-            }
-        }
-        data_loader = self.create_dataloader(wrap_dataloader, config)
-        config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-        _, compressed_model = self.create_algo_and_compressed_model(config)
-
-        quantizers = get_all_modules_by_type(compressed_model, ['SymmetricQuantizer',
-                                                                'AsymmetricQuantizer'])
-        quantizer_str_dict = {str(k): v for k, v in quantizers.items()}
-        group_1 = [quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
-                                      "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
-                                      "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
-                                      "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/"
-                                      "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict['NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/'
-                                      'Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/'
-                                      'AsymmetricQuantizer[op]']
-                   ]
-        group_2 = [quantizer_str_dict['NNCFNetwork/ModuleDict[activation_quantizers]/'
-                                      'SymmetricQuantizer[TwoConvTestModel/Sequential[features]'
-                                      '/Sequential[0]/NNCFConv2d[0]/conv2d_0]']]
-
-        for quantizer in group_1:
-            assert isinstance(quantizer, AsymmetricQuantizer)
-            assert quantizer.levels == 2 ** 7
-        for quantizer in group_2:
-            assert isinstance(quantizer, SymmetricQuantizer)
-            assert not quantizer.signed
 
 
 def get_path_to_keys(tmp_path, rank):
@@ -660,7 +278,7 @@ def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path):
 
 
 def test_load_state_sets_initialized_flag():
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
 
     model = TwoConvTestModel()
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
@@ -689,7 +307,7 @@ def test_quantize_has_proper_is_weights_flag():
             return self.conv(x)
 
     model = Model()
-    config = get_basic_quantization_config(model_size=2)
+    config = get_quantization_config_without_range_init(model_size=2)
     quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     for module in quant_model.modules():
@@ -712,7 +330,7 @@ def test_can_quantize_free_operators(mocker):
             return F.linear(x, self.weight, self.bias)
 
     mod = Model()
-    config = get_basic_quantization_config(model_size=1)
+    config = get_quantization_config_without_range_init(model_size=1)
 
     config["compression"].update({"quantize_inputs": False})
     quant_model, _ = create_compressed_model_and_algo_for_test(mod, config)
@@ -805,7 +423,7 @@ class QuantizeInputsTestModel(nn.Module):
 
 def test_quantize_inputs():
     model = QuantizeInputsTestModel()
-    config = get_basic_quantization_config()
+    config = get_quantization_config_without_range_init()
     config["input_info"] = [
         {
             "sample_size": [2, 3, 32, 32],
@@ -844,98 +462,3 @@ def test_quantize_inputs():
             assert update_inputs_count == 1
         else:
             assert update_inputs_count == 0
-
-
-class SingleConv2dIdentityModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv2d = nn.Conv2d(1, 1, 1)
-        self.conv2d.weight = torch.nn.Parameter(torch.ones_like(self.conv2d.weight))
-
-    def forward(self, input_):
-        return self.conv2d(input_)
-
-
-class SingleConv2dSyntheticWeightModel(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv2d = nn.Conv2d(1, 1, 100)
-
-        for i in range(0, 100):
-            for j in range(0, 100):
-                self.conv2d.weight[0][0][i][j] = i * 100 + j
-
-    def forward(self, input_):
-        return self.conv2d(input_)
-
-
-@pytest.mark.parametrize("quantization_mode",
-                         ["symmetric", "asymmetric"])
-def test_percentile_init(quantization_mode):
-    class SyntheticDataset(torch.utils.data.Dataset):
-        def __init__(self):
-            self._length = 1
-
-        def __getitem__(self, idx):
-            if idx >= self._length:
-                raise StopIteration
-            test_input_sample = torch.zeros([1, 100, 100])
-            for i in range(0, 100):
-                for j in range(0, 100):
-                    test_input_sample[0][i][j] = i * 100 + j
-            return test_input_sample, test_input_sample
-
-        def __len__(self):
-            return self._length
-
-    data_loader = torch.utils.data.DataLoader(SyntheticDataset(), batch_size=1)
-
-    config_with_init = NNCFConfig()
-    config_with_init.update(
-        {
-            "input_info": {
-                "sample_size": [1, 1, 100, 100]
-            },
-            "compression": {
-                "algorithm": "quantization",
-                "activations": {
-                    "mode": quantization_mode,
-                },
-                "weights": {
-                    "mode": quantization_mode,
-                },
-                "initializer": {
-                    "range": {
-                        "num_init_steps": 1,
-                        "type": "percentile",
-                        "min_percentile": 32.10,
-                        "max_percentile": 67.89
-                    }
-                }
-            }
-        }
-    )
-
-    # Activations init check
-    id_model = SingleConv2dIdentityModel()
-    config_with_init.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(id_model, config_with_init)
-
-    act_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
-
-    def assert_range(quantizer: BaseQuantizer):
-        # Absolute tolerance is 1.0 due to percentile value interpolation
-        if quantization_mode == 'symmetric':
-            assert quantizer.scale.item() == approx(6789, abs=1.0)
-        else:
-            assert quantizer.input_low.item() == approx(3210, abs=1.0)
-            assert quantizer.input_range.item() == approx(3578, abs=1.0)
-
-    assert_range(act_quantizer)
-    # Weight init check
-    synth_weight_model = SingleConv2dSyntheticWeightModel()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(synth_weight_model,
-                                                                    config_with_init)
-
-    weight_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
-    assert_range(weight_quantizer)

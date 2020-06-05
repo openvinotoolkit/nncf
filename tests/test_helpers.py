@@ -10,25 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import namedtuple
 from typing import Dict, Callable, Any, Union, List
 from typing import Tuple
 
 import numpy as np
-import pytest
 import torch
 from copy import deepcopy
-from functools import partial
 from torch import nn
 from torch.nn import Module
 
 from nncf.compression_method_api import CompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
-from nncf.utils import get_all_modules_by_type, objwalk
+from nncf.utils import get_all_modules_by_type
 
 
 def fill_conv_weight(conv, value):
@@ -209,7 +207,7 @@ def check_equal(test, reference, rtol=1e-4):
 
 def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFConfig,
                                               dummy_forward_fn: Callable[[Module], Any] = None) \
-        -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
+    -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn)
@@ -249,83 +247,25 @@ def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model:
     return original_modules, nncf_modules
 
 
-class ObjwalkTestClass:
-    def __init__(self, field: int):
-        self.field = field
+class OnesDatasetMock:
+    def __init__(self, input_size):
+        self.input_size = input_size
+        super().__init__()
 
-    def member_fn(self, val):
-        return ObjwalkTestClass(self.field + 1)
+    def __getitem__(self, index):
+        return torch.ones(self.input_size), torch.ones(1)
 
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
-
-
-NamedTuple = namedtuple("NamedTuple", ("field1", "field2"))
-
-OBJWALK_INIT_VAL = 0
-OBJWALK_REF_VAL = OBJWALK_INIT_VAL + 1
-TEST_VS_REF_OBJECTS_TO_WALK = [
-    (0,
-     0),
-
-    ("foo",
-     "foo"),
-
-    (ObjwalkTestClass(OBJWALK_INIT_VAL),
-     ObjwalkTestClass(OBJWALK_REF_VAL)),
-
-    ([0, ObjwalkTestClass(OBJWALK_INIT_VAL), "bar"],
-     [0, ObjwalkTestClass(OBJWALK_REF_VAL), "bar"]),
-
-    ([ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL), (5, 8)],
-     [ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL), (5, 8)]),
-
-    (
-        {
-            "obj1": ObjwalkTestClass(OBJWALK_INIT_VAL),
-            "obj2": ObjwalkTestClass(OBJWALK_INIT_VAL)
-        },
-        {
-            "obj1": ObjwalkTestClass(OBJWALK_REF_VAL),
-            "obj2": ObjwalkTestClass(OBJWALK_REF_VAL)
-        }
-    ),
-
-    ((ObjwalkTestClass(OBJWALK_INIT_VAL), 42),
-     (ObjwalkTestClass(OBJWALK_REF_VAL), 42)),
-
-    ([(ObjwalkTestClass(OBJWALK_INIT_VAL), 8), [ObjwalkTestClass(OBJWALK_INIT_VAL), "foo"],
-      {"bar": ObjwalkTestClass(OBJWALK_INIT_VAL),
-       "baz": (ObjwalkTestClass(OBJWALK_INIT_VAL), ObjwalkTestClass(OBJWALK_INIT_VAL)),
-       "xyzzy": {1337: ObjwalkTestClass(OBJWALK_INIT_VAL),
-                 31337: ObjwalkTestClass(OBJWALK_INIT_VAL)}}],
-     [(ObjwalkTestClass(OBJWALK_REF_VAL), 8), [ObjwalkTestClass(OBJWALK_REF_VAL), "foo"],
-      {"bar": ObjwalkTestClass(OBJWALK_REF_VAL),
-       "baz": (ObjwalkTestClass(OBJWALK_REF_VAL), ObjwalkTestClass(OBJWALK_REF_VAL)),
-       "xyzzy": {1337: ObjwalkTestClass(OBJWALK_REF_VAL),
-                 31337: ObjwalkTestClass(OBJWALK_REF_VAL)}}]
-     ),
-    (
-        (0, NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL), field2=-5.3), "bar"),
-        (0, NamedTuple(field1=ObjwalkTestClass(OBJWALK_REF_VAL), field2=-5.3), "bar"),
-    )
-]
+    def __len__(self):
+        return 1
 
 
-@pytest.fixture(name="objwalk_objects", params=TEST_VS_REF_OBJECTS_TO_WALK)
-def objwalk_objects_(request):
-    return request.param
+def create_mock_dataloader(config):
+    input_infos_list = create_input_infos(config)
+    input_sample_size = input_infos_list[0].shape
+    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:]),
+                                              batch_size=1,
+                                              num_workers=1,
+                                              shuffle=False)
+    return data_loader
 
 
-def test_objwalk(objwalk_objects):
-    start_obj = objwalk_objects[0]
-    ref_obj = objwalk_objects[1]
-
-    def is_target_class(obj):
-        return isinstance(obj, ObjwalkTestClass)
-
-    fn_to_apply = partial(ObjwalkTestClass.member_fn, val=OBJWALK_REF_VAL)
-
-    test_obj = objwalk(start_obj, is_target_class, fn_to_apply)
-
-    assert test_obj == ref_obj

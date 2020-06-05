@@ -11,12 +11,9 @@
  limitations under the License.
 """
 
-import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from tests.quantization.test_algo_quantization import OnesDatasetMock
 from tests.test_helpers import create_conv
 
 
@@ -112,13 +109,3 @@ def get_pruning_exponential_config():
     compression_config['params']["num_init_steps"] = 1
     compression_config['params']["pruning_steps"] = 20
     return config
-
-
-def create_dataloader(config):
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:]),
-                                              batch_size=1,
-                                              num_workers=1,
-                                              shuffle=False)
-    return data_loader
