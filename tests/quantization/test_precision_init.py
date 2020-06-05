@@ -44,7 +44,8 @@ from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
-    get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init
+    get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
+    get_squeezenet_quantization_config
 from tests.test_compressed_graph import check_graph
 from tests.test_helpers import create_compressed_model_and_algo_for_test, MockModel, create_conv, \
     create_mock_dataloader
