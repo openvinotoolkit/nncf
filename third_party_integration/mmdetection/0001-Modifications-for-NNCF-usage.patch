@@ -1,4 +1,4 @@
-From a884a13ca8be97a8ba7686df9b64dbaabb1ee04e Mon Sep 17 00:00:00 2001
+From bdc56258346ede82e51439d1e8d884c817f9b055 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -10,12 +10,12 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/core/__init__.py                        |  1 +
  mmdet/core/nncf/__init__.py                   |  9 ++
  mmdet/core/nncf/hooks.py                      | 25 +++++
- mmdet/core/nncf/utils.py                      | 86 +++++++++++++++++
+ mmdet/core/nncf/utils.py                      | 73 ++++++++++++++
  mmdet/models/dense_heads/anchor_head.py       |  1 +
  mmdet/models/detectors/base.py                |  9 +-
  mmdet/models/detectors/single_stage.py        |  8 +-
  tools/train.py                                |  6 ++
- 11 files changed, 311 insertions(+), 11 deletions(-)
+ 11 files changed, 298 insertions(+), 11 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -331,14 +331,15 @@ index 0000000..9f8dbc3
 +            logger.info('{}: {}'.format(key, val))
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
-index 0000000..f1513b1
+index 0000000..a1f4460
 --- /dev/null
 +++ b/mmdet/core/nncf/utils.py
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,73 @@
 +import pathlib
 +from collections import OrderedDict
 +
 +import torch
++from nncf.initialization import InitializingDataLoader
 +from nncf.structures import QuantizationRangeInitArgs
 +
 +from nncf import NNCFConfig
@@ -351,11 +352,7 @@ index 0000000..f1513b1
 +    nncf_config = NNCFConfig(cfg.nncf_config)
 +
 +    if data_loader_for_init is not None:
-+        mmdet_kwargs = dict(return_loss=False, dummy_forward=True)
-+        device = next(model.parameters()).device
-+        wrapped_loader = MMInitializeDataLoader(
-+            data_loader=data_loader_for_init, kwargs=mmdet_kwargs, device=device
-+        )
++        wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
 +
 +        nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 +
@@ -402,23 +399,13 @@ index 0000000..f1513b1
 +    return checkpoint
 +
 +
-+class MMInitializeDataLoader:
-+    def __init__(self, data_loader, kwargs, device):
-+        self.data_loader = data_loader
-+        self.data_iterator = self.data_loader.__iter__()
-+        self.kwargs = kwargs
-+        self.device = device
-+        self.num_workers = data_loader.num_workers
-+
-+    def __iter__(self):
-+        return self
-+
++class MMInitializeDataLoader(InitializingDataLoader):
 +    def __next__(self):
 +        # redefined InitializeDataLoader because
 +        # of DataContainer format in mmdet
-+        input = self.data_iterator.__next__()
-+        input_tensor = input['img']._data[0].to(self.device)
-+        return ([input_tensor,], None, self.kwargs)
++        input_ = self.data_loader_iter.__next__()
++        input_ = {k: v.data[0] for k, v in input_.items()}
++        return (), input_
 +
 +
 diff --git a/mmdet/models/dense_heads/anchor_head.py b/mmdet/models/dense_heads/anchor_head.py

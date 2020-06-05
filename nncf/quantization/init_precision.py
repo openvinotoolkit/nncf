@@ -150,9 +150,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._tolerance = config.get('tolerance', 1e-5)
         self._bits = hw_precision_constraints.get_all_unique_bits() \
             if hw_precision_constraints else config.get('bits', [4, 8])
-        self._device = next(self._model.parameters()).device
+        self._init_device = init_args.device
 
     def apply_init(self):
+        original_device = next(self._model.parameters()).device
+        self._model.to(self._init_device)
+
         traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
         if not traces_per_layer:
             raise RuntimeError('Failed to calculate hessian traces!')
@@ -170,7 +173,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         perturbations, weight_observers = self.calc_quantization_noise()
 
         configuration_metric = self.calc_hawq_metric_per_configuration(bits_configurations, perturbations,
-                                                                       traces_per_layer, self._device)
+                                                                       traces_per_layer, self._init_device)
 
         chosen_config_per_layer = self.choose_configuration(configuration_metric, bits_configurations,
                                                             traces_per_layer.get_order_of_traces())
@@ -190,6 +193,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         str_bw = [str(element) for element in self.get_bitwidth_per_scope()]
         nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
+        self._model.to(original_device)
         return ordered_metric_per_layer
 
     def get_bitwidth_per_scope(self) -> List[List[Union[int, str]]]:
@@ -252,7 +256,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     def _calc_traces(self, criterion: _Loss, iter_number: int, tolerance: float) -> TracesPerLayer:
         if self._traces_per_layer_path:
-            return TracesPerLayer(torch.load(self._traces_per_layer_path))
+            return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         disabled_gradients = self.disable_all_gradients_except_weights_of_quantized_modules(
@@ -261,7 +265,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             self._model,
             self._scopes_of_skipped_weight_quantizers)
 
-        trace_estimator = HessianTraceEstimator(self._model, criterion, self._device, self._data_loader,
+        trace_estimator = HessianTraceEstimator(self._model, criterion, self._init_device, self._data_loader,
                                                 self._num_data_points)
         avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
 
@@ -325,7 +329,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         hook_handles = []
         observers = []
         for module in self._ordered_weight_quantizations.values():
-            observer = PerturbationObserver(self._device)
+            observer = PerturbationObserver(self._init_device)
             hook_handles.append(module.register_forward_hook(observer.calc_perturbation))
             observers.append(observer)
 
@@ -337,7 +341,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             self._model.do_dummy_forward(force_eval=True)
 
             for i, observer in enumerate(observers):
-                perturbations.add(layer_id=i, bitwidth=b, perturbation=observer.get_observation())
+                perturbations.add(layer_id=i, bitwidth=b, perturbation=observer.get_observation().to(self._init_device))
 
         for handle in hook_handles:
             handle.remove()
@@ -360,7 +364,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                              traces_order: List[int]) -> List[int]:
         num_weights = len(traces_order)
         ordered_config = [0] * num_weights
-        median_metric = torch.Tensor(configuration_metric).to(self._device).median()
+        median_metric = torch.Tensor(configuration_metric).to(self._init_device).median()
         configuration_index = configuration_metric.index(median_metric)
         bit_configuration = bits_configurations[configuration_index]
         for i, bitwidth in enumerate(bit_configuration):
