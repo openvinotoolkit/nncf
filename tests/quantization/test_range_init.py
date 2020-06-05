@@ -337,3 +337,17 @@ def test_percentile_init(quantization_mode):
 
     weight_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
     assert_range(weight_quantizer)
+
+
+def test_range_init_is_called_by_default(mocker):
+    config = create_hawq_test_config()
+    model = MockModel()
+    config = register_default_init_args(config, mocker.stub(), mocker.stub())
+    mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
+    mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer._calc_traces')
+
+    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.' + method_name)
+    mocked_trace.return_value = None
+
+    with pytest.raises(RuntimeError):
+        create_compressed_model_and_algo_for_test(model, config)
