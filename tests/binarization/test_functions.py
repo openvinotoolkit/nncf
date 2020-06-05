@@ -17,7 +17,7 @@ import torch
 from torch.autograd import Variable
 
 from nncf.binarization.layers import xnor_binarize_op, dorefa_binarize_op, activation_bin_scale_threshold_op
-from tests.test_helpers import check_equal, get_grads
+from tests.helpers import check_equal, get_grads
 
 
 # reference impl

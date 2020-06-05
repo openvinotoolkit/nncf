@@ -21,7 +21,7 @@ from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_
 from nncf.pruning.schedulers import BaselinePruningScheduler
 from tests.pruning.test_helpers import get_basic_pruning_config, PruningTestModel, \
     BigPruningTestModel
-from tests.test_helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
+from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
     create_mock_dataloader
 
 

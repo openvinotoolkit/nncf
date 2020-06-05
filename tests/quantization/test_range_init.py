@@ -31,7 +31,7 @@ from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_precision_init import create_hawq_test_config
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, get_squeezenet_quantization_config, \
     distributed_init_test_default, post_compression_test_distr_init
-from tests.test_helpers import TwoConvTestModel, get_empty_config, \
+from tests.helpers import TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, create_mock_dataloader, MockModel
 
 

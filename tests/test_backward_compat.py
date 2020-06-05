@@ -23,7 +23,7 @@ from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
 from tests.conftest import TEST_ROOT
 from tests.test_compression_training import get_cli_dict_args, parse_best_acc1
-from tests.test_helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_sanity_sample import Command, create_command_line
 
 GLOBAL_CONFIG = {

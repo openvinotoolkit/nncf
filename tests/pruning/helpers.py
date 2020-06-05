@@ -14,7 +14,7 @@
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.test_helpers import create_conv
+from tests.helpers import create_conv
 
 
 class PruningTestModel(nn.Module):

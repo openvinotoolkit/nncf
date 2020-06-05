@@ -16,7 +16,7 @@ import pytest
 
 from nncf.sparsity.schedulers import PolynomialSparseScheduler, ExponentialSparsityScheduler, \
     AdaptiveSparsityScheduler, MultiStepSparsityScheduler
-from tests.test_helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
+from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     MockModel
 
 

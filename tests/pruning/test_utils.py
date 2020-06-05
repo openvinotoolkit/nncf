@@ -18,7 +18,7 @@ from nncf.pruning.utils import get_rounded_pruned_element_number, get_bn_for_mod
     get_first_pruned_modules, get_last_pruned_modules
 from tests.pruning.test_helpers import get_basic_pruning_config, BigPruningTestModel, \
     PruningTestModelBranching
-from tests.test_helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_compressed_model_and_algo_for_test
 
 
 # pylint: disable=protected-access

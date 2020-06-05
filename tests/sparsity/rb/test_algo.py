@@ -23,7 +23,7 @@ from nncf.sparsity.rb.algo import RBSparsityController
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.sparsity.rb.loss import SparseLoss
 from nncf.sparsity.schedulers import PolynomialSparseScheduler
-from tests.test_helpers import BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
+from tests.helpers import BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement
 
 

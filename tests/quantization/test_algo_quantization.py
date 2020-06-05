@@ -33,7 +33,7 @@ from nncf.quantization.layers import QuantizationMode, QuantizerConfig, Symmetri
 from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
     get_squeezenet_quantization_config
-from tests.test_helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
+from tests.helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, MockModel, create_conv
 
 
