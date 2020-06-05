@@ -23,16 +23,16 @@ from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import InitializingDataLoader
+from nncf.initialization import InitializingDataLoader, register_default_init_args
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
     BaseQuantizer
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
-from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, RankDatasetMock, \
-    get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init
+from tests.quantization.test_precision_init import create_hawq_test_config
+from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, get_squeezenet_quantization_config, \
+    distributed_init_test_default, post_compression_test_distr_init
 from tests.test_helpers import TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_mock_dataloader
+    create_compressed_model_and_algo_for_test, create_mock_dataloader, MockModel
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
@@ -343,11 +343,11 @@ def test_range_init_is_called_by_default(mocker):
     config = create_hawq_test_config()
     model = MockModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
-    mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
-    mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer._calc_traces')
+    range_init_spy = mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
+    precision_init_spy = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.apply_init')
 
-    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.' + method_name)
-    mocked_trace.return_value = None
+    del config['compression']['initializer']['range']
+    create_compressed_model_and_algo_for_test(model, config)
 
-    with pytest.raises(RuntimeError):
-        create_compressed_model_and_algo_for_test(model, config)
+    assert range_init_spy.call_count == 1
+    assert precision_init_spy.call_count == 1
