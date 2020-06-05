@@ -19,7 +19,7 @@ from nncf.sparsity.const.algo import ConstSparsityController
 from nncf.sparsity.layers import BinaryMask
 from tests.quantization.test_functions import check_equal
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel
-from tests.test_helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
+from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement
 
 sub_tensor = torch.tensor([[[[1., 0.],

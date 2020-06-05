@@ -4,7 +4,7 @@ from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.quantization.layers import SymmetricQuantizer
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.utils import get_all_modules_by_type
-from tests.test_helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test
+from tests.helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test
 
 
 def get_basic_sparsity_plus_quantization_config(input_sample_size=None):

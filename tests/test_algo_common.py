@@ -20,10 +20,10 @@ from torch import nn
 from torch.nn import DataParallel
 
 from nncf.checkpoint_loading import load_state
+from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.sparsity.rb.test_algo import get_basic_sparsity_config
-from tests.test_helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 
 
 class BasicLinearTestModel(nn.Module):

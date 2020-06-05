@@ -23,7 +23,7 @@ from nncf.sparsity.magnitude.functions import normed_magnitude
 from tests.quantization.test_functions import check_equal
 from tests.sparsity.const.test_algo import ref_mask_2, ref_mask_1
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config
-from tests.test_helpers import create_compressed_model_and_algo_for_test, MockModel, BasicConvTestModel, \
+from tests.helpers import create_compressed_model_and_algo_for_test, MockModel, BasicConvTestModel, \
     get_empty_config, check_correct_nncf_modules_replacement
 
 

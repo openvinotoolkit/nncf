@@ -19,7 +19,7 @@ from examples.common.model_loader import load_model
 from nncf.checkpoint_loading import load_state
 from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_functions import check_equal
-from tests.test_helpers import BasicConvTestModel
+from tests.helpers import BasicConvTestModel
 
 
 @pytest.mark.parametrize(('model_name', 'ceil_mode'),

@@ -33,7 +33,7 @@ from nncf.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.model_creation import create_compressed_model
 from nncf.utils import manual_seed
 from tests.modules.seq2seq.gnmt import GNMT
-from tests.test_helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
 
 
 @pytest.fixture

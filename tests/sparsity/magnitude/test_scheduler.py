@@ -15,7 +15,7 @@ import pytest
 
 from nncf.sparsity.schedulers import MultiStepSparsityScheduler
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config
-from tests.test_helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 
 
 def get_multistep_normed_abs_config():
