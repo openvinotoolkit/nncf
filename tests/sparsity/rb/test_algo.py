@@ -28,7 +28,8 @@ from tests.test_helpers import BasicConvTestModel, TwoConvTestModel, create_comp
 
 
 def get_basic_sparsity_config(model_size=4, input_sample_size=None,
-                              sparsity_init=0.02, sparsity_target=0.5, sparsity_steps=2, sparsity_training_steps=3):
+                              sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2,
+                              sparsity_freeze_epoch=3):
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
 
@@ -48,8 +49,8 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
                         "schedule": "polynomial",
                         "sparsity_init": sparsity_init,
                         "sparsity_target": sparsity_target,
-                        "sparsity_steps": sparsity_steps,
-                        "sparsity_training_steps": sparsity_training_steps
+                        "sparsity_target_epoch": sparsity_target_epoch,
+                        "sparsity_freeze_epoch": sparsity_freeze_epoch
                     },
             }
     })
@@ -118,9 +119,9 @@ def test_can_create_sparse_loss_and_scheduler():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, PolynomialSparseScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.max_sparsity == approx(0.5)
-    assert scheduler.max_step == 2
-    assert scheduler.sparsity_training_steps == 3
+    assert scheduler.sparsity_target == approx(0.5)
+    assert scheduler.sparsity_target_epoch == 2
+    assert scheduler.sparsity_freeze_epoch == 3
 
 
 def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
@@ -166,8 +167,8 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
         'algorithm': 'rb_sparsity',
         "params": {
             'schedule': 'polynomial',
-            'power': 1, 'sparsity_steps': 2, 'sparsity_init': 0.2, 'sparsity_target': 0.6,
-            'sparsity_training_steps': 4
+            'power': 1, 'sparsity_target_epoch': 2, 'sparsity_init': 0.2, 'sparsity_target': 0.6,
+            'sparsity_freeze_epoch': 4
         }
     }
 

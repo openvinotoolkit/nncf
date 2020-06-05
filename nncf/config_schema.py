@@ -322,20 +322,28 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                             "of scheduler steps."),
     "power": with_attributes(_NUMBER,
                              description="For polynomial scheduler - determines the corresponding power value."),
+    "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity level"
+                                                     "will be approached in concave manner, and in convex manner "
+                                                     "otherwise."),
     "sparsity_init": with_attributes(_NUMBER,
                                      description="Initial value of the sparsity level applied to the "
                                                  "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
-    "sparsity_steps": with_attributes(_NUMBER,
-                                      description="The default scheduler will do this many "
-                                                  "proportional target sparsity level adjustments, "
-                                                  "distributed evenly across "
-                                                  "'sparsity_training_steps'."),
-    "sparsity_training_steps": with_attributes(_NUMBER,
-                                               description="The number of steps after which the "
-                                                           "sparsity mask will be frozen and no "
-                                                           "longer trained"),
+    "sparsity_target_epoch": with_attributes(_NUMBER,
+                                             description="The target sparsity value will be reached after this many"
+                                                         "epoch steps"),
+    "sparsity_freeze_epoch": with_attributes(_NUMBER,
+                                             description="The number of epoch steps after which the "
+                                                         "sparsity mask will be frozen and no "
+                                                         "longer trained"),
+    "update_per_optimizer_step": with_attributes(_BOOLEAN,
+                                                 description="Whether the function-based sparsity level schedulers should"
+                                                             "update the sparsity level after each optimizer step instead"
+                                                             "of each epoch step."),
+    "steps_per_epoch": with_attributes(_NUMBER,
+                                       description="Number of optimizer steps in one epoch. Required to start proper scheduling"
+                                                   "in the first training epoch if 'update_per_optimizer_step' is true"),
     "multistep_steps": with_attributes(_ARRAY_OF_NUMBERS,
                                        description="A list of scheduler steps at which to transition "
                                                    "to the next scheduled sparsity level (multistep "

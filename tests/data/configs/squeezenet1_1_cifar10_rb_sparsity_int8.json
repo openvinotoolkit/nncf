@@ -20,7 +20,7 @@
                 "schedule": "polynomial",
                 "sparsity_init": 0.2,
                 "sparsity_target": 0.6,
-                "sparsity_steps": 5
+                "sparsity_target_epoch": 5
             }
         },
         {
