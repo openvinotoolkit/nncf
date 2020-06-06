@@ -12,7 +12,7 @@
 """
 import torch
 from nncf import NNCFConfig
-from tests.test_helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test
+from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test
 import onnx
 
 

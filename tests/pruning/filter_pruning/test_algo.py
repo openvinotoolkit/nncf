@@ -19,9 +19,10 @@ from nncf.pruning.filter_pruning.algo import FilterPruningController
 from nncf.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_binary_mask
 from nncf.pruning.schedulers import BaselinePruningScheduler
-from tests.pruning.test_helpers import get_basic_pruning_config, PruningTestModel, \
-    BigPruningTestModel, create_dataloader
-from tests.test_helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement
+from tests.pruning.helpers import get_basic_pruning_config, PruningTestModel, \
+    BigPruningTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
+    create_mock_dataloader
 
 
 def create_pruning_algo_with_config(config):
@@ -216,7 +217,7 @@ def test_zeroing_gradients(zero_grad):
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
     device = next(pruned_model.parameters()).device
-    data_loader = create_dataloader(config)
+    data_loader = create_mock_dataloader(config)
 
     params_to_optimize = get_parameter_groups(pruned_model, config)
     optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)

@@ -20,7 +20,7 @@ import torch.nn.functional as F
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_dummy_forward_fn, GraphBuilder
 from tests.test_compressed_graph import get_basic_quantization_config
-from tests.test_helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_compressed_model_and_algo_for_test
 
 TEST_TRACING_CONTEXT = 'test'
 

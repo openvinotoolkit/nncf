@@ -20,10 +20,10 @@ from torch import nn
 from torch.nn import DataParallel
 
 from nncf.checkpoint_loading import load_state
-from tests.quantization.test_algo_quantization import get_basic_quantization_config, get_basic_asym_quantization_config
+from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.sparsity.rb.test_algo import get_basic_sparsity_config
-from tests.test_helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 
 
 class BasicLinearTestModel(nn.Module):
@@ -40,9 +40,18 @@ def get_const_sparsity_config():
     config['compression'] = {'algorithm': 'const_sparsity'}
     return config
 
-@pytest.mark.parametrize('config_provider', (get_basic_quantization_config, get_basic_asym_quantization_config,
-                                             get_basic_sparsity_config,
-                                             get_basic_magnitude_sparsity_config, get_const_sparsity_config),
+
+def get_basic_asym_quantization_config(model_size=4):
+    config = get_quantization_config_without_range_init(model_size)
+    config['compression']['activations'] = {"mode": "asymmetric"}
+    config['compression']['initializer']['range'] = {"num_init_steps": 0}
+    return config
+
+
+@pytest.mark.parametrize('config_provider',
+                         (get_quantization_config_without_range_init, get_basic_asym_quantization_config,
+                          get_basic_sparsity_config,
+                          get_basic_magnitude_sparsity_config, get_const_sparsity_config),
                          ids=('SymQuantization', 'AsymQuantization', 'Sparsity', 'MagnitudeSparsity', 'ConstSparsity'))
 @pytest.mark.parametrize('model_provider', (BasicConvTestModel, BasicLinearTestModel),
                          ids=('Conv2d', 'Linear'))
@@ -55,7 +64,6 @@ class TestCompressionAlgos:
 
         compression_ctrl.export_model(test_path)
         assert os.path.exists(test_path)
-
 
 
 QUANTIZATION = 'quantization'
@@ -101,7 +109,6 @@ def _algos(request):
                 # resume works fine for magnitude <-> const combo, because they have similar parameters
                 if s != v and ('magnitude' in s and 'const' in v or 'const' in s and 'magnitude' in v):
                     resume_ok = True
-
 
     return {
         'save_algos': save_algos,

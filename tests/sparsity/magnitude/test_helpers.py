@@ -16,7 +16,7 @@ from torch import nn
 
 from nncf.config import NNCFConfig
 from tests.quantization.test_functions import check_equal
-from tests.test_helpers import create_conv
+from tests.helpers import create_conv
 
 
 class MagnitudeTestModel(nn.Module):

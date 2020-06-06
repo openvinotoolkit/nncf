@@ -4,7 +4,7 @@ import pytest
 from tests import test_models
 from tests.test_compressed_graph import check_model_graph, QUANTIZERS, QuantizeTestCaseConfiguration
 from tests.test_compressed_graph import get_basic_quantization_config
-from tests.test_helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_compressed_model_and_algo_for_test
 
 TEST_MODELS = [(("alexnet.dot", "lenet.dot"),
                 (test_models.AlexNet, test_models.LeNet),

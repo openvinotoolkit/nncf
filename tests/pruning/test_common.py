@@ -14,8 +14,8 @@ import pytest
 
 from nncf.pruning.schedulers import BaselinePruningScheduler, ExponentialPruningScheduler, \
     ExponentialWithBiasPruningScheduler
-from tests.pruning.test_helpers import PruningTestModel, get_basic_pruning_config
-from tests.test_helpers import create_compressed_model_and_algo_for_test
+from tests.pruning.helpers import PruningTestModel, get_basic_pruning_config
+from tests.helpers import create_compressed_model_and_algo_for_test
 
 
 @pytest.mark.parametrize('algo',
