@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
+from tests.quantization.test_precision_init import create_hawq_test_config
 from torch.utils.data import DataLoader
 
 from examples.common.models.classification import squeezenet1_1_custom
@@ -28,9 +29,8 @@ from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
     BaseQuantizer
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
-from tests.quantization.test_precision_init import create_hawq_test_config
-from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, get_squeezenet_quantization_config, \
-    distributed_init_test_default, post_compression_test_distr_init
+from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, RankDatasetMock, \
+    get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init
 from tests.helpers import TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, create_mock_dataloader, MockModel
 
