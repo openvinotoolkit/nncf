@@ -21,11 +21,11 @@ The framework is designed so that the modifications to your original training co
  1. **Add** the imports required for NNCF:
     ```python
     import nncf
-    from nncf import Config, create_compressed_model, load_state
+    from nncf import NNCFConfig, create_compressed_model, load_state
     ```
  2. Load the NNCF JSON configuration file that you prepared during Step 1:
     ```python
-    nncf_config = Config.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"
+    nncf_config = NNCFConfig.from_json("nncf_config.json")  # Specify a path to your own NNCF configuration file in place of "nncf_config.json"
     ```
  3. (Optional) For certain algorithms such as quantization it is highly recommended to **initialize the algorithm** by  
  passing training data via `nncf_config` prior to starting the compression fine-tuning properly:
@@ -33,22 +33,22 @@ The framework is designed so that the modifications to your original training co
     from nncf import register_default_init_args
     nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
     ```
-    Training data should be stored in `CompressionAlgorithmInitArgs` structure. `create_default_init_args` is a helper 
-    method that creates this structure for all available initializations by taking criterion and data loader.  
+    Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
+    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking criterion and data loader.  
 
-    The initialization expects that the model is called with its first argument equal to the dataloader output. 
-    If your model has more complex input arguments you can create and pass an instance of 
-    `nncf.initialization.InitializingDataLoader` that overrides its `__next__` method to return 
+    The initialization expects that the model is called with its first argument equal to the dataloader output.
+    If your model has more complex input arguments you can create and pass an instance of
+    `nncf.initialization.InitializingDataLoader` that overrides its `__next__` method to return
     a tuple of (_single model input_ , _the rest of the model inputs as a kwargs dict_).
- 
+
  4. Right after you create an instance of the original model and load its weights, **wrap the model** by making the following call
     ```python
     compression_ctrl, compressed_model = create_compressed_model(model, nncf_config)
     ```
     The `create_compressed_model` function parses the loaded configuration file and returns two objects. `compression_ctrl` is a "controller" object that can be used during compressed model training to adjust certain parameters of the compression algorithm (according to a scheduler, for instance), or to gather statistics related to your compression algorithm (such as the current level of sparsity in your model).
-    
+
  5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training. If you do so, add the following call afterwards:
-   ```
+   ```python
    compression_ctrl.distributed()
    ```
 
@@ -57,16 +57,16 @@ The framework is designed so that the modifications to your original training co
 
 6. In the **training loop**, make the following changes:
      - After inferring the model, take a compression loss and add it (using the `+` operator) to the common loss, for example cross-entropy loss:
-        ```
+        ```python
         compression_loss = compression_ctrl.loss()
         loss = cross_entropy_loss + compression_loss
         ```
      - Call the scheduler `step()` after each training iteration:
-        ```
+        ```python
         compression_ctrl.scheduler.step()
         ```
      - Call the scheduler `epoch_step()` after each training epoch:
-        ```
+        ```python
         compression_ctrl.scheduler.epoch_step()
         ```
 
@@ -86,7 +86,9 @@ You can save the `compressed_model` object using `torch.save` as usual.
 However, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should have the
 same structure with regards to PyTorch module and parameters as it was when the checkpoint was saved.
 In practice this means that you should use the same compression algorithms (i.e. the same NNCF configuration file) when loading a compressed model checkpoint.
-For easier loading process you can use the `nncf.load_state` function.
+Use the optional `resuming_checkpoint` argument of the `create_compressed_model` helper function to specify a PyTorch state dict to be loaded into your model once it is created.
+
+Alternatively, you can use the `nncf.load_state` function.
 It will attempt to load a PyTorch state dict into a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and the model layer identifiers, and then do the matching between the layers.
 Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
 `is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.

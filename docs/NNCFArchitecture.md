@@ -36,7 +36,7 @@ This information is stored as an `OperationExecutionContext` of the operator. If
 This process occurs dynamically during each `forward` call of an `NNCFNetwork`. If the control flow is data-dependent, a whole new subgraph of the model will be built for each branching in the model definition. The graph building mechanism can cope with some branching, but it is advisable to disable NNCF tracing for the parts of the model that exhibit branching (such as the "detection output" layers of object detection networks) by using a `no_nncf_trace()` context.
 
 
-#### Operation scope and addressing
+### Operation scope and addressing
 A unique identifier of a node in the `NNCFGraph` - i.e. an operation in the DNN control flow graph - is the `OperationExecutionContext`.
 However, in most cases the input-agnostic part of `OperationExecutionContext` is enough to identify an operation in the model control flow graph for purposes of inserting compression-related hooks into the model.
 This `InputAgnosticOperationExecutionContext` is built using a) and b) from the information list gathered to build a regular `OperationExecutionContext`. Its string representation is a concatenation of a `Scope` string representation, the name of the operator (Python function), underscore `_`, and the order of the operator call in the same `Scope`. In turn, the string representation of a `Scope` is a sequence of "__module_class_name__[__module_field_name__]/" substrings, where each such substring corresponds to a __module_class_name__ type of `torch.nn.Module` being called as a __module_field_name__ member field of its parent module, and slashes `/` separate the adjacent levels of the module call hierarchy.
@@ -67,7 +67,7 @@ Each `torch.nn.Conv2d` module call internally calls a `conv2d` operator, which w
  These string definitions are referred to as "scopes" in the NNCF configuration files (as in `"ignored_scopes"` or `"target_scopes"`), and help specify exact operations for inclusion into or exclusion from compression or for separate compression parameter specification.
 
 
-#### Compression algorithm API and interaction with NNCFNetwork
+### Compression algorithm API and interaction with NNCFNetwork
 A compression algorithm is a modification of a regular model control flow according to some trainable or non-trainable parameters. Modification of the control flow is done via a hook, and the trainable parameters are stored inside special NNCF modules. Each compression algorithm therefore consists of taking an unmodified model, analyzing it and then determining a set of modifications necessary for modifying the model's execution so that it now takes specific compression into account.
 
 `NNCFNetwork` defines a common interface for compression algorithms to specify the location for hook insertion (based on a `InputAgnosticOperationExecutionContext` of an operation) and the hook itself. It also allows algorithms to register external modules within itself so that the trainable parameters of the compression algorithm could be saved as a checkpoint along with the model while also being undistinguishable from any other trainable parameter of the original model from the training pipeline optimizer's standpoint.
