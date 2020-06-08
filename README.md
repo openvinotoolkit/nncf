@@ -1,6 +1,12 @@
 # Neural Network Compression Framework (NNCF)
 
-This module contains a PyTorch\*-based framework and samples for neural networks compression. The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework architecture is unified to make it easy to add different compression methods. The samples demonstrate the usage of compression algorithms for three different use cases on public models and datasets: Image Classification, Object Detection and Semantic Segmentation.
+This repository contains a PyTorch\*-based framework and samples for neural networks compression.
+ 
+The framework is organized as a Python\* package that can be built and used in a standalone mode. 
+The framework architecture is unified to make it easy to add different compression methods.
+ 
+The samples demonstrate the usage of compression algorithms for three different use cases on public models and datasets: Image Classification, Object Detection and Semantic Segmentation.
+Compression results achievable with the NNCF-powered samples are reported [here](#nncf-compression-results).
 
 ## Key Features
 
@@ -48,12 +54,12 @@ comp_ctrl.export_model("compressed_model.onnx")
 torch.save(compressed_model.state_dict(), "compressed_model.pth")
 ```
 
-For a more detailed description of NNCF usage in your training code, see [Usage.md](./docs/Usage.md). For in-depth examples of NNCF integration, browse the [sample scripts](#Model Compression Samples) code, or the [example patches](#Third-party repository integration) to third-party repositories.
+For a more detailed description of NNCF usage in your training code, see [Usage.md](./docs/Usage.md). For in-depth examples of NNCF integration, browse the [sample scripts](#model-compression-samples) code, or the [example patches](#third-party-repository-integration) to third-party repositories.
 
 For more details about the framework architecture, refer to the [NNCFArchitecture.md](./docs/NNCFArchitecture.md).
 
 
-### Model Compression Samples
+## Model Compression Samples
 
 For a quicker start with NNCF-powered compression, you can also try the sample scripts, each of which provides a basic training pipeline for classification, semantic segmentation and object detection neural network training correspondingly.
 
@@ -62,18 +68,18 @@ To run the samples please refer to the corresponding tutorials:
 - [Object Detection sample](examples/object_detection/README.md)
 - [Semantic Segmentation sample](examples/semantic_segmentation/README.md)
 
-### Third-party repository integration
+## Third-party repository integration
 NNCF may be straightforwardly integrated into training/evaluation pipelines of third-party repositories.
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into select repositories.
 
 
-### System requirements
+## System requirements
 - Ubuntu\* 16.04 or later (64-bit)
 - Python\* 3.6 or later
 - NVidia CUDA\* Toolkit 10.2 or later
-- PyTorch\* 1.5 or higher.
+- PyTorch\* 1.5 or later.
 
-### Installation
+## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
 #### As a package built from checked-out repository:
@@ -89,12 +95,14 @@ We suggest to install or use the package in the [Python virtual environment](htt
 `python setup.py install --cpu-only`
 
 #### As a Docker image
-Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#Model Compression Samples).
+Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
+## Contributing
+Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
 ## NNCF compression results
 
-Achieved using sample scripts and NNCF configuration files provided with this repository. See README.md files for [sample scripts](#Model Compression Samples) for links to exact configuration files and final PyTorch checkpoints.
+Achieved using sample scripts and NNCF configuration files provided with this repository. See README.md files for [sample scripts](#model-compression-samples) for links to exact configuration files and final PyTorch checkpoints.
 
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
@@ -139,3 +147,7 @@ Achieved using sample scripts and NNCF configuration files provided with this re
 |UNet|INT8|Mapillary|56.23|56.12|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.0|
 
+
+
+## Legal Information
+[*] Other names and brands may be claimed as the property of others.
