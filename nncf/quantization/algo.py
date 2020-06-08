@@ -715,7 +715,7 @@ class QuantizationController(CompressionAlgorithmController):
         init_config = self.quantization_config.get('initializer', {})
         init_range_config = init_config.get('range', {})
 
-        if not init_config:
+        if not init_range_config:
             try:
                 self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
                 has_range_init_args = True

@@ -17,14 +17,14 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
+from tests.quantization.test_precision_init import create_hawq_test_config
 from torch.utils.data import DataLoader
 
 from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import InitializingDataLoader
+from nncf.initialization import InitializingDataLoader, register_default_init_args
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
     BaseQuantizer
 from nncf.structures import QuantizationRangeInitArgs
@@ -32,7 +32,7 @@ from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, RankDatasetMock, \
     get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init
 from tests.helpers import TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_mock_dataloader
+    create_compressed_model_and_algo_for_test, create_mock_dataloader, MockModel
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
@@ -337,3 +337,24 @@ def test_percentile_init(quantization_mode):
 
     weight_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
     assert_range(weight_quantizer)
+
+
+@pytest.mark.parametrize(("config_cutter", "range_init_call_count", "precision_init_call_count"),
+                         [
+                             (lambda x: x['initializer'].pop('range'), 1, 1),
+                             (lambda x: x.pop('initializer'), 1, 0),
+                             (lambda x: x['initializer'].pop('precision'), 1, 0),
+                             (lambda x: x['initializer']['range'].update({'num_init_steps': 0}), 0, 1),
+                         ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])
+def test_range_init_is_called(config_cutter, range_init_call_count, precision_init_call_count, mocker):
+    config = create_hawq_test_config()
+    model = MockModel()
+    config = register_default_init_args(config, mocker.stub(), mocker.stub())
+    range_init_spy = mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
+    precision_init_spy = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.apply_init')
+
+    config_cutter(config['compression'])
+    create_compressed_model_and_algo_for_test(model, config)
+
+    assert range_init_spy.call_count == range_init_call_count
+    assert precision_init_spy.call_count == precision_init_call_count
