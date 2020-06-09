@@ -433,7 +433,7 @@ def test_hawq_manual_configs(manual_config_params, hw_config):
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    table = compression_ctrl.get_bit_stats()
+    table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
     # pylint: disable=protected-access
     assert table._rows == bit_stats
 
@@ -529,6 +529,6 @@ def test_quantization_configs__with_precisions_list():
     ref_rows = [['2', '16.667', '16.667', '33.333'],
                 ['4', '16.667', '16.667', '33.333'],
                 ['6', '0', '33.333', '33.333']]
-    table = compression_ctrl.get_bit_stats()
+    table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
     # pylint: disable=protected-access
     assert table._rows == ref_rows
