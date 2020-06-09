@@ -10,10 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
 from nncf import NNCFConfig
-from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test
-import onnx
+from tests.test_helpers import TwoConvTestModel, load_exported_onnx_version
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -30,20 +28,10 @@ def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
     return nncf_config
 
 
-def load_exported_onnx_version(model: torch.nn.Module, should_be_onnx_standard: bool,
-                               path_to_storage_dir) -> onnx.ModelProto:
-    nncf_config = get_config_for_export_mode(should_be_onnx_standard)
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    onnx_checkpoint_path = path_to_storage_dir / 'model.onnx'
-    compression_ctrl.export_model(onnx_checkpoint_path)
-    model_proto = onnx.load_model(onnx_checkpoint_path)
-    return model_proto
-
-
 def test_onnx_export_to_fake_quantize(tmp_path):
     model = TwoConvTestModel()
-    onnx_model_proto = load_exported_onnx_version(model,
-                                                  should_be_onnx_standard=False,
+    nncf_config = get_config_for_export_mode(should_be_onnx_standard=False)
+    onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     num_fq = 0
     num_model_nodes = 0
@@ -63,8 +51,8 @@ def test_onnx_export_to_fake_quantize(tmp_path):
 
 def test_onnx_export_to_quantize_dequantize(tmp_path):
     model = TwoConvTestModel()
-    onnx_model_proto = load_exported_onnx_version(model,
-                                                  should_be_onnx_standard=True,
+    nncf_config = get_config_for_export_mode(should_be_onnx_standard=True)
+    onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     num_q = 0
     num_dq = 0

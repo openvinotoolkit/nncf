@@ -218,13 +218,14 @@ class DefaultScopeNodeMatcher:
         self._nx_graph.add_node(node_key, **attrs)
 
         has_traced_inputs = False
-        for info in op_exec_context.tensor_metas:
+        for i, info in enumerate(op_exec_context.tensor_metas):
             if info is None or info.creator_id is None:
                 continue
             parent = self._node_id_to_key_dict[info.creator_id]
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
+            self._nx_graph.edges[parent, node_key]['in_port'] = i
 
         if not has_traced_inputs:
             self._inputless_nx_nodes[node_key] = self._nx_graph.nodes[node_key]

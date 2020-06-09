@@ -13,19 +13,20 @@
 from typing import List
 
 import torch
+from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController
 from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
+from nncf.pruning.export_helpers import ModelPruner
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
-
-from nncf.nncf_logger import logger as nncf_logger
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -147,9 +148,61 @@ class FilterPruningController(BasePruningAlgoController):
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
+    @staticmethod
+    def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
+        """
+        Creating a table with comparison of model params number before and after pruning.
+        :param old_modules_info: Information about pruned layers before actually prune layers.
+        :param new_modules_info: Information about pruned layers after actually prune layers.
+        """
+        table = Texttable()
+        header = ["Name", "Weight's shape", "New weight's shape", "Bias shape", "New bias shape",
+                  "Weight's params count", "New weight's params count",
+                  "Mask zero %", "Layer PR"]
+        data = [header]
+
+        for layer in old_modules_info.keys():
+            assert layer in new_modules_info
+
+            drow = {h: 0 for h in header}
+            drow["Name"] = layer
+            drow["Weight's shape"] = old_modules_info[layer]['w_shape']
+            drow["New weight's shape"] = new_modules_info[layer]['w_shape']
+            drow["Bias shape"] = old_modules_info[layer]['b_shape']
+            drow["New bias shape"] = new_modules_info[layer]['b_shape']
+
+            drow["Weight's params count"] = old_modules_info[layer]['params_count']
+            drow["New weight's params count"] = new_modules_info[layer]['params_count']
+
+            drow["Mask zero %"] = old_modules_info[layer]['mask_pr']
+
+            drow["Layer PR"] = 1 - new_modules_info[layer]['params_count'] / old_modules_info[layer]['params_count']
+            row = [drow[h] for h in header]
+            data.append(row)
+        table.add_rows(data)
+        return table
+
+    # pylint: disable=protected-access
     def export_model(self, filename, *args, **kwargs):
         """
         This function saving model without actually pruning the layers, just nullifies the necessary filters by mask.
         """
         self._apply_masks()
+        model = self._model.eval().cpu()
+        graph = model.get_original_graph()
+        nx_graph = graph._nx_graph
+
+        parameters_count_before = self.get_parameters_count_in_model()
+        pruned_layers_stats = self.get_stats_for_pruned_modules()
+
+        model_pruner = ModelPruner(model, graph, nx_graph)
+        model_pruner.prune_model()
+
+        parameters_count_after = self.get_parameters_count_in_model()
+        new_pruned_layers_stats = self.get_stats_for_pruned_modules()
+        stats = self.create_stats_table_for_pruning_export(pruned_layers_stats, new_pruned_layers_stats)
+
+        nncf_logger.info(stats.draw())
+        nncf_logger.info('Final Model Pruning Rate = %.3f', 1 - parameters_count_after / parameters_count_before)
+
         super().export_model(filename, *args, **kwargs)

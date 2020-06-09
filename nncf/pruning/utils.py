@@ -161,5 +161,26 @@ def get_last_pruned_modules(target_model: NNCFNetwork, pruned_ops_types):
     return last_pruned_modules
 
 
+def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
+    """
+    Source is a node of sourse such that there is path from this node to nx_node and on this path
+    no node has one of sources_types type.
+    :param sources_types: list of sources types
+    :param nncf_node: NNCFNode to get sources
+    :param graph: NNCF graph to work with
+    :return: list of all sources nodes
+    """
+    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=sources_types,
+                                        visited=visited)
+
+    source_nodes = graph.traverse_graph(nncf_node, partial_traverse_function, False)
+    return source_nodes
+
+
 def is_conv_with_downsampling(conv_module):
     return not torch.all(torch.tensor(conv_module.stride) == 1)
+
+
+def is_grouped_conv(conv_module):
+    return conv_module.groups != 1

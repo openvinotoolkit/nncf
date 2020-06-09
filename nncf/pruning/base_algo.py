@@ -23,7 +23,7 @@ from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.utils import get_bn_for_module_scope, \
-    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling
+    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv
 
 from nncf.nncf_logger import logger as nncf_logger
 
@@ -90,6 +90,10 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
             if not self.prune_downsample_convs and is_conv_with_downsampling(module):
                 nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
                                  " this scope is convolution with downsample".format(module_scope_str))
+                continue
+            if is_grouped_conv(module):
+                nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
+                                 " this scope is grouped convolution".format(module_scope_str))
                 continue
 
             nncf_logger.info("Adding Weight Pruner in scope: {}".format(module_scope_str))
@@ -203,7 +207,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
     def pruning_rate_for_mask(self, minfo: PrunedModuleInfo):
         mask = self._get_mask(minfo)
-        pruning_rate = mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
+        pruning_rate = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
         return pruning_rate
 
     def mask_shape(self, minfo: PrunedModuleInfo):
@@ -223,7 +227,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
             drow["Mask Shape"] = list(self.mask_shape(minfo))
 
-            drow["Mask zero %"] = 1.0 - self.pruning_rate_for_mask(minfo)
+            drow["Mask zero %"] = self.pruning_rate_for_mask(minfo)
 
             drow["PR"] = self.pruning_rate_for_weight(minfo)
 
@@ -238,4 +242,45 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
     @staticmethod
     def add_algo_specific_stats(stats):
+        return stats
+
+    def get_parameters_count_in_model(self):
+        """
+        Return total amount of model parameters.
+        """
+        count = 0
+        for param in self._model.parameters():
+            count = count + param.numel()
+        return count
+
+    def get_stats_for_pruned_modules(self):
+        """
+        Return dict with information about pruned modules. Keys in dict is module names, values is dicts with next keys:
+         'w_shape': shape of module weight,
+         'b_shape': shape of module bias,
+         'params_count': total number of params in module
+         'mask_pr': proportion of zero elements in filter pruning mask.
+        """
+        stats = {}
+        for minfo in self.pruned_module_info:
+            layer_info = {}
+            layer_info["w_shape"] = list(minfo.module.weight.size())
+            layer_info["b_shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
+            layer_info["params_count"] = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
+
+            layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
+
+            if PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules and \
+                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                bn_info = {}
+                bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME]
+                bn_info['w_shape'] = bn_module.weight.size()
+
+                bn_info["b_shape"] = bn_module.bias.size() if bn_module.bias is not None else []
+                bn_info['params_count'] = sum(p.numel() for p in bn_module.parameters() if p.requires_grad)
+                bn_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
+                stats[minfo.module_name + '/BatchNorm'] = bn_info
+
+            stats[minfo.module_name] = layer_info
+
         return stats
