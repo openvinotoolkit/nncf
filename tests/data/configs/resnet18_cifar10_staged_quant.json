@@ -10,7 +10,6 @@
         ]
     },
     "num_classes": 10,
-    "epochs": 5,
     "compression": [
         {
             "algorithm": "quantization",
@@ -18,11 +17,11 @@
                 "base_lr": 3.1e-4,
                 "base_wd": 1e-5,
                 "batch_multiplier": 1,
-                "activations_quant_start_epoch": 1,
-                "weights_quant_start_epoch": 2,
-                "lr_poly_drop_start_epoch": 3,
+                "activations_quant_start_epoch": 0,
+                "weights_quant_start_epoch": 1,
+                "lr_poly_drop_start_epoch": 0,
                 "lr_poly_drop_duration_epochs": 1,
-                "disable_wd_start_epoch": 3
+                "disable_wd_start_epoch": 1
             },
             "ignored_scopes": [
                 "ResNet/Linear[fc]",

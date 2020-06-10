@@ -44,7 +44,7 @@ from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo,
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
-    QuantizerExportMode
+    QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
@@ -717,23 +717,16 @@ class QuantizationController(QuantizationControllerBase):
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
-        modules_to_init = OrderedDict(sorted(modules_to_init.items()))
+        modules_to_init = OrderedDict(sorted(modules_to_init.items()))  # type: Dict[Scope, BaseQuantizer]
 
         runner = DataLoaderInitializeRunner(self._model, modules_to_init)
 
         # Some quantizers can be disabled in a staged scenario when range initialization might be called multiple times.
         # Need to save originally disabled quantizers for restoring their state after initialization
-        originally_disabled = []
-        for module, _ in modules_to_init.values():
-            if not module.is_enabled_quantization():
-                originally_disabled.append(module)
-            module.disable_quantization()
-
+        quantizers_switcher = QuantizersSwitcher(list(modules_to_init.values()))
+        quantizers_switcher.disable_quantizers()
         runner.run(data_loader, num_init_steps)
-
-        for module, _ in modules_to_init.values():
-            if module not in originally_disabled:
-                module.enable_quantization()
+        quantizers_switcher.enable_quantizers()
 
         self._model.rebuild_graph()
 

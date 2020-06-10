@@ -233,13 +233,17 @@ def train_staged(config, compression_ctrl, model, criterion, is_inception, optim
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
+        # statistics (e.g. portion of the enabled quantizers) is related to the finished epoch,
+        # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
+        # portion of enabled quantizers)
+        if is_main_process():
+            print_statistics(stats)
+
         # update compression scheduler state at the end of the epoch
         compression_ctrl.scheduler.epoch_step()
         optimizer_scheduler.epoch_step()
 
         if is_main_process():
-            print_statistics(stats)
-
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
             checkpoint = {
                 'epoch': epoch + 1,

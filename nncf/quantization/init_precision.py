@@ -12,7 +12,7 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import no_nncf_trace
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, CompressionModuleType
-from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
+from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer, QuantizersSwitcher
 from .hessian_trace import HessianTraceEstimator
 from .hw_precision_constraints import HWPrecisionConstraints
 from .quantizer_id import QuantizerId
@@ -203,25 +203,23 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     @staticmethod
     def disable_all_gradients_except_weights_of_quantized_modules(
-        all_quantizations: Dict['Scope', BaseQuantizer],
+        quantizers_switcher: QuantizersSwitcher,
         quantized_weight_modules_registry: Dict[str, torch.nn.Module],
         model: nn.Module,
         scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.
-        :param all_quantizations: all quantizers per scope
+        :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param quantized_weight_modules_registry: modules with quantized weights per scope
         :param model: model to access all parameters
         :param scopes_of_skipped_weight_quantizers: list of string scopes of layers that have a single precision
         constraint and which weights should be skipped from bitwidth initialization
         :return: list of names of the parameters that were originally disabled
         """
-        for module in all_quantizations.values():
-            module.disable_gradients()
+        quantizers_switcher.disable_quantizers()
 
         disabled_gradients = []
-
         # remember gradients of quantized modules that were enabled
         gradients_to_enable = []
         for scope, quantized_module in quantized_weight_modules_registry.items():
@@ -261,8 +259,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                 originally_disabled.append(module)
             module.disable_quantization()
 
+        quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         disabled_gradients = self.disable_all_gradients_except_weights_of_quantized_modules(
-            self._all_quantizers_per_scope,
+            quantizers_switcher,
             self._algo.quantized_weight_modules_registry,
             self._model,
             self._scopes_of_skipped_weight_quantizers)
@@ -271,28 +270,23 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                                                 self._num_data_points)
         avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
 
-        self.restore_disabled_gradients( self._all_quantizers_per_scope, self._model, disabled_gradients)
-
-        for module in self._all_quantizers_per_scope.values():  # type: BaseQuantizer
-            if module not in originally_disabled:
-                module.enable_quantization()
+        self.restore_disabled_gradients(quantizers_switcher, self._model, disabled_gradients)
 
         return TracesPerLayer(avg_traces)
 
     @staticmethod
-    def restore_disabled_gradients(all_quantizers: Dict['Scope', BaseQuantizer],
+    def restore_disabled_gradients(quantizers_switcher: QuantizersSwitcher,
                                    model: nn.Module, disabled_gradients: List[str]):
         """
         Enables gradients of all parameters back, except for ones that were originally disabled
-        :param all_quantizers: all quantizers per scope
+        :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
         :param disabled_gradients:  list of names of the parameters that were originally disabled
         """
         for param_name, param in model.named_parameters():
             if param_name not in disabled_gradients:
                 param.requires_grad = True
-        for module in all_quantizers.values():
-            module.enable_gradients()
+        quantizers_switcher.enable_quantizers()
 
     @staticmethod
     def get_configs_constrained_by_order(bits_: List[int], num_layers: int) -> List[List[int]]:

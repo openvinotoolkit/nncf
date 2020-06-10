@@ -131,7 +131,7 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["cifar10", "cifar100"],
+    "classification": ["cifar10", "cifar100", "cifar10"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
@@ -146,7 +146,7 @@ CONFIGS = {
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256],
+    "classification": [256, 256, 256],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from enum import Enum
-from typing import Dict
+from typing import Dict, Iterable, List, Callable
 
 import numpy as np
 import torch
@@ -50,7 +50,6 @@ class QuantizerConfig:
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
-
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
@@ -139,9 +138,11 @@ class BaseQuantizer(nn.Module):
 
     def enable_quantization(self):
         self._is_enabled = True
+        self.enable_gradients()
 
     def disable_quantization(self):
         self._is_enabled = False
+        self.disable_gradients()
 
     def forward(self, x):
         if is_debug():
@@ -190,6 +191,32 @@ class BaseQuantizer(nn.Module):
 
     def run_export_quantization(self, x: torch.Tensor):
         raise NotImplementedError
+
+
+class QuantizersSwitcher:
+    """ Enables/disables quantizers with saving and restoring original state """
+
+    def __init__(self, quantizers: List[BaseQuantizer]):
+        self.originally_disabled = []  # type: List[BaseQuantizer]
+        self.originally_enabled = []  # type: List[BaseQuantizer]
+        self._quantizers = quantizers
+
+    def disable_quantizers(self):
+        for module in self._quantizers:  # type: BaseQuantizer
+            if not module.is_enabled_quantization():
+                self.originally_disabled.append(module)
+            if module not in self.originally_enabled:
+                module.disable_quantization()
+        self.originally_enabled = []
+
+    def enable_quantizers(self):
+        for module in self._quantizers:  # type: BaseQuantizer
+            if module.is_enabled_quantization():
+                self.originally_enabled.append(module)
+            if module not in self.originally_disabled:
+                module.enable_quantization()
+        self.originally_disabled = []
+
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)

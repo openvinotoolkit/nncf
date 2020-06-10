@@ -35,17 +35,21 @@ class StagedQuantizationScheduler(CompressionScheduler):
         super().epoch_step(epoch)
         if self.last_epoch + 1 == self.activations_quant_start_epoch:
             # TODO: prevent multiple init range when both enabled at the same time and when start_epoch is zero for both
-            self.algo.init_range()
-            self.algo.enable_activation_quantization()
             logger.info('Enabled quantization of activations')
-        if self.last_epoch + 1 == self.weights_quant_start_epoch:
+            self.algo.enable_activation_quantization()
             self.algo.init_range()
-            self.algo.enable_weight_quantization()
+
+        if self.last_epoch + 1 == self.weights_quant_start_epoch:
             logger.info('Enabled quantization of weights')
+            self.algo.enable_weight_quantization()
+            self.algo.init_range()
+
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
         print('StagedQuantizationScheduler: load_state_dict+')
+        # just enables/disables quantizers without calling initialization of ranges, because it's called on epoch_step
+        # in the end of previous epoch before saving the scheduler's state dict.
         self._set_quantization_status()
 
     def _set_quantization_status(self):
@@ -56,15 +60,12 @@ class StagedQuantizationScheduler(CompressionScheduler):
         # Should compare with last_epoch + 1, because epoch_step is called in the end of epoch.
         # If last_epoch = -1 and start_epoch = 0, it means that quantizers should be enabled from the very beginning.
         if self.last_epoch + 1 >= self.activations_quant_start_epoch:
-            # TODO: is initialization not required in ctor and load_state_dict? resume and
-            # self.algo.init_range()
             self.algo.enable_activation_quantization()
             logger.info('Enabled quantization of activations')
         else:
             self.algo.disable_activation_quantization()
             logger.info('Disabled quantization of activations')
         if self.last_epoch + 1 >= self.weights_quant_start_epoch:
-            # self.algo.init_range()
             self.algo.enable_weight_quantization()
             logger.info('Enabled quantization of weights')
         else:

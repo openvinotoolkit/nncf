@@ -39,7 +39,7 @@ from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import HAWQPrecisionInitializer, TracesPerLayer, Perturbations, \
     PerturbationObserver, HAWQDebugger
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig
+from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig, QuantizersSwitcher
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
@@ -319,8 +319,8 @@ def test_disable_quantizer_gradients():
 
 
 def test_enable_quantizer_gradients():
-    all_quantizations, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
-    HAWQPrecisionInitializer.restore_disabled_gradients(all_quantizations, model, disabled_parameters)
+    quantizers_swicther, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
+    HAWQPrecisionInitializer.restore_disabled_gradients(quantizers_swicther, model, disabled_parameters)
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     assert original_requires_grad_per_param == actual_requires_grad_per_param
 
@@ -336,12 +336,13 @@ def disable_quantizer_gradients():
     original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     all_quantizations = get_all_modules_by_type(model, quantization_types)
+    quantizers_switcher = QuantizersSwitcher(list(all_quantizations.values()))
     disabled_parameters = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
-        all_quantizations,
+        quantizers_switcher,
         compression_ctrl.quantized_weight_modules_registry,
         model,
         get_scopes_of_skipped_weight_quantizers())
-    return all_quantizations, disabled_parameters, model, original_requires_grad_per_param
+    return quantizers_switcher, disabled_parameters, model, original_requires_grad_per_param
 
 
 def get_path_to_bitwidth_dump(tmp_path, rank):
