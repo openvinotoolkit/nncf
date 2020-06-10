@@ -12,7 +12,7 @@
 """
 import pytest
 
-from tests.pruning.test_helpers import BigPruningTestModel, get_basic_pruning_config, \
+from tests.pruning.helpers import BigPruningTestModel, get_basic_pruning_config, \
     PruningTestModelConcat, PruningTestModelEltwise
 from tests.test_helpers import load_exported_onnx_version
 

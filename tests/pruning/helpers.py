@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
