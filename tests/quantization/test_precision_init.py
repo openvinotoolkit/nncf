@@ -50,7 +50,6 @@ from tests.test_compressed_graph import check_graph
 from tests.helpers import create_compressed_model_and_algo_for_test, MockModel, create_conv, \
     create_mock_dataloader
 
-
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
 
@@ -321,7 +320,7 @@ def test_disable_quantizer_gradients():
 
 def test_enable_quantizer_gradients():
     all_quantizations, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
-    HAWQPrecisionInitializer.enable_quantizer_gradients(model, all_quantizations, disabled_parameters)
+    HAWQPrecisionInitializer.restore_disabled_gradients(all_quantizations, model, disabled_parameters)
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     assert original_requires_grad_per_param == actual_requires_grad_per_param
 
@@ -334,10 +333,10 @@ def disable_quantizer_gradients():
     model = MobileNetV2(num_classes=10)
     model.eval()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     all_quantizations = get_all_modules_by_type(model, quantization_types)
-    original_requires_grad_per_param = get_requires_grad_per_param(model)
-    disabled_parameters = HAWQPrecisionInitializer.disable_quantizer_gradients(
+    disabled_parameters = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
         all_quantizations,
         compression_ctrl.quantized_weight_modules_registry,
         model,
@@ -369,8 +368,8 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
 
 
 def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
-    num_data_points = 100
-    batch_size = 10
+    num_data_points = 10
+    batch_size = 2
     config = create_hawq_test_config(batch_size, num_data_points)
 
     ngpus_per_node = torch.cuda.device_count()

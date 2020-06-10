@@ -70,13 +70,13 @@ def prepare_model_for_execution(model, config):
         # should always set the single device scope, otherwise,
         # DistributedDataParallel will use all available devices.
         torch.cuda.set_device(config.current_gpu)
-        model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[config.current_gpu])
+        model = torch.nn.parallel.distributed.DistributedDataParallel(model, device_ids=[config.current_gpu], find_unused_parameters=True)
         model_without_dp = model.module
 
     if config.execution_mode == ExecutionMode.DISTRIBUTED:
         # DistributedDataParallel will divide and allocate batch_size to all
         # available GPUs if device_ids are not set
-        model = torch.nn.parallel.DistributedDataParallel(model)
+        model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
         model_without_dp = model.module
 
     if config.execution_mode == ExecutionMode.SINGLE_GPU:

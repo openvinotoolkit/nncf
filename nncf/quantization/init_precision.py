@@ -153,16 +153,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._device = next(self._model.parameters()).device
 
     def apply_init(self):
-        disabled_gradients = self.disable_quantizer_gradients(self._all_quantizers_per_scope,
-                                                              self._algo.quantized_weight_modules_registry,
-                                                              self._model,
-                                                              self._scopes_of_skipped_weight_quantizers)
-
         traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
         if not traces_per_layer:
             raise RuntimeError('Failed to calculate hessian traces!')
-
-        self.enable_quantizer_gradients(self._model, self._all_quantizers_per_scope, disabled_gradients)
 
         num_weights = len(self._ordered_weight_quantizations)
         bits_configurations = self.get_configs_constrained_by_order(self._bits, num_weights)
@@ -209,20 +202,22 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         return full_bitwidth_per_scope
 
     @staticmethod
-    def disable_quantizer_gradients(all_quantizations: Dict['Scope', BaseQuantizer],
-                                    quantized_weight_modules_registry: Dict[str, torch.nn.Module],
-                                    model: nn.Module,
-                                    scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
+    def disable_all_gradients_except_weights_of_quantized_modules(
+        all_quantizations: Dict['Scope', BaseQuantizer],
+        quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+        model: nn.Module,
+        scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.
-        :param all_quantizations: all quantizers per quantizer id
+        :param all_quantizations: all quantizers per scope
         :param quantized_weight_modules_registry: modules with quantized weights per scope
         :param model: model to access all parameters
+        :param scopes_of_skipped_weight_quantizers: list of string scopes of layers that have a single precision
+        constraint and which weights should be skipped from bitwidth initialization
         :return: list of names of the parameters that were originally disabled
         """
         for module in all_quantizations.values():
-            module.init_stage = True
             module.disable_gradients()
 
         disabled_gradients = []
@@ -246,6 +241,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                 disabled_gradients.append(param_name)
             else:
                 param.requires_grad = False
+
         # enable gradients of quantized modules that were disabled
         for quantized_module in quantized_weight_modules_registry.values():
             for param_name, param in quantized_module.named_parameters():
@@ -257,17 +253,38 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         if self._traces_per_layer_path:
             return TracesPerLayer(torch.load(self._traces_per_layer_path))
 
+        # Some quantizers can be disabled in a staged scenario on creation of staged scheduler
+        # Need to save originally disabled quantizers for restoring their state after initialization
+        originally_disabled = []  # type: List[BaseQuantizer]
+        for module in self._all_quantizers_per_scope.values():  # type: BaseQuantizer
+            if not module.is_enabled_quantization():
+                originally_disabled.append(module)
+            module.disable_quantization()
+
+        disabled_gradients = self.disable_all_gradients_except_weights_of_quantized_modules(
+            self._all_quantizers_per_scope,
+            self._algo.quantized_weight_modules_registry,
+            self._model,
+            self._scopes_of_skipped_weight_quantizers)
+
         trace_estimator = HessianTraceEstimator(self._model, criterion, self._device, self._data_loader,
                                                 self._num_data_points)
         avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
+
+        self.restore_disabled_gradients( self._all_quantizers_per_scope, self._model, disabled_gradients)
+
+        for module in self._all_quantizers_per_scope.values():  # type: BaseQuantizer
+            if module not in originally_disabled:
+                module.enable_quantization()
+
         return TracesPerLayer(avg_traces)
 
     @staticmethod
-    def enable_quantizer_gradients(model: nn.Module, all_quantizers: Dict['Scope', nn.Module],
-                                   disabled_gradients: List):
+    def restore_disabled_gradients(all_quantizers: Dict['Scope', BaseQuantizer],
+                                   model: nn.Module, disabled_gradients: List[str]):
         """
         Enables gradients of all parameters back, except for ones that were originally disabled
-        :param all_quantizers: all quantizers per id
+        :param all_quantizers: all quantizers per scope
         :param model: model to access all parameters
         :param disabled_gradients:  list of names of the parameters that were originally disabled
         """
@@ -275,7 +292,6 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             if param_name not in disabled_gradients:
                 param.requires_grad = True
         for module in all_quantizers.values():
-            module.init_stage = False
             module.enable_gradients()
 
     @staticmethod
@@ -336,6 +352,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         for handle in hook_handles:
             handle.remove()
+
         return perturbations, observers
 
     @staticmethod

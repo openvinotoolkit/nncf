@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import List
+from typing import List, Callable
 
 import torch
 from texttable import Texttable
@@ -19,8 +19,7 @@ from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
-    ActivationBinarizationScaleThreshold
-from nncf.binarization.schedulers import BINARIZATION_SCHEDULERS
+    ActivationBinarizationScaleThreshold, BaseBinarizer
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
@@ -29,6 +28,8 @@ from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
 from nncf.nncf_network import NNCFNetwork
+from nncf.quantization.algo import QuantizationControllerBase
+from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 
 
 @COMPRESSION_ALGORITHMS.register('binarization')
@@ -84,27 +85,37 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
         return BinarizationController(target_model, self.config)
 
 
-class BinarizationController(CompressionAlgorithmController):
-    def __init__(self, target_model: NNCFNetwork, params: NNCFConfig):
+class BinarizationController(QuantizationControllerBase):
+    def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):
         super().__init__(target_model)
 
-        scheduler_cls = BINARIZATION_SCHEDULERS.get("staged")
-        self._scheduler = scheduler_cls(self, params)
+        scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+        self._scheduler = scheduler_cls(self, config.get("params", {}))
         from nncf.utils import is_main_process
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()
 
-    def enable_activation_binarization(self):
+    def _set_binarization_status(self, condition_fn: Callable[[BaseBinarizer], bool],
+                                 apply_fn: Callable[[BaseBinarizer], None]):
         if self._model is not None:
             for _, m in self._model.named_modules():
-                if isinstance(m, ActivationBinarizer):
-                    m.enable()
+                if condition_fn(m):
+                    apply_fn(m)
 
-    def enable_weight_binarization(self):
-        if self._model is not None:
-            for _, m in self._model.named_modules():
-                if isinstance(m, WeightBinarizer):
-                    m.enable()
+    def enable_activation_quantization(self):
+        self._set_binarization_status(lambda x: isinstance(x, ActivationBinarizer), lambda x: x.enable())
+
+    def enable_weight_quantization(self):
+        self._set_binarization_status(lambda x: isinstance(x, WeightBinarizer), lambda x: x.enable())
+
+    def disable_activation_quantization(self):
+        self._set_binarization_status(lambda x: isinstance(x, ActivationBinarizer), lambda x: x.disable())
+
+    def disable_weight_quantization(self):
+        self._set_binarization_status(lambda x: isinstance(x, WeightBinarizer), lambda x: x.disable())
+
+    def init_range(self):
+        pass
 
     def _compute_and_display_flops_binarization_rate(self):
         net = self._model

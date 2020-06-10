@@ -14,8 +14,8 @@
             "mode": "dorefa",
             "params": {
                 "batch_multiplier": 1,
-                "activations_bin_start_epoch": 10,
-                "weights_bin_start_epoch": 30,
+                "activations_quant_start_epoch": 10,
+                "weights_quant_start_epoch": 30,
                 "lr_poly_drop_start_epoch": 60,
                 "lr_poly_drop_duration_epochs": 30,
                 "disable_wd_start_epoch": 60

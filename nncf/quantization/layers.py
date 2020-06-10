@@ -99,7 +99,7 @@ class BaseQuantizer(nn.Module):
 
         self.levels = 0
 
-        self.init_stage = False
+        self._is_enabled = True
         self.initialized = False
         self.state_dict_name = None
         self.call_count = 0
@@ -134,11 +134,20 @@ class BaseQuantizer(nn.Module):
     def disable_gradients(self):
         raise NotImplementedError
 
+    def is_enabled_quantization(self):
+        return self._is_enabled
+
+    def enable_quantization(self):
+        self._is_enabled = True
+
+    def disable_quantization(self):
+        self._is_enabled = False
+
     def forward(self, x):
         if is_debug():
             self.call_count += 1
         # TODO: refactor to get rid of extra if's and calls on each forward
-        if self.init_stage:
+        if not self.is_enabled_quantization():
             return x
         self.set_level_ranges()
         if is_tracing_state():

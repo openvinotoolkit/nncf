@@ -1,0 +1,45 @@
+{
+    "model": "mobilenetv2",
+    "input_info": {
+        "sample_size": [
+            2,
+            3,
+            32,
+            32
+        ]
+    },
+    "num_classes": 100,
+    "batch_size": 256,
+    "epochs": 30,
+    "compression": {
+        "algorithm": "quantization",
+        "weights": {
+            "mode": "asymmetric",
+            "bits": 8,
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric",
+            "bits": 8
+        },
+        "params": {
+            "base_lr": 3.1e-4,
+            "base_wd": 1e-3,
+            "batch_multiplier": 1,
+            "activations_quant_start_epoch": 3,
+            "weights_quant_start_epoch": 12,
+            "lr_poly_drop_start_epoch": 20,
+            "lr_poly_drop_duration_epochs": 10,
+            "disable_wd_start_epoch": 20
+        },
+        "initializer": {
+            "precision": {
+                "type": "hawq",
+                "num_data_points": 100,
+                "iter_number": 200,
+                "tolerance": 1e-4
+            }
+        }
+    },
+    "dataset": "CIFAR100"
+}
