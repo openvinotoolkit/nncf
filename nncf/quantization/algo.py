@@ -717,13 +717,14 @@ class QuantizationController(QuantizationControllerBase):
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
-        modules_to_init = OrderedDict(sorted(modules_to_init.items()))  # type: Dict[Scope, BaseQuantizer]
+        modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
         runner = DataLoaderInitializeRunner(self._model, modules_to_init)
 
         # Some quantizers can be disabled in a staged scenario when range initialization might be called multiple times.
         # Need to save originally disabled quantizers for restoring their state after initialization
-        quantizers_switcher = QuantizersSwitcher(list(modules_to_init.values()))
+        quantizers = [module for module, config in modules_to_init.values()]
+        quantizers_switcher = QuantizersSwitcher(quantizers)
         quantizers_switcher.disable_quantizers()
         runner.run(data_loader, num_init_steps)
         quantizers_switcher.enable_quantizers()

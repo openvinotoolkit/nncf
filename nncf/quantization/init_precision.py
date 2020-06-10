@@ -217,9 +217,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         constraint and which weights should be skipped from bitwidth initialization
         :return: list of names of the parameters that were originally disabled
         """
+        disabled_gradients = []
+
+        # Some quantizers can be disabled in a staged scenario on creation of staged scheduler
+        # Need to save originally disabled quantizers for restoring their state after initialization
         quantizers_switcher.disable_quantizers()
 
-        disabled_gradients = []
         # remember gradients of quantized modules that were enabled
         gradients_to_enable = []
         for scope, quantized_module in quantized_weight_modules_registry.items():
@@ -250,14 +253,6 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     def _calc_traces(self, criterion: _Loss, iter_number: int, tolerance: float) -> TracesPerLayer:
         if self._traces_per_layer_path:
             return TracesPerLayer(torch.load(self._traces_per_layer_path))
-
-        # Some quantizers can be disabled in a staged scenario on creation of staged scheduler
-        # Need to save originally disabled quantizers for restoring their state after initialization
-        originally_disabled = []  # type: List[BaseQuantizer]
-        for module in self._all_quantizers_per_scope.values():  # type: BaseQuantizer
-            if not module.is_enabled_quantization():
-                originally_disabled.append(module)
-            module.disable_quantization()
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         disabled_gradients = self.disable_all_gradients_except_weights_of_quantized_modules(
