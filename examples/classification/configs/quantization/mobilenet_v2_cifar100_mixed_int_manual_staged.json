@@ -10,17 +10,7 @@
     },
     "num_classes": 100,
     "batch_size": 256,
-    "epochs": 270,
-    "optimizer": {
-        "type": "Adam",
-        "schedule_type": "plateau",
-        "scheduler_params": {
-            "cooldown": 3,
-            "threshold": 0.1
-        },
-        "base_lr": 0.00031,
-        "weight_decay": 1e-05
-    },
+    "epochs": 100,
     "compression": {
         "algorithm": "quantization",
         "weights": {
@@ -31,6 +21,16 @@
         "activations": {
             "mode": "asymmetric",
             "bits": 8
+        },
+        "params": {
+            "base_lr": 3.1e-4,
+            "base_wd": 1e-5,
+            "batch_multiplier": 1,
+            "activations_quant_start_epoch": 30,
+            "weights_quant_start_epoch": 60,
+            "lr_poly_drop_start_epoch": 90,
+            "lr_poly_drop_duration_epochs": 10,
+            "disable_wd_start_epoch": 90
         },
         "initializer": {
             "precision": {
@@ -94,5 +94,6 @@
             }
         }
     },
-    "dataset": "CIFAR100"
+    "dataset": "CIFAR100",
+    "test_every_n_epochs": 5
 }

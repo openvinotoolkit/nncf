@@ -388,6 +388,9 @@ MANUAL_CONFIG_TEST_PARAMS = [
     ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '33.333', '56.410'],
                                       ['4', '22.222', '21.368', '43.590']]),
+    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual_staged.json",
+                           bit_stats=[['8', '23.077', '33.333', '56.410'],
+                                      ['4', '22.222', '21.368', '43.590']]),
     ManualConfigTestParams(config_name="mobilenet_v2_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '23.932', '47.009'],
                                       ['4', '22.222', '30.769', '52.991']]),
@@ -396,7 +399,10 @@ MANUAL_CONFIG_TEST_PARAMS = [
                                       ['4', '21.600', '33.600', '55.200']]),
     ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                      ['4', '24.528', '20.755', '45.283']])
+                                      ['4', '24.528', '20.755', '45.283']]),
+    ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
+                           bit_stats=[['8', '24.528', '28.302', '52.830'],
+                                      ['4', '24.528', '22.642', '47.170']])
 ]
 
 
