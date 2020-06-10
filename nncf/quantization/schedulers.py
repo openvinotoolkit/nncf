@@ -49,16 +49,11 @@ class StagedQuantizationScheduler(CompressionScheduler):
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
-        print('StagedQuantizationScheduler: load_state_dict+')
-        # just enables/disables quantizers without calling initialization of ranges, because it's called on epoch_step
+        # Just enables/disables quantizers without calling initialization of ranges, because it's called on epoch_step
         # in the end of previous epoch before saving the scheduler's state dict.
         self._set_quantization_status()
 
     def _set_quantization_status(self):
-        print('StagedQuantizationScheduler: last_epoch={} a_start={} w_start={}'.format(self.last_epoch,
-                                                                                        self.activations_quant_start_epoch,
-                                                                                        self.weights_quant_start_epoch))
-
         # Should compare with last_epoch + 1, because epoch_step is called in the end of epoch.
         # If last_epoch = -1 and start_epoch = 0, it means that quantizers should be enabled from the very beginning.
         if self.last_epoch + 1 >= self.activations_quant_start_epoch:

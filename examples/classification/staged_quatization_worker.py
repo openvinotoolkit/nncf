@@ -91,12 +91,9 @@ class PolyLRDropScheduler:
         if epoch is not None:
             self.last_epoch = epoch
         self.last_epoch += 1
-        print('PolyLRDropScheduler: epoch_step {}'.format(self.last_epoch))
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
-        print('PolyLRDropScheduler: load_state_dict: last_epoch {} lr_poly_drop_start_epoch={}'.format(
-            self.last_epoch, self.lr_poly_drop_start_epoch))
 
     def state_dict(self):
         return self.__dict__
