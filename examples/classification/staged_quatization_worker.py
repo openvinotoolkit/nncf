@@ -139,9 +139,10 @@ def staged_quantization_main_worker(current_gpu, config):
     # create model
     model_name = config['model']
     model = load_model(model_name,
-                       pretrained=config.get('pretrained', True) if config.get('weights') is None else False,
+                       pretrained=pretrained,
                        num_classes=config.get('num_classes', 1000),
-                       model_params=config.get('model_params'))
+                       model_params=config.get('model_params'),
+                       weights_path=config.get('weights'))
     original_model = copy.deepcopy(model)
 
     model.to(config.device)
