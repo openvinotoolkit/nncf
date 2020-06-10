@@ -33,17 +33,19 @@ class StagedQuantizationScheduler(CompressionScheduler):
 
     def epoch_step(self, epoch=None):
         super().epoch_step(epoch)
+        should_call_init = False
         if self.last_epoch + 1 == self.activations_quant_start_epoch:
-            # TODO: prevent multiple init range when both enabled at the same time and when start_epoch is zero for both
             logger.info('Enabled quantization of activations')
             self.algo.enable_activation_quantization()
-            self.algo.init_range()
+            should_call_init = True
 
         if self.last_epoch + 1 == self.weights_quant_start_epoch:
             logger.info('Enabled quantization of weights')
             self.algo.enable_weight_quantization()
-            self.algo.init_range()
+            should_call_init = True
 
+        if should_call_init:
+            self.algo.init_range()
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)

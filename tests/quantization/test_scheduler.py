@@ -93,6 +93,15 @@ def test_staged_scheduler_enables_quantizations_on_epoch_step(mocker):
     ctrl_spy.check_call_counts(1, 1, 1, 1, 2)
 
 
+def test_staged_scheduler_enables_quantizations_on_epoch_step__at_the_same_time(mocker):
+    ctrl_spy = QuantizationCtrlBaseSpy(mocker)
+    scheduler = create_staged_scheduler(ctrl_spy, 1, 1)
+    ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
+
+    scheduler.epoch_step()
+    ctrl_spy.check_call_counts(1, 1, 1, 1, 1)
+
+
 def test_staged_scheduler_enables_quantizations_on_load(mocker):
     old_ctrl_spy = QuantizationCtrlBaseSpy(mocker)
     old_scheduler = create_staged_scheduler(old_ctrl_spy)
