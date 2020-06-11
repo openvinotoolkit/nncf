@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from enum import Enum
-from typing import Dict, Iterable, List, Callable
+from typing import Dict, List
 
 import numpy as np
 import torch

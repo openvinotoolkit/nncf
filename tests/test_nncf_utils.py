@@ -11,25 +11,10 @@
  limitations under the License.
 """
 from collections import namedtuple
-from typing import Dict, Callable, Any, Union, List
-from typing import Tuple
 
-import numpy as np
 import pytest
-import torch
-from copy import deepcopy
 from functools import partial
-from torch import nn
-from torch.nn import Module
-
-from nncf.compression_method_api import CompressionAlgorithmController
-from nncf.config import NNCFConfig
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.layers import NNCF_MODULES_MAP
-from nncf.model_creation import create_compressed_model
-from nncf.nncf_network import NNCFNetwork
-from nncf.utils import get_all_modules_by_type, objwalk
+from nncf.utils import objwalk
 
 
 class ObjwalkTestClass:
