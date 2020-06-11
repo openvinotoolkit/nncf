@@ -44,7 +44,7 @@ from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo,
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
-    QuantizerExportMode
+    QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
@@ -721,7 +721,14 @@ class QuantizationController(QuantizationControllerBase):
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
         runner = DataLoaderInitializeRunner(self._model, modules_to_init)
+
+        quantizers = [module for module, config in modules_to_init.values()]
+        quantizers_switcher = QuantizersSwitcher(quantizers)
+        # bypass quantization to collect statistics from floating point model
+        quantizers_switcher.disable_quantizers()
         runner.run(data_loader, num_init_steps)
+        quantizers_switcher.enable_quantizers()
+
         self._model.rebuild_graph()
 
     def initialize_quantizer_params(self):
