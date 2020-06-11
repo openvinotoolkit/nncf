@@ -29,7 +29,19 @@
                 "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]",
                 "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]",
                 "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"
-            ]
+            ],
+            "initializer": {
+                "precision": {
+                    "type": "hawq",
+                    "bits": [
+                        4,
+                        8
+                    ],
+                    "num_data_points": 100,
+                    "iter_number": 200,
+                    "tolerance": 5e-1
+                }
+            }
         }
     ]
 }

@@ -124,6 +124,7 @@ def create_hawq_hw_test_config(batch_size):
     config["hw_config_type"] = HWConfigType.VPU.value
     return config
 
+
 def create_staged_hawq_test_config(batch_size):
     config = create_hawq_test_config(batch_size)
     config["compression"]["params"] = {
@@ -185,6 +186,10 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
     model = model.cuda()
 
     all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
+    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
+    # graph may not contain quantizers (e.g. in staged scenario)
+    quantizer_switcher.enable_quantizers()
+    model.rebuild_graph()
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope)
     path_to_dot = 'mobilenet_v2_mixed_bitwidth_graph_{}.dot'.format(filename_suffix)
     check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)

@@ -322,6 +322,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         return filtered_bits_configurations
 
     def calc_quantization_noise(self) -> [Perturbations, List[PerturbationObserver]]:
+        quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
+        quantizers_switcher.enable_quantizers()
         hook_handles = []
         observers = []
         for module in self._ordered_weight_quantizations.values():
@@ -341,7 +343,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         for handle in hook_handles:
             handle.remove()
-
+        quantizers_switcher.disable_quantizers()
         return perturbations, observers
 
     @staticmethod
