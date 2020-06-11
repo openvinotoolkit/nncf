@@ -124,6 +124,14 @@ def create_hawq_hw_test_config(batch_size):
     config["hw_config_type"] = HWConfigType.VPU.value
     return config
 
+def create_staged_hawq_test_config(batch_size):
+    config = create_hawq_test_config(batch_size)
+    config["compression"]["params"] = {
+        "activations_quant_start_epoch": 0,
+        "weights_quant_start_epoch": 1
+    }
+    return config
+
 
 def get_avg_traces(model):
     """ Assigns bigger average traces for DepthWise Conv than for ordinary Conv and Linear"""
@@ -153,7 +161,8 @@ def get_avg_traces_for_vpu(model):
 
 @pytest.mark.parametrize(('config_creator', 'filename_suffix', 'avg_traces_creator'),
                          ([create_hawq_test_config, 'pattern_based', get_avg_traces],
-                          [create_hawq_hw_test_config, 'hw_config_vpu', get_avg_traces_for_vpu]))
+                          [create_hawq_hw_test_config, 'hw_config_vpu', get_avg_traces_for_vpu],
+                          [create_staged_hawq_test_config, 'pattern_based', get_avg_traces]))
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creator: Callable, filename_suffix: str,
                              avg_traces_creator: Callable):
     batch_size = 10
