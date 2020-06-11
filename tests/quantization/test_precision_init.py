@@ -187,7 +187,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
 
     all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
     quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
-    # graph may not contain quantizers (e.g. in staged scenario)
+    # graph may not contain some quantizers (e.g. in staged scenario)
     quantizer_switcher.enable_quantizers()
     model.rebuild_graph()
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope)

@@ -44,7 +44,7 @@ from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo,
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
-    QuantizerExportMode, QuantizersSwitcher
+    QuantizerExportMode
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
@@ -688,14 +688,15 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             quantizer.set_export_mode(export_mode)
 
+        if is_main_process() and should_init:
+            self.initialize_quantizer_params()
+
+        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
-
-        if is_main_process() and should_init:
-            self.initialize_quantizer_params()
 
     def distributed(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
@@ -720,15 +721,7 @@ class QuantizationController(QuantizationControllerBase):
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
         runner = DataLoaderInitializeRunner(self._model, modules_to_init)
-
-        # Some quantizers can be disabled in a staged scenario when range initialization might be called multiple times.
-        # Need to save originally disabled quantizers for restoring their state after initialization
-        quantizers = [module for module, config in modules_to_init.values()]
-        quantizers_switcher = QuantizersSwitcher(quantizers)
-        quantizers_switcher.disable_quantizers()
         runner.run(data_loader, num_init_steps)
-        quantizers_switcher.enable_quantizers()
-
         self._model.rebuild_graph()
 
     def initialize_quantizer_params(self):
@@ -829,7 +822,8 @@ class QuantizationController(QuantizationControllerBase):
                     weight_quantizer = ops.op
                 if isinstance(ops, UpdateInputs):
                     activation_quantizer = ops.op
-            pairs.append(([weight_quantizer], activation_quantizer))
+            if weight_quantizer:
+                pairs.append(([weight_quantizer], activation_quantizer))
 
         nncf_network = self._model
         nncf_graph = nncf_network.get_original_graph()
