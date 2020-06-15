@@ -398,8 +398,8 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
         if is_staged_quantization(config['nncf_config']):
-            mocker.patch("examples.classification.staged_quatization_worker.train_epoch_staged")
-            mocker.patch("examples.classification.staged_quatization_worker.validate")
+            mocker.patch("examples.classification.staged_quantization_worker.train_epoch_staged")
+            mocker.patch("examples.classification.staged_quantization_worker.validate")
             import examples.classification.staged_quantization_worker as staged_worker
             staged_worker.validate.return_value = (0, 0)
         else:
