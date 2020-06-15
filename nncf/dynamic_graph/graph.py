@@ -225,7 +225,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
-            self._nx_graph.edges[parent, node_key]['in_port'] = i
+            self._nx_graph.edges[parent, node_key][NNCFGraph.IN_PORT_NAME] = i
 
         if not has_traced_inputs:
             self._inputless_nx_nodes[node_key] = self._nx_graph.nodes[node_key]
@@ -462,6 +462,7 @@ class NNCFGraph:
     KEY_NODE_ATTR = "key"
     OP_EXEC_CONTEXT_NODE_ATTR = "op_exec_context"
     ACTIVATION_SHAPE_EDGE_ATTR = "activation_shape"
+    IN_PORT_NAME = "in_port"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()

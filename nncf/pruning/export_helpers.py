@@ -274,6 +274,8 @@ class StopMaskForwardOps(DefaultMetaOp):
 
 
 class ModelPruner:
+    CAN_PRUNE_ATTR = 'can_prune'
+
     def __init__(self, model: NNCFNetwork, graph: NNCFGraph, nx_graph: nx.DiGraph):
         self.model = model
         self.graph = graph
@@ -322,7 +324,7 @@ class ModelPruner:
         (except convs because conv can be pruned by input and output independently).
         """
         for node_name in self.nx_graph.nodes:
-            self.nx_graph.nodes[node_name]['can_prune'] = True
+            self.nx_graph.nodes[node_name][ModelPruner.CAN_PRUNE_ATTR] = True
 
         reversed_sorted_nodes = reversed([self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)])
         for node in reversed_sorted_nodes:
@@ -331,9 +333,9 @@ class ModelPruner:
             outputs_accept_pruned_input = all(self.nx_graph.nodes[key]['accept_pruned_input'] for _, key in out_edges)
 
             # Check all output nodes can_prune attribute
-            outputs_will_be_pruned = all([self.nx_graph.nodes[key]['can_prune'] for _, key in out_edges
+            outputs_will_be_pruned = all([self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for _, key in out_edges
                                           if self.node_propagate_can_prune_attr(key)])
-            node['can_prune'] = outputs_accept_pruned_input and outputs_will_be_pruned
+            node[ModelPruner.CAN_PRUNE_ATTR] = outputs_accept_pruned_input and outputs_will_be_pruned
 
         nncf_logger.info('Propagated can_prune attribute up')
 
@@ -347,20 +349,20 @@ class ModelPruner:
             # Propagate attribute only in not conv case
             if self.node_propagate_can_prune_attr(node['key']):
                 in_edges = self.nx_graph.in_edges(node['key'])
-                can_prune = all(self.nx_graph.nodes[key]['can_prune'] for key, _ in in_edges)
-                can_prune_any = any(self.nx_graph.nodes[key]['can_prune'] for key, _ in in_edges)
+                can_prune = all(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
+                can_prune_any = any(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
 
                 if (not self.node_accept_different_inputs(node) and not can_prune) or \
                         (self.node_accept_different_inputs(node) and not can_prune_any):
-                    node['can_prune'] = can_prune
+                    node[ModelPruner.CAN_PRUNE_ATTR] = can_prune
 
         nncf_logger.info('Propagated can_prune attribute down')
 
-    def mask_applying(self):
+    def apply_mask(self):
         """
         Applying propagated masks for all nodes in topological order:
         if all inputs of node can_prune -> running input_prune method for this node
-        if node['can_prune'] -> running output_prune method for this node
+        if node[ModelPruner.CAN_PRUNE_ATTR] -> running output_prune method for this node
         """
         sorted_nodes = [self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)]
         with torch.no_grad():
@@ -369,11 +371,11 @@ class ModelPruner:
                 node_cls = self.get_class_by_type_name(node_type)()
 
                 in_edges = self.nx_graph.in_edges(node['key'])
-                can_prune_input = all(self.nx_graph.nodes[key]['can_prune'] for key, _ in in_edges)
+                can_prune_input = all(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
                 if can_prune_input:
                     node_cls.input_prune(self.model, node, self.graph, self.nx_graph)
 
-                if node['can_prune']:
+                if node[ModelPruner.CAN_PRUNE_ATTR]:
                     node_cls.output_prune(self.model, node, self.graph, self.nx_graph)
         nncf_logger.info('Finished mask applying step')
 
@@ -390,5 +392,5 @@ class ModelPruner:
         self.mask_propagation()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-        self.mask_applying()
+        self.apply_mask()
         nncf_logger.info('Finished pruning model')
