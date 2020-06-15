@@ -94,7 +94,7 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.classification.staged_quatization_worker import staged_quantization_main_worker
+        from examples.classification.staged_quantization_worker import staged_quantization_main_worker
         start_worker(staged_quantization_main_worker, config)
 
 

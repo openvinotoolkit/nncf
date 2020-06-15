@@ -400,7 +400,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         if is_staged_quantization(config['nncf_config']):
             mocker.patch("examples.classification.staged_quatization_worker.train_epoch_staged")
             mocker.patch("examples.classification.staged_quatization_worker.validate")
-            import examples.classification.staged_quatization_worker as staged_worker
+            import examples.classification.staged_quantization_worker as staged_worker
             staged_worker.validate.return_value = (0, 0)
         else:
             mocker.patch("examples.classification.main.train_epoch")
@@ -419,7 +419,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
         if is_staged_quantization(config['nncf_config']):
-            import examples.classification.staged_quatization_worker as staged_worker
+            import examples.classification.staged_quantization_worker as staged_worker
             model_to_be_trained = staged_worker.train_epoch_staged.call_args[0][2]  # model
         else:
             model_to_be_trained = sample.train_epoch.call_args[0][1]  # model
