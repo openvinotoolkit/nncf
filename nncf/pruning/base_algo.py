@@ -23,13 +23,15 @@ from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.utils import get_bn_for_module_scope, \
-    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv
+    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
+    get_previous_conv
 
 from nncf.nncf_logger import logger as nncf_logger
 
 
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
+    DEPTHWISE_BN_NAME = 'next_bn_module'
 
     def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict):
         self.module_name = module_name
@@ -62,6 +64,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         device = next(target_model.parameters()).device
         modules_to_prune = target_model.get_nncf_modules()
         insertion_commands = []
+        bn_for_depthwise = {}
 
         input_non_pruned_modules = get_first_pruned_modules(target_model,
                                                             self.get_types_of_pruned_modules() + ['linear'])
@@ -87,13 +90,20 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                                  " this scope is one of the last convolutions".format(module_scope_str))
                 continue
 
+            if is_grouped_conv(module):
+                if is_depthwise_conv(module):
+                    previous_conv = get_previous_conv(target_model, module, module_scope)
+                    if previous_conv:
+                        depthwise_bn = get_bn_for_module_scope(target_model, module_scope)
+                        bn_for_depthwise[str(previous_conv.op_exec_context.scope_in_model)] = depthwise_bn
+
+                nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
+                                 " this scope is grouped convolution".format(module_scope_str))
+                continue
+
             if not self.prune_downsample_convs and is_conv_with_downsampling(module):
                 nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
                                  " this scope is convolution with downsample".format(module_scope_str))
-                continue
-            if is_grouped_conv(module):
-                nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
-                                 " this scope is grouped convolution".format(module_scope_str))
                 continue
 
             nncf_logger.info("Adding Weight Pruner in scope: {}".format(module_scope_str))
@@ -112,12 +122,25 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
             related_modules = {}
             if self.prune_batch_norms:
-                related_modules['bn_module'] = get_bn_for_module_scope(target_model, module_scope)
+                related_modules[PrunedModuleInfo.BN_MODULE_NAME] = get_bn_for_module_scope(target_model, module_scope)
 
             self._pruned_module_info.append(
                 PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules))
 
+        if self.prune_batch_norms:
+            self.update_minfo_with_depthwise_bn(bn_for_depthwise)
+
         return insertion_commands
+
+    def update_minfo_with_depthwise_bn(self, bn_for_depthwise):
+        """
+        Adding information about BN of depthwise modules to PrunedModuleInfo of previous convolution.
+        :param bn_for_depthwise: dict with next structure - {previous_conv_module_name: BatchNorm module}
+        """
+        for prev_conv_name, bn_depthwise in bn_for_depthwise.items():
+            prev_conv_minfo = [minfo for minfo in self._pruned_module_info if minfo.module_name == prev_conv_name]
+            if prev_conv_minfo and len(prev_conv_minfo) == 1:
+                prev_conv_minfo[0].related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME] = bn_depthwise
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return BasePruningAlgoController(target_model, self._pruned_module_info, self._params)

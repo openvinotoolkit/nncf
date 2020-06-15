@@ -17,6 +17,7 @@ import torch
 from functools import partial
 
 import networkx as nx
+from nncf.layers import NNCF_CONV_MODULES_DICT
 
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
@@ -173,8 +174,13 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
     partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=sources_types,
                                         visited=visited)
+    nncf_nodes = [nncf_node]
+    if nncf_node.op_exec_context.operator_name in sources_types:
+        nncf_nodes = graph.get_previous_nodes(nncf_node)
 
-    source_nodes = graph.traverse_graph(nncf_node, partial_traverse_function, False)
+    source_nodes = []
+    for node in nncf_nodes:
+        source_nodes.extend(graph.traverse_graph(node, partial_traverse_function, False))
     return source_nodes
 
 
@@ -184,3 +190,22 @@ def is_conv_with_downsampling(conv_module):
 
 def is_grouped_conv(conv_module):
     return conv_module.groups != 1
+
+
+def is_depthwise_conv(conv_module):
+    return conv_module.groups == conv_module.in_channels and (conv_module.out_channels % conv_module.in_channels == 0)
+
+
+def get_previous_conv(target_model: NNCFNetwork, module, module_scope):
+    """
+    Return source convolution of module. If node has other source type or there are more than one source - return None.
+    """
+    conv_types = [str.lower(v.__name__) for v in NNCF_CONV_MODULES_DICT.values()]
+
+    graph = target_model.get_original_graph()
+    nx_node = graph.find_node_in_nx_graph_by_scope(module_scope)
+    nncf_node = graph._nx_node_to_nncf_node(nx_node)
+    sources = get_sources_of_node(nncf_node, graph, conv_types + ['linear'])
+    if len(sources) == 1 and sources[0].op_exec_context.operator_name in conv_types:
+        return sources[0]
+    return None

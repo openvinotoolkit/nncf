@@ -148,6 +148,11 @@ class FilterPruningController(BasePruningAlgoController):
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
+            if minfo.related_modules is not None and PrunedModuleInfo.DEPTHWISE_BN_NAME in minfo.related_modules \
+                    and related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME] is not None:
+                bn_module = related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME]
+                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
+
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
         """
