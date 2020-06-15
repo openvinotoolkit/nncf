@@ -198,16 +198,19 @@ class FilterPruningController(BasePruningAlgoController):
         nx_graph = graph._nx_graph
 
         parameters_count_before = self.get_parameters_count_in_model()
+        flops = self.get_flops_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
 
         model_pruner = ModelPruner(model, graph, nx_graph)
         model_pruner.prune_model()
 
         parameters_count_after = self.get_parameters_count_in_model()
+        flops_after = self.get_flops_in_model()
         new_pruned_layers_stats = self.get_stats_for_pruned_modules()
         stats = self.create_stats_table_for_pruning_export(pruned_layers_stats, new_pruned_layers_stats)
 
         nncf_logger.info(stats.draw())
         nncf_logger.info('Final Model Pruning Rate = %.3f', 1 - parameters_count_after / parameters_count_before)
+        nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
 
         super().export_model(filename, *args, **kwargs)
