@@ -12,13 +12,12 @@
 """
 
 # pylint:disable=too-many-lines
-
+import functools
 from collections import OrderedDict, namedtuple
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Callable
 
-import functools
 import networkx as nx
 import numpy as np
 import operator
@@ -45,10 +44,11 @@ from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo,
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
-    QuantizerExportMode
+    QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
+from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process
 from nncf.utils import get_state_dict_names_with_modules
@@ -638,7 +638,24 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return pattern
 
 
-class QuantizationController(CompressionAlgorithmController):
+class QuantizationControllerBase(CompressionAlgorithmController):
+    def enable_activation_quantization(self):
+        raise NotImplementedError
+
+    def enable_weight_quantization(self):
+        raise NotImplementedError
+
+    def disable_activation_quantization(self):
+        raise NotImplementedError
+
+    def disable_weight_quantization(self):
+        raise NotImplementedError
+
+    def init_range(self):
+        raise NotImplementedError
+
+
+class QuantizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork,
                  quantization_config: 'NNCFConfig',
                  should_init: bool,
@@ -674,6 +691,13 @@ class QuantizationController(CompressionAlgorithmController):
         if is_main_process() and should_init:
             self.initialize_quantizer_params()
 
+        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
+        params = quantization_config.get('params', None)
+        self.is_staged_scheduler = bool(params)
+        if self.is_staged_scheduler:
+            scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+            self._scheduler = scheduler_cls(self, params)
+
     def distributed(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
         sorted_quantizers = OrderedDict(sorted(self.all_quantizations.items(), key=lambda x: str(x[0])))
@@ -697,24 +721,59 @@ class QuantizationController(CompressionAlgorithmController):
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
         runner = DataLoaderInitializeRunner(self._model, modules_to_init)
+
+        quantizers = [module for module, config in modules_to_init.values()]
+        quantizers_switcher = QuantizersSwitcher(quantizers)
+        # bypass quantization to collect statistics from floating point model
+        quantizers_switcher.disable_quantizers()
         runner.run(data_loader, num_init_steps)
+        quantizers_switcher.enable_quantizers()
+
         self._model.rebuild_graph()
 
     def initialize_quantizer_params(self):
+        """ For the quantization there are 2 types of initializations: range and precision"""
+        self.init_range()
+        self.init_precision()
+
+    def init_precision(self):
         """
-        For the quantization there are 2 types of initializations: range and precision.
-        First method calculates per-layer activation statistics on training dataset in order to choose proper output
-        range for quantization. Precision initialization happens based on measure - layers' sensitivity to
-        perturbations. The measure is calculated by estimation of average trace of Hessian for modules using Hutchinson
-        algorithm.
+        Precision initialization happens based on measure - layers' sensitivity to perturbations. The measure is
+        calculated by estimation of average trace of Hessian for modules using Hutchinson algorithm.
         Parameters for quantization algorithm:
             'data_loader' - provides an iterable over the given dataset, instance of 'torch.utils.data.DataLoader'
             'criterion' - loss function, instance of `torch.nn.modules.loss._Loss`,
         """
+        init_config = self.quantization_config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if init_precision_config:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            precision_init_args = None
+            if precision_init_type != 'manual':
+                try:
+                    precision_init_args = self.quantization_config.get_extra_struct(QuantizationPrecisionInitArgs)
+                except KeyError:
+                    raise ValueError(
+                        'Specified non-manual precision initialization in the NNCF config, '
+                        'but the initializing data loader and loss criterion are not provided as an extra struct. '
+                        'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` class')
 
+            init_impl = PrecisionInitializerFactory.create(precision_init_type)
+            initializer = init_impl(self, init_precision_config, self.all_quantizations,
+                                    self._hw_precision_constraints,
+                                    precision_init_args)
+            initializer.apply_init()
+            nncf_logger.info('Bitwidth distribution\n{}'.format(self.get_bit_stats().draw()))
+
+    def init_range(self):
+        """
+        Calculates per-layer activation statistics on training dataset in order to choose proper output range for
+        quantization.
+        Parameters for quantization algorithm:
+            'data_loader' - provides an iterable over the given dataset, instance of 'torch.utils.data.DataLoader'
+        """
         init_config = self.quantization_config.get('initializer', {})
         init_range_config = init_config.get('range', {})
-
         if not init_range_config:
             try:
                 self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
@@ -732,7 +791,6 @@ class QuantizationController(CompressionAlgorithmController):
                 num_init_steps = 0
 
             init_range_config = {'num_init_steps': num_init_steps}
-
         if init_range_config:
             global_init_range_config = dict()
             global_init_range_config.update(init_range_config)
@@ -754,26 +812,6 @@ class QuantizationController(CompressionAlgorithmController):
 
                 self._do_range_init(data_loader, num_init_steps, global_init_range_config)
 
-        init_precision_config = init_config.get('precision', None)
-        if init_precision_config:
-            precision_init_type = init_precision_config.get('type', 'manual')
-            precision_init_args = None
-            if precision_init_type != 'manual':
-                try:
-                    precision_init_args = self.quantization_config.get_extra_struct(QuantizationPrecisionInitArgs)
-                except KeyError:
-                    raise ValueError(
-                        'Specified non-manual precision initialization in the NNCF config, '
-                        'but the initializing data loader and loss criterion are not provided as an extra struct. '
-                        'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` class')
-
-            init_impl = PrecisionInitializerFactory.create(precision_init_type)
-            initializer = init_impl(self, init_precision_config, self.all_quantizations,
-                                    self._hw_precision_constraints,
-                                    precision_init_args)
-            initializer.apply_init()
-            nncf_logger.info('Bitwidth distribution\n{}'.format(self.get_bit_stats().draw()))
-
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:
         """
         finds all neighbour weight and input activation quantizers that share the same module (e.g. conv or linear).
@@ -791,7 +829,8 @@ class QuantizationController(CompressionAlgorithmController):
                     weight_quantizer = ops.op
                 if isinstance(ops, UpdateInputs):
                     activation_quantizer = ops.op
-            pairs.append(([weight_quantizer], activation_quantizer))
+            if weight_quantizer:
+                pairs.append(([weight_quantizer], activation_quantizer))
 
         nncf_network = self._model
         nncf_graph = nncf_network.get_original_graph()
@@ -823,6 +862,25 @@ class QuantizationController(CompressionAlgorithmController):
                 activation_quantizer = self.non_weight_quantizers[quantizer_id]
                 pairs.append((weight_quantizers, activation_quantizer))
         return pairs
+
+    def _set_quantization_status(self, condition_fn: Callable[[BaseQuantizer], bool],
+                                 apply_fn: Callable[[BaseQuantizer], None]):
+        if self._model is not None:
+            for m in self.all_quantizations.values():
+                if condition_fn(m):
+                    apply_fn(m)
+
+    def enable_activation_quantization(self):
+        self._set_quantization_status(lambda x: not x.is_weights, lambda x: x.enable_quantization())
+
+    def enable_weight_quantization(self):
+        self._set_quantization_status(lambda x: x.is_weights, lambda x: x.enable_quantization())
+
+    def disable_activation_quantization(self):
+        self._set_quantization_status(lambda x: not x.is_weights, lambda x: x.disable_quantization())
+
+    def disable_weight_quantization(self):
+        self._set_quantization_status(lambda x: x.is_weights, lambda x: x.disable_quantization())
 
     def get_bit_stats(self):
         table = Texttable()
@@ -871,6 +929,14 @@ class QuantizationController(CompressionAlgorithmController):
                 if override_config is not None:
                     module_init_range_config = override_config
         return module_init_range_config
+
+    def statistics(self):
+        stats = super().statistics()
+        if self.is_staged_scheduler:
+            num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
+            multiplier = 100 / len(self.all_quantizations)
+            stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        return stats
 
 
 class QuantizationDebugInterface(DebugInterface):

@@ -39,7 +39,7 @@ from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import HAWQPrecisionInitializer, TracesPerLayer, Perturbations, \
     PerturbationObserver, HAWQDebugger
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig
+from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig, QuantizersSwitcher
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
@@ -49,7 +49,6 @@ from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump,
 from tests.test_compressed_graph import check_graph
 from tests.helpers import create_compressed_model_and_algo_for_test, MockModel, create_conv, \
     create_mock_dataloader
-
 
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
@@ -126,6 +125,15 @@ def create_hawq_hw_test_config(batch_size):
     return config
 
 
+def create_staged_hawq_test_config(batch_size):
+    config = create_hawq_test_config(batch_size)
+    config["compression"]["params"] = {
+        "activations_quant_start_epoch": 0,
+        "weights_quant_start_epoch": 1
+    }
+    return config
+
+
 def get_avg_traces(model):
     """ Assigns bigger average traces for DepthWise Conv than for ordinary Conv and Linear"""
     all_convs = get_all_modules_by_type(model, 'Conv2d')
@@ -154,7 +162,8 @@ def get_avg_traces_for_vpu(model):
 
 @pytest.mark.parametrize(('config_creator', 'filename_suffix', 'avg_traces_creator'),
                          ([create_hawq_test_config, 'pattern_based', get_avg_traces],
-                          [create_hawq_hw_test_config, 'hw_config_vpu', get_avg_traces_for_vpu]))
+                          [create_hawq_hw_test_config, 'hw_config_vpu', get_avg_traces_for_vpu],
+                          [create_staged_hawq_test_config, 'pattern_based', get_avg_traces]))
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creator: Callable, filename_suffix: str,
                              avg_traces_creator: Callable):
     batch_size = 10
@@ -177,6 +186,10 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
     model = model.cuda()
 
     all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
+    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
+    # graph may not contain some quantizers (e.g. in staged scenario)
+    quantizer_switcher.enable_quantizers()
+    model.rebuild_graph()
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope)
     path_to_dot = 'mobilenet_v2_mixed_bitwidth_graph_{}.dot'.format(filename_suffix)
     check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)
@@ -320,8 +333,8 @@ def test_disable_quantizer_gradients():
 
 
 def test_enable_quantizer_gradients():
-    all_quantizations, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
-    HAWQPrecisionInitializer.enable_quantizer_gradients(model, all_quantizations, disabled_parameters)
+    quantizers_swicther, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
+    HAWQPrecisionInitializer.restore_disabled_gradients(quantizers_swicther, model, disabled_parameters)
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     assert original_requires_grad_per_param == actual_requires_grad_per_param
 
@@ -334,15 +347,16 @@ def disable_quantizer_gradients():
     model = MobileNetV2(num_classes=10)
     model.eval()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     all_quantizations = get_all_modules_by_type(model, quantization_types)
-    original_requires_grad_per_param = get_requires_grad_per_param(model)
-    disabled_parameters = HAWQPrecisionInitializer.disable_quantizer_gradients(
-        all_quantizations,
+    quantizers_switcher = QuantizersSwitcher(list(all_quantizations.values()))
+    disabled_parameters = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
+        quantizers_switcher,
         compression_ctrl.quantized_weight_modules_registry,
         model,
         get_scopes_of_skipped_weight_quantizers())
-    return all_quantizations, disabled_parameters, model, original_requires_grad_per_param
+    return quantizers_switcher, disabled_parameters, model, original_requires_grad_per_param
 
 
 def get_path_to_bitwidth_dump(tmp_path, rank):
@@ -369,8 +383,8 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
 
 
 def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
-    num_data_points = 100
-    batch_size = 10
+    num_data_points = 10
+    batch_size = 2
     config = create_hawq_test_config(batch_size, num_data_points)
 
     ngpus_per_node = torch.cuda.device_count()
@@ -388,6 +402,9 @@ MANUAL_CONFIG_TEST_PARAMS = [
     ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '33.333', '56.410'],
                                       ['4', '22.222', '21.368', '43.590']]),
+    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual_staged.json",
+                           bit_stats=[['8', '23.077', '33.333', '56.410'],
+                                      ['4', '22.222', '21.368', '43.590']]),
     ManualConfigTestParams(config_name="mobilenet_v2_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '23.932', '47.009'],
                                       ['4', '22.222', '30.769', '52.991']]),
@@ -396,7 +413,10 @@ MANUAL_CONFIG_TEST_PARAMS = [
                                       ['4', '21.600', '33.600', '55.200']]),
     ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                      ['4', '24.528', '20.755', '45.283']])
+                                      ['4', '24.528', '20.755', '45.283']]),
+    ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
+                           bit_stats=[['8', '24.528', '28.302', '52.830'],
+                                      ['4', '24.528', '22.642', '47.170']])
 ]
 
 

@@ -27,7 +27,7 @@ import torch
 # pylint: disable=redefined-outer-name
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
-from examples.common.utils import get_name, is_binarization
+from examples.common.utils import get_name, is_staged_quantization
 from nncf.config import NNCFConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
@@ -131,21 +131,22 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["cifar10", "cifar100"],
+    "classification": ["cifar10", "cifar100", "cifar10"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
 
 CONFIGS = {
     "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
-                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json")],
+                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
+                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json")],
     "semantic_segmentation": [TEST_ROOT.joinpath("data", "configs", "unet_camvid_int8.json"),
                               TEST_ROOT.joinpath("data", "configs", "unet_camvid_rb_sparsity.json")],
     "object_detection": [TEST_ROOT.joinpath("data", "configs", "ssd300_vgg_voc_int8.json")]
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256],
+    "classification": [256, 256, 256],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }
@@ -396,11 +397,11 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
 
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
-        if is_binarization(config['nncf_config']):
-            mocker.patch("examples.classification.binarization_worker.train_epoch_bin")
-            mocker.patch("examples.classification.binarization_worker.validate")
-            import examples.classification.binarization_worker as bin_worker
-            bin_worker.validate.return_value = (0, 0)
+        if is_staged_quantization(config['nncf_config']):
+            mocker.patch("examples.classification.staged_quantization_worker.train_epoch_staged")
+            mocker.patch("examples.classification.staged_quantization_worker.validate")
+            import examples.classification.staged_quantization_worker as staged_worker
+            staged_worker.validate.return_value = (0, 0)
         else:
             mocker.patch("examples.classification.main.train_epoch")
             mocker.patch("examples.classification.main.validate")
@@ -417,9 +418,9 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
-        if is_binarization(config['nncf_config']):
-            import examples.classification.binarization_worker as bin_worker
-            model_to_be_trained = bin_worker.train_epoch_bin.call_args[0][2]  # model
+        if is_staged_quantization(config['nncf_config']):
+            import examples.classification.staged_quantization_worker as staged_worker
+            model_to_be_trained = staged_worker.train_epoch_staged.call_args[0][2]  # model
         else:
             model_to_be_trained = sample.train_epoch.call_args[0][1]  # model
     elif config["sample_type"] == "semantic_segmentation":

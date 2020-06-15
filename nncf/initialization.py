@@ -104,7 +104,6 @@ class DataLoaderInitializeRunner:
             module, init_config = data
             initializers[name] = RangeInitializerFactory.create(init_config, module, log_module_name=name)
             hook_handles.append(module.register_forward_hook(initializers[name].forward_hook))
-            module.init_stage = True
         with torch.no_grad():
             bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
             bar_desc = 'Algorithm initialization'
@@ -118,10 +117,6 @@ class DataLoaderInitializeRunner:
                 handle.remove()
             for initializer in initializers.values():
                 initializer.apply_init()
-
-        for module, _ in self.modules_to_init.values():
-            module.init_stage = False
-
 
 def register_default_init_args(nncf_config: 'NNCFConfig', criterion, train_loader) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),

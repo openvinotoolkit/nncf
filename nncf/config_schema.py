@@ -202,6 +202,34 @@ BASIC_COMPRESSION_ALGO_SCHEMA = {
     "required": ["algorithm"]
 }
 
+STAGED_QUANTIZATION_PARAMS = {
+    "params": {
+        "type": "object",
+        "properties": {
+            "batch_multiplier": with_attributes(_NUMBER,
+                                                description="Gradients will be accumulated for this number of "
+                                                            "batches before doing a 'backward' call. Increasing "
+                                                            "this may improve training quality, since binarized "
+                                                            "networks exhibit noisy gradients requiring larger "
+                                                            "batch sizes than could be accomodated by GPUs"),
+            "activations_quant_start_epoch": with_attributes(_NUMBER,
+                                                           description="Epoch to start binarizing activations"),
+            "weights_quant_start_epoch": with_attributes(_NUMBER,
+                                                       description="Epoch to start binarizing weights"),
+            "lr_poly_drop_start_epoch": with_attributes(_NUMBER,
+                                                        description="Epoch to start dropping the learning rate"),
+            "lr_poly_drop_duration_epochs": with_attributes(_NUMBER,
+                                                            description="Duration, in epochs, of the learning "
+                                                                        "rate dropping process."),
+            "disable_wd_start_epoch": with_attributes(_NUMBER,
+                                                      description="Epoch to disable weight decay in the optimizer"),
+            "base_lr": with_attributes(_NUMBER, description="Initial value of learning rate"),
+            "base_wd": with_attributes(_NUMBER, description="Initial value of weight decay"),
+        },
+        "additionalProperties": False
+    }
+}
+
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -253,6 +281,7 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
+        **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False
@@ -269,29 +298,7 @@ BINARIZATION_SCHEMA = {
         "mode": with_attributes(_STRING,
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
                                             "or 'dorefa' for DoReFa binarization"),
-        "params": {
-            "type": "object",
-            "properties": {
-                "batch_multiplier": with_attributes(_NUMBER,
-                                                    description="Gradients will be accumulated for this number of "
-                                                                "batches before doing a 'backward' call. Increasing "
-                                                                "this may improve training quality, since binarized "
-                                                                "networks exhibit noisy gradients requiring larger "
-                                                                "batch sizes than could be accomodated by GPUs"),
-                "activations_bin_start_epoch": with_attributes(_NUMBER,
-                                                               description="Epoch to start binarizing activations"),
-                "weights_bin_start_epoch": with_attributes(_NUMBER,
-                                                           description="Epoch to start binarizing weights"),
-                "lr_poly_drop_start_epoch": with_attributes(_NUMBER,
-                                                            description="Epoch to start dropping the learning rate"),
-                "lr_poly_drop_duration_epochs": with_attributes(_NUMBER,
-                                                                description="Duration, in epochs, of the learning "
-                                                                            "rate dropping process."),
-                "disable_wd_start_epoch": with_attributes(_NUMBER,
-                                                          description="Epoch to disable weight decay in the optimizer")
-            },
-            "additionalProperties": False
-        },
+        **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False

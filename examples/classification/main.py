@@ -43,7 +43,7 @@ from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
-    print_args, make_additional_checkpoints, get_name, is_binarization, print_statistics, is_pretrained_model_requested
+    print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, is_pretrained_model_requested
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.dynamic_graph.graph_builder import create_input_infos
@@ -91,11 +91,11 @@ def main(argv):
     if config.metrics_dump is not None:
         write_metrics(0, config.metrics_dump)
 
-    if not is_binarization(config):
+    if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.classification.binarization_worker import main_worker_binarization
-        start_worker(main_worker_binarization, config)
+        from examples.classification.staged_quantization_worker import staged_quantization_main_worker
+        start_worker(staged_quantization_main_worker, config)
 
 
 #pylint:disable=too-many-branches

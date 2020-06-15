@@ -161,12 +161,14 @@ class ForkedPdb(pdb.Pdb):
             sys.stdin = _stdin
 
 
-def is_binarization(config):
+def is_staged_quantization(config):
     compression_config = config.get('compression', {})
     if isinstance(compression_config, list):
         compression_config = compression_config[0]
     algo_type = compression_config.get("algorithm")
     if algo_type is not None and algo_type == "binarization":
+        return True
+    if algo_type == "quantization" and compression_config.get("params", {}):
         return True
     return False
 

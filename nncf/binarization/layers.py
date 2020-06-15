@@ -36,18 +36,10 @@ class BaseBinarizer(nn.Module):
         super().__init__()
         self.register_buffer('enabled', torch.IntTensor([0]))
         if enabled:
-            self.is_enabled = True
-
-    @property
-    def is_enabled(self):
-        return self.enabled[0] == 1
-
-    @is_enabled.setter
-    def is_enabled(self, value: bool):
-        self.enabled[0] = 1 if value else 0
+            self.enable()
 
     def forward(self, x):
-        if self.is_enabled:
+        if self.is_enabled():
             return self.binarize(x)
         return x
 
@@ -55,8 +47,13 @@ class BaseBinarizer(nn.Module):
         raise NotImplementedError
 
     def enable(self):
-        self.is_enabled = True
+        self.enabled[0] = 1
 
+    def disable(self):
+        self.enabled[0] = 0
+
+    def is_enabled(self):
+        return self.enabled[0] == 1
 
 class WeightBinarizer(BaseBinarizer):
     def binarize(self, x):

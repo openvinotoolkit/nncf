@@ -28,12 +28,13 @@ from examples.classification.main import create_data_loaders, validate, AverageM
 from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
-from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested
 from nncf.binarization.algo import BinarizationController
+from nncf.initialization import register_default_init_args
 from nncf.model_creation import create_compressed_model
+from nncf.quantization.algo import QuantizationController
 from nncf.utils import manual_seed, is_main_process
 
 
@@ -43,17 +44,17 @@ class KDLossCalculator:
         self.original_model.eval()
         self.temperature = temperature
 
-    def loss(self, inputs, binarized_network_outputs):
+    def loss(self, inputs, quantized_network_outputs):
         T = self.temperature
         with torch.no_grad():
             ref_output = self.original_model(inputs).detach()
-        kd_loss = -(nn.functional.log_softmax(binarized_network_outputs / T, dim=1) *
-                    nn.functional.softmax(ref_output / T, dim=1)).mean() * (T * T * binarized_network_outputs.shape[1])
+        kd_loss = -(nn.functional.log_softmax(quantized_network_outputs / T, dim=1) *
+                    nn.functional.softmax(ref_output / T, dim=1)).mean() * (T * T * quantized_network_outputs.shape[1])
         return kd_loss
 
 
-def get_binarization_optimizer(params_to_optimize, binarization_config):
-    params = binarization_config.get("params", {})
+def get_quantization_optimizer(params_to_optimize, quantization_config):
+    params = quantization_config.get("params", {})
     base_lr = params.get("base_lr", 1e-3)
     base_wd = params.get("base_wd", 1e-5)
     return torch.optim.Adam(params_to_optimize,
@@ -61,10 +62,10 @@ def get_binarization_optimizer(params_to_optimize, binarization_config):
                             weight_decay=base_wd)
 
 
-class BinarizationOptimizerScheduler:
-    def __init__(self, optimizer, binarization_config):
-        params = binarization_config.get('params', {})
-        self.base_lr = binarization_config.get("base_lr", 1e-3)
+class PolyLRDropScheduler:
+    def __init__(self, optimizer, quantization_config):
+        params = quantization_config.get('params', {})
+        self.base_lr = params.get("base_lr", 1e-3)
         self.lr_poly_drop_start_epoch = params.get('lr_poly_drop_start_epoch', None)
         self.lr_poly_drop_duration_epochs = params.get('lr_poly_drop_duration_epochs', 30)
         self.disable_wd_start_epoch = params.get('disable_wd_start_epoch', None)
@@ -97,9 +98,10 @@ class BinarizationOptimizerScheduler:
     def state_dict(self):
         return self.__dict__
 
-#pylint:disable=too-many-branches
-#pylint:disable=too-many-statements
-def main_worker_binarization(current_gpu, config):
+
+# pylint:disable=too-many-branches
+# pylint:disable=too-many-statements
+def staged_quantization_main_worker(current_gpu, config):
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
@@ -137,9 +139,10 @@ def main_worker_binarization(current_gpu, config):
     # create model
     model_name = config['model']
     model = load_model(model_name,
-                       pretrained=config.get('pretrained', True) if config.get('weights') is None else False,
+                       pretrained=pretrained,
                        num_classes=config.get('num_classes', 1000),
-                       model_params=config.get('model_params'))
+                       model_params=config.get('model_params'),
+                       weights_path=config.get('weights'))
     original_model = copy.deepcopy(model)
 
     model.to(config.device)
@@ -151,8 +154,9 @@ def main_worker_binarization(current_gpu, config):
         resuming_model_sd = resuming_checkpoint['state_dict']
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
-    if not isinstance(compression_ctrl, BinarizationController):
-        raise RuntimeError("The binarization sample worker may only be run with the binarization algorithm!")
+    if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
+        raise RuntimeError(
+            "The stage quantization sample worker may only be run with the binarization and quantization algorithms!")
 
     model, _ = prepare_model_for_execution(model, config)
     original_model.to(config.device)
@@ -165,9 +169,9 @@ def main_worker_binarization(current_gpu, config):
     params_to_optimize = model.parameters()
 
     compression_config = config['compression']
-    binarization_config = compression_config if isinstance(compression_config, dict) else compression_config[0]
-    optimizer = get_binarization_optimizer(params_to_optimize, binarization_config)
-    optimizer_scheduler = BinarizationOptimizerScheduler(optimizer, binarization_config)
+    quantization_config = compression_config if isinstance(compression_config, dict) else compression_config[0]
+    optimizer = get_quantization_optimizer(params_to_optimize, quantization_config)
+    optimizer_scheduler = PolyLRDropScheduler(optimizer, quantization_config)
     kd_loss_calculator = KDLossCalculator(original_model)
 
     best_acc1 = 0
@@ -198,21 +202,22 @@ def main_worker_binarization(current_gpu, config):
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
-        batch_multiplier = (binarization_config.get("params", {})).get("batch_multiplier", 1)
-        train_bin(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,
-                  train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
+        batch_multiplier = (quantization_config.get("params", {})).get("batch_multiplier", 1)
+        train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name,
+                     optimizer,
+                     train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
 
 
-def train_bin(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,
-              train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
+def train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,
+                 train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
     for epoch in range(config.start_epoch, config.epochs):
         config.cur_epoch = epoch
         if config.distributed:
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train_epoch_bin(train_loader, batch_multiplier, model, criterion, optimizer, optimizer_scheduler,
-                        kd_loss_calculator, compression_ctrl, epoch, config, is_inception)
+        train_epoch_staged(train_loader, batch_multiplier, model, criterion, optimizer, optimizer_scheduler,
+                           kd_loss_calculator, compression_ctrl, epoch, config, is_inception)
 
         # compute compression algo statistics
         stats = compression_ctrl.statistics()
@@ -226,13 +231,17 @@ def train_bin(config, compression_ctrl, model, criterion, is_inception, optimize
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
+        # statistics (e.g. portion of the enabled quantizers) is related to the finished epoch,
+        # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
+        # portion of enabled quantizers)
+        if is_main_process():
+            print_statistics(stats)
+
         # update compression scheduler state at the end of the epoch
         compression_ctrl.scheduler.epoch_step()
         optimizer_scheduler.epoch_step()
 
         if is_main_process():
-            print_statistics(stats)
-
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
             checkpoint = {
                 'epoch': epoch + 1,
@@ -252,9 +261,10 @@ def train_bin(config, compression_ctrl, model, criterion, is_inception, optimize
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
-def train_epoch_bin(train_loader, batch_multiplier, model, criterion, optimizer,
-                    optimizer_scheduler: BinarizationOptimizerScheduler, kd_loss_calculator: KDLossCalculator,
-                    compression_ctrl, epoch, config, is_inception=False):
+
+def train_epoch_staged(train_loader, batch_multiplier, model, criterion, optimizer,
+                       optimizer_scheduler: PolyLRDropScheduler, kd_loss_calculator: KDLossCalculator,
+                       compression_ctrl, epoch, config, is_inception=False):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()

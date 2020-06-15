@@ -24,8 +24,8 @@ Training binarized networks requires special scheduling of the training process.
     "mode": "xnor", // Selects the mode of binarization - either 'xnor' for XNOR binarization, or 'dorefa' for DoReFa binarization
     "params": {
         "batch_multiplier": 1,  // Gradients will be accumulated for this number of batches before doing a 'backward' call
-        "activations_bin_start_epoch": 10,  // Epoch to start binarizing activations
-        "weights_bin_start_epoch": 30,  // Epoch to start binarizing weights
+        "activations_quant_start_epoch": 10,  // Epoch to start binarizing activations
+        "weights_quant_start_epoch": 30,  // Epoch to start binarizing weights
         "lr_poly_drop_start_epoch": 60,  // Epoch to start dropping the learning rate
         "lr_poly_drop_duration_epochs": 30,  // Duration, in epochs, of the learning rate dropping process.
         "disable_wd_start_epoch": 60  // Epoch to disable weight decay in the optimizer

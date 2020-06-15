@@ -10,8 +10,8 @@
             "algorithm": "binarization",
             "mode": "xnor",
             "params": {
-                "activations_bin_start_epoch": 0,
-                "weights_bin_start_epoch": 0
+                "activations_quant_start_epoch": 0,
+                "weights_quant_start_epoch": 0
             },
             "ignored_scopes": ["ResNet/Linear[fc]",
                                "ResNet/Conv2d[conv1]",
