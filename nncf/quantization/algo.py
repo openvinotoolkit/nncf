@@ -123,7 +123,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        self.quantizer_setup_type = QuantizerSetupType.PATTERN_BASED  # TODO: determine from config
+        self.quantizer_setup_type = QuantizerSetupType.PATTERN_BASED # TODO: determine from config
         self.quantizable_subgraph_patterns = self.config.get('quantizable_subgraph_patterns', None)
         self.hw_config = None
         hw_config_type = self.config.get("hw_config_type")
@@ -315,7 +315,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             insertion_point_graph = target_model.get_insertion_point_graph()
             if self._debug_interface:
                 self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
-            prop_graph_solver = QuantizerPropagationSolver(debug_interface=self._debug_interface,
+            prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
+                                                           debug_interface=self._debug_interface,
                                                            hw_config=self.hw_config)
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
             insertion_data = prop_graph_solver.run_on_ip_graph(merged_ip_graph)

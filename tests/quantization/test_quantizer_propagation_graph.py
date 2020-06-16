@@ -52,8 +52,8 @@ class TestQuantizerPropagationStateGraph:
 
         for ip_graph_node_key, ip_graph_node in ip_graph.nodes.items():
             qpg_node = quant_prop_graph.nodes[ip_graph_node_key]
-            assert qpg_node[QPSG.NODE_TYPE_NODE_ATTR] == ip_graph_node[
-                InsertionPointGraph.NODE_TYPE_NODE_ATTR]
+            assert qpg_node[QPSG.NODE_TYPE_NODE_ATTR] == QPSG.ipg_node_type_to_qpsg_node_type(ip_graph_node[
+                InsertionPointGraph.NODE_TYPE_NODE_ATTR])
             qpg_node_type = qpg_node[QPSG.NODE_TYPE_NODE_ATTR]
             if qpg_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
                 assert qpg_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] is None
