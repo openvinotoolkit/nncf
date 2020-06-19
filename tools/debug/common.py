@@ -20,7 +20,7 @@ from torch import nn
 from examples.common.model_loader import load_model
 from examples.common.utils import print_statistics
 from nncf.checkpoint_loading import load_state
-from nncf.layers import NNCFConv2d, NNCFLinear
+from nncf.layers import NNCFConv1d, NNCFConv2d, NNCFLinear
 from nncf.model_creation import create_compressed_model
 
 
@@ -73,8 +73,8 @@ def get_full_dump_paths(layer):
 
 
 def is_weightable(layer):
-    return isinstance(layer, (nn.Conv2d, nn.Linear)) and \
-           not isinstance(layer, (NNCFConv2d, NNCFLinear))
+    return isinstance(layer, (nn.Conv1d, nn.Conv2d, nn.Linear)) and \
+           not isinstance(layer, (NNCFConv1d, NNCFConv2d, NNCFLinear))
 
 
 def has_sparse_quant_weights(layer, name):
