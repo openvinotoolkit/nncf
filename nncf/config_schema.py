@@ -213,9 +213,9 @@ STAGED_QUANTIZATION_PARAMS = {
                                                             "networks exhibit noisy gradients requiring larger "
                                                             "batch sizes than could be accomodated by GPUs"),
             "activations_quant_start_epoch": with_attributes(_NUMBER,
-                                                           description="Epoch to start binarizing activations"),
+                                                             description="Epoch to start binarizing activations"),
             "weights_quant_start_epoch": with_attributes(_NUMBER,
-                                                       description="Epoch to start binarizing weights"),
+                                                         description="Epoch to start binarizing weights"),
             "lr_poly_drop_start_epoch": with_attributes(_NUMBER,
                                                         description="Epoch to start dropping the learning rate"),
             "lr_poly_drop_duration_epochs": with_attributes(_NUMBER,
@@ -329,9 +329,9 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                             "of scheduler steps."),
     "power": with_attributes(_NUMBER,
                              description="For polynomial scheduler - determines the corresponding power value."),
-    "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity level"
-                                                     "will be approached in concave manner, and in convex manner "
-                                                     "otherwise."),
+    "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
+                                                     "level will be approached in concave manner, and in convex "
+                                                     "manner otherwise."),
     "sparsity_init": with_attributes(_NUMBER,
                                      description="Initial value of the sparsity level applied to the "
                                                  "model"),
@@ -345,12 +345,13 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                          "sparsity mask will be frozen and no "
                                                          "longer trained"),
     "update_per_optimizer_step": with_attributes(_BOOLEAN,
-                                                 description="Whether the function-based sparsity level schedulers should"
-                                                             "update the sparsity level after each optimizer step instead"
-                                                             "of each epoch step."),
+                                                 description="Whether the function-based sparsity level schedulers "
+                                                             "should update the sparsity level after each optimizer "
+                                                             "step instead of each epoch step."),
     "steps_per_epoch": with_attributes(_NUMBER,
-                                       description="Number of optimizer steps in one epoch. Required to start proper scheduling"
-                                                   "in the first training epoch if 'update_per_optimizer_step' is true"),
+                                       description="Number of optimizer steps in one epoch. Required to start proper "
+                                                   " scheduling in the first training epoch if "
+                                                   "'update_per_optimizer_step' is true"),
     "multistep_steps": with_attributes(_ARRAY_OF_NUMBERS,
                                        description="A list of scheduler steps at which to transition "
                                                    "to the next scheduled sparsity level (multistep "

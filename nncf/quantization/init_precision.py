@@ -203,10 +203,10 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     @staticmethod
     def disable_all_gradients_except_weights_of_quantized_modules(
-        quantizers_switcher: QuantizersSwitcher,
-        quantized_weight_modules_registry: Dict[str, torch.nn.Module],
-        model: nn.Module,
-        scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
+            quantizers_switcher: QuantizersSwitcher,
+            quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+            model: nn.Module,
+            scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.

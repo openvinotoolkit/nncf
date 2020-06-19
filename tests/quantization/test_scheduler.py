@@ -30,6 +30,7 @@ def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
 
 
 class QuantizationCtrlBaseSpy:
+    #pylint:disable=no-member
     def __init__(self, mocker):
         self._mocked_ctrl = QuantizationControllerBase(mocker.stub)
         mocker.patch.object(self._mocked_ctrl, 'enable_weight_quantization')

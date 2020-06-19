@@ -43,7 +43,8 @@ from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
-    print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, is_pretrained_model_requested
+    print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
+    is_pretrained_model_requested
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.dynamic_graph.graph_builder import create_input_infos

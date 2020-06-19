@@ -238,6 +238,7 @@ def test_get_configs_constrained_by_precision(precision_constraints):
     ordered_weight_keys = [get_mock_quantizer_id(str(i)) for i in range(len(constraints))]
     hw_precision_constraints = get_mock_precision_constraints(constraints, ordered_weight_keys)
 
+    #pylint:disable=protected-access
     actual_configs = HAWQPrecisionInitializer._filter_configs_by_precision_constraints(
         bits_configurations, hw_precision_constraints, ordered_weight_keys, order)
 
@@ -460,16 +461,16 @@ def test_check_hawq_dump(mocker, tmp_path):
     tensor2 = torch.Tensor([2])
     bitwidth1 = 2
     bitwidth2 = 4
-    id = 0
+    id_ = 0
     bits_configurations = [[bitwidth1], [bitwidth2]]
     configuration_metric = [tensor1, tensor2]
     perturbations = Perturbations()
-    perturbations.add(id, bitwidth1, tensor1)
-    perturbations.add(id, bitwidth2, tensor2)
+    perturbations.add(id_, bitwidth1, tensor1)
+    perturbations.add(id_, bitwidth2, tensor2)
     observer = PerturbationObserver(mocker.stub())
     observer.perturbation = tensor1
-    observer.numels = id
-    observer.input_norm = id
+    observer.numels = id_
+    observer.input_norm = id_
     weight_observers = [observer]
     traces_per_layer = TracesPerLayer(torch.cat((tensor1, tensor2)))
 
