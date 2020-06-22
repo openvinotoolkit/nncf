@@ -14,7 +14,7 @@
 from nncf.dynamic_graph.graph import NNCFNodeExpression as N
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 
-LINEAR_OPS = N('linear') | N('conv2d') | N('conv_transpose2d') | N('conv3d') | N('conv_transpose3d')
+LINEAR_OPS = N('linear') | N('conv2d') | N('conv_transpose2d') | N('conv3d') | N('conv_transpose3d') | N('conv1d')
 
 RELU = N(VersionAgnosticNames.RELU) | N('hardtanh')
 
