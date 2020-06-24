@@ -26,7 +26,6 @@ __device__ bool last_block(int* counter) {
 
     return __syncthreads_or(last == gridDim.x - 1);
 }
-
 // support only warp size = 32
 template <typename scalar_t>
 __device__ void sum_warp(volatile scalar_t* sharr) {
@@ -38,6 +37,40 @@ __device__ void sum_warp(volatile scalar_t* sharr) {
         sharr[tidx] += sharr[tidx + 2];
         sharr[tidx] += sharr[tidx + 1];
     }
+}
+
+// Since volatile c10::Half arithmetic is not supported, will have to sacrifice
+// the implicit warp-synchronous programming in favor of explicit intra-warp thread
+// synchronization
+
+template <typename scalar_t>
+__device__ void sum_warp_with_explicit_sync(scalar_t* sharr) {
+    int tidx = threadIdx.x & 31;
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 16];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 8];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 4];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 2];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 1];
+    }
+    __syncwarp();
+}
+
+template <typename scalar_t>
+__device__ inline void gather_warp_execution_results(scalar_t* sharr, const int tidx) {
+    sharr[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sharr[tidx * CUDA_WARP_SIZE] : static_cast<scalar_t>(0.0);
 }
 
 template <typename scalar_t>
@@ -56,7 +89,7 @@ __device__ void sumReduce(
 
     __syncthreads();
     if (tidx < CUDA_WARP_SIZE) {
-        sh_grad[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sh_grad[tidx * CUDA_WARP_SIZE] : 0;
+        gather_warp_execution_results(sh_grad, tidx);
         sum_warp(sh_grad);
         if (tidx == 0) {
             dev_tmp[bidx] = sh_grad[0];
@@ -64,15 +97,56 @@ __device__ void sumReduce(
     }
 
     if (last_block(dev_last_block_counter)) {
-        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : 0;
+        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : static_cast<scalar_t>(0.0);
 
         __syncthreads();
         sum_warp(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
 
         __syncthreads();
         if (tidx < CUDA_WARP_SIZE) {
-            sh_grad[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sh_grad[tidx * CUDA_WARP_SIZE] : 0;
+            gather_warp_execution_results(sh_grad, tidx);
             sum_warp(sh_grad);
+            if (tidx == 0) {
+                grad[0] = sh_grad[0];
+            }
+        }
+    }
+}
+
+
+template<>
+__device__ void sumReduce<c10::Half>(
+        c10::Half* __restrict__ sh_grad,
+        c10::Half sum,
+        const int tidx,
+        const int bidx,
+        c10::Half* __restrict__ dev_tmp,
+        int* __restrict__ dev_last_block_counter,
+        c10::Half* __restrict__ grad) {
+    sh_grad[tidx] = sum;
+
+    __syncthreads();
+    sum_warp_with_explicit_sync(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
+
+    __syncthreads();
+    if (tidx < CUDA_WARP_SIZE) {
+        gather_warp_execution_results(sh_grad, tidx);
+        sum_warp_with_explicit_sync(sh_grad);
+        if (tidx == 0) {
+            dev_tmp[bidx] = sh_grad[0];
+        }
+    }
+
+    if (last_block(dev_last_block_counter)) {
+        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : static_cast<c10::Half>(0.0);
+
+        __syncthreads();
+        sum_warp_with_explicit_sync(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
+
+        __syncthreads();
+        if (tidx < CUDA_WARP_SIZE) {
+            gather_warp_execution_results(sh_grad, tidx);
+            sum_warp_with_explicit_sync(sh_grad);
             if (tidx == 0) {
                 grad[0] = sh_grad[0];
             }
@@ -136,7 +210,7 @@ __global__ void ab_cuda_forward_kernel(
     if (idx < size) {
         int64_t threshold_idx = static_cast<int64_t>(idx / contiguous_elements_per_threshold) % threshold_count;
         scalar_t threshold_element = (*(thresholds + threshold_idx)) * (*scale);
-        *(output + idx) = (*(input + idx) > threshold_element) ? (*scale) : 0;
+        *(output + idx) = (*(input + idx) > threshold_element) ? (*scale) : static_cast<scalar_t>(0.0);
     }
 }
 
@@ -152,7 +226,7 @@ __global__ void ab_cuda_grad_input_kernel(
 
     if (idx < size) {
         const scalar_t input_element = *(input + idx);
-        *(grad_input + idx) = (input_element > 0 && input_element < *scale) ? *(grad_output + idx) : 0;
+        *(grad_input + idx) = (input_element > 0 && input_element < *scale) ? *(grad_output + idx) : static_cast<scalar_t>(0.0);
     }
 }
 
@@ -243,7 +317,7 @@ at::Tensor wb_cuda_forward(
 
     for (int ch_idx = 0; ch_idx < scale_count; ch_idx++)
     {
-        AT_DISPATCH_FLOATING_TYPES(input.type(), "wb_cuda_forward_scale", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "wb_cuda_forward_scale", ([&] {
           wb_cuda_scale_calc_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
               input.data<scalar_t>() + ch_idx * elements_per_scale,
               scale.data<scalar_t>() + ch_idx,
@@ -255,7 +329,7 @@ at::Tensor wb_cuda_forward(
         dev_last_block_counter.fill_(0);
     }
 
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "wb_cuda_forward_binarize", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "wb_cuda_forward_binarize", ([&] {
       wb_cuda_binarize_kernel<scalar_t><<<GET_BLOCKS(input_elements_count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
           output.data<scalar_t>(),
           input.data<scalar_t>(),
@@ -283,7 +357,7 @@ at::Tensor ab_cuda_forward(
 
     auto output = at::empty_like(input);
 
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "ab_cuda_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_forward", ([&] {
       ab_cuda_forward_kernel<scalar_t><<<GET_BLOCKS(input_elements_count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
           output.data<scalar_t>(),
           input.data<scalar_t>(),
@@ -328,7 +402,7 @@ std::vector<at::Tensor> ab_cuda_backward(
     int64_t total_elements_per_threshold = input.numel() / threshold_count;
     int64_t contiguous_elements_per_threshold = input_elements_count / input.size(0) / input.size(1);
 
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "ab_cuda_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
       ab_cuda_grad_input_kernel<scalar_t><<<GET_BLOCKS(input_elements_count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
           grad_input.data<scalar_t>(),
           grad_output.data<scalar_t>(),
@@ -343,7 +417,7 @@ std::vector<at::Tensor> ab_cuda_backward(
     auto dev_last_block_counter = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
 
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "ab_cuda_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
           ab_cuda_grad_scale_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_scale.data<scalar_t>(),
               grad_output.data<scalar_t>(),
@@ -363,7 +437,7 @@ std::vector<at::Tensor> ab_cuda_backward(
     for (int64_t ch_idx = 0; ch_idx < threshold_count; ch_idx++)
     {
         auto init_element_offset = contiguous_elements_per_threshold * ch_idx;
-        AT_DISPATCH_FLOATING_TYPES(input.type(), "ab_cuda_backward", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "ab_cuda_backward", ([&] {
           ab_cuda_grad_thresholds_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_thresholds.data<scalar_t>() + ch_idx,
               grad_output.data<scalar_t>() + init_element_offset,

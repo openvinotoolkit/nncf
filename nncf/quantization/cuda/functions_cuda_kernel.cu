@@ -140,6 +140,40 @@ __device__ void sum_warp(volatile scalar_t* sharr) {
     }
 }
 
+// Since volatile c10::Half arithmetic is not supported, will have to sacrifice
+// the implicit warp-synchronous programming in favor of explicit intra-warp thread
+// synchronization
+
+template <typename scalar_t>
+__device__ void sum_warp_with_explicit_sync(scalar_t* sharr) {
+    int tidx = threadIdx.x & 31;
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 16];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 8];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 4];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 2];
+    }
+    __syncwarp();
+    if (tidx < 16) {
+        sharr[tidx] += sharr[tidx + 1];
+    }
+    __syncwarp();
+}
+
+template <typename scalar_t>
+__device__ inline void gather_warp_execution_results(scalar_t* sharr, const int tidx) {
+    sharr[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sharr[tidx * CUDA_WARP_SIZE] : static_cast<scalar_t>(0.0);
+}
+
 template <typename scalar_t>
 __device__ void sumGrad(
         scalar_t* __restrict__ sh_grad,
@@ -156,7 +190,7 @@ __device__ void sumGrad(
 
     __syncthreads();
     if (tidx < CUDA_WARP_SIZE) {
-        sh_grad[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sh_grad[tidx * CUDA_WARP_SIZE] : 0;
+        gather_warp_execution_results(sh_grad, tidx);
         sum_warp(sh_grad);
         if (tidx == 0) {
             dev_tmp[bidx] = sh_grad[0];
@@ -164,15 +198,57 @@ __device__ void sumGrad(
     }
 
     if (last_block(dev_last_block_counter)) {
-        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : 0;
+        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : static_cast<scalar_t>(0.0);
 
         __syncthreads();
         sum_warp(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
 
         __syncthreads();
         if (tidx < CUDA_WARP_SIZE) {
-            sh_grad[tidx] = tidx * CUDA_WARP_SIZE < CUDA_NUM_THREADS ? sh_grad[tidx * CUDA_WARP_SIZE] : 0;
+            gather_warp_execution_results(sh_grad, tidx);
             sum_warp(sh_grad);
+            if (tidx == 0) {
+                grad[0] = sh_grad[0];
+            }
+        }
+    }
+}
+
+// Remove this and other FP16 template specializations once arithmetic operators are implemented in c10
+// for volatile c10::Half
+template <>
+__device__ void sumGrad<c10::Half>(
+        c10::Half* __restrict__ sh_grad,
+        c10::Half sum,
+        const int tidx,
+        const int bidx,
+        c10::Half* __restrict__ dev_tmp,
+        int* __restrict__ dev_last_block_counter,
+        c10::Half* __restrict__ grad) {
+    sh_grad[tidx] = sum;
+
+    __syncthreads();
+    sum_warp_with_explicit_sync(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
+
+    __syncthreads();
+    if (tidx < CUDA_WARP_SIZE) {
+        gather_warp_execution_results(sh_grad, tidx);
+        sum_warp_with_explicit_sync(sh_grad);
+        if (tidx == 0) {
+            dev_tmp[bidx] = sh_grad[0];
+        }
+    }
+
+    if (last_block(dev_last_block_counter)) {
+        sh_grad[tidx] = tidx < gridDim.x ? dev_tmp[tidx] : static_cast<c10::Half>(0.0);
+
+        __syncthreads();
+        sum_warp_with_explicit_sync(sh_grad + (tidx & ~(CUDA_WARP_SIZE - 1)));
+
+        __syncthreads();
+        if (tidx < CUDA_WARP_SIZE) {
+            gather_warp_execution_results(sh_grad, tidx);
+            sum_warp_with_explicit_sync(sh_grad);
             if (tidx == 0) {
                 grad[0] = sh_grad[0];
             }
@@ -307,7 +383,7 @@ at::Tensor q_cuda_forward(
     }
 
     auto output = at::empty_like(input);
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_cuda_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_cuda_forward", ([&] {
       q_cuda_forward_kernel<scalar_t><<<GET_BLOCKS(quantized_elements_count), CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
           output.data<scalar_t>(),
           input.data<scalar_t>(),
@@ -353,7 +429,7 @@ std::vector<at::Tensor> q_scale_per_activation_channel_cuda_backward(at::Tensor 
     for (int64_t scale_idx = 0; scale_idx < scale_count; scale_idx++)
     {
         auto init_element_offset = contiguous_elements_per_scale * scale_idx;
-        AT_DISPATCH_FLOATING_TYPES(input.type(), "q_scale_per_activation_channel_cuda_backward", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_scale_per_activation_channel_cuda_backward", ([&] {
           q_scale_per_activation_channel_cuda_backward_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_input.data<scalar_t>() + init_element_offset,
               grad_input_low.data<scalar_t>() + scale_idx,
@@ -410,7 +486,7 @@ std::vector<at::Tensor> q_scale_per_weight_channel_cuda_backward(at::Tensor grad
     for (int64_t scale_idx = 0; scale_idx < scale_count; scale_idx++)
     {
         auto init_element_offset = elements_per_scale * scale_idx;
-        AT_DISPATCH_FLOATING_TYPES(input.type(), "q_single_scale_cuda_backward", ([&] {
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_single_scale_cuda_backward", ([&] {
           q_single_scale_cuda_backward_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
               grad_input.data<scalar_t>() + init_element_offset,
               grad_input_low.data<scalar_t>() + scale_idx,
@@ -457,7 +533,7 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
     auto dev_last_block_counter_range = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
     auto dev_last_block_counter_low = at::zeros({1},  at::device(grad_output.options().device()).dtype(at::kInt));
 
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_single_scale_cuda_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_single_scale_cuda_backward", ([&] {
       q_single_scale_cuda_backward_kernel<scalar_t><<<grid_size, CUDA_NUM_THREADS, 0, at::cuda::getCurrentCUDAStream()>>>(
           grad_input.data<scalar_t>(),
           grad_input_low.data<scalar_t>(),
