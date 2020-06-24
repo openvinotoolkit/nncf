@@ -197,15 +197,15 @@ class FilterPruningController(BasePruningAlgoController):
         graph = model.get_original_graph()
         nx_graph = graph._nx_graph
 
-        parameters_count_before = self.get_parameters_count_in_model()
-        flops = self.get_flops_in_model()
+        parameters_count_before = model.get_parameters_count_in_model()
+        flops = model.get_MACs_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
 
         model_pruner = ModelPruner(model, graph, nx_graph)
         model_pruner.prune_model()
 
-        parameters_count_after = self.get_parameters_count_in_model()
-        flops_after = self.get_flops_in_model()
+        parameters_count_after = model.get_parameters_count_in_model()
+        flops_after = model.get_MACs_in_model()
         new_pruned_layers_stats = self.get_stats_for_pruned_modules()
         stats = self.create_stats_table_for_pruning_export(pruned_layers_stats, new_pruned_layers_stats)
 

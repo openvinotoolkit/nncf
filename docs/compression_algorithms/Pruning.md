@@ -61,7 +61,8 @@ Where ![a, k, b](https://microsoft.codecogs.com/gif.latex?a%2C%20k%2C%20b) - par
 > **NOTE**:  Baseline scheduler prunes filters only ONCE and after it just fine-tunes remaining parameters while exponential (and exponential with bias) schedulers choose and prune different filters subsets at each pruning epoch.  
 
 **Filter pruning configuration file parameters**:    
-```{
+```
+{
     "algorithm": "filter_pruning",
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
@@ -83,12 +84,13 @@ Where ![a, k, b](https://microsoft.codecogs.com/gif.latex?a%2C%20k%2C%20b) - par
 
     // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
     // "target_scopes": []
-}```
+}
+```
 
 > **NOTE:**  In all our pruning experiments we used SGD optimizer.
 
 
-**Export pruning algorithm description:**
+#### Export pruning algorithm description:
 This algorithm transforms trained with `Filter pruning algorithm` model with masked pruning (when convolution size remains
  same but some filters are zeroed by mask) to smaller model with actually pruned operations.
 

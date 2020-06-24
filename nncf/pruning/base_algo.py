@@ -12,7 +12,6 @@
 """
 from typing import List, Dict
 
-import numpy as np
 from functools import partial, update_wrapper
 from texttable import Texttable
 from torch import nn
@@ -21,13 +20,12 @@ from nncf.compression_method_api import CompressionAlgorithmBuilder, \
     CompressionAlgorithmController
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.module_operations import UpdateWeight
+from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.utils import get_bn_for_module_scope, \
     get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
     get_previous_conv
-
-from nncf.nncf_logger import logger as nncf_logger
 
 
 class PrunedModuleInfo:
@@ -267,47 +265,6 @@ class BasePruningAlgoController(CompressionAlgorithmController):
     @staticmethod
     def add_algo_specific_stats(stats):
         return stats
-
-    def get_parameters_count_in_model(self):
-        """
-        Return total amount of model parameters.
-        """
-        count = 0
-        for param in self._model.parameters():
-            count = count + param.numel()
-        return count
-
-    def get_flops_in_model(self):
-        """
-        Calculates MAC units count for model.
-        """
-        model = self._model
-        ops_count_dict = {}
-
-        def get_hook(name):
-            def compute_flops_hook(module, input_, output):
-                if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
-                    ks = module.weight.data.shape
-                    ops_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
-                elif isinstance(module, nn.Linear):
-                    ops_count = input_[0].shape[1] * output.shape[1]
-                elif isinstance(module, nn.BatchNorm2d):
-                    ops_count = np.prod(list(input_[0].shape))
-                else:
-                    return
-                ops_count_dict[name] = ops_count
-
-            return compute_flops_hook
-
-        hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
-
-        model.do_dummy_forward(force_eval=True)
-
-        for h in hook_list:
-            h.remove()
-
-        total_ops_count = sum(v for v in ops_count_dict.values())
-        return total_ops_count
 
     def get_stats_for_pruned_modules(self):
         """
