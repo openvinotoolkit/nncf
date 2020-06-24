@@ -30,11 +30,13 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
                 and gradients.
+    :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
     """
 
-    def __init__(self, criterion: _Loss, data_loader: DataLoader):
+    def __init__(self, criterion: _Loss, data_loader: DataLoader, device: str = 'cuda'):
         self.criterion = criterion
         self.data_loader = data_loader
+        self.device = device
 
     @classmethod
     def get_id(cls) -> str:
@@ -50,10 +52,12 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
                 and gradients.
+    :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
     """
 
-    def __init__(self, data_loader: DataLoader):
+    def __init__(self, data_loader: DataLoader, device: str = 'cuda'):
         self.data_loader = data_loader
+        self.device = device
 
     @classmethod
     def get_id(cls) -> str:

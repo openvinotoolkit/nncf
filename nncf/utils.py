@@ -286,6 +286,10 @@ string_types = (str, bytes)
 iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 
 
+def is_tensor(obj):
+    return isinstance(obj, torch.Tensor)
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     if memo is None:
         memo = set()

@@ -24,7 +24,7 @@ from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.initialization import InitializingDataLoader, register_default_init_args
+from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
     BaseQuantizer
 from nncf.structures import QuantizationRangeInitArgs
@@ -138,12 +138,10 @@ class TestRangeInit:
         return algo, compressed_model
 
     @staticmethod
-    def create_dataloader(wrap_dataloader, config, device='cpu') -> DataLoader:
+    def create_dataloader(wrap_dataloader, config) -> DataLoader:
         data_loader = create_mock_dataloader(config)
         if wrap_dataloader:
-            data_loader = InitializingDataLoader(data_loader=data_loader,
-                                                 device=device,
-                                                 kwargs={})
+            data_loader = DefaultInitializingDataLoader(data_loader)
         return data_loader
 
     @staticmethod

@@ -59,19 +59,17 @@ def create_test_dataloaders(model_size, dataset_dir, batch_size):
                                      std=(0.5, 0.5, 0.5))
 
     train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(model_size),
-        transforms.RandomHorizontalFlip(),
+        transforms.CenterCrop(model_size),
         transforms.ToTensor(),
         normalize,
     ])
 
     dummy_config = type('dummy', (object,), {'dataset_dir': dataset_dir})()
     train_dataset = create_cifar(dummy_config, dataset_config='cifar10', is_train=True, transform=train_transforms)
-    pin_memory = True
-    workers = 1
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=workers,
-                                               pin_memory=pin_memory)
+    # Do not set num_workers > 0 here - random hangs occur during pytest runs of this files
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False,
+                                               pin_memory=True)
     return train_loader, train_dataset
 
 
@@ -134,7 +132,7 @@ def create_staged_hawq_test_config(batch_size):
     return config
 
 
-def get_avg_traces(model):
+def get_avg_traces(model, init_device: str):
     """ Assigns bigger average traces for DepthWise Conv than for ordinary Conv and Linear"""
     all_convs = get_all_modules_by_type(model, 'Conv2d')
     dw_conv_indexes = [i for i, conv in enumerate(all_convs.values()) if conv.groups == conv.in_channels]
@@ -143,19 +141,18 @@ def get_avg_traces(model):
 
     mock_avg_traces = []
     scale = 1e-1
-    device = next(model.parameters()).device
     for i in range(num_traces):
         relative_sensativity = 2 * num_traces + i if i in dw_conv_indexes else num_traces - i
-        mock_avg_traces.append(torch.Tensor([scale * relative_sensativity]).to(device))
+        mock_avg_traces.append(torch.Tensor([scale * relative_sensativity]).to(init_device))
     return mock_avg_traces
 
 
-def get_avg_traces_for_vpu(model):
+def get_avg_traces_for_vpu(model, init_device: str):
     """
     Filters average traces for Convolutions only, as they have choice of precision on VPU and
     won't be skipped on Hessian calculation
     """
-    avg_traces = get_avg_traces(model)
+    avg_traces = get_avg_traces(model, init_device)
     all_convs = get_all_modules_by_type(model, 'Conv2d')
     return [avg_traces[i] for i, conv in enumerate(all_convs.values()) if conv.groups != conv.in_channels]
 
@@ -179,7 +176,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
 
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces')
 
-    mocked_trace.return_value = avg_traces_creator(model)
+    mocked_trace.return_value = avg_traces_creator(model, 'cuda')
     from torchvision.models.mobilenet import model_urls
     load_state(model, model_zoo.load_url(model_urls['mobilenet_v2']))
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -249,10 +246,10 @@ HAWQTestParams = namedtuple('HAWQTestParams', ('iter_number', 'batch_size', 'num
 
 
 @pytest.mark.parametrize("params",
-                         (HAWQTestParams(200, 13, 100, 0.07957423478364944),
-                          HAWQTestParams(2, 13, 100, 0.062167033553123474),
-                          HAWQTestParams(2, 10, 10, 0.11200366914272308),
-                          HAWQTestParams(2, 10, 5, 0.11200366914272308)),
+                         (HAWQTestParams(200, 13, 100, 0.04771214351058006),
+                          HAWQTestParams(2, 13, 100, 0.031417448073625565),
+                          HAWQTestParams(2, 10, 10, 0.04505228251218796),
+                          HAWQTestParams(2, 10, 5, 0.04505228251218796)),
                          ids=('until_threshold', 'until_num_iter', 'batch_eq_num_data', 'batch_larger_num_data'))
 def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, params: HAWQTestParams):
     config = get_squeezenet_quantization_config(batch_size=params.batch_size)

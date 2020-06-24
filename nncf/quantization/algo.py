@@ -705,7 +705,10 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
             quantizer.broadcast_initialized_params()
 
-    def _do_range_init(self, data_loader, num_init_steps: int, global_init_range_config: dict):
+    def _do_range_init(self, data_loader,
+                       num_init_steps: int,
+                       global_init_range_config: dict,
+                       device: str):
         modules_to_init = OrderedDict()
         scope_overrides = self.quantization_config.get("scope_overrides", {})
 
@@ -721,7 +724,7 @@ class QuantizationController(QuantizationControllerBase):
         # and input_range)
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
-        runner = DataLoaderInitializeRunner(self._model, modules_to_init)
+        runner = DataLoaderInitializeRunner(self._model, modules_to_init, device)
 
         quantizers = [module for module, config in modules_to_init.values()]
         quantizers_switcher = QuantizersSwitcher(quantizers)
@@ -811,7 +814,8 @@ class QuantizationController(QuantizationControllerBase):
                         'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
                 data_loader = range_init_args.data_loader
 
-                self._do_range_init(data_loader, num_init_steps, global_init_range_config)
+                self._do_range_init(data_loader, num_init_steps, global_init_range_config,
+                                    range_init_args.device)
 
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:
         """
