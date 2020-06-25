@@ -11,9 +11,8 @@
  limitations under the License.
 """
 
-
-from _warnings import warn
 from typing import Callable, List, Optional, Tuple, Any
+import os
 
 import networkx as nx
 from copy import deepcopy
@@ -251,7 +250,7 @@ class DefaultScopeNodeMatcher:
         if len(nncf_node_candidates) == 1:
             result = nncf_node_candidates[0]
         if len(nncf_node_candidates) > 1:
-            warn("More than one node matches input")
+            nncf_logger.warning("More than one node matches input")
             result = nncf_node_candidates[0]
 
         return result
@@ -357,7 +356,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         if len(nncf_node_candidates) == 1:
             result = nncf_node_candidates[0]
         if len(nncf_node_candidates) > 1:
-            warn("More than one node matches input")
+            nncf_logger.warning("More than one node matches input")
             result = nncf_node_candidates[0]
 
         return result
@@ -511,8 +510,21 @@ class NNCFGraph:
         pattern_ios = [self._get_nncf_graph_pattern_io_list(match) for match in matched_node_key_sequences]
         return pattern_ios
 
-    def dump_graph(self, path, extended=False):
-        nx.drawing.nx_pydot.write_dot(self._get_graph_to_dump(extended), path)
+    def dump_graph(self, path):
+        nx.drawing.nx_pydot.write_dot(self._get_graph_for_structure_analysis(), path)
+
+    def visualize_graph(self, path):
+        out_graph = self._get_graph_for_visualization()
+        nx.drawing.nx_pydot.write_dot(out_graph, path)
+        try:
+            A = to_agraph(out_graph)
+            A.layout('dot')
+            png_path = os.path.splitext(path)[0]+'.png'
+            A.draw(png_path)
+        except ImportError:
+            nncf_logger.warning("Graphviz is not installed - only the .dot model visualization format will be used. "
+                                "Install pygraphviz into your Python environment and graphviz system-wide to enable "
+                                "PNG rendering.")
 
     def is_output_node(self, node: NNCFNode) -> bool:
         return not list(self._nx_graph.successors(self._node_id_to_key_dict[node.node_id]))
@@ -571,7 +583,7 @@ class NNCFGraph:
         edge_list = [self._nx_graph.edges[node_key, to_node_key] for to_node_key in succs]
         return [edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] for edge in edge_list]
 
-    def _get_graph_to_dump(self, extended=False) -> nx.DiGraph:
+    def _get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
         """The graph to dump has certain node attributes omitted, compared to the graph stored
          inside NNCFGraph."""
         out_graph = nx.DiGraph()
@@ -595,6 +607,28 @@ class NNCFGraph:
         else:
             for u, v in self._nx_graph.edges:
                 out_graph.add_edge(u, v)
+
+        return out_graph
+
+    def _get_graph_for_visualization(self) -> nx.DiGraph:
+        """A user-friendly graph .dot file, making it easier to debug the network and setup
+        ignored/target scopes."""
+        out_graph = nx.DiGraph()
+        for node_name, node in self._nx_graph.nodes.items():
+            op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+
+            attrs_node = {}
+            attrs_node['label'] = str(node[NNCFGraph.ID_NODE_ATTR]) + ' ' + str(op_exec_context.input_agnostic)
+
+            out_graph.add_node(node_name, **attrs_node)
+
+        for u, v in self._nx_graph.edges:
+            out_graph.add_edge(u, v, label=self._nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
+
+        mapping = {k: v["label"] for k, v in out_graph.nodes.items()}
+        out_graph = nx.relabel_nodes(out_graph, mapping)
+        for node in out_graph.nodes.values():
+            node.pop("label")
 
         return out_graph
 
@@ -703,23 +737,6 @@ class NNCFGraph:
             if nodes[node_key][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model == scope:
                 return nodes[node_key]
         return None
-
-    def visualize_graph(self, path):
-        out_graph = nx.DiGraph()
-        for node_name, node in self._nx_graph.nodes.items():
-            op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
-            scope_str = str(op_exec_context.scope_in_model)
-            out_graph.add_node(node_name, type=op_exec_context.operator_name,
-                               id=node[NNCFGraph.ID_NODE_ATTR],
-                               scope=scope_str)
-        for u, v in self._nx_graph.edges:
-            out_graph.add_edge(u, v, label=self._nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR])
-        try:
-            A = to_agraph(out_graph)
-            A.layout('dot')
-            A.draw(path)
-        except ImportError:
-            warn("Graphviz is not installed - no graph visualization will be done")
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
         matching_graph_op_nodes = []

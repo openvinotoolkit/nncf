@@ -82,6 +82,9 @@ def configure_paths(config):
     config.log_dir = osp.join(config.log_dir, "{}/{}".format(config.name, run_id))
     os.makedirs(config.log_dir)
 
+    if config.nncf_config is not None:
+        config.nncf_config["log_dir"] = config.log_dir
+
     if config.checkpoint_save_dir is None:
         config.checkpoint_save_dir = config.log_dir
 
