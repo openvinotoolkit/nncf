@@ -23,6 +23,7 @@ import numpy as np
 import operator
 import shutil
 import torch
+from nncf.layers import NNCFEmbedding
 from texttable import Texttable
 from torch import nn
 
@@ -456,7 +457,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         def traverse_function(node: NNCFNode, output) -> Tuple[bool, List[NNCFNode]]:
             module = target_model.get_module_by_scope(node.op_exec_context.scope_in_model)
-            if is_nncf_module(module):
+            if is_nncf_module(module) and not isinstance(module, NNCFEmbedding):  # Embeddings have integer input
                 current_node_scope = node.op_exec_context.scope_in_model
                 module_op_insertion_commands = []
                 for comm in prev_weight_and_activation_quantizer_insertion_commands:
