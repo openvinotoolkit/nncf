@@ -37,7 +37,7 @@ from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
 from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
-from nncf.initialization import DataLoaderInitializeRunner
+from nncf.initialization import DataLoaderRangeInitializeRunner, DataLoaderBNAdaptationRunner
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo, InsertionCommand, OperationPriority, \
@@ -725,7 +725,7 @@ class QuantizationController(QuantizationControllerBase):
         # and input_range)
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
 
-        runner = DataLoaderInitializeRunner(self._model, modules_to_init, device)
+        runner = DataLoaderRangeInitializeRunner(self._model, modules_to_init, device)
 
         quantizers = [module for module, config in modules_to_init.values()]
         quantizers_switcher = QuantizersSwitcher(quantizers)
@@ -737,15 +737,18 @@ class QuantizationController(QuantizationControllerBase):
         self._model.rebuild_graph()
 
     def initialize_quantizer_params(self):
-        """ For the quantization there are 2 types of initializations: range and precision"""
+        """ For the quantization there are 2 types of initializations: range and precision
+            BatchNorm statistics are updated for the quantized model as a final initialization step.
+        """
         self.init_range()
         self.init_precision()
+        self.run_batchnorm_adaptation()
 
     def init_precision(self):
         """
-        Precision initialization happens based on measure - layers' sensitivity to perturbations. The measure is
-        calculated by estimation of average trace of Hessian for modules using Hutchinson algorithm.
-        Parameters for quantization algorithm:
+        Precision initialization happens based on an measure of layer sensitivity to perturbations. The measure is
+        calculated by average Hessian trace estimation for each layer using Hutchinson algorithm.
+        Parameters for the quantization algorithm:
             'data_loader' - provides an iterable over the given dataset, instance of 'torch.utils.data.DataLoader'
             'criterion' - loss function, instance of `torch.nn.modules.loss._Loss`,
         """
@@ -804,7 +807,7 @@ class QuantizationController(QuantizationControllerBase):
 
             num_init_steps = global_init_range_config.get('num_init_steps', 1)
             if num_init_steps < 0:
-                raise AttributeError('Number of step to initialize must be >= 0')
+                raise AttributeError('Number of initialization steps must be >= 0')
             if num_init_steps > 0:
                 try:
                     range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
@@ -817,6 +820,24 @@ class QuantizationController(QuantizationControllerBase):
 
                 self._do_range_init(data_loader, num_init_steps, global_init_range_config,
                                     range_init_args.device)
+
+    def run_batchnorm_adaptation(self):
+        init_config = self.quantization_config.get('initializer', {})
+        num_bn_adaptation_steps = init_config.get('num_bn_adaptation_steps', 200)
+        if num_bn_adaptation_steps < 0:
+            raise AttributeError('Number of batch adaptation steps must be >= 0')
+        if num_bn_adaptation_steps > 0:
+            try:
+                range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
+            except KeyError:
+                raise ValueError(
+                    'Should run range initialization as specified via config,'
+                    'but the initializing data loader is not provided as an extra struct. '
+                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
+            data_loader = range_init_args.data_loader
+
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
+        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
 
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:
         """
