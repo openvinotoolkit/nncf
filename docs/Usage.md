@@ -92,3 +92,25 @@ Alternatively, you can use the `nncf.load_state` function.
 It will attempt to load a PyTorch state dict into a model by first stripping the irrelevant prefixes, such as `module.` or `nncf_module.`, from both the checkpoint and the model layer identifiers, and then do the matching between the layers.
 Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
 `is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
+
+
+## Exploring the compressed model
+After a `create_compressed_model` call, the NNCF log directory will contain visualizations of internal representations for the original, uncompressed model (`original_graph.dot`) and for the model with the compression algorithms applied (`compressed_graph.dot`).
+These graphs form the basis for NNCF analyses of your model.
+Below is the example of a LeNet network's `original_graph.dot` visualization:
+
+![alt text](pics/lenet_original_graph.png)
+
+Same model's `compressed_graph.dot` visualization for symmetric INT8 quantization:
+
+![alt text](pics/lenet_compressed_graph.png)
+ 
+Visualize these .dot files using Graphviz and browse through the visualization to validate that this representation correctly reflects your model structure.
+Each node represents a single PyTorch function call - see [NNCFArchitecture.md](./NNCFArchitecture.md) section on graph tracing for details.
+In case you need to exclude some parts of the model from being considered in one algorithm or another, you can use the labels of the `compressed_graph.dot` nodes (excluding the numerical ID in the beginning) and specify these (globally or per-algorithm) within the corresponding specific sections in [configuration file](./ConfigFile.md)
+Regular expression matching is also possible for easier exclusion of certain node groups.
+For instance, below is the same LeNet INT8 model as above, but with `"ignored_scopes": ["{re}.*RELU.*", "LeNet/NNCFConv2d[conv2]"]`:
+
+![alt text](pics/lenet_compressed_graph_ignored.png)
+
+Notice that all RELU operation outputs and the second convolution's weights are no longer quantized. 

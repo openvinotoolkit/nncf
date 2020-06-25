@@ -103,7 +103,7 @@ def sort_dot(path):
 
 def check_graph(graph: NNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     # pylint:disable=protected-access
-    nx_graph = graph._get_graph_to_dump()
+    nx_graph = graph._get_graph_for_structure_analysis()
 
     data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
     dot_dir = os.path.join(data_dir, graph_dir)
