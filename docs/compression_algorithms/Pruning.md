@@ -91,23 +91,21 @@ Where ![a, k, b](https://microsoft.codecogs.com/gif.latex?a%2C%20k%2C%20b) - par
 
 
 #### Export pruning algorithm description:
-This algorithm transforms trained with `Filter pruning algorithm` model with masked pruning (when convolution size remains
- same but some filters are zeroed by mask) to smaller model with actually pruned operations.
+This algorithm transforms model trained with `Filter pruning` algorithm (when convolution size is still the same but some filters are zeroed by mask) to smaller model with actually pruned operations.
 
 The algorithm consists of 3 stages:
-1. On the first stage, channel-wise masks from pruned operations propagate through the graph. Every operation has a function that can calculate the output mask by its attributes and the input masks. These calculated masks determine how the operations will be pruned.
+1. On the first stage, channel-wise masks from pruned operations is propagated through the graph. Every operation has a function that can calculate the output mask by its attributes and the input masks. These calculated masks determine how the operations will be pruned.
  There are three groups of operations:
- - Operations that just pass the mask further unchanged. These operations include all activations and elementwise operations with one input, Batch Norms, Pullings.
- - Operations that cannot work with pruned input and do not skip the mask further. These operations include reshapes, matmul, reduce with some operations.
- - Operations that transform mask somehow. These operations include Convolutions (passes on a mask for this convolution), Concat (concatenates input masks),
+ - Operations that just pass the mask further unchanged. These operations include all activations and elementwise operations with one input, BatchNorm, Pooling.
+ - Operations that cannot work with pruned input and do not skip the mask further. These operations includes Reshape, MatMul, Reduce.
+ - Operations that transform mask in some way. These operations include Convolutions (passes on a mask for this convolution), Concat (concatenates input masks),
   Elementwise (currently not supported, but potentially can intersect masks).
 
-2. In the second stage, a decision is made about which parts of the network will be pruned in accordance with the masks and which will not.
+2. In the second stage, a decision is made about which parts of the network will be pruned in accordance with the masks.
 This is necessary since some operations do not accept the pruned input and the path leading to it cannot be pruned.
 To do this, the special `can_prune` attribute is propagated through the network. For every operation, with information about
     whether inputs and outputs accept pruned inputs and can be pruned, algorithm marks whether this operation can be pruned or not.
-The result is a valid graph for the pruned and non-pruned parts: that is, there is no operation that does not accept a pruned input,
-into which such input will come.
+The result is a valid graph for the pruned and non-pruned parts: that is, there is no operation that does not accept a pruned input.
 
 3. On the final stage, there is a direct pruning of operations according to the obtained `can_prune` attribute values.
 
