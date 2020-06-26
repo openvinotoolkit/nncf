@@ -33,13 +33,14 @@ from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
 class Command:
-    def __init__(self, cmd):
+    def __init__(self, cmd, path=None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
         self.output = []  # store output here
         self.kwargs = {}
         self.timeout = False
+        self.path = path
 
         # set system/version dependent "start_new_session" analogs
         if sys.platform == "win32":
@@ -63,7 +64,7 @@ class Command:
         def target():
             start_time = time.time()
             self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, **self.kwargs)
+                                            bufsize=1, cwd=self.path, **self.kwargs)
             self.timeout = False
 
             self.output = []
