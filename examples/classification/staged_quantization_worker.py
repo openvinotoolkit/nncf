@@ -32,6 +32,7 @@ from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested
 from nncf.binarization.algo import BinarizationController
+from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController
@@ -210,6 +211,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
 def train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,
                  train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
+    best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
         config.cur_epoch = epoch
         if config.distributed:
@@ -227,9 +229,14 @@ def train_staged(config, compression_ctrl, model, criterion, is_inception, optim
             # evaluate on validation set
             acc1, _ = validate(val_loader, model, criterion, config)
 
-        # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
+        compression_level = compression_ctrl.compression_level()
+        # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
+        # still can be best if current compression level is bigger then best one. Compression levels in ascending
+        # order: NONE, PARTIAL, FULL.
+        is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
+        is_best = is_best_by_accuracy or compression_level > best_compression_level
         best_acc1 = max(acc1, best_acc1)
+        best_compression_level = max(compression_level, best_compression_level)
 
         # statistics (e.g. portion of the enabled quantizers) is related to the finished epoch,
         # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
@@ -249,6 +256,7 @@ def train_staged(config, compression_ctrl, model, criterion, is_inception, optim
                 'state_dict': model.state_dict(),
                 'original_model_state_dict': kd_loss_calculator.original_model.state_dict(),
                 'best_acc1': best_acc1,
+                'compression_level': compression_level,
                 'optimizer': optimizer.state_dict(),
                 'compression_scheduler': compression_ctrl.scheduler.state_dict(),
                 'optimizer_scheduler': optimizer_scheduler.state_dict()

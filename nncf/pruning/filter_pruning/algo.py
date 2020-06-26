@@ -15,8 +15,9 @@ from typing import List
 import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
 from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
@@ -24,8 +25,6 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
-
-from nncf.nncf_logger import logger as nncf_logger
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -143,7 +142,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Applying mask to the BatchNorm node
             related_modules = minfo.related_modules
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
@@ -153,3 +152,12 @@ class FilterPruningController(BasePruningAlgoController):
         """
         self._apply_masks()
         super().export_model(filename, *args, **kwargs)
+
+    def compression_level(self) -> CompressionLevel:
+        target_pruning_level = self.scheduler.pruning_target
+        actual_pruning_level = self.pruning_rate
+        if actual_pruning_level == 0:
+            return CompressionLevel.NONE
+        if actual_pruning_level >= target_pruning_level:
+            return CompressionLevel.FULL
+        return CompressionLevel.PARTIAL
