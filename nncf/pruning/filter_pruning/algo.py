@@ -26,7 +26,7 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
-from nncf.structures import QuantizationRangeInitArgs
+from nncf.structures import BNAdaptationInitArgs
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -94,10 +94,9 @@ class FilterPruningController(BasePruningAlgoController):
     def run_batchnorm_adaptation(self):
         initializer_params = self.config.get("initializer", {})
         num_bn_adaptation_steps = initializer_params.get("num_bn_adaptation_steps", 200)
-        range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
-        data_loader = range_init_args.data_loader
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
-        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
+        bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
+        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
     def _set_binary_masks_for_filters(self):
         nncf_logger.debug("Setting new binary masks for pruned modules.")

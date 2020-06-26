@@ -10,7 +10,7 @@ from tqdm import tqdm
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs
 from nncf.utils import objwalk, is_tensor
 
 
@@ -193,5 +193,6 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
 
 def register_default_init_args(nncf_config: 'NNCFConfig', criterion, train_loader) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),
-                                        QuantizationRangeInitArgs(data_loader=train_loader)])
+                                        QuantizationRangeInitArgs(data_loader=train_loader),
+                                        BNAdaptationInitArgs(data_loader=train_loader)])
     return nncf_config

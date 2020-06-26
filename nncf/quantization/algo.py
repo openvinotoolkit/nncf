@@ -50,7 +50,7 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process
 from nncf.utils import get_state_dict_names_with_modules
 
@@ -828,15 +828,15 @@ class QuantizationController(QuantizationControllerBase):
             raise AttributeError('Number of batch adaptation steps must be >= 0')
         if num_bn_adaptation_steps > 0:
             try:
-                range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
+                bn_adaptation_args = self.quantization_config.get_extra_struct(BNAdaptationInitArgs)
             except KeyError:
                 raise ValueError(
-                    'Should run range initialization as specified via config,'
-                    'but the initializing data loader is not provided as an extra struct. '
-                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
-            data_loader = range_init_args.data_loader
+                    'Should run range batchnorm adaptation as specified via config,'
+                    'but the adaptation data loader is not provided as an extra struct. '
+                    'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
+            data_loader = bn_adaptation_args.data_loader
 
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
         bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
 
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:

@@ -23,7 +23,7 @@ from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoCon
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.structures import QuantizationRangeInitArgs
+from nncf.structures import BNAdaptationInitArgs
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -72,10 +72,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     def run_batchnorm_adaptation(self):
         initializer_params = self.config.get("initializer", {})
         num_bn_adaptation_steps = initializer_params.get("num_bn_adaptation_steps", 200)
-        range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
-        data_loader = range_init_args.data_loader
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
-        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
+        bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
+        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
     def _select_threshold(self):
         all_weights = self._collect_all_weights()
