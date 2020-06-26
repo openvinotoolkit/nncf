@@ -13,7 +13,7 @@
 import logging
 
 from nncf.algo_selector import Registry
-from nncf.compression_method_api import CompressionScheduler
+from nncf.compression_method_api import CompressionScheduler, CompressionLevel
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +31,21 @@ class StagedQuantizationScheduler(CompressionScheduler):
         self.weights_quant_start_epoch = params.get('weights_quant_start_epoch', 1)
         self._set_quantization_status()
 
+    @property
+    def current_epoch(self):
+        # Should be last_epoch + 1, because epoch_step is called in the end of epoch.
+        # If last_epoch = -1 and start_epoch = 0, it means that quantizers should be enabled from the very beginning.
+        return self.last_epoch + 1
+
     def epoch_step(self, epoch=None):
         super().epoch_step(epoch)
         should_call_init = False
-        if self.last_epoch + 1 == self.activations_quant_start_epoch:
+        if self.current_epoch == self.activations_quant_start_epoch:
             logger.info('Enabled quantization of activations')
             self.algo.enable_activation_quantization()
             should_call_init = True
 
-        if self.last_epoch + 1 == self.weights_quant_start_epoch:
+        if self.current_epoch == self.weights_quant_start_epoch:
             logger.info('Enabled quantization of weights')
             self.algo.enable_weight_quantization()
             should_call_init = True
@@ -54,15 +60,13 @@ class StagedQuantizationScheduler(CompressionScheduler):
         self._set_quantization_status()
 
     def _set_quantization_status(self):
-        # Should compare with last_epoch + 1, because epoch_step is called in the end of epoch.
-        # If last_epoch = -1 and start_epoch = 0, it means that quantizers should be enabled from the very beginning.
-        if self.last_epoch + 1 >= self.activations_quant_start_epoch:
+        if self.current_epoch >= self.activations_quant_start_epoch:
             self.algo.enable_activation_quantization()
             logger.info('Enabled quantization of activations')
         else:
             self.algo.disable_activation_quantization()
             logger.info('Disabled quantization of activations')
-        if self.last_epoch + 1 >= self.weights_quant_start_epoch:
+        if self.current_epoch >= self.weights_quant_start_epoch:
             self.algo.enable_weight_quantization()
             logger.info('Enabled quantization of weights')
         else:
@@ -71,3 +75,12 @@ class StagedQuantizationScheduler(CompressionScheduler):
 
     def _calc_density_level(self):
         raise NotImplementedError
+
+    def compression_level(self):
+        is_activations_enabled = self.current_epoch >= self.activations_quant_start_epoch
+        is_weights_enabled = self.current_epoch >= self.weights_quant_start_epoch
+        if is_activations_enabled and is_weights_enabled:
+            return CompressionLevel.FULL
+        if not is_activations_enabled and not is_weights_enabled:
+            return CompressionLevel.NONE
+        return CompressionLevel.PARTIAL

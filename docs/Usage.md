@@ -93,6 +93,16 @@ It will attempt to load a PyTorch state dict into a model by first stripping the
 Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
 `is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
 
+To save the best compressed checkpoint use `compression_ctrl.compression_level()` to distinguish between 3 possible 
+levels of compression: `NONE`, `PARTIAL` and `FULL`. It is useful in case of `staged` compression. Model may achieve 
+the best accuracy on earlier stages of compression - tuning without compression or with intermediate compression rate,  
+but still fully compressed model with lower accuracy should be considered as the best compressed one. 
+`NONE` means that no compression is applied for the model, for instance, in case of stage quantization - when all 
+quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIAL` stands for the 
+compressed model which haven't reached final compression ratio yet, e.g. magnitude sparsity algorithm has learnt 
+masking of 30% weights out of 51% of target rate. The controller returns `FULL` compression level when it finished 
+scheduling and tuning hyper parameters of the compression algorithm, for example when rb-sparsity method sets final 
+target sparsity rate for the loss. 
 
 ## Exploring the compressed model
 After a `create_compressed_model` call, the NNCF log directory will contain visualizations of internal representations for the original, uncompressed model (`original_graph.dot`) and for the model with the compression algorithms applied (`compressed_graph.dot`).

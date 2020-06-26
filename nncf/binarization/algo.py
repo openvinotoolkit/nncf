@@ -20,7 +20,7 @@ from torch import nn
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
     ActivationBinarizationScaleThreshold, BaseBinarizer
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.layers import NNCFConv2d
@@ -116,6 +116,9 @@ class BinarizationController(QuantizationControllerBase):
 
     def init_range(self):
         pass
+
+    def compression_level(self) -> CompressionLevel:
+        return self.scheduler.compression_level()
 
     def _compute_and_display_flops_binarization_rate(self):
         net = self._model

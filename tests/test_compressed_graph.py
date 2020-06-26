@@ -303,7 +303,7 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn)
 
-        assert ref_num_sparsed == len(compression_ctrl.child_algos[0].sparsified_module_info)
+        assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
 
 

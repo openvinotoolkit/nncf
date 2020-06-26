@@ -34,6 +34,7 @@ from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
     prepare_model_for_execution, start_worker
+from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.optimizer import make_optimizer
@@ -289,6 +290,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
     metric = IoU(len(class_encoding), ignore_index=ignore_index)
 
     best_miou = -1
+    best_compression_level = CompressionLevel.NONE
     resuming_checkpoint_path = config.resuming_checkpoint_path
     # Optionally resume from a checkpoint
     if resuming_checkpoint_path is not None:
@@ -345,8 +347,11 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                 for i, (key, class_iou) in enumerate(zip(class_encoding.keys(), iou)):
                     config.tb.add_scalar("{}/mIoU_Cls{}_{}".format(config.dataset, i, key), class_iou, epoch)
 
-            is_best = miou > best_miou
+            compression_level = compression_ctrl.compression_level()
+            is_best_by_miou = miou > best_miou and compression_level == best_compression_level
+            is_best = is_best_by_miou or compression_level > best_compression_level
             best_miou = max(miou, best_miou)
+            best_compression_level = max(compression_level, best_compression_level)
 
             if config.metrics_dump is not None:
                 write_metrics(best_miou, config.metrics_dump)
@@ -364,6 +369,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             if is_main_process():
                 checkpoint_path = save_checkpoint(model,
                                                   optimizer, epoch + 1, best_miou,
+                                                  compression_level,
                                                   compression_ctrl.scheduler, config)
 
                 make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
@@ -478,7 +484,6 @@ def main_worker(current_gpu, config):
     model.to(config.device)
     compression_ctrl, model = create_compressed_model(model, nncf_config)
     model, model_without_dp = prepare_model_for_execution(model, config)
-
 
     if config.distributed:
         compression_ctrl.distributed()

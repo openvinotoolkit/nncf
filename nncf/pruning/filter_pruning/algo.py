@@ -16,7 +16,7 @@ import torch
 from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
 from nncf.layers import NNCF_CONV_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
@@ -144,7 +144,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Applying mask to the BatchNorm node
             related_modules = minfo.related_modules
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
@@ -214,3 +214,12 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
 
         super().export_model(filename, *args, **kwargs)
+
+    def compression_level(self) -> CompressionLevel:
+        target_pruning_level = self.scheduler.pruning_target
+        actual_pruning_level = self.pruning_rate
+        if actual_pruning_level == 0:
+            return CompressionLevel.NONE
+        if actual_pruning_level >= target_pruning_level:
+            return CompressionLevel.FULL
+        return CompressionLevel.PARTIAL
