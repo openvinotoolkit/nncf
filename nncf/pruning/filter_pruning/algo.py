@@ -93,7 +93,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     def run_batchnorm_adaptation(self):
         initializer_params = self.config.get("initializer", {})
-        num_bn_adaptation_steps = initializer_params.get("num_bn_adaptation_steps", 200)
+        init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
+        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 200)
         bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
         bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
         bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)

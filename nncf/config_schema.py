@@ -124,11 +124,18 @@ QUANTIZER_GROUP_SCHEMA = {
 GENERIC_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
-        "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                   description="Number of batches from the training "
-                                                      "dataset to use for model inference during "
-                                                      "the BatchNorm statistics adapation procedure "
-                                                      "for the compressed model"),
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adapation "
+                                                                           "procedure for the compressed model"),
+                },
+                "additionalProperties": False,
+            },
     },
     "additionalProperties": False,
 }
@@ -136,14 +143,21 @@ GENERIC_INITIALIZER_SCHEMA = {
 QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adapation "
+                                                                           "procedure for the compressed model"),
+                },
+                "additionalProperties": False,
+            },
         "range":
             {
                 "type": "object",
-                "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adapation procedure "
-                                                                       "for the compressed model"),
                 "properties": {
                     "num_init_steps": with_attributes(_NUMBER,
                                                       description="Number of batches from the training dataset to "
