@@ -12,13 +12,14 @@
 """
 
 from collections import OrderedDict
-from enum import Enum
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
 import networkx as nx
+import numpy as np
 import torch
 from copy import deepcopy
+from enum import Enum
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
@@ -652,3 +653,44 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                            str(scope)))
             curr_module = next_module
         return curr_module
+
+    def get_parameters_count_in_model(self):
+        """
+        Return total amount of model parameters.
+        """
+        count = 0
+        for param in self.parameters():
+            count = count + param.numel()
+        return count
+
+    def get_MACs_in_model(self):
+        """
+        Calculates MAC units count for model.
+        """
+        model = self
+        ops_count_dict = {}
+
+        def get_hook(name):
+            def compute_flops_hook(module, input_, output):
+                if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+                    ks = module.weight.data.shape
+                    ops_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
+                elif isinstance(module, nn.Linear):
+                    ops_count = input_[0].shape[1] * output.shape[1]
+                elif isinstance(module, nn.BatchNorm2d):
+                    ops_count = np.prod(list(input_[0].shape))
+                else:
+                    return
+                ops_count_dict[name] = ops_count
+
+            return compute_flops_hook
+
+        hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
+
+        model.do_dummy_forward(force_eval=True)
+
+        for h in hook_list:
+            h.remove()
+
+        total_ops_count = sum(v for v in ops_count_dict.values())
+        return total_ops_count
