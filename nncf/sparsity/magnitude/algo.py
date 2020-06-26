@@ -17,11 +17,13 @@ import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.structures import QuantizationRangeInitArgs
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -32,15 +34,17 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         params = self.config.get("params", {})
         return MagnitudeSparsityController(target_model, self._sparsified_module_info,
-                                           params,
+                                           self.config,
                                            params.get('weight_importance', 'normed_abs'))
 
 
 class MagnitudeSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo],
-                 params, weight_importance: str):
+                 config, weight_importance: str):
         super().__init__(target_model, sparsified_module_info)
+        self.config = config
+        params = self.config.get("params", {})
         self.sparsity_level = self.threshold = 0
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
@@ -63,6 +67,15 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
         self.threshold = self._select_threshold()
         self._set_masks_for_threshold(self.threshold)
+        self.run_batchnorm_adaptation()
+
+    def run_batchnorm_adaptation(self):
+        initializer_params = self.config.get("initializer", {})
+        num_bn_adaptation_steps = initializer_params.get("num_bn_adaptation_steps", 200)
+        range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
+        data_loader = range_init_args.data_loader
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
+        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
 
     def _select_threshold(self):
         all_weights = self._collect_all_weights()

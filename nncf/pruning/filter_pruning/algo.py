@@ -16,7 +16,9 @@ import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
@@ -25,9 +27,6 @@ from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
 from nncf.structures import QuantizationRangeInitArgs
-from nncf.initialization import DataLoaderBNAdaptationRunner
-
-from nncf.nncf_logger import logger as nncf_logger
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
