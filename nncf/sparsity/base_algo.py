@@ -14,16 +14,15 @@
 from collections import namedtuple
 from typing import List
 
-
 from texttable import Texttable
 
-from nncf.nncf_network import NNCFNetwork
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.layer_utils import COMPRESSION_MODULES
-from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
+from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
+from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
 
@@ -57,8 +56,8 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
             insertion_commands.append(InsertionCommand(InsertionPoint(
                 InputAgnosticOperationExecutionContext("", module_scope, 0),
                 InsertionType.NNCF_MODULE_PRE_OP),
-                                                       hook,
-                                                       OperationPriority.SPARSIFICATION_PRIORITY))
+                hook,
+                OperationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
                 SparseModuleInfo(scope_str, module, hook.operand))
 
@@ -80,7 +79,7 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
     def freeze(self):
         raise NotImplementedError
 
-    def set_sparsity_level(self, sparsity_level):
+    def set_sparsity_level(self, sparsity_level: float):
         raise NotImplementedError
 
     @property
@@ -159,3 +158,6 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
 
     def add_algo_specific_stats(self, stats):
         return stats
+
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL
