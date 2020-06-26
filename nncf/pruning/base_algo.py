@@ -136,8 +136,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
 class BasePruningAlgoController(CompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
-                 pruned_module_info: List[PrunedModuleInfo], params: dict):
+                 pruned_module_info: List[PrunedModuleInfo],
+                 config):
         super().__init__(target_model)
+        self.config = config
+        params = self.config.get("params", {})
         self.pruned_module_info = pruned_module_info
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
@@ -153,7 +156,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
     def zero_grads_for_pruned_modules(self):
         """
-        This function register hook that will set gradients for pruned filters to zero.
+        This function registers a hook that will set the
+        gradients for pruned filters to zero.
         """
         self._clean_hooks()
 

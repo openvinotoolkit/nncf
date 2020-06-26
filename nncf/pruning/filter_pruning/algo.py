@@ -24,6 +24,8 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
+from nncf.structures import QuantizationRangeInitArgs
+from nncf.initialization import DataLoaderBNAdaptationRunner
 
 from nncf.nncf_logger import logger as nncf_logger
 
@@ -32,7 +34,6 @@ from nncf.nncf_logger import logger as nncf_logger
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        self._params = self.config.get("params", {})
 
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(0))
@@ -40,7 +41,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self._pruned_module_info,
-                                       self._params)
+                                       self.config)
 
     def _is_pruned_module(self, module):
         # Currently prune only Convolutions
@@ -55,8 +56,9 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  pruned_module_info: List[PrunedModuleInfo],
-                 params: dict):
-        super().__init__(target_model, pruned_module_info, params)
+                 config):
+        super().__init__(target_model, pruned_module_info, config)
+        params = self.config.get("params", {})
         self.frozen = False
         self.pruning_rate = 0
 
@@ -88,6 +90,15 @@ class FilterPruningController(BasePruningAlgoController):
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
         self._apply_masks()
+        self.run_batchnorm_adaptation()
+
+    def run_batchnorm_adaptation(self):
+        initializer_params = self.config.get("initializer", {})
+        num_bn_adaptation_steps = initializer_params.get("num_bn_adaptation_steps", 200)
+        range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
+        data_loader = range_init_args.data_loader
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, range_init_args.device)
+        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
 
     def _set_binary_masks_for_filters(self):
         nncf_logger.debug("Setting new binary masks for pruned modules.")
@@ -149,7 +160,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     def export_model(self, filename, *args, **kwargs):
         """
-        This function saving model without actually pruning the layers, just nullifies the necessary filters by mask.
+        This function saves the model without actually pruning the layers,
+        just zeroes out the necessary filters by applying a mask.
         """
         self._apply_masks()
         super().export_model(filename, *args, **kwargs)
