@@ -102,11 +102,13 @@ class DataLoaderBaseRunner:
         ):
             if num_init_steps is not None and i >= num_init_steps:
                 break
-
             args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            to_device_fn = partial(torch.Tensor.to, device=device)
-            args, kwargs = objwalk(args_kwargs_tuple, is_tensor, to_device_fn)
-            self.model(*args, **kwargs)
+            self._infer_batch(args_kwargs_tuple, device)
+
+    def _infer_batch(self, args_kwargs_tuple, device):
+        to_device_fn = partial(torch.Tensor.to, device=device)
+        args, kwargs = objwalk(args_kwargs_tuple, is_tensor, to_device_fn)
+        self.model(*args, **kwargs)
 
     def run(self, data_loader, num_init_steps):
         original_device = next(iter(self.model.parameters())).device
@@ -172,20 +174,43 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
     def __init__(self, model, init_device: str):
         super().__init__(model, init_device)
         self.progressbar_description = 'BatchNorm statistics adaptation'
+        self.num_bn_forget_steps = 5
+        self.momentum_bn_forget = 0.95
+        self.momentum_base = 0.1
+
+    def _run_model_inference(self, data_loader, num_init_steps, device):
+        num_bn_forget_steps = self.num_bn_forget_steps
+        bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
+
+        def set_bn_momentum(module, momentum_value):
+            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
+                module.momentum = momentum_value
+
+        self.model.apply(partial(set_bn_momentum,
+                                 momentum_value=self.momentum_bn_forget))
+
+        for i, loaded_item in enumerate(data_loader):
+            if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
+                break
+            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+            self._infer_batch(args_kwargs_tuple, device)
+
+        self.model.apply(partial(set_bn_momentum,
+                                 momentum_value=self.momentum_base))
+
+        for i, loaded_item in tqdm(
+                enumerate(data_loader),
+                total=num_init_steps,
+                desc=self.progressbar_description,
+                bar_format=bar_format,
+        ):
+            if num_init_steps is not None and i >= num_init_steps:
+                break
+            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+            self._infer_batch(args_kwargs_tuple, device)
 
     def _prepare_initialization(self):
-        if not self.model.training:
-            warnings.warn(
-                "Model is not in the training mode. "
-                "BatchNorm statistics will not be adapted for the compressed model"
-            )
-
-        def set_zero_batchnorm_stats(module):
-            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
-                module.running_mean = torch.zeros_like(module.running_mean)
-                module.running_var = torch.ones_like(module.running_var)
-
-        self.model.apply(set_zero_batchnorm_stats)
+        pass
 
     def _apply_initializers(self):
         pass
