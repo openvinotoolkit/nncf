@@ -175,7 +175,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         super().__init__(model, init_device)
         self.progressbar_description = 'BatchNorm statistics adaptation'
         self.num_bn_forget_steps = 5
-        self.momentum_bn_forget = 0.95
+        self.momentum_bn_forget = 0.9
         self.momentum_base = 0.1
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
