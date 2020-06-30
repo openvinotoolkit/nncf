@@ -829,7 +829,7 @@ class QuantizationController(QuantizationControllerBase):
     def run_batchnorm_adaptation(self):
         init_config = self.quantization_config.get('initializer', {})
         init_bn_adapt_config = init_config.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 200)
+        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 20)
         if num_bn_adaptation_steps < 0:
             raise AttributeError('Number of batch adaptation steps must be >= 0')
         if num_bn_adaptation_steps > 0:

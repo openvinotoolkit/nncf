@@ -72,7 +72,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
     def run_batchnorm_adaptation(self):
         initializer_params = self.config.get("initializer", {})
         init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 200)
+        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 20)
         bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
         bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
         bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
