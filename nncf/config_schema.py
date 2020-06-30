@@ -432,9 +432,6 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        # TODO: properly search for the initialize in the compression algo list and
-        # remove the necessity to piggyback on the RB sparsity algo entry in the config
-        "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",
