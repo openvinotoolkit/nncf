@@ -16,7 +16,7 @@ from typing import List
 import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
@@ -99,3 +99,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
     def create_weight_sparsifying_operation(self, module):
         return BinaryMask(module.weight.size())
+
+    def compression_level(self) -> CompressionLevel:
+        return self.scheduler.compression_level()

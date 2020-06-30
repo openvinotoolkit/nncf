@@ -28,6 +28,7 @@ import torch
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
+from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
@@ -201,6 +202,7 @@ def case_common_dirs(tmp_path_factory):
         "checkpoint_save_dir": str(tmp_path_factory.mktemp("models"))
     }
 
+
 @pytest.mark.parametrize(" multiprocessing_distributed",
                          (True, False),
                          ids=['distributed', 'dataparallel'])
@@ -250,7 +252,9 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
     runner = Command(create_command_line(args, config["sample_type"]))
     res = runner.run()
     assert res == 0
-    assert os.path.exists(os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth"))
+    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
+    assert os.path.exists(last_checkpoint_path)
+    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
 
 
 @pytest.mark.parametrize(
@@ -316,7 +320,9 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
     runner = Command(create_command_line(args, config["sample_type"]))
     res = runner.run()
     assert res == 0
-    assert os.path.exists(os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth"))
+    last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
+    assert os.path.exists(last_checkpoint_path)
+    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
 
 
 @pytest.mark.parametrize(
@@ -352,7 +358,7 @@ def test_export_with_pretrained(tmp_path):
             "sample_size": [2, 3, 299, 299]
         },
         "num_classes": 1000,
-        "compression":  {"algorithm": "magnitude_sparsity"}
+        "compression": {"algorithm": "magnitude_sparsity"}
     })
     config_factory = ConfigFactory(config, tmp_path / 'config.json')
 

@@ -16,7 +16,9 @@
 This package defines the API for the NNCF compression methods, so that the user could
 extend the existing algorithms.
 """
+from enum import Enum
 
+import functools
 import torch
 from copy import copy
 from functools import partial
@@ -96,6 +98,35 @@ class CompressionScheduler:
         pass
 
 
+@functools.total_ordering
+class CompressionLevel(Enum):
+    NONE = 0
+    PARTIAL = 1
+    FULL = 2
+
+    def __add__(self, other: 'CompressionLevel') -> 'CompressionLevel':
+        """
+        Defines compression level of a composite compression controller, consist of two algorithms, where `self` is
+        compression level of first algorithm and other - compression level of second one.
+            NONE    & NONE    = NONE
+            PARTIAL & PARTIAL = PARTIAL
+            FULL    & FULL    = FULL
+            NONE    & PARTIAL = PARTIAL
+            NONE    & FULL    = PARTIAL
+            PARTIAL & FULL    = PARTIAL
+        Args:
+            other: instance of another compression level
+        Returns:
+            common compression level of two algorithms
+        """
+        if self.value == other.value:
+            return self
+        return CompressionLevel.PARTIAL
+
+    def __lt__(self, other: 'CompressionLevel') -> bool:
+        return self.value < other.value
+
+
 class CompressionAlgorithmController:
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
@@ -122,6 +153,13 @@ class CompressionAlgorithmController:
         Any special preparations for the algorithm to properly support distributed training
         should be made inside this function.
         """
+
+    def compression_level(self) -> CompressionLevel:
+        """
+        Returns level of compression. Should be used on saving best checkpoints to distinguish between
+        uncompressed, partially compressed and fully compressed models.
+        """
+        raise NotImplementedError()
 
     def statistics(self):
         """
@@ -152,7 +190,7 @@ class CompressionAlgorithmController:
             input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
         original_forward = model.forward
         model.forward = partial(model.forward, *args, **kwargs)
-        #pylint:disable=unexpected-keyword-arg
+        # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
             torch.onnx.export(model, tuple(input_tensor_list),
                               filename, verbose=True, enable_onnx_checker=False, opset_version=10)

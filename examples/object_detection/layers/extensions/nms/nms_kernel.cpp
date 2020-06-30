@@ -64,7 +64,7 @@ at::Tensor nms_cpu_kernel(const at::Tensor& boxes,
 
 at::Tensor nms_cpu(const at::Tensor& boxes, const float threshold, int64_t top_k) {
   at::Tensor result;
-  AT_DISPATCH_FLOATING_TYPES(boxes.type(), "nms_cpu", [&] {
+  AT_DISPATCH_FLOATING_TYPES_AND_HALF(boxes.type(), "nms_cpu", [&] {
     result = nms_cpu_kernel<scalar_t>(boxes, threshold, top_k);
   });
   return result;

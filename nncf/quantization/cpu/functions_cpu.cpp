@@ -100,7 +100,7 @@ at::Tensor q_forward(
     }
 
     at::Tensor output;
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_cpu_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_cpu_forward", ([&] {
       output = q_cpu_forward<scalar_t>(input, input_low, input_range, levels);
     }));
 
@@ -122,7 +122,7 @@ std::vector<at::Tensor> q_backward(
     CHECK_INPUT(input_range);
 
     std::vector<at::Tensor> results;
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_cpu_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_cpu_backward", ([&] {
         results = q_cpu_backward<scalar_t>(grad_output, input, input_low, input_range, levels, level_low, level_high, is_asymmetric);
     }));
 

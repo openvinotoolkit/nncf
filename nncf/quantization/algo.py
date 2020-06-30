@@ -28,7 +28,7 @@ from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.debug import is_debug, DebugInterface, CallCountTracker
 from nncf.dynamic_graph.context import OperatorInput, TracingContext, Scope
 from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
@@ -735,6 +735,11 @@ class QuantizationController(QuantizationControllerBase):
         quantizers_switcher.enable_quantizers()
 
         self._model.rebuild_graph()
+
+    def compression_level(self) -> CompressionLevel:
+        if self.is_staged_scheduler:
+            return self.scheduler.compression_level()
+        return CompressionLevel.FULL
 
     def initialize_quantizer_params(self):
         """ For the quantization there are 2 types of initializations: range and precision

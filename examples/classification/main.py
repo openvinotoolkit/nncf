@@ -29,8 +29,6 @@ import torchvision.transforms as transforms
 import warnings
 from functools import partial
 from shutil import copyfile
-
-from examples.common.sample_config import SampleConfig, create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 
@@ -39,20 +37,23 @@ from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
     prepare_model_for_execution, start_worker
-from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
+from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
     is_pretrained_model_requested
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
+from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
+
 
 def get_argument_parser():
     parser = get_common_argument_parser()
@@ -99,7 +100,7 @@ def main(argv):
         start_worker(staged_quantization_main_worker, config)
 
 
-#pylint:disable=too-many-branches
+# pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
@@ -134,7 +135,6 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
         nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
-
 
     # create model
     model_name = config['model']
@@ -180,7 +180,6 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
@@ -196,6 +195,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
 def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
+    best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
         config.cur_epoch = epoch
         if config.distributed:
@@ -218,9 +218,14 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
             # evaluate on validation set
             acc1, _ = validate(val_loader, model, criterion, config)
 
-        # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
+        compression_level = compression_ctrl.compression_level()
+        # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
+        # still can be best if current compression level is bigger then best one. Compression levels in ascending
+        # order: NONE, PARTIAL, FULL.
+        is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
+        is_best = is_best_by_accuracy or compression_level > best_compression_level
         best_acc1 = max(acc1, best_acc1)
+        best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
@@ -233,6 +238,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
                 'arch': model_name,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
+                'compression_level': compression_level,
                 'acc1': acc1,
                 'optimizer': optimizer.state_dict(),
                 'scheduler': compression_ctrl.scheduler.state_dict()

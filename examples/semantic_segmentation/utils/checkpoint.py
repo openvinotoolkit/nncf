@@ -17,7 +17,7 @@ import torch
 from nncf.checkpoint_loading import load_state
 
 
-def save_checkpoint(model, optimizer, epoch, miou, compression_scheduler, config):
+def save_checkpoint(model, optimizer, epoch, miou, compression_level, compression_scheduler, config):
     """Saves the model in a specified directory with a specified name.save
 
     Keyword arguments:
@@ -25,6 +25,7 @@ def save_checkpoint(model, optimizer, epoch, miou, compression_scheduler, config
     - optimizer (``torch.optim``): The optimizer state to save.
     - epoch (``int``): The current epoch for the model.
     - miou (``float``): The mean IoU obtained by the model.
+    - compression_level (``CompressionLevel``): level of compression
     - compression_scheduler: The compression scheduler associated with the model
     - config: Model config".
 
@@ -43,6 +44,7 @@ def save_checkpoint(model, optimizer, epoch, miou, compression_scheduler, config
     checkpoint = {
         'epoch': epoch,
         'miou': miou,
+        'compression_level': compression_level,
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict(),
         'scheduler': compression_scheduler.state_dict()

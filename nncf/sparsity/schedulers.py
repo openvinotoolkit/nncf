@@ -14,9 +14,9 @@
 import numpy as np
 from bisect import bisect_right
 
-from ..algo_selector import Registry
-from ..compression_method_api import CompressionScheduler
 from nncf.nncf_logger import logger
+from ..algo_selector import Registry
+from ..compression_method_api import CompressionScheduler, CompressionLevel
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
@@ -52,11 +52,22 @@ class SparsityScheduler(CompressionScheduler):
             self.algo.freeze()
 
     def _calc_density_level(self):
-        return 1 - self.current_sparsity_level()
+        return 1 - self.current_sparsity_level
 
     @property
     def current_sparsity_level(self):
         raise NotImplementedError
+
+    @property
+    def target_sparsity_level(self) -> float:
+        return self.sparsity_target
+
+    def compression_level(self) -> CompressionLevel:
+        if self.current_sparsity_level == 0:
+            return CompressionLevel.NONE
+        if self.current_sparsity_level >= self.target_sparsity_level:
+            return CompressionLevel.FULL
+        return CompressionLevel.PARTIAL
 
 
 @SPARSITY_SCHEDULERS.register("polynomial")
@@ -117,10 +128,10 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
         if self.concave:
             current_sparsity = self.initial_sparsity + (self.sparsity_target - self.initial_sparsity) * (
-                        progress ** self.power)
+                progress ** self.power)
         else:
             current_sparsity = self.sparsity_target - (self.sparsity_target - self.initial_sparsity) * (
-                        (1 - progress) ** self.power)
+                (1 - progress) ** self.power)
         return current_sparsity
 
 
@@ -221,3 +232,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     @property
     def current_sparsity_level(self):
         return self.sparsity_level
+
+    @property
+    def target_sparsity_level(self):
+        return self.sparsity_levels[-1]

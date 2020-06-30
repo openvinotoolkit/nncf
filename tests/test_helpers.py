@@ -11,9 +11,11 @@
  limitations under the License.
 """
 
+import onnx
 import torch
+from nncf import NNCFConfig
 
-from tests.helpers import check_equal, TwoConvTestModel, BasicConvTestModel
+from tests.helpers import check_equal, TwoConvTestModel, BasicConvTestModel, create_compressed_model_and_algo_for_test
 
 
 def test_basic_model_has_expected_params():
@@ -69,3 +71,12 @@ def test_two_conv_model_is_valid():
     ref_output = torch.tensor([-24])
     act_output = model(input_)
     check_equal(ref_output, act_output)
+
+
+def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,
+                               path_to_storage_dir) -> onnx.ModelProto:
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    onnx_checkpoint_path = path_to_storage_dir / 'model.onnx'
+    compression_ctrl.export_model(onnx_checkpoint_path)
+    model_proto = onnx.load_model(onnx_checkpoint_path)
+    return model_proto

@@ -20,16 +20,17 @@ from nncf.compression_method_api import CompressionAlgorithmBuilder, \
     CompressionAlgorithmController
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.module_operations import UpdateWeight
+from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.utils import get_bn_for_module_scope, \
-    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling
-
-from nncf.nncf_logger import logger as nncf_logger
+    get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
+    get_previous_conv
 
 
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
+    DEPTHWISE_BN_NAME = 'next_bn_module'
 
     def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict):
         self.module_name = module_name
@@ -62,6 +63,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         device = next(target_model.parameters()).device
         modules_to_prune = target_model.get_nncf_modules()
         insertion_commands = []
+        bn_for_depthwise = {}
 
         input_non_pruned_modules = get_first_pruned_modules(target_model,
                                                             self.get_types_of_pruned_modules() + ['linear'])
@@ -87,6 +89,17 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                                  " this scope is one of the last convolutions".format(module_scope_str))
                 continue
 
+            if is_grouped_conv(module):
+                if is_depthwise_conv(module):
+                    previous_conv = get_previous_conv(target_model, module, module_scope)
+                    if previous_conv:
+                        depthwise_bn = get_bn_for_module_scope(target_model, module_scope)
+                        bn_for_depthwise[str(previous_conv.op_exec_context.scope_in_model)] = depthwise_bn
+
+                nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
+                                 " this scope is grouped convolution".format(module_scope_str))
+                continue
+
             if not self.prune_downsample_convs and is_conv_with_downsampling(module):
                 nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
                                  " this scope is convolution with downsample".format(module_scope_str))
@@ -108,12 +121,25 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
             related_modules = {}
             if self.prune_batch_norms:
-                related_modules['bn_module'] = get_bn_for_module_scope(target_model, module_scope)
+                related_modules[PrunedModuleInfo.BN_MODULE_NAME] = get_bn_for_module_scope(target_model, module_scope)
 
             self._pruned_module_info.append(
                 PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules))
 
+        if self.prune_batch_norms:
+            self.update_minfo_with_depthwise_bn(bn_for_depthwise)
+
         return insertion_commands
+
+    def update_minfo_with_depthwise_bn(self, bn_for_depthwise):
+        """
+        Adding information about BN of depthwise modules to PrunedModuleInfo of previous convolution.
+        :param bn_for_depthwise: dict with next structure - {previous_conv_module_name: BatchNorm module}
+        """
+        for prev_conv_name, bn_depthwise in bn_for_depthwise.items():
+            prev_conv_minfo = [minfo for minfo in self._pruned_module_info if minfo.module_name == prev_conv_name]
+            if prev_conv_minfo and len(prev_conv_minfo) == 1:
+                prev_conv_minfo[0].related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME] = bn_depthwise
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return BasePruningAlgoController(target_model, self._pruned_module_info, self._params)
@@ -207,7 +233,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
     def pruning_rate_for_mask(self, minfo: PrunedModuleInfo):
         mask = self._get_mask(minfo)
-        pruning_rate = mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
+        pruning_rate = 1 - mask.nonzero().size(0) / max(mask.view(-1).size(0), 1)
         return pruning_rate
 
     def mask_shape(self, minfo: PrunedModuleInfo):
@@ -227,7 +253,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
             drow["Mask Shape"] = list(self.mask_shape(minfo))
 
-            drow["Mask zero %"] = 1.0 - self.pruning_rate_for_mask(minfo)
+            drow["Mask zero %"] = self.pruning_rate_for_mask(minfo)
 
             drow["PR"] = self.pruning_rate_for_weight(minfo)
 
@@ -242,4 +268,36 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
     @staticmethod
     def add_algo_specific_stats(stats):
+        return stats
+
+    def get_stats_for_pruned_modules(self):
+        """
+        Return dict with information about pruned modules. Keys in dict is module names, values is dicts with next keys:
+         'w_shape': shape of module weight,
+         'b_shape': shape of module bias,
+         'params_count': total number of params in module
+         'mask_pr': proportion of zero elements in filter pruning mask.
+        """
+        stats = {}
+        for minfo in self.pruned_module_info:
+            layer_info = {}
+            layer_info["w_shape"] = list(minfo.module.weight.size())
+            layer_info["b_shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
+            layer_info["params_count"] = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
+
+            layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
+
+            if PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules and \
+                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                bn_info = {}
+                bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME]
+                bn_info['w_shape'] = bn_module.weight.size()
+
+                bn_info["b_shape"] = bn_module.bias.size() if bn_module.bias is not None else []
+                bn_info['params_count'] = sum(p.numel() for p in bn_module.parameters() if p.requires_grad)
+                bn_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
+                stats[minfo.module_name + '/BatchNorm'] = bn_info
+
+            stats[minfo.module_name] = layer_info
+
         return stats
