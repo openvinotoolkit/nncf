@@ -1,6 +1,7 @@
 #include <torch/torch.h>
-
 #include <vector>
+
+#include "common_defs.h"
 
 at::Tensor wb_cuda_forward(
         at::Tensor input,
@@ -17,8 +18,6 @@ std::vector<at::Tensor> ab_cuda_backward(
     at::Tensor scale,
     at::Tensor output);
 
-#define CHECK_CUDA(x) AT_ASSERTM(x.type().is_cuda(), #x " must be a CUDA tensor")
-#define CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
 at::Tensor wb_forward(

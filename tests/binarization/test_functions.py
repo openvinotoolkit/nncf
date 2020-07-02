@@ -135,7 +135,7 @@ class TestParametrized:
                 ref_value = ReferenceDOREFABinarize.forward(ref_input)
                 test_value = dorefa_binarize_op(test_input)
 
-            check_equal(ref_value, test_value, rtol=1e-3)
+            check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_forward(self, _seed, input_size, use_cuda):
         ref_input = generate_input(input_size)
@@ -146,7 +146,7 @@ class TestParametrized:
         ref_value = ReferenceActivationBinarize.forward(ref_input, ref_scale, ref_threshold)
         test_value = activation_bin_scale_threshold_op(test_input, test_scale, test_threshold)
 
-        check_equal(ref_value, test_value, rtol=1e-3)
+        check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_backward(self, _seed, input_size, use_cuda):
         ref_input = generate_input(input_size)
@@ -162,4 +162,4 @@ class TestParametrized:
         test_value.sum().backward()
         test_grads = get_grads([test_input, test_scale, test_threshold])
 
-        check_equal(ref_grads, test_grads, rtol=1e-3)
+        check_equal(test_grads, ref_grads, rtol=1e-3)

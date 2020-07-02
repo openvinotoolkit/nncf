@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import os
+import pathlib
 from collections import OrderedDict
 from contextlib import contextmanager
 from typing import Dict, Callable, Any, Mapping, Sequence, Set
@@ -338,3 +339,11 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         return tuple(obj)
 
     return obj
+
+
+def set_build_dir_for_venv():
+    # Set build directory for C++/CUDA extensions to virtual environment if it is present
+    if "VIRTUAL_ENV" in os.environ:
+        build_dir = os.path.join(os.environ["VIRTUAL_ENV"], "torch_extensions")
+        pathlib.Path(build_dir).mkdir(parents=True, exist_ok=True)
+        os.environ["TORCH_EXTENSIONS_DIR"] = build_dir
