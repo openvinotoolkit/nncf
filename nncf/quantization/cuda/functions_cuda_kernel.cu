@@ -285,7 +285,7 @@ __global__ void q_scale_per_activation_channel_cuda_backward_kernel(
     scalar_t sum_range = 0, sum_low = 0;
     scalar_t output, val_grad_input_range, val_grad_input_low;
     scalar_t alpha = level_low / level_high;
-    scalar_t range_low = (*input_low) + (*input_range) * alpha;
+    scalar_t range_low = (*input_low);
     scalar_t range_high = (*input_low) + (*input_range);
     scalar_t reverted_range = 1 / (*input_range);
 
