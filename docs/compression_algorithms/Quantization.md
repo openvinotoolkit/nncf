@@ -87,7 +87,7 @@ You can use the `num_init_steps` parameter from the `initializer` group to initi
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
-![output = \frac{\left\lfloor clamp(input-input\_low^{*}, level\_low, level\_high)*s\right \rceil} {s} + input\_low^{*}](https://microsoft.codecogs.com/png.latex?output%20%3D%20%5Cfrac%7B%5Cleft%5Clfloor%20clamp%28input-input%5C_low%5E%7B*%7D%2C%20level%5C_low%2C%20level%5C_high%29*s%5Cright%20%5Crceil%7D%20%7Bs%7D%20&plus;%20input%5C_low%5E%7B*%7D)
+![output = \frac{clamp(\left\lfloor(input-input\_low^{*})*s\right\rceil, level\_low, level\_high)} {s} + input\_low^{*}](https://microsoft.codecogs.com/png.latex?output%3D%5Cfrac%7Bclamp%28%5Cleft%5Clfloor%28input-input%5C_low%5E%7B%2A%7D%29%2As%5Cright%5Crceil%2Clevel%5C_low%2Clevel%5C_high%29%7D%7Bs%7D%2Binput%5C_low%5E%7B%2A%7D)
 
 ![s = \frac{level\_high}{|input\_range^{*}| + eps}](https://microsoft.codecogs.com/png.latex?s%20%3D%20%5Cfrac%7Blevel%5C_high%7D%7B%7Cinput%5C_range%5E%7B*%7D%7C%20&plus;%20eps%7D)
 
