@@ -11,33 +11,38 @@
  limitations under the License.
 """
 
-import os
-import pathlib
 import os.path
-from nncf.definitions import get_install_type
-
 from torch.utils.cpp_extension import load
 
+from nncf.utils import set_build_dir_for_venv
+from nncf.definitions import get_install_type, NNCF_PACKAGE_ROOT_DIR
 
-if "VIRTUAL_ENV" in os.environ:
-    build_dir = os.path.join(os.environ["VIRTUAL_ENV"], "torch_extensions")
-    pathlib.Path(build_dir).mkdir(parents=True, exist_ok=True)
-    os.environ["TORCH_EXTENSIONS_DIR"] = build_dir
+set_build_dir_for_venv()
 
-ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cpu")
+
+BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/binarization")
+
+EXT_INCLUDE_DIRS = [
+    os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/include"),
+]
+
+CPU_EXT_SRC_LIST = [
+    os.path.join(BASE_EXT_DIR, "cpu/functions_cpu.cpp"),
+    os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/common/cpu/tensor_funcs.cpp")
+]
+
+CUDA_EXT_SRC_LIST = [
+    os.path.join(BASE_EXT_DIR, "cuda/functions_cuda.cpp"),
+    os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu")
+]
+
 BinarizedFunctionsCPU = load(
-    'binarized_functions_cpu', [
-        os.path.join(ext_dir, 'functions_cpu.cpp')
-    ],
+    'binarized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
     verbose=False
 )
 
 if get_install_type() == "GPU":
-    ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cuda")
     BinarizedFunctionsCUDA = load(
-        'binarized_functions_cuda', [
-            os.path.join(ext_dir, 'functions_cuda.cpp'),
-            os.path.join(ext_dir, 'functions_cuda_kernel.cu')
-        ],
+        'binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
         verbose=False
     )

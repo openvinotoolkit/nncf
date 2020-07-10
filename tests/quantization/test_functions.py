@@ -219,7 +219,7 @@ class TestParametrized:
 
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
 
-            check_outputs_for_quantization_functions(ref_value, test_value, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
+            check_outputs_for_quantization_functions(test_value, ref_value, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
 
         def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
                                              scale_mode):
@@ -250,8 +250,8 @@ class TestParametrized:
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_scale])
 
-            check_outputs_for_quantization_functions(ref_output, test_value, is_fp16)
-            check_outputs_for_quantization_functions(ref_grads, test_grads, is_fp16)
+            check_outputs_for_quantization_functions(test_value, ref_output, is_fp16)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
 
     class TestAsymmetric:
         @staticmethod
@@ -330,7 +330,7 @@ class TestParametrized:
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, EPS)
 
-            check_outputs_for_quantization_functions(ref_value, test_value, is_fp16)
+            check_outputs_for_quantization_functions(test_value, ref_value, is_fp16)
 
         def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
                                               is_fp16, scale_mode):
@@ -361,4 +361,4 @@ class TestParametrized:
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
-            check_outputs_for_quantization_functions(ref_grads, test_grads, is_fp16)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)

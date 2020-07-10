@@ -1,21 +1,8 @@
-#include <torch/torch.h>
 #include <torch/csrc/autograd/variable.h>
-
 #include <vector>
 
-void sum_to_act_channels(at::Tensor& target_tensor)
-{
-    // Sum over N
-    target_tensor = target_tensor.sum(0, /*keepdims=*/ true);
-
-    // Sum over H, W and the rest
-    auto dim_count = target_tensor.dim();
-    for (int64_t dim_idx = 2; dim_idx < dim_count; dim_idx++)
-    {
-        target_tensor = target_tensor.sum(dim_idx, /*keepdims=*/ true);
-    }
-}
-
+#include "common_cpu_funcs.h"
+#include "common_defs.h"
 
 namespace {
 
@@ -94,7 +81,6 @@ std::vector<at::Tensor> ab_cpu_backward(
     return {grad_input, grad_scale, grad_thresholds};
 }
 
-#define CHECK_CPU(x) TORCH_CHECK(!x.type().is_cuda(), #x " must be a CPU tensor")
 #define CHECK_INPUT(x) CHECK_CPU(x)
 
 at::Tensor wb_forward(
