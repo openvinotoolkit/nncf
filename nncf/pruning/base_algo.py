@@ -249,7 +249,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
             drow["Mask Shape"] = list(self.mask_shape(minfo))
 
-            drow["Mask zero %"] = self.pruning_rate_for_mask(minfo)
+            drow["Mask zero %"] = self.pruning_rate_for_mask(minfo) * 100
 
             drow["PR"] = self.pruning_rate_for_weight(minfo)
 
