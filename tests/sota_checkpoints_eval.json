@@ -191,7 +191,8 @@
                 "metric_type": "Acc@1",
                 "resume": "resnet18_imagenet_filter_pruning_magnitude.pth",
                 "model_description": "ResNet-18",
-                "compression_description": "Filter pruning, 30%, magnitude criterion"
+                "compression_description": "Filter pruning, 30%, magnitude criterion",
+                "diff_fp32_min": -1.03
             },
             "resnet18_imagenet_filter_pruning_geomean": {
                 "config": "examples/classification/configs/pruning/resnet18_pruning_geometric_median.json",
@@ -283,7 +284,7 @@
             "ssd512_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 79.98,
+                "target": 79.88,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_magnitude_sparsity_int8.pth",
                 "batch": 40,
