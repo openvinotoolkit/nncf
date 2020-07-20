@@ -22,7 +22,7 @@ import setuptools
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open("README.md", "r") as fh:
+with open("{}/README.md".format(here), "r") as fh:
     long_description = fh.read()
 
 
@@ -67,7 +67,10 @@ INSTALL_REQUIRES = ["ninja",
 DEPENDENCY_LINKS = []
 
 python_version = sys.version_info[:2]
-if python_version not in [(3, 5), (3, 6), (3, 7)]:
+if python_version[0] < 3:
+    print("Only Python > 3.5 is supported")
+    sys.exit(0)
+elif  python_version[1] < 5:
     print("Only Python > 3.5 is supported")
     sys.exit(0)
 
