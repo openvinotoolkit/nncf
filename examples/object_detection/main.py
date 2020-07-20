@@ -270,6 +270,7 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
     return batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp
 
 
+# pylint: disable=too-many-statements
 def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler):
     net.train()
     # loss counters
@@ -306,10 +307,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                     net.eval()
                     mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
                     is_best_by_mAP = mAP > best_mAp and compression_level == best_compression_level
-                    if is_best_by_mAP or compression_level > best_compression_level:
-                        is_best = True
+                    is_best = is_best_by_mAP or compression_level > best_compression_level
+                    if is_best:
                         best_mAp = mAP
-                        best_compression_level = max(compression_level, best_compression_level)
+                    best_compression_level = max(compression_level, best_compression_level)
                     net.train()
 
             # Learning rate scheduling should be applied after optimizer’s update
