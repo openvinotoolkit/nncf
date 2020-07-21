@@ -17,13 +17,11 @@ import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
-from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.structures import BNAdaptationInitArgs
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -67,15 +65,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
         self.threshold = self._select_threshold()
         self._set_masks_for_threshold(self.threshold)
-        self.run_batchnorm_adaptation()
-
-    def run_batchnorm_adaptation(self):
-        initializer_params = self.config.get("initializer", {})
-        init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 20)
-        bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
-        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
+        self.run_batchnorm_adaptation(self.config)
 
     def _select_threshold(self):
         all_weights = self._collect_all_weights()

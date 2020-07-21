@@ -747,7 +747,7 @@ class QuantizationController(QuantizationControllerBase):
         """
         self.init_range()
         self.init_precision()
-        self.run_batchnorm_adaptation()
+        self.run_batchnorm_adaptation(self.quantization_config)
 
     def init_precision(self):
         """
@@ -825,25 +825,6 @@ class QuantizationController(QuantizationControllerBase):
 
                 self._do_range_init(data_loader, num_init_steps, global_init_range_config,
                                     range_init_args.device)
-
-    def run_batchnorm_adaptation(self):
-        init_config = self.quantization_config.get('initializer', {})
-        init_bn_adapt_config = init_config.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 20)
-        if num_bn_adaptation_steps < 0:
-            raise AttributeError('Number of batch adaptation steps must be >= 0')
-        if num_bn_adaptation_steps > 0:
-            try:
-                bn_adaptation_args = self.quantization_config.get_extra_struct(BNAdaptationInitArgs)
-            except KeyError:
-                raise ValueError(
-                    'Should run range batchnorm adaptation as specified via config,'
-                    'but the adaptation data loader is not provided as an extra struct. '
-                    'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
-            data_loader = bn_adaptation_args.data_loader
-
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
-        bn_adaptation_runner.run(data_loader, num_bn_adaptation_steps)
 
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:
         """

@@ -149,7 +149,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     ):
         super().__init__(model, init_device)
         self.modules_to_init = modules_to_init_vs_init_configs
-        self.progressbar_description = 'Quantizer range initialization'
+        self.progressbar_description = 'Range parameters initialization'
         self.initializers = OrderedDict()
         self.hook_handles = []
 
@@ -171,10 +171,10 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
 
 
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
-    def __init__(self, model, init_device: str):
+    def __init__(self, model, init_device: str, num_bn_forget_steps):
         super().__init__(model, init_device)
         self.progressbar_description = 'BatchNorm statistics adaptation'
-        self.num_bn_forget_steps = 5
+        self.num_bn_forget_steps = num_bn_forget_steps
         self.momentum_bn_forget = 0.9
         self.momentum_base = 0.1
 

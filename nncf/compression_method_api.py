@@ -28,6 +28,9 @@ from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import in_scope_list
+from nncf.structures import BNAdaptationInitArgs
+from nncf.initialization import DataLoaderBNAdaptationRunner
+from nncf.nncf_logger import logger as nncf_logger
 
 
 class CompressionLoss(nn.Module):
@@ -169,6 +172,27 @@ class CompressionAlgorithmController:
         if hasattr(self._model, 'statistics'):
             stats.update(self._model.statistics())
         return stats
+
+    def run_batchnorm_adaptation(self, config):
+        initializer_params = config.get("initializer", {})
+        init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
+        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 10)
+        num_bn_forget_steps = init_bn_adapt_config.get('num_bn_forget_steps', 5)
+
+        if num_bn_adaptation_steps < 0:
+            raise AttributeError('Number of batch adaptation steps must be >= 0')
+        if num_bn_adaptation_steps > 0:
+            try:
+                bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
+            except KeyError:
+                nncf_logger.info(
+                    'Should run range batchnorm adaptation as specified via config,'
+                    'but the adaptation data loader is not provided as an extra struct. '
+                    'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
+                return
+
+        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device, num_bn_forget_steps)
+        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
     def export_model(self, filename, *args, **kwargs):
         """

@@ -91,15 +91,7 @@ class FilterPruningController(BasePruningAlgoController):
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
         self._apply_masks()
-        self.run_batchnorm_adaptation()
-
-    def run_batchnorm_adaptation(self):
-        initializer_params = self.config.get("initializer", {})
-        init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 20)
-        bn_adaptation_args = self.config.get_extra_struct(BNAdaptationInitArgs)
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device)
-        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
+        self.run_batchnorm_adaptation(self.config)
 
     def _set_binary_masks_for_filters(self):
         nncf_logger.debug("Setting new binary masks for pruned modules.")
