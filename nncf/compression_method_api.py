@@ -16,21 +16,21 @@
 This package defines the API for the NNCF compression methods, so that the user could
 extend the existing algorithms.
 """
-from enum import Enum
-
 import functools
-import torch
 from copy import copy
+from enum import Enum
 from functools import partial
+
+import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
-from nncf.nncf_network import NNCFNetwork
-from nncf.utils import in_scope_list
-from nncf.structures import BNAdaptationInitArgs
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_logger import logger as nncf_logger
+from nncf.nncf_network import NNCFNetwork
+from nncf.structures import BNAdaptationInitArgs
+from nncf.utils import in_scope_list
 
 
 class CompressionLoss(nn.Module):
@@ -186,8 +186,8 @@ class CompressionAlgorithmController:
                 bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
             except KeyError:
                 nncf_logger.info(
-                    'Should run range batchnorm adaptation as specified via config,'
-                    'but the adaptation data loader is not provided as an extra struct. '
+                    'Could not run batchnorm adaptation '
+                    'as the adaptation data loader is not provided as an extra struct. '
                     'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
                 return
 
