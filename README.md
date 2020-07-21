@@ -21,7 +21,7 @@ Compression results achievable with the NNCF-powered samples are reported [here]
 - Distributed training support
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([mmdetection](https://github.com/open-mmlab/mmdetection), [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
-- Exporting compressed models to ONNX\* checkpoints ready for usage with [OpenVINO&trade; toolkit](https://github.com/opencv/dldt).
+- Exporting compressed models to ONNX\* checkpoints ready for usage with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
 
 ## Usage
 The NNCF is organized as a regular Python package that can be imported in your target training pipeline script.
