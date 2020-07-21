@@ -191,8 +191,8 @@ class CompressionAlgorithmController:
                     'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
                 return
 
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device, num_bn_forget_steps)
-        bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
+            bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device, num_bn_forget_steps)
+            bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
     def export_model(self, filename, *args, **kwargs):
         """
