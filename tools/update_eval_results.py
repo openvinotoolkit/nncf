@@ -112,10 +112,10 @@ def get_results_table_rows(per_sample_config_dict,
                 resume = model_dicts[model_name].get('resume', {})
             else:
                 resume = None
-            model_display_name = model_dicts[model_name].get('model_description', {})
+            model_display_name = model_dicts[model_name].get('model_description')
 
-            if model_dicts[model_name].get('compression_description', {}):
-                compression = model_dicts[model_name].get('compression_description', {})
+            if model_dicts[model_name].get('compression_description') is not None:
+                compression = model_dicts[model_name].get('compression_description')
             else:
                 compression = 'None'
 
@@ -125,7 +125,8 @@ def get_results_table_rows(per_sample_config_dict,
                                                                                          model_name,
                                                                                          reference,
                                                                                          table_format)
-
+            if table_format == 'overview' and compression == 'None':
+                continue  # The overview already has baseline results as a separate column
             rows.append(build_per_model_row(with_links, with_fp32_baseline,
                                             model_display_name,
                                             compression,
@@ -135,8 +136,6 @@ def get_results_table_rows(per_sample_config_dict,
                                             conf_file,
                                             checkpoint_link))
 
-            if args.output is not None:
-                model_dicts[model_name]['target'] = measured_metrics[model_name]
     return rows
 
 

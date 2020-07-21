@@ -121,28 +121,22 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|76.13|-|
 |ResNet-50|INT8|ImageNet|76.13|76.05|
 |ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.3|
 |ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.22|
 |ResNet-50|Filter pruning, 30%, magnitude criterion|ImageNet|76.13|75.7|
 |ResNet-50|Filter pruning, 30%, geometric median criterion|ImageNet|76.13|75.7|
-|Inception V3|None|ImageNet|77.32|-|
 |Inception V3|INT8|ImageNet|77.32|76.96|
 |Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.32|77.02|
-|MobileNet V2|None|ImageNet|71.81|-|
 |MobileNet V2|INT8|ImageNet|71.81|71.34|
 |MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.81|70.89|
 |MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.81|70.99|
-|SqueezeNet V1.1|None|ImageNet|58.18|-|
 |SqueezeNet V1.1|INT8|ImageNet|58.18|58.02|
 |SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.85|
-|ResNet-18|None|ImageNet|69.76|-|
 |ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
 |ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.56|
 |ResNet-18|Filter pruning, 30%, magnitude criterion|ImageNet|69.76|68.73|
 |ResNet-18|Filter pruning, 30%, geometric median criterion|ImageNet|69.76|68.97|
-|ResNet-34|None|ImageNet|73.31|-|
 |ResNet-34|Filter pruning, 30%, magnitude criterion|ImageNet|73.31|72.54|
 |ResNet-34|Filter pruning, 30%, geometric median criterion|ImageNet|73.31|72.62|
 
@@ -150,10 +144,8 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|SSD300-BN|None|VOC12+07|78.28|-|
 |SSD300-BN|INT8|VOC12+07|78.28|78.12|
 |SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|78.28|77.94|
-|SSD512-BN|None|VOC12+07|80.26|-|
 |SSD512-BN|INT8|VOC12+07|80.26|80.09|
 |SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|80.26|79.88|
 
@@ -161,13 +153,10 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|UNet|None|CamVid|71.95|-|
 |UNet|INT8|CamVid|71.95|71.66|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|None|CamVid|67.89|-|
 |ICNet|INT8|CamVid|67.89|67.87|
 |ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.24|
-|UNet|None|Mapillary|56.23|-|
 |UNet|INT8|Mapillary|56.23|56.12|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.0|
 
@@ -176,15 +165,10 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|BERT-base-chinese|None|XNLI|77.68|-|
 |BERT-base-chinese|INT8|XNLI|77.68|77.22|
-|BERT-large (Whole Word Masking)|None|SQuAD v1.1|93.21 (F1)|-|
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|93.21 (F1)|92.68 (F1)|
-|RoBERTa-large|None|MNLI|90.6 (matched)|-|
-|RoBERTa-large|None|MNLI|90.6 (matched)|89.25 (matched)|
-|DistilBERT-base|None|SST-2|91.1|-|
+|RoBERTa-large|INT8|MNLI|90.6 (matched)|89.25 (matched)|
 |DistilBERT-base|INT8|SST-2|91.1|90.3|
-|MobileBERT|None|SQuAD v1.1|89.98 (F1)|-|
 |MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.3 (F1)|
 
 
@@ -192,10 +176,8 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet-ResNet50-FPN|None|COCO2017|35.6 (avg box mAP)|-|
 |RetinaNet-ResNet50-FPN|INT8|COCO2017|35.6 (avg box mAP)|35.3 (avg box mAP)|
 |RetinaNet-ResNet50-FPN|INT8 + Sparsity 50%|COCO2017|35.6 (avg box mAP)|34.7 (avg box mAP)|
-|RetinaNet-ResNeXt101-64x4d-FPN|None|COCO2017|39.6 (avg box mAP)|-|
 |RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
 
 
