@@ -191,8 +191,8 @@ class FilterPruningController(BasePruningAlgoController):
     # pylint: disable=protected-access
     def export_model(self, filename, *args, **kwargs):
         """
-        This function saves the model without actually pruning the layers,
-        just zeroes out the necessary filters by applying a mask.
+        This function discards the pruned filters based on the binary masks
+        before exporting the model to ONNX.
         """
         self._apply_masks()
         model = self._model.eval().cpu()
