@@ -192,7 +192,7 @@
                 "resume": "resnet18_imagenet_filter_pruning_magnitude.pth",
                 "model_description": "ResNet-18",
                 "compression_description": "Filter pruning, 30%, magnitude criterion",
-                "diff_fp32_min": -1.03
+                "diff_fp32_min": -1.05
             },
             "resnet18_imagenet_filter_pruning_geomean": {
                 "config": "examples/classification/configs/pruning/resnet18_pruning_geometric_median.json",
