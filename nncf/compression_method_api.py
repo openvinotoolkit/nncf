@@ -176,7 +176,7 @@ class CompressionAlgorithmController:
     def run_batchnorm_adaptation(self, config):
         initializer_params = config.get("initializer", {})
         init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 10)
+        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 0)
         num_bn_forget_steps = init_bn_adapt_config.get('num_bn_forget_steps', 5)
 
         if num_bn_adaptation_steps < 0:

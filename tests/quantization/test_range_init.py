@@ -341,18 +341,19 @@ def test_percentile_init(quantization_mode):
                           "bn_adaptation_call_count"),
                          [
                              (lambda x: x['initializer'].pop('range'), 1, 1, 1),
-                             (lambda x: x.pop('initializer'), 1, 0, 1),
+                             (lambda x: x.pop('initializer'), 1, 0, 0),
                              (lambda x: x['initializer'].pop('precision'), 1, 0, 1),
                              (lambda x: x['initializer']['range'].update({'num_init_steps': 0}), 0, 1, 1),
                          ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])
 def test_range_init_is_called(config_cutter, range_init_call_count, precision_init_call_count,
                               bn_adaptation_call_count, mocker):
     config = create_hawq_test_config()
+    config['compression']['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_steps': 5}})
     model = MockModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
     range_init_spy = mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
     precision_init_spy = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.apply_init')
-    bn_adaptation_spy = mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
+    bn_adaptation_spy = mocker.patch('nncf.initialization.DataLoaderBNAdaptationRunner.run')
 
     config_cutter(config['compression'])
     create_compressed_model_and_algo_for_test(model, config)
