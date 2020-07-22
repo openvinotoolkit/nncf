@@ -41,15 +41,13 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                  sparsified_module_info: List[SparseModuleInfo],
                  params, weight_importance: str):
         super().__init__(target_model, sparsified_module_info)
-        self.sparsity_level = self.threshold = 0
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
         self._scheduler = scheduler_cls(self, params)
 
     def statistics(self):
         stats = super().statistics()
-        stats['sparsity_threshold'] = self.threshold
-        stats['sparsity_level'] = self.sparsity_level
+        stats['sparsity_threshold'] = self._select_threshold(self.sparsity_rate_for_sparsified_modules)
         return stats
 
     def freeze(self):
@@ -59,17 +57,14 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if sparsity_level >= 1 or sparsity_level < 0:
             raise AttributeError(
                 'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
-        self.sparsity_level = sparsity_level
+        self._set_masks_for_threshold(self._select_threshold(sparsity_level))
 
-        self.threshold = self._select_threshold()
-        self._set_masks_for_threshold(self.threshold)
-
-    def _select_threshold(self):
+    def _select_threshold(self, sparsity_level):
         all_weights = self._collect_all_weights()
         if not all_weights:
             return 0.0
         all_weights_tensor, _ = torch.cat(all_weights).sort()
-        threshold = all_weights_tensor[int(all_weights_tensor.size(0) * self.sparsity_level)].item()
+        threshold = all_weights_tensor[int((all_weights_tensor.size(0) - 1) * sparsity_level)].item()
         return threshold
 
     def _set_masks_for_threshold(self, threshold_val):

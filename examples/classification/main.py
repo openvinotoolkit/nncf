@@ -222,9 +222,11 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
         # still can be best if current compression level is bigger then best one. Compression levels in ascending
         # order: NONE, PARTIAL, FULL.
+
         is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
         is_best = is_best_by_accuracy or compression_level > best_compression_level
-        best_acc1 = max(acc1, best_acc1)
+        if is_best:
+            best_acc1 = acc1
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:

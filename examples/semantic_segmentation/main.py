@@ -350,7 +350,8 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             compression_level = compression_ctrl.compression_level()
             is_best_by_miou = miou > best_miou and compression_level == best_compression_level
             is_best = is_best_by_miou or compression_level > best_compression_level
-            best_miou = max(miou, best_miou)
+            if is_best:
+                best_miou = miou
             best_compression_level = max(compression_level, best_compression_level)
 
             if config.metrics_dump is not None:
