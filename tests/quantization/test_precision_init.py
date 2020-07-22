@@ -413,8 +413,8 @@ MANUAL_CONFIG_TEST_PARAMS = [
                            bit_stats=[['8', '24.528', '30.189', '54.717'],
                                       ['4', '24.528', '20.755', '45.283']]),
     ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
-                           bit_stats=[['8', '24.528', '28.302', '52.830'],
-                                      ['4', '24.528', '22.642', '47.170']])
+                           bit_stats=[['8', '24.528', '30.189', '54.717'],
+                                      ['4', '24.528', '20.755', '45.283']])
 ]
 
 

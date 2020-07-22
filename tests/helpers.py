@@ -146,7 +146,7 @@ def get_grads(variables):
 
 def check_equal(test, reference, rtol=1e-4):
     for i, (x, y) in enumerate(zip(test, reference)):
-        y = y.cpu().detach().numpy()
+        x = x.cpu().detach().numpy()
         np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
 
 

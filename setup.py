@@ -22,7 +22,7 @@ import setuptools
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open("README.md", "r") as fh:
+with open("{}/README.md".format(here), "r") as fh:
     long_description = fh.read()
 
 
@@ -38,6 +38,15 @@ def find_version(*file_paths):
     if version_match:
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
+
+
+INSTALL_TYPE_RESOURCE_NAME = 'install_type'
+INSTALL_TYPE_RESOURCE_LOCATION = "{}/nncf/{}".format(here, INSTALL_TYPE_RESOURCE_NAME)
+
+
+def write_install_type(install_type: str):
+    with open(INSTALL_TYPE_RESOURCE_LOCATION, 'wb') as f:
+        f.write(install_type.encode("ASCII"))
 
 
 INSTALL_REQUIRES = ["ninja",
@@ -67,7 +76,10 @@ INSTALL_REQUIRES = ["ninja",
 DEPENDENCY_LINKS = []
 
 python_version = sys.version_info[:2]
-if python_version not in [(3, 5), (3, 6), (3, 7)]:
+if python_version[0] < 3:
+    print("Only Python > 3.5 is supported")
+    sys.exit(0)
+elif  python_version[1] < 5:
     print("Only Python > 3.5 is supported")
     sys.exit(0)
 
@@ -86,6 +98,7 @@ TORCHVISION_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torch
                                   'ver}m-linux_x86_64.whl'
 WHL_MODE_TEMPLATE = '%2B{mode}'
 
+
 if "--cpu-only" in sys.argv:
     mode = 'cpu'
     whl_mode = WHL_MODE_TEMPLATE.format(mode=mode)
@@ -100,7 +113,7 @@ if "--cpu-only" in sys.argv:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    KEY = ["CPU"]
+    write_install_type("CPU")
     sys.argv.remove("--cpu-only")
 else:
     mode = "cu{}".format(CUDA_VERSION)
@@ -116,7 +129,7 @@ else:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    KEY = ["GPU"]
+    write_install_type("GPU")
 
 
 EXTRAS_REQUIRE = {
@@ -124,14 +137,6 @@ EXTRAS_REQUIRE = {
         "pytest"],
     "docs": []
 }
-
-package_data = {'nncf': ['quantization/cpu/functions_cpu.cpp',
-                         'quantization/cuda/functions_cuda.cpp',
-                         'quantization/cuda/functions_cuda_kernel.cu',
-                         'binarization/cpu/functions_cpu.cpp',
-                         'binarization/cuda/functions_cuda.cpp',
-                         'binarization/cuda/functions_cuda_kernel.cu']}
-
 
 setuptools.setup(
     name="nncf",
@@ -141,7 +146,7 @@ setuptools.setup(
     description="Neural Networks Compression Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/opencv/openvino-training-extensions",
+    url="https://github.com/openvinotoolkit/nncf_pytorch",
     packages=setuptools.find_packages(),
     dependency_links=DEPENDENCY_LINKS,
     classifiers=[
@@ -151,8 +156,13 @@ setuptools.setup(
     ],
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
-    package_data=package_data,
-    keywords=KEY
+    package_data={
+        INSTALL_TYPE_RESOURCE_NAME: [INSTALL_TYPE_RESOURCE_LOCATION]
+    },
+    keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
+              "quantization-aware-training", "hawq", "classification",
+              "pruning", "object-detection", "semantic-segmentation", "nlp",
+              "bert", "transformers", "mmdetection"]
 )
 
 path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"]+"/ninja*/ninja/data/bin/"))

@@ -145,7 +145,7 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
             mask = minfo.operand.apply_binary_mask(minfo.module.weight)
             nonzero = mask.nonzero().size(0)
             drow["SR"] = 1.0 - nonzero / max(mask.view(-1).size(0), 1)
-            drow["% weights"] = mask.view(-1).size(0) / sparsified_weights_count
+            drow["% weights"] = (mask.view(-1).size(0) / sparsified_weights_count) * 100
             row = [drow[h] for h in header]
             data.append(row)
         table.add_rows(data)
