@@ -121,9 +121,50 @@ QUANTIZER_GROUP_SCHEMA = {
     "additionalProperties": False
 }
 
-INITIALIZER_SCHEMA = {
+GENERIC_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
+    },
+    "additionalProperties": False,
+}
+
+QUANTIZATION_INITIALIZER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
         "range":
             {
                 "type": "object",
@@ -237,7 +278,7 @@ QUANTIZATION_SCHEMA = {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
-        "initializer": INITIALIZER_SCHEMA,
+        "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(QUANTIZER_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
                                                "Overrides higher-level settings."),
@@ -294,7 +335,7 @@ BINARIZATION_SCHEMA = {
         "algorithm": {
             "const": BINARIZATION_ALGO_NAME_IN_CONFIG
         },
-        "initializer": INITIALIZER_SCHEMA,
+        "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "mode": with_attributes(_STRING,
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
                                             "or 'dorefa' for DoReFa binarization"),
@@ -373,6 +414,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",
@@ -400,9 +442,6 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        # TODO: properly search for the initialize in the compression algo list and
-        # remove the necessity to piggyback on the RB sparsity algo entry in the config
-        "initializer": INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",
@@ -421,6 +460,7 @@ FILTER_PRUNING_SCHEMA = {
         "algorithm": {
             "const": FILTER_PRUNING_ALGO_NAME_IN_CONFIG
         },
+        "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",

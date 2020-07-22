@@ -32,15 +32,17 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         params = self.config.get("params", {})
         return MagnitudeSparsityController(target_model, self._sparsified_module_info,
-                                           params,
+                                           self.config,
                                            params.get('weight_importance', 'normed_abs'))
 
 
 class MagnitudeSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo],
-                 params, weight_importance: str):
+                 config, weight_importance: str):
         super().__init__(target_model, sparsified_module_info)
+        self.config = config
+        params = self.config.get("params", {})        
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
         self._scheduler = scheduler_cls(self, params)
@@ -58,6 +60,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             raise AttributeError(
                 'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
         self._set_masks_for_threshold(self._select_threshold(sparsity_level))
+        self.run_batchnorm_adaptation(self.config)
 
     def _select_threshold(self, sparsity_level):
         all_weights = self._collect_all_weights()

@@ -60,10 +60,25 @@ Where ![a, k, b](https://latex.codecogs.com/png.latex?a%2C%20k%2C%20b) - paramet
 
 > **NOTE**:  Baseline scheduler prunes filters only ONCE and after it just fine-tunes remaining parameters while exponential (and exponential with bias) schedulers choose and prune different filters subsets at each pruning epoch.  
 
+#### Batch-norm statistics adaptation
+
+After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
+(per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
+through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
+and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
+sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_steps` in the
+`batchnorm_adaptation` section of the `initializer` configuration (see example below).
+
 **Filter pruning configuration file parameters**:    
 ```
 {
     "algorithm": "filter_pruning",
+    "initializer": {
+        "batchnorm_adaptation": {
+            "num_bn_adaptation_steps": 10, // Number of batches from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model
+            "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
+        }
+    }
     "params": {
         "schedule": "baseline", // The type of scheduling to use for adjusting the target pruning level. Either `exponential`, `exponential_with_bias`,  or `baseline`, by default it is `baseline`"
         "pruning_init": 0.1, // Initial value of the pruning level applied to the model. 0.0 by default.
