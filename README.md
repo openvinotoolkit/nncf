@@ -124,6 +124,7 @@ Quick jump to sample type:
 |ResNet-50|INT8|ImageNet|76.13|76.05|
 |ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.3|
 |ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.22|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.13|75.60|
 |ResNet-50|Filter pruning, 30%, magnitude criterion|ImageNet|76.13|75.7|
 |ResNet-50|Filter pruning, 30%, geometric median criterion|ImageNet|76.13|75.7|
 |Inception V3|INT8|ImageNet|77.32|76.96|
