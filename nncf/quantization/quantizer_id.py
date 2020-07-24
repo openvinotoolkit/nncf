@@ -33,6 +33,9 @@ class QuantizerId:
     def __hash__(self):
         return hash((self.get_base(), self.get_suffix()))
 
+    def __eq__(self, other: 'QuantizerId'):
+        return (self.get_base() == other.get_base()) and (self.get_suffix() == other.get_suffix())
+
 
 class WeightQuantizerId(QuantizerId):
     """ Unique identifier of a quantizer for weights."""
