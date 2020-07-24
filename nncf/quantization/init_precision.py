@@ -473,7 +473,7 @@ class HAWQDebugger:
 
             for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
                 activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
-                bits = non_weight_quantizers[quantizer_id].num_bits
+                bits = non_weight_quantizers[quantizer_id].quantizer_module_ref.num_bits
 
                 activation_fq_node['color'] = bits_color_map[bits]
                 node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
