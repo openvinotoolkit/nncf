@@ -20,7 +20,7 @@ from tests.conftest import TEST_ROOT, PROJECT_ROOT
 INSTALL_CHECKS_FILENAME = 'install_checks.py'
 
 
-@pytest.fixture(name="package_type", params=["install", "develop", "sdist", "bdist_wheel"])
+@pytest.fixture(name="package_type", params=["install", "develop", "sdist", "bdist_wheel", "pypi"])
 def package_type_(request):
     return request.param
 
@@ -41,15 +41,21 @@ def test_install(install_type, tmp_path, package_type):
 
     shutil.copy(TEST_ROOT / INSTALL_CHECKS_FILENAME, run_path)
 
-    subprocess.run(
-        "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(python=python_executable_with_venv,
-                                                                                  nncf_repo_root=PROJECT_ROOT,
-                                                                                  package_type=package_type,
-                                                                                  install_flag='--cpu-only' if
-                                                                                  install_type == "CPU" else ''),
-        check=True,
-        shell=True,
-        cwd=PROJECT_ROOT)
+    if package_type == "pypi":
+        subprocess.run(
+            "{} install nncf".format(pip_with_venv), check=True, shell=True)
+    else:
+
+        subprocess.run(
+            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
+                python=python_executable_with_venv,
+                nncf_repo_root=PROJECT_ROOT,
+                package_type=package_type,
+                install_flag='--cpu-only' if
+                install_type == "CPU" else ''),
+            check=True,
+            shell=True,
+            cwd=PROJECT_ROOT)
 
     # Do additional install step for sdist/bdist packages
     if package_type == "sdist":

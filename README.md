@@ -82,6 +82,13 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
+#### As a PyPI package:
+NNCF can be installed as a regular PyPI package via pip:
+```
+sudo apt install python3-dev
+pip install nncf
+```
+
 #### As a package built from checked-out repository:
 1) Install the following system dependencies:
 
