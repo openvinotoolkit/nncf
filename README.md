@@ -82,14 +82,8 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-#### As a PyPI package:
-NNCF can be installed as a regular PyPI package via pip:
-```
-sudo apt install python3-dev
-pip install nncf
-```
 
-#### As a package built from checked-out repository:
+#### As a package built from a checked-out repository:
 1) Install the following system dependencies:
 
 `sudo apt-get install python3-dev`
@@ -100,6 +94,15 @@ pip install nncf
 `python setup.py install`
 - For CPU-only installation
 `python setup.py install --cpu-only`
+
+_NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
+
+#### As a PyPI package:
+NNCF can be installed as a regular PyPI package via pip:
+```
+sudo apt install python3-dev
+pip install nncf
+```
 
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
