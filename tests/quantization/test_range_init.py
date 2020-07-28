@@ -317,7 +317,7 @@ def test_percentile_init(quantization_mode):
     config_with_init.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
     _, compression_ctrl = create_compressed_model_and_algo_for_test(id_model, config_with_init)
 
-    act_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
+    act_quantizer_info = next(iter(compression_ctrl.non_weight_quantizers.values()))
 
     def assert_range(quantizer: BaseQuantizer):
         # Absolute tolerance is 1.0 due to percentile value interpolation
@@ -327,13 +327,13 @@ def test_percentile_init(quantization_mode):
             assert quantizer.input_low.item() == approx(3210, abs=1.0)
             assert quantizer.input_range.item() == approx(3578, abs=1.0)
 
-    assert_range(act_quantizer)
+    assert_range(act_quantizer_info.quantizer_module_ref)
     # Weight init check
     synth_weight_model = SingleConv2dSyntheticWeightModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(synth_weight_model,
                                                                     config_with_init)
 
-    weight_quantizer = next(iter(compression_ctrl.non_weight_quantizers.values()))
+    weight_quantizer = next(iter(compression_ctrl.weight_quantizers.values()))
     assert_range(weight_quantizer)
 
 

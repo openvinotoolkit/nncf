@@ -79,6 +79,7 @@ class InsertionInfo:
         self.is_input = is_input
         self.is_output = is_output
         self.shape_to_operate_on = shape_to_operate_on
+        self.linked_op_exec_contexts = []  # type: List[OperationExecutionContext]
 
     def __eq__(self, other: 'InsertionInfo'):
         return self.op_exec_context == other.op_exec_context
