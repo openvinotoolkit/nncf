@@ -162,7 +162,8 @@ setuptools.setup(
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",
               "pruning", "object-detection", "semantic-segmentation", "nlp",
-              "bert", "transformers", "mmdetection"]
+              "bert", "transformers", "mmdetection"],
+    include_package_data=True
 )
 
 path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"]+"/ninja*/ninja/data/bin/"))

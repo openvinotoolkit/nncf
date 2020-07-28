@@ -20,7 +20,7 @@ from tests.conftest import TEST_ROOT, PROJECT_ROOT
 INSTALL_CHECKS_FILENAME = 'install_checks.py'
 
 
-@pytest.fixture(name="package_type", params=["develop", "sdist", "bdist_wheel"])
+@pytest.fixture(name="package_type", params=["install", "develop", "sdist", "bdist_wheel"])
 def package_type_(request):
     return request.param
 
