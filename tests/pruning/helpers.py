@@ -15,9 +15,7 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from tests.quantization.test_algo_quantization import OnesDatasetMock
-from tests.test_helpers import create_conv
+from tests.helpers import create_conv
 
 
 class PruningTestModel(nn.Module):
@@ -51,6 +49,57 @@ class PruningTestModelBranching(nn.Module):
         return x
 
 
+class PruningTestModelConcat(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+
+        self.conv2 = create_conv(16, 32, 2, 2, -2)
+        self.conv3 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.conv4 = create_conv(64, 16, 3, 10, 0)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x = self.relu(x)
+        x = self.conv4(x)
+        return x
+
+
+class PruningTestModelEltwise(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 2, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+
+        self.conv2 = create_conv(16, 32, 2, 2, -2)
+        self.conv3 = create_conv(16, 32, 2, 2, -2)
+        for i in range(32):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.conv4 = create_conv(32, 16, 3, 10, 0)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x) + self.conv3(x)
+        x = self.relu(x)
+        x = self.conv4(x)
+        return x
+
+
 class BigPruningTestModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -76,7 +125,7 @@ class BigPruningTestModel(nn.Module):
         return x
 
 
-def get_basic_pruning_config(input_sample_size=None):
+def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
     config = NNCFConfig()
@@ -95,8 +144,8 @@ def get_basic_pruning_config(input_sample_size=None):
     return config
 
 
-def get_pruning_baseline_config():
-    config = get_basic_pruning_config()
+def get_pruning_baseline_config(input_sample_size=None) -> NNCFConfig:
+    config = get_basic_pruning_config(input_sample_size)
     # Filling params
     compression_config = config['compression']
     compression_config['params']["schedule"] = "baseline"
@@ -104,21 +153,11 @@ def get_pruning_baseline_config():
     return config
 
 
-def get_pruning_exponential_config():
-    config = get_basic_pruning_config()
+def get_pruning_exponential_config(input_sample_size=None) -> NNCFConfig:
+    config = get_basic_pruning_config(input_sample_size)
     # Filling params
     compression_config = config['compression']
     compression_config['params']["schedule"] = "exponential_with_bias"
     compression_config['params']["num_init_steps"] = 1
     compression_config['params']["pruning_steps"] = 20
     return config
-
-
-def create_dataloader(config):
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:]),
-                                              batch_size=1,
-                                              num_workers=1,
-                                              shuffle=False)
-    return data_loader

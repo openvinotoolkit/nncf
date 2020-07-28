@@ -121,9 +121,50 @@ QUANTIZER_GROUP_SCHEMA = {
     "additionalProperties": False
 }
 
-INITIALIZER_SCHEMA = {
+GENERIC_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
+    },
+    "additionalProperties": False,
+}
+
+QUANTIZATION_INITIALIZER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
         "range":
             {
                 "type": "object",
@@ -202,6 +243,34 @@ BASIC_COMPRESSION_ALGO_SCHEMA = {
     "required": ["algorithm"]
 }
 
+STAGED_QUANTIZATION_PARAMS = {
+    "params": {
+        "type": "object",
+        "properties": {
+            "batch_multiplier": with_attributes(_NUMBER,
+                                                description="Gradients will be accumulated for this number of "
+                                                            "batches before doing a 'backward' call. Increasing "
+                                                            "this may improve training quality, since binarized "
+                                                            "networks exhibit noisy gradients requiring larger "
+                                                            "batch sizes than could be accomodated by GPUs"),
+            "activations_quant_start_epoch": with_attributes(_NUMBER,
+                                                             description="Epoch to start binarizing activations"),
+            "weights_quant_start_epoch": with_attributes(_NUMBER,
+                                                         description="Epoch to start binarizing weights"),
+            "lr_poly_drop_start_epoch": with_attributes(_NUMBER,
+                                                        description="Epoch to start dropping the learning rate"),
+            "lr_poly_drop_duration_epochs": with_attributes(_NUMBER,
+                                                            description="Duration, in epochs, of the learning "
+                                                                        "rate dropping process."),
+            "disable_wd_start_epoch": with_attributes(_NUMBER,
+                                                      description="Epoch to disable weight decay in the optimizer"),
+            "base_lr": with_attributes(_NUMBER, description="Initial value of learning rate"),
+            "base_wd": with_attributes(_NUMBER, description="Initial value of weight decay"),
+        },
+        "additionalProperties": False
+    }
+}
+
 QUANTIZATION_ALGO_NAME_IN_CONFIG = "quantization"
 QUANTIZATION_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -209,7 +278,7 @@ QUANTIZATION_SCHEMA = {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
-        "initializer": INITIALIZER_SCHEMA,
+        "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(QUANTIZER_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
                                                "Overrides higher-level settings."),
@@ -253,6 +322,7 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
+        **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
     "additionalProperties": False
@@ -265,33 +335,11 @@ BINARIZATION_SCHEMA = {
         "algorithm": {
             "const": BINARIZATION_ALGO_NAME_IN_CONFIG
         },
-        "initializer": INITIALIZER_SCHEMA,
+        "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "mode": with_attributes(_STRING,
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
                                             "or 'dorefa' for DoReFa binarization"),
-        "params": {
-            "type": "object",
-            "properties": {
-                "batch_multiplier": with_attributes(_NUMBER,
-                                                    description="Gradients will be accumulated for this number of "
-                                                                "batches before doing a 'backward' call. Increasing "
-                                                                "this may improve training quality, since binarized "
-                                                                "networks exhibit noisy gradients requiring larger "
-                                                                "batch sizes than could be accomodated by GPUs"),
-                "activations_bin_start_epoch": with_attributes(_NUMBER,
-                                                               description="Epoch to start binarizing activations"),
-                "weights_bin_start_epoch": with_attributes(_NUMBER,
-                                                           description="Epoch to start binarizing weights"),
-                "lr_poly_drop_start_epoch": with_attributes(_NUMBER,
-                                                            description="Epoch to start dropping the learning rate"),
-                "lr_poly_drop_duration_epochs": with_attributes(_NUMBER,
-                                                                description="Duration, in epochs, of the learning "
-                                                                            "rate dropping process."),
-                "disable_wd_start_epoch": with_attributes(_NUMBER,
-                                                          description="Epoch to disable weight decay in the optimizer")
-            },
-            "additionalProperties": False
-        },
+        **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES
     },
     "additionalProperties": False
@@ -322,20 +370,29 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                             "of scheduler steps."),
     "power": with_attributes(_NUMBER,
                              description="For polynomial scheduler - determines the corresponding power value."),
+    "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
+                                                     "level will be approached in concave manner, and in convex "
+                                                     "manner otherwise."),
     "sparsity_init": with_attributes(_NUMBER,
                                      description="Initial value of the sparsity level applied to the "
                                                  "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
-    "sparsity_steps": with_attributes(_NUMBER,
-                                      description="The default scheduler will do this many "
-                                                  "proportional target sparsity level adjustments, "
-                                                  "distributed evenly across "
-                                                  "'sparsity_training_steps'."),
-    "sparsity_training_steps": with_attributes(_NUMBER,
-                                               description="The number of steps after which the "
-                                                           "sparsity mask will be frozen and no "
-                                                           "longer trained"),
+    "sparsity_target_epoch": with_attributes(_NUMBER,
+                                             description="The target sparsity value will be reached after this many"
+                                                         "epoch steps"),
+    "sparsity_freeze_epoch": with_attributes(_NUMBER,
+                                             description="The number of epoch steps after which the "
+                                                         "sparsity mask will be frozen and no "
+                                                         "longer trained"),
+    "update_per_optimizer_step": with_attributes(_BOOLEAN,
+                                                 description="Whether the function-based sparsity level schedulers "
+                                                             "should update the sparsity level after each optimizer "
+                                                             "step instead of each epoch step."),
+    "steps_per_epoch": with_attributes(_NUMBER,
+                                       description="Number of optimizer steps in one epoch. Required to start proper "
+                                                   " scheduling in the first training epoch if "
+                                                   "'update_per_optimizer_step' is true"),
     "multistep_steps": with_attributes(_ARRAY_OF_NUMBERS,
                                        description="A list of scheduler steps at which to transition "
                                                    "to the next scheduled sparsity level (multistep "
@@ -357,6 +414,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",
@@ -384,9 +442,6 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
-        # TODO: properly search for the initialize in the compression algo list and
-        # remove the necessity to piggyback on the RB sparsity algo entry in the config
-        "initializer": INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",
@@ -405,6 +460,7 @@ FILTER_PRUNING_SCHEMA = {
         "algorithm": {
             "const": FILTER_PRUNING_ALGO_NAME_IN_CONFIG
         },
+        "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
                 "type": "object",

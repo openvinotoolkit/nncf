@@ -7,6 +7,18 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 1.4:
+- Models with filter pruning applied are now exportable to ONNX
+- BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
+- Major performance improvements for per-channel quantization training - now performs almost as fast as the per-tensor quantization training
+- nn.Embedding and nn.Conv1d weights are now quantized by default
+- Compression level querying is now available to determine current compression level (for purposes of choosing a correct "best" checkpoint during training)
+- Generalized initializing data loaders to handle more interaction cases between a model and the associated data loader
+- FP16 training supported for quantization
+- Ignored scopes can now be set for the propagation-based quantization setup mode
+- Per-optimizer stepping enabled as an option for polynomial sparsity scheduler
+- Added an example config and model checkpoint for the ResNet50 INT8 + 50% sparsity (RB)
+
 ## New in Release 1.3.1
 - Now using PyTorch 1.5 and CUDA 10.2 by default
 - Support for exporting quantized models to ONNX checkpoints with standard ONNX v10 QuantizeLinear/DequantizeLinear pairs (8-bit quantization only)

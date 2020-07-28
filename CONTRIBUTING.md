@@ -1,8 +1,8 @@
 # Contributing to NNCF
 
-Contributions are accepted in form of:
+Contributions are accepted in the form of:
 * Submitting issues against the current code to report bugs or request features
-* Extending NNCF functionality with important features (e.g. to address community requests, improve usability, implement a recently published compression algorithm etc.)
+* Extending NNCF functionality with important features (e.g. to address community requests, improve usability, implement a recently published compression algorithm, etc.)
 * Adding example scripts to showcase NNCF usage in real training pipelines and provide the means to reproduce the reported compression results
 * Providing recipes (specific NNCF configurations and training hyperparameters) to obtain state-of-the-art compression using NNCF for existing models
 * Adding well-defined patches that integrate NNCF into third-party repositories
@@ -23,7 +23,7 @@ Please run the pre-commit testing scope locally before submitting your PR and en
 New feature pull requests should include all the necessary testing code.
 Testing is done using the `pytest` framework. 
 The test files should be located inside the [tests](./tests) directory and start with `test_` so that the `pytest` is able to discover them.
-Any additional data that is required for tests (configuration files, mock datasets etc.) must be stored within the [tests/data](./tests/data) folder.
+Any additional data that is required for tests (configuration files, mock datasets, etc.) must be stored within the [tests/data](./tests/data) folder.
 The test files themselves may be grouped in arbitrary directories according to their testing purpose and common sense.
 
 Any additional tests in the [tests](./tests) directory will be automatically added into the pre-commit CI scope. 
@@ -32,7 +32,7 @@ If your testing code is more extensive than unit tests (in terms of test executi
 
 ## Code style
 Pylint is used throughout the project to ensure code cleanliness and quality. 
-A Pylint run is also done as part of the precommit scope - the pre-commit `pytest` scope will not be run if your code fails the Pylint checks.
+A Pylint run is also done as part of the pre-commit scope - the pre-commit `pytest` scope will not be run if your code fails the Pylint checks.
 The Pylint rules and exceptions for this repository are described in the standard [.pylintrc](./.pylintrc) format - make sure your local linter uses these.
 
 ## Binary files

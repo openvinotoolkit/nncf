@@ -30,8 +30,8 @@
             "params": {
                 "sparsity_init": 0.01, // Inital sparsity ratio, e.g. value "0.1" means that the method sets 10% of zero weights as a target after the training process starts
                 "sparsity_target": 0.52, // Desired sparsity ratio, e.g. value "0.5" means that the method will schedule the training so that to get 50% of zero weights in the end
-                "sparsity_steps": 5, // Number of epochs at which sparsity ratio will be increased from "sparsity_init" value up to "sparsity_target" value
-                "sparsity_training_steps": 10 // Overall number of epochs that are used to train sparsity mask
+                "sparsity_target_epoch": 5, // Number of epochs at which sparsity ratio will be increased from "sparsity_init" value up to "sparsity_target" value
+                "sparsity_freeze_epoch": 10 // Overall number of epochs that are used to train sparsity mask
             },
             "ignored_scopes": ["MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]"] // Layers or blocks that are excluded from compression
         },

@@ -16,7 +16,7 @@ import torch
 import torch.distributed as dist
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
@@ -56,6 +56,9 @@ class RBSparsityController(BaseSparsityAlgoController):
 
     def set_sparsity_level(self, sparsity_level):
         self._loss.target = 1 - sparsity_level
+
+    def compression_level(self) -> CompressionLevel:
+        return self.scheduler.compression_level()
 
     def freeze(self):
         self._loss.disable()

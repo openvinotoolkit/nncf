@@ -95,7 +95,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
         if is_main_process():
             graph = graph_builder.build_graph(model)
-            graph.dump_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"), extended=True)
+            graph.visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
 
     if is_debug():
         set_debug_log_dir(config.get("log_dir", "."))
@@ -127,7 +127,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
         graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
-        graph.dump_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"), extended=True)
+        graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
     if resuming_state_dict is not None:
         load_state(compressed_model, resuming_state_dict, is_resume=True)

@@ -33,7 +33,7 @@ from nncf.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
 from nncf.model_creation import create_compressed_model
 from nncf.utils import manual_seed
 from tests.modules.seq2seq.gnmt import GNMT
-from tests.test_helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config, get_grads, create_compressed_model_and_algo_for_test
 
 
 @pytest.fixture
@@ -504,8 +504,8 @@ class TestNumberOfNodes:
             counters[str(name)] = counter
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
-        assert model.get_graph().get_nodes_count() == 230  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 55
+        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 57
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size, name
@@ -513,8 +513,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 230  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 55
+        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 57
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name

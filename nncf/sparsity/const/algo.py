@@ -31,5 +31,6 @@ class ConstSparsityController(BaseSparsityAlgoController):
     def freeze(self):
         pass
 
-    def set_sparsity_level(self, sparsity_level):
+    def set_sparsity_level(self, sparsity_level: float):
         pass
+

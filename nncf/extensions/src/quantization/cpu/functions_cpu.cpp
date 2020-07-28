@@ -1,26 +1,5 @@
-#include <torch/torch.h>
-#include <torch/csrc/autograd/variable.h>
-
-#include <vector>
-
-void sum_like(at::Tensor& target_tensor, const at::Tensor& ref_tensor)
-{
-    if (target_tensor.numel() == 1)
-    {
-        target_tensor = target_tensor.sum().view_as(ref_tensor);
-    }
-    else
-    {
-        auto dim_count = ref_tensor.dim();
-        for (int64_t dim_idx = 0; dim_idx < dim_count; dim_idx++)
-        {
-            if (ref_tensor.size(dim_idx) == 1)
-            {
-                target_tensor = target_tensor.sum(dim_idx, true);
-            }
-        }
-    }
-}
+#include "common_cpu_funcs.h"
+#include "common_defs.h"
 
 namespace {
 
@@ -81,7 +60,6 @@ std::vector<at::Tensor> q_cpu_backward(
     return {grad_input, dummy_variable, grad_input_range};
 }
 
-#define CHECK_CPU(x) TORCH_CHECK(!x.is_cuda(), #x " must be a CPU tensor")
 #define CHECK_INPUT(x) CHECK_CPU(x)
 
 at::Tensor q_forward(
@@ -100,7 +78,7 @@ at::Tensor q_forward(
     }
 
     at::Tensor output;
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_cpu_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_cpu_forward", ([&] {
       output = q_cpu_forward<scalar_t>(input, input_low, input_range, levels);
     }));
 
@@ -122,7 +100,7 @@ std::vector<at::Tensor> q_backward(
     CHECK_INPUT(input_range);
 
     std::vector<at::Tensor> results;
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "q_cpu_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(input.type(), "q_cpu_backward", ([&] {
         results = q_cpu_backward<scalar_t>(grad_output, input, input_low, input_range, levels, level_low, level_high, is_asymmetric);
     }));
 

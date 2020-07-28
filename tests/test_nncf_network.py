@@ -27,7 +27,7 @@ from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
-from tests.test_helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement
+from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement
 
 
 def test_disable_shape_matching():

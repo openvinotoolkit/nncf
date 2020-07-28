@@ -18,7 +18,7 @@ from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateWeight
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask, \
     apply_filter_binary_mask
-from tests.test_helpers import fill_conv_weight, fill_bias
+from tests.helpers import fill_conv_weight, fill_bias
 
 
 class TestFilterPruningBlockModel(nn.Module):

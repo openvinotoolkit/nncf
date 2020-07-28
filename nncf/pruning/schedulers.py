@@ -48,18 +48,22 @@ class PruningScheduler(CompressionScheduler):
     def _set_pruning_level(self):
         self.algo.set_pruning_rate(self.current_pruning_level)
 
-        if self.last_epoch >= (self.pruning_steps + self.num_init_steps):
+        curr_epoch = self.last_epoch + 1
+        if curr_epoch >= (self.pruning_steps + self.num_init_steps):
             self.algo.freeze()
 
-    def _calc_density_level(self):
+    def _calc_pruning_level(self):
         raise NotImplementedError
 
     @property
     def current_pruning_level(self):
-        if self.last_epoch >= self.num_init_steps:
-            return 1 - self._calc_density_level()
+        curr_epoch = self.last_epoch + 1
+        if curr_epoch >= self.num_init_steps:
+            return self._calc_pruning_level()
         return 0
 
+    def _calc_density_level(self):
+        return 1 - self.current_pruning_level()
 
 @PRUNING_SCHEDULERS.register("baseline")
 class BaselinePruningScheduler(PruningScheduler):
@@ -71,13 +75,13 @@ class BaselinePruningScheduler(PruningScheduler):
         super().__init__(pruning_algo, config)
         self._set_pruning_level()
 
-    def _calc_density_level(self):
-        min_density = 1 - self.pruning_target
-        return min_density
+    def _calc_pruning_level(self):
+        return self.pruning_target
 
     def _set_pruning_level(self):
         self.algo.set_pruning_rate(self.current_pruning_level)
-        if self.last_epoch >= self.num_init_steps:
+        curr_epoch = self.last_epoch + 1
+        if curr_epoch >= self.num_init_steps:
             self.algo.freeze()
 
 
@@ -96,10 +100,11 @@ class ExponentialPruningScheduler(PruningScheduler):
         self.a, self.k = self._init_exp(self.initial_pruning, self.pruning_target, pruning_steps=self.pruning_steps)
         self._set_pruning_level()
 
-    def _calc_density_level(self):
-        curr_density = self.a * np.exp(-self.k * (self.last_epoch - self.num_init_steps))
-        min_density = 1 - self.pruning_target
-        return min_density if curr_density < min_density else curr_density
+    def _calc_pruning_level(self):
+        curr_epoch = self.last_epoch + 1
+        curr_pruning = 1 - self.a * np.exp(-self.k * (curr_epoch - self.num_init_steps))
+        max_pruning = self.pruning_target
+        return max_pruning if curr_pruning >= max_pruning else curr_pruning
 
     @staticmethod
     def _init_exp(initial_pruning, max_pruning, pruning_steps=20):
@@ -125,10 +130,11 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         self.a, self.b, self.k = self._init_exp(self.pruning_steps, self.initial_pruning, self.pruning_target)
         self._set_pruning_level()
 
-    def _calc_density_level(self):
-        curr_density = 1 - (self.a * np.exp(-self.k * (self.last_epoch - self.num_init_steps)) + self.b)
-        min_density = 1 - self.pruning_target
-        return min_density if curr_density < min_density else curr_density
+    def _calc_pruning_level(self):
+        curr_epoch = self.last_epoch
+        curr_pruning = self.a * np.exp(-self.k * (curr_epoch - self.num_init_steps)) + self.b
+        max_pruning = self.pruning_target
+        return max_pruning if curr_pruning >= max_pruning else curr_pruning
 
     @staticmethod
     def _init_exp(E_max, P_min, P_max, D=1 / 8):

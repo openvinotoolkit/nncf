@@ -26,6 +26,7 @@ from examples.common.distributed import DistributedSampler, configure_distribute
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
+from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
@@ -269,6 +270,7 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
     return batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp
 
 
+# pylint: disable=too-many-statements
 def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler):
     net.train()
     # loss counters
@@ -283,6 +285,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     print_statistics(compression_ctrl.statistics())
 
     best_mAp = 0
+    best_compression_level = CompressionLevel.NONE
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
 
     for iteration in range(config.start_iter, config['max_iter']):
@@ -294,7 +297,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
         if (iteration + 1) % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
-
+            compression_level = compression_ctrl.compression_level()
             is_best = False
 
             if (epoch + 1) % test_freq_in_epochs == 0:
@@ -303,9 +306,11 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                 with torch.no_grad():
                     net.eval()
                     mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
-                    if mAP > best_mAp:
-                        is_best = True
+                    is_best_by_mAP = mAP > best_mAp and compression_level == best_compression_level
+                    is_best = is_best_by_mAP or compression_level > best_compression_level
+                    if is_best:
                         best_mAp = mAP
+                    best_compression_level = max(compression_level, best_compression_level)
                     net.train()
 
             # Learning rate scheduling should be applied after optimizer’s update
@@ -322,7 +327,8 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                     'state_dict': net.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'iter': config['max_iter'],
-                    'scheduler': compression_ctrl.scheduler.state_dict()
+                    'scheduler': compression_ctrl.scheduler.state_dict(),
+                    'compression_level': compression_level,
                 }, str(checkpoint_file_path))
                 make_additional_checkpoints(checkpoint_file_path,
                                             is_best=is_best,

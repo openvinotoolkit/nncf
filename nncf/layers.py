@@ -108,6 +108,20 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
         return nncf_conv_transpose3d
 
 
+class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
+    # Note that this does not require activation quantization because it's basically a lookup.
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.Embedding.__name__
+
+        args = [module.num_embeddings, module.embedding_dim, module.padding_idx,
+                module.max_norm, module.norm_type, module.scale_grad_by_freq,
+                module.sparse, module.weight]
+        nncf_embedding = NNCFEmbedding(*args)
+        dict_update(nncf_embedding.__dict__, module.__dict__)
+        return nncf_embedding
+
+
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
@@ -115,6 +129,7 @@ NNCF_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
+    NNCFEmbedding: nn.Embedding
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}

@@ -82,6 +82,9 @@ def configure_paths(config):
     config.log_dir = osp.join(config.log_dir, "{}/{}".format(config.name, run_id))
     os.makedirs(config.log_dir)
 
+    if config.nncf_config is not None:
+        config.nncf_config["log_dir"] = config.log_dir
+
     if config.checkpoint_save_dir is None:
         config.checkpoint_save_dir = config.log_dir
 
@@ -161,12 +164,14 @@ class ForkedPdb(pdb.Pdb):
             sys.stdin = _stdin
 
 
-def is_binarization(config):
+def is_staged_quantization(config):
     compression_config = config.get('compression', {})
     if isinstance(compression_config, list):
         compression_config = compression_config[0]
     algo_type = compression_config.get("algorithm")
     if algo_type is not None and algo_type == "binarization":
+        return True
+    if algo_type == "quantization" and compression_config.get("params", {}):
         return True
     return False
 

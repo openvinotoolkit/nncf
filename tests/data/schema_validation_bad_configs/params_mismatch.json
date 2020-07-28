@@ -20,8 +20,8 @@
             "params": {
                 "sparsity_init": 0.01,
                 "sparsity_target": 0.61,
-                "sparsity_steps": 5,
-                "sparsity_training_steps": 10,
+                "sparsity_target_epoch": 5,
+                "sparsity_freeze_epoch": 10,
             }
         }
     ]

@@ -16,7 +16,7 @@ from typing import List
 import torch.nn
 
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler, \
-    CompressionAlgorithmController
+    CompressionAlgorithmController, CompressionLevel
 from nncf.nncf_network import NNCFNetwork
 
 
@@ -81,37 +81,49 @@ class CompositeCompressionScheduler(CompressionScheduler):
 class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork):
         super().__init__(target_model)
-        self._child_algos = []  # type: List[CompressionAlgorithmController]
+        self._child_ctrls = []  # type: List[CompressionAlgorithmController]
         self._loss = CompositeCompressionLoss()
         self._scheduler = CompositeCompressionScheduler()
 
     @property
-    def child_algos(self):
-        return self._child_algos
+    def child_ctrls(self):
+        return self._child_ctrls
 
-    def add(self, child_algo: CompressionAlgorithmController):
+    def add(self, child_ctrl: CompressionAlgorithmController):
         # pylint: disable=protected-access
-        assert child_algo._model is self._model, "Cannot create a composite controller " \
+        assert child_ctrl._model is self._model, "Cannot create a composite controller " \
                                                  "from controllers belonging to different models!"
-        self.child_algos.append(child_algo)
-        self._loss.add(child_algo.loss)
-        self._scheduler.add(child_algo.scheduler)
-        self._model = child_algo._model
+        self.child_ctrls.append(child_ctrl)
+        self._loss.add(child_ctrl.loss)
+        self._scheduler.add(child_ctrl.scheduler)
+        self._model = child_ctrl._model
 
     def distributed(self):
-        for algo in self.child_algos:
-            algo.distributed()
+        for ctrl in self.child_ctrls:
+            ctrl.distributed()
 
     def statistics(self):
         stats = {}
-        for algo in self.child_algos:
-            stats.update(algo.statistics())
+        for ctrl in self.child_ctrls:
+            stats.update(ctrl.statistics())
         return stats
 
     def export_model(self, filename):
-        self.child_algos[-1].export_model(filename)
+        self.child_ctrls[-1].export_model(filename)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        for algo in self.child_algos:
-            target_model = algo.apply_to(target_model)
+        for ctrl in self.child_ctrls:
+            target_model = ctrl.apply_to(target_model)
         return target_model
+
+    def compression_level(self) -> CompressionLevel:
+        if not self.child_ctrls:
+            return CompressionLevel.NONE
+        result = None
+        for ctrl in self.child_ctrls:
+            current_level = ctrl.compression_level()
+            if not result:
+                result = current_level
+            else:
+                result += current_level
+        return result

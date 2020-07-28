@@ -10,20 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import itertools
+from typing import Dict, List
 
+import copy
 import os
 import pytest
 from functools import partial
 from torch import nn
 from torch.nn import DataParallel
 
+from nncf import NNCFConfig
 from nncf.checkpoint_loading import load_state
-from tests.quantization.test_algo_quantization import get_basic_quantization_config, get_basic_asym_quantization_config
+from nncf.compression_method_api import CompressionLevel
+from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.sparsity.rb.test_algo import get_basic_sparsity_config
-from tests.test_helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 
 
 class BasicLinearTestModel(nn.Module):
@@ -40,9 +43,18 @@ def get_const_sparsity_config():
     config['compression'] = {'algorithm': 'const_sparsity'}
     return config
 
-@pytest.mark.parametrize('config_provider', (get_basic_quantization_config, get_basic_asym_quantization_config,
-                                             get_basic_sparsity_config,
-                                             get_basic_magnitude_sparsity_config, get_const_sparsity_config),
+
+def get_basic_asym_quantization_config(model_size=4):
+    config = get_quantization_config_without_range_init(model_size)
+    config['compression']['activations'] = {"mode": "asymmetric"}
+    config['compression']['initializer']['range'] = {"num_init_steps": 0}
+    return config
+
+
+@pytest.mark.parametrize('config_provider',
+                         (get_quantization_config_without_range_init, get_basic_asym_quantization_config,
+                          get_basic_sparsity_config,
+                          get_basic_magnitude_sparsity_config, get_const_sparsity_config),
                          ids=('SymQuantization', 'AsymQuantization', 'Sparsity', 'MagnitudeSparsity', 'ConstSparsity'))
 @pytest.mark.parametrize('model_provider', (BasicConvTestModel, BasicLinearTestModel),
                          ids=('Conv2d', 'Linear'))
@@ -56,6 +68,137 @@ class TestCompressionAlgos:
         compression_ctrl.export_model(test_path)
         assert os.path.exists(test_path)
 
+
+class TestConfigCreator:
+    def __init__(self):
+        self._config = get_empty_config()
+        self._algorithm_sections = {}
+
+    def create(self) -> NNCFConfig:
+        self._config['compression'] = []
+        for algo_name, params in self._algorithm_sections.items():
+            algo_section = {'algorithm': algo_name}
+            if params:
+                algo_section['params'] = params
+            self._config['compression'].append(algo_section)
+        return self._config
+
+    def add_algo(self, name: str, params: Dict = None):
+        self._algorithm_sections[name] = params
+        return self
+
+    def __str__(self):
+        return '_'.join(self._algorithm_sections)
+
+
+class CompressionLevelTestStruct:
+    def __init__(self, config_provider: 'TestConfigCreator', compression_levels: List[CompressionLevel]):
+        self.config_provider = config_provider
+        self.compression_levels = compression_levels
+
+    def __str__(self):
+        return str(self.config_provider)
+
+
+staged_quantization_params = {'activations_quant_start_epoch': 1, 'weights_quant_start_epoch': 2}
+magnitude_sparsity_params = {'schedule': 'multistep',
+                             'multistep_steps': [1, 2],
+                             'multistep_sparsity_levels': [0, 0.3, 0.5]}
+filter_pruning_params = {'schedule': 'exponential', 'num_init_steps': 0, 'pruning_steps': 2}
+FFF_levels = [CompressionLevel.FULL] * 3
+NPF_levels = [CompressionLevel.NONE, CompressionLevel.PARTIAL, CompressionLevel.FULL]
+LIST_OF_TEST_PARAMS = [
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('quantization'),
+        compression_levels=FFF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params),
+        compression_levels=NPF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('const_sparsity'),
+        compression_levels=FFF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
+        compression_levels=NPF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('rb_sparsity', {
+            'sparsity_init': 0,
+            'sparsity_target': 0.61,
+            'sparsity_target_epoch': 2,
+        }),
+        compression_levels=NPF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('filter_pruning', {
+            'num_init_steps': 1,
+            'pruning_steps': 1,
+        }),
+        compression_levels=[CompressionLevel.NONE, CompressionLevel.FULL, CompressionLevel.FULL]
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('filter_pruning', filter_pruning_params),
+        compression_levels=NPF_levels
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+            'quantization'),
+        compression_levels=[CompressionLevel.PARTIAL] * 2 + [CompressionLevel.FULL],
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+            'quantization', staged_quantization_params),
+        compression_levels=NPF_levels,
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
+            'filter_pruning', filter_pruning_params),
+        compression_levels=NPF_levels,
+    ),
+    CompressionLevelTestStruct(
+        config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
+            'quantization', staged_quantization_params).add_algo('filter_pruning', filter_pruning_params),
+        compression_levels=NPF_levels,
+    ),
+]
+
+
+@pytest.mark.parametrize('test_struct', LIST_OF_TEST_PARAMS, ids=[str(param) for param in LIST_OF_TEST_PARAMS])
+def test_can_get_compression_level(test_struct: CompressionLevelTestStruct):
+    config_provider, compression_levels = test_struct.config_provider, test_struct.compression_levels
+    model = BasicConvTestModel()
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config_provider.create())
+    compression_scheduler = compression_ctrl.scheduler
+    assert compression_ctrl.compression_level() == compression_levels[0]
+
+    compression_scheduler.epoch_step()
+    assert compression_ctrl.compression_level() == compression_levels[1]
+
+    compression_scheduler.epoch_step()
+    assert compression_ctrl.compression_level() == compression_levels[2]
+
+
+@pytest.mark.parametrize(('src', 'dst', 'ref'),
+                         (
+                             (CompressionLevel.NONE, CompressionLevel.NONE, CompressionLevel.NONE),
+                             (CompressionLevel.PARTIAL, CompressionLevel.PARTIAL, CompressionLevel.PARTIAL),
+                             (CompressionLevel.FULL, CompressionLevel.FULL, CompressionLevel.FULL),
+                             (CompressionLevel.NONE, CompressionLevel.PARTIAL, CompressionLevel.PARTIAL),
+                             (CompressionLevel.NONE, CompressionLevel.FULL, CompressionLevel.PARTIAL),
+                             (CompressionLevel.PARTIAL, CompressionLevel.FULL, CompressionLevel.PARTIAL))
+                         )
+def test_combo_of_compression_levels(src, dst, ref):
+    assert src + dst == ref
+    assert dst + src == ref
+    src_c = copy.deepcopy(src)
+    src_c += dst
+    assert src_c == ref
+    dst_c = copy.deepcopy(dst)
+    dst_c += src
+    assert dst_c == ref
 
 
 QUANTIZATION = 'quantization'
@@ -101,7 +244,6 @@ def _algos(request):
                 # resume works fine for magnitude <-> const combo, because they have similar parameters
                 if s != v and ('magnitude' in s and 'const' in v or 'const' in s and 'magnitude' in v):
                     resume_ok = True
-
 
     return {
         'save_algos': save_algos,

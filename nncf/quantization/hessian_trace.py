@@ -10,16 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from functools import partial
 from typing import List, Union
 
 import torch
+from nncf.utils import objwalk, is_tensor
 from torch import Tensor
 from torch import nn
 from torch.nn import Parameter
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-from nncf.initialization import wrap_data_loader, InitializingDataLoader
+from nncf.initialization import wrap_dataloader_for_init, InitializingDataLoader
 from nncf.nncf_logger import logger as nncf_logger
 
 
@@ -51,7 +53,7 @@ class ParameterHandler:
 
 class GradientsCalculator:
 
-    def __init__(self, model: nn.Module, criterion: _Loss, data_loader, num_data_iter: int,
+    def __init__(self, model: nn.Module, criterion: _Loss, data_loader: InitializingDataLoader, num_data_iter: int,
                  paramerter_handler: ParameterHandler):
         self._model = model
         self._criterion = criterion
@@ -69,10 +71,16 @@ class GradientsCalculator:
         if self.num_iter >= self._num_data_iter:
             raise StopIteration
         self.num_iter += 1
-        inputs, targets, dataloader_kwargs = next(self.data_loader_iter)
+        dataloader_output = next(self.data_loader_iter)
+
+        device = next(self._model.parameters()).device
+        to_device_fn = partial(torch.Tensor.to, device=device)
+        dataloader_output = objwalk(dataloader_output, is_tensor, to_device_fn)
+        args, kwargs = self._data_loader.get_inputs(dataloader_output)
+
         self._model.zero_grad()
-        outputs = self._model(inputs, **dataloader_kwargs)
-        loss = self._criterion(outputs, targets)
+        outputs = self._model(*args, **kwargs)
+        loss = self._criterion(outputs, self._data_loader.get_target(dataloader_output))
         loss.backward(create_graph=True)
         grads = self._parameter_handler.get_gradients()
         self._model.zero_grad()
@@ -90,7 +98,7 @@ class HessianTraceEstimator:
         parameters = [p for p in model.parameters() if p.requires_grad]
         self._parameter_handler = ParameterHandler(parameters, device)
         self._batch_size = data_loader.batch_size
-        data_loader = wrap_data_loader(data_loader, InitializingDataLoader, {}, device)
+        data_loader = wrap_dataloader_for_init(data_loader)
         self._num_data_iter = num_data_points // self._batch_size if num_data_points >= self._batch_size else 1
         self._gradients_calculator = GradientsCalculator(self._model, criterion, data_loader, self._num_data_iter,
                                                          self._parameter_handler)

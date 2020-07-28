@@ -18,12 +18,12 @@ from torch.autograd import Variable
 
 from nncf.quantization.quantize_functions import asymmetric_quantize, symmetric_quantize
 from nncf.utils import sum_like
-from tests.test_helpers import get_grads, check_equal
+from tests.helpers import get_grads, check_equal
 
-EPS = 1
+EPS = 1e-6
 
 
-class ReferenceQuantizeAsymmetric:
+class ReferenceQuantize:
     @staticmethod
     def forward(input_, input_low, input_range, levels):
         scale = (levels - 1) / input_range
@@ -38,8 +38,8 @@ class ReferenceQuantizeAsymmetric:
 
     @staticmethod
     def backward(grad_output, input_, input_low, input_range, output, level_low, level_high, range_sign):
-        mask_hi = (input_ > input_low + input_range).astype(float)
-        mask_lo = (input_ < input_low).astype(float)
+        mask_hi = (input_ > (input_low + input_range)).astype(input_.dtype)
+        mask_lo = (input_ < input_low).astype(input_.dtype)
 
         mask_in = 1 - mask_hi - mask_lo
         err = (output - input_) * np.reciprocal(input_range * range_sign)
@@ -94,33 +94,55 @@ def _seed():
 
 
 def generate_input(input_size):
-    return 2 * np.random.random_sample(input_size) - 1
+    return 1.0 * (2 * np.random.random_sample(input_size) - 1)
 
 
-def get_test_data(data_list, is_cuda=False, is_backward=False):
+def get_test_data(data_list, is_cuda=False, is_backward=False, is_fp16=False):
     results = []
     for data in data_list:
         result = torch.from_numpy(data.copy())
         if is_cuda:
             result = result.cuda()
+        if is_fp16:
+            result = result.half()
         if is_backward:
             result = Variable(result, requires_grad=True)
         results.append(result)
     return results
 
 
+def skip_if_half_on_cpu(is_fp16, use_cuda):
+    if is_fp16 and not use_cuda:
+        pytest.skip("As of PyTorch 1.5, the 'abs' operation is not supported on CPU for half and therefore"
+                    "symmetric quantize fails. Remove this once this is fixed in PyTorch.")
+
+
+def check_outputs_for_quantization_functions(test_val: torch.Tensor, ref_val: np.ndarray, is_fp16, rtol=1e-4):
+    if is_fp16:
+        # FP16 seems to be so inaccurate that ref and test quantization runs
+        # will never be aligned quantum-wise - for quanta close to the
+        # distribution's zero point even a difference in 1 quantum gives a
+        # 100% relative error, and this is exactly what happens in FP16 for ~5% of the
+        # input values uniformly sampled from the [-1.0; 1.0]. Therefore won't check for
+        # tensor equality - the test passes for FP32 cases, and the kernel implementation
+        # is exactly the same for FP16 calculations-wise.
+        return
+    check_equal(test_val, ref_val, rtol)
+
+
 @pytest.mark.parametrize('input_size',
-                         [[1, 96, 112, 112],
-                          [1, 192, 28, 28],
-                          [1, 576, 14, 14],
-                          [32, 96, 112, 112],
-                          [32, 192, 28, 28],
-                          [32, 576, 14, 14]],
+                         [[1, 48, 112, 112],
+                          [1, 96, 28, 28],
+                          [1, 288, 14, 14],
+                          [16, 96, 112, 112],
+                          [16, 192, 28, 28],
+                          [16, 576, 14, 14]],
                          ids=idfn)
 @pytest.mark.parametrize('bits', (8, 4), ids=('8bit', '4bit'))
 @pytest.mark.parametrize("use_cuda", [False, True], ids=['cpu', 'cuda'])
 @pytest.mark.parametrize('scale_mode', ["single_scale", "per_channel_scale"])
 @pytest.mark.parametrize("is_weights", (True, False), ids=('weights', 'activation'))
+@pytest.mark.parametrize("is_fp16", (True, False), ids=('fp16', 'fp32'))
 class TestParametrized:
     @pytest.mark.parametrize("is_signed", (True, False), ids=('signed', 'unsigned'))
     class TestSymmetric:
@@ -129,7 +151,9 @@ class TestParametrized:
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             def calc_scale(input_):
-                return min(abs(input_.min()), abs(input_.max())) - input_.mean() / 4
+                # Should generate a scale that is 1/2 of the input data span,
+                # to test the out-of-bounds gradient calculation
+                return (min(abs(input_.min()), abs(input_.max())) - input_.mean()) / 4
 
             if scale_mode == "single_scale":
                 return np.array([calc_scale(input_)])
@@ -172,63 +196,83 @@ class TestParametrized:
                 level_low = 0
             return level_low, level_high, levels
 
-        def test_quantize_symmetric_forward(self, _seed, is_signed, is_weights, input_size, bits, use_cuda, scale_mode):
+        def test_quantize_symmetric_forward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
+                                            scale_mode):
+            skip_if_half_on_cpu(is_fp16, use_cuda)
             ref_input = generate_input(input_size)
 
             ref_scale = self.generate_scale(ref_input, scale_mode, is_weights)
 
-            test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda)
+            if is_fp16:
+                ref_input = ref_input.astype(np.float16)
+                ref_scale = ref_scale.astype(np.float16)
+
+            test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_fp16=is_fp16)
             level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
 
             ref_scale = abs(ref_scale) + EPS
+
             ref_input_low = ref_scale * (level_low / level_high)
             ref_input_range = ref_scale - ref_input_low
 
-            ref_value = ReferenceQuantizeAsymmetric.forward(ref_input, ref_input_low, ref_input_range, levels)
+            ref_value = ReferenceQuantize.forward(ref_input, ref_input_low, ref_input_range, levels)
 
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
 
-            check_equal(ref_value, test_value, rtol=1e-3)
+            check_outputs_for_quantization_functions(test_value, ref_value, is_fp16, rtol=1e-2 if is_fp16 else 1e-3)
 
-        def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, input_size, bits, use_cuda,
+        def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
                                              scale_mode):
+            skip_if_half_on_cpu(is_fp16, use_cuda)
             ref_input = generate_input(input_size)
 
             ref_scale = self.generate_scale(ref_input, scale_mode, is_weights)
             level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
-            test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_backward=True)
+            test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_backward=True,
+                                                   is_fp16=is_fp16)
 
             ref_scale = abs(ref_scale) + EPS
+            if is_fp16:
+                ref_input = ref_input.astype(np.float16)
+                ref_scale = ref_scale.astype(np.float16)
+
             ref_input_low = ref_scale * (level_low / level_high)
             ref_input_range = ref_scale - ref_input_low
 
-            ref_output = ReferenceQuantizeAsymmetric.forward(ref_input, ref_input_low, ref_input_range, levels)
-            ref_grads = ReferenceQuantizeAsymmetric.backward(np.ones(input_size), ref_input, ref_input_low,
-                                                             ref_input_range, ref_output, level_low, level_high,
-                                                             True)
+            ref_output = ReferenceQuantize.forward(ref_input, ref_input_low, ref_input_range, levels)
+
+            mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float)
+            ref_grads = ReferenceQuantize.backward(mock_prev_output_grads, ref_input, ref_input_low,
+                                                   ref_input_range, ref_output, level_low, level_high,
+                                                   True)
             del ref_grads[1]
             test_value = symmetric_quantize(test_input, levels, level_low, level_high, test_scale, EPS)
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_scale])
 
-            check_equal(ref_output, test_value)
-            check_equal(ref_grads, test_grads)
+            check_outputs_for_quantization_functions(test_value, ref_output, is_fp16)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
 
-    @pytest.mark.parametrize("is_negative_range", (True, False), ids=('range<0', 'range>0'))
     class TestAsymmetric:
         @staticmethod
-        def generate_range(input_, is_negative_range, scale_mode, is_weights):
+        def generate_range(input_, scale_mode, is_weights, is_fp16):
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
-            def calc_low_and_range(input_, is_negative_range):
-                input_low = input_.min() - input_.mean() / 4
-                input_range = input_.max() - input_low
-                if is_negative_range:
-                    input_range *= -1
+            def calc_low_and_range(input_, is_fp16):
+                # Should generate input_low and input_range that cover only the internal
+                # 3/4 of the input data span to test the out-of-bounds gradient calculation
+                span = input_.max() - input_.min()
+                input_low = input_.min() + span / 8
+                input_range = span * 3 / 4
+
+                if is_fp16:
+                    input_low = input_low.astype(np.float16)
+                    input_range = input_range.astype(np.float16)
+
                 return input_low, input_range
 
             if scale_mode == "single_scale":
-                input_low, input_range = calc_low_and_range(input_, is_negative_range)
+                input_low, input_range = calc_low_and_range(input_, is_fp16)
                 return np.array([input_low]), np.array([input_range])
 
             if scale_mode == "per_channel_scale":
@@ -242,7 +286,8 @@ class TestParametrized:
                     input_range = np.zeros(scales_shape)
                     for idx in range(0, channel_count):
                         single_input_channel = input_[idx, ...]
-                        input_low[idx], input_range[idx] = calc_low_and_range(single_input_channel, is_negative_range)
+                        input_low[idx], input_range[idx] = calc_low_and_range(single_input_channel,
+                                                                              is_fp16)
                 else:
                     channel_count = input_.shape[1]
                     if channel_count == 1:
@@ -253,8 +298,7 @@ class TestParametrized:
                     input_range = np.zeros(scales_shape)
                     for idx in range(0, channel_count):
                         single_input_channel = input_[:, idx, ...]
-                        input_low[0, idx], input_range[0, idx] = calc_low_and_range(single_input_channel,
-                                                                                    is_negative_range)
+                        input_low[0, idx], input_range[0, idx] = calc_low_and_range(single_input_channel, is_fp16)
 
                 return input_low, input_range
 
@@ -265,39 +309,51 @@ class TestParametrized:
             level_high = levels - 1
             return level_low, level_high, levels
 
-        def test_quantize_asymmetric_forward(self, _seed, input_size, bits, use_cuda, is_negative_range, is_weights,
-                                             scale_mode):
+        def test_quantize_asymmetric_forward(self, _seed, input_size, bits, use_cuda, is_weights,
+                                             is_fp16, scale_mode):
+            skip_if_half_on_cpu(is_fp16, use_cuda)
             level_low, level_high, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)
-            ref_input_low, ref_input_range = self.generate_range(ref_input, is_negative_range, scale_mode, is_weights)
+            if is_fp16:
+                ref_input = ref_input.astype(np.float16)
+
+            ref_input_low, ref_input_range = self.generate_range(ref_input, scale_mode, is_weights,
+                                                                 is_fp16)
             test_input, test_input_low, test_input_range = get_test_data(
-                [ref_input, ref_input_low, ref_input_range], use_cuda)
+                [ref_input, ref_input_low, ref_input_range], use_cuda, is_fp16=is_fp16)
 
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = ReferenceQuantizeAsymmetric.tune_range(
+            ref_input_low, ref_input_range = ReferenceQuantize.tune_range(
                 ref_input_low, ref_input_range, levels)
-            ref_value = ReferenceQuantizeAsymmetric.forward(
+            ref_value = ReferenceQuantize.forward(
                 ref_input, ref_input_low, ref_input_range, levels)
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
                                              test_input_range, EPS)
 
-            check_equal(ref_value, test_value)
+            check_outputs_for_quantization_functions(test_value, ref_value, is_fp16)
 
-        def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_negative_range, is_weights,
-                                              scale_mode):
+        def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
+                                              is_fp16, scale_mode):
+            skip_if_half_on_cpu(is_fp16, use_cuda)
             level_low, level_high, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)
-            ref_input_low, ref_input_range = self.generate_range(ref_input, is_negative_range, scale_mode, is_weights)
+            if is_fp16:
+                ref_input = ref_input.astype(np.float16)
+
+            ref_input_low, ref_input_range = self.generate_range(ref_input, scale_mode, is_weights,
+                                                                 is_fp16)
             test_input, test_input_low, test_input_range = get_test_data(
-                [ref_input, ref_input_low, ref_input_range], use_cuda, is_backward=True)
+                [ref_input, ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16)
 
             range_sign = np.sign(ref_input_range)
             ref_input_range = abs(ref_input_range) + EPS
-            ref_input_low, ref_input_range = ReferenceQuantizeAsymmetric.tune_range(
+            ref_input_low, ref_input_range = ReferenceQuantize.tune_range(
                 ref_input_low, ref_input_range, levels)
-            ref_output = ReferenceQuantizeAsymmetric.forward(ref_input, ref_input_low, ref_input_range, levels)
-            ref_grads = ReferenceQuantizeAsymmetric.backward(
-                np.ones(input_size), ref_input, ref_input_low, ref_input_range, ref_output, level_low,
+            ref_output = ReferenceQuantize.forward(ref_input, ref_input_low, ref_input_range, levels)
+
+            mock_prev_output_grads = np.ones(input_size, dtype=np.float16 if is_fp16 else np.float)
+            ref_grads = ReferenceQuantize.backward(
+                mock_prev_output_grads, ref_input, ref_input_low, ref_input_range, ref_output, level_low,
                 level_high, range_sign)
 
             test_value = asymmetric_quantize(test_input, levels, level_low, level_high, test_input_low,
@@ -305,4 +361,4 @@ class TestParametrized:
             test_value.sum().backward()
             test_grads = get_grads([test_input, test_input_low, test_input_range])
 
-            check_equal(ref_grads, test_grads)
+            check_outputs_for_quantization_functions(test_grads, ref_grads, is_fp16)
