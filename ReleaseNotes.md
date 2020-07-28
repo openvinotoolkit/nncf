@@ -7,6 +7,7 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+
 ## New in Release 1.4:
 - Models with filter pruning applied are now exportable to ONNX
 - BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
