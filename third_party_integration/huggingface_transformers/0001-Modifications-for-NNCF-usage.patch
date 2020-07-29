@@ -1,27 +1,31 @@
-From d685284299132df4325bdf97c4109a51decc14c9 Mon Sep 17 00:00:00 2001
+From a8ade1da5aaf0185613a8848307da4d852844c58 Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Fri, 29 Nov 2019 18:33:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
- examples/question-answering/run_squad.py | 121 ++++++++++++++++++++---
- examples/text-classification/run_glue.py |  69 ++++++++++++-
- examples/text-classification/run_xnli.py | 118 +++++++++++++++++++---
- nncf_bert_config_squad.json              |  43 ++++++++
- nncf_bert_config_xnli.json               |  36 +++++++
- nncf_distilbert_config_sst2.json         |  33 +++++++
- nncf_roberta_config_mnli.json            |  42 ++++++++
- src/transformers/modeling_utils.py       |  23 ++++-
- src/transformers/trainer.py              |  25 ++++-
- src/transformers/training_args.py        |   5 +
- 10 files changed, 480 insertions(+), 35 deletions(-)
+ examples/question-answering/run_squad.py      | 128 ++++++++++++++++--
+ examples/text-classification/run_glue.py      |  65 ++++++++-
+ examples/text-classification/run_xnli.py      | 125 +++++++++++++++--
+ nncf_bert_config_squad.json                   |  43 ++++++
+ ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
+ nncf_bert_config_xnli.json                    |  36 +++++
+ nncf_distilbert_config_sst2.json              |  33 +++++
+ nncf_mobilebert_config_squad_int8.json        |  43 ++++++
+ nncf_roberta_config_mnli.json                 |  42 ++++++
+ src/transformers/modeling_utils.py            |  23 +++-
+ src/transformers/trainer.py                   |  33 ++++-
+ src/transformers/training_args.py             |   5 +
+ 12 files changed, 573 insertions(+), 34 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
+ create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
  create mode 100644 nncf_distilbert_config_sst2.json
+ create mode 100644 nncf_mobilebert_config_squad_int8.json
  create mode 100644 nncf_roberta_config_mnli.json
 
 diff --git a/examples/question-answering/run_squad.py b/examples/question-answering/run_squad.py
-index 821174dd..ec5a39cb 100644
+index 3fe887d6..b119cc4f 100644
 --- a/examples/question-answering/run_squad.py
 +++ b/examples/question-answering/run_squad.py
 @@ -25,9 +25,11 @@ import timeit
@@ -86,7 +90,18 @@ index 821174dd..ec5a39cb 100644
              # model outputs are always tuple in transformers (see doc)
              loss = outputs[0]
  
-@@ -215,6 +225,8 @@ def train(args, train_dataset, model, tokenizer):
+@@ -208,6 +218,10 @@ def train(args, train_dataset, model, tokenizer):
+             if args.gradient_accumulation_steps > 1:
+                 loss = loss / args.gradient_accumulation_steps
+ 
++            if compression_ctrl is not None:
++                compression_loss = compression_ctrl.loss()
++                loss += compression_loss
++
+             if args.fp16:
+                 with amp.scale_loss(loss, optimizer) as scaled_loss:
+                     scaled_loss.backward()
+@@ -215,6 +229,8 @@ def train(args, train_dataset, model, tokenizer):
                  loss.backward()
  
              tr_loss += loss.item()
@@ -95,7 +110,7 @@ index 821174dd..ec5a39cb 100644
              if (step + 1) % args.gradient_accumulation_steps == 0:
                  if args.fp16:
                      torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
-@@ -223,6 +235,10 @@ def train(args, train_dataset, model, tokenizer):
+@@ -223,6 +239,10 @@ def train(args, train_dataset, model, tokenizer):
  
                  optimizer.step()
                  scheduler.step()  # Update learning rate schedule
@@ -106,11 +121,12 @@ index 821174dd..ec5a39cb 100644
                  model.zero_grad()
                  global_step += 1
  
-@@ -237,14 +253,21 @@ def train(args, train_dataset, model, tokenizer):
+@@ -237,14 +257,22 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
 +                    if compression_ctrl is not None:
++                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
 +                        for key, value in compression_stats.items():
 +                            if isinstance(value, (int, float)):
@@ -131,7 +147,7 @@ index 821174dd..ec5a39cb 100644
                      tokenizer.save_pretrained(output_dir)
  
                      torch.save(args, os.path.join(output_dir, "training_args.bin"))
-@@ -257,10 +280,13 @@ def train(args, train_dataset, model, tokenizer):
+@@ -257,10 +285,13 @@ def train(args, train_dataset, model, tokenizer):
              if args.max_steps > 0 and global_step > args.max_steps:
                  epoch_iterator.close()
                  break
@@ -146,11 +162,11 @@ index 821174dd..ec5a39cb 100644
      if args.local_rank in [-1, 0]:
          tb_writer.close()
  
-@@ -660,6 +686,11 @@ def main():
+@@ -661,6 +692,11 @@ def main():
      parser.add_argument("--server_port", type=str, default="", help="Can be used for distant debugging.")
  
      parser.add_argument("--threads", type=int, default=1, help="multiple threads for converting example to features")
-+    parser.add_argument('--to-onnx', type=str, metavar='PATH', default=None,
++    parser.add_argument('--to_onnx', type=str, metavar='PATH', default=None,
 +                        help='Export to ONNX model by given path')
 +    parser.add_argument('--nncf_config', type=str, help='path to NNCF config .json file to be used for compressed model'
 +                                                        'fine-tuning')
@@ -158,7 +174,7 @@ index 821174dd..ec5a39cb 100644
      args = parser.parse_args()
  
      if args.doc_stride >= args.max_seq_length - args.max_query_length:
-@@ -734,17 +765,63 @@ def main():
+@@ -735,19 +771,67 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir if args.cache_dir else None,
      )
@@ -204,8 +220,6 @@ index 821174dd..ec5a39cb 100644
 +        compression_ctrl = None
 +    else:
 +        compression_ctrl, model = retval
-+        if not (args.local_rank == -1 or args.no_cuda):
-+            compression_ctrl.distributed()
 +
 +
      if args.local_rank == 0:
@@ -222,8 +236,14 @@ index 821174dd..ec5a39cb 100644
 +
      model.to(args.device)
  
++    if nncf_config is not None:
++        if not (args.local_rank == -1 or args.no_cuda):
++            compression_ctrl.distributed()
++
      logger.info("Training/evaluation parameters %s", args)
-@@ -763,7 +840,7 @@ def main():
+ 
+     # Before we do anything with models, we want to ensure that we get fp16 execution of torch.einsum if args.fp16 is set.
+@@ -764,7 +848,7 @@ def main():
      # Training
      if args.do_train:
          train_dataset = load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False)
@@ -232,7 +252,7 @@ index 821174dd..ec5a39cb 100644
          logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
  
      # Save the trained model and the tokenizer
-@@ -777,14 +854,22 @@ def main():
+@@ -778,14 +862,22 @@ def main():
          # They can then be reloaded using `from_pretrained()`
          # Take care of distributed/parallel training
          model_to_save = model.module if hasattr(model, "module") else model
@@ -257,7 +277,7 @@ index 821174dd..ec5a39cb 100644
          tokenizer = AutoTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
          model.to(args.device)
  
-@@ -809,7 +894,15 @@ def main():
+@@ -810,7 +902,15 @@ def main():
          for checkpoint in checkpoints:
              # Reload the model
              global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
@@ -275,10 +295,10 @@ index 821174dd..ec5a39cb 100644
  
              # Evaluate
 diff --git a/examples/text-classification/run_glue.py b/examples/text-classification/run_glue.py
-index cf9b765a..6ab04e34 100644
+index cf9b765a..2836299a 100644
 --- a/examples/text-classification/run_glue.py
 +++ b/examples/text-classification/run_glue.py
-@@ -24,8 +24,12 @@ from dataclasses import dataclass, field
+@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
  from typing import Callable, Dict, Optional
  
  import numpy as np
@@ -286,17 +306,13 @@ index cf9b765a..6ab04e34 100644
 +from nncf.structures import QuantizationRangeInitArgs
 +from nncf.initialization import InitializingDataLoader
  
--from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
-+from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset, \
-+    DefaultDataCollator
+ from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
  from transformers import GlueDataTrainingArguments as DataTrainingArguments
- from transformers import (
-     HfArgumentParser,
-@@ -41,6 +45,32 @@ from transformers import (
+@@ -41,6 +44,33 @@ from transformers import (
  logger = logging.getLogger(__name__)
  
  
-+def get_train_dataloader_for_init(args, train_dataset, data_collator = None):
++def get_train_dataloader_for_init(args, train_dataset, data_collator=None):
 +    from transformers.training_args import is_tpu_available
 +    if is_tpu_available():
 +        from transformers.trainer import get_tpu_sampler
@@ -311,21 +327,22 @@ index cf9b765a..6ab04e34 100644
 +        )
 +
 +    if data_collator is None:
-+        data_collator = DefaultDataCollator()
++        from transformers.data.data_collator import default_data_collator
++        data_collator = default_data_collator
 +
 +    from torch.utils.data import DataLoader
 +    data_loader = DataLoader(
 +        train_dataset,
 +        batch_size=args.train_batch_size,
 +        sampler=train_sampler,
-+        collate_fn=data_collator.collate_batch
++        collate_fn=data_collator
 +    )
 +    return data_loader
 +
  @dataclass
  class ModelArguments:
      """
-@@ -126,14 +156,46 @@ def main():
+@@ -126,14 +156,44 @@ def main():
          model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
          cache_dir=model_args.cache_dir,
      )
@@ -368,13 +385,11 @@ index cf9b765a..6ab04e34 100644
 +        compression_ctrl = None
 +    else:
 +        compression_ctrl, model = retval
-+        if not (training_args.local_rank == -1 or training_args.no_cuda):
-+            compression_ctrl.distributed()
 +            
      train_dataset = (
          GlueDataset(data_args, tokenizer=tokenizer, cache_dir=model_args.cache_dir) if training_args.do_train else None
      )
-@@ -165,6 +227,7 @@ def main():
+@@ -165,6 +225,7 @@ def main():
          train_dataset=train_dataset,
          eval_dataset=eval_dataset,
          compute_metrics=build_compute_metrics_fn(data_args.task_name),
@@ -383,7 +398,7 @@ index cf9b765a..6ab04e34 100644
  
      # Training
 diff --git a/examples/text-classification/run_xnli.py b/examples/text-classification/run_xnli.py
-index f0ee5120..7c920a90 100644
+index f0ee5120..83ab26ef 100644
 --- a/examples/text-classification/run_xnli.py
 +++ b/examples/text-classification/run_xnli.py
 @@ -25,8 +25,11 @@ import random
@@ -450,7 +465,18 @@ index f0ee5120..7c920a90 100644
              loss = outputs[0]  # model outputs are always tuple in transformers (see doc)
  
              if args.n_gpu > 1:
-@@ -179,6 +191,8 @@ def train(args, train_dataset, model, tokenizer):
+@@ -172,6 +184,10 @@ def train(args, train_dataset, model, tokenizer):
+             if args.gradient_accumulation_steps > 1:
+                 loss = loss / args.gradient_accumulation_steps
+ 
++            if compression_ctrl is not None:
++                compression_loss = compression_ctrl.loss()
++                loss += compression_loss
++
+             if args.fp16:
+                 with amp.scale_loss(loss, optimizer) as scaled_loss:
+                     scaled_loss.backward()
+@@ -179,6 +195,8 @@ def train(args, train_dataset, model, tokenizer):
                  loss.backward()
  
              tr_loss += loss.item()
@@ -459,7 +485,7 @@ index f0ee5120..7c920a90 100644
              if (step + 1) % args.gradient_accumulation_steps == 0:
                  if args.fp16:
                      torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
-@@ -188,6 +202,10 @@ def train(args, train_dataset, model, tokenizer):
+@@ -188,6 +206,10 @@ def train(args, train_dataset, model, tokenizer):
                  optimizer.step()
                  scheduler.step()  # Update learning rate schedule
                  model.zero_grad()
@@ -470,11 +496,12 @@ index f0ee5120..7c920a90 100644
                  global_step += 1
  
                  if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-@@ -202,13 +220,20 @@ def train(args, train_dataset, model, tokenizer):
+@@ -202,13 +224,21 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
 +                    if compression_ctrl is not None:
++                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
 +                        for key, value in compression_stats.items():
 +                            if isinstance(value, (int, float)):
@@ -492,7 +519,7 @@ index f0ee5120..7c920a90 100644
                      )  # Take care of distributed/parallel training
                      model_to_save.save_pretrained(output_dir)
                      tokenizer.save_pretrained(output_dir)
-@@ -223,6 +248,10 @@ def train(args, train_dataset, model, tokenizer):
+@@ -223,6 +253,10 @@ def train(args, train_dataset, model, tokenizer):
              if args.max_steps > 0 and global_step > args.max_steps:
                  epoch_iterator.close()
                  break
@@ -503,18 +530,18 @@ index f0ee5120..7c920a90 100644
          if args.max_steps > 0 and global_step > args.max_steps:
              train_iterator.close()
              break
-@@ -474,6 +503,10 @@ def main():
+@@ -474,6 +508,10 @@ def main():
      parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
      parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
      parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
-+    parser.add_argument('--to-onnx', type=str, metavar='PATH', default=None,
++    parser.add_argument('--to_onnx', type=str, metavar='PATH', default=None,
 +                        help='Export to ONNX model by given path')
 +    parser.add_argument('--nncf_config', type=str, help='path to NNCF config .json file to be used for compressed model'
 +                                                        'fine-tuning')
      args = parser.parse_args()
  
      if (
-@@ -551,16 +584,62 @@ def main():
+@@ -551,24 +589,72 @@ def main():
          do_lower_case=args.do_lower_case,
          cache_dir=args.cache_dir,
      )
@@ -559,8 +586,6 @@ index f0ee5120..7c920a90 100644
 +        compression_ctrl = None
 +    else:
 +        compression_ctrl, model = retval
-+        if not (args.local_rank == -1 or args.no_cuda):
-+            compression_ctrl.distributed()
 +
      if args.local_rank == 0:
          torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
@@ -577,8 +602,12 @@ index f0ee5120..7c920a90 100644
 +
      model.to(args.device)
  
++    if nncf_config is not None:
++        if not (args.local_rank == -1 or args.no_cuda):
++            compression_ctrl.distributed()
++
      logger.info("Training/evaluation parameters %s", args)
-@@ -568,7 +647,7 @@ def main():
+ 
      # Training
      if args.do_train:
          train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
@@ -587,7 +616,7 @@ index f0ee5120..7c920a90 100644
          logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
  
      # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-@@ -581,7 +660,7 @@ def main():
+@@ -581,7 +667,7 @@ def main():
          # Save a trained model, configuration and tokenizer using `save_pretrained()`.
          # They can then be reloaded using `from_pretrained()`
          model_to_save = (
@@ -596,7 +625,7 @@ index f0ee5120..7c920a90 100644
          )  # Take care of distributed/parallel training
          model_to_save.save_pretrained(args.output_dir)
          tokenizer.save_pretrained(args.output_dir)
-@@ -590,7 +669,15 @@ def main():
+@@ -590,7 +676,15 @@ def main():
          torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
  
          # Load a trained model and vocabulary that you have fine-tuned
@@ -613,7 +642,7 @@ index f0ee5120..7c920a90 100644
          tokenizer = AutoTokenizer.from_pretrained(args.output_dir)
          model.to(args.device)
  
-@@ -608,7 +695,16 @@ def main():
+@@ -608,7 +702,16 @@ def main():
              global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
              prefix = checkpoint.split("/")[-1] if checkpoint.find("checkpoint") != -1 else ""
  
@@ -633,7 +662,7 @@ index f0ee5120..7c920a90 100644
              result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
 diff --git a/nncf_bert_config_squad.json b/nncf_bert_config_squad.json
 new file mode 100644
-index 00000000..a1c34e3d
+index 00000000..7b0b4c6e
 --- /dev/null
 +++ b/nncf_bert_config_squad.json
 @@ -0,0 +1,43 @@
@@ -669,8 +698,8 @@ index 00000000..a1c34e3d
 +        {
 +            "mode": "symmetric",
 +            "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/NNCFLinear\\[(key)|(query)|(value)\\].*",
-+            "BertForQuestionAnswering/BertModel\\[bert\\]/BertEmbeddings\\[embeddings\\]/__add___0",
-+            "BertForQuestionAnswering/BertModel\\[bert\\]/BertEmbeddings\\[embeddings\\]/__add___1",
++            "{re}BertForQuestionAnswering/BertModel\\[bert\\]/BertEmbeddings\\[embeddings\\]/__add___0",
++            "{re}BertForQuestionAnswering/BertModel\\[bert\\]/BertEmbeddings\\[embeddings\\]/__add___1",
 +            "{re}BertOutput\\[output\\]/__add___0"]
 +        },
 +        "weights":
@@ -678,6 +707,43 @@ index 00000000..a1c34e3d
 +            "mode": "symmetric",
 +            "signed": true
 +        }
++    }
++}
+diff --git a/nncf_bert_config_squad_magnitude_sparsity_cubic.json b/nncf_bert_config_squad_magnitude_sparsity_cubic.json
+new file mode 100644
+index 00000000..b4452e8d
+--- /dev/null
++++ b/nncf_bert_config_squad_magnitude_sparsity_cubic.json
+@@ -0,0 +1,31 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        }
++    ],
++    "compression": {
++        "algorithm": "magnitude_sparsity",
++        "params": {
++            "schedule": "polynomial",
++            "power": 3,
++            "sparsity_init": 0.0,
++            "sparsity_target": 0.8,
++            "sparsity_target_epoch": 40,
++            "sparsity_freeze_epoch": 60,
++            "update_per_optimizer_step": true,
++            "steps_per_epoch": 1109,
++            "weight_importance": "abs"
++        },
++        "ignored_scopes": ["{re}.*NNCFEmbedding"]
 +    }
 +}
 diff --git a/nncf_bert_config_xnli.json b/nncf_bert_config_xnli.json
@@ -761,6 +827,55 @@ index 00000000..746b3e1b
 +        }
 +    }
 +}
+diff --git a/nncf_mobilebert_config_squad_int8.json b/nncf_mobilebert_config_squad_int8.json
+new file mode 100644
+index 00000000..107360f8
+--- /dev/null
++++ b/nncf_mobilebert_config_squad_int8.json
+@@ -0,0 +1,43 @@
++{
++    "input_info": [
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        },
++        {
++            "sample_size": [1, 384],
++            "type": "long"
++        }
++    ],
++    "compression": {
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_steps": 8,
++                "type": "percentile",
++                "min_percentile": 0.01,
++                "max_percentile": 99.99
++            }
++        },
++        "ignored_scopes": ["{re}MobileBertSelfAttention\\[self\\]/__add___0",
++            "{re}MobileBertIntermediate\\[intermediate\\]/NNCFLinear\\[dense\\]/linear_0"],
++        "activations":
++        {
++            "mode": "symmetric",
++            "ignored_scopes": [
++            "{re}MobileBertForQuestionAnswering/MobileBertModel\\[mobilebert\\]/MobileBertEmbeddings\\[embeddings\\]/__add___0",
++            "{re}MobileBertForQuestionAnswering/MobileBertModel\\[mobilebert\\]/MobileBertEmbeddings\\[embeddings\\]/__add___1",
++            "{re}MobileBertOutput\\[output\\]/__add___0",
++            "{re}NoNorm\\[LayerNorm\\]/__mul___0"]
++        },
++        "weights":
++        {
++            "mode": "symmetric",
++            "signed": true
++        }
++    }
++}
 diff --git a/nncf_roberta_config_mnli.json b/nncf_roberta_config_mnli.json
 new file mode 100644
 index 00000000..3f2eb189
@@ -810,7 +925,7 @@ index 00000000..3f2eb189
 +    }
 +}
 diff --git a/src/transformers/modeling_utils.py b/src/transformers/modeling_utils.py
-index befb5773..26cdad5a 100644
+index 3f84bb4b..6a2e1fa3 100644
 --- a/src/transformers/modeling_utils.py
 +++ b/src/transformers/modeling_utils.py
 @@ -24,6 +24,9 @@ from torch import Tensor, device, dtype, nn
@@ -855,7 +970,7 @@ index befb5773..26cdad5a 100644
  
          logger.info("Model weights saved in {}".format(output_model_file))
  
-@@ -586,6 +592,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
+@@ -585,6 +591,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
          output_loading_info = kwargs.pop("output_loading_info", False)
          local_files_only = kwargs.pop("local_files_only", False)
          use_cdn = kwargs.pop("use_cdn", True)
@@ -864,7 +979,7 @@ index befb5773..26cdad5a 100644
  
          # Load config if we don't provide a configuration
          if not isinstance(config, PretrainedConfig):
-@@ -678,6 +686,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
+@@ -677,6 +685,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
                      "If you tried to load a PyTorch model from a TF 2.0 checkpoint, please set from_tf=True. "
                  )
  
@@ -876,7 +991,7 @@ index befb5773..26cdad5a 100644
          missing_keys = []
          unexpected_keys = []
          error_msgs = []
-@@ -784,6 +797,10 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
+@@ -772,6 +785,10 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin):
          # Set model in evaluation mode to deactivate DropOut modules by default
          model.eval()
  
@@ -888,10 +1003,10 @@ index befb5773..26cdad5a 100644
              loading_info = {
                  "missing_keys": missing_keys,
 diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
-index c586907b..174d09a3 100644
+index 0aa9cdf3..06101277 100644
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
-@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+@@ -10,6 +10,7 @@ from typing import Callable, Dict, List, Optional, Tuple
  
  import numpy as np
  import torch
@@ -899,7 +1014,7 @@ index c586907b..174d09a3 100644
  from packaging import version
  from torch import nn
  from torch.utils.data.dataloader import DataLoader
-@@ -159,6 +160,7 @@ class Trainer:
+@@ -178,6 +179,7 @@ class Trainer:
          prediction_loss_only=False,
          tb_writer: Optional["SummaryWriter"] = None,
          optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = None,
@@ -907,16 +1022,26 @@ index c586907b..174d09a3 100644
      ):
          """
          Trainer is a simple but feature-complete training and eval loop for PyTorch,
-@@ -209,6 +211,8 @@ class Trainer:
-                 FutureWarning,
-             )
+@@ -219,6 +221,8 @@ class Trainer:
+             # We'll find a more elegant and not need to do this in the future.
+             self.model.config.xla_device = True
  
 +        self.compression_ctrl = compression_ctrl
 +
      def get_train_dataloader(self) -> DataLoader:
          if self.train_dataset is None:
              raise ValueError("Trainer: training requires a train_dataset.")
-@@ -418,7 +422,7 @@ class Trainer:
+@@ -395,6 +399,9 @@ class Trainer:
+ 
+         # Distributed training (should be after apex fp16 initialization)
+         if self.args.local_rank != -1:
++            if self.compression_ctrl is not None:
++                self.compression_ctrl.distributed()
++
+             model = torch.nn.parallel.DistributedDataParallel(
+                 model,
+                 device_ids=[self.args.local_rank],
+@@ -428,7 +435,7 @@ class Trainer:
          epochs_trained = 0
          steps_trained_in_current_epoch = 0
          # Check if continuing training from a checkpoint
@@ -925,7 +1050,7 @@ index c586907b..174d09a3 100644
              # set global_step to global_step of last saved checkpoint from model path
              try:
                  self.global_step = int(model_path.split("-")[-1].split("/")[0])
-@@ -479,6 +483,10 @@ class Trainer:
+@@ -489,6 +496,10 @@ class Trainer:
  
                      scheduler.step()
                      model.zero_grad()
@@ -936,11 +1061,12 @@ index c586907b..174d09a3 100644
                      self.global_step += 1
                      self.epoch = epoch + (step + 1) / len(epoch_iterator)
  
-@@ -495,6 +503,12 @@ class Trainer:
+@@ -505,6 +516,13 @@ class Trainer:
                          )
                          logging_loss = tr_loss
  
 +                        if self.compression_ctrl is not None:
++                            logs["compression_loss"] = self.compression_ctrl.loss().item()
 +                            compression_stats = self.compression_ctrl.statistics()
 +                            for key, value in compression_stats.items():
 +                                if isinstance(value, (int, float)):
@@ -949,7 +1075,18 @@ index c586907b..174d09a3 100644
                          self._log(logs)
  
                          if self.args.evaluate_during_training:
-@@ -644,9 +658,12 @@ class Trainer:
+@@ -594,6 +612,10 @@ class Trainer:
+         if self.args.gradient_accumulation_steps > 1:
+             loss = loss / self.args.gradient_accumulation_steps
+ 
++        if self.compression_ctrl is not None:
++            compression_loss = self.compression_ctrl.loss()
++            loss += compression_loss
++
+         if self.args.fp16:
+             with amp.scale_loss(loss, optimizer) as scaled_loss:
+                 scaled_loss.backward()
+@@ -653,9 +675,12 @@ class Trainer:
          logger.info("Saving model checkpoint to %s", output_dir)
          # Save a trained model and configuration using `save_pretrained()`.
          # They can then be reloaded using `from_pretrained()`
