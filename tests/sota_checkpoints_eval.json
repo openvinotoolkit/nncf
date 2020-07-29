@@ -328,6 +328,8 @@
                 "target": 71.95,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid.pth",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "model_description": "UNet"
             },
             "unet_camvid_int8": {
@@ -338,6 +340,8 @@
                 "resume": "unet_camvid_int8.pth",
                 "model_description": "UNet",
                 "compression_description": "INT8",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1
             },
@@ -347,6 +351,8 @@
                 "target": 71.72,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid_magnitude_sparsity_int8.pth",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
@@ -357,6 +363,8 @@
                 "target": 67.89,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid.pth",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "model_description": "ICNet"
             },
             "icnet_camvid_int8": {
@@ -365,6 +373,8 @@
                 "target": 67.87,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_int8.pth",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "model_description": "ICNet",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
@@ -376,6 +386,8 @@
                 "target": 67.24,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_magnitude_sparsity_int8.pth",
+                "mean_value": "[99.603,103.329,105.6567]",
+                "scale_value": "[75.643,77.821,76.746]",
                 "model_description": "ICNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
