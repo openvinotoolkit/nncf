@@ -180,7 +180,7 @@ Quick jump to sample type:
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|93.21 (F1)|92.68 (F1)|
 |RoBERTa-large|INT8|MNLI|90.6 (matched)|89.25 (matched)|
 |DistilBERT-base|INT8|SST-2|91.1|90.3|
-|MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.3 (F1)|
+|MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.4 (F1)|
 
 
 #### Object detection (3rd party)

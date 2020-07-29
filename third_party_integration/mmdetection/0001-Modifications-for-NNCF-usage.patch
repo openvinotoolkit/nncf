@@ -1,4 +1,4 @@
-From bdc56258346ede82e51439d1e8d884c817f9b055 Mon Sep 17 00:00:00 2001
+From 4dc6866b5222b49a2209b3c1135de06b43cd8bc0 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -10,12 +10,14 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/core/__init__.py                        |  1 +
  mmdet/core/nncf/__init__.py                   |  9 ++
  mmdet/core/nncf/hooks.py                      | 25 +++++
- mmdet/core/nncf/utils.py                      | 73 ++++++++++++++
+ mmdet/core/nncf/utils.py                      | 74 +++++++++++++++
  mmdet/models/dense_heads/anchor_head.py       |  1 +
  mmdet/models/detectors/base.py                |  9 +-
  mmdet/models/detectors/single_stage.py        |  8 +-
+ requirements/readthedocs.txt                  |  2 +-
+ requirements/runtime.txt                      |  2 +-
  tools/train.py                                |  6 ++
- 11 files changed, 298 insertions(+), 11 deletions(-)
+ 13 files changed, 301 insertions(+), 13 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -331,10 +333,10 @@ index 0000000..9f8dbc3
 +            logger.info('{}: {}'.format(key, val))
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
-index 0000000..a1f4460
+index 0000000..64bee15
 --- /dev/null
 +++ b/mmdet/core/nncf/utils.py
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,74 @@
 +import pathlib
 +from collections import OrderedDict
 +
@@ -400,12 +402,13 @@ index 0000000..a1f4460
 +
 +
 +class MMInitializeDataLoader(InitializingDataLoader):
-+    def __next__(self):
-+        # redefined InitializeDataLoader because
++    def get_inputs(self, dataloader_output):
++        # redefined InitializingDataLoader because
 +        # of DataContainer format in mmdet
-+        input_ = self.data_loader_iter.__next__()
-+        input_ = {k: v.data[0] for k, v in input_.items()}
-+        return (), input_
++        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
++        return (), kwargs
++
++    # get_targets TBD
 +
 +
 diff --git a/mmdet/models/dense_heads/anchor_head.py b/mmdet/models/dense_heads/anchor_head.py
@@ -472,6 +475,26 @@ index 78509f3..04d1129 100644
          return losses
  
      def simple_test(self, img, img_metas, rescale=False):
+diff --git a/requirements/readthedocs.txt b/requirements/readthedocs.txt
+index 0542bfc..4a55df6 100644
+--- a/requirements/readthedocs.txt
++++ b/requirements/readthedocs.txt
+@@ -1,3 +1,3 @@
+-mmcv
++mmcv==0.6.2
+ torch
+ torchvision
+diff --git a/requirements/runtime.txt b/requirements/runtime.txt
+index 8b3b12a..2a66ea6 100644
+--- a/requirements/runtime.txt
++++ b/requirements/runtime.txt
+@@ -1,5 +1,5 @@
+ matplotlib
+-mmcv>=0.5.1
++mmcv==0.6.2
+ numpy
+ # need older pillow until torchvision is fixed
+ Pillow<=6.2.2
 diff --git a/tools/train.py b/tools/train.py
 index 4acd3a4..6a4bfff 100644
 --- a/tools/train.py
