@@ -14,27 +14,58 @@
 import subprocess
 import sys
 import pytest
-import os
+import shutil
+from tests.conftest import TEST_ROOT, PROJECT_ROOT
+
+INSTALL_CHECKS_FILENAME = 'install_checks.py'
 
 
-def test_install(install_type, tmp_path):
+@pytest.fixture(name="package_type", params=["install", "develop", "sdist", "bdist_wheel", "pypi"])
+def package_type_(request):
+    return request.param
+
+
+def test_install(install_type, tmp_path, package_type):
     if install_type is None:
         pytest.skip("Please specify type of installation")
-    tests_dir = os.path.dirname(__file__)
-    cur_dir = os.path.dirname(tests_dir)
-    install_path = str(tmp_path.joinpath("install"))
-    if sys.version_info[:2] == (3, 5):
-        subprocess.call("virtualenv -ppython3.5 {}".format(install_path), shell=True)
-    elif sys.version_info[:2] == (3, 6):
-        subprocess.call("virtualenv -ppython3.6 {}".format(install_path), shell=True)
-    python_executable_with_venv = str(". {0}/bin/activate && {0}/bin/python".format(install_path))
-    if install_type == "CPU":
+    venv_path = tmp_path / 'venv'
+    venv_path.mkdir()
+
+    version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
+    subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
+    python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
+    pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
+
+    run_path = tmp_path / 'run'
+    run_path.mkdir()
+
+    shutil.copy(TEST_ROOT / INSTALL_CHECKS_FILENAME, run_path)
+
+    if package_type == "pypi":
         subprocess.run(
-            "{} {}/setup.py develop --cpu-only".format(python_executable_with_venv, cur_dir), check=True, shell=True)
-        subprocess.run(
-            "{} {}/install_checks.py cpu".format(python_executable_with_venv, tests_dir), check=True, shell=True)
+            "{} install nncf".format(pip_with_venv), check=True, shell=True)
     else:
+
         subprocess.run(
-            "{} {}/setup.py develop".format(python_executable_with_venv, cur_dir), check=True, shell=True)
+            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
+                python=python_executable_with_venv,
+                nncf_repo_root=PROJECT_ROOT,
+                package_type=package_type,
+                install_flag='--cpu-only' if
+                install_type == "CPU" else ''),
+            check=True,
+            shell=True,
+            cwd=PROJECT_ROOT)
+
+    # Do additional install step for sdist/bdist packages
+    if package_type == "sdist":
         subprocess.run(
-            "{} {}/install_checks.py cuda".format(python_executable_with_venv, tests_dir), check=True, shell=True)
+            "{} install {}/dist/*.tar.gz ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
+    elif package_type == "bdist_wheel":
+        subprocess.run(
+            "{} install {}/dist/*.whl ".format(pip_with_venv, PROJECT_ROOT), check=True, shell=True)
+
+    subprocess.run(
+        "{} {}/install_checks.py {}".format(python_executable_with_venv, run_path,
+                                            'cpu' if install_type == "CPU" else 'cuda'),
+        check=True, shell=True, cwd=run_path)

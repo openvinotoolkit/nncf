@@ -52,15 +52,15 @@ def test_quantization_configs__with_defaults():
 
     assert isinstance(compression_ctrl, QuantizationController)
     weight_quantizers = compression_ctrl.weight_quantizers
-    activation_quantizers = compression_ctrl.non_weight_quantizers
+    activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
     ref_weight_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, True)
     for wq in weight_quantizers.values():
         compare_qconfigs(ref_weight_qconfig, wq)
 
     ref_activation_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, False)
-    for wq in activation_quantizers.values():
-        compare_qconfigs(ref_activation_qconfig, wq)
+    for aq_info in activation_quantizer_infos.values():
+        compare_qconfigs(ref_activation_qconfig, aq_info.quantizer_module_ref)
 
 
 def test_quantization_configs__custom():
@@ -83,7 +83,7 @@ def test_quantization_configs__custom():
 
     assert isinstance(compression_ctrl, QuantizationController)
     weight_quantizers = compression_ctrl.weight_quantizers
-    activation_quantizers = compression_ctrl.non_weight_quantizers
+    activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
     ref_weight_qconfig = QuantizerConfig(bits=4,
                                          mode=QuantizationMode.ASYMMETRIC,
@@ -100,8 +100,9 @@ def test_quantization_configs__custom():
                                              per_channel=False,
                                              input_shape=None,
                                              is_weights=False)
-    for wq in activation_quantizers.values():
-        compare_qconfigs(ref_activation_qconfig, wq)
+
+    for aq_info in activation_quantizer_infos.values():
+        compare_qconfigs(ref_activation_qconfig, aq_info.quantizer_module_ref)
 
 
 def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name):

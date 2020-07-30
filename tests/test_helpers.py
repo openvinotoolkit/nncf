@@ -39,7 +39,7 @@ def test_basic_model_is_valid():
     input_ = torch.ones([1, 1, 4, 4])
     ref_output = torch.ones((1, 2, 3, 3)) * (-4)
     act_output = model(input_)
-    check_equal(ref_output, act_output)
+    check_equal(act_output, ref_output)
 
 
 def test_two_conv_model_has_expected_params():
@@ -70,7 +70,7 @@ def test_two_conv_model_is_valid():
     input_ = torch.ones([1, 1, 4, 4])
     ref_output = torch.tensor([-24])
     act_output = model(input_)
-    check_equal(ref_output, act_output)
+    check_equal(act_output, ref_output)
 
 
 def load_exported_onnx_version(nncf_config: NNCFConfig, model: torch.nn.Module,

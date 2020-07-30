@@ -65,13 +65,13 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'mobilenet_v2_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 64.53,
+                            'expected_accuracy': 57.3,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
-                            'expected_accuracy': 64.53,
+                            'expected_accuracy': 62.71,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed'},
                         }
