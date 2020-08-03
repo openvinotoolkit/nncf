@@ -1,11 +1,11 @@
-From a8ade1da5aaf0185613a8848307da4d852844c58 Mon Sep 17 00:00:00 2001
+From 0753c10ab8b4fc2c6fc232bff8bae8720f7baaec Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Fri, 29 Nov 2019 18:33:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
  examples/question-answering/run_squad.py      | 128 ++++++++++++++++--
- examples/text-classification/run_glue.py      |  65 ++++++++-
+ examples/text-classification/run_glue.py      |  67 ++++++++-
  examples/text-classification/run_xnli.py      | 125 +++++++++++++++--
  nncf_bert_config_squad.json                   |  43 ++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
@@ -16,7 +16,7 @@ Subject: [PATCH] Modifications for NNCF usage
  src/transformers/modeling_utils.py            |  23 +++-
  src/transformers/trainer.py                   |  33 ++++-
  src/transformers/training_args.py             |   5 +
- 12 files changed, 573 insertions(+), 34 deletions(-)
+ 12 files changed, 574 insertions(+), 35 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -295,10 +295,10 @@ index 3fe887d6..b119cc4f 100644
  
              # Evaluate
 diff --git a/examples/text-classification/run_glue.py b/examples/text-classification/run_glue.py
-index cf9b765a..2836299a 100644
+index cf9b765a..a79a2edd 100644
 --- a/examples/text-classification/run_glue.py
 +++ b/examples/text-classification/run_glue.py
-@@ -24,6 +24,9 @@ from dataclasses import dataclass, field
+@@ -24,8 +24,12 @@ from dataclasses import dataclass, field
  from typing import Callable, Dict, Optional
  
  import numpy as np
@@ -306,15 +306,18 @@ index cf9b765a..2836299a 100644
 +from nncf.structures import QuantizationRangeInitArgs
 +from nncf.initialization import InitializingDataLoader
  
- from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
+-from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
++from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset, \
++    is_torch_tpu_available
  from transformers import GlueDataTrainingArguments as DataTrainingArguments
-@@ -41,6 +44,33 @@ from transformers import (
+ from transformers import (
+     HfArgumentParser,
+@@ -41,6 +45,32 @@ from transformers import (
  logger = logging.getLogger(__name__)
  
  
 +def get_train_dataloader_for_init(args, train_dataset, data_collator=None):
-+    from transformers.training_args import is_tpu_available
-+    if is_tpu_available():
++    if is_torch_tpu_available():
 +        from transformers.trainer import get_tpu_sampler
 +        train_sampler = get_tpu_sampler(train_dataset)
 +    else:
