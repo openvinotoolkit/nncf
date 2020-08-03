@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import itertools
+
 import pytest
 import re
 import torch
@@ -245,7 +247,7 @@ class TestRangeInit:
 class SingleConv2dIdentityModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv2d = nn.Conv2d(1, 1, 1)
+        self.conv2d = nn.Conv2d(3, 3, 1)
         self.conv2d.weight = torch.nn.Parameter(torch.ones_like(self.conv2d.weight))
 
     def forward(self, input_):
@@ -255,19 +257,25 @@ class SingleConv2dIdentityModel(torch.nn.Module):
 class SingleConv2dSyntheticWeightModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv2d = nn.Conv2d(1, 1, 100)
+        self.conv2d = nn.Conv2d(3, 3, 100)
 
         for i in range(0, 100):
             for j in range(0, 100):
                 self.conv2d.weight[0][0][i][j] = i * 100 + j
 
+        for i in range(0, 3):
+            for j in range(0, 3):
+                if not(i == 0 and j == 0):
+                    self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
+                    self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
+
     def forward(self, input_):
         return self.conv2d(input_)
 
 
-@pytest.mark.parametrize("quantization_mode",
-                         ["symmetric", "asymmetric"])
-def test_percentile_init(quantization_mode):
+@pytest.mark.parametrize("quantization_mode, per_channel",
+                         itertools.product(["symmetric", "asymmetric"], [True, False]))
+def test_percentile_init(quantization_mode: str, per_channel: bool):
     class SyntheticDataset(torch.utils.data.Dataset):
         def __init__(self):
             self._length = 1
@@ -275,10 +283,12 @@ def test_percentile_init(quantization_mode):
         def __getitem__(self, idx):
             if idx >= self._length:
                 raise StopIteration
-            test_input_sample = torch.zeros([1, 100, 100])
+            test_input_sample = torch.zeros([3, 100, 100])
             for i in range(0, 100):
                 for j in range(0, 100):
                     test_input_sample[0][i][j] = i * 100 + j
+            test_input_sample[1] = test_input_sample[0]
+            test_input_sample[2] = test_input_sample[0]
             return test_input_sample, test_input_sample
 
         def __len__(self):
@@ -290,15 +300,17 @@ def test_percentile_init(quantization_mode):
     config_with_init.update(
         {
             "input_info": {
-                "sample_size": [1, 1, 100, 100]
+                "sample_size": [1, 3, 100, 100]
             },
             "compression": {
                 "algorithm": "quantization",
                 "activations": {
                     "mode": quantization_mode,
+                    "per_channel": per_channel
                 },
                 "weights": {
                     "mode": quantization_mode,
+                    "per_channel": per_channel
                 },
                 "initializer": {
                     "range": {
@@ -319,22 +331,32 @@ def test_percentile_init(quantization_mode):
 
     act_quantizer_info = next(iter(compression_ctrl.non_weight_quantizers.values()))
 
-    def assert_range(quantizer: BaseQuantizer):
+    def check_scales(quantizer: BaseQuantizer, per_channel: bool):
         # Absolute tolerance is 1.0 due to percentile value interpolation
         if quantization_mode == 'symmetric':
-            assert quantizer.scale.item() == approx(6789, abs=1.0)
+            assert torch.allclose(quantizer.scale, torch.ones_like(quantizer.scale) * 6789, atol=1.0)
+            if per_channel:
+                assert quantizer.scale.numel() == 3
+            else:
+                assert quantizer.scale.numel() == 1
         else:
-            assert quantizer.input_low.item() == approx(3210, abs=1.0)
-            assert quantizer.input_range.item() == approx(3578, abs=1.0)
+            assert torch.allclose(quantizer.input_low, torch.ones_like(quantizer.input_low) * 3210, atol=1.0)
+            assert torch.allclose(quantizer.input_range, torch.ones_like(quantizer.input_low) * 3578, atol=1.0)
+            if per_channel:
+                assert quantizer.input_low.numel() == 3
+                assert quantizer.input_range.numel() == 3
+            else:
+                assert quantizer.input_low.numel() == 1
+                assert quantizer.input_range.numel() == 1
 
-    assert_range(act_quantizer_info.quantizer_module_ref)
+    check_scales(act_quantizer_info.quantizer_module_ref, per_channel)
     # Weight init check
     synth_weight_model = SingleConv2dSyntheticWeightModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(synth_weight_model,
                                                                     config_with_init)
 
     weight_quantizer = next(iter(compression_ctrl.weight_quantizers.values()))
-    assert_range(weight_quantizer)
+    check_scales(weight_quantizer, per_channel)
 
 
 @pytest.mark.parametrize(("config_cutter", "range_init_call_count", "precision_init_call_count",
