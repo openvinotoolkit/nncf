@@ -1,4 +1,4 @@
-#Integrating NNCF into Transformers
+## Integrating NNCF into Transformers
 https://github.com/huggingface/transformers
 
 This folder contains a git patch to enable NNCF-based quantization for XNLI, SQuAD and GLUE training pipelines of the huggingface transformers repository. 
@@ -28,7 +28,7 @@ For instance, the following command line, while run from the huggingface reposit
 
 4. While running with the `--nncf_config` option, the training scripts will output NNCF-wrapped model checkpoints instead of the regular ones. You may evaluate these checkpoints using the same command lines for training above, but with the`--do_train` key omitted. In order to export these checkpoints into ONNX format, further add `--to_onnx <path_to_output_onnx_file>` to your evaluation command line parameters.
 
-#Current best results:
+### Current best results:
 
 All models use as their baselines the checkpoints obtained with the scripts and command line parameters from the corresponding sections in the original repository documentation. While fine-tuning the quantized model, the hyperparameters were left unchanged, i.e. the difference in the training script invocation was limited to adding `--nncf_config` option and specifying the pre-trained baseline model as the starting point for quantization fine-tuning. For RoBERTa-MNLI, no baseline model finetuning was necessary since the `roberta-large-mnli` model pretrained on MNLI was already available for download.
 

@@ -82,6 +82,16 @@ Important points you should consider when training your networks with compressio
   - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
+#### Step 4 (optional): Export the compressed model to ONNX
+After the compressed model has been fine-tuned to acceptable accuracy and compression levels, you can export it to ONNX format.
+Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
+```python
+compression_ctrl.export_model("./compressed_model.onnx")
+```
+The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
+In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
+Refer to [compression algorithm documentation](./compression_algorithms) for details.
+
 ## Saving and loading compressed models in PyTorch
 You can save the `compressed_model` object using `torch.save` as usual.
 However, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should have the
