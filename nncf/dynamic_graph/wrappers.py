@@ -37,7 +37,14 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = True
 
         if operator_info.custom_trace_fn is not None:
-            result = operator_info.custom_trace_fn(operator, *args, **kwargs)
+            try:
+                result = operator_info.custom_trace_fn(operator, *args, **kwargs)
+            except:
+                # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
+                # but instead throws an exception. This try...except block handles such a situation.
+                # Otherwise the context is stuck in the "in_operator == True" state.
+                ctx.in_operator = False
+                raise
         else:
             ia_op_exec_context = ctx.get_caller_context(operator_info.name)
             ctx.register_operator_call(ia_op_exec_context.operator_name, ia_op_exec_context.scope_in_model)
