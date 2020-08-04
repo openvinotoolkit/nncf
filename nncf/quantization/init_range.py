@@ -1,5 +1,5 @@
 import queue
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import torch
@@ -58,8 +58,21 @@ def get_channel_count_and_dim_idx(scale_shape):
         for dim_idx, dim in enumerate(scale_shape):
             if dim != 1:
                 channel_dim_idx = dim_idx
-                channel_count = 1
+                channel_count = dim
     return channel_count, channel_dim_idx
+
+
+def expand_like(input_: torch.Tensor, scale_shape: Union[List, int]):
+    retval = input_
+    count, idx = get_channel_count_and_dim_idx(scale_shape)
+    assert input_.numel() == count
+    assert len(input_.size()) == 1
+    if isinstance(scale_shape, List):
+        for _ in range(0, idx):
+            retval = retval.unsqueeze(0)
+        for _ in range(idx + 1, len(scale_shape)):
+            retval = retval.unsqueeze(-1)
+    return retval
 
 
 def split_into_channels(input_: np.ndarray, scale_shape) -> List[np.ndarray]:
@@ -215,9 +228,13 @@ class PercentileInitializer(QuantizeRangeInitializer):
         mins_tensor = torch.from_numpy(numpy_mins).to(self.device, dtype=torch.float)
         maxs_tensor = torch.from_numpy(numpy_maxs).to(self.device, dtype=torch.float)
 
+        mins_tensor = expand_like(mins_tensor, self.scale_shape)
+        maxs_tensor = expand_like(maxs_tensor, self.scale_shape)
+
         nncf_logger.debug("Statistics: Min ({}%th) percentile = {},"
                           " Max ({}%th) percentile = {}".format(self.min_percentile,
                                                                 get_flat_tensor_contents_string(mins_tensor),
                                                                 self.max_percentile,
                                                                 get_flat_tensor_contents_string(maxs_tensor)))
-        self.quantize_module.apply_minmax_init(mins_tensor, maxs_tensor, self.log_module_name)
+        self.quantize_module.apply_minmax_init(mins_tensor,
+                                               maxs_tensor, self.log_module_name)
