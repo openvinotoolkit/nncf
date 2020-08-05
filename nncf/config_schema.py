@@ -146,28 +146,11 @@ GENERIC_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
-QUANTIZATION_INITIALIZER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "batchnorm_adaptation":
-            {
-                "type": "object",
-                "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
-                },
-                "additionalProperties": False,
-            },
-        "range":
-            {
+RANGE_INIT_CONFIG_PROPERTIES = {
+    "initializer": {
+        "type": "object",
+        "properties": {
+            "range": {
                 "type": "object",
                 "properties": {
                     "num_init_steps": with_attributes(_NUMBER,
@@ -189,6 +172,32 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                 },
                 "additionalProperties": False,
             },
+        },
+        "additionalProperties": False,
+    },
+}
+
+QUANTIZATION_INITIALIZER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
+        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
         "precision":
             {
                 "type": "object",
@@ -231,40 +240,6 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
     },
     "additionalProperties": False,
 }
-
-RANGE_INIT_CONFIG = {
-    "initializer": {
-        "type": "object",
-        "properties": {
-            "range": {
-                "type": "object",
-                "properties": {
-                    "num_init_steps": with_attributes(_NUMBER,
-                                                      description="Number of batches from the training dataset to "
-                                                                  "consume as sample model inputs for purposes of "
-                                                                  "setting initial minimum and maximum quantization "
-                                                                  "ranges"),
-                    "type": with_attributes(_STRING, description="Type of the initializer - determines which "
-                                                                 "statistics gathered during initialization will be "
-                                                                 "used to initialize the quantization ranges"),
-                    "min_percentile": with_attributes(_NUMBER,
-                                                      description="For 'percentile' type - specify the percentile of "
-                                                                  "input value histograms to be set as the initial "
-                                                                  "value for minimum quantizer input"),
-                    "max_percentile": with_attributes(_NUMBER,
-                                                      description="For 'percentile' type - specify the percentile of "
-                                                                  "input value histograms to be set as the initial "
-                                                                  "value for maximum quantizer input"),
-                },
-                "additionalProperties": False,
-            },
-        },
-        "additionalProperties": False,
-    },
-}
-
-QUANTIZER_CONFIG_INIT_PROPERTIES = deepcopy(QUANTIZER_CONFIG_PROPERTIES)
-QUANTIZER_CONFIG_INIT_PROPERTIES.update(RANGE_INIT_CONFIG)
 
 COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
@@ -341,7 +316,10 @@ QUANTIZATION_SCHEMA = {
             "patternProperties": {
                 ".*": {
                     "type": "object",
-                    "properties": QUANTIZER_CONFIG_INIT_PROPERTIES,
+                    "properties": {
+                        **QUANTIZER_CONFIG_PROPERTIES,
+                        **RANGE_INIT_CONFIG_PROPERTIES,
+                    },
                     "additionalProperties": False
                 },
             },
