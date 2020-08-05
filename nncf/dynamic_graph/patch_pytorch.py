@@ -183,6 +183,9 @@ def patch_torch_operators():
             ps = op_meta_class.torch_tensor_patch_spec
             patch_namespace_by_patchspec(TracedTensor, ps)
 
+    # Patch __repr__ methods so that debugging does not add new nodes to the graph
+    patch_namespace_opname(torch.Tensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly))
+
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
     ignore_scope(DataParallel)
