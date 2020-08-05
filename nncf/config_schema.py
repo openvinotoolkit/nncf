@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import logging
-from copy import deepcopy
 from typing import Dict
 
 import jsonschema
