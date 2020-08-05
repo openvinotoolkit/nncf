@@ -32,7 +32,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope, nncf_model_input, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES
+from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules
@@ -468,7 +468,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return self._nncf_module_scopes
 
     def get_nncf_modules(self) -> Dict['Scope', torch.nn.Module]:
-        return get_all_modules_by_type(self.get_nncf_wrapped_model(), NNCF_MODULES)
+        nncf_module_names_list = NNCF_MODULES + [x.__name__ for x in NNCF_WRAPPED_USER_MODULES_DICT.values()]
+        return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()

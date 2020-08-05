@@ -148,7 +148,26 @@ NNCF_DECONV_MODULES_DICT = {
 NNCF_CONV_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
 NNCF_CONV_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
 
+UNWRAPPED_USER_MODULES = Registry('user_modules')
+NNCF_WRAPPED_USER_MODULES_DICT = {}
 
+
+def register_module(cls, *quantizable_field_names: str):
+    # Will work for `weight` attributes only. Should later extend to registering
+    # customly named attributes if it becomes necessary
+    UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
+    nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
+    NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
+
+    return cls
+
+
+def add_nncf_functionality_to_user_module(module: torch.nn.Module):
+    user_class = module.__class__
+    assert user_class.__name__ in UNWRAPPED_USER_MODULES.registry_dict
+    module.__class__ = NNCF_WRAPPED_USER_MODULES_DICT[user_class]
+    _NNCFModuleMixin.add_mixin_fields(module)
+    return module
 class RNNCellBaseNNCF(nn.Module):
     __constants__ = ['input_size', 'hidden_size', 'bias']
 
