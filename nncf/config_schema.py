@@ -145,28 +145,11 @@ GENERIC_INITIALIZER_SCHEMA = {
     "additionalProperties": False,
 }
 
-QUANTIZATION_INITIALIZER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "batchnorm_adaptation":
-            {
-                "type": "object",
-                "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
-                },
-                "additionalProperties": False,
-            },
-        "range":
-            {
+RANGE_INIT_CONFIG_PROPERTIES = {
+    "initializer": {
+        "type": "object",
+        "properties": {
+            "range": {
                 "type": "object",
                 "properties": {
                     "num_init_steps": with_attributes(_NUMBER,
@@ -188,6 +171,32 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                 },
                 "additionalProperties": False,
             },
+        },
+        "additionalProperties": False,
+    },
+}
+
+QUANTIZATION_INITIALIZER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "batchnorm_adaptation":
+            {
+                "type": "object",
+                "properties": {
+                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
+                                                               description="Number of batches from the training "
+                                                                           "dataset to use for model inference during "
+                                                                           "the BatchNorm statistics adaptation "
+                                                                           "procedure for the compressed model"),
+                    "num_bn_forget_steps": with_attributes(_NUMBER,
+                                                           description="Number of batches from the training "
+                                                                       "dataset to use for model inference during "
+                                                                       "the BatchNorm statistics adaptation "
+                                                                       "in the initial statistics forgetting step"),
+                },
+                "additionalProperties": False,
+            },
+        **RANGE_INIT_CONFIG_PROPERTIES["initializer"]["properties"],
         "precision":
             {
                 "type": "object",
@@ -306,7 +315,10 @@ QUANTIZATION_SCHEMA = {
             "patternProperties": {
                 ".*": {
                     "type": "object",
-                    "properties": QUANTIZER_CONFIG_PROPERTIES,
+                    "properties": {
+                        **QUANTIZER_CONFIG_PROPERTIES,
+                        **RANGE_INIT_CONFIG_PROPERTIES,
+                    },
                     "additionalProperties": False
                 },
             },
