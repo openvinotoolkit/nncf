@@ -1,4 +1,4 @@
-From 4dc6866b5222b49a2209b3c1135de06b43cd8bc0 Mon Sep 17 00:00:00 2001
+From 98181352e9856a86f83de88b64cb7c6a0e4c0364 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -16,8 +16,9 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/models/detectors/single_stage.py        |  8 +-
  requirements/readthedocs.txt                  |  2 +-
  requirements/runtime.txt                      |  2 +-
+ tools/test.py                                 |  6 +-
  tools/train.py                                |  6 ++
- 13 files changed, 301 insertions(+), 13 deletions(-)
+ 14 files changed, 304 insertions(+), 16 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -424,14 +425,14 @@ index 2d8f515..21c8115 100644
  from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                          build_assigner, build_bbox_coder, build_sampler,
 diff --git a/mmdet/models/detectors/base.py b/mmdet/models/detectors/base.py
-index bd2d76d..6c01a89 100644
+index bd2d76d..e2b4944 100644
 --- a/mmdet/models/detectors/base.py
 +++ b/mmdet/models/detectors/base.py
 @@ -111,6 +111,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              if not isinstance(var, list):
                  raise TypeError(f'{name} must be a list, but got {type(var)}')
  
-+        if kwargs['dummy_forward']:
++        if 'dummy_forward' in kwargs:
 +            return self.forward_dummy(imgs[0])
 +
          num_augs = len(imgs)
@@ -495,6 +496,30 @@ index 8b3b12a..2a66ea6 100644
  numpy
  # need older pillow until torchvision is fixed
  Pillow<=6.2.2
+diff --git a/tools/test.py b/tools/test.py
+index 6904ba1..f136730 100644
+--- a/tools/test.py
++++ b/tools/test.py
+@@ -6,7 +6,7 @@ import torch
+ from mmcv import Config, DictAction
+ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
+ from mmcv.runner import get_dist_info, init_dist, load_checkpoint
+-from tools.fuse_conv_bn import fuse_module
++# from tools.fuse_conv_bn import fuse_module
+ 
+ from mmdet.apis import multi_gpu_test, single_gpu_test
+ from mmdet.core import wrap_fp16_model
+@@ -112,8 +112,8 @@ def main():
+     if fp16_cfg is not None:
+         wrap_fp16_model(model)
+     checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+-    if args.fuse_conv_bn:
+-        model = fuse_module(model)
++    # if args.fuse_conv_bn:
++    #     model = fuse_module(model)
+     # old versions did not save class info in checkpoints, this walkaround is
+     # for backward compatibility
+     if 'CLASSES' in checkpoint['meta']:
 diff --git a/tools/train.py b/tools/train.py
 index 4acd3a4..6a4bfff 100644
 --- a/tools/train.py
