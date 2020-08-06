@@ -1,4 +1,4 @@
-From 0753c10ab8b4fc2c6fc232bff8bae8720f7baaec Mon Sep 17 00:00:00 2001
+From a847e7fe93d7f22789cad8db4dc8309c2a22703e Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Fri, 29 Nov 2019 18:33:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -6,7 +6,7 @@ Subject: [PATCH] Modifications for NNCF usage
 ---
  examples/question-answering/run_squad.py      | 128 ++++++++++++++++--
  examples/text-classification/run_glue.py      |  67 ++++++++-
- examples/text-classification/run_xnli.py      | 125 +++++++++++++++--
+ examples/text-classification/run_xnli.py      | 127 +++++++++++++++--
  nncf_bert_config_squad.json                   |  43 ++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 +++++
@@ -16,7 +16,7 @@ Subject: [PATCH] Modifications for NNCF usage
  src/transformers/modeling_utils.py            |  23 +++-
  src/transformers/trainer.py                   |  33 ++++-
  src/transformers/training_args.py             |   5 +
- 12 files changed, 574 insertions(+), 35 deletions(-)
+ 12 files changed, 575 insertions(+), 36 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -401,7 +401,7 @@ index cf9b765a..a79a2edd 100644
  
      # Training
 diff --git a/examples/text-classification/run_xnli.py b/examples/text-classification/run_xnli.py
-index f0ee5120..83ab26ef 100644
+index f0ee5120..b29f56eb 100644
 --- a/examples/text-classification/run_xnli.py
 +++ b/examples/text-classification/run_xnli.py
 @@ -25,8 +25,11 @@ import random
@@ -619,16 +619,19 @@ index f0ee5120..83ab26ef 100644
          logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
  
      # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-@@ -581,7 +667,7 @@ def main():
+@@ -581,16 +667,25 @@ def main():
          # Save a trained model, configuration and tokenizer using `save_pretrained()`.
          # They can then be reloaded using `from_pretrained()`
          model_to_save = (
 -            model.module if hasattr(model, "module") else model
 +            model.module if hasattr(model, "module") and nncf_config is None else model
          )  # Take care of distributed/parallel training
-         model_to_save.save_pretrained(args.output_dir)
+-        model_to_save.save_pretrained(args.output_dir)
++
++        model_to_save.save_pretrained(args.output_dir, saved_module_override=model_to_save)
          tokenizer.save_pretrained(args.output_dir)
-@@ -590,7 +676,15 @@ def main():
+ 
+         # Good practice: save your training arguments together with the trained model
          torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
  
          # Load a trained model and vocabulary that you have fine-tuned
@@ -645,15 +648,14 @@ index f0ee5120..83ab26ef 100644
          tokenizer = AutoTokenizer.from_pretrained(args.output_dir)
          model.to(args.device)
  
-@@ -608,7 +702,16 @@ def main():
+@@ -608,7 +703,15 @@ def main():
              global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
              prefix = checkpoint.split("/")[-1] if checkpoint.find("checkpoint") != -1 else ""
  
 -            model = AutoModelForSequenceClassification.from_pretrained(checkpoint)
 +            retval = AutoModelForSequenceClassification.from_pretrained(checkpoint,
 +                                                                        nncf_config=nncf_config,
-+                                                                        nncf_eval=nncf_config is not None and
-+                                                                                  args.do_eval and not args.do_train)
++                                                                        nncf_eval=nncf_config is not None)
 +
 +            if nncf_config is None:
 +                model = retval
@@ -1006,7 +1008,7 @@ index 3f84bb4b..6a2e1fa3 100644
              loading_info = {
                  "missing_keys": missing_keys,
 diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
-index 0aa9cdf3..06101277 100644
+index 0aa9cdf3..2f22364b 100644
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
 @@ -10,6 +10,7 @@ from typing import Callable, Dict, List, Optional, Tuple
@@ -1101,7 +1103,7 @@ index 0aa9cdf3..06101277 100644
 +            self.model.module if hasattr(self.model, "module") and self.compression_ctrl is None else self.model
 +        )  # Take care of distributed/parallel training
 +
-+        model_to_save.save_pretrained(output_dir)
++        model_to_save.save_pretrained(output_dir, saved_module_override=model_to_save)
  
          # Good practice: save your training arguments together with the trained model
          torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
