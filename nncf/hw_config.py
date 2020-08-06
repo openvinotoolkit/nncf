@@ -161,7 +161,7 @@ class HWConfig(List):
 
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type['OperatorMetatype'],
                                                                                List[QuantizerConfig]]:
-        # 'None' for marking ops as quantization agnostic by default if not specified otherwise by HW config
+        # 'None' for ops unspecified in HW config
         retval = {k: None for k in OPERATOR_METATYPES.registry_dict.values()}
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
