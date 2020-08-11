@@ -237,6 +237,7 @@ class LinearMetatype(OperatorMetatype):
     name = "linear"
     hw_config_names = [HWConfigOpName.MATMUL]
     torch_nn_functional_patch_spec = PatchSpec([name])
+    torch_module_patch_spec = PatchSpec(["addmm"])
 
 
 @OPERATOR_METATYPES.register()
@@ -416,7 +417,7 @@ class PadMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class CatMetatype(OperatorMetatype):
     name = "cat"
-    torch_module_patch_spec = PatchSpec([name])
+    torch_module_patch_spec = PatchSpec([name, "stack"])
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
@@ -458,7 +459,7 @@ class TransposeMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class GatherMetatype(OperatorMetatype):
     name = "gather"
-    torch_module_patch_spec = PatchSpec(["index_select", ], ForwardTraceOnly())
+    torch_module_patch_spec = PatchSpec(["index_select", "where"], ForwardTraceOnly())
     torch_tensor_patch_spec = PatchSpec(["index_select", "__getitem__"], ForwardTraceOnly())
 
 
@@ -488,7 +489,7 @@ class ContiguousMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class SplitMetatype(OperatorMetatype):
     name = "split"
-    torch_tensor_patch_spec = PatchSpec(["chunk"], ForwardTraceOnly())
+    torch_tensor_patch_spec = PatchSpec([name, "chunk"], ForwardTraceOnly())
     hw_config_names = [HWConfigOpName.SPLIT]
 
 

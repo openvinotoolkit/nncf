@@ -23,8 +23,6 @@ from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
 
 
-
-
 class CustomTraceFunction:
     def __call__(self, operator: Callable, *args, **kwargs):
         raise NotImplementedError
