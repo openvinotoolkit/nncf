@@ -491,7 +491,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         def traverse_function(node: NNCFNode, output) -> Tuple[bool, List[NNCFNode]]:
             module = target_model.get_module_by_scope(node.op_exec_context.scope_in_model)
-            if is_nncf_module(module) and not isinstance(module, NNCFEmbedding):  # Embeddings have integer input
+            if is_nncf_module(module):
+                if isinstance(module, NNCFEmbedding):
+                    # Embeddings have integer input and their quantization is rather controlled
+                    # by their weights.
+                    return True, output
                 current_node_scope = node.op_exec_context.scope_in_model
                 module_op_insertion_commands = []
                 for comm in prev_weight_and_activation_quantizer_insertion_commands:
