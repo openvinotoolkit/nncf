@@ -19,11 +19,13 @@ import torch
 from copy import deepcopy
 from torch import nn
 
+from nncf import register_module
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
@@ -74,6 +76,44 @@ def test_check_correct_modules_replacement():
 
     _, nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
+
+
+@register_module
+class ModuleOfUser(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones([1]))
+
+    def forward(self, input_):
+        return input_ * self.weight
+
+
+class TwoConvTestModelWithUserModule(TwoConvTestModel):
+    def __init__(self):
+        super().__init__()
+        self.user_module = ModuleOfUser()
+
+    def forward(self, x):
+        x = super().forward(x)
+        x = self.user_module(x)
+        return x
+
+
+def test_custom_module_registering():
+    model = TwoConvTestModelWithUserModule()
+    nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+
+    from nncf.layers import UNWRAPPED_USER_MODULES
+    assert ModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
+
+    # pylint: disable=protected-access
+    assert isinstance(nncf_model.user_module, ModuleOfUser)
+    assert isinstance(nncf_model.user_module, _NNCFModuleMixin)
+    assert type(nncf_model.user_module).__name__ == "NNCFUserModuleOfUser"
+
+    user_module_attrs = dir(nncf_model.user_module)
+    for attr in dir(_NNCFModuleMixin):
+        assert attr in user_module_attrs
 
 
 # pylint: disable=protected-access

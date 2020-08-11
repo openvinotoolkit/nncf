@@ -16,8 +16,12 @@ class ProxyModule:
 class _NNCFModuleMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pre_ops = nn.ModuleDict()
-        self.post_ops = nn.ModuleDict()
+        _NNCFModuleMixin.add_mixin_fields(self)
+
+    @staticmethod
+    def add_mixin_fields(obj):
+        obj.pre_ops = nn.ModuleDict()
+        obj.post_ops = nn.ModuleDict()
 
     def get_pre_op(self, key):
         return self.pre_ops[key]
