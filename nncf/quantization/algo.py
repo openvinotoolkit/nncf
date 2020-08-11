@@ -197,7 +197,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return qconfig
 
     def __get_scoped_quantizer_config(self, target_model: NNCFNetwork,
-                                      parent_module_scope_str: str, is_weights=False, input_shape=None):
+                                      parent_module_scope_str: str, is_weights=False,
+                                      input_shape=None) -> QuantizerConfig:
         group = QuantizerGroup.WEIGHTS if is_weights else QuantizerGroup.ACTIVATIONS
         qconfig = self.__get_default_qconfig(constraints=self.global_quantizer_contraints[group])
         qconfig.is_weights = is_weights
@@ -252,7 +253,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 nncf_logger.info("Ignored adding Weight quantizer in scope: {}".format(module_scope))
                 continue
             if self.hw_config is None:
-                qconfig_list = self.__get_scoped_quantizer_config(target_model, str(module_scope), is_weights=True)
+                qconfig = self.__get_scoped_quantizer_config(target_model, str(module_scope), is_weights=True)
+                qconfig_list = [qconfig]
             else:
                 associated_ops = insertion_point_graph.get_op_nodes_in_scope(module_scope)
                 if not associated_ops:
@@ -276,7 +278,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for module, module_scope, qconfig_list in quantized_modules_with_potential_qconfig:
             self._quantized_weight_modules_registry[str(module_scope)] = module
             nncf_logger.info("Adding signed Weight quantizer in scope: {}".format(module_scope))
-            qconfig = qconfig_list
+
             if self.hw_config is not None:
                 try:
                     qconfig = self._select_final_qconfig(qconfig_list,
@@ -286,6 +288,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
                     err_msg += "First conflicting quantizer location: {}".format(str(module_scope))
                     raise RuntimeError(err_msg)
+            else:
+                assert len(
+                    qconfig_list) == 1, "Non-HW config scenarios should produce single quantizer configs for each " \
+                                        "weight module!"
+                qconfig = qconfig_list[0]
+
             quantizer_id = WeightQuantizerId(module_scope)
             self._hw_precision_constraints.add(quantizer_id, qconfig_list)
             qconfig.input_shape = module.weight.shape
@@ -325,7 +333,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
             prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
                                                            debug_interface=self._debug_interface,
-                                                           hw_config=self.hw_config)
+                                                           hw_config=self.hw_config,
+                                                           default_qconfig_list=[self.__get_default_qconfig(
+                                                               constraints=self.global_quantizer_contraints[
+                                                                   QuantizerGroup.ACTIVATIONS])])
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
             insertion_data = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
             insertion_commands = []

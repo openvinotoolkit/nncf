@@ -341,6 +341,8 @@ class MatMulMetatype(OperatorMetatype):
     name = "matmul"
     torch_module_patch_spec = PatchSpec([name, "bmm"])
     torch_tensor_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.MATMUL]
+
 
 
 @OPERATOR_METATYPES.register()
