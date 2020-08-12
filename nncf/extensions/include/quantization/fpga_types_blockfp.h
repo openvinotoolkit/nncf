@@ -25,31 +25,31 @@
 #define AUX_LSB (0)
   STATIC ushort mask_dla_type(ushort val, int low_bit) {
     val &= BIT_MASK_RANGE((SHORT_MSB), (low_bit));
-    return val; 
+    return val;
   }
   
   STATIC ushort dla_type_to_raw(ushort val, int low_bit) {
       // Why mask? dla type should already be masked
-    return mask_dla_type(val, low_bit); 
-  } 
+    return mask_dla_type(val, low_bit);
+  }
   
-  STATIC ushort raw_to_dla_type(ushort val, int low_bit) { 
-      ushort res = val; 
+  STATIC ushort raw_to_dla_type(ushort val, int low_bit) {
+      ushort res = val;
     return mask_dla_type(res, low_bit);
-  } 
+  }
 
   STATIC ushort raw_to_rounded_dla_type(ushort val, int low_bit) {
     bool round_up = ((low_bit) <= 0) ? false : BIT_IS_SET(val, (low_bit)-1); 
       ushort val_rounded = (round_up) ? val + (1 << (low_bit)) : val; 
-    /* If the mantissa overflows, it would cause the exponent to increment, */ 
-    /* which is the desired behaviour */ 
+    /* If the mantissa overflows, it would cause the exponent to increment, */
+    /* which is the desired behaviour */
     if (round_up && ((val_rounded & BIT_MASK_RANGE((SHORT_MSB)-1, (low_bit))) == 0)) {
-      /* Guard against overflowing into the sign bit */ 
-      val_rounded = val; 
+      /* Guard against overflowing into the sign bit */
+      val_rounded = val;
     }
     ushort res = val_rounded;
     ushort ret = mask_dla_type(res,  low_bit);
-    return ret; 
+    return ret;
   }
 
   STATIC half_t dla_type_to_half(ushort val, int low_bit) {

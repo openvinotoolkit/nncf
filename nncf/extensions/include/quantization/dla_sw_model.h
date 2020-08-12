@@ -138,7 +138,7 @@ STATIC float block_align(float in, uint32_t max_exp, uint32_t mantissa_width,
     }
     else {
         // dla_v1_hw code, for mantissa_width, needs total number bits, including implicit 1 and sign
-        aligned = dla_v1_hw_block_align(in, max_exp, mantissa_width + 2, exp_width);
+        aligned = dla_v1_hw_block_align(in, max_exp, mantissa_width, exp_width);
     }
     return aligned;
 }

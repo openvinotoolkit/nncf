@@ -2,7 +2,7 @@
 #include "common_cuda_defs.cuh"
 
 #define CUDA_CODE
-#include "../../../include/quantization/dla_sw_model.h"
+#include "quantization/dla_sw_model.h"
 #include <cuda_fp16.h>
 
 enum class ScaleType

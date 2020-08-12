@@ -23,7 +23,7 @@ from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.nncf_logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
-    get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange, blockfp_quantize
+    get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange, blockfp_quantize, ExportBlockfp
 from ..layer_utils import COMPRESSION_MODULES
 from ..registry import Registry
 from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
@@ -497,4 +497,8 @@ class BlockfpQuantizer(BaseQuantizer):
         return
 
     def set_level_ranges(self):
-        return       
+        return
+
+    def run_export_quantization(self, x: torch.Tensor):
+        with no_jit_trace():
+            return ExportBlockfp.apply(x, self.exponent_bits, self.mantissa_bits, self.block_size, self.scope_string, self.folded_config)       

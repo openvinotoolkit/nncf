@@ -180,12 +180,12 @@ STATIC float dla_v1_hw_block_align(float in, uint32_t max_exp, uint32_t mantissa
     // line below is just bit-reinterpretation. Rik - really? Not for generic float input, perhaps if float is already preconditioned
     ushort in_raw = dla_type_to_raw(float_to_dla_type(in, mantissa_lsb), mantissa_lsb);
     // FP9 -> blocked FP9
-    uint new_mantissa = transform_input_one(in_raw, mantissa_width, rebiased_max_exp);
+    uint new_mantissa = transform_input_one(in_raw, mantissa_width + 2, rebiased_max_exp);
 
     uint32_t sign = extract_sign(in);
 
     // mantissa_width includes sign. reassemble_float needs mantissa_width without the sign bit.
-    float result = reassemble_float(sign, max_exp, new_mantissa, mantissa_width - 2);
+    float result = reassemble_float(sign, max_exp, new_mantissa, mantissa_width);
 
     //std::cout << "dla_v1_block_align: in_raw=" << in_raw << ", new_mantissa=" << new_mantissa << "\n";
     //std::cout << "dla_v1_block_align: " << in << ", exp=" << rebiased_max_exp << " -> " << result << "\n";

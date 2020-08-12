@@ -1,0 +1,25 @@
+{
+    "model": "resnet18",
+    "pretrained": true,
+    "hw_config_type": "dla",
+    "input_info": {
+      "sample_size": [1, 3, 224, 224]
+    },
+    "num_classes": 1000,
+    "batch_size": 128,
+    "epochs": 12,
+    "multiprocessing_distributed": true,
+    "optimizer": {
+        "type": "Adam",
+        "base_lr": 0.00001,
+        "schedule_type": "multistep",
+        "steps": [
+            3,8
+        ]
+    },
+    "compression": {  
+        "algorithm": "quantization",
+	"name": "int54bfp"//,
+        //"dump_fake_quant_to_onnx":true
+    }
+}

@@ -78,11 +78,11 @@ def write_metrics(acc, filename):
             json.dump(metrics, outfile)
 
 
-def configure_paths(config):
+def configure_paths(config, args):
     d = datetime.datetime.now()
     run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
     config.name = get_name(config)
-    config.log_dir = osp.join(config.log_dir, "{}/{}".format(config.name, run_id))
+    config.log_dir = osp.join(config.log_dir, "{}/{}/{}".format(config.name, args.mode, run_id))
     os.makedirs(config.log_dir)
 
     if config.nncf_config is not None:

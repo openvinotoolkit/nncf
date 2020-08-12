@@ -1,7 +1,7 @@
 #include "common_cpu_funcs.h"
 #include "common_defs.h"
 
-#include "../../../include/quantization/dla_sw_model.h"
+#include "quantization/dla_sw_model.h"
 
 namespace {
 

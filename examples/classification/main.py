@@ -46,9 +46,12 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
+from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
+from nncf import set_log_level
+import logging
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -65,6 +68,8 @@ def get_argument_parser():
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')
+    parser.add_argument('--debug', action='store_true')
+
     return parser
 
 
@@ -76,8 +81,9 @@ def main(argv):
     if config.dist_url == "env://":
         config.update_from_env()
 
-    configure_paths(config)
+    configure_paths(config, args)
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
+    copyfile(osp.join(NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR, "dla.json"), osp.join(config.log_dir, "dla.json"))
     source_root = Path(__file__).absolute().parents[2]  # nncf root
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))
 
@@ -102,6 +108,7 @@ def main(argv):
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
+    if config.get("debug") : set_log_level(logging.DEBUG) 
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
@@ -135,6 +142,7 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
         nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
+
 
     # create model
     model_name = config['model']
@@ -179,6 +187,7 @@ def main_worker(current_gpu, config: SampleConfig):
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
+
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True

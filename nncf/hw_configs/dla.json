@@ -16,6 +16,13 @@
                 "mode": "blockfp",
                 "granularity": "perblock"
             },
+            "int5bfp_double": {
+                "mantissa_bits": 7,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },            
             "int5bfp_double_folded": {
                 "mantissa_bits": 7, // Assume 2 shift/add in the input convolution
                 "exponent_bits": 5,
@@ -48,8 +55,23 @@
                 "granularity": "perblock",
                 "folded":true
             },
+            "int8bfp": {
+                "mantissa_bits": 6,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "int8bfp_folded": {
+                "mantissa_bits": 6,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            },            
             "fp16": {
-                "mantissa_bits": 11,
+                "mantissa_bits": 10,
                 "exponent_bits": 5,
                 "block_size": 1,
                 "mode": "blockfp",
@@ -68,8 +90,8 @@
         {
             "type": "DepthWiseConvolution",
             "quantization": {
-                "activations": "int5bfp",
-                "weights": "int5bfp"
+                "activations": "fp16",
+                "weights": "fp16"
             }
         },
         {
@@ -99,8 +121,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "int5bfp",
-                "weights": "int5bfp"
+                "activations": "int8bfp",
+                "weights": "int8bfp"
             }
         },
         {
@@ -109,8 +131,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "int5bfp",
-                "weights": "int5bfp"
+                "activations": "int8bfp",
+                "weights": "int8bfp"
             }
         },
         {
