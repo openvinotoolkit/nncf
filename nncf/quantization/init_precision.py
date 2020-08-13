@@ -463,21 +463,23 @@ class HAWQDebugger:
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
         bits_color_map = {4: 'red', 8: 'green', 6: 'orange'}
-        for quantizer_id in non_weight_quantizers:
-            activation_iap_ctx = quantizer_id.ia_op_exec_context
-            post_hooked_nx_node_key = nncf_graph.get_node_id_by_iap_context(activation_iap_ctx)
-            post_hooked_module_node = nncf_graph.get_nx_node_by_key(post_hooked_nx_node_key)
-            operator_name = post_hooked_module_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-            node_id = post_hooked_module_node[NNCFGraph.ID_NODE_ATTR]
-            post_hooked_module_node['label'] = '_#'.join([operator_name, str(node_id)])
+        for quantizer_id, quantizer_info in non_weight_quantizers.items():
+            affected_iap_ctx_list = quantizer_info.affected_ia_op_exec_contexts
 
-            for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
-                activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
-                bits = non_weight_quantizers[quantizer_id].quantizer_module_ref.num_bits
+            for activation_iap_ctx in affected_iap_ctx_list:
+                post_hooked_nx_node_key = nncf_graph.get_node_id_by_iap_context(activation_iap_ctx)
+                post_hooked_module_node = nncf_graph.get_nx_node_by_key(post_hooked_nx_node_key)
+                operator_name = post_hooked_module_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                node_id = post_hooked_module_node[NNCFGraph.ID_NODE_ATTR]
+                post_hooked_module_node['label'] = '_#'.join([operator_name, str(node_id)])
 
-                activation_fq_node['color'] = bits_color_map[bits]
-                node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
-                activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+                for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
+                    activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
+                    bits = non_weight_quantizers[quantizer_id].quantizer_module_ref.num_bits
+
+                    activation_fq_node['color'] = bits_color_map[bits]
+                    node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+                    activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
 
         for scope, quantizer in all_quantizers_per_full_scope.items():
             if quantizer.is_weights:

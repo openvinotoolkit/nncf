@@ -1149,7 +1149,7 @@ class QuantizationDebugInterface(DebugInterface):
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
             with open(str(self.scale_dump_dir / fname), "ba") as file:
-                np.savetxt(file, scale_param.cpu().numpy())
+                np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):
         for tracker in self.call_trackers.values():
