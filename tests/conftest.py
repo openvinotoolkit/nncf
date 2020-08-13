@@ -58,6 +58,9 @@ def pytest_addoption(parser):
         "--backward-compat-models", type=str, default=None, help="Path to NNCF-traned model checkpoints that are tested"
                                                                  "to be strictly loadable"
     )
+    parser.addoption(
+        "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -100,3 +103,8 @@ def torch_home_dir(request, monkeypatch):
     torch_home = request.config.getoption("--torch-home")
     if torch_home:
         monkeypatch.setenv('TORCH_HOME', torch_home)
+
+
+@pytest.fixture(scope="session")
+def third_party(request):
+    return request.config.getoption("--third-party-sanity")

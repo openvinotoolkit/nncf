@@ -34,13 +34,14 @@ from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
 class Command:
-    def __init__(self, cmd):
+    def __init__(self, cmd, path=None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
         self.output = []  # store output here
         self.kwargs = {}
         self.timeout = False
+        self.path = path
 
         # set system/version dependent "start_new_session" analogs
         if sys.platform == "win32":
@@ -64,7 +65,7 @@ class Command:
         def target():
             start_time = time.time()
             self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, **self.kwargs)
+                                            bufsize=1, cwd=self.path, **self.kwargs)
             self.timeout = False
 
             self.output = []
@@ -201,7 +202,6 @@ def case_common_dirs(tmp_path_factory):
     return {
         "checkpoint_save_dir": str(tmp_path_factory.mktemp("models"))
     }
-
 
 @pytest.mark.parametrize(" multiprocessing_distributed",
                          (True, False),
@@ -358,7 +358,7 @@ def test_export_with_pretrained(tmp_path):
             "sample_size": [2, 3, 299, 299]
         },
         "num_classes": 1000,
-        "compression": {"algorithm": "magnitude_sparsity"}
+        "compression":  {"algorithm": "magnitude_sparsity"}
     })
     config_factory = ConfigFactory(config, tmp_path / 'config.json')
 
