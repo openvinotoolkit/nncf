@@ -109,14 +109,43 @@ IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to 
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
                             " - functions as a 'whitelist'. Optional."
 
-QUANTIZER_GROUP_SCHEMA = {
+QUANTIZER_GROUP_PROPERTIES = {
+    **QUANTIZER_CONFIG_PROPERTIES,
+    "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
+                                      description=IGNORED_SCOPES_DESCRIPTION),
+    "target_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
+                                     description=TARGET_SCOPES_DESCRIPTION)
+}
+
+WEIGHTS_GROUP_SCHEMA = {
     "type": "object",
     "properties": {
-        **QUANTIZER_CONFIG_PROPERTIES,
-        "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
-                                          description=IGNORED_SCOPES_DESCRIPTION),
-        "target_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
-                                         description=TARGET_SCOPES_DESCRIPTION)
+        **QUANTIZER_GROUP_PROPERTIES,
+    },
+    "additionalProperties": False
+}
+
+LINKED_ACTIVATION_SCOPES_SPECIFIER_SCHEMA = {
+    "type": "array",
+    "items": _ARRAY_OF_STRINGS
+}
+
+ACTIVATIONS_GROUP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        **QUANTIZER_GROUP_PROPERTIES,
+        "linked_quantizer_scopes": with_attributes(LINKED_ACTIVATION_SCOPES_SPECIFIER_SCHEMA,
+                                                   description="Specifies points in the model which will share the "
+                                                               "same quantizer module for activations. This is helpful "
+                                                               "in case one and the same quantizer scale is required "
+                                                               "for inputs to the same operation. Each sub-array will"
+                                                               "define a group of activation quantizer insertion "
+                                                               "points that have to share a single actual "
+                                                               "quantization module, each entry in this subarray "
+                                                               "should correspond to exactly one node in the NNCF "
+                                                               "graph and the groups should not overlap. The final"
+                                                               "quantizer for each sub-array will be associated with "
+                                                               "the first element of this sub-array.")
     },
     "additionalProperties": False
 }
@@ -288,10 +317,10 @@ QUANTIZATION_SCHEMA = {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
-        "weights": with_attributes(QUANTIZER_GROUP_SCHEMA,
+        "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
                                                "Overrides higher-level settings."),
-        "activations": with_attributes(QUANTIZER_GROUP_SCHEMA,
+        "activations": with_attributes(ACTIVATIONS_GROUP_SCHEMA,
                                        description="Constraints to be applied to model activations quantization only. "
                                                    "Overrides higher-level settings."),
         "quantize_inputs": with_attributes(_BOOLEAN,

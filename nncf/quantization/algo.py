@@ -396,6 +396,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         target_insertion_infos = target_model.get_post_pattern_insertion_points(pattern)
         insertion_commands = []
 
+        act_config = self.config.get('activations', {})
+        if 'linked_quantizer_scopes' in act_config:
+            linked_scopes_groups_list = act_config['linked_quantizer_scopes']
+            target_insertion_infos = self.coalesce_insertion_infos(target_insertion_infos, linked_scopes_groups_list)
+
         for insertion_info in target_insertion_infos:
             ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
             operator_scope_str = str(ia_op_exec_context)
@@ -677,6 +682,66 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         pattern = p.LINEAR_OPS | p.ARITHMETIC | p.ANY_BN_RELU_COMBO | \
                   p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.ARITHMETIC + p.ANY_BN_RELU_COMBO | p.SINGLE_OPS | p.MATMUL
         return pattern
+
+    @staticmethod
+    def coalesce_insertion_infos(target_insertion_infos: List[InsertionInfo],
+                                 linked_scopes_groups_list: List[List[str]]) -> List[InsertionInfo]:
+        """Accepts a list of InsertionInfos that each correspond only to one InputAgnosticOperationExecutionContext,
+        and merges these according to linked_scope_groups_list so that some or all of the resulting InsertionInfo
+        objects have non-empty linked_op_exec_contexts lists.
+        Each entry in linked_scope_groups_list must be a valid string representation of a single
+        InputAgnosticOperationExecutionContext object."""
+        ia_op_exec_context_list = [x.op_exec_context.input_agnostic for x in target_insertion_infos]
+        retval = []
+        insertion_info_indices_vs_group_id = OrderedDict()
+
+        for group_idx, group_list in enumerate(linked_scopes_groups_list):
+            for group_member_scope_str in group_list:
+                ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(group_member_scope_str)
+                matching_indices = list(
+                    filter(lambda x: ia_op_exec_context_list[x] == ia_op_exec_context,
+                           range(len(ia_op_exec_context_list))))
+                if len(matching_indices) > 1:
+                    raise RuntimeError(
+                        "Linked activation quantizer entry {} specifies more than 1 activation quantizer:\n {}".format(
+                            group_member_scope_str,
+                            "\n".join([str(ia_op_exec_context_list[i]) for i in matching_indices])))
+                if len(matching_indices) == 0:
+                    raise RuntimeError("No match for linked quantizer entry {} among activation quantizers!".format(
+                        group_member_scope_str))
+
+                target_idx = matching_indices[0]
+                if target_idx in insertion_info_indices_vs_group_id:
+                    raise RuntimeError(
+                        "Linked activation quantizer groups {} and {} "
+                        "overlap!".format(group_idx,
+                                          insertion_info_indices_vs_group_id[target_idx])
+                    )
+                insertion_info_indices_vs_group_id[target_idx] = group_idx
+
+        for i in range(len(ia_op_exec_context_list)):
+            if i not in insertion_info_indices_vs_group_id:
+                insertion_info_indices_vs_group_id[i] = None
+
+        group_indices_list = [[] for _ in linked_scopes_groups_list]  # type: List[List[int]]
+        for insertion_info_idx, group_idx in insertion_info_indices_vs_group_id.items():
+            if group_idx is not None:
+                group_indices_list[group_idx].append(insertion_info_idx)
+            else:
+                retval.append(target_insertion_infos[insertion_info_idx])
+
+        for intra_group_indices in group_indices_list:
+            main_info_idx = intra_group_indices[0]
+            main_info = target_insertion_infos[main_info_idx]
+            new_info = InsertionInfo(main_info.op_exec_context,
+                                     main_info.is_input,
+                                     main_info.is_output,
+                                     shape_to_operate_on=main_info.shape_to_operate_on)
+            for linked_info_idx in intra_group_indices[1:]:
+                new_info.linked_op_exec_contexts.append(target_insertion_infos[linked_info_idx].op_exec_context)
+            retval.append(new_info)
+
+        return retval
 
 
 class QuantizationControllerBase(CompressionAlgorithmController):

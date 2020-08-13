@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
@@ -82,7 +82,8 @@ class InsertionInfo:
         self.linked_op_exec_contexts = []  # type: List[OperationExecutionContext]
 
     def __eq__(self, other: 'InsertionInfo'):
-        return self.op_exec_context == other.op_exec_context
+        return self.op_exec_context == other.op_exec_context and Counter(self.linked_op_exec_contexts) == Counter(
+            other.linked_op_exec_contexts)
 
     def __hash__(self):
         return self.op_exec_context.__hash__()
