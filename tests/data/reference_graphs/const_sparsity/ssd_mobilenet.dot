@@ -167,7 +167,6 @@ strict digraph  {
 "165 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=165, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "166 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=166, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "167 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax" [id=167, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=softmax];
-"168 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=168, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "0 /nncf_model_input" -> "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
 "1 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
 "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/BatchNorm2d[1]/batch_norm";

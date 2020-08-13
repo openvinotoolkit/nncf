@@ -16,6 +16,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from examples.object_detection.layers import DetectionOutput, PriorBox
+from nncf.dynamic_graph.context import no_nncf_trace
 
 
 class SSDDetectionOutput(nn.Module):
@@ -50,11 +51,15 @@ class SSDDetectionOutput(nn.Module):
         loc = torch.cat([o.view(batch, -1) for o in locs], 1)
         conf = torch.cat([o.view(batch, -1) for o in confs], 1)
         conf_softmax = F.softmax(conf.view(conf.size(0), -1, self.num_classes), dim=-1)
-        priors = torch.cat(priors, dim=2)
+
+        with no_nncf_trace():
+            priors = torch.cat(priors, dim=2)
 
         if self.training:
             return loc.view(batch, -1, 4), conf.view(batch, -1, self.num_classes), priors.view(1, 2, -1, 4)
-        return self.detection_output(loc, conf_softmax.view(batch, -1), priors)
+
+        with no_nncf_trace():
+            return self.detection_output(loc, conf_softmax.view(batch, -1), priors)
 
 
 class SSDHead(nn.Module):
@@ -79,7 +84,9 @@ class SSDHead(nn.Module):
     def forward(self, features, image_tensor):
         loc = self.loc(features)
         conf = self.conf(features)
-        priors = self.prior_box(features, image_tensor).to(loc.device)
+
+        with no_nncf_trace():
+            priors = self.prior_box(features, image_tensor).to(loc.device)
 
         loc = loc.permute(0, 2, 3, 1).contiguous()
         conf = conf.permute(0, 2, 3, 1).contiguous()

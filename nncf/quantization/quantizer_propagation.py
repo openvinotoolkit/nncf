@@ -62,7 +62,7 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.NON_QUANTIZABLE: [
         EmbeddingMetatype,
         SoftmaxMetatype
-    ]
+    ],
 }  # type: Dict[QuantizationTrait, List[OperatorMetatype]]
 
 
@@ -398,7 +398,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     prop_quantizer = node[
                         QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]  # type: PropagatingQuantizer
                     quant_node_key = "Quantizer #{}".format(prop_quantizer.id)
-                    quant_configs_str_list = [str(conf) for conf in prop_quantizer.potential_quant_configs]
+                    if prop_quantizer.potential_quant_configs:
+                        quant_configs_str_list = [str(conf) for conf in prop_quantizer.potential_quant_configs]
+                    else:
+                        quant_configs_str_list = ["!!! NONE !!!]"]
                     sub_label = '[' + ',\n'.join(quant_configs_str_list) + ']'
                     quant_node_label = quant_node_key + '\n' + "T: {}\n".format(sub_label)
                     out_graph.add_node(quant_node_key,
@@ -448,15 +451,28 @@ class QuantizerPropagationSolver:
 
     def __init__(self, ignored_scopes=None, hw_config=None,
                  debug_interface: 'QuantizationDebugInterface' = None,
-                 propagation_strategy: PropagationStrategy = PropagationStrategy.AGGRESSIVE):
+                 propagation_strategy: PropagationStrategy = PropagationStrategy.AGGRESSIVE,
+                 default_qconfig_list: List[QuantizerConfig] = None):
         self._hw_config = hw_config
         self._debug_interface = debug_interface
         self._propagation_strategy = propagation_strategy  # TODO: determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
+
+        # Will handle the situations when all of the following is true:
+        # 1) the operation is unknown in the IR opset
+        # (i.e. the metatype has no associated HW config names),
+        # 2) the default quantization trait is INPUTS_QUANTIZABLE, i.e. there has to be SOME
+        # quantizer attached to the op's input
+        if default_qconfig_list is not None:
+            for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
+                if qconf_list is None:
+                    self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
+
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
         self._ignored_scopes = ignored_scopes
+
 
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> Dict[InsertionInfo, Optional[List[QuantizerConfig]]]:
         """ The main function to be used on an InsertionPointGraph to produce
@@ -577,13 +593,35 @@ class QuantizerPropagationSolver:
             op_meta_vs_qconfs_map = self._hw_config.get_metatype_vs_quantizer_configs_map()
             for op_meta, qconf_list in op_meta_vs_qconfs_map.items():
                 if qconf_list is None:
-                    trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                    trait = self._get_trait_for_op_meta_not_specified_in_hw_config(op_meta)
                 elif qconf_list:
                     trait = QuantizationTrait.INPUTS_QUANTIZABLE
                 else:
                     trait = QuantizationTrait.NON_QUANTIZABLE
                 retval[op_meta] = trait
         return retval
+
+    @staticmethod
+    def _get_trait_for_op_meta_not_specified_in_hw_config(op_meta: OperatorMetatype) -> QuantizationTrait:
+        if not op_meta.hw_config_names:
+            # The metatype might not have an associated name in the config
+            # namespace (yet) - use default trait
+            for default_trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
+                if op_meta in meta_list:
+                    trait = default_trait
+                    break
+            else:
+                trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                # TODO: think of switching to this?
+                # raise RuntimeError("Operation metatype {} encountered, but it has no default "
+                #                    "quantization trait and the HW config entry is not given for it - "
+                #                    "cannot determine how to quantize it!".format(op_meta))
+        else:
+            # There IS a valid HW config name for the metatype, but it is deliberately not specified
+            # in the config
+            trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+
+        return trait
 
     def _get_operator_qconfigs_map(self) -> Dict[OperatorMetatype, List[QuantizerConfig]]:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
@@ -640,6 +678,10 @@ class QuantizerPropagationSolver:
 
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+
+                # Until wildcard quantizers are implemented, every placed propagating quantizer has
+                # to have a non-empty list of possible quantizer configs
+                assert (qconf_list is not None) and qconf_list
                 prop_quantizer = quant_prop_graph.add_propagating_quantizer(qconf_list, pred_ip_key)
                 self._active_propagating_quantizers_queue.appendleft(prop_quantizer)
 

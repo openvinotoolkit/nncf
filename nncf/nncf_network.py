@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
@@ -32,7 +32,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope, nncf_model_input, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES
+from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules
@@ -82,7 +82,8 @@ class InsertionInfo:
         self.linked_op_exec_contexts = []  # type: List[OperationExecutionContext]
 
     def __eq__(self, other: 'InsertionInfo'):
-        return self.op_exec_context == other.op_exec_context
+        return self.op_exec_context == other.op_exec_context and Counter(self.linked_op_exec_contexts) == Counter(
+            other.linked_op_exec_contexts)
 
     def __hash__(self):
         return self.op_exec_context.__hash__()
@@ -468,7 +469,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return self._nncf_module_scopes
 
     def get_nncf_modules(self) -> Dict['Scope', torch.nn.Module]:
-        return get_all_modules_by_type(self.get_nncf_wrapped_model(), NNCF_MODULES)
+        nncf_module_names_list = NNCF_MODULES + [x.__name__ for x in NNCF_WRAPPED_USER_MODULES_DICT.values()]
+        return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()

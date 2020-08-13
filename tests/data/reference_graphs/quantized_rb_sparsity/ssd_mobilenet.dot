@@ -309,7 +309,6 @@ strict digraph  {
 "307 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=307, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "308 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=308, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "309 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax" [id=309, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=softmax];
-"310 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=310, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "0 /nncf_model_input" -> "4 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[2]/SymmetricQuantizer[op]/symmetric_quantize";
 "1 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";

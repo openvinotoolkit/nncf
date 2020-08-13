@@ -103,6 +103,16 @@ class InputAgnosticOperationExecutionContext:
     def __hash__(self):
         return hash((self.operator_name, self.scope_in_model, self.call_order))
 
+    @staticmethod
+    def from_str(s: str):
+        scope_and_op, _, call_order_str = s.rpartition('_')
+        scope_str, _, op_name = scope_and_op.rpartition('/')
+
+        from nncf.dynamic_graph.context import Scope
+        return InputAgnosticOperationExecutionContext(op_name,
+                                                      Scope.from_str(scope_str),
+                                                      int(call_order_str))
+
 
 class OperationExecutionContext:
     """Information that allows to uniquely identify an operation inside the NNCF graph,

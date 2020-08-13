@@ -206,6 +206,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 
         // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
         // "target_scopes": []
+
+        // Specifies points in the model which will share the same quantizer module for activations. This is helpful in case one and the same quantizer scale is required for inputs to the same operation. Each sub-array will define a group of activation quantizer insertion points that have to share a single actual quantization module, each entry in this subarray should correspond to exactly one node in the NNCF graph and the groups should not overlap. The finalquantizer for each sub-array will be associated with the first element of this sub-array.
+        "linked_quantizer_scopes": []
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
     "quantizable_subgraph_patterns": [ // Each sub-list in this list will correspond to a sequence of operations in the model control flow graph that will have a quantizer appended at the end of the sequence

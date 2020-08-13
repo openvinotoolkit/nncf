@@ -135,3 +135,22 @@ For instance, below is the same LeNet INT8 model as above, but with `"ignored_sc
 ![alt text](pics/lenet_compressed_graph_ignored.png)
 
 Notice that all RELU operation outputs and the second convolution's weights are no longer quantized. 
+
+
+## Advanced usage
+
+### Compression of custom modules
+With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`
+If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
+
+```python
+import nncf
+
+@nncf.register_module
+class MyModule(torch.nn.Module):
+    def __init__(self, ...):
+        self.weight = torch.nn.Parameter(...)
+    # ...
+```
+
+In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation. 
