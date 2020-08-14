@@ -192,6 +192,16 @@ Quick jump to sample type:
 |RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
 
 
+## Citing
+
+```
+@article{kozlov2020neural,
+    title =   {Neural network compression framework for fast model inference},
+    author =  {Kozlov, Alexander and Lazarevich, Ivan and Shamporov, Vasily and Lyalyushkin, Nikolay and Gorbachev, Yury},
+    journal = {arXiv preprint arXiv:2002.08679},
+    year =    {2020}
+}
+```
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.
