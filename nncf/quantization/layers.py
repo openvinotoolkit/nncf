@@ -393,15 +393,10 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
-            with no_jit_trace():
-                input_range_safe = abs(self.input_range) + self.eps
-                input_low_tuned, input_range_tuned = TuneRange.apply(self.input_low, input_range_safe, self.levels)
-                input_high_tuned = input_low_tuned + input_range_tuned
+            input_range_safe = abs(self.input_range) + self.eps
+            input_low_tuned, input_range_tuned = TuneRange.apply(self.input_low, input_range_safe, self.levels)
+            input_high_tuned = input_low_tuned + input_range_tuned
 
-                y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(self.level_low,
-                                                                               self.level_high,
-                                                                               input_low_tuned,
-                                                                               input_high_tuned)
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(self.level_low,
                                                                                self.level_high,
