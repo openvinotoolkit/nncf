@@ -59,6 +59,14 @@ class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
     PROPAGATION_BASED = "propagation_based"
 
+    @staticmethod
+    def from_str(quantizer_setup_type: str) -> 'QuantizerSetupType':
+        if quantizer_setup_type == QuantizerSetupType.PATTERN_BASED.value:
+            return QuantizerSetupType.PATTERN_BASED
+        if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED.value:
+            return QuantizerSetupType.PROPAGATION_BASED
+        raise RuntimeError("Unknown quantizer setup type. Please select 'pattern_based' or 'propagation_based'.")
+
 
 class QuantizationConstraints:
     REF_QCONF_OBJ = QuantizerConfig()
@@ -131,7 +139,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        self.quantizer_setup_type = QuantizerSetupType.PATTERN_BASED # TODO: determine from config
+        self.quantizer_setup_type = self.config.get('quantizer_setup_type')
         self.quantizable_subgraph_patterns = self.config.get('quantizable_subgraph_patterns', None)
         self.hw_config = None
         hw_config_type = self.config.get("hw_config_type")
@@ -140,7 +148,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         if is_hw_config_enabled:
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
-            self.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
+
 
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value

@@ -615,10 +615,26 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                       "presets that are more likely to result in best performance on "
                                                       "a given HW type."),
         "log_dir": with_attributes(_STRING,
-                                   description="Log directory for NNCF-specific logging outputs")
+                                   description="Log directory for NNCF-specific logging outputs"),
+        "quantizer_setup_type": with_attributes(_STRING,
+                                                description="Selects the mode of placement quantizers - either "
+                                                            "'pattern_based' or 'propagation_based'. "
+                                                            "In 'pattern_based' mode, the quantizers are placed "
+                                                            "according to the accepted patterns (Each pattern is "
+                                                            "a layer or a set of layers to be quantized). "
+                                                            "In 'propagation_based' initially quantizers are placed "
+                                                            "on all possible quantized layers and then the algorithm "
+                                                            "their propagation is run from the bottom up. Also in "
+                                                            "this mode it is possible to use hw config."),
     },
     "required": ["input_info"],
-    "definitions": REF_VS_ALGO_SCHEMA
+    "definitions": REF_VS_ALGO_SCHEMA,
+    "dependencies": {
+        "hw_config_type": {
+            "properties": {
+            "quantizer_setup_type": { "const": "propagation_based"}}
+            }
+    }
 }
 
 
