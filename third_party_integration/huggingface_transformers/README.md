@@ -4,7 +4,7 @@ https://github.com/huggingface/transformers
 This folder contains a git patch to enable NNCF-based quantization for XNLI, SQuAD and GLUE training pipelines of the huggingface transformers repository. 
 
 Instructions:
-1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the huggingface transformers repository checked out at commit id: `ebba39e4e1d27e159d22d442e326a11cfbc10d31`
+1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the huggingface transformers repository checked out at commit id: `b0892fa0e8df02d683e05e625b3903209bff362d`
 
 2. Install the `transformers` library and the example scripts from this patched repository as described in the documentation for the huggingface transformers repository.
 
@@ -66,3 +66,9 @@ _INT8 model (symmetrically quantized)_ - 90.3% accuracy
 _Full-precision FP32 baseline model_ - google/mobilebert-uncased, trained on SQuAD v1.1 - 89.98% F1, 82.61% EM on the dev set,
 
 _INT8 model (symmetric quantization)_ - 89.4% F1, 82.05% EM on the dev set.
+
+**GPT-2-WikiText 2 (raw) language modeling**:
+
+_Full-precision FP32 baseline model_ - 19.73 perplexity on the test set
+
+_INT8 model (symmetric quantization)_ - 20.9 perplexity on the test set
