@@ -246,6 +246,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         modules = target_model.get_nncf_modules()
         insertion_point_graph = target_model.get_insertion_point_graph()
         quantized_modules_with_potential_qconfig = []
+        default_qconfig_list = [self.__get_default_qconfig(
+            constraints=self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])]
         if self.hw_config is not None:
             meta_vs_qconfig_map = self.hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
         for module_scope, module in modules.items():
@@ -266,6 +268,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
+                if qconfig_list is None:
+                    qconfig_list = default_qconfig_list
             quantized_modules_with_potential_qconfig.append(PotentialQuantizedModule(module, module_scope,
                                                                                      qconfig_list))
         return quantized_modules_with_potential_qconfig
