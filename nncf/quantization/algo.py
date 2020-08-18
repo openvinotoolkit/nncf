@@ -783,7 +783,7 @@ class QuantizationController(QuantizationControllerBase):
                  weight_quantizers: Dict[WeightQuantizerId, torch.nn.Module],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  hw_precision_constraints: HWPrecisionConstraints,
-                 collect_compression_metrics: bool = True):
+                 collect_compression_metrics: bool = False):
         super().__init__(target_model)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
