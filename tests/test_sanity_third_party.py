@@ -20,7 +20,7 @@ from tests.test_sanity_sample import Command
 from tests.conftest import PROJECT_ROOT
 
 
-TRANSFORMERS_COMMIT = "ebba39e4e1d27e159d22d442e326a11cfbc10d31"
+TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
 MMDETECTION_COMMIT = "7ab8f440749df44bb222401b98bef7c25f74ae06"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "data", "mock_datasets")
@@ -172,6 +172,30 @@ class TestTransformers:
                    " --output_dir {output} --data_dir {}/glue/glue_data/SST-2" \
                    " --nncf_config nncf_distilbert_config_sst2.json"\
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "distilbert_output"))
+        runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
+                                             self.cuda_visible_string), self.TRANS_PATH)
+        res = runner.run()
+        assert res == 0
+
+    def test_lm_train(self, temp_folder):
+        com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 --model_name_or_path gpt2" \
+                   " --do_train --per_gpu_train_batch_size 8" \
+                   " --train_data_file {}/wikitext-2-raw/wiki.train.raw " \
+                   " --output_dir {} --nncf_config" \
+                   " nncf_gpt2_config_wikitext_hw_config.json".format(DATASET_PATH, os.path.join(temp_folder["models"],
+                                                                                                 "lm_output"))
+        runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
+                                             self.cuda_visible_string), self.TRANS_PATH)
+        res = runner.run()
+        assert res == 0
+        assert os.path.exists(os.path.join(temp_folder["models"], "lm_output", "pytorch_model.bin"))
+
+    def test_lm_eval(self, temp_folder):
+        com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 " \
+                   "--model_name_or_path {output} --do_eval " \
+                   " --output_dir {output} --eval_data_file {}/wikitext-2-raw/wiki.train.raw" \
+                   " --nncf_config nncf_gpt2_config_wikitext_hw_config.json" \
+            .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "lm_output"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
         res = runner.run()
