@@ -53,7 +53,7 @@ from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process
 from nncf.utils import get_state_dict_names_with_modules
-
+from nncf.quantization.metrics import NetworkQuantizationShareMetric
 
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
@@ -782,11 +782,13 @@ class QuantizationController(QuantizationControllerBase):
                  quantized_inputs_modules_registry: Dict[Scope, torch.nn.Module],
                  weight_quantizers: Dict[WeightQuantizerId, torch.nn.Module],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
-                 hw_precision_constraints: HWPrecisionConstraints):
+                 hw_precision_constraints: HWPrecisionConstraints,
+                 collect_compression_metrics: bool = True):
         super().__init__(target_model)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._hw_precision_constraints = hw_precision_constraints
+        self._collect_compression_metrics = collect_compression_metrics
 
         self.quantized_weight_modules_registry = quantized_weight_modules_registry
         self.quantized_inputs_modules_registry = quantized_inputs_modules_registry
@@ -815,6 +817,25 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+        if self._collect_compression_metrics:
+            self.metric_store = {}
+            quantizer_setup_type = self.quantization_config.get('quantizer_setup_type')
+            # These metrics are collected here and are updated when the method .statistics() is called
+            self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers,
+                 self.non_weight_quantizers, quantizer_setup_type)]#, MemoryСostMetric(target_model, self.weight_quantizers, self.non_weight_quantizers)]
+            # These metrics are collected once here and are not updated when the method .statistics() is called
+            self.stable_metric_collectors = []
+            self.update_metric_store(True)
+
+    def update_metric_store(self, all: bool = False):
+        for collector in self.non_stable_metric_collectors:
+            collector.collect()
+            self.metric_store[collector.NAME_STR] = collector.get_metric_table()
+        if all:
+            for collector in self.stable_metric_collectors:
+                collector.collect()
+                self.metric_store[collector.NAME_STR] = collector.get_metric_table()
 
     def distributed(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
@@ -1066,6 +1087,11 @@ class QuantizationController(QuantizationControllerBase):
             num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
             multiplier = 100 / len(self.all_quantizations)
             stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        if self._collect_compression_metrics:
+            self.update_metric_store()
+            for name_metric, metric in self.metric_store.items():
+                for add_info, table in metric.items():
+                    stats[add_info] = table
         return stats
 
 
