@@ -320,3 +320,176 @@ class MemoryСostMetric(BaseMetric):
 
         retval = {"Memory consumption statistics:": table}
         return retval
+
+
+class ShareEdgesQuantizedDataPath(BaseMetric):
+    """
+    This metric calculates the percentage of quantized edges relative to the total number of edges
+    in the original network graph. "Quantized edge" is an edge representing a quantized activation tensor.
+    """
+    NAME_STR = 'ShareEdgesQuantizedDataPath'
+    COUNT_QUANTIZED_EDGES_STR = 'Share edges of the quantized data path'
+    QUANTIZED_EDGES_ATTR = 'quantized'
+    PASSED_EDGES_ATTR = 'passed'
+    NODES_GRAPH_ATTR = 'nodes'
+    IS_MERGED_GRAPH_ATTR = 'is_merged'
+
+
+    def __init__(self, compressed_model: NNCFNetwork):
+        super().__init__()
+        self._compressed_model = compressed_model
+        self.stat = {}
+
+    def collect(self):
+        merged_original_graph = self.get_merged_original_graph_with_patterns(self._compressed_model.get_original_graph())
+        self.stat[self.COUNT_QUANTIZED_EDGES_STR] = 0
+        self.header = [self.COUNT_QUANTIZED_EDGES_STR]
+        nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
+        nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)              
+
+        original_graph = self._compressed_model.get_original_graph()
+        input_nodes = [ node for node in merged_original_graph.nodes if len(merged_original_graph._pred[node]) == 0 ]
+        queue = deque()
+        for input_node in input_nodes:
+            next_nodes = merged_original_graph._succ[input_node]
+            for next_node_key in next_nodes:
+                edge = merged_original_graph.edges[input_node, next_node_key]
+                edge[self.PASSED_EDGES_ATTR] = True
+                edge[self.QUANTIZED_EDGES_ATTR] = True
+                self.stat[self.COUNT_QUANTIZED_EDGES_STR] += 1
+                queue.appendleft(next_node_key)
+        visited_nodes = {}
+        while len(queue) != 0:
+            node_key = queue.pop()
+            if node_key in visited_nodes:
+                continue
+            if self._all_enter_edges_in_node_of_type(merged_original_graph, node_key, self.PASSED_EDGES_ATTR):
+                visited_nodes[node_key] = True
+                node = merged_original_graph.nodes[node_key]
+                if node[self.IS_MERGED_GRAPH_ATTR]:
+                    last_node = node[self.NODES_GRAPH_ATTR][-1]
+                    scope_str = str(last_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                    if scope_str in self._compressed_model.activation_quantizers:
+                        self._marking_edges(merged_original_graph, node_key, queue)
+                    else:
+                        self._marking_edges(merged_original_graph, node_key, queue, False)
+                else:
+                    scope_str = str(node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                    if scope_str in self._compressed_model.activation_quantizers:
+                        self._marking_edges(merged_original_graph, node_key, queue)
+                    else:
+                        is_op_non_change_precision_activation_tensor = True
+                        node_op_name = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                        for op in DEFAULT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
+                            op_names = [op.name]
+                            if op.torch_tensor_patch_spec is not None:
+                                op_names = op.torch_tensor_patch_spec.underlying_function_names
+                            if node_op_name in op_names:
+                                is_op_non_change_precision_activation_tensor = False
+                                break
+                        status = is_op_non_change_precision_activation_tensor and self._all_enter_edges_in_node_of_type(\
+                            merged_original_graph, node_key, self.QUANTIZED_EDGES_ATTR)
+                        self._marking_edges(merged_original_graph, node_key, queue, status)
+            else:
+                queue.appendleft(node_key)
+        self.num_merged_original_graph_edges = len(merged_original_graph.edges)
+
+    def _get_copy_statistics(self):
+        statistics = deepcopy(self.stat)
+        try:
+            statistics[self.COUNT_QUANTIZED_EDGES_STR] /= self.num_merged_original_graph_edges
+            statistics[self.COUNT_QUANTIZED_EDGES_STR] *= 100
+        except ZeroDivisionError:
+            statistics[self.COUNT_QUANTIZED_EDGES_STR] = 0
+
+        return statistics
+
+    def _all_enter_edges_in_node_of_type(self, graph, node_key, type_edge):
+        prev_nodes = graph._pred[node_key]
+        retval = True
+        for prev_node_key in prev_nodes:
+            edge = graph.edges[prev_node_key, node_key]
+            if not edge[type_edge]:
+                retval = False
+                break
+        return retval
+
+    def _marking_edges(self, graph, node_key, queue, mark=True):
+        next_nodes = graph._succ[node_key]
+        for next_node_key in next_nodes:
+            edge = graph.edges[node_key, next_node_key]
+            edge[self.QUANTIZED_EDGES_ATTR] = mark
+            edge[self.PASSED_EDGES_ATTR] = True
+            queue.appendleft(next_node_key)
+            if mark:
+                self.stat[self.COUNT_QUANTIZED_EDGES_STR] += 1
+
+    def get_metric_table(self):
+        table = Texttable()
+        data = [['Metric type', 'Value']]
+        try:
+            data.append([self.header[0], '{:.2f} % ({} / {})'.format(
+                self.stat[self.COUNT_QUANTIZED_EDGES_STR] / self.num_merged_original_graph_edges * 100,
+                self.stat[self.COUNT_QUANTIZED_EDGES_STR], self.num_merged_original_graph_edges)])
+        except ZeroDivisionError:
+            data.append([self.header[0], '{} % '.format(0)])
+        table.add_rows(data)
+
+        retval = {"Quantization configuration statistics:" : table}
+        return retval
+
+    def get_merged_original_graph_with_patterns(self, original_graph: NNCFGraph):
+        import nncf.dynamic_graph.patterns as p
+        from nncf.dynamic_graph.graph_matching import search_all
+
+        pattern = p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        matches = search_all(original_graph._nx_graph, pattern)
+        merged_graph = deepcopy(original_graph._nx_graph)
+        nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
+        for match in matches:
+            if len(match) == 1:
+                continue
+
+            input_node_key = match[0]
+            output_node_key = match[-1]
+            in_edges = list(merged_graph.in_edges(input_node_key))
+            out_edges = list(merged_graph.out_edges(output_node_key))
+
+            in_edge_copies_dict = {}
+            for in_edge_key in in_edges:
+                in_edge_copies_dict[in_edge_key] = deepcopy(merged_graph.edges[in_edge_key])
+            out_edge_copies_dict = {}
+            for out_edge_key in out_edges:
+                out_edge_copies_dict[out_edge_key] = deepcopy(merged_graph.edges[out_edge_key])
+
+            merged_node_key = ""
+            merged_nodes = []
+            for node_key in match:
+                merged_node_key += node_key + '\n'
+                merged_nodes.append(original_graph._nx_graph.nodes[node_key])
+                merged_graph.remove_node(node_key)
+            merged_node_attrs = {
+                NNCFGraph.KEY_NODE_ATTR: merged_node_key,
+                self.NODES_GRAPH_ATTR: merged_nodes,
+                self.IS_MERGED_GRAPH_ATTR: True
+            }
+            merged_graph.add_node(merged_node_key, **merged_node_attrs)
+            for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():
+                merged_graph.add_edge(in_edge_key[0], merged_node_key, **in_edge_attrs)
+            for out_edge_key, out_edge_attrs in out_edge_copies_dict.items():
+                merged_graph.add_edge(merged_node_key, out_edge_key[1], **out_edge_attrs)
+
+        return merged_graph
+
+    @staticmethod
+    def visualize_marked_graph(merged_original_graph):
+        out_graph = nx.DiGraph()
+        for node_key, node in merged_original_graph.nodes.items():
+            out_graph.add_node(node_key)
+        for u, v in merged_original_graph.edges:
+            edge = merged_original_graph.edges[u, v]
+            attrs = {"color": "black"}
+            if edge[ShareEdgesQuantizedDataPath.QUANTIZED_EDGES_ATTR]:
+                attrs = {"color": "blue"}
+            out_graph.add_edge(u, v, **attrs)
+        return out_graph

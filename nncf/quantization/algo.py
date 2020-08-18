@@ -53,7 +53,7 @@ from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process
 from nncf.utils import get_state_dict_names_with_modules
-from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryСostMetric
+from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryСostMetric, ShareEdgesQuantizedDataPath
 
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
@@ -825,7 +825,7 @@ class QuantizationController(QuantizationControllerBase):
             self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers,
                  self.non_weight_quantizers, quantizer_setup_type), MemoryСostMetric(target_model, self.weight_quantizers, self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
-            self.stable_metric_collectors = []
+            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
 
     def update_metric_store(self, all: bool = False):
