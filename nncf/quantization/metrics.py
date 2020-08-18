@@ -189,3 +189,134 @@ class NetworkQuantizationShareMetric(BaseMetric):
             data.append(row)
         table.add_rows(data)
         return table
+
+
+
+class MemoryСostMetric(BaseMetric):
+    """
+    This metric considers:
+        - how many times memory consumption for network weights will decrease.
+        - how many times memory consumption* for activations tensor will decrease.
+    * Reflects host memory consumption, assuming only the final low-precision output activation tensors are stored
+      in host memory (i.e. assuming intermediate accumulation results are only stored in device memory)
+    """
+    PARAMS_STR = 'params'
+    NAME_STR = 'MemoryCost'
+
+    EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR = 'Memory consumption decrease for weights'
+    SIZE_MEMORY_FP_WEIGHTS_STR = 'Memory consumption for full-precision weights'
+    SIZE_MEMORY_COMPRESSED_WEIGHTS_STR = 'Memory consumption for quantized weights'
+    MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR =\
+         'Max memory consumption for an activation tensor in FP32 model'
+    MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR =\
+         'Max memory consumption for an activation tensor in compressed model'
+
+    def __init__(self, compressed_model: NNCFNetwork, weights_quantizers, non_weight_quantizers):
+        super().__init__()
+        self._compressed_model = compressed_model
+        self._weights_quantizers = weights_quantizers
+        self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
+        self.header = [self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR, self.SIZE_MEMORY_FP_WEIGHTS_STR,\
+             self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR,\
+             self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR,\
+             self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR]
+        self.stat = {}
+
+    def collect(self):
+        self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] = 0
+        self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] = 0
+        fp_num_bits = 32
+        nncf_modules = self._compressed_model.get_nncf_modules()
+
+        for scope_module, nncf_module in nncf_modules.items():
+            count_el = np.prod(nncf_module.weight.shape)
+            self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] += count_el * fp_num_bits
+            status, quantizer = self._get_quantizer_for_scope(scope_module, self._weights_quantizers)
+            if status > 0:
+                num_bits = quantizer.num_bits
+                self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] += count_el * num_bits
+            else:
+                self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] += count_el * fp_num_bits
+        try:
+            self.stat[self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR] = self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] /\
+             self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR]
+        except ZeroDivisionError:
+            self.stat[self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR] = 0
+        self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] /= 2**23
+        self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] /= 2**23
+
+        original_graph = deepcopy(self._compressed_model.get_original_graph())
+
+        activation_quantizers = self._compressed_model.activation_quantizers
+        memory_consumption_fp_model = {}
+        memory_consumption_compressed_model = {}
+        original_nx_graph = original_graph._nx_graph
+        nx.set_edge_attributes(original_nx_graph, 32, "precision")
+        input_nodes = original_graph.get_input_nodes()
+        input_node_keys = []
+        for input_node in input_nodes:
+            input_node_key = original_graph.get_node_key_by_id(input_node.node_id)
+            input_node_keys.append(input_node_key)
+            next_nodes = original_graph.get_next_nodes(input_node)
+            for next_node in next_nodes:
+                scope = next_node.op_exec_context.scope_in_model
+                status, quantizer = self._get_quantizer_for_scope(scope, self._non_weight_quantizers)
+                if status:
+                    next_node_key = original_graph.get_node_key_by_id(next_node.node_id)
+                    num_bits = quantizer.num_bits
+                    original_nx_graph.edges[input_node_key, next_node_key]['precision'] = num_bits
+
+        for u, v in original_nx_graph.edges:
+            if u in input_node_keys:
+                continue
+
+            shape = original_nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            u_node_scope_str = str(original_nx_graph.nodes[u]['op_exec_context'].input_agnostic)
+            num_bits = self.get_precision_for_activation_tensor(u, v, original_nx_graph)
+            original_nx_graph.edges[u, v]['precision'] = num_bits
+            memory_consumption_fp_model[u_node_scope_str] = np.prod(shape) * fp_num_bits
+            memory_consumption_compressed_model[u_node_scope_str] = np.prod(shape) * num_bits
+        try:    
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] = max(memory_consumption_fp_model.values()) / 2**23
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = max(memory_consumption_compressed_model.values()) / 2**23
+        except ValueError:
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] = 0
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = 0
+
+    def get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
+        scope_u_node = original_nx_graph.nodes[u_node][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
+        pred_u_nodes = original_nx_graph._pred[u_node]
+        precision_enter_activation_tensor =\
+             max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
+        module = self._compressed_model.get_module_by_scope(scope_u_node)
+        if is_nncf_module(module):
+            status, quantizer = self._get_quantizer_for_scope(scope_u_node, self._weights_quantizers)
+            if status:
+                precision = max(quantizer.num_bits, precision_enter_activation_tensor)
+            else:
+                precision = 32
+            return precision
+
+        u_node_scope_str = str(original_nx_graph.nodes[u_node][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+        if u_node_scope_str in self._compressed_model.activation_quantizers:
+            precision = self._compressed_model.activation_quantizers[u_node_scope_str].num_bits
+        else:
+            precision = precision_enter_activation_tensor
+        return precision
+
+    def _get_quantizer_for_scope(self, scope, quatizers):
+        for quantizer_id, quantizer in quatizers.items():
+            if quantizer_id.get_scope() == scope:
+                return True, quantizer
+        return False, None
+
+    def get_metric_table(self):
+        table = Texttable()
+        data = [['Metric type', 'Value']]
+        data.append([self.header[0], self.stat[self.header[0]]])
+        for h in self.header[1:]:
+            data.append([h + ' (Mbyte)', self.stat[h]])
+        table.add_rows(data)
+
+        retval = {"Memory consumption statistics:": table}
+        return retval
