@@ -809,7 +809,7 @@ class QuantizerPropagationSolver:
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
-                        retval[op_meta] = self.DEFAULT_QUANTIZATION_TYPES
+                        retval[op_meta] = deepcopy(self.DEFAULT_QUANTIZATION_TYPES)
                 else:
                     for op_meta in meta_list:  # type: OperatorMetatype
                         retval[op_meta] = []
