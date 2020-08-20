@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Type, List, Dict
+from typing import Type, List, Dict, Set
 
 import addict as ad
 import jstyleson as json
@@ -52,6 +52,9 @@ def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['Ope
 
 class HWConfig(List):
     QUANTIZATION_ALGORITHM_NAME = "quantization"
+    ATTRIBUTES_NAME = "attributes"
+    SCALE_ATTRIBUTE_NAME = "scales"
+    UNIFIED_TYPE_NAME = "unified"
 
     TYPE_TO_CONF_NAME_DICT = {
         HWConfigType.CPU: "cpu.json",
@@ -195,4 +198,19 @@ class HWConfig(List):
             for meta in metatypes:
                 retval[meta] = qconf_list
 
+        return retval
+
+    def get_operations_with_unified_scales(self) -> Set[Type['OperatorMetatype']]:
+        retval = set()
+        for op_dict in self:
+            if self.ATTRIBUTES_NAME in op_dict:
+                if self.SCALE_ATTRIBUTE_NAME in op_dict[self.ATTRIBUTES_NAME]:
+                    if op_dict[self.ATTRIBUTES_NAME][self.SCALE_ATTRIBUTE_NAME] == self.UNIFIED_TYPE_NAME:
+                        hw_config_op_name = op_dict.type  # type: HWConfigOpName
+                        metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
+                        if not metatypes:
+                            warnings.warn(
+                                "Operation name {} in HW config is not registered in NNCF under any supported "
+                                "operation metatype - will be ignored".format(hw_config_op_name))
+                        retval.update(metatypes)
         return retval
