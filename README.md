@@ -30,7 +30,8 @@ This function returns a wrapped model ready for compression fine-tuning, and han
 
 ```python
 import nncf
-from nncf import create_compressed_model, Config as NNCFConfig
+from nncf import create_compressed_model, NNCFConfig
+from nncf import register_default_init_args
 
 # Instantiate your uncompressed model
 from torchvision.models.resnet import resnet50
@@ -38,6 +39,9 @@ model = resnet50()
 
 # Load a configuration file to specify compression
 nncf_config = NNCFConfig.from_json("resnet50_int8.json")
+
+loss_criterion = # Your loss function
+train_loader = # Your train loader
 
 # Provide data loaders for compression algorithm initialization, if necessary
 nncf_config = register_default_init_args(nncf_config, loss_criterion, train_loader)
