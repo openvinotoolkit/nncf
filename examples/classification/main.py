@@ -46,7 +46,6 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
-from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
@@ -81,9 +80,8 @@ def main(argv):
     if config.dist_url == "env://":
         config.update_from_env()
 
-    configure_paths(config, args)
+    configure_paths(config)
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
-    copyfile(osp.join(NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR, "dla.json"), osp.join(config.log_dir, "dla.json"))
     source_root = Path(__file__).absolute().parents[2]  # nncf root
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))
 
@@ -143,7 +141,6 @@ def main_worker(current_gpu, config: SampleConfig):
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
         nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
 
-
     # create model
     model_name = config['model']
     model = load_model(model_name,
@@ -187,7 +184,6 @@ def main_worker(current_gpu, config: SampleConfig):
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
-
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
