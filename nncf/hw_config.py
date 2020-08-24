@@ -73,49 +73,53 @@ class HWConfig(List):
                          HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]])
 
     @classmethod
-    def from_json(cls, path):
+    def from_dict(cls, dct: dict):
         # pylint:disable=too-many-nested-blocks,too-many-branches
+        hw_config = cls()
+        hw_config.target_device = dct['target_device']
+
+        for algorithm_name, algorithm_configs in dct.get('config', {}).items():
+            hw_config.registered_algorithm_configs[algorithm_name] = {}
+            for algo_config_alias, algo_config in algorithm_configs.items():
+                for key, val in algo_config.items():
+                    if not isinstance(val, list):
+                        algo_config[key] = [val]
+
+                hw_config.registered_algorithm_configs[algorithm_name][algo_config_alias] = list(
+                    product_dict(algo_config))
+
+        for op_dict in dct.get('operations', []):
+            for algorithm_name in op_dict:
+                if algorithm_name not in hw_config.registered_algorithm_configs:
+                    continue
+                tmp_config = {}
+                for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
+                    if not isinstance(algorithm_configs, list):
+                        algorithm_configs = [algorithm_configs]
+
+                    tmp_config[algo_and_op_specific_field_name] = []
+                    for algorithm_config in algorithm_configs:
+                        if isinstance(algorithm_config, str):  # Alias was supplied
+                            tmp_config[algo_and_op_specific_field_name].extend(
+                                hw_config.registered_algorithm_configs[algorithm_name][algorithm_config])
+                        else:
+                            for key, val in algorithm_config.items():
+                                if not isinstance(val, list):
+                                    algorithm_config[key] = [val]
+
+                            tmp_config[algo_and_op_specific_field_name].extend(list(product_dict(algorithm_config)))
+
+                op_dict[algorithm_name] = tmp_config
+
+            hw_config.append(ad.Dict(op_dict))
+
+        return hw_config
+
+    @classmethod
+    def from_json(cls, path):
         with open(path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
-            hw_config = cls()
-            hw_config.target_device = json_config['target_device']
-
-            for algorithm_name, algorithm_configs in json_config.get('config', {}).items():
-                hw_config.registered_algorithm_configs[algorithm_name] = {}
-                for algo_config_alias, algo_config in algorithm_configs.items():
-                    for key, val in algo_config.items():
-                        if not isinstance(val, list):
-                            algo_config[key] = [val]
-
-                    hw_config.registered_algorithm_configs[algorithm_name][algo_config_alias] = list(
-                        product_dict(algo_config))
-
-            for op_dict in json_config.get('operations', []):
-                for algorithm_name in op_dict:
-                    if algorithm_name not in hw_config.registered_algorithm_configs:
-                        continue
-                    tmp_config = {}
-                    for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
-                        if not isinstance(algorithm_configs, list):
-                            algorithm_configs = [algorithm_configs]
-
-                        tmp_config[algo_and_op_specific_field_name] = []
-                        for algorithm_config in algorithm_configs:
-                            if isinstance(algorithm_config, str):  # Alias was supplied
-                                tmp_config[algo_and_op_specific_field_name].extend(
-                                    hw_config.registered_algorithm_configs[algorithm_name][algorithm_config])
-                            else:
-                                for key, val in algorithm_config.items():
-                                    if not isinstance(val, list):
-                                        algorithm_config[key] = [val]
-
-                                tmp_config[algo_and_op_specific_field_name].extend(list(product_dict(algorithm_config)))
-
-                    op_dict[algorithm_name] = tmp_config
-
-                hw_config.append(ad.Dict(op_dict))
-
-            return hw_config
+            return HWConfig.from_dict(json_config)
 
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
@@ -164,7 +168,7 @@ class HWConfig(List):
 
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type['OperatorMetatype'],
                                                                                List[QuantizerConfig]]:
-        # 'None' for ops unspecified in HW config
+        # 'None' for ops unspecified in HW config, empty list for quantization agnostic ops
         retval = {k: None for k in OPERATOR_METATYPES.registry_dict.values()}
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
@@ -183,7 +187,7 @@ class HWConfig(List):
                 # or, if no merge occured during propagation, use any quantizer configuration. This is
                 # to ensure that as many ops in the model control flow graph as possible are executed in
                 # low precision to conserve memory.
-                allowed_qconfs = None
+                allowed_qconfs = []
 
             if allowed_qconfs is not None:
                 qconf_list_with_possible_duplicates = []

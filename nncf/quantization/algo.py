@@ -14,6 +14,7 @@
 # pylint:disable=too-many-lines
 import functools
 from collections import OrderedDict, namedtuple
+from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Callable
@@ -24,7 +25,6 @@ import operator
 import shutil
 import torch
 from nncf.layers import NNCFEmbedding
-from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -117,6 +117,11 @@ class NonWeightQuantizerInfo:
 
 @COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(CompressionAlgorithmBuilder):
+    DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(bits=8,
+                                               mode=QuantizationMode.SYMMETRIC,
+                                               signedness_to_force=None,
+                                               per_channel=False)
+
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
 
@@ -195,10 +200,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       self._hw_precision_constraints)
 
     def __get_default_qconfig(self, constraints: QuantizationConstraints = None):
-        qconfig = QuantizerConfig(bits=8,
-                                  mode=QuantizationMode.SYMMETRIC,
-                                  signedness_to_force=None,
-                                  per_channel=False)
+        qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -275,10 +277,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
-                if qconfig_list is None:
+                if qconfig_list is not None and len(qconfig_list) == 0:  # Empty list = wildcard quantization
                     qconfig_list = default_qconfig_list
-            quantized_modules_with_potential_qconfig.append(PotentialQuantizedModule(module, module_scope,
-                                                                                     qconfig_list))
+
+            if qconfig_list is not None:
+                quantized_modules_with_potential_qconfig.append(PotentialQuantizedModule(module, module_scope,
+                                                                                         qconfig_list))
         return quantized_modules_with_potential_qconfig
 
     def _quantize_weights(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
@@ -821,17 +825,20 @@ class QuantizationController(QuantizationControllerBase):
             self.metric_store = {}
             quantizer_setup_type = self.quantization_config.get('quantizer_setup_type')
             # These metrics are collected here and are updated when the method .statistics() is called
-            self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers,\
-                 self.non_weight_quantizers, quantizer_setup_type), MemoryСostMetric(target_model, self.weight_quantizers, self.non_weight_quantizers)]
+            self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers, \
+                                                                                self.non_weight_quantizers,
+                                                                                quantizer_setup_type),
+                                                 MemoryСostMetric(target_model, self.weight_quantizers,
+                                                                  self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
 
-    def update_metric_store(self, all: bool = False):
+    def update_metric_store(self, do_all: bool = False):
         for collector in self.non_stable_metric_collectors:
             collector.collect()
             self.metric_store[collector.NAME_STR] = collector.get_metric_table()
-        if all:
+        if do_all:
             for collector in self.stable_metric_collectors:
                 collector.collect()
                 self.metric_store[collector.NAME_STR] = collector.get_metric_table()
@@ -1049,7 +1056,7 @@ class QuantizationController(QuantizationControllerBase):
             stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
         if self._collect_compression_metrics:
             self.update_metric_store()
-            for name_metric, metric in self.metric_store.items():
+            for metric in self.metric_store.values():
                 for add_info, table in metric.items():
                     stats[add_info] = table
         return stats

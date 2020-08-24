@@ -30,6 +30,30 @@ from tests.quantization.test_quantizer_propagation_graph import get_edge_paths_f
 from tests.test_nncf_network import get_mock_nncf_node_attrs
 
 
+def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
+    graph_len = len(op_name_keys)
+    mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
+    shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
+    for idx, (_, node) in enumerate(mock_graph.nodes.items()):
+        node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = \
+            TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+    return mock_graph
+
+
+def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
+    graph = nx.DiGraph()
+    for node_key in op_name_keys:
+        attrs = {
+            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
+                TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(node_key)
+        }
+        graph.add_node(node_key, **attrs)
+
+    edges = [(op_name_keys[i], op_name_keys[i + 1]) for i in range(0, len(op_name_keys) - 1)]
+    for from_key, to_key in edges:
+        graph.add_edge(from_key, to_key)
+    return graph
+
 class TestQuantizerPropagationSolver:
     @staticmethod
     def get_mock_model_node_attrs_for_op_name(op_name: str) -> OperationExecutionContext:
@@ -37,31 +61,6 @@ class TestQuantizerPropagationSolver:
                                          Scope(),
                                          0,
                                          [None])
-
-    @staticmethod
-    def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
-        graph_len = len(op_name_keys)
-        mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
-        shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
-        for idx, (_, node) in enumerate(mock_graph.nodes.items()):
-            node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = \
-                TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
-        return mock_graph
-
-    @staticmethod
-    def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
-        graph = nx.DiGraph()
-        for node_key in op_name_keys:
-            attrs = {
-                NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
-                    TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(node_key)
-            }
-            graph.add_node(node_key, **attrs)
-
-        edges = [(op_name_keys[i], op_name_keys[i + 1]) for i in range(0, len(op_name_keys) - 1)]
-        for from_key, to_key in edges:
-            graph.add_edge(from_key, to_key)
-        return graph
 
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
@@ -85,7 +84,7 @@ class TestQuantizerPropagationSolver:
                 tested_op_names.append(get_version_agnostic_name(alias))
 
         # Edges should be irrelevant - using random graph
-        mock_graph = self.get_randomly_connected_model_graph(tested_op_names)
+        mock_graph = get_randomly_connected_model_graph(tested_op_names)
         ip_graph = InsertionPointGraph(mock_graph)
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
@@ -113,7 +112,7 @@ class TestQuantizerPropagationSolver:
         ops_to_quantize = ['conv2d', 'matmul', 'gelu']
         ops_not_to_quantize = ['batch_norm', 'max_pool2d', 'dropout', 'min', 'softmax']
         node_keys = ops_to_quantize + ops_not_to_quantize
-        mock_graph = self.get_sequentially_connected_model_graph(node_keys)
+        mock_graph = get_sequentially_connected_model_graph(node_keys)
 
         ip_graph = InsertionPointGraph(mock_graph)
         for node in ip_graph.nodes.values():
@@ -1110,7 +1109,7 @@ class TestQuantizerPropagationSolver:
 
         # Graph preparation
         node_keys = run_on_ip_graph_test_struct.list_ops
-        mock_graph = self.get_sequentially_connected_model_graph(node_keys)
+        mock_graph = get_sequentially_connected_model_graph(node_keys)
         ip_graph = InsertionPointGraph(mock_graph)
 
         for node in ip_graph.nodes.values():
