@@ -470,7 +470,7 @@ class BlockfpQuantizer(BaseQuantizer):
                                 'offset':[0,0] }
             else:
                 self.folded_config = {'stride':FoldedConv2dSubtype.stride, 
-                                'offset':[((FoldedConv2dSubtype.kernel_size[i]-1)//2) % FoldedConv2dSubtype.stride[i] for i in range(2)] }
+                                'offset':FoldedConv2dSubtype.offset }
         else :
             self.folded_config = False
 

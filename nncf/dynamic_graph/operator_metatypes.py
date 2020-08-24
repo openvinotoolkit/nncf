@@ -195,23 +195,25 @@ class FoldedConv2dSubtype(OperatorSubtype):
 
     # Messy - Store details  
     stride = (0,0)
-    kernel_size = (0,0) 
+    offset = (0,0) 
     initialised = False
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        #@todo need to check stride of convolution and generalise from "3"
+        #@todo need to generalise from "32" to the group size of the block fp
+        # Implies we need to know the hw_config associated with folding
         if containing_module.stride[0] *  containing_module.stride[1] > 1 and \
             containing_module.in_channels * containing_module.stride[0] * containing_module.stride[1] <=32:
+            tmp_offset = [((containing_module.kernel_size[i]-1)//2) % containing_module.stride[i] for i in range(2)]
             if FoldedConv2dSubtype.initialised :
                 assert FoldedConv2dSubtype.stride == containing_module.stride and \
-                    FoldedConv2dSubtype.kernel_size == containing_module.kernel_size, \
+                    FoldedConv2dSubtype.offset == tmp_offset, \
                         "Found candidates for FoldedConv2dSubtype with mismatched paramters - not supported"
             else:
                 FoldedConv2dSubtype.stride = containing_module.stride
-                FoldedConv2dSubtype.kernel_size = containing_module.kernel_size
+                FoldedConv2dSubtype.offset = tmp_offset
                 FoldedConv2dSubtype.initialised = True
             return True
         return False
