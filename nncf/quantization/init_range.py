@@ -11,10 +11,12 @@ from ..utils import get_flat_tensor_contents_string
 
 
 class QuantizeRangeInitializer:
-    def __init__(self, quantize_module: BaseQuantizer):
+    def __init__(self, quantize_module: BaseQuantizer, num_init_steps: int):
         self.quantize_module = quantize_module
         self.device = next(self.quantize_module.parameters()).device
         self.scale_shape = self.quantize_module.scale_shape
+        self.num_init_steps = num_init_steps
+        self.num_register_init_steps = 0
 
     def register_input(self, x: torch.Tensor):
         raise NotImplementedError
@@ -23,7 +25,9 @@ class QuantizeRangeInitializer:
         raise NotImplementedError
 
     def forward_hook(self, module, input_, output):
-        return self.register_input(input_[0])
+        if self.num_register_init_steps < self.num_init_steps:
+            self.register_input(input_[0])
+            self.num_register_init_steps += 1
 
     def apply_init(self):
         raise NotImplementedError
@@ -85,8 +89,8 @@ def split_into_channels(input_: np.ndarray, scale_shape) -> List[np.ndarray]:
 
 
 class MinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
         self.max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
         self.log_module_name = log_module_name
@@ -109,8 +113,8 @@ class MinMaxInitializer(QuantizeRangeInitializer):
 
 
 class MeanMinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.log_module_name = log_module_name
         self.all_min_values = []
         self.all_max_values = []
@@ -160,8 +164,8 @@ def get_per_channel_history(raw_input_history: queue.Queue, scale_shape: List[in
 
 
 class ThreeSigmaInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.input_history = queue.Queue()
         self.log_module_name = log_module_name
 
@@ -197,10 +201,11 @@ class ThreeSigmaInitializer(QuantizeRangeInitializer):
 
 class PercentileInitializer(QuantizeRangeInitializer):
     def __init__(self, quantize_module: 'BaseQuantizer',
+                 num_init_steps: int,
                  min_percentile: float,
                  max_percentile: float,
                  log_module_name: str = None):
-        super().__init__(quantize_module)
+        super().__init__(quantize_module, num_init_steps)
         self.input_history = queue.Queue()
         self.log_module_name = log_module_name
         self.min_percentile = min_percentile  # NB: Both min_percentile and max_percentile
