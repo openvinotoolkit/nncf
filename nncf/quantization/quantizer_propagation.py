@@ -599,15 +599,13 @@ class QuantizerPropagationSolver:
         else:
             self._unified_scales_operation_set = {}
 
-        # Will handle the situations when all of the following is true:
-        # 1) the operation is unknown in the IR opset
-        # (i.e. the metatype has no associated HW config names),
-        # 2) the default quantization trait is INPUTS_QUANTIZABLE, i.e. there has to be SOME
-        # quantizer attached to the op's input
+        # Will handle the "wildcard" quantization situation for the time being
         if default_qconfig_list is not None:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
-                if qconf_list is None:
-                    self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
+                trait = self._operator_quantization_trait_map[op_meta]
+                if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
+                    if qconf_list is None or len(qconf_list) == 0:
+                        self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
 
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers = []  # type: List[PropagatingQuantizer]
@@ -771,10 +769,10 @@ class QuantizerPropagationSolver:
             for op_meta, qconf_list in op_meta_vs_qconfs_map.items():
                 if qconf_list is None:
                     trait = self._get_trait_for_op_meta_not_specified_in_hw_config(op_meta)
-                elif qconf_list:
-                    trait = QuantizationTrait.INPUTS_QUANTIZABLE
+                elif len(qconf_list) == 0:
+                    trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 else:
-                    trait = QuantizationTrait.NON_QUANTIZABLE
+                    trait = QuantizationTrait.INPUTS_QUANTIZABLE
                 retval[op_meta] = trait
         return retval
 
@@ -795,8 +793,8 @@ class QuantizerPropagationSolver:
                 #                    "cannot determine how to quantize it!".format(op_meta))
         else:
             # There IS a valid HW config name for the metatype, but it is deliberately not specified
-            # in the config
-            trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+            # in the config, which means that it should execute in FP32
+            trait = QuantizationTrait.NON_QUANTIZABLE
 
         return trait
 
@@ -805,14 +803,14 @@ class QuantizerPropagationSolver:
         retval = {}
         if self._hw_config is None:
             for op_meta in OPERATOR_METATYPES.registry_dict.values():
-                retval[op_meta] = QuantizationTrait.QUANTIZATION_AGNOSTIC  # Default value
+                retval[op_meta] = []  # Default value, corresponds to wildcard quantization
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
                         retval[op_meta] = deepcopy(self.DEFAULT_QUANTIZATION_TYPES)
-                else:
+                elif trait == QuantizationTrait.NON_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
-                        retval[op_meta] = []
+                        retval[op_meta] = None
         else:
             retval = self._hw_config.get_metatype_vs_quantizer_configs_map()
         return retval
