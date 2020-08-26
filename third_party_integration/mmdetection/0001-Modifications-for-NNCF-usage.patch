@@ -1,4 +1,4 @@
-From 4e1518bd0f3e810d4d3dd5deee50b02f301e7e8b Mon Sep 17 00:00:00 2001
+From 3e31041f8f990446be4d993fa481f2d6e1d4a7b6 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -9,14 +9,14 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/apis/train.py                           | 36 +++++--
  mmdet/core/__init__.py                        |  1 +
  mmdet/core/nncf/__init__.py                   |  9 ++
- mmdet/core/nncf/hooks.py                      | 25 +++++
+ mmdet/core/nncf/hooks.py                      | 24 +++++
  mmdet/core/nncf/utils.py                      | 74 +++++++++++++++
  mmdet/models/dense_heads/anchor_head.py       |  1 +
  mmdet/models/dense_heads/base_dense_head.py   |  5 +-
  mmdet/models/detectors/base.py                | 15 ++-
  mmdet/models/detectors/single_stage.py        |  1 +
  tools/train.py                                |  6 ++
- 12 files changed, 299 insertions(+), 9 deletions(-)
+ 12 files changed, 298 insertions(+), 9 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -25,7 +25,7 @@ Subject: [PATCH] Modifications for NNCF usage
 
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
 new file mode 100644
-index 0000000..0fff6fc
+index 0000000..cae6870
 --- /dev/null
 +++ b/configs/pascal_voc/ssd300_voc_int8.py
 @@ -0,0 +1,95 @@
@@ -39,7 +39,7 @@ index 0000000..0fff6fc
 +                                                                    0.9))))
 +# dataset settings
 +dataset_type = 'VOCDataset'
-+data_root = 'VOCdevkit/'
++data_root = 'voc/'
 +img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 +train_pipeline = [
 +    dict(type='LoadImageFromFile', to_float32=True),
@@ -281,10 +281,10 @@ index 0000000..bc743b9
 +]
 diff --git a/mmdet/core/nncf/hooks.py b/mmdet/core/nncf/hooks.py
 new file mode 100644
-index 0000000..9f8dbc3
+index 0000000..d6b3887
 --- /dev/null
 +++ b/mmdet/core/nncf/hooks.py
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,24 @@
 +from texttable import Texttable
 +from mmcv.runner.hooks.hook import Hook
 +
@@ -300,16 +300,15 @@ index 0000000..9f8dbc3
 +        self.compression_ctrl.scheduler.epoch_step()
 +
 +    def before_run(self, runner):
-+        runner.logger.info(print_statistics(self.compression_ctrl.statistics()))
++        runner.logger.info(get_printable_stats(self.compression_ctrl.statistics()))
 +
 +
-+def print_statistics(stats):
++def get_printable_stats(stats):
 +    for key, val in stats.items():
 +        if isinstance(val, Texttable):
-+            logger.info(key)
-+            logger.info(val.draw())
++            return '{}\n{}'.format(key, val.draw())
 +        else:
-+            logger.info('{}: {}'.format(key, val))
++            return '{}: {}'.format(key, val)
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
 index 0000000..64bee15
