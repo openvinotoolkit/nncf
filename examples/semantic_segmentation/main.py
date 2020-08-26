@@ -182,9 +182,12 @@ def load_dataset(dataset, config):
         sampler=train_sampler, num_workers=num_workers,
         collate_fn=data_utils.collate_fn, drop_last=True)
 
+    val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
         val_set,
         batch_size=1, num_workers=num_workers,
+        shuffle=False,
+        sampler=val_sampler,
         collate_fn=data_utils.collate_fn)
 
     # Get encoding between pixel values in label images and RGB colors

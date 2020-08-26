@@ -210,7 +210,7 @@ def create_dataloaders(config):
     if config.distributed:
         test_sampler = DistributedSampler(test_dataset, config.rank, config.world_size)
     else:
-        test_sampler = None
+        test_sampler = torch.utils.data.SequentialSampler(test_dataset)
     test_data_loader = data.DataLoader(
         test_dataset, config.batch_size,
         num_workers=config.workers,
