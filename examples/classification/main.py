@@ -331,10 +331,12 @@ def create_data_loaders(config, train_dataset, val_dataset):
         batch_size //= config.ngpus_per_node
         workers //= config.ngpus_per_node
 
+    val_sampler = torch.utils.data.SequentialSampler(val_dataset)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_size, shuffle=False,
-        num_workers=workers, pin_memory=pin_memory)
+        num_workers=workers, pin_memory=pin_memory,
+        sampler=val_sampler)
 
     train_sampler = None
     if config.distributed:
