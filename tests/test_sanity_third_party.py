@@ -238,7 +238,7 @@ class TestMmdetection:
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install mmcv-full".format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
+        subprocess.run("{}; pip install mmcv-full==1.0.5".format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -v -e .".format(self.activate_venv), check=True, shell=True,
@@ -247,8 +247,6 @@ class TestMmdetection:
                        .format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run("{}; ln -s {} data".format(self.activate_venv, DATASET_PATH), check=True, shell=True,
                        cwd=self.MMDET_PATH)
-        subprocess.run("{}; ln -s {} VOCdevkit".format(self.activate_venv, str(os.path.join(DATASET_PATH, "voc"))),
-                       check=True, shell=True, cwd=DATASET_PATH)
 
     def test_ssd300_train(self):
         subprocess.run(
