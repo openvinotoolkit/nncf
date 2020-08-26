@@ -22,6 +22,5 @@
                 "num_init_steps": 10
             }
         }
-    },
-    "hw_config_type": "vpu"
+    }
 }
