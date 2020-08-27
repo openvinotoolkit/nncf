@@ -204,18 +204,26 @@ class FoldedConv2dSubtype(OperatorSubtype):
                 functions_kwargs=None) -> bool:
         #@todo need to generalise from "32" to the group size of the block fp
         # Implies we need to know the hw_config associated with folding
-        if containing_module.stride[0] *  containing_module.stride[1] > 1 and \
-            containing_module.in_channels * containing_module.stride[0] * containing_module.stride[1] <=32:
-            tmp_offset = [((containing_module.kernel_size[i]-1)//2) % containing_module.stride[i] for i in range(2)]
-            if FoldedConv2dSubtype.initialised :
-                assert FoldedConv2dSubtype.stride == containing_module.stride and \
-                    FoldedConv2dSubtype.offset == tmp_offset, \
-                        "Found candidates for FoldedConv2dSubtype with mismatched paramters - not supported"
-            else:
-                FoldedConv2dSubtype.stride = containing_module.stride
-                FoldedConv2dSubtype.offset = tmp_offset
-                FoldedConv2dSubtype.initialised = True
-            return True
+        hw_config = functions_kwargs.get('hw_config')
+
+        if hw_config is not None :
+            metatype_map = hw_config.get_metatype_vs_quantizer_configs_map()
+            folding_config_list = metatype_map[FoldedConv2dSubtype]
+            if folding_config_list is not None:
+                for folding_config in folding_config_list:
+                    if folding_config.mode is 'blockfp' and \
+                        containing_module.stride[0] *  containing_module.stride[1] > 1 and \
+                        containing_module.in_channels * containing_module.stride[0] * containing_module.stride[1] <= folding_config.block_size:
+                        tmp_offset = [((containing_module.kernel_size[i]-1)//2) % containing_module.stride[i] for i in range(2)]
+                        if FoldedConv2dSubtype.initialised :
+                            assert FoldedConv2dSubtype.stride == containing_module.stride and \
+                                FoldedConv2dSubtype.offset == tmp_offset, \
+                                    "Found candidates for FoldedConv2dSubtype with mismatched paramters - not supported"
+                        else:
+                            FoldedConv2dSubtype.stride = containing_module.stride
+                            FoldedConv2dSubtype.offset = tmp_offset
+                            FoldedConv2dSubtype.initialised = True
+                        return True
         return False
 
 

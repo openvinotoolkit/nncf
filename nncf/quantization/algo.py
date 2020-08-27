@@ -175,7 +175,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._quantize_weights(target_model) + self._quantize_activations(target_model)
+        insertion_commands = self._quantize_weights(target_model, hw_config=self.hw_config) + self._quantize_activations(target_model, hw_config=self.hw_config)
         if self.quantize_inputs:
             insertion_commands += self._quantize_inputs(target_model, insertion_commands)
 
@@ -259,9 +259,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 full_pattern = full_pattern | custom_pattern
         return full_pattern
 
-    def get_potential_quantized_modules(self, target_model: NNCFNetwork) -> List[PotentialQuantizedModule]:
+    def get_potential_quantized_modules(self, target_model: NNCFNetwork, **kwargs) -> List[PotentialQuantizedModule]:
         modules = target_model.get_nncf_modules()
-        insertion_point_graph = target_model.get_insertion_point_graph()
+        insertion_point_graph = target_model.get_insertion_point_graph(**kwargs)
         quantized_modules_with_potential_qconfig = []
         default_qconfig_list = [self.__get_default_qconfig(
             constraints=self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])]
@@ -293,11 +293,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                                          qconfig_list))
         return quantized_modules_with_potential_qconfig
 
-    def _quantize_weights(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _quantize_weights(self, target_model: NNCFNetwork, **kwargs) -> List[InsertionCommand]:
         device = next(target_model.parameters()).device
         insertion_commands = []
         quantized_modules_with_potential_qconfig = \
-            self.get_potential_quantized_modules(target_model)
+            self.get_potential_quantized_modules(target_model, **kwargs)
         for module, module_scope, qconfig_list in quantized_modules_with_potential_qconfig:
             self._quantized_weight_modules_registry[str(module_scope)] = module
             nncf_logger.info("Adding signed Weight quantizer in scope: {}".format(module_scope))
@@ -346,13 +346,13 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             replica = self.compressed_context.base_module_thread_local_replica
             return replica.activation_quantizers[self.quantizer_storage_key](*args, **kwargs)
 
-    def _quantize_activations(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _quantize_activations(self, target_model: NNCFNetwork, **kwargs) -> List[InsertionCommand]:
         target_model.register_compression_module_type(CompressionModuleType.ACTIVATION_QUANTIZER)
 
         if self.quantizer_setup_type == QuantizerSetupType.PATTERN_BASED:
             insertion_commands = self._quantize_post_pattern_activations(target_model)
         elif self.quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
-            insertion_point_graph = target_model.get_insertion_point_graph()
+            insertion_point_graph = target_model.get_insertion_point_graph(**kwargs)
             if self._debug_interface:
                 self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
             prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,
