@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Type, List, Dict, Set
+from typing import Type, List, Dict, Set, Optional
 
 import addict as ad
 import jstyleson as json
@@ -166,9 +166,19 @@ class HWConfig(List):
                                signedness_to_force=signedness_to_force,
                                is_weights=for_weights)
 
+    @staticmethod
+    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
+        return qconf_list is None
+
+    @staticmethod
+    def is_wildcard_quantization(qconf_list: Optional[List[QuantizerConfig]]):
+        # Corresponds to an op itself being specified in the HW config, but having no associated quantization
+        # configs specified
+        return qconf_list is not None and len(qconf_list) == 0
+
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type['OperatorMetatype'],
-                                                                               List[QuantizerConfig]]:
-        # 'None' for ops unspecified in HW config, empty list for quantization agnostic ops
+                                                                               Optional[List[QuantizerConfig]]]:
+        # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
         retval = {k: None for k in OPERATOR_METATYPES.registry_dict.values()}
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
@@ -182,22 +192,14 @@ class HWConfig(List):
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
                 allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME][config_key]
             else:
-                # TODO: Ops without specified quantization configs actually have to be associated
-                # with a special "wildcard" quantizer that can be merged with any non-wildcard quantizer
-                # or, if no merge occured during propagation, use any quantizer configuration. This is
-                # to ensure that as many ops in the model control flow graph as possible are executed in
-                # low precision to conserve memory.
                 allowed_qconfs = []
 
-            if allowed_qconfs is not None:
-                qconf_list_with_possible_duplicates = []
-                for hw_config_qconf_dict in allowed_qconfs:
-                    qconf_list_with_possible_duplicates.append(
-                        self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
+            qconf_list_with_possible_duplicates = []
+            for hw_config_qconf_dict in allowed_qconfs:
+                qconf_list_with_possible_duplicates.append(
+                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
 
-                qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
-            else:
-                qconf_list = None
+            qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 
             for meta in metatypes:
                 retval[meta] = qconf_list

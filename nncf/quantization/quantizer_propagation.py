@@ -484,7 +484,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         for in_edge in self.in_edges(insertion_point_node_key):
             if self.nodes[in_edge[0]][QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] == \
-                QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
+                    QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
                 return paths
             recursive_helper(in_edge, [], paths)
         return paths
@@ -604,7 +604,8 @@ class QuantizerPropagationSolver:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
                 trait = self._operator_quantization_trait_map[op_meta]
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    if qconf_list is None or len(qconf_list) == 0:
+                    # !!! FIXME !!! Ensure that INPUTS_QUANTIZABLE ops always have non-None qconf_list
+                    if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
 
         self._active_propagating_quantizers_queue = deque()
@@ -767,10 +768,15 @@ class QuantizerPropagationSolver:
         else:
             op_meta_vs_qconfs_map = self._hw_config.get_metatype_vs_quantizer_configs_map()
             for op_meta, qconf_list in op_meta_vs_qconfs_map.items():
-                if qconf_list is None:
+                if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
                     trait = self._get_trait_for_op_meta_not_specified_in_hw_config(op_meta)
-                elif len(qconf_list) == 0:
-                    trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
+                elif HWConfig.is_wildcard_quantization(qconf_list):
+                    for default_trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
+                        if op_meta in meta_list:
+                            trait = default_trait
+                            break
+                    else:
+                        trait = QuantizationTrait.QUANTIZATION_AGNOSTIC
                 else:
                     trait = QuantizationTrait.INPUTS_QUANTIZABLE
                 retval[op_meta] = trait
@@ -854,9 +860,8 @@ class QuantizerPropagationSolver:
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
 
-                # Until wildcard quantizers are implemented, every placed propagating quantizer has
-                # to have a non-empty list of possible quantizer configs
-                assert (qconf_list is not None) and qconf_list
+                # No need to place quantizers for FP32-forced ops, naturally
+                assert qconf_list is not None
 
                 is_unified_scale = quant_det_id in self._unified_scales_operation_set
                 if is_unified_scale:
@@ -959,7 +964,11 @@ class QuantizerPropagationSolver:
             if potential_quantizers:
                 # Assuming that multiple affecting quantizers should all have the same quantization config
                 # by construction
-                if prop_quantizer.potential_quant_configs == potential_quantizers[0].potential_quant_configs:
+                curr_pq_configs = prop_quantizer.potential_quant_configs
+                target_pq_configs = potential_quantizers[0].potential_quant_configs
+                if curr_pq_configs == target_pq_configs or \
+                        HWConfig.is_wildcard_quantization(curr_pq_configs) or \
+                        HWConfig.is_wildcard_quantization(target_pq_configs):
                     return TransitionStatus.SHOULD_MERGE
                 return TransitionStatus.SHOULD_NOT_TRANSITION
 
@@ -970,10 +979,15 @@ class QuantizerPropagationSolver:
                 if potential_quantizers:
                     # Affecting quantizers should have the same configs by construction, so we only
                     # check the first
-                    if prop_quantizer.potential_quant_configs == potential_quantizers[0].potential_quant_configs:
+                    curr_pq_configs = prop_quantizer.potential_quant_configs
+                    target_pq_configs = potential_quantizers[0].potential_quant_configs
+                    if curr_pq_configs == target_pq_configs or \
+                            HWConfig.is_wildcard_quantization(curr_pq_configs) or \
+                            HWConfig.is_wildcard_quantization(target_pq_configs):
                         return TransitionStatus.SHOULD_MERGE
 
-                    # The edge will remain untraversed, but the quantizers at the next node will still be affecting it
+                    # Did not merge - the edge will remain untraversed, but the quantizers at the next node will
+                    # still be affecting it
                     for pq in potential_quantizers:
                         pq.affected_edges.add((from_node_key, to_node_key))
                         edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(pq)
