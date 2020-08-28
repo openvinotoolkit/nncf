@@ -132,7 +132,7 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader = create_dataloaders(config)
-        config.nncf_config = register_default_init_args(config.nncf_config, criterion, train_data_loader)
+        config.nncf_config = register_default_init_args(config.nncf_config, train_data_loader, criterion)
 
     ##################
     # Prepare model
