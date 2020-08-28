@@ -69,26 +69,12 @@
                 "mode": "blockfp",
                 "granularity": "perblock",
                 "folded":true
-            },            
-            "fp16": {
-                "mantissa_bits": 10,
-                "exponent_bits": 5,
-                "block_size": 1,
-                "mode": "blockfp",
-                "granularity": "perblock"
             }
         }
     },
     "operations": [
         {
             "type": "Convolution",
-            "quantization": {
-                "activations": "int5bfp",
-                "weights": "int5bfp"
-            }
-        },
-        {
-            "type": "DepthWiseConvolution",
             "quantization": {
                 "activations": "int5bfp",
                 "weights": "int5bfp"
