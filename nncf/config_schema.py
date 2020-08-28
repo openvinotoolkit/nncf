@@ -409,7 +409,7 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
-        "dump_fake_quant_to_onnx" : with_attributes(_BOOLEAN,
+        "export_to_onnx_block_floating_point" : with_attributes(_BOOLEAN,
                             description="By default, block floating point mode does not export fakeQuantisationBfp nodes to onnx since they are not required. This enables for debug"),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,

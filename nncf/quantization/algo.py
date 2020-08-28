@@ -156,9 +156,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type, hw_config_subtype)
             self.hw_config = HWConfig.from_json(hw_config_path)
 
-        if self.config.get('dump_fake_quant_to_onnx', False):
-            ExportBlockfp.enable()
-
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
         params_dict = quant_config.get(group_name, {})
@@ -813,11 +810,15 @@ class QuantizationController(QuantizationControllerBase):
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
+        should_export_to_onnx_bfp = quantization_config.get("export_to_onnx_block_floating_point",
+                                                            False)
         if should_export_to_onnx_qdq:
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:
             export_mode = QuantizerExportMode.FAKE_QUANTIZE
-
+        if should_export_to_onnx_bfp:
+            export_mode = QuantizerExportMode.BFP_FAKE_QUANTIZE
+        
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             quantizer.set_export_mode(export_mode)
 

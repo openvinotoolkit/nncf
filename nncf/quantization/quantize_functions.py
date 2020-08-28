@@ -165,13 +165,21 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
         # backward is not used during export
         return grad_output
 
-class ExportBlockfp(torch.autograd.Function):
-    enabled = False
+class ExportQuantizeDummy(torch.autograd.Function):
+    @staticmethod
+    def symbolic(g, input_):
+        return input_
 
     @staticmethod
-    def enable(new_state = True):
-        ExportBlockfp.enabled = new_state
+    def forward(ctx, input_):
+        return input_
 
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output
+
+
+class ExportBlockfp(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
         if fold_config:
@@ -185,8 +193,7 @@ class ExportBlockfp(torch.autograd.Function):
             strideX = 0
             strideY = 0
             
-        if ExportBlockfp.enabled :
-            return g.op("FakeQuantizeBfp", input_, 
+        return g.op("FakeQuantizeBfp", input_, 
                 exponent_i=torch.tensor(exponent_bits), 
                 mantissa_i = torch.tensor(mantissa_bits), 
                 blocksize_i = torch.tensor(block_size),
@@ -195,14 +202,10 @@ class ExportBlockfp(torch.autograd.Function):
                 strideX_i = strideX,
                 strideY_i = strideY,
                 name_s = name)
-        else :
-            return input_
+
 
     @staticmethod
     def forward(ctx, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
-        warnings.warn("ExportQuantize - dummy function called", RuntimeWarning)
-        #output = _quantize_autograd_to_range(input_, input_low, input_high, levels)
-        
         output = input_
         return output
 
