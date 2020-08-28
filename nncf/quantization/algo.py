@@ -277,7 +277,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
-                if qconfig_list is not None and len(qconfig_list) == 0:  # Empty list = wildcard quantization
+                if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
                     qconfig_list = default_qconfig_list
 
             if qconfig_list is not None:
@@ -386,12 +386,13 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             insertion_commands += self._quantize_free_function_inputs(target_model)
         return insertion_commands
 
-    def _select_final_qconfig(self, quantizer_config_list: Optional[List[QuantizerConfig]],
+    def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig],
                               constraints: QuantizationConstraints) -> QuantizerConfig:
-        if quantizer_config_list is None:
-            # TODO: This case corresponds to allowing to use any quantization configuration
-            # supported by HW. Need to parse this from HW config instead of using a global
-            # default config.
+        assert quantizer_config_list is not None
+
+        if HWConfig.is_wildcard_quantization(quantizer_config_list):
+            # Set a default, most basic quantization config in case wildcard propagating quantizer did
+            # not merge to align with other tools
             return self.__get_default_qconfig()
 
         constrained_quantizer_config_list = list(filter(

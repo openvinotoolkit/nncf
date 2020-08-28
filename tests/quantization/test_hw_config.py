@@ -38,7 +38,8 @@ class ModelForHWConfigTest(torch.nn.Module):
 
 
 class TestHWConfigRules:
-    def get_model_and_ctrl_with_applied_hw_config_quantization(self, model: torch.nn.Module, hw_config_dict: dict):
+    @staticmethod
+    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module, hw_config_dict: dict):
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["compression"].update({"quantize_inputs": False})
 
@@ -50,17 +51,21 @@ class TestHWConfigRules:
         ctrl = net.commit_compression_changes()
         return net, ctrl
 
-    def check_if_quantizer_has_default_config(self, quantizer: BaseQuantizer):
+    @staticmethod
+    def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
         default_qconfig = QuantizationBuilder.DEFAULT_QUANTIZER_CONFIG
-        assert quantizer.num_bits == default_qconfig.bits
-        assert quantizer.per_channel == default_qconfig.per_channel
+        is_ok = True
+        is_ok &= (quantizer.num_bits == default_qconfig.bits)
+        is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
         if default_qconfig.signedness_to_force is not None:
-            assert quantizer.signed == default_qconfig.signedness_to_force
-        assert isinstance(quantizer,
-                          SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else
-                          AsymmetricQuantizer)
+            is_ok &= (quantizer.signed == default_qconfig.signedness_to_force)
+        is_ok &= isinstance(quantizer,
+                            SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else
+                            AsymmetricQuantizer)
+        return is_ok
 
-    def get_quantizer_module_after_op_name(self, op_name: str, ctrl: QuantizationController) -> BaseQuantizer:
+    @staticmethod
+    def get_quantizer_module_after_op_name(op_name: str, ctrl: QuantizationController) -> BaseQuantizer:
         input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name == op_name,
                                     ctrl.non_weight_quantizers.keys()))
         assert len(input_matches) == 1
@@ -147,10 +152,10 @@ class TestHWConfigRules:
         assert str(w_key.scope) == "ModelForHWConfigTest/NNCFConv2d[conv2d]"
 
         gelu_input_act_quantizer_ref = self.get_quantizer_module_after_op_name(MODEL_INPUT_OP_NAME, ctrl)
-        self.check_if_quantizer_has_default_config(gelu_input_act_quantizer_ref)
+        assert self.quantizer_has_default_config(gelu_input_act_quantizer_ref)
 
-    def test_unspecified_quantization_for_unweighted_op_results_in_quantization_agnostic(self):
-        hw_config_dict = {
+    def test_unspecified_quantization_for_fundamentally_quantizable_op_results_in_default_qconfig(self):
+        hw_config_dict = {  # Only the MatMul will receive a default config here (8 bit symmetric per-tensor)
             "target_device": "test",
             "config": {
                 "quantization": {
@@ -182,15 +187,22 @@ class TestHWConfigRules:
         _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
                                                                               hw_config_dict)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
-        assert len(ctrl.non_weight_quantizers) == 1  # Conv2d input
+        conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0]
+        assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
 
+        assert len(ctrl.non_weight_quantizers) == 2  # Conv2d input, matmul input
         matmul_input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name == "conv2d",
                                            ctrl.non_weight_quantizers.keys()))
 
-        # TODO: change tested condition to == 1 and checking for default config
-        # once wildcarding is implemented, because matmul in fact has to have inputs quantized,
-        # but it won't happen here because current implementation marks op as quantization agnostic instead
-        assert len(matmul_input_matches) == 0
+        assert len(matmul_input_matches) == 1
+        matmul_quantizer_ref = ctrl.non_weight_quantizers[matmul_input_matches[0]].quantizer_module_ref
+        assert self.quantizer_has_default_config(matmul_quantizer_ref)
+
+        non_matmul_input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name != "conv2d",
+                                               ctrl.non_weight_quantizers.keys()))
+        for quantizer_id in non_matmul_input_matches:
+            quantizer_ref = ctrl.non_weight_quantizers[quantizer_id].quantizer_module_ref
+            assert not self.quantizer_has_default_config(quantizer_ref)
 
     def test_unspecified_quantization_for_weighted_op_results_in_default_qconf_list_for_weights(self):
         hw_config_dict = {
@@ -220,6 +232,6 @@ class TestHWConfigRules:
         _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
                                                                               hw_config_dict)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized with default config
-        assert len(ctrl.non_weight_quantizers) == 0  # ... but the inputs aren't quantized. TODO: fix with wildcarding
-        conv2d_weight_quant = list(ctrl.weight_quantizers.values())[0]
-        self.check_if_quantizer_has_default_config(conv2d_weight_quant)
+        assert len(ctrl.non_weight_quantizers) == 2  # All inputs are quantized.
+        for quantizer_ref in ctrl.all_quantizations.values():
+            assert self.quantizer_has_default_config(quantizer_ref)
