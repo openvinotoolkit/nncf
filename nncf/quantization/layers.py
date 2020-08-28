@@ -505,6 +505,5 @@ class BlockfpQuantizer(BaseQuantizer):
     def disable_gradients(self):
         return
 
-def run_export_quantization(self, x: torch.Tensor):
-        with no_jit_trace():
-            return ExportBlockfp.apply(x, self.exponent_bits, self.mantissa_bits, self.block_size, self.scope_string, self.folded_config)       
+    def run_export_quantization(self, x: torch.Tensor):
+        return ExportBlockfp.apply(x, self.exponent_bits, self.mantissa_bits, self.block_size, self.scope_string, self.folded_config)       
