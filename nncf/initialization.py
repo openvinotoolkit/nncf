@@ -216,8 +216,12 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         pass
 
 
-def register_default_init_args(nncf_config: 'NNCFConfig', criterion, train_loader) -> 'NNCFConfig':
-    nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),
-                                        QuantizationRangeInitArgs(data_loader=train_loader),
-                                        BNAdaptationInitArgs(data_loader=train_loader)])
+def register_default_init_args(nncf_config: 'NNCFConfig', train_loader, criterion=None) -> 'NNCFConfig':
+    if criterion:
+        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),
+                                            QuantizationRangeInitArgs(data_loader=train_loader),
+                                            BNAdaptationInitArgs(data_loader=train_loader)])
+    else:
+        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader),
+                                            BNAdaptationInitArgs(data_loader=train_loader)])                                                
     return nncf_config

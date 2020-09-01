@@ -134,7 +134,7 @@ def main_worker(current_gpu, config: SampleConfig):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
 
     # create model
     model_name = config['model']

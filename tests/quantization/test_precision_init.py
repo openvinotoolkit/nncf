@@ -172,7 +172,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config.get("model_size"), dataset_dir, batch_size)
-    config = register_default_init_args(config, criterion, train_loader)
+    config = register_default_init_args(config, train_loader, criterion)
 
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces')
 
@@ -367,7 +367,7 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, criterion, data_loader)
+    config = register_default_init_args(config, data_loader, criterion)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
@@ -425,7 +425,7 @@ MANUAL_CONFIG_TEST_PARAMS = [
 def test_hawq_manual_configs(manual_config_params, hw_config):
     config_name, bit_stats = manual_config_params
     config = NNCFConfig.from_json(str(EXAMPLES_DIR.joinpath('classification', 'configs', 'quantization') / config_name))
-    config = register_default_init_args(config, criterion=None, train_loader=create_mock_dataloader(config))
+    config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
     if hw_config:
         config['hw_config'] = hw_config.value
     model = load_model(config['model'], pretrained=False)
