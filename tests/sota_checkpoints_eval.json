@@ -237,6 +237,21 @@
                 "resume": "resnet34_imagenet_filter_pruning_geomean.pth",
                 "model_description": "ResNet-34",
                 "compression_description": "Filter pruning, 30%, geometric median criterion"
+            },
+            "googlenet_imagenet": {
+                "config": "examples/classification/configs/pruning/googlenet_imagenet.json",
+                "target": 69.78,
+                "metric_type": "Acc@1",
+                "model_description": "Googlenet"
+            },
+            "googlenet_imagenet_filter_pruning_geomean": {
+                "config": "examples/classification/configs/pruning/googlenet_pruning_geometric_median.json",
+                "reference": "googlenet_imagenet",
+                "target": 69.7,
+                "metric_type": "Acc@1",
+                "resume": "googlenet_imagenet_filter_pruning_geomean.pth",
+                "model_description": "Googlenet",
+                "compression_description": "Filter pruning, 30%, geometric median criterion"
             }
         }
     },
