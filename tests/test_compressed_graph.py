@@ -411,12 +411,13 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("mobilenet_v2.dot", torchvision.models.MobileNetV2, [2, 3, 32, 32])
 ]
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(HWConfigType.CPU, None), (HWConfigType.GPU, None), (HWConfigType.VPU, None), 
+        (HWConfigType.DLA, "int5bfp"), (HWConfigType.DLA, "int5bfp_dw"), (HWConfigType.DLA, "int54bfp_dw"), (HWConfigType.DLA, "int8bfp")]
 
-@pytest.fixture(scope='function', params=TYPE_HW)
+@pytest.fixture(scope='function', params=TYPE_HW, ids=lambda x: str(x[0]).split(".")[1] if x[1]==None else str(x[0]).split(".")[1]+"_"+x[1])
 def hw_config_type(request):
-    type_hw = request.param
-    return type_hw
+    type_hw, hw_config_subtype = request.param
+    return type_hw, hw_config_subtype
 
 # pylint:disable=too-many-branches
 @pytest.mark.parametrize(
@@ -426,10 +427,11 @@ def hw_config_type(request):
 # pylint:disable=redefined-outer-name
 def test_compressed_graph_models_hw(desc, hw_config_type):
     model = desc.model_builder()
-    config = get_basic_quantization_config_with_hw_config_type(hw_config_type.value,
+    config = get_basic_quantization_config_with_hw_config_type(hw_config_type[0].value,
                                                                input_sample_size=desc.input_sample_sizes)
     input_info_list = create_input_infos(config)
-    hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
+    config["hw_config_subtype"] = hw_config_type[1]
+    hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type[0], hw_config_type[1])
     hw_config = HWConfig.from_json(hw_config_path)
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
@@ -445,10 +447,13 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, potential_activations_quantizers,
                                                                   potential_weights_modules)
-    check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
+    check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type), sort_dot_graph=False)
 
 def _case_dir(type_hw_config):
-    graph_dir = os.path.join('quantized', "hw", type_hw_config)
+    if type_hw_config[1] != None:
+        graph_dir = os.path.join('quantized', "hw", type_hw_config[0].value + "_" + type_hw_config[1])
+    else:
+        graph_dir = os.path.join('quantized', "hw", type_hw_config[0].value)
     return graph_dir
 
 def prepare_potential_quantizer_graph(graph: NNCFGraph,

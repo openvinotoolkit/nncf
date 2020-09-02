@@ -1,0 +1,319 @@
+{
+    "target_device": "DLA",
+    "config": {
+        "quantization": {
+            "int4bfp": {
+                "mantissa_bits": 2,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "int5bfp": {
+                "mantissa_bits": 3,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "int5bfp_double": {
+                "mantissa_bits": 7,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },            
+            "int5bfp_double_folded": {
+                "mantissa_bits": 7, // Assume 2 shift/add in the input convolution
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            },
+            "int5bfp_folded": {
+                "mantissa_bits": 3, 
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            },
+            "int4bfp_double_folded": {
+                "mantissa_bits": 5, // Assume 2 shift/add in the input convolution
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            },
+            "int4bfp_folded": {
+                "mantissa_bits": 2, 
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            },
+            "int8bfp": {
+                "mantissa_bits": 6,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "int8bfp_folded": {
+                "mantissa_bits": 6,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock",
+                "folded":true
+            }
+        }
+    },
+    "operations": [
+        {
+            "type": "Convolution",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "FoldedConvolution",
+            "quantization": {
+                "activations": "int5bfp_folded",
+                "weights": "int4bfp_folded"
+            }
+        },
+        {
+            "type": "MatMul",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Add",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Multiply",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Maximum",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Less",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "LessEqual",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Greater",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "GreaterEqual",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Divide",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Minimum",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Equal",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Subtract",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "NotEqual",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "FloorMod",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "LogicalOr",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "LogicalXor",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "LogicalAnd",
+            "attributes": {
+                "scales": "unified"
+            },
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "LogicalNot",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "Power",
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {
+            "type": "AvgPool",
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {
+            "type": "ReduceMean",
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {
+            "type": "MaxPool",
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {
+            "type": "ReduceMax"
+        },
+        {
+            "type": "Interpolate",
+            "attributes": {
+                "mode": "linear"
+            },
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {
+            "type": "Interpolate",
+            "attributes": {
+                "mode": "nearest"
+            }
+        },
+        {
+            "type": "MVN",
+            "quantization": {
+                "activations": "int5bfp"
+            }
+        },
+        {"type": "Reshape"},
+        {"type": "Concat"},
+        {"type": "Flatten"},
+        {"type": "Squeeze"},
+        {"type": "Unsqueeze"},
+        {"type": "Split"},
+        {"type": "Crop"},
+        {"type": "Transpose"},
+        {"type": "Tile"}
+    ]
+}

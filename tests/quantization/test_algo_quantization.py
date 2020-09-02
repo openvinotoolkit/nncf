@@ -31,12 +31,13 @@ from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_network import CompressionModuleType
 from nncf.quantization.algo import QuantizationController, QuantizationBuilder
 from nncf.quantization.layers import QuantizationMode, QuantizerConfig, SymmetricQuantizer, BaseQuantizer, \
-    QUANTIZATION_MODULES
+    BlockfpQuantizer, QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
     get_squeezenet_quantization_config
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, MockModel, create_conv
+from nncf.dynamic_graph.operator_metatypes import FoldedConv2dSubtype
 
 
 def compare_qconfigs(config: QuantizerConfig, quantizer: BaseQuantizer):
@@ -45,7 +46,138 @@ def compare_qconfigs(config: QuantizerConfig, quantizer: BaseQuantizer):
     assert isinstance(quantizer, QUANTIZATION_MODULES.get(config.mode))
     assert config.per_channel == quantizer.per_channel
     assert config.signedness_to_force == quantizer.signedness_to_force
+    if config.mode == QuantizationMode.BLOCKFP:
+        assert config.exponent_bits == quantizer.exponent_bits
+        assert config.mantissa_bits == quantizer.mantissa_bits
+        assert config.block_size == quantizer.block_size
+        assert config.is_weights or config.folded == quantizer.folded_config # Not strictly true if is_weights
 
+
+@pytest.mark.blockfp
+def test_quantizer_config_bfp():
+    bfp_config = QuantizerConfig(mode=QuantizationMode.BLOCKFP,
+                             exponent_bits=5,
+                             mantissa_bits=3,
+                             block_size=32)
+    config = QuantizerConfig()
+    asymmetric_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)
+    
+    assert bfp_config.mode == QuantizationMode.BLOCKFP
+    assert bfp_config.bits == 0
+    assert bfp_config.exponent_bits == 5
+    assert bfp_config.mantissa_bits == 3
+    assert bfp_config.block_size == 32
+    
+    assert config.mode == QuantizationMode.SYMMETRIC
+    assert config.bits == 8
+    assert config.exponent_bits == 0
+    assert config.mantissa_bits == 0
+    assert config.block_size == 0
+    
+    assert asymmetric_config.mode == QuantizationMode.ASYMMETRIC
+    assert asymmetric_config.bits == 8
+    assert asymmetric_config.exponent_bits == 0
+    assert asymmetric_config.mantissa_bits == 0
+    assert asymmetric_config.block_size == 0
+    
+@pytest.mark.blockfp
+def test_quantizer_config_str_bfp():
+    bfp_config = QuantizerConfig(mode=QuantizationMode.BLOCKFP,
+                             exponent_bits=5,
+                             mantissa_bits=3,
+                             block_size=32)
+    config = QuantizerConfig()
+    
+    assert(str(bfp_config), "Man:3 Exp:5 Blk:32 M:BFP SGN:S W:N PC:Y")
+    assert(str(config), "B:8 M:S SGN:ANY W:N PC:N")
+    
+@pytest.mark.blockfp
+def test_quantizer_config_lt_bfp():
+    bfp_config = QuantizerConfig(mode=QuantizationMode.BLOCKFP,
+                             exponent_bits=5,
+                             mantissa_bits=3,
+                             block_size=32)
+    bfp_config_other = QuantizerConfig(mode=QuantizationMode.BLOCKFP,
+                             exponent_bits=7,
+                             mantissa_bits=3,
+                             block_size=32)
+    config = QuantizerConfig()
+    
+    assert(bfp_config.__lt__(bfp_config_other), True)
+    assert(bfp_config.__lt__(config), True)
+    assert(config.__lt__(bfp_config), False)
+
+@pytest.mark.blockfp  
+def test_quantization_configs__bfp():
+    model = BasicConvTestModel()
+
+    config = get_quantization_config_without_range_init()
+    config['compression'].update({
+        "weights": {
+            "mode": "blockfp",
+            "bits": 0,
+            "exponentBits": 5,
+            "mantissaBits": 3,
+            "blockSize": 32
+        },
+        "activations": {
+            "mode": "blockfp",
+            "bits": 0,
+            "exponentBits": 5,
+            "mantissaBits": 3,
+            "blockSize": 32, 
+        },
+    })
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    assert isinstance(compression_ctrl, QuantizationController)
+    weight_quantizers = compression_ctrl.weight_quantizers
+    activation_quantizer_infos = compression_ctrl.non_weight_quantizers
+
+    ref_weight_qconfig = QuantizerConfig(bits=0,
+                                         mode=QuantizationMode.BLOCKFP,
+                                         exponent_bits=5,
+                                         mantissa_bits=3,
+                                         block_size=32,
+                                         is_weights=True)
+    for wq in weight_quantizers.values():
+        compare_qconfigs(ref_weight_qconfig, wq)
+
+    ref_activation_qconfig = QuantizerConfig(bits=0,
+                                             mode=QuantizationMode.BLOCKFP,
+                                             exponent_bits=5,
+                                             mantissa_bits=3,
+                                             block_size=32,
+                                             is_weights=False)
+
+    for aq_info in activation_quantizer_infos.values():
+        compare_qconfigs(ref_activation_qconfig, aq_info.quantizer_module_ref)
+
+@pytest.mark.blockfp  
+def test_quantization_configs__bfp_folding():
+    config = QuantizerConfig(bits=0,
+                             mode=QuantizationMode.BLOCKFP,
+                             exponent_bits=5,
+                             mantissa_bits=3,
+                             block_size=32,
+                             is_weights=False,
+                             folded=True)
+    config_weights = QuantizerConfig(bits=0,
+                                     mode=QuantizationMode.BLOCKFP,
+                                     exponent_bits=5,
+                                     mantissa_bits=3,
+                                     block_size=32,
+                                     is_weights=True,
+                                     folded=True)
+    
+    blockfp = BlockfpQuantizer(config_weights)
+    assert blockfp.folded_config["stride"] == FoldedConv2dSubtype.stride
+    assert blockfp.folded_config["offset"] == [0,0]
+    blockfp = BlockfpQuantizer(config)
+    assert blockfp.folded_config["stride"] == FoldedConv2dSubtype.stride
+    assert blockfp.folded_config["offset"] == FoldedConv2dSubtype.offset
+    
+    
 
 def test_quantization_configs__with_defaults():
     model = BasicConvTestModel()
@@ -56,11 +188,21 @@ def test_quantization_configs__with_defaults():
     weight_quantizers = compression_ctrl.weight_quantizers
     activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
-    ref_weight_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, True)
+    ref_weight_qconfig = QuantizerConfig(bits=8, 
+                                         mode=QuantizationMode.SYMMETRIC, 
+                                         signedness_to_force=None, 
+                                         per_channel=False, 
+                                         input_shape=None, 
+                                         is_weights=True)
     for wq in weight_quantizers.values():
         compare_qconfigs(ref_weight_qconfig, wq)
 
-    ref_activation_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, False)
+    ref_activation_qconfig = QuantizerConfig(bits=8, 
+                                             mode=QuantizationMode.SYMMETRIC, 
+                                             signedness_to_force=None, 
+                                             per_channel=False, 
+                                             input_shape=None, 
+                                             is_weights=False)
     for aq_info in activation_quantizer_infos.values():
         compare_qconfigs(ref_activation_qconfig, aq_info.quantizer_module_ref)
 
