@@ -291,7 +291,7 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
         return pattern
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:

@@ -695,8 +695,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     @staticmethod
     def _make_default_quantizable_subgraph_pattern():
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS | p.ARITHMETIC | p.ANY_BN_RELU_COMBO | \
-                  p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.ARITHMETIC + p.ANY_BN_RELU_COMBO | p.SINGLE_OPS | p.MATMUL
+        pattern = p.LINEAR_OPS | p.ARITHMETIC | p.ANY_BN_ACT_COMBO | \
+                  p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.SINGLE_OPS | p.MATMUL
         return pattern
 
     @staticmethod
