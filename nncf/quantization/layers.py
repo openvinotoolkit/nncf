@@ -130,6 +130,7 @@ class BaseQuantizer(nn.Module):
         self.input_shape = config.input_shape
         self.per_channel = config.per_channel
         self.is_weights = config.is_weights
+        self.mode = config.mode
         self.signedness_to_force = config.signedness_to_force
         self._num_bits = nn.Parameter(torch.IntTensor([config.bits]), requires_grad=False)
         self.level_high = None

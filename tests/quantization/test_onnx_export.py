@@ -42,13 +42,12 @@ def get_config_for_bfp_export_mode(config,should_be_bfp_onnx_fake: bool)-> NNCFC
    
     
     nncf_config.update({
-        "hw_config_subtype": "int54bfp_dw", 
+        "hw_config_subtype": "int5bfp", 
         "input_info": {
             "sample_size": [1, 1, 4, 4]
         },
         "compression": {
             "algorithm": "quantization",
-            "dump_fake_quant_to_onnx":False,
             "export_to_onnx_block_floating_point": should_be_bfp_onnx_fake
         }
     })

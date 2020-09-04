@@ -19,7 +19,6 @@
     },
     "compression": {  
         "algorithm": "quantization",
-	"name": "int54bfp"//,
-        //"dump_fake_quant_to_onnx":true
+	"name": "int54bfp"
     }
 }

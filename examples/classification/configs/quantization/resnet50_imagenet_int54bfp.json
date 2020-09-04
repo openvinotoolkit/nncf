@@ -19,7 +19,6 @@
     ]
   },
   "compression": {
-    "algorithm": "quantization" //,
-    //"dump_fake_quant_to_onnx":true
+    "algorithm": "quantization" 
   }
 }

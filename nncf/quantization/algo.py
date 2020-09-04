@@ -810,17 +810,18 @@ class QuantizationController(QuantizationControllerBase):
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
-        should_export_to_onnx_bfp = quantization_config.get("export_to_onnx_block_floating_point",
+        should_export_bfp_to_onnx = quantization_config.get("export_to_onnx_block_floating_point",
                                                             False)
         if should_export_to_onnx_qdq:
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:
             export_mode = QuantizerExportMode.FAKE_QUANTIZE
-        if should_export_to_onnx_bfp:
-            export_mode = QuantizerExportMode.BFP_FAKE_QUANTIZE
         
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
-            quantizer.set_export_mode(export_mode)
+            if quantizer.mode == QuantizationMode.BLOCKFP and should_export_bfp_to_onnx:
+                quantizer.set_export_mode(QuantizerExportMode.BFP_FAKE_QUANTIZE)
+            else :
+                quantizer.set_export_mode(export_mode)
 
         if is_main_process() and should_init:
             self.initialize_quantizer_params()
