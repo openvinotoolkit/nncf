@@ -163,7 +163,7 @@ class DepthwiseConv1dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
@@ -184,7 +184,8 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
@@ -205,7 +206,8 @@ class DepthwiseConv3dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
