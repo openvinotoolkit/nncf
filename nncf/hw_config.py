@@ -77,11 +77,10 @@ class HWConfig(List):
     def get_path_to_hw_config(hw_config_type: HWConfigType, hw_config_subtype: str = None):
         if hw_config_subtype is None:
             return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
-                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]+".json"])
-        else :
+                             HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]+".json"])
+        else:
             return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
-                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type] + "_" + hw_config_subtype + ".json"])
-                              
+                             HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type] + "_" + hw_config_subtype + ".json"])
 
     @classmethod
     def from_dict(cls, dct: dict):
@@ -132,14 +131,16 @@ class HWConfig(List):
             json_config = json.load(f, object_pairs_hook=OrderedDict)
             hw_config = HWConfig.from_dict(json_config)
             mergeable_subgraph_path = os.path.splitext(path)[0] + "_subgraphs.txt"
-            
+
             try:
-                with open( mergeable_subgraph_path ) as subgraph_file :
+                with open(mergeable_subgraph_path) as subgraph_file:
                     hw_config.mergeable_operators_string = " ".join(line.strip() for line in subgraph_file)
-                    nncf_logger.info('Overriding default subgraph definitions since {} was found '.format(mergeable_subgraph_path))
+                    nncf_logger.info('Overriding default subgraph definitions since {} was found '\
+                        .format(mergeable_subgraph_path))
 
             except IOError:
-                nncf_logger.info('Using default subgraph definitions since {} not found '.format(mergeable_subgraph_path))
+                nncf_logger.info('Using default subgraph definitions since {} not found '\
+                    .format(mergeable_subgraph_path))
 
             return hw_config
 
@@ -165,41 +166,41 @@ class HWConfig(List):
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict, for_weights=False):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
-        if  mode == QuantizationMode.BLOCKFP :
+        if  mode == QuantizationMode.BLOCKFP:
             mantissa_bits = quantization_subdict["mantissa_bits"]
             exponent_bits = quantization_subdict["exponent_bits"]
-            block_size =  quantization_subdict["block_size"]
+            block_size = quantization_subdict["block_size"]
             folded = quantization_subdict.get("folded", False)
-            
-            return QuantizerConfig(
-                            mode=mode,
-                            exponent_bits=exponent_bits,
-                            mantissa_bits=mantissa_bits,
-                            block_size=block_size,
-                            folded = folded
-                            ) 
 
-        else:
-            is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
-            signedness_to_force = None
-            if 'level_low' in quantization_subdict and 'level_high' in quantization_subdict:
-                signedness_to_force = False
-                if mode == QuantizationMode.SYMMETRIC:
-                    if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
-                        signedness_to_force = True
-                    true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
-                else:
+            return QuantizerConfig(mode=mode,
+                                   exponent_bits=exponent_bits,
+                                   mantissa_bits=mantissa_bits,
+                                   block_size=block_size,
+                                   folded=folded
+                                  )
+
+
+        is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
+        signedness_to_force = None
+        if 'level_low' in quantization_subdict and 'level_high' in quantization_subdict:
+            signedness_to_force = False
+            if mode == QuantizationMode.SYMMETRIC:
+                if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
                     signedness_to_force = True
-                    true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
+                true_level_high, true_level_low, _ = \
+                SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
+            else:
+                signedness_to_force = True
+                true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
 
-                assert quantization_subdict['level_low'] == true_level_low, \
-                        "Invalid value of quantizer parameter `level_low`.\
-                            The parameter must be consistent with other parameters!"
-                assert quantization_subdict['level_high'] == true_level_high, \
-                        "Invalid value of quantizer parameter `level_high`.\
-                            The parameter must be consistent with other parameters!"
+            assert quantization_subdict['level_low'] == true_level_low, \
+                    "Invalid value of quantizer parameter `level_low`.\
+                        The parameter must be consistent with other parameters!"
+            assert quantization_subdict['level_high'] == true_level_high, \
+                    "Invalid value of quantizer parameter `level_high`.\
+                        The parameter must be consistent with other parameters!"
 
-            return QuantizerConfig(bits=bits,
+        return QuantizerConfig(bits=bits,
                                 mode=mode,
                                 per_channel=is_per_channel,
                                 signedness_to_force=signedness_to_force,

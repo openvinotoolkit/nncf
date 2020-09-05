@@ -47,8 +47,8 @@ def fill_linear_weight(linear, value):
         linear.weight[:n, :n] += torch.eye(n)
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init):
-    conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, *args, **kwargs):
+    conv = nn.Conv2d(in_channels, out_channels, kernel_size, **kwargs)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
     return conv
@@ -101,7 +101,7 @@ class BasicConvTestModel(nn.Module):
 
 
 class TwoConvTestModel(nn.Module):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         self.features = []
         self.features.append(nn.Sequential(create_conv(1, 2, 2, -1, -2)))
@@ -134,7 +134,7 @@ class TwoConvDepthwiseTestModel(nn.Module):
         self.features = []
         self.features.append(nn.Sequential(create_depthwise_conv(2, 2, 2, -1, -2)))
         self.features.append(nn.Sequential(create_conv(2, 1, 3, 0, 0)))
-         
+
         self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
@@ -156,6 +156,32 @@ class TwoConvDepthwiseTestModel(nn.Module):
     def nz_bias_num(self):
         return 2
 
+class TwoConvFoldableTestModel(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Sequential(create_conv(3, 2, 3, -1, -2, stride=[2, 2], padding=[1, 1])))
+        self.features.append(nn.Sequential(create_conv(2, 1, 3, 0, 0)))
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
+
+    @property
+    def weights_num(self):
+        return 8 + 18
+
+    @property
+    def bias_num(self):
+        return 2 + 1
+
+    @property
+    def nz_weights_num(self):
+        return 4 + 6
+
+    @property
+    def nz_bias_num(self):
+        return 2
 
 def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None):
     if input_sample_sizes is None:

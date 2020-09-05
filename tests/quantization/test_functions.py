@@ -366,18 +366,18 @@ class TestParametrized:
 
 def fold(src, fold_config ):
     input_shape = src.shape
-    
-    num_in = input_shape[0] 
-    depth_in = input_shape[1] 
-    height_in = input_shape[2] 
-    width_in = input_shape[3] 
+
+    num_in = input_shape[0]
+    depth_in = input_shape[1]
+    height_in = input_shape[2]
+    width_in = input_shape[3]
 
     stride_x = fold_config['stride'][0]
     stride_y = fold_config['stride'][1]
     offset_x = fold_config['offset'][0]
     offset_y = fold_config['offset'][1]
-    
-    num_out = num_in 
+
+    num_out = num_in
     depth_out = depth_in * stride_x * stride_y
     height_out = (height_in + offset_x + stride_x - 1) // stride_x
     width_out = (width_in + offset_y + stride_y - 1) // stride_y
@@ -397,7 +397,8 @@ def fold(src, fold_config ):
             input_pos_x = (raw_input_pos_x + stride_x) % stride_x
             output_pos_x = (input_pos_x - raw_input_pos_x) // stride_x
             slice_width = (width_in - input_pos_x + stride_x - 1)//stride_x
-            output[0:num_out,c_pos:c_pos+depth_in,output_pos_y:output_pos_y+slice_height,output_pos_x:output_pos_x+slice_width] = \
+            output[0:num_out,c_pos:c_pos+depth_in,output_pos_y:output_pos_y+\
+            slice_height,output_pos_x:output_pos_x+slice_width] = \
                 src[0:num_in,0:depth_in,input_pos_y:height_in:stride_y,input_pos_x:width_in:stride_x]
             c_pos = c_pos + depth_in
 
@@ -435,7 +436,7 @@ class TestBlockfp:
 
     @staticmethod
     def check_block(ref_block, dut_block, exponent_bits, mantissa_bits, block_size ):
-        assert(ref_block.shape == dut_block.shape)
+        assert ref_block.shape == dut_block.shape
         ref_signs = np.sign(ref_block)
         dut_signs = np.sign(dut_block)
         assert np.amin(ref_signs * dut_signs) >= 0 # No signs are opposite. Some can be zero
@@ -444,20 +445,20 @@ class TestBlockfp:
         dut_max = np.amax(np.abs(dut_block))
         (ref_sign, ref_exponent, ref_mantissa) =  TestBlockfp.float_to_parts(ref_max)
         (dut_sign_max, dut_exponent_max, dut_mantissa_max) =  TestBlockfp.float_to_parts(dut_max)
-        
+
         assert(ref_exponent ==  dut_exponent_max or \
              ref_exponent ==  dut_exponent_max-1 or \
             (dut_exponent_max == 0 and ref_exponent <= 128-(1<<exponent_bits-1)))
-        
+
         mantissa_mask = (1<<(23-mantissa_bits))-1
         if block_size > 1:
             for dut_val in dut_block:
                 if dut_val:
                     (dut_sign, dut_exponent, dut_mantissa) =  TestBlockfp.float_to_parts(dut_val)
-                    assert(dut_exponent <= dut_exponent_max)
+                    assert dut_exponent <= dut_exponent_max
                     exponent_delta = dut_exponent_max - dut_exponent
                     mantissa_mask = (1<<(23-mantissa_bits-exponent_delta))-1
-                    assert((dut_mantissa & mantissa_mask) == 0)  
+                    assert(dut_mantissa & mantissa_mask) == 0
 
         if dut_exponent_max != 0:
             lsb = TestBlockfp.parts_to_float(0, dut_exponent_max-mantissa_bits, 0 )
@@ -468,8 +469,8 @@ class TestBlockfp:
 
     @staticmethod
     def check_bfp_outputs_for_quantization_functions(ref, dut, exponent_bits, mantissa_bits, block_size ):
-        assert(ref.shape == dut.shape)
- 
+        assert ref.shape == dut.shape
+
         for n in range (ref.shape[0]) :
             for y in range (ref.shape[2]) :
                 for x in range (ref.shape[3]) :
@@ -480,9 +481,9 @@ class TestBlockfp:
 
     @pytest.mark.blockfp
     def test_quantize_blockfp(self, _seed, input_size, mantissa_bits, block_size, is_weights, fold_config ):
-        exponent_bits = 5                      
+        exponent_bits = 5
         ref_input =np.float32(generate_input(input_size))
- 
+
         if fold_config is not None and fold_config['stride'][0]*fold_config['stride'][1]*input_size[1] > block_size:
             pytest.skip("Blocksize smaller than folding dimensions")
 
@@ -492,15 +493,17 @@ class TestBlockfp:
         [test_input_cuda] = get_test_data([ref_input], is_cuda=True, is_fp16=False)#
         [test_input_cpu] = get_test_data([ref_input], is_cuda=False, is_fp16=False)#
 
-        dut_output_cuda = blockfp_quantize(test_input_cuda, exponent_bits, mantissa_bits, block_size, fold_config, is_weights, name="").cpu().numpy()
-        dut_output_cpu = blockfp_quantize(test_input_cpu, exponent_bits, mantissa_bits, block_size, fold_config, is_weights, name="").cpu().numpy()
+        dut_output_cuda = blockfp_quantize(test_input_cuda, exponent_bits, mantissa_bits, block_size,
+         fold_config, is_weights, name="").cpu().numpy()
+        dut_output_cpu = blockfp_quantize(test_input_cpu, exponent_bits, mantissa_bits, block_size,
+         fold_config, is_weights, name="").cpu().numpy()
         assert((dut_output_cuda == dut_output_cpu).all)
 
         if fold_config is not None:
             folded_input = fold(ref_input, fold_config)
             folded_output = fold(dut_output_cpu, fold_config)
-            self.check_bfp_outputs_for_quantization_functions(folded_input, folded_output, exponent_bits, mantissa_bits, block_size )
+            self.check_bfp_outputs_for_quantization_functions(folded_input, folded_output, exponent_bits,
+             mantissa_bits, block_size )
         else :
-            self.check_bfp_outputs_for_quantization_functions(ref_input, dut_output_cpu, exponent_bits, mantissa_bits, block_size )
-
-        
+            self.check_bfp_outputs_for_quantization_functions(ref_input, dut_output_cpu, exponent_bits,
+             mantissa_bits, block_size )

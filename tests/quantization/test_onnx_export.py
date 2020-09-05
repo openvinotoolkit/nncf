@@ -13,11 +13,12 @@
 from nncf import NNCFConfig
 from tests.test_helpers import  load_exported_onnx_version
 from tests.helpers import TwoConvDepthwiseTestModel
-
-from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 import pytest
 
-def get_config_for_export_mode(should_be_onnx_standard=False, should_be_bfp_onnx_fake=False, hw_config_type=None, hw_config_subtype=None) -> NNCFConfig:
+def get_config_for_export_mode(should_be_onnx_standard=False,
+                               should_be_bfp_onnx_fake=False,
+                               hw_config_type=None,
+                               hw_config_subtype=None) -> NNCFConfig:
     nncf_config = NNCFConfig()
     nncf_config.update({
         "input_info": {
@@ -26,38 +27,37 @@ def get_config_for_export_mode(should_be_onnx_standard=False, should_be_bfp_onnx
         "compression": {
             "algorithm": "quantization",
             "export_to_onnx_standard_ops": should_be_onnx_standard,
-            "export_to_onnx_block_floating_point": should_be_bfp_onnx_fake 
+            "export_to_onnx_block_floating_point": should_be_bfp_onnx_fake
         }
     })
     if hw_config_type is not None:
         nncf_config.update({
             "hw_config_type": hw_config_type,
             "hw_config_subtype": hw_config_subtype
-        }) 
-        
+        })
     return nncf_config
 
 
-@pytest.mark.parametrize('should_be_onnx_standard', (False, True), ids=['fake_quantize','onnx_std'])
-@pytest.mark.parametrize('should_be_bfp_onnx_fake', (False, True), ids=['skipBFP','bfp' ])
-@pytest.mark.parametrize('bfp', (False, True), ids=['normal','bfp' ])
+@pytest.mark.parametrize('should_be_onnx_standard', (False, True), ids=['fake_quantize', 'onnx_std'])
+@pytest.mark.parametrize('should_be_bfp_onnx_fake', (False, True), ids=['skipBFP', 'bfp'])
+@pytest.mark.parametrize('bfp', (False, True), ids=['normal', 'bfp'])
 def test_onnx_export(tmp_path, should_be_onnx_standard, should_be_bfp_onnx_fake, bfp):
     model = TwoConvDepthwiseTestModel()
-    hw_config_type = "dla" if bfp else None 
-    hw_config_subtype = "int5bfp_dw" if bfp else None 
-    nncf_config = get_config_for_export_mode( should_be_onnx_standard=should_be_onnx_standard, 
-        should_be_bfp_onnx_fake=should_be_bfp_onnx_fake,
-        hw_config_type = hw_config_type,
-        hw_config_subtype = hw_config_subtype)
-    nncf_config['input_info']={"sample_size": [1,2,4,4]} # 
+    hw_config_type = "dla" if bfp else None
+    hw_config_subtype = "int5bfp_dw" if bfp else None
+    nncf_config = get_config_for_export_mode(should_be_onnx_standard=should_be_onnx_standard,
+                                             should_be_bfp_onnx_fake=should_be_bfp_onnx_fake,
+                                             hw_config_type=hw_config_type,
+                                             hw_config_subtype=hw_config_subtype)
+    nncf_config['input_info'] = {"sample_size": [1, 2, 4, 4]}
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
 
     node_counters = {'QuantizeLinear':0,
-                    'DequantizeLinear':0,
-                    'FakeQuantize':0,
-                    'FakeQuantizeBfp':0,
-                    'Conv':0
+                     'DequantizeLinear':0,
+                     'FakeQuantize':0,
+                     'FakeQuantizeBfp':0,
+                     'Conv':0
                     }
 
     #pylint:disable=no-member
@@ -65,10 +65,12 @@ def test_onnx_export(tmp_path, should_be_onnx_standard, should_be_bfp_onnx_fake,
         op_type = node.op_type
         print(op_type)
 
-        if op_type in node_counters.keys() :
-            node_counters[op_type]  += 1
+        if op_type in node_counters.keys():
+            node_counters[op_type] += 1
 
-        expected_results = [[[
+        expected_results = [
+            [
+                [
                     {
                         'QuantizeLinear':0,
                         'DequantizeLinear':0,
@@ -102,7 +104,7 @@ def test_onnx_export(tmp_path, should_be_onnx_standard, should_be_bfp_onnx_fake,
                 ],
             ],
             [
-             [
+                [
                     {
                         'QuantizeLinear':4,
                         'DequantizeLinear':4,
@@ -117,7 +119,6 @@ def test_onnx_export(tmp_path, should_be_onnx_standard, should_be_bfp_onnx_fake,
                         'FakeQuantizeBfp':0,
                         'Conv':2
                     }
-                    
                 ],
                 [
                     {
@@ -134,8 +135,8 @@ def test_onnx_export(tmp_path, should_be_onnx_standard, should_be_bfp_onnx_fake,
                         'FakeQuantizeBfp':2,
                         'Conv':2
                     }
-                    
                 ]
-                ]]
+                ]
+                ]
 
     assert node_counters == expected_results[should_be_onnx_standard][should_be_bfp_onnx_fake][bfp]

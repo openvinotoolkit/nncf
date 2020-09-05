@@ -55,8 +55,6 @@ from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInit
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
 from nncf.utils import get_state_dict_names_with_modules
 
-from nncf.quantization.quantize_functions import ExportBlockfp 
-
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
     PROPAGATION_BASED = "propagation_based"
@@ -152,7 +150,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         is_hw_config_enabled = hw_config_type is not None
         self._hw_precision_constraints = HWPrecisionConstraints(is_hw_config_enabled)
         if is_hw_config_enabled:
-            hw_config_subtype = self.config.get("hw_config_subtype")        
+            hw_config_subtype = self.config.get("hw_config_subtype")
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type, hw_config_subtype)
             self.hw_config = HWConfig.from_json(hw_config_path)
 
@@ -172,7 +170,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._quantize_weights(target_model, hw_config=self.hw_config) + self._quantize_activations(target_model, hw_config=self.hw_config)
+        insertion_commands = self._quantize_weights(target_model, hw_config=self.hw_config) + \
+                             self._quantize_activations(target_model, hw_config=self.hw_config)
         if self.quantize_inputs:
             insertion_commands += self._quantize_inputs(target_model, insertion_commands)
 
@@ -816,11 +815,11 @@ class QuantizationController(QuantizationControllerBase):
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:
             export_mode = QuantizerExportMode.FAKE_QUANTIZE
-        
+
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             if quantizer.mode == QuantizationMode.BLOCKFP and should_export_bfp_to_onnx:
                 quantizer.set_export_mode(QuantizerExportMode.BFP_FAKE_QUANTIZE)
-            else :
+            else:
                 quantizer.set_export_mode(export_mode)
 
         if is_main_process() and should_init:

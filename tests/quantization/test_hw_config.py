@@ -12,16 +12,18 @@
 """
 
 import torch
+import pytest
 
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizerSetupType, QuantizationController
-from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, \
+     BlockfpQuantizer, BaseQuantizer
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-
+from tests.helpers import TwoConvFoldableTestModel
 
 class ModelForHWConfigTest(torch.nn.Module):
     def __init__(self, with_gelu=False):
@@ -235,3 +237,69 @@ class TestHWConfigRules:
         assert len(ctrl.non_weight_quantizers) == 2  # All inputs are quantized.
         for quantizer_ref in ctrl.all_quantizations.values():
             assert self.quantizer_has_default_config(quantizer_ref)
+
+    def get_hw_config_dict_for_folding(self, block_size: int, is_folded: bool):
+        hw_config_dict = {
+            "target_device": "test",
+            "config":{
+                "quantization": {
+                    "int5bfp": {
+                        "mantissa_bits": 3,
+                        "exponent_bits": 5,
+                        "block_size": block_size,
+                        "mode": "blockfp",
+                        "granularity": "perblock"
+                    },
+                    "int5bfp_folded": {
+                        "mantissa_bits": 3,
+                        "exponent_bits": 5,
+                        "block_size": block_size,
+                        "mode": "blockfp",
+                        "granularity": "perblock",
+                        "folded":is_folded
+                    },
+                },
+            },
+            "operations": [
+                {
+                    "type": "MatMul"
+                },
+                {
+                    "type": "Convolution",
+                    "quantization": {
+                        "activations": "int5bfp",
+                        "weights": "int5bfp"
+                    }
+                },
+                {
+                    "type": "FoldedConvolution",
+                    "quantization": {
+                        "activations": "int5bfp_folded",
+                        "weights": "int5bfp_folded"
+                    }
+                }
+            ]
+        }
+        return hw_config_dict
+
+    @pytest.mark.parametrize('folded', (True, False), ids=('folded', 'unfolded'))
+    @pytest.mark.parametrize('block_size', (8, 32), ids=('block8', 'block32'))
+    def test_input_conv_folding(self, folded, block_size, tmp_path):
+        model = TwoConvFoldableTestModel()
+        hw_config_dict = self.get_hw_config_dict_for_folding(block_size, folded)
+
+        nncf_config = get_quantization_config_without_range_init(model_size=1)
+        nncf_config["compression"].update({"quantize_inputs": False})
+
+        net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 3, 7, 7])])
+        qbuilder = QuantizationBuilder(nncf_config["compression"], should_init=False)
+        qbuilder.hw_config = HWConfig.from_dict(hw_config_dict)
+        qbuilder.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
+        net = qbuilder.apply_to(net)
+        num_folded = 0
+        for module in net.modules():
+            if isinstance(module, BlockfpQuantizer):
+                if module.folded_config is not None:
+                    num_folded = num_folded + 1
+        assert (block_size == 32 and folded and num_folded == 1) or \
+            num_folded == 0 and (block_size != 32 or not folded)

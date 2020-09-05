@@ -103,11 +103,13 @@ QUANTIZER_CONFIG_PROPERTIES = {
                                                "weight quantization, and per 1-st dimension for activation "
                                                "quantization)"),
     "mantissaBits" : with_attributes(_NUMBER,
-                            description="For block floating point - number of bits in floating point representation of nmantissa value excluding sign and implicit 1 bit"),
+                                     description="For block floating point - number of bits in floating point"
+                                                 " representation of mantissa value excluding sign and implicit 1 bit"),
     "exponentBits" : with_attributes(_NUMBER,
-                            description="For block floating point - number of bits in floating point representation of exponent"),
+                                     description="For block floating point - number of bits in floating point"
+                                                 " representation of exponent"),
     "blockSize" : with_attributes(_NUMBER,
-                            description="For block floating point - number of values in a block")
+                                  description="For block floating point - number of values in a block")
 }
 
 IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be ignored for this " \
@@ -361,7 +363,7 @@ QUANTIZATION_SCHEMA = {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
         "name": with_attributes(_STRING,
-                            description="Explicit name used for logfile"),
+                                description="Explicit name used for logfile"),
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
@@ -410,7 +412,10 @@ QUANTIZATION_SCHEMA = {
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
         "export_to_onnx_block_floating_point" : with_attributes(_BOOLEAN,
-                            description="By default, block floating point mode does not export fakeQuantisationBfp nodes to onnx since they are not required. This enables for debug"),
+                                                                description="By default, block floating point mode "
+                                                                            "does not export fakeQuantisationBfp nodes "
+                                                                            "to onnx since they are not required. This "
+                                                                            "enables for debug"),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
@@ -663,8 +668,9 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                       "presets that are more likely to result in best performance on "
                                                       "a given HW type."),
         "hw_config_subtype": with_attributes(_STRING,
-                                          description="If specified, refines the hw_config_type for specific HW varients."),
-        
+                                             description="If specified, refines the hw_config_type"
+                                                         " for specific HW varients."),
+
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,

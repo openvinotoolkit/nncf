@@ -16,7 +16,7 @@ import warnings
 from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from ..dynamic_graph.patch_pytorch import register_operator
 from ..functions import STRound, clamp
-from ..utils import is_tracing_state, no_jit_trace
+from ..utils import is_tracing_state
 
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
@@ -119,19 +119,43 @@ class QuantizeBlockfp(torch.autograd.Function):
                 if not input_.is_contiguous():
                     warnings.warn("input_ is not contiguous!", RuntimeWarning)
                     input_ = input_.contiguous()
-                output = QuantizedFunctionsCUDA.Quantize_blockfp_fold(input_, exponent_bits, mantissa_bits, block_size, is_weights, offsetX, offsetY, strideX, strideY)
+                output = QuantizedFunctionsCUDA.Quantize_blockfp_fold(input_,
+                                                                      exponent_bits,
+                                                                      mantissa_bits,
+                                                                      block_size,
+                                                                      is_weights,
+                                                                      offsetX,
+                                                                      offsetY,
+                                                                      strideX,
+                                                                      strideY)
             else:
-                output = QuantizedFunctionsCPU.Quantize_blockfp_fold(input_, exponent_bits, mantissa_bits, block_size, is_weights, offsetX, offsetY, strideX, strideY)
+                output = QuantizedFunctionsCPU.Quantize_blockfp_fold(input_,
+                                                                     exponent_bits,
+                                                                     mantissa_bits,
+                                                                     block_size,
+                                                                     is_weights,
+                                                                     offsetX,
+                                                                     offsetY,
+                                                                     strideX,
+                                                                     strideY)
 
-        else :
+        else:
             if input_.is_cuda:
                 if not input_.is_contiguous():
                     warnings.warn("input_ is not contiguous!", RuntimeWarning)
                     input_ = input_.contiguous()
 
-                output = QuantizedFunctionsCUDA.Quantize_blockfp(input_, exponent_bits, mantissa_bits, block_size, is_weights)
+                output = QuantizedFunctionsCUDA.Quantize_blockfp(input_,
+                                                                 exponent_bits,
+                                                                 mantissa_bits,
+                                                                 block_size,
+                                                                 is_weights)
             else:
-                output = QuantizedFunctionsCPU.Quantize_blockfp(input_, exponent_bits, mantissa_bits, block_size, is_weights)
+                output = QuantizedFunctionsCPU.Quantize_blockfp(input_,
+                                                                exponent_bits,
+                                                                mantissa_bits,
+                                                                block_size,
+                                                                is_weights)
 
         return output
 
@@ -192,16 +216,17 @@ class ExportBlockfp(torch.autograd.Function):
             offsetY = 0
             strideX = 0
             strideY = 0
-            
-        return g.op("FakeQuantizeBfp", input_, 
-                exponent_i=torch.tensor(exponent_bits), 
-                mantissa_i = torch.tensor(mantissa_bits), 
-                blocksize_i = torch.tensor(block_size),
-                offsetX_i = offsetX,
-                offsetY_i = offsetY,
-                strideX_i = strideX,
-                strideY_i = strideY,
-                name_s = name)
+
+        return g.op("FakeQuantizeBfp",
+                    input_,
+                    exponent_i=torch.tensor(exponent_bits),
+                    mantissa_i=torch.tensor(mantissa_bits),
+                    blocksize_i=torch.tensor(block_size),
+                    offsetX_i=offsetX,
+                    offsetY_i=offsetY,
+                    strideX_i=strideX,
+                    strideY_i=strideY,
+                    name_s=name)
 
 
     @staticmethod
@@ -210,7 +235,7 @@ class ExportBlockfp(torch.autograd.Function):
         return output
 
     @staticmethod
-    def backward(ctx, grad_output): 
+    def backward(ctx, grad_output):
         # backward is not used during export
         return grad_output
 

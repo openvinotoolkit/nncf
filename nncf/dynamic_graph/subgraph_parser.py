@@ -14,7 +14,7 @@
 import nncf.dynamic_graph.patterns as p
 
 class TokenType:
-    VAR, ADD, OR, LP, RP= ["Var", "+", "|", "(", ")"]#range(6)
+    VAR, ADD, OR, LP, RP = ["Var", "+", "|", "(", ")"]#range(6)
 
 class TreeNode:
     tokenType = None
@@ -22,19 +22,19 @@ class TreeNode:
     l = None
     r = None
 
-    def __init__(self, tokenType, l = None, r = None):
+    def __init__(self, tokenType, l=None, r=None):
         self.tokenType = tokenType
         self.l = l
         self.r = r
 
-class AddNode(TreeNode) :
+class AddNode(TreeNode):
     def __init__(self, l, r):
-        super().__init__(TokenType.ADD, l,r)
-        self.value = l.value  + r.value 
+        super().__init__(TokenType.ADD, l, r)
+        self.value = l.value  + r.value
 
-class OrNode(TreeNode) :
+class OrNode(TreeNode):
     def __init__(self, l, r):
-        super().__init__(TokenType.OR, l,r)
+        super().__init__(TokenType.OR, l, r)
         self.value = l.value | r.value
 
 class Tokenizer:
@@ -61,21 +61,21 @@ class Tokenizer:
 
     def tokenize(self):
         import re
-        reg = re.compile(r'(\+|ADD|\||OR|\(|\))') 
+        reg = re.compile(r'(\+|ADD|\||OR|\(|\))')
         self.tokens = reg.split(self.expression)
         self.tokens = [t.strip() for t in self.tokens if t.strip() != '']
 
         self.tokenTypes = []
         for t in self.tokens:
-            if t == '+' or t == '&' or t == 'ADD':
+            if t in ('+', '&', 'ADD'):
                 self.tokenTypes.append(TokenType.ADD)
-            elif t == '|' or t == 'OR':
+            elif t in ('|', 'OR'):
                 self.tokenTypes.append(TokenType.OR)
             elif t == '(':
                 self.tokenTypes.append(TokenType.LP)
             elif t == ')':
                 self.tokenTypes.append(TokenType.RP)
-            else :
+            else:
                 self.tokenTypes.append(TokenType.VAR)
 
 class SubgraphParser:
@@ -94,16 +94,14 @@ class SubgraphParser:
     def parse_expression(self):
         term = self.parse_add()
         while self.tokenizer.has_next() and self.tokenizer.next_token_type() == TokenType.OR:
-            #print(" OR ", end = '')
             self.tokenizer.next()
             right = self.parse_add()
-            term = OrNode(term,right)
+            term = OrNode(term, right)
         return term
 
     def parse_add(self):
         term = self.parse_sub_expr()
         while self.tokenizer.has_next() and self.tokenizer.next_token_type() == TokenType.ADD:
-            #print(" + ", end = '')
             self.tokenizer.next()
             right = self.parse_sub_expr()
             term = AddNode(term, right)
@@ -111,23 +109,19 @@ class SubgraphParser:
 
     def parse_sub_expr(self):
         if self.tokenizer.has_next() and self.tokenizer.next_token_type() == TokenType.LP:
-            #print("(")
             self.tokenizer.next()
             expression = self.parse_expression()
             if self.tokenizer.has_next() and self.tokenizer.next_token_type() == TokenType.RP:
-                #print(")")
                 self.tokenizer.next()
                 return expression
-            else:
-                raise Exception("Closing ) expected, but got " + self.tokenizer.next())
+            raise Exception("Closing ) expected, but got " + self.tokenizer.next())
 
         leaf1 = self.parse_leaf()
         return leaf1
 
     def eval_token(self, token_value):
-        # print(token_value)
         if not token_value in self.macro_dict:
-            raise Exception("Unknown symbol " + token_value + " encountered in graph expression")        
+            raise Exception("Unknown symbol " + token_value + " encountered in graph expression")
         return self.macro_dict[token_value]
 
     def parse_leaf(self):
@@ -137,7 +131,4 @@ class SubgraphParser:
                 n = TreeNode(tokenType)
                 n.value = self.eval_token(self.tokenizer.next())
                 return n
-            else:
-                raise Exception('VAR expected, but got ' + self.tokenizer.next())
-
-
+            raise Exception('VAR expected, but got ' + self.tokenizer.next())

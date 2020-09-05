@@ -411,10 +411,13 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("mobilenet_v2.dot", torchvision.models.MobileNetV2, [2, 3, 32, 32])
 ]
 
-TYPE_HW = [(HWConfigType.CPU, None), (HWConfigType.GPU, None), (HWConfigType.VPU, None), 
-        (HWConfigType.DLA, "int5bfp"), (HWConfigType.DLA, "int5bfp_dw"), (HWConfigType.DLA, "int54bfp_dw"), (HWConfigType.DLA, "int8bfp")]
+TYPE_HW = [(HWConfigType.CPU, None), (HWConfigType.GPU, None), (HWConfigType.VPU, None),
+           (HWConfigType.DLA, "int5bfp"), (HWConfigType.DLA, "int5bfp_dw"),
+           (HWConfigType.DLA, "int54bfp_dw"), (HWConfigType.DLA, "int8bfp")]
 
-@pytest.fixture(scope='function', params=TYPE_HW, ids=lambda x: str(x[0]).split(".")[1] if x[1]==None else str(x[0]).split(".")[1]+"_"+x[1])
+@pytest.fixture(scope='function', params=TYPE_HW, ids=[(str(x[0]).split(".")[1] + ("" if x[1] is None \
+    else "_"+x[1])) \
+    for x in TYPE_HW])
 def hw_config_type(request):
     type_hw, hw_config_subtype = request.param
     return type_hw, hw_config_subtype
@@ -450,7 +453,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type), sort_dot_graph=False)
 
 def _case_dir(type_hw_config):
-    if type_hw_config[1] != None:
+    if type_hw_config[1] is not None:
         graph_dir = os.path.join('quantized', "hw", type_hw_config[0].value + "_" + type_hw_config[1])
     else:
         graph_dir = os.path.join('quantized', "hw", type_hw_config[0].value)
