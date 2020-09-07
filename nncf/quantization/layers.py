@@ -290,7 +290,8 @@ class SymmetricQuantizer(BaseQuantizer):
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
         self.scale.fill_(SCALE_LOWER_THRESHOLD)
-        self.scale.masked_scatter_(torch.gt(abs_max, SCALE_LOWER_THRESHOLD), abs_max)
+        mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
+        self.scale = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self.scale)))
 
         nncf_logger.info(
             "Set sign: {} and scale: {} for {}".format(self.signed,

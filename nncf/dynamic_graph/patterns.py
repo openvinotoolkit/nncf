@@ -21,16 +21,18 @@ RELU = N(VersionAgnosticNames.RELU) | N('hardtanh')
 
 BN = N('batch_norm') | N('batch_norm3d')
 
-ANY_BN_RELU_COMBO = BN + RELU | RELU + BN | BN | RELU
-
 POOLING = N('adaptive_avg_pool2d') | N('adaptive_avg_pool3d') | N('avg_pool2d') | N('avg_pool3d')
 
 NON_RELU_ACTIVATIONS = N('elu') | N('elu_') | N('prelu') | N('sigmoid') | N('gelu')
 
-SINGLE_OPS = NON_RELU_ACTIVATIONS | POOLING | N('mean') | N('layer_norm')
+ACTIVATIONS = RELU | NON_RELU_ACTIVATIONS
+
+ANY_BN_ACT_COMBO = BN + ACTIVATIONS | ACTIVATIONS + BN | BN | ACTIVATIONS
+
+SINGLE_OPS = ACTIVATIONS | POOLING | N('mean') | N('layer_norm')
 
 ARITHMETIC = N('__iadd__') | N('__add__') | N('__mul__') | N('__rmul__')
 
-ELTWISE_UNIFORM_OPS = BN | RELU | NON_RELU_ACTIVATIONS
+ELTWISE_UNIFORM_OPS = BN | RELU | ACTIVATIONS
 
 MATMUL = N('matmul') | N('bmm')

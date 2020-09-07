@@ -14,6 +14,7 @@
 # pylint:disable=too-many-lines
 import functools
 from collections import OrderedDict, namedtuple
+from copy import deepcopy
 from enum import Enum
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Callable
@@ -24,7 +25,6 @@ import operator
 import shutil
 import torch
 from nncf.layers import NNCFEmbedding
-from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -46,6 +46,7 @@ from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
     QuantizerExportMode, QuantizersSwitcher
+from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryСostMetric, ShareEdgesQuantizedDataPath
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
@@ -58,6 +59,14 @@ from nncf.utils import get_state_dict_names_with_modules
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
     PROPAGATION_BASED = "propagation_based"
+
+    @staticmethod
+    def from_str(quantizer_setup_type: str) -> 'QuantizerSetupType':
+        if quantizer_setup_type == QuantizerSetupType.PATTERN_BASED.value:
+            return QuantizerSetupType.PATTERN_BASED
+        if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED.value:
+            return QuantizerSetupType.PROPAGATION_BASED
+        raise RuntimeError("Unknown quantizer setup type. Please select 'pattern_based' or 'propagation_based'.")
 
 
 class QuantizationConstraints:
@@ -108,13 +117,17 @@ class NonWeightQuantizerInfo:
 
 @COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(CompressionAlgorithmBuilder):
+    DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(bits=8,
+                                               mode=QuantizationMode.SYMMETRIC,
+                                               signedness_to_force=None,
+                                               per_channel=False)
+
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
 
         self.quantize_inputs = self.config.get('quantize_inputs', True)
         self.quantize_outputs = self.config.get('quantize_outputs', False)
         self.disable_function_quantization_hooks = self.config.get('disable_function_quantization_hooks', False)
-
         self._debug_interface = QuantizationDebugInterface() if is_debug() else None
 
         self._quantized_weight_modules_registry = OrderedDict()
@@ -131,7 +144,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self.config, quantizer_group)
 
-        self.quantizer_setup_type = QuantizerSetupType.PATTERN_BASED # TODO: determine from config
+        self.quantizer_setup_type = self.config.get('quantizer_setup_type')
         self.quantizable_subgraph_patterns = self.config.get('quantizable_subgraph_patterns', None)
         self.hw_config = None
         hw_config_type = self.config.get("hw_config_type")
@@ -140,7 +153,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         if is_hw_config_enabled:
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
-            self.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
 
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
@@ -188,10 +200,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       self._hw_precision_constraints)
 
     def __get_default_qconfig(self, constraints: QuantizationConstraints = None):
-        qconfig = QuantizerConfig(bits=8,
-                                  mode=QuantizationMode.SYMMETRIC,
-                                  signedness_to_force=None,
-                                  per_channel=False)
+        qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -246,6 +255,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         modules = target_model.get_nncf_modules()
         insertion_point_graph = target_model.get_insertion_point_graph()
         quantized_modules_with_potential_qconfig = []
+        default_qconfig_list = [self.__get_default_qconfig(
+            constraints=self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])]
         if self.hw_config is not None:
             meta_vs_qconfig_map = self.hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
         for module_scope, module in modules.items():
@@ -266,8 +277,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
-            quantized_modules_with_potential_qconfig.append(PotentialQuantizedModule(module, module_scope,
-                                                                                     qconfig_list))
+                if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
+                    qconfig_list = default_qconfig_list
+
+            if qconfig_list is not None:
+                quantized_modules_with_potential_qconfig.append(PotentialQuantizedModule(module, module_scope,
+                                                                                         qconfig_list))
         return quantized_modules_with_potential_qconfig
 
     def _quantize_weights(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
@@ -371,12 +386,13 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             insertion_commands += self._quantize_free_function_inputs(target_model)
         return insertion_commands
 
-    def _select_final_qconfig(self, quantizer_config_list: Optional[List[QuantizerConfig]],
+    def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig],
                               constraints: QuantizationConstraints) -> QuantizerConfig:
-        if quantizer_config_list is None:
-            # TODO: This case corresponds to allowing to use any quantization configuration
-            # supported by HW. Need to parse this from HW config instead of using a global
-            # default config.
+        assert quantizer_config_list is not None
+
+        if HWConfig.is_wildcard_quantization(quantizer_config_list):
+            # Set a default, most basic quantization config in case wildcard propagating quantizer did
+            # not merge to align with other tools
             return self.__get_default_qconfig()
 
         constrained_quantizer_config_list = list(filter(
@@ -679,8 +695,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     @staticmethod
     def _make_default_quantizable_subgraph_pattern():
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS | p.ARITHMETIC | p.ANY_BN_RELU_COMBO | \
-                  p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.ARITHMETIC + p.ANY_BN_RELU_COMBO | p.SINGLE_OPS | p.MATMUL
+        pattern = p.LINEAR_OPS | p.ARITHMETIC | p.ANY_BN_ACT_COMBO | \
+                  p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.SINGLE_OPS | p.MATMUL
         return pattern
 
     @staticmethod
@@ -770,11 +786,13 @@ class QuantizationController(QuantizationControllerBase):
                  quantized_inputs_modules_registry: Dict[Scope, torch.nn.Module],
                  weight_quantizers: Dict[WeightQuantizerId, torch.nn.Module],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
-                 hw_precision_constraints: HWPrecisionConstraints):
+                 hw_precision_constraints: HWPrecisionConstraints,
+                 collect_compression_metrics: bool = True):
         super().__init__(target_model)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._hw_precision_constraints = hw_precision_constraints
+        self._collect_compression_metrics = collect_compression_metrics
 
         self.quantized_weight_modules_registry = quantized_weight_modules_registry
         self.quantized_inputs_modules_registry = quantized_inputs_modules_registry
@@ -803,6 +821,28 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+        if self._collect_compression_metrics:
+            self.metric_store = {}
+            quantizer_setup_type = self.quantization_config.get('quantizer_setup_type')
+            # These metrics are collected here and are updated when the method .statistics() is called
+            self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers, \
+                                                                                self.non_weight_quantizers,
+                                                                                quantizer_setup_type),
+                                                 MemoryСostMetric(target_model, self.weight_quantizers,
+                                                                  self.non_weight_quantizers)]
+            # These metrics are collected once here and are not updated when the method .statistics() is called
+            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
+            self.update_metric_store(True)
+
+    def update_metric_store(self, do_all: bool = False):
+        for collector in self.non_stable_metric_collectors:
+            collector.collect()
+            self.metric_store[collector.NAME_STR] = collector.get_metric_table()
+        if do_all:
+            for collector in self.stable_metric_collectors:
+                collector.collect()
+                self.metric_store[collector.NAME_STR] = collector.get_metric_table()
 
     def distributed(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
@@ -880,7 +920,6 @@ class QuantizationController(QuantizationControllerBase):
                                     self._hw_precision_constraints,
                                     precision_init_args)
             initializer.apply_init()
-            nncf_logger.info('Bitwidth distribution\n{}'.format(self.get_bit_stats().draw()))
 
     def init_range(self):
         """
@@ -1000,44 +1039,6 @@ class QuantizationController(QuantizationControllerBase):
     def disable_weight_quantization(self):
         self._set_quantization_status(lambda x: x.is_weights, lambda x: x.disable_quantization())
 
-    def get_bit_stats(self):
-        table = Texttable()
-        BITS = 'num_bits'
-        WEIGHTS_RATIO = '% weights'
-        ACTIVATIONS_RATIO = '% activations'
-        TOTAL_RATIO = '% total'
-
-        header = [BITS, WEIGHTS_RATIO, ACTIVATIONS_RATIO, TOTAL_RATIO]
-
-        bits = set()
-        num_all_quantizations = len(self.all_quantizations)
-        for quantizer in self.all_quantizations.values():
-            bits.add(quantizer.num_bits)
-
-        bits_stat = {}
-        for h in header:
-            bits_stat[h] = {}
-            for b in bits:
-                bits_stat[h][b] = 0
-
-        for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
-            num_bits = quantizer.num_bits
-            bits_stat[TOTAL_RATIO][num_bits] += 1
-            type_ = WEIGHTS_RATIO if quantizer.is_weights else ACTIVATIONS_RATIO
-            bits_stat[type_][num_bits] += 1
-
-        data = [header]
-
-        for num_bits in bits:
-            drow = {h: 0 for h in header}
-            for column_name in header[1:]:
-                drow[column_name] = (bits_stat[column_name][num_bits] / num_all_quantizations) * 100
-            drow[BITS] = num_bits
-            row = [drow[h] for h in header]
-            data.append(row)
-        table.add_rows(data)
-        return table
-
     def _get_local_init_range_config(self, scope: Scope, scope_overrides: Dict[str, Dict],
                                      global_init_range_config: Dict):
         module_init_range_config = global_init_range_config
@@ -1054,6 +1055,11 @@ class QuantizationController(QuantizationControllerBase):
             num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
             multiplier = 100 / len(self.all_quantizations)
             stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        if self._collect_compression_metrics:
+            self.update_metric_store()
+            for metric in self.metric_store.values():
+                for add_info, table in metric.items():
+                    stats[add_info] = table
         return stats
 
 
@@ -1145,7 +1151,7 @@ class QuantizationDebugInterface(DebugInterface):
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
             with open(str(self.scale_dump_dir / fname), "ba") as file:
-                np.savetxt(file, scale_param.cpu().numpy())
+                np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):
         for tracker in self.call_trackers.values():

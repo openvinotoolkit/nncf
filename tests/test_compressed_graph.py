@@ -477,6 +477,8 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
         for qconfig in qconfig_list:
             str_qconfig_list += '[' + str(qconfig) + '] '
         quantizers_activations_attr[ia_op_exec_context] = str_qconfig_list
+        for linked_op_exec_context in insertion_info.linked_op_exec_contexts:
+            quantizers_activations_attr[linked_op_exec_context.input_agnostic] = str_qconfig_list
 
     nx_graph = graph._nx_graph
     nodes = deepcopy(nx_graph.nodes)

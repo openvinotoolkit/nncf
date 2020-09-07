@@ -231,7 +231,7 @@ def test_staged_scheduler_with_hawq():
                              num_workers=1,
                              shuffle=False)
     criterion = nn.CrossEntropyLoss().cuda()
-    config = register_default_init_args(config, criterion, data_loader)
+    config = register_default_init_args(config, data_loader, criterion)
 
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler

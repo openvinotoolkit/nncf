@@ -134,7 +134,7 @@ def main_worker(current_gpu, config: SampleConfig):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
 
     # create model
     model_name = config['model']
@@ -331,10 +331,12 @@ def create_data_loaders(config, train_dataset, val_dataset):
         batch_size //= config.ngpus_per_node
         workers //= config.ngpus_per_node
 
+    val_sampler = torch.utils.data.SequentialSampler(val_dataset)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_size, shuffle=False,
-        num_workers=workers, pin_memory=pin_memory)
+        num_workers=workers, pin_memory=pin_memory,
+        sampler=val_sampler)
 
     train_sampler = None
     if config.distributed:
