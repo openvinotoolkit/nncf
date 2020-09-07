@@ -53,6 +53,12 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init):
     fill_bias(conv, bias_init)
     return conv
 
+def create_depthwise_conv(in_channels, out_channels, kernel_size, weight_init, bias_init):
+    conv = nn.Conv2d(in_channels, out_channels, kernel_size, groups=in_channels)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
 
 class BasicConvTestModel(nn.Module):
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
@@ -100,6 +106,35 @@ class TwoConvTestModel(nn.Module):
         self.features = []
         self.features.append(nn.Sequential(create_conv(1, 2, 2, -1, -2)))
         self.features.append(nn.Sequential(create_conv(2, 1, 3, 0, 0)))
+
+        self.features = nn.Sequential(*self.features)
+
+    def forward(self, x):
+        return self.features(x)
+
+    @property
+    def weights_num(self):
+        return 8 + 18
+
+    @property
+    def bias_num(self):
+        return 2 + 1
+
+    @property
+    def nz_weights_num(self):
+        return 4 + 6
+
+    @property
+    def nz_bias_num(self):
+        return 2
+
+class TwoConvDepthwiseTestModel(nn.Module):
+    def __init__(self, use_depthwise=False):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Sequential(create_depthwise_conv(2, 2, 2, -1, -2)))
+        self.features.append(nn.Sequential(create_conv(2, 1, 3, 0, 0)))
+         
         self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
