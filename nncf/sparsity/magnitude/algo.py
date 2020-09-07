@@ -44,41 +44,50 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.config = config
         params = self.config.get("params", {})
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
-        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
-        self._scheduler = scheduler_cls(self, params)
+        sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
+        self._scheduler = None
+        if sparsity_level_mode == 'global':
+            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
+            self._scheduler = scheduler_cls(self, params)
 
     def statistics(self):
         stats = super().statistics()
-        stats['sparsity_threshold'] = self._select_threshold(self.sparsity_rate_for_sparsified_modules)
+        stats['sparsity_threshold'] =\
+             self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
         return stats
 
     def freeze(self):
         pass
 
-    def set_sparsity_level(self, sparsity_level):
+    def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
         if sparsity_level >= 1 or sparsity_level < 0:
             raise AttributeError(
                 'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
-        self._set_masks_for_threshold(self._select_threshold(sparsity_level))
+        if target_sparsified_module_info is None:
+            target_sparsified_module_info_list = self.sparsified_module_info # List[SparseModuleInfo]
+        else:
+            target_sparsified_module_info_list = [target_sparsified_module_info]
+        threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
+        self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
         self.run_batchnorm_adaptation(self.config)
 
-    def _select_threshold(self, sparsity_level):
-        all_weights = self._collect_all_weights()
+    def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
+        all_weights = self._collect_all_weights(target_sparsified_module_info_list)
         if not all_weights:
             return 0.0
         all_weights_tensor, _ = torch.cat(all_weights).sort()
         threshold = all_weights_tensor[int((all_weights_tensor.size(0) - 1) * sparsity_level)].item()
         return threshold
 
-    def _set_masks_for_threshold(self, threshold_val):
-        for layer in self.sparsified_module_info:
+    def _set_masks_for_threshold(self, threshold_val, target_sparsified_module_info_list):
+        for layer in target_sparsified_module_info_list:
             layer.operand.binary_mask = calc_magnitude_binary_mask(layer.module.weight,
                                                                    self.weight_importance,
                                                                    threshold_val)
 
-    def _collect_all_weights(self):
+    def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
         all_weights = []
-        for minfo in self.sparsified_module_info:
+        for minfo in target_sparsified_module_info_list:
             all_weights.append(self.weight_importance(minfo.module.weight).view(-1))
         return all_weights
 
@@ -86,4 +95,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         return BinaryMask(module.weight.size())
 
     def compression_level(self) -> CompressionLevel:
-        return self.scheduler.compression_level()
+        if self.scheduler is not None:
+            return self.scheduler.compression_level()
+        return CompressionLevel.NONE
