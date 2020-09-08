@@ -633,8 +633,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
     "dependencies": {
         "hw_config_type": {
             "properties": {
-            "quantizer_setup_type": { "const": "propagation_based"}}
-            }
+                "quantizer_setup_type": {"const": "propagation_based"}}
+        }
     }
 }
 

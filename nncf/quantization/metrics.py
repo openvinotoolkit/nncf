@@ -5,7 +5,6 @@ from texttable import Texttable
 from collections import deque
 
 from nncf.quantization.layers import SymmetricQuantizer
-from nncf.utils import get_all_modules_by_type
 from nncf.nncf_network import NNCFNetwork, NNCFGraph
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT, QuantizationTrait
@@ -32,7 +31,7 @@ class NetworkQuantizationShareMetric(BaseMetric):
     - Percentage of weight quantizers and non weight quantizers for each precision relative
       to the number potential* quantizers / placed quantizers
     Bitwidth distribution data is also collected.
-    
+
     * The maximum possible number of potential quantizers depends on the presence of ignored
     scopes and the mode of quantizer setup that is used at the time of collecting the metric.
 
@@ -60,7 +59,7 @@ class NetworkQuantizationShareMetric(BaseMetric):
         self.non_weights_quantizers = {k: v.quantizer_module_ref for k, v in non_weights_quantizers.items()}
         self.weights_quantizers = weights_quantizers
         self._all_quantizations = {**self.weights_quantizers, **self.non_weights_quantizers}
-        self.header = [self.PARAMS_STR,self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR,  self.TOTAL_RATIO_STR]
+        self.header = [self.PARAMS_STR, self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR]
         self.params = {self.PER_CHANNEL_STR, self.PER_TENSOR_STR, self.UNSIGNED_STR, self.SIGNED_STR,
                        self.SYMMETRIC_STR, self.ASYMMETRIC_STR}
         self.params_bits_stat = set()
@@ -68,7 +67,8 @@ class NetworkQuantizationShareMetric(BaseMetric):
         self.num_potential_quantized_activations = self._get_num_potential_quantized_activations()
         self.num_placed_weight_quantizers = len(self.weights_quantizers)
         self.num_placed_activation_quantizers = len(self.non_weights_quantizers)
-        self.num_all_potential_quantizer = self.num_potential_quantized_weights + self.num_potential_quantized_activations
+        self.num_all_potential_quantizer = self.num_potential_quantized_weights +\
+             self.num_potential_quantized_activations
         self.stat = {}
         self._ratio = {
             self.WEIGHTS_RATIO_STR: len(self.weights_quantizers),
@@ -77,17 +77,19 @@ class NetworkQuantizationShareMetric(BaseMetric):
 
     def _get_num_potential_quantized_activations(self):
         from nncf.quantization.algo import QuantizerSetupType
-
+        retval = 0
         if self._quantizer_setup_type == QuantizerSetupType.PATTERN_BASED:
             from nncf.quantization.algo import QuantizationBuilder
+            # pylint: disable=protected-access
             default_pattern = QuantizationBuilder._make_default_quantizable_subgraph_pattern()
-            return len(self._compressed_model.get_post_pattern_insertion_points(default_pattern))
+            retval = len(self._compressed_model.get_post_pattern_insertion_points(default_pattern))
         else:
             from nncf.quantization.algo import QuantizerPropagationSolver
             insertion_point_graph = self._compressed_model.get_insertion_point_graph()
             prop_graph_solver = QuantizerPropagationSolver()
             insertion_data = prop_graph_solver.run_on_ip_graph(insertion_point_graph)
-            return len(insertion_data)
+            retval = len(insertion_data)
+        return retval
 
     def collect(self):
         for quantizer in self._all_quantizations.values():
@@ -121,29 +123,29 @@ class NetworkQuantizationShareMetric(BaseMetric):
     def _get_copy_statistics(self):
         statistics = deepcopy(self.stat)
         for h in self.header[1:]:
-            for key, value in statistics[h].items():
+            for key, _ in statistics[h].items():
                 try:
                     statistics[h][key] /= self._ratio[h]
                     statistics[h][key] *= 100
                 except ZeroDivisionError:
-                    statistics[h][key]
+                    statistics[h][key] = 0
         return statistics
-        
+
     def get_metric_table(self):
         table_with_bits_stats = Texttable()
-        table_with_other_stats = Texttable() 
+        table_with_other_stats = Texttable()
         data = [['Metric type', 'Value']]
         for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR):
-            for p in self.params:   
+            for p in self.params:
                 try:
-                    row = [ '{} '.format(p) + str(h) , '{:.2f} % ({} / {}) '.format(\
+                    row = ['{} '.format(p) + str(h), '{:.2f} % ({} / {}) '.format(\
                         self.stat[h][p] / self._ratio[h] * 100, self.stat[h][p], self._ratio[h])]
-                except ZeroDivisionError:    
-                    row = [ '{} '.format(p) + h , 0 ]
+                except ZeroDivisionError:
+                    row = ['{} '.format(p) + h, 0]
                 data.append(row)
         try:
             row = [self.SHARE_WEIGHT_QUANTIZERS_STR, '{:.2f} % ({} / {}) '.format(\
-                   self.num_placed_weight_quantizers / self.num_potential_quantized_weights * 100 ,
+                   self.num_placed_weight_quantizers / self.num_potential_quantized_weights * 100,
                    self.num_placed_weight_quantizers, self.num_potential_quantized_weights)]
         except ZeroDivisionError:
             row = [self.SHARE_WEIGHT_QUANTIZERS_STR, '{} % '.format(0)]
@@ -151,7 +153,7 @@ class NetworkQuantizationShareMetric(BaseMetric):
         data.append(row)
         try:
             row = [self.SHARE_ACTIVATION_QUANTIZERS_STR, '{:.2f} % ({} / {}) '.format(\
-                   self.num_placed_activation_quantizers / self.num_potential_quantized_activations * 100 ,
+                   self.num_placed_activation_quantizers / self.num_potential_quantized_activations * 100,
                    self.num_placed_activation_quantizers, self.num_potential_quantized_activations)]
         except ZeroDivisionError:
             row = [self.SHARE_ACTIVATION_QUANTIZERS_STR, '{} % '.format(0)]
@@ -159,33 +161,33 @@ class NetworkQuantizationShareMetric(BaseMetric):
 
         table_with_other_stats.add_rows(data)
 
-        data = [['Num bits (N)' , 'N-bits WQs / Placed WQs', 'N-bits AQs / Placed AQs', 'N-bits Qs / Placed Qs']]
+        data = [['Num bits (N)', 'N-bits WQs / Placed WQs', 'N-bits AQs / Placed AQs', 'N-bits Qs / Placed Qs']]
         for p in self.params_bits_stat:
             row = [p]
             for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR):
-                try:        
+                try:
                     row.append('{:.2f} % ({} / {}) '.format(\
                         self.stat[h][p] / self._ratio[h] * 100, self.stat[h][p], self._ratio[h]))
-                except ZeroDivisionError:    
+                except ZeroDivisionError:
                     row.append(0)
             data.append(row)
         table_with_bits_stats.add_rows(data)
-        
+
         retval = {
-                  "Share quantization statistics:" : table_with_other_stats,
-                  "Bitwidth distribution:" : table_with_bits_stats
+            "Share quantization statistics:" : table_with_other_stats,
+            "Bitwidth distribution:" : table_with_bits_stats
         }
         return retval
 
     def get_bits_stat(self):
         table = Texttable()
-        data = [['Num bits (N)' , 'N-bits WQs / Placed Qs', 'N-bits AQs / Placed Qs', 'N-bits Qs / Placed Qs']]
+        data = [['Num bits (N)', 'N-bits WQs / Placed Qs', 'N-bits AQs / Placed Qs', 'N-bits Qs / Placed Qs']]
         for p in self.params_bits_stat:
             row = [p]
             for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR):
-                try:        
+                try:
                     row.append(self.stat[h][p] / self._ratio[self.TOTAL_RATIO_STR] * 100)
-                except ZeroDivisionError:    
+                except ZeroDivisionError:
                     row.append(0)
             data.append(row)
         table.add_rows(data)
@@ -246,12 +248,12 @@ class MemoryСostMetric(BaseMetric):
             self.stat[self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR] = 0
         self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] /= 2**23
         self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] /= 2**23
-        
+
         original_graph = deepcopy(self._compressed_model.get_original_graph())
 
-        activation_quantizers = self._compressed_model.activation_quantizers
         memory_consumption_fp_model = {}
         memory_consumption_compressed_model = {}
+        # pylint: disable=protected-access
         original_nx_graph = original_graph._nx_graph
         nx.set_edge_attributes(original_nx_graph, 32, "precision")
         input_nodes = original_graph.get_input_nodes()
@@ -278,15 +280,18 @@ class MemoryСostMetric(BaseMetric):
             original_nx_graph.edges[u, v]['precision'] = num_bits
             memory_consumption_fp_model[u_node_scope_str] = np.prod(shape) * fp_num_bits
             memory_consumption_compressed_model[u_node_scope_str] = np.prod(shape) * num_bits
-        try:    
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] = max(memory_consumption_fp_model.values()) / 2**23
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = max(memory_consumption_compressed_model.values()) / 2**23
+        try:
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] =\
+                max(memory_consumption_fp_model.values()) / 2**23
+            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] =\
+                max(memory_consumption_compressed_model.values()) / 2**23
         except ValueError:
             self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] = 0
             self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = 0
 
     def get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
         scope_u_node = original_nx_graph.nodes[u_node][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
+        # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor =\
              max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
@@ -337,7 +342,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
     PASSED_EDGES_ATTR = 'passed'
     NODES_GRAPH_ATTR = 'nodes'
     IS_MERGED_GRAPH_ATTR = 'is_merged'
-    
+
 
     def __init__(self, compressed_model: NNCFNetwork):
         super().__init__()
@@ -345,16 +350,18 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         self.stat = {}
 
     def collect(self):
-        merged_original_graph = self.get_merged_original_graph_with_patterns(self._compressed_model.get_original_graph())
+        # pylint: disable=too-many-branches
+        merged_original_graph =\
+            self.get_merged_original_graph_with_patterns(self._compressed_model.get_original_graph())
         self.stat[self.COUNT_QUANTIZED_EDGES_STR] = 0
         self.header = [self.COUNT_QUANTIZED_EDGES_STR]
         nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
-        nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)              
-
-        original_graph = self._compressed_model.get_original_graph()
-        input_nodes = [ node for node in merged_original_graph.nodes if len(merged_original_graph._pred[node]) == 0 ]
+        nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)
+        # pylint: disable=protected-access
+        input_nodes = [node for node in merged_original_graph.nodes if len(merged_original_graph._pred[node]) == 0]
         queue = deque()
         for input_node in input_nodes:
+            # pylint: disable=protected-access
             next_nodes = merged_original_graph._succ[input_node]
             for next_node_key in next_nodes:
                 edge = merged_original_graph.edges[input_node, next_node_key]
@@ -363,6 +370,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 self.stat[self.COUNT_QUANTIZED_EDGES_STR] += 1
                 queue.appendleft(next_node_key)
         visited_nodes = {}
+        #pylint: disable=too-many-nested-blocks
         while len(queue) != 0:
             node_key = queue.pop()
             if node_key in visited_nodes:
@@ -391,8 +399,9 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                             if node_op_name in op_names:
                                 is_op_non_change_precision_activation_tensor = False
                                 break
-                        status = is_op_non_change_precision_activation_tensor and self._all_enter_edges_in_node_of_type(\
-                            merged_original_graph, node_key, self.QUANTIZED_EDGES_ATTR)
+                        status = is_op_non_change_precision_activation_tensor and\
+                            self._all_enter_edges_in_node_of_type(merged_original_graph,\
+                                node_key, self.QUANTIZED_EDGES_ATTR)
                         self._marking_edges(merged_original_graph, node_key, queue, status)
             else:
                 queue.appendleft(node_key)
@@ -409,6 +418,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         return statistics
 
     def _all_enter_edges_in_node_of_type(self, graph, node_key, type_edge):
+        # pylint: disable=protected-access
         prev_nodes = graph._pred[node_key]
         retval = True
         for prev_node_key in prev_nodes:
@@ -419,6 +429,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         return retval
 
     def _marking_edges(self, graph, node_key, queue, mark=True):
+        # pylint: disable=protected-access
         next_nodes = graph._succ[node_key]
         for next_node_key in next_nodes:
             edge = graph.edges[node_key, next_node_key]
@@ -447,6 +458,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         from nncf.dynamic_graph.graph_matching import search_all
 
         pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        # pylint: disable=protected-access
         matches = search_all(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
         nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
@@ -470,6 +482,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
             merged_nodes = []
             for node_key in match:
                 merged_node_key += node_key + '\n'
+                # pylint: disable=protected-access
                 merged_nodes.append(original_graph._nx_graph.nodes[node_key])
                 merged_graph.remove_node(node_key)
             merged_node_attrs = {
@@ -488,7 +501,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
     @staticmethod
     def visualize_marked_graph(merged_original_graph):
         out_graph = nx.DiGraph()
-        for node_key, node in merged_original_graph.nodes.items():
+        for node_key, _ in merged_original_graph.nodes.items():
             out_graph.add_node(node_key)
         for u, v in merged_original_graph.edges:
             edge = merged_original_graph.edges[u, v]

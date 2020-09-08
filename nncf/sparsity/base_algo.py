@@ -55,9 +55,7 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
             hook = UpdateWeight(operation).to(device)
             insertion_commands.append(InsertionCommand(InsertionPoint(
                 InputAgnosticOperationExecutionContext("", module_scope, 0),
-                InsertionType.NNCF_MODULE_PRE_OP),
-                hook,
-                OperationPriority.SPARSIFICATION_PRIORITY))
+                InsertionType.NNCF_MODULE_PRE_OP), hook, OperationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
                 SparseModuleInfo(scope_str, module, hook.operand))
 

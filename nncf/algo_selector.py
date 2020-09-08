@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+# pylint:disable=relative-beyond-top-level
 from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
 from .registry import Registry
 
@@ -22,5 +22,6 @@ class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     pass
 
 
+# pylint:disable=abstract-method
 class NoCompressionAlgorithmController(CompressionAlgorithmController):
     pass

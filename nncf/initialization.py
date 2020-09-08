@@ -1,5 +1,4 @@
 import logging
-import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Tuple, Any
@@ -218,10 +217,11 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
 
 def register_default_init_args(nncf_config: 'NNCFConfig', train_loader, criterion=None) -> 'NNCFConfig':
     if criterion:
-        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),
+        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion,
+                                                                          data_loader=train_loader),
                                             QuantizationRangeInitArgs(data_loader=train_loader),
                                             BNAdaptationInitArgs(data_loader=train_loader)])
     else:
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader),
-                                            BNAdaptationInitArgs(data_loader=train_loader)])                                                
+                                            BNAdaptationInitArgs(data_loader=train_loader)])
     return nncf_config

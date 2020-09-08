@@ -31,9 +31,6 @@ from nncf.pruning.utils import get_rounded_pruned_element_number
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
-    def __init__(self, config, should_init: bool = True):
-        super().__init__(config, should_init)
-
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(0))
 
