@@ -45,7 +45,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
     hw_config_type_str = config.get("hw_config_type")
     if hw_config_type_str is not None:
         hw_config_type = HWConfigType.from_str(config.get("hw_config_type"))
-    default_quantizer_setup_type =  'pattern_based' if hw_config_type is None else "propagation_based"
+    default_quantizer_setup_type = 'pattern_based' if hw_config_type is None else "propagation_based"
     quantizer_setup_type_str = config.get("quantizer_setup_type", default_quantizer_setup_type)
     quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
 

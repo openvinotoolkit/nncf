@@ -554,6 +554,7 @@ class NNCFGraph:
                 outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
         return outputs
 
+    # pylint:disable=protected-access
     def get_nx_edge(self, node_u: NNCFNode, node_v: NNCFNode):
         nx_node_u = self._nx_graph._node[self._node_id_to_key_dict[node_u.node_id]]
         nx_node_v = self._nx_graph._node[self._node_id_to_key_dict[node_v.node_id]]

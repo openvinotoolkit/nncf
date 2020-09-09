@@ -107,6 +107,7 @@ class CompressionLevel(Enum):
     PARTIAL = 1
     FULL = 2
 
+    # pylint:disable=comparison-with-callable
     def __add__(self, other: 'CompressionLevel') -> 'CompressionLevel':
         """
         Defines compression level of a composite compression controller, consist of two algorithms, where `self` is
@@ -191,7 +192,8 @@ class CompressionAlgorithmController:
                     'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
                 return
 
-            bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device, num_bn_forget_steps)
+            bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device,
+                                                                num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
     def export_model(self, filename, *args, **kwargs):
