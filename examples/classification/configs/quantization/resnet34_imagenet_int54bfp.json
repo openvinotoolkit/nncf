@@ -2,6 +2,7 @@
     "model": "resnet34",
     "pretrained": true,
     "hw_config_type": "dla",
+    "hw_config_subtype": "int54bfp_dw",
     "input_info": {
       "sample_size": [1, 3, 224, 224]
     },
