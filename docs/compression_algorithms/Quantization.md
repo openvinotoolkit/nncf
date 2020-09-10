@@ -138,9 +138,58 @@ where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of 
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.   
 
-Automatic mixed precision selection can be enabled by specifying `"type": "hawq"` in `precision` group within
-`initializer` section of the quantization algorithm. The manual mode is also available by explicitly setting the number
-of bits per layer through `bitwidth_per_scope` parameter.
+For automatic mixed precision selection is recommended to use the following template of configuration file:
+ 
+```
+    "optimizer": {
+        "base_lr": 3.1e-4,
+        "schedule_type": "plateau",
+        "type": "Adam",
+        "scheduler_params": {
+            "threshold": 0.1,
+            "cooldown": 3
+        },
+        "weight_decay": 1e-05
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "weights": {
+            "mode": "asymmetric",
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric"
+        },
+        "initializer": {
+            "precision": {
+                "type": "hawq",
+                "bits": [4,8]
+            }
+        }
+    }
+```
+
+On initialization stage the HAWQ algorithm chooses the most accurate mixed precision configuration with compression 
+ratio no less than the specified. The ratio is computed between bits complexity of fully INT8 model and mixed-precision 
+lower-bit one. Bit complexity of the model is a sum of bit complexities for each quantized layer, which are a 
+multiplication of FLOPS for the layer by number of bits for its quantization.
+By default, the compression ratio is 1.5. It should be enough to compress model with no more then 1% of accuracy drop. 
+But if it doesn't happen, lower ratio can be set by `compression_ratio` parameter in `precision` section of config.
+
+This template uses `plateau` scheduler. Though it usually leads to a lot of epoch of tuning for achieving a good model's 
+accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than two times 
+faster, but it may require tweaking of hyper-parameters for each model. Please refer to configs ending by 
+`*_staged` for an example of this method.     
+
+The manual mode of mixed precision quantization is also available by explicitly setting the number of bits per layer
+ through `bitwidth_per_scope` parameter.
+
+---
+**NOTE**
+
+Precision initialization overrides bits settings specified in `weights` and `activations` sections of config. 
+
+---
 
 #### Batch-norm statistics adaptation
 
@@ -164,9 +213,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
             "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
-            "num_data_points": 200, // Number of data points to iteratively estimate Hessian trace, 200 by default.
-            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
+            "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
+            "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
             "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
+            "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
                     4,

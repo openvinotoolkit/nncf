@@ -916,9 +916,7 @@ class QuantizationController(QuantizationControllerBase):
                         'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` class')
 
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
-            initializer = init_impl(self, init_precision_config, self.all_quantizations,
-                                    self._hw_precision_constraints,
-                                    precision_init_args)
+            initializer = init_impl(self, init_precision_config, precision_init_args)
             initializer.apply_init()
 
     def init_range(self):

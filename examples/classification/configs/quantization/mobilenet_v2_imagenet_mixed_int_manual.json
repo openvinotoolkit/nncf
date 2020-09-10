@@ -32,10 +32,8 @@
             "bits": 4
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 8
+            "mode": "asymmetric"
         },
-        "quantize_inputs": true,
         "initializer": {
             "precision": {
                 "bitwidth_per_scope": [

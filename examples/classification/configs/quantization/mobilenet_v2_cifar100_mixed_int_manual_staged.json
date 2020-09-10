@@ -15,12 +15,10 @@
         "algorithm": "quantization",
         "weights": {
             "mode": "asymmetric",
-            "bits": 8,
             "per_channel": true
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 8
+            "mode": "asymmetric"
         },
         "params": {
             "base_lr": 3.1e-4,
