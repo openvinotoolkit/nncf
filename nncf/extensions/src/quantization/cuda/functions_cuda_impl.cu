@@ -672,9 +672,6 @@ at::Tensor bfp_cuda_forward(
   // weights are rounded in software, activations are rounded in hardware
   bool sw_rnd = is_weights;
   
-
-//const auto quantized_elements_count = input.numel();
-
   auto output = at::empty_like(input);
   AT_DISPATCH_FLOATING_TYPES(input.type(), "bfp_cuda_forward", ([&] {
     block_align_floats_kernel<<<N * HxW, std::ceil(C/ (float) (block_size))>>>(

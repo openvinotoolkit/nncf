@@ -61,7 +61,7 @@ class Tokenizer:
 
     def tokenize(self):
         import re
-        reg = re.compile(r'(\+|ADD|\||OR|\(|\))')
+        reg = re.compile(r'(\+|\bADD\b|\||\bOR\b|\(|\))')
         self.tokens = reg.split(self.expression)
         self.tokens = [t.strip() for t in self.tokens if t.strip() != '']
 
@@ -132,3 +132,4 @@ class SubgraphParser:
                 n.value = self.eval_token(self.tokenizer.next())
                 return n
             raise Exception('VAR expected, but got ' + self.tokenizer.next())
+        raise Exception('Parse subgraph text leaf had no next')

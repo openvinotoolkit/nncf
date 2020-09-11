@@ -52,7 +52,6 @@ class QuantizerConfig:
                  block_size=0,
                  folded=None
                  ):
-        self.bits = bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
@@ -67,7 +66,7 @@ class QuantizerConfig:
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
- 
+
     def __str__(self):
         if self.mode == QuantizationMode.BLOCKFP:
             return "Man:{man} Exp:{exp} Blk:{blk} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
@@ -99,7 +98,7 @@ class QuantizerConfig:
                     self.folded != other.folded
             # BFP < non_bfp
             return True
-        elif other.mode == QuantizationMode.BLOCKFP:
+        if other.mode == QuantizationMode.BLOCKFP:
             return False
 
         return self.bits < other.bits or \

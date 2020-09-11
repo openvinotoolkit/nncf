@@ -49,8 +49,6 @@ from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
-from nncf import set_log_level
-import logging
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -106,7 +104,6 @@ def main(argv):
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-    if config.get("debug") : set_log_level(logging.DEBUG) 
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
@@ -258,7 +255,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
-            config.tb.flush() # currently tb doesn't flush correctly so flushing manually to fix it 
+            config.tb.flush() # currently tb doesn't flush correctly so flushing manually to fix it
 
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):

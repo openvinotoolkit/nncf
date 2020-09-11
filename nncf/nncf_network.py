@@ -619,7 +619,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
-    def get_insertion_point_graph(self, **kwargs) -> InsertionPointGraph:
+    def get_insertion_point_graph(self, hw_config=None) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph.get_nx_graph_copy())
 
         # Mark IP graph operator nodes with associated op metatypes
@@ -643,7 +643,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 module = self.get_module_by_scope(scope)
                 if module is not None:
-                    subtype = op_arch.determine_subtype(containing_module=module, functions_kwargs=kwargs)
+                    subtype = op_arch.determine_subtype(containing_module=module, hw_config=hw_config)
                     if subtype is not None:
                         op_arch = subtype
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch

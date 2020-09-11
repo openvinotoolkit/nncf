@@ -78,9 +78,8 @@ class HWConfig(List):
         if hw_config_subtype is None:
             return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
                              HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]+".json"])
-        else:
-            return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
-                             HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type] + "_" + hw_config_subtype + ".json"])
+        return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
+                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type] + "_" + hw_config_subtype + ".json"])
 
     @classmethod
     def from_dict(cls, dct: dict):
@@ -201,10 +200,10 @@ class HWConfig(List):
                         The parameter must be consistent with other parameters!"
 
         return QuantizerConfig(bits=bits,
-                                mode=mode,
-                                per_channel=is_per_channel,
-                                signedness_to_force=signedness_to_force,
-                                is_weights=for_weights)
+                               mode=mode,
+                               per_channel=is_per_channel,
+                               signedness_to_force=signedness_to_force,
+                               is_weights=for_weights)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):

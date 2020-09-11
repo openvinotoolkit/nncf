@@ -72,13 +72,11 @@ class OperatorMetatype:
     @classmethod
     def determine_subtype(cls,
                           containing_module: Optional[torch.nn.Module] = None,
-                          function_args=None,
-                          functions_kwargs=None) -> Optional['OperatorSubtype']:
+                          hw_config=None) -> Optional['OperatorSubtype']:
         matches = []
         for subtype in cls.subtypes:
             if subtype.matches(containing_module,
-                               function_args,
-                               functions_kwargs):
+                               hw_config):
                 matches.append(subtype)
         assert len(matches) <= 1, "Multiple subtypes match operator call " \
                                   "- cannot determine single subtype."
@@ -111,8 +109,7 @@ class OperatorSubtype(OperatorMetatype):
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
-                function_args=None,
-                functions_kwargs=None) -> bool:
+                hw_config=None) -> bool:
         raise NotImplementedError
 
 
@@ -161,8 +158,7 @@ class DepthwiseConv1dSubtype(OperatorSubtype):
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
-                function_args=None,
-                functions_kwargs=None) -> bool:
+                hw_config=None) -> bool:
         if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
@@ -182,8 +178,7 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
-                function_args=None,
-                functions_kwargs=None) -> bool:
+                hw_config=None) -> bool:
 
         if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
@@ -200,11 +195,7 @@ class FoldedConv2dSubtype(OperatorSubtype):
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
-                function_args=None,
-                functions_kwargs=None) -> bool:
-        #@todo need to generalise from "32" to the group size of the block fp
-        # Implies we need to know the hw_config associated with folding
-        hw_config = functions_kwargs.get('hw_config')
+                hw_config=None) -> bool:
 
         if hw_config is not None:
             metatype_map = hw_config.get_metatype_vs_quantizer_configs_map()
@@ -244,8 +235,7 @@ class DepthwiseConv3dSubtype(OperatorSubtype):
 
     @classmethod
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
-                function_args=None,
-                functions_kwargs=None) -> bool:
+                hw_config=None) -> bool:
 
         if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True

@@ -102,14 +102,15 @@ QUANTIZER_CONFIG_PROPERTIES = {
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
                                                "quantization)"),
-    "mantissaBits" : with_attributes(_NUMBER,
-                                     description="For block floating point - number of bits in floating point"
-                                                 " representation of mantissa value excluding sign and implicit 1 bit"),
-    "exponentBits" : with_attributes(_NUMBER,
-                                     description="For block floating point - number of bits in floating point"
-                                                 " representation of exponent"),
-    "blockSize" : with_attributes(_NUMBER,
-                                  description="For block floating point - number of values in a block")
+    "mantissa_bits" : with_attributes(_NUMBER,
+                                      description="For block floating point - number of bits in floating point"
+                                                  " representation of mantissa value excluding sign and implicit"
+                                                  " 1 bit"),
+    "exponent_bits" : with_attributes(_NUMBER,
+                                      description="For block floating point - number of bits in floating point"
+                                                  " representation of exponent"),
+    "block_size" : with_attributes(_NUMBER,
+                                   description="For block floating point - number of values in a block")
 }
 
 IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be ignored for this " \
@@ -669,7 +670,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                       "a given HW type."),
         "hw_config_subtype": with_attributes(_STRING,
                                              description="If specified, refines the hw_config_type"
-                                                         " for specific HW varients."),
+                                                         " for specific HW variants."),
 
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),

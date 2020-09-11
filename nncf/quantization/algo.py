@@ -162,9 +162,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             mode=params_dict.get('mode'),
             signedness_to_force=params_dict.get('signed'),
             per_channel=params_dict.get('per_channel'),
-            block_size=params_dict.get('blockSize'),
-            exponent_bits=params_dict.get('exponentBits'),
-            mantissa_bits=params_dict.get('mantissaBits')
+            block_size=params_dict.get('block_size'),
+            exponent_bits=params_dict.get('exponent_bits'),
+            mantissa_bits=params_dict.get('mantissa_bits')
         )
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
@@ -289,11 +289,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                                          qconfig_list))
         return quantized_modules_with_potential_qconfig
 
-    def _quantize_weights(self, target_model: NNCFNetwork, **kwargs) -> List[InsertionCommand]:
+    def _quantize_weights(self, target_model: NNCFNetwork, hw_config=None) -> List[InsertionCommand]:
         device = next(target_model.parameters()).device
         insertion_commands = []
         quantized_modules_with_potential_qconfig = \
-            self.get_potential_quantized_modules(target_model, **kwargs)
+            self.get_potential_quantized_modules(target_model, hw_config=hw_config)
         for module, module_scope, qconfig_list in quantized_modules_with_potential_qconfig:
             self._quantized_weight_modules_registry[str(module_scope)] = module
             nncf_logger.info("Adding signed Weight quantizer in scope: {}".format(module_scope))

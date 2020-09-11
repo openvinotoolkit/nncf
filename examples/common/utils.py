@@ -26,6 +26,7 @@ from shutil import copyfile
 from examples.common.sample_config import SampleConfig
 from tensorboardX import SummaryWriter
 from texttable import Texttable
+from nncf import set_log_level
 
 from examples.common.example_logger import logger as default_logger
 
@@ -108,7 +109,8 @@ def configure_logging(sample_logger, config):
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
     from nncf.nncf_logger import logger as nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
-
+    if config.get("debug"):
+        set_log_level(logging.DEBUG)
 
 def is_on_first_rank(config):
     return not config.multiprocessing_distributed or (config.multiprocessing_distributed

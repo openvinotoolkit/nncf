@@ -64,6 +64,11 @@ GLOBAL_CONFIG = {
                             'weights': 'resnet50_68.86.sd',
                             'absolute_tolerance_eval': 6e-2,
                         },
+                        'resnet50_bfp.json': {
+                            'expected_accuracy': 67.5,
+                            'weights': 'resnet50_68.86.sd',
+                            'absolute_tolerance_eval': 1,
+                        },
                         'mobilenet_v2_magnitude_sparsity_int8.json': {
                             'expected_accuracy': 57.3,
                             'weights': 'mobilenetV2_64.53.sd',
@@ -74,6 +79,11 @@ GLOBAL_CONFIG = {
                             'expected_accuracy': 62.71,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed'},
+                        },
+                        'mobilenet_v2_bfp.json': {
+                            'expected_accuracy': 56.5,
+                            'weights': 'mobilenetV2_64.53.sd',
+                            'absolute_tolerance_eval': 1.25,
                         }
                     }
                 },

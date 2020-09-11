@@ -1,0 +1,24 @@
+{
+    "model": "mobilenet_v2",
+    "hw_config_type": "dla",
+    "hw_config_subtype": "int5bfp_dw",
+    "input_info": {
+      "sample_size": [2, 3, 32, 32]
+    },
+    "num_classes": 1000,
+    "batch_size": 256,
+    "optimizer": {
+        "type": "Adam",
+        "base_lr": 1e-5,
+        "schedule_type": "multistep",
+        "steps": [
+            20,
+            45
+        ]
+    },
+    "compression": {
+        "algorithm": "quantization"
+    },
+    "epochs": 100,
+    "dataset": "CIFAR100"
+}
