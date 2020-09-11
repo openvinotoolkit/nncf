@@ -139,7 +139,6 @@ computed by 2 backpropagation passes: first  - with respect to the loss and seco
 gradients and a random vector.   
 
 For automatic mixed precision selection is recommended to use the following template of configuration file:
- 
 ```
     "optimizer": {
         "base_lr": 3.1e-4,
@@ -168,6 +167,9 @@ For automatic mixed precision selection is recommended to use the following temp
         }
     }
 ```
+
+Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+using the template in the full configuration file.
 
 On initialization stage the HAWQ algorithm chooses the most accurate mixed precision configuration with compression 
 ratio no less than the specified. The ratio is computed between bits complexity of fully INT8 model and mixed-precision 
