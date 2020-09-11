@@ -168,6 +168,8 @@ For automatic mixed precision selection is recommended to use the following temp
     }
 ```
 
+Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
+
 Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
 using the template in the full configuration file.
 
