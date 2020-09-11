@@ -493,7 +493,7 @@ class CompressionRatioCalculator:
             unambiguously based on constraints of the HW config
 
         Returns:
-            compression ratio of mixed precision model by relation to fully INT8
+            compression ratio of mixed-precision model by relation to fully INT8
         """
         quantizer_ops = 0
         for num_bits, (quantizer_id, quantizer) in zip(bits_config, self._ordered_weight_quantizations.items()):

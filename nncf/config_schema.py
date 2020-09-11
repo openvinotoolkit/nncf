@@ -252,7 +252,7 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                      "fully INT8 model and mixed-precision lower-bit "
                                                                      "one. On precision initialization stage the HAWQ "
                                                                      "algorithm chooses the most accurate "
-                                                                     "mixed precision configuration with ratio no less "
+                                                                     "mixed-precision configuration with ratio no less "
                                                                      "than the specified. Bit complexity of the model "
                                                                      "is a sum of bit complexities for each quantized "
                                                                      "layer, which are a multiplication of FLOPS for "

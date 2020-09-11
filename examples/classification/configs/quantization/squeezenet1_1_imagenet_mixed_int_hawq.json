@@ -37,10 +37,7 @@
                 "bits": [
                     4,
                     8
-                ],
-                "tolerance": 1e-5,
-                "num_data_points": 1000,
-                "iter_number": 500
+                ]
             },
             "range": {
                 "type": "min_max"
