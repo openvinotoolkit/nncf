@@ -1,6 +1,8 @@
 #include "common_cpu_funcs.h"
 #include "common_defs.h"
 
+#include "../../../include/quantization/dla_sw_model.h"
+
 namespace {
 
 template <typename scalar_t>
@@ -106,11 +108,173 @@ std::vector<at::Tensor> q_backward(
 
     return results;
 }
+///////////////////
+/// BlockFP support
+///////////////////
+void block_align_floats_body(float* out, float* in, uint32_t exp_width,
+    uint32_t mantissa_width, uint32_t block_size,  uint32_t N, uint32_t C, uint32_t HxW, bool sw_rnd, int blockIdx, int threadIdx) {
 
+    
+  int n = blockIdx / HxW;
+  int hw = blockIdx % HxW;
+  int c = threadIdx;
+  int32_t max_exp = 0;
+  for (int b = 0; b < block_size && (c * block_size + b < C); ++b) {
+    int c_idx = c * block_size + b;
+    int idx = (n * C + c_idx) * HxW + hw;
+    uint32_t bits;      //violating strict aliasing!
+    out[idx] = round_subnorm(in[idx], exp_width, mantissa_width, sw_rnd, false /* not input layer */);
+    float *temp = &out[idx];
+    bits = *((uint32_t *)temp);
+    int32_t exp = ((bits >> 23) & 0xFF);
+    if (exp > max_exp) {
+      max_exp = exp;
+    }
+  }
+  for (int b = 0; (b < block_size) && (c * block_size + b < C); ++b) {
+    int c_idx = c * block_size + b;
+    int idx = (n * C + c_idx) * HxW + hw;
+    out[idx] = block_align(out[idx], max_exp, mantissa_width, exp_width, sw_rnd);
+  }
+}
+
+
+
+at::Tensor bfp_forward(
+    at::Tensor input,
+    uint32_t exp_width, 
+    uint32_t mantissa_width, 
+    uint32_t block_size,
+    uint32_t is_weights) {
+
+    uint32_t N = input.size(0);
+    uint32_t C = input.size(1);
+    uint32_t HxW = 1;
+
+    for (int d = input.dim()-1; d >=2; d--)
+    {
+      HxW *= input.size(d);
+    }
+    
+    bool sw_rnd = is_weights;
+    
+    auto output = at::empty_like(input);
+    for (int blockIdx = 0; blockIdx < N * HxW; blockIdx ++)
+    {
+        for (int threadIdx = 0; threadIdx < std::ceil(C/ (float) (block_size)); threadIdx++)
+        {
+            block_align_floats_body(
+                (float*)output.data_ptr(), //output.data<scalar_t>(),
+                (float*)input.data_ptr(),
+                exp_width, mantissa_width, block_size, 
+                N, C, HxW, sw_rnd, blockIdx, threadIdx);
+        }
+    }
+    return output;
+}
+
+void block_align_floats_folded_body(float *out, float *in, uint32_t exp_width, uint32_t mantissa_width,
+      uint32_t block_size, uint32_t N, uint32_t C, uint32_t H, uint32_t W, uint32_t SY, uint32_t SX, uint32_t PY, uint32_t PX, bool sw_rnd, int n, int h) {
+    int32_t *max_exps = new int32_t[(int)ceil(C * SY * SX / (float) block_size)];
+    int32_t w_end = ceil((W + 2 * PX) / (float) SX);
+    for (int w = 0; w < w_end; ++w) {
+      // ceil(C * SY * SX / block_size) is how many blocks there are
+      int32_t block = 0;
+  
+      for (int i = 0; i < ceil(C * SY * SX / (float) block_size); ++i) {
+        max_exps[i] = 0;
+      }
+  
+      // Blocking along these loops
+      for (int c = 0; c < C; ++c) {
+        for (int sy = 0; sy < SY; ++sy) {
+          for (int sx = 0; sx < SX; ++sx) {
+            int h_idx = h * SY + sy - PY;
+            int w_idx = w * SX + sx - PX;
+            int idx = (((n * C) + c) * H + h_idx) * W + w_idx;
+            if ((w_idx < W) &&
+                (h_idx < H) &&
+                (w_idx >= 0) &&
+                (h_idx >= 0)) {
+              uint32_t bits;
+              out[idx] = round_subnorm(in[idx], exp_width, mantissa_width, sw_rnd, true /* input layer */);
+              float *temp = &out[idx];
+              bits = *((uint32_t *)temp);
+              int32_t exp = ((bits >> 23) & 0xFF);
+              if (exp > max_exps[block / block_size]) {
+                max_exps[block / block_size] = exp;
+              }
+            }
+            block++;
+          }
+        }
+      }
+      block = 0;
+      for (int c = 0; c < C; ++c) {
+        for (int sy = 0; sy < SY; ++sy) {
+          for (int sx = 0; sx < SX; ++sx) {
+            int h_idx = h * SY + sy - PY;
+            int w_idx = w * SX + sx - PX;
+            int idx = (((n * C) + c) * H + h_idx) * W + w_idx;
+            if ((w_idx < W) && 
+                (h_idx < H) &&
+                (w_idx >= 0) &&
+                (h_idx >= 0)) {
+              out[idx] = block_align(out[idx], max_exps[block / block_size], mantissa_width, exp_width, sw_rnd);
+            }
+            block++;
+          }
+        }
+      }
+    }
+    delete[] max_exps;
+  }
+
+at::Tensor bfp_forward_fold(at::Tensor input,
+                uint32_t exp_width, 
+                uint32_t mantissa_width, 
+                uint32_t block_size,
+                uint32_t is_weights,
+                unsigned int PX,
+                unsigned int PY,
+                unsigned int strideX,
+                unsigned int strideY) {
+
+
+  auto output = at::empty_like(input);
+  uint32_t N = input.size(0);
+  uint32_t C = input.size(1);
+  uint32_t H = input.size(2);
+  uint32_t W = input.size(3);
+
+  bool sw_rnd = is_weights;
+    
+//////
+
+  for (int blockIdx = 0; blockIdx < N ; blockIdx ++)
+  {
+      for (int threadIdx = 0; threadIdx < std::ceil((H +  PY*2) / (float) strideY) ; threadIdx++)
+      {
+          block_align_floats_folded_body(
+              (float*)output.data_ptr(), //output.data<scalar_t>(),
+              (float*)input.data_ptr(),
+              exp_width, mantissa_width, block_size, 
+              N, C, H, W, strideY, strideX, PY, PX, sw_rnd, blockIdx, threadIdx);
+      }
+  }
+
+
+///////
+
+    return output;
+}
 
 }  // namespace
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("Quantize_forward", &q_forward, "Quantize forward");
   m.def("Quantize_backward", &q_backward, "Quantize backward");
+  m.def("Quantize_blockfp", &bfp_forward, "input");
+  m.def("Quantize_blockfp_fold", &bfp_forward_fold, "input");
+  
 }

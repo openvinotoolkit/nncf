@@ -15,6 +15,7 @@
 class HWConfigOpName:
     CONVOLUTION = "Convolution"
     DEPTHWISECONVOLUTION = "DepthWiseConvolution"
+    FOLDEDCONVOLUTION = "FoldedConvolution"
     MATMUL = "MatMul"
     ADD = "Add"
     MULTIPLY = "Multiply"

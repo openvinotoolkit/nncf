@@ -18,8 +18,7 @@ disable = arguments-differ,
           unused-argument,
           wrong-import-order,
           attribute-defined-outside-init,
-          import-outside-toplevel,
-          duplicate-code
+          import-outside-toplevel
 
 max-line-length = 120
 ignore-docstrings = yes

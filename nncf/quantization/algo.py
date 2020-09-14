@@ -55,6 +55,7 @@ from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInit
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
 from nncf.utils import get_state_dict_names_with_modules
 
+from nncf.quantization.quantize_functions import ExportBlockfp 
 
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
@@ -154,6 +155,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
 
+        if self.config.get('dump_fake_quant_to_onnx', False):
+            ExportBlockfp.enable()
+
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
         params_dict = quant_config.get(group_name, {})
@@ -161,7 +165,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             bits=params_dict.get('bits'),
             mode=params_dict.get('mode'),
             signedness_to_force=params_dict.get('signed'),
-            per_channel=params_dict.get('per_channel')
+            per_channel=params_dict.get('per_channel'),
+            block_size=params_dict.get('blockSize'),
+            exponent_bits=params_dict.get('exponentBits'),
+            mantissa_bits=params_dict.get('mantissaBits')
         )
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
@@ -312,6 +319,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             quantizer_id = WeightQuantizerId(module_scope)
             self._hw_precision_constraints.add(quantizer_id, qconfig_list)
             qconfig.input_shape = module.weight.shape
+            qconfig.is_weights = True
             quantizer = self.__create_quantize_module(qconfig)
             op = UpdateWeight(quantizer).to(device)
             # TODO: separate insertion point semantic for weights and activations

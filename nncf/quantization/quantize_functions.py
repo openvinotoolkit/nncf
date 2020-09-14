@@ -16,7 +16,7 @@ import warnings
 from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from ..dynamic_graph.patch_pytorch import register_operator
 from ..functions import STRound, clamp
-
+from ..utils import is_tracing_state, no_jit_trace
 
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
@@ -103,6 +103,43 @@ class QuantizeAsymmetric(torch.autograd.Function):
         return grad_input, grad_input_low, grad_input_range, None, None, None
 
 
+
+class QuantizeBlockfp(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights):
+        if  fold_config:
+            offsetX = fold_config["offset"][0]
+            offsetY = fold_config["offset"][1]
+            strideX = fold_config["stride"][0]
+            strideY = fold_config["stride"][1]
+
+            ## Following convolution is folded
+            if input_.is_cuda:
+                if not input_.is_contiguous():
+                    warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                    input_ = input_.contiguous()
+                output = QuantizedFunctionsCUDA.Quantize_blockfp_fold(input_, exponent_bits, mantissa_bits, block_size, is_weights, offsetX, offsetY, strideX, strideY)
+            else:
+                output = QuantizedFunctionsCPU.Quantize_blockfp_fold(input_, exponent_bits, mantissa_bits, block_size, is_weights, offsetX, offsetY, strideX, strideY)
+
+        else :
+            if input_.is_cuda:
+                if not input_.is_contiguous():
+                    warnings.warn("input_ is not contiguous!", RuntimeWarning)
+                    input_ = input_.contiguous()
+
+                output = QuantizedFunctionsCUDA.Quantize_blockfp(input_, exponent_bits, mantissa_bits, block_size, is_weights)
+            else:
+                output = QuantizedFunctionsCPU.Quantize_blockfp(input_, exponent_bits, mantissa_bits, block_size, is_weights)
+
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, None, None, None, None, None
+
+
 def _quantize_autograd_to_range(input_, input_low, input_high, levels):
     input_ = input_ - input_low
     input_range = (input_high - input_low)
@@ -127,6 +164,54 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     def backward(ctx, grad_output):
         # backward is not used during export
         return grad_output
+
+class ExportBlockfp(torch.autograd.Function):
+    enabled = False
+
+    @staticmethod
+    def enable(new_state = True):
+        ExportBlockfp.enabled = new_state
+
+    @staticmethod
+    def symbolic(g, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
+        if fold_config:
+            offsetX = fold_config["offset"][0]
+            offsetY = fold_config["offset"][1]
+            strideX = fold_config["stride"][0]
+            strideY = fold_config["stride"][1]
+        else:
+            offsetX = 0
+            offsetY = 0
+            strideX = 0
+            strideY = 0
+            
+        if ExportBlockfp.enabled :
+            return g.op("FakeQuantizeBfp", input_, 
+                exponent_i=torch.tensor(exponent_bits), 
+                mantissa_i = torch.tensor(mantissa_bits), 
+                blocksize_i = torch.tensor(block_size),
+                offsetX_i = offsetX,
+                offsetY_i = offsetY,
+                strideX_i = strideX,
+                strideY_i = strideY,
+                name_s = name)
+        else :
+            return input_
+
+    @staticmethod
+    def forward(ctx, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
+        warnings.warn("ExportQuantize - dummy function called", RuntimeWarning)
+        #output = _quantize_autograd_to_range(input_, input_low, input_high, levels)
+        
+        output = input_
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output): 
+        # backward is not used during export
+        return grad_output
+
+
 
 
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
@@ -177,6 +262,14 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     input_low_tuned, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
+@register_operator()
+def blockfp_quantize(input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights, name=""):
+    if is_tracing_state():
+        #with no_jit_trace():
+        return ExportBlockfp.apply(input_, exponent_bits, mantissa_bits, block_size, name, fold_config)
+
+    output = QuantizeBlockfp.apply(input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights)
+    return output
 
 class TuneRange(torch.autograd.Function):
     @staticmethod

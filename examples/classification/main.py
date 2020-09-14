@@ -253,6 +253,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
+            config.tb.flush() # currently tb doesn't flush correctly so flushing manually to fix it 
 
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):

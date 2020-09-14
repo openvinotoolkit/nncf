@@ -23,10 +23,11 @@ from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.nncf_logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
-    get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
+    get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange, blockfp_quantize
 from ..layer_utils import COMPRESSION_MODULES
 from ..registry import Registry
 from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
+from nncf.dynamic_graph.operator_metatypes import FoldedConv2dSubtype # Access parameters of the folded convolution
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
@@ -35,6 +36,7 @@ INITIALIZABLE_MODULES = Registry('initializable_modules')
 class QuantizationMode:
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
+    BLOCKFP = "blockfp"
 
 
 class QuantizerConfig:
@@ -43,7 +45,12 @@ class QuantizerConfig:
                  signedness_to_force=None,
                  per_channel=False,
                  input_shape=None,
-                 is_weights=False):
+                 is_weights=False,
+                 exponent_bits=0,
+                 mantissa_bits=0,
+                 block_size=0,
+                 folded=False
+                 ):
         self.bits = bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
@@ -51,21 +58,52 @@ class QuantizerConfig:
         self.is_weights = is_weights
         self.input_shape = input_shape
 
+        
+        self.bits = bits if mode != QuantizationMode.BLOCKFP else 0
+                   
+        self.exponent_bits = exponent_bits if mode == QuantizationMode.BLOCKFP else 0
+        self.mantissa_bits = mantissa_bits if mode == QuantizationMode.BLOCKFP else 0
+        self.block_size = block_size if mode == QuantizationMode.BLOCKFP else 0
+        self.folded = folded
+
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
-            bits=self.bits,
-            mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
-            signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
-            is_weights='Y' if self.is_weights else 'N',
-            per_channel='Y' if self.per_channel else 'N')
+        if self.mode == QuantizationMode.BLOCKFP:
+            return "Man:{man} Exp:{exp} Blk:{blk} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
+                man=self.mantissa_bits,
+                exp=self.exponent_bits,
+                blk=self.block_size,
+                mode='BFP',
+                signedness='S' ,
+                is_weights='Y' if self.is_weights else 'N',
+                per_channel='Y' )
+        else :
+            return "B:{bits} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
+                bits=self.bits,
+                mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
+		        signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
+		        is_weights='Y' if self.is_weights else 'N',
+		        per_channel='Y' if self.per_channel else 'N')
 
     def __hash__(self):
         return hash(str(self))
 
     def __lt__(self, other):
+        if self.mode == QuantizationMode.BLOCKFP :
+            if other.mode == QuantizationMode.BLOCKFP :
+                # Both bfp
+                return self.mantissa_bits < other.mantissa_bits or \
+                    self.exponent_bits < other.exponent_bits or \
+                    self.block_size < other.block_size or \
+                    self.folded != other.folded 
+            else :
+                # BFP < non_bfp
+                return True
+        elif other.mode == QuantizationMode.BLOCKFP:
+                return False
+
         return self.bits < other.bits or \
                (self.mode == QuantizationMode.SYMMETRIC and other.mode == QuantizationMode.ASYMMETRIC) or \
                (self.signedness_to_force is None and other.signedness_to_force is not None) or \
@@ -411,3 +449,52 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                       input_low_tuned, input_high_tuned,
                                                       input_low_tuned, input_high_tuned)
         raise RuntimeError
+
+@COMPRESSION_MODULES.register()
+@QUANTIZATION_MODULES.register(QuantizationMode.BLOCKFP)
+@INITIALIZABLE_MODULES.register()
+class BlockfpQuantizer(BaseQuantizer):
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.input_shape = config.input_shape
+        self.is_weights = config.is_weights
+
+        self.exponent_bits = config.exponent_bits
+        self.mantissa_bits = config.mantissa_bits
+        self.block_size = config.block_size
+        self.scope_string = "scope"
+        if config.folded :
+            if self.is_weights:
+                self.folded_config = {'stride':FoldedConv2dSubtype.stride, 
+                                'offset':[0,0] }
+            else:
+                self.folded_config = {'stride':FoldedConv2dSubtype.stride, 
+                                'offset':[((FoldedConv2dSubtype.kernel_size[i]-1)//2) % FoldedConv2dSubtype.stride[i] for i in range(2)] }
+        else :
+            self.folded_config = False
+
+        self.signed_tensor = nn.Parameter(torch.IntTensor([0]), requires_grad=False)
+
+    @property
+    def signed(self):
+        return self.signed_tensor.item() == 1
+
+    @signed.setter
+    def signed(self, signed: bool):
+        self.signed_tensor.fill_(signed)
+
+    def quantize(self, x):
+        result = blockfp_quantize(x, self.exponent_bits, self.mantissa_bits, self.block_size, self.folded_config, self.is_weights, name = self.scope_string)
+                
+        return result
+
+    def get_trainable_params(self) -> Dict[str, torch.Tensor]:
+        return {}
+
+    def apply_minmax_init(self, min_values, max_values, distributed_,
+                          log_module_name: str = None):
+        return
+
+    def set_level_ranges(self):
+        return       

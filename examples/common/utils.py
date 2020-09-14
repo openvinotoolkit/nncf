@@ -44,19 +44,22 @@ def get_name(config):
     for algo_dict in compression_config:
         algo_name = algo_dict["algorithm"]
         if algo_name == "quantization":
-            initializer = algo_dict.get("initializer", {})
-            precision = initializer.get("precision", {})
-            if precision:
-                retval += "_mixed_int"
+            if "name" in algo_dict:
+                retval += "_"+algo_dict["name"]
             else:
-                activations = algo_dict.get('activations', {})
-                a_bits = activations.get('bits', 8)
-                weights = algo_dict.get('weights', {})
-                w_bits = weights.get('bits', 8)
-                if a_bits == w_bits:
-                    retval += "_int{}".format(a_bits)
+                initializer = algo_dict.get("initializer", {})
+                precision = initializer.get("precision", {})
+                if precision:
+                    retval += "_mixed_int"
                 else:
-                    retval += "_a_int{}_w_int{}".format(a_bits, w_bits)
+                    activations = algo_dict.get('activations', {})
+                    a_bits = activations.get('bits', 8)
+                    weights = algo_dict.get('weights', {})
+                    w_bits = weights.get('bits', 8)
+                    if a_bits == w_bits:
+                        retval += "_int{}".format(a_bits)
+                    else:
+                        retval += "_a_int{}_w_int{}".format(a_bits, w_bits)
         else:
             retval += "_{}".format(algo_name)
     return retval
@@ -112,7 +115,7 @@ def is_on_first_rank(config):
                                                       and config.rank % config.ngpus_per_node == 0)
 
 
-def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu")):
+def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu", ".h")):
     """Creates tarball with the source code"""
     with tarfile.open(str(dst_path), "w:gz") as tar:
         for path in Path(root).rglob("*"):

@@ -118,7 +118,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    should_init = resuming_state_dict is None
+    should_init = resuming_state_dict is None and config.get('hw_config_type') != "dla"
     compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
 
     for builder in compression_algo_builder_list:

@@ -101,7 +101,13 @@ QUANTIZER_CONFIG_PROPERTIES = {
     "per_channel": with_attributes(_BOOLEAN,
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
-                                               "quantization)")
+                                               "quantization)"),
+    "mantissaBits" : with_attributes(_NUMBER,
+                            description="For block floating point - number of bits in floating point representation of nmantissa value excluding sign and implicit 1 bit"),
+    "exponentBits" : with_attributes(_NUMBER,
+                            description="For block floating point - number of bits in floating point representation of exponent"),
+    "blockSize" : with_attributes(_NUMBER,
+                            description="For block floating point - number of values in a block")
 }
 
 IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be ignored for this " \
@@ -354,6 +360,8 @@ QUANTIZATION_SCHEMA = {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
+        "name": with_attributes(_STRING,
+                            description="Explicit name used for logfile"),
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
@@ -401,6 +409,8 @@ QUANTIZATION_SCHEMA = {
                                                                    "standard QuantizeLinear-DequantizeLinear "
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
+        "dump_fake_quant_to_onnx" : with_attributes(_BOOLEAN,
+                            description="By default, block floating point mode does not export fakeQuantisation nodes to onnx. this enables for debug"),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },

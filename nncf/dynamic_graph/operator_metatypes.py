@@ -189,13 +189,40 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
             return True
         return False
 
+@OPERATOR_METATYPES.register()
+class FoldedConv2dSubtype(OperatorSubtype):
+    hw_config_names = [HWConfigOpName.FOLDEDCONVOLUTION]
+
+    # Messy - Store details  
+    stride = (0,0)
+    kernel_size = (0,0) 
+    initialised = False
+
+    @classmethod
+    def matches(cls, containing_module: Optional[torch.nn.Module] = None,
+                function_args=None,
+                functions_kwargs=None) -> bool:
+        #@todo need to check stride of convolution and generalise from "3"
+        if containing_module.stride[0] *  containing_module.stride[1] > 1 and \
+            containing_module.in_channels * containing_module.stride[0] * containing_module.stride[1] <=32:
+            if FoldedConv2dSubtype.initialised :
+                assert FoldedConv2dSubtype.stride == containing_module.stride and \
+                    FoldedConv2dSubtype.kernel_size == containing_module.kernel_size, \
+                        "Found candidates for FoldedConv2dSubtype with mismatched paramters - not supported"
+            else:
+                FoldedConv2dSubtype.stride = containing_module.stride
+                FoldedConv2dSubtype.kernel_size = containing_module.kernel_size
+                FoldedConv2dSubtype.initialised = True
+            return True
+        return False
+
 
 @OPERATOR_METATYPES.register()
 class Conv2dMetatype(OperatorMetatype):
     name = "conv2d"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     torch_nn_functional_patch_spec = PatchSpec([name])
-    subtypes = [DepthwiseConv2dSubtype]
+    subtypes = [DepthwiseConv2dSubtype, FoldedConv2dSubtype]
 
 
 @OPERATOR_METATYPES.register()
