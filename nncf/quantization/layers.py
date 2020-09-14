@@ -115,7 +115,7 @@ class QuantizerExportMode(Enum):
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
 
     @staticmethod
-    def from_str(config_value: str) -> 'HWConfigType':
+    def from_str(config_value: str) -> 'QuantizerExportMode':
         if config_value == QuantizerExportMode.FAKE_QUANTIZE.value:
             return QuantizerExportMode.FAKE_QUANTIZE
         if config_value == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS.value:
@@ -499,6 +499,12 @@ class BlockfpQuantizer(BaseQuantizer):
     def set_level_ranges(self):
         return
 
-    def run_export_quantization(self, x: torch.Tensor):
+    def enable_gradients(self):
+        return
+
+    def disable_gradients(self):
+        return
+
+def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
             return ExportBlockfp.apply(x, self.exponent_bits, self.mantissa_bits, self.block_size, self.scope_string, self.folded_config)       

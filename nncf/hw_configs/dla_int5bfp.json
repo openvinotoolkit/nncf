@@ -121,8 +121,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "int8bfp",
-                "weights": "int8bfp"
+                "activations": "int5bfp",
+                "weights": "int5bfp"
             }
         },
         {
@@ -131,8 +131,8 @@
                 "scales": "unified"
             },
             "quantization": {
-                "activations": "int8bfp",
-                "weights": "int8bfp"
+                "activations": "int5bfp",
+                "weights": "int5bfp"
             }
         },
         {

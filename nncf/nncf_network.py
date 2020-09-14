@@ -31,6 +31,7 @@ from nncf.dynamic_graph.graph_matching import NodeExpression
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope, nncf_model_input, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.dynamic_graph.subgraph_parser import SubgraphParser
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
@@ -291,7 +292,15 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+
+        if hw_config is not None and hw_config.mergeable_operators_string:
+            nncf_logger.info("Overriding built in mergable subgraph definition from file ")
+
+            parser = SubgraphParser()
+            pattern = parser.parse(hw_config.mergeable_operators_string)
+        else:
+            pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+
         return pattern
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
@@ -610,7 +619,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
-    def get_insertion_point_graph(self) -> InsertionPointGraph:
+    def get_insertion_point_graph(self, **kwargs) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph.get_nx_graph_copy())
 
         # Mark IP graph operator nodes with associated op metatypes
@@ -634,7 +643,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 module = self.get_module_by_scope(scope)
                 if module is not None:
-                    subtype = op_arch.determine_subtype(containing_module=module)
+                    subtype = op_arch.determine_subtype(containing_module=module, functions_kwargs=kwargs)
                     if subtype is not None:
                         op_arch = subtype
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch

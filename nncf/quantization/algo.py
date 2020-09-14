@@ -152,7 +152,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         is_hw_config_enabled = hw_config_type is not None
         self._hw_precision_constraints = HWPrecisionConstraints(is_hw_config_enabled)
         if is_hw_config_enabled:
-            hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
+            hw_config_subtype = self.config.get("hw_config_subtype")        
+            hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type, hw_config_subtype)
             self.hw_config = HWConfig.from_json(hw_config_path)
 
         if self.config.get('dump_fake_quant_to_onnx', False):

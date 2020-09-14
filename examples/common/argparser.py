@@ -30,6 +30,11 @@ def get_common_argument_parser():
                         dest="hw_config_type",
                         choices=[t.value for t in HWConfigType])
 
+    parser.add_argument('--hw-config-subtype', help='Subtype of the hardware configuration for compression algorithms',
+                        type=str,
+                        default=None,
+                        dest="hw_config_subtype")
+
     parser.add_argument(
         "--mode",
         "-m",

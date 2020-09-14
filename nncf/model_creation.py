@@ -42,9 +42,11 @@ def create_compression_algorithm_builders(config: NNCFConfig,
     compression_config_json_section = deepcopy(compression_config_json_section)
 
     hw_config_type = None
+    hw_config_subtype = None
     hw_config_type_str = config.get("hw_config_type")
     if hw_config_type_str is not None:
         hw_config_type = HWConfigType.from_str(config.get("hw_config_type"))
+        hw_config_subtype = config.get("hw_config_subtype")
     default_quantizer_setup_type = 'pattern_based' if hw_config_type is None else "propagation_based"
     quantizer_setup_type_str = config.get("quantizer_setup_type", default_quantizer_setup_type)
     quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
@@ -53,6 +55,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
         compression_config = NNCFConfig(compression_config_json_section)
         compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
         compression_config["hw_config_type"] = hw_config_type
+        compression_config["hw_config_subtype"] = hw_config_subtype
         compression_config['quantizer_setup_type'] = quantizer_setup_type
         return [get_compression_algorithm(compression_config)(compression_config, should_init=should_init), ]
     retval = []
@@ -60,6 +63,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
         algo_config = NNCFConfig(algo_config)
         algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
         algo_config["hw_config_type"] = hw_config_type
+        algo_config["hw_config_subtype"] = hw_config_subtype
         algo_config['quantizer_setup_type'] = quantizer_setup_type
         retval.append(get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
     return retval
@@ -118,7 +122,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    should_init = resuming_state_dict is None and config.get('hw_config_type') != "dla"
+    should_init = resuming_state_dict is None
+
     compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
 
     for builder in compression_algo_builder_list:

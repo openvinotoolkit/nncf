@@ -18,18 +18,20 @@ from typing import Type, List, Dict, Set, Optional
 import addict as ad
 import jstyleson as json
 import warnings
+import os
 
 from nncf.config import product_dict
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config_op_names import HWConfigOpName
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
-
+from nncf.nncf_logger import logger as nncf_logger
 
 class HWConfigType(Enum):
     CPU = "cpu"
     GPU = "gpu"
     VPU = "vpu"
+    DLA = "dla"
 
     @staticmethod
     def from_str(config_value: str) -> 'HWConfigType':
@@ -39,6 +41,8 @@ class HWConfigType(Enum):
             return HWConfigType.GPU
         if config_value == HWConfigType.VPU.value:
             return HWConfigType.VPU
+        if config_value == HWConfigType.DLA.value:
+            return HWConfigType.DLA
         raise RuntimeError("Unknown HW config type string")
 
 
@@ -57,20 +61,27 @@ class HWConfig(List):
     UNIFIED_TYPE_NAME = "unified"
 
     TYPE_TO_CONF_NAME_DICT = {
-        HWConfigType.CPU: "cpu.json",
-        HWConfigType.VPU: "vpu.json",
-        HWConfigType.GPU: "gpu.json"
+        HWConfigType.CPU: "cpu",
+        HWConfigType.VPU: "vpu",
+        HWConfigType.GPU: "gpu",
+        HWConfigType.DLA: "dla"
     }
 
     def __init__(self):
         super().__init__()
         self.registered_algorithm_configs = {}
         self.target_device = None
+        self.mergeable_operators_string = None
 
     @staticmethod
-    def get_path_to_hw_config(hw_config_type: HWConfigType):
-        return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
-                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]])
+    def get_path_to_hw_config(hw_config_type: HWConfigType, hw_config_subtype: str = None):
+        if hw_config_subtype is None:
+            return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
+                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]+".json"])
+        else :
+            return '/'.join([NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR,
+                         HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type] + "_" + hw_config_subtype + ".json"])
+                              
 
     @classmethod
     def from_dict(cls, dct: dict):
@@ -119,7 +130,18 @@ class HWConfig(List):
     def from_json(cls, path):
         with open(path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
-            return HWConfig.from_dict(json_config)
+            hw_config = HWConfig.from_dict(json_config)
+            mergeable_subgraph_path = os.path.splitext(path)[0] + "_subgraphs.txt"
+            
+            try:
+                with open( mergeable_subgraph_path ) as subgraph_file :
+                    hw_config.mergeable_operators_string = " ".join(line.strip() for line in subgraph_file)
+                    nncf_logger.info('Overriding default subgraph definitions since {} was found '.format(mergeable_subgraph_path))
+
+            except IOError:
+                nncf_logger.info('Using default subgraph definitions since {} not found '.format(mergeable_subgraph_path))
+
+            return hw_config
 
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
@@ -127,6 +149,8 @@ class HWConfig(List):
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
             return QuantizationMode.ASYMMETRIC
+        if str_val == "blockfp":
+            return QuantizationMode.BLOCKFP
         raise RuntimeError("Invalid quantization type specified in HW config")
 
     @staticmethod
@@ -141,30 +165,45 @@ class HWConfig(List):
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict, for_weights=False):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
-        is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
-        signedness_to_force = None
-        if 'level_low' in quantization_subdict and 'level_high' in quantization_subdict:
-            signedness_to_force = False
-            if mode == QuantizationMode.SYMMETRIC:
-                if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
+        if  mode == QuantizationMode.BLOCKFP :
+            mantissa_bits = quantization_subdict["mantissa_bits"]
+            exponent_bits = quantization_subdict["exponent_bits"]
+            block_size =  quantization_subdict["block_size"]
+            folded = quantization_subdict.get("folded", False)
+            
+            return QuantizerConfig(
+                            mode=mode,
+                            exponent_bits=exponent_bits,
+                            mantissa_bits=mantissa_bits,
+                            block_size=block_size,
+                            folded = folded
+                            ) 
+
+        else:
+            is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
+            signedness_to_force = None
+            if 'level_low' in quantization_subdict and 'level_high' in quantization_subdict:
+                signedness_to_force = False
+                if mode == QuantizationMode.SYMMETRIC:
+                    if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
+                        signedness_to_force = True
+                    true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
+                else:
                     signedness_to_force = True
-                true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
-            else:
-                signedness_to_force = True
-                true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
+                    true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
 
-            assert quantization_subdict['level_low'] == true_level_low, \
-                    "Invalid value of quantizer parameter `level_low`.\
-                         The parameter must be consistent with other parameters!"
-            assert quantization_subdict['level_high'] == true_level_high, \
-                    "Invalid value of quantizer parameter `level_high`.\
-                         The parameter must be consistent with other parameters!"
+                assert quantization_subdict['level_low'] == true_level_low, \
+                        "Invalid value of quantizer parameter `level_low`.\
+                            The parameter must be consistent with other parameters!"
+                assert quantization_subdict['level_high'] == true_level_high, \
+                        "Invalid value of quantizer parameter `level_high`.\
+                            The parameter must be consistent with other parameters!"
 
-        return QuantizerConfig(bits=bits,
-                               mode=mode,
-                               per_channel=is_per_channel,
-                               signedness_to_force=signedness_to_force,
-                               is_weights=for_weights)
+            return QuantizerConfig(bits=bits,
+                                mode=mode,
+                                per_channel=is_per_channel,
+                                signedness_to_force=signedness_to_force,
+                                is_weights=for_weights)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):

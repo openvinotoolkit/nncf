@@ -410,7 +410,7 @@ QUANTIZATION_SCHEMA = {
                                                                    "node pairs (8-bit quantization only in the latter "
                                                                    "case). Default: false"),
         "dump_fake_quant_to_onnx" : with_attributes(_BOOLEAN,
-                            description="By default, block floating point mode does not export fakeQuantisation nodes to onnx. this enables for debug"),
+                            description="By default, block floating point mode does not export fakeQuantisationBfp nodes to onnx since they are not required. This enables for debug"),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },
@@ -662,6 +662,9 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                           description="If specified, the compression algorithms will use parameter "
                                                       "presets that are more likely to result in best performance on "
                                                       "a given HW type."),
+        "hw_config_subtype": with_attributes(_STRING,
+                                          description="If specified, refines the hw_config_type for specific HW varients."),
+        
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,
