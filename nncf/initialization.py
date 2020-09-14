@@ -17,16 +17,17 @@ class RangeInitializerFactory:
     @staticmethod
     def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
         init_type = init_config["type"]
+        num_init_steps = init_config["num_init_steps"]
         if init_type == "min_max":
-            return MinMaxInitializer(module, log_module_name)
+            return MinMaxInitializer(module, num_init_steps, log_module_name)
         if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, log_module_name)
+            return ThreeSigmaInitializer(module, num_init_steps, log_module_name)
         if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, log_module_name)
+            return MeanMinMaxInitializer(module, num_init_steps, log_module_name)
         if init_type == "percentile":
             min_percentile = init_config["min_percentile"]
             max_percentile = init_config["max_percentile"]
-            return PercentileInitializer(module, min_percentile, max_percentile, log_module_name)
+            return PercentileInitializer(module, num_init_steps, min_percentile, max_percentile, log_module_name)
         raise NotImplementedError
 
 

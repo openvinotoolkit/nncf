@@ -30,7 +30,7 @@ from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.structures import BNAdaptationInitArgs
-from nncf.utils import in_scope_list
+from nncf.utils import in_scope_list, should_consider_scope
 
 
 class CompressionLoss(nn.Module):
@@ -265,5 +265,4 @@ class CompressionAlgorithmBuilder:
         """
 
     def _should_consider_scope(self, scope_str: str) -> bool:
-        return (self.target_scopes is None or in_scope_list(scope_str, self.target_scopes)) \
-               and not in_scope_list(scope_str, self.ignored_scopes)
+        return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)

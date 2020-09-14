@@ -239,3 +239,25 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "export_to_onnx_standard_ops": false
 }
 ```
+
+***Per layer ranges initializations parameters***:
+Per layer ranges initiaization can be enabled by specifying  in `"initializer"` section `"range"` as list of dictionaries in the following format:
+
+```
+{
+    "range": [
+        {
+            "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
+
+            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+
+            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+            "target_quantizer_group": "weights" // Type of quantizer group to which this initialization of ranges will be applied. Optional. (By default this initialization of ranges will be applied to weights and activations quantizers)
+        },
+        ...
+    ]
+}
+
+```
+Initialization of ranges defined in this way must specify an unambiguous initialization rule for each module.
