@@ -108,9 +108,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stats.update(ctrl.statistics())
         return stats
 
-    def export_model(self, filename, *args, **kwargs):
-        # The order of algorithms are always such as that the last algorithm is Pruning
-        self.child_ctrls[-1].export_model(filename, *args, **kwargs)
+    def prepare_for_export(self):
+        for child_ctrl in self.child_ctrls:
+            child_ctrl.prepare_for_export()
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         for ctrl in self.child_ctrls:
