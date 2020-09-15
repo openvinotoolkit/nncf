@@ -196,6 +196,9 @@ class CompressionAlgorithmController:
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
+    def prepare_for_export(self):
+        pass
+
     def export_model(self, filename, *args, **kwargs):
         """
         Used to export the compressed model for inference into the ONNX format.
@@ -207,6 +210,7 @@ class CompressionAlgorithmController:
             *args, **kwargs - if the model's `forward` requires additional parameters
             during export, specify these here.
         """
+        self.prepare_for_export()
         model = self._model.eval().cpu()
         input_tensor_list = []
         for info in self._model.input_infos:
