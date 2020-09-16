@@ -72,7 +72,7 @@ class TestQuantizerPropagationStateGraph:
                 assert qpg_edge_data[key] == value
 
     def test_add_propagating_quantizer(self, mock_qp_graph):
-        ref_qconf_list = [QuantizerConfig(), QuantizerConfig(bits=6)]
+        ref_qconf_list = [QuantizerConfig.create(), QuantizerConfig.create(bits=6)]
 
         target_node_key = "F"
         target_ip_node_key = InsertionPointGraph.get_pre_hook_node_key(target_node_key)
@@ -171,7 +171,7 @@ class TestQuantizerPropagationStateGraph:
 
         for path in rev_paths:
             working_graph = deepcopy(mock_qp_graph)
-            ref_prop_quant = working_graph.add_propagating_quantizer([QuantizerConfig()],
+            ref_prop_quant = working_graph.add_propagating_quantizer([QuantizerConfig.create()],
                                                                      start_ip_node_key)
             ref_affected_edges = deepcopy(ref_prop_quant.affected_edges)
             ref_affected_edges.update(set(path))
@@ -230,7 +230,7 @@ class TestQuantizerPropagationStateGraph:
         target_ip_node_key = start_target_accepting_nodes[1]
         ref_last_accepting_location = start_target_accepting_nodes[2]
 
-        prop_quant = mock_qp_graph.add_propagating_quantizer([QuantizerConfig()],
+        prop_quant = mock_qp_graph.add_propagating_quantizer([QuantizerConfig.create()],
                                                              start_ip_node_key)
         ref_affected_edges = deepcopy(prop_quant.affected_edges)
 
@@ -270,7 +270,7 @@ class TestQuantizerPropagationStateGraph:
         # Only take one path out of possible paths for this test
         rev_path = get_edge_paths_for_propagation(mock_qp_graph, target_ip_node_key, start_ip_node_key)[0]
 
-        ref_prop_quant = mock_qp_graph.add_propagating_quantizer([QuantizerConfig()],
+        ref_prop_quant = mock_qp_graph.add_propagating_quantizer([QuantizerConfig.create()],
                                                                  start_ip_node_key)
 
         prop_quant = mock_qp_graph.propagate_quantizer_via_path(ref_prop_quant, rev_path)
@@ -329,11 +329,11 @@ class TestQuantizerPropagationStateGraph:
                                                        target_ip_node_key_keep,
                                                        start_ip_node_key_keep)[0]
 
-        prop_quant_to_remove = mock_qp_graph.add_propagating_quantizer([QuantizerConfig()],
+        prop_quant_to_remove = mock_qp_graph.add_propagating_quantizer([QuantizerConfig.create()],
                                                                        start_ip_node_key_remove)
         prop_quant_to_remove = mock_qp_graph.propagate_quantizer_via_path(prop_quant_to_remove, rev_path_remove)
 
-        prop_quant_to_keep = mock_qp_graph.add_propagating_quantizer([QuantizerConfig()],
+        prop_quant_to_keep = mock_qp_graph.add_propagating_quantizer([QuantizerConfig.create()],
                                                                      start_ip_node_key_keep)
 
         prop_quant_to_keep = mock_qp_graph.propagate_quantizer_via_path(prop_quant_to_keep, rev_path_keep)
@@ -454,7 +454,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()])
+                              [QuantizerConfig.create()])
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
                     target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
@@ -466,7 +466,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()]),
+                              [QuantizerConfig.create()]),
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
                     target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('C'),
@@ -481,7 +481,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'PRE HOOK B': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                                       [QuantizerConfig()])
+                                       [QuantizerConfig.create()])
 
                     },
                     starting_quantizer_ip_node=['E', 'F'],
@@ -497,7 +497,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()])
+                              [QuantizerConfig.create()])
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
                     target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
@@ -509,7 +509,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()]),
+                              [QuantizerConfig.create()]),
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
                     target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -523,7 +523,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'B': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()])
+                              [QuantizerConfig.create()])
 
                     },
                     starting_quantizer_ip_node=['E', 'F'],
@@ -539,7 +539,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()])
+                              [QuantizerConfig.create()])
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
                     target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -551,7 +551,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()]),
+                              [QuantizerConfig.create()]),
                     },
                     starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
                     target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('C'),
@@ -566,7 +566,7 @@ class TestQuantizerPropagationStateGraph:
                     init_node_to_trait_and_configs_dict=
                     {
                         'B': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                              [QuantizerConfig()])
+                              [QuantizerConfig.create()])
 
                     },
                     starting_quantizer_ip_node=['E', 'F'],

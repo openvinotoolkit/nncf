@@ -55,7 +55,7 @@ class TestHWConfigRules:
 
     @staticmethod
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
-        default_qconfig = QuantizationBuilder.DEFAULT_QUANTIZER_CONFIG
+        default_qconfig = QuantizationBuilder.get_default_quantizer_config()
         is_ok = True
         is_ok &= (quantizer.num_bits == default_qconfig.bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
@@ -244,14 +244,14 @@ class TestHWConfigRules:
             "config":{
                 "quantization": {
                     "int5bfp": {
-                        "mantissa_bits": 3,
+                        "bits": 5,
                         "exponent_bits": 5,
                         "block_size": block_size,
                         "mode": "blockfp",
                         "granularity": "perblock"
                     },
                     "int5bfp_folded": {
-                        "mantissa_bits": 3,
+                        "bits": 5,
                         "exponent_bits": 5,
                         "block_size": block_size,
                         "mode": "blockfp",

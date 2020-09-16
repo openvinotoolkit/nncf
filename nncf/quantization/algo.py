@@ -44,7 +44,8 @@ from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo,
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
+from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, \
+    QuantizerConfig, BaseQuantizer, \
     QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
@@ -67,9 +68,9 @@ class QuantizerSetupType(Enum):
             return QuantizerSetupType.PROPAGATION_BASED
         raise RuntimeError("Unknown quantizer setup type. Please select 'pattern_based' or 'propagation_based'.")
 
-
 class QuantizationConstraints:
-    REF_QCONF_OBJ = QuantizerConfig()
+    REF_QCONFS = {True: QuantizerConfig.create(mode=QuantizationMode.BLOCKFP),
+                  False: QuantizerConfig.create(mode=QuantizationMode.SYMMETRIC)}
 
     def __init__(self, **kwargs):
         """Use attribute names of QuantizerConfig as arguments
@@ -77,9 +78,10 @@ class QuantizationConstraints:
         E.g. QuantizationConstraint(bits=8, per_channel=True) will set up
         a constraint that corresponds to all 8-bit per-channel quantizers, either
         symmetric or asymmetric, either signed or unsigned."""
-
-        for attr_name in kwargs:
-            if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
+        mode = kwargs.get('mode')
+        ref_qconf = QuantizationConstraints.REF_QCONFS[mode == QuantizationMode.BLOCKFP]
+        for attr_name, attr_val in kwargs.items():
+            if attr_val is not None and not hasattr(ref_qconf, attr_name):
                 raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))
         self.qconf_attr_vs_constraint_dict = kwargs
 
@@ -116,10 +118,20 @@ class NonWeightQuantizerInfo:
 
 @COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(CompressionAlgorithmBuilder):
-    DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(bits=8,
-                                               mode=QuantizationMode.SYMMETRIC,
-                                               signedness_to_force=None,
-                                               per_channel=False)
+    __DEFAULT_QUANTIZER_CONFIG_INTN =QuantizerConfig.create(bits=8,
+                                                               mode=QuantizationMode.SYMMETRIC,
+                                                               signedness_to_force=None,
+                                                               per_channel=False)
+    __DEFAULT_QUANTIZER_CONFIG_BFP = QuantizerConfig.create(bits=5,
+                                                              mode=QuantizationMode.BLOCKFP,
+                                                              block_size=32,
+                                                              exponent_bits=5,
+                                                              per_channel=False)
+    @staticmethod
+    def get_default_quantizer_config(mode=None):
+        if mode == QuantizationMode.BLOCKFP:
+            return QuantizationBuilder.__DEFAULT_QUANTIZER_CONFIG_BFP
+        return QuantizationBuilder.__DEFAULT_QUANTIZER_CONFIG_INTN 
 
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
@@ -163,8 +175,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             signedness_to_force=params_dict.get('signed'),
             per_channel=params_dict.get('per_channel'),
             block_size=params_dict.get('block_size'),
-            exponent_bits=params_dict.get('exponent_bits'),
-            mantissa_bits=params_dict.get('mantissa_bits')
+            exponent_bits=params_dict.get('exponent_bits')
         )
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
@@ -204,7 +215,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       self._hw_precision_constraints)
 
     def __get_default_qconfig(self, constraints: QuantizationConstraints = None):
-        qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
+        mode = None
+        if constraints is not None:
+            mode = constraints.qconf_attr_vs_constraint_dict['mode']
+        qconfig = deepcopy(QuantizationBuilder.get_default_quantizer_config(mode))
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -255,9 +269,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 full_pattern = full_pattern | custom_pattern
         return full_pattern
 
-    def get_potential_quantized_modules(self, target_model: NNCFNetwork, **kwargs) -> List[PotentialQuantizedModule]:
+    def get_potential_quantized_modules(self,
+                                        target_model: NNCFNetwork, 
+                                        hw_config=None) -> List[PotentialQuantizedModule]:
         modules = target_model.get_nncf_modules()
-        insertion_point_graph = target_model.get_insertion_point_graph(**kwargs)
+        insertion_point_graph = target_model.get_insertion_point_graph(hw_config=hw_config)
         quantized_modules_with_potential_qconfig = []
         default_qconfig_list = [self.__get_default_qconfig(
             constraints=self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])]
@@ -342,13 +358,13 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             replica = self.compressed_context.base_module_thread_local_replica
             return replica.activation_quantizers[self.quantizer_storage_key](*args, **kwargs)
 
-    def _quantize_activations(self, target_model: NNCFNetwork, **kwargs) -> List[InsertionCommand]:
+    def _quantize_activations(self, target_model: NNCFNetwork, hw_config=None) -> List[InsertionCommand]:
         target_model.register_compression_module_type(CompressionModuleType.ACTIVATION_QUANTIZER)
 
         if self.quantizer_setup_type == QuantizerSetupType.PATTERN_BASED:
             insertion_commands = self._quantize_post_pattern_activations(target_model)
         elif self.quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
-            insertion_point_graph = target_model.get_insertion_point_graph(**kwargs)
+            insertion_point_graph = target_model.get_insertion_point_graph(hw_config)
             if self._debug_interface:
                 self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
             prop_graph_solver = QuantizerPropagationSolver(ignored_scopes=self.ignored_scopes,

@@ -102,10 +102,6 @@ QUANTIZER_CONFIG_PROPERTIES = {
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
                                                "quantization)"),
-    "mantissa_bits" : with_attributes(_NUMBER,
-                                      description="For block floating point - number of bits in floating point"
-                                                  " representation of mantissa value excluding sign and implicit"
-                                                  " 1 bit"),
     "exponent_bits" : with_attributes(_NUMBER,
                                       description="For block floating point - number of bits in floating point"
                                                   " representation of exponent"),

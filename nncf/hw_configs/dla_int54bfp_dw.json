@@ -3,28 +3,28 @@
     "config": {
         "quantization": {
             "int4bfp": {
-                "mantissa_bits": 2,
+                "bits": 4,
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
                 "granularity": "perblock"
             },
             "int5bfp": {
-                "mantissa_bits": 3,
+                "bits": 5,
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
                 "granularity": "perblock"
             },
             "int5bfp_double": {
-                "mantissa_bits": 7,
+                "bits": 9,
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
                 "granularity": "perblock"
             },            
             "int5bfp_double_folded": {
-                "mantissa_bits": 7, // Assume 2 shift/add in the input convolution
+                "bits": 9, // Assume 2 shift/add in the input convolution
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
@@ -32,7 +32,7 @@
                 "folded":true
             },
             "int5bfp_folded": {
-                "mantissa_bits": 3, 
+                "bits": 5, 
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
@@ -40,7 +40,7 @@
                 "folded":true
             },
             "int4bfp_double_folded": {
-                "mantissa_bits": 5, // Assume 2 shift/add in the input convolution
+                "bits": 7, // Assume 2 shift/add in the input convolution
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
@@ -48,7 +48,7 @@
                 "folded":true
             },
             "int4bfp_folded": {
-                "mantissa_bits": 2, 
+                "bits": 4, 
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
@@ -56,14 +56,14 @@
                 "folded":true
             },
             "int8bfp": {
-                "mantissa_bits": 6,
+                "bits": 8,
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",
                 "granularity": "perblock"
             },
             "int8bfp_folded": {
-                "mantissa_bits": 6,
+                "bits": 8,
                 "exponent_bits": 5,
                 "block_size": 32,
                 "mode": "blockfp",

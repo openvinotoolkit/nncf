@@ -33,51 +33,91 @@ from nncf.dynamic_graph.operator_metatypes import FoldedConv2dSubtype # Access p
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
 
-
 class QuantizationMode:
     SYMMETRIC = "symmetric"
     ASYMMETRIC = "asymmetric"
     BLOCKFP = "blockfp"
 
-
 class QuantizerConfig:
-    def __init__(self, bits=8,
+    # Blocks direct access to the __init__
+    __create_key = object()
+
+    def __init__(self,
+                 create_key,
+                 bits,
                  mode=QuantizationMode.SYMMETRIC,
                  signedness_to_force=None,
                  per_channel=False,
                  input_shape=None,
-                 is_weights=False,
-                 exponent_bits=0,
-                 mantissa_bits=0,
-                 block_size=0,
-                 folded=None
-                 ):
+                 is_weights=False):
+        if create_key != QuantizerConfig.__create_key:
+            raise Exception("QuantizerConfig must be created through the create method")
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
-        self.bits = bits if mode != QuantizationMode.BLOCKFP else 0
-        self.exponent_bits = exponent_bits if mode == QuantizationMode.BLOCKFP else 0
-        self.mantissa_bits = mantissa_bits if mode == QuantizationMode.BLOCKFP else 0
-        self.block_size = block_size if mode == QuantizationMode.BLOCKFP else 0
-        self.folded = folded
+        self.bits = bits
+
+    @classmethod
+    def create(cls,
+               mode=QuantizationMode.SYMMETRIC,
+               bits=8,
+               signedness_to_force=None,
+               per_channel=False,
+               input_shape=None,
+               is_weights=False,
+               exponent_bits=None,
+               block_size=None,
+               folded=None
+               ):
+        if mode == QuantizationMode.BLOCKFP:
+            return BFPQuantizerConfig(cls.__create_key,
+                                      bits,
+                                      input_shape=input_shape,
+                                      is_weights=is_weights,
+                                      exponent_bits=exponent_bits,
+                                      block_size=block_size,
+                                      folded=folded)
+
+        return IntNQuantizerConfig(cls.__create_key,
+                                   bits,
+                                   mode=mode,
+                                   signedness_to_force=signedness_to_force,
+                                   per_channel=per_channel,
+                                   input_shape=input_shape,
+                                   is_weights=is_weights)
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    def __hash__(self):
+        return hash(str(self))
+
+class IntNQuantizerConfig(QuantizerConfig):
+    def __init__(self,
+                 create_key,
+                 bits=8,
+                 mode=QuantizationMode.SYMMETRIC,
+                 signedness_to_force=None,
+                 per_channel=False,
+                 input_shape=None,
+                 is_weights=False):
+        super().__init__(create_key,
+                         bits,
+                         mode=mode,
+                         signedness_to_force=signedness_to_force,
+                         input_shape=input_shape,
+                         is_weights=is_weights)
+        self.signedness_to_force = signedness_to_force
+        self.per_channel = per_channel
+        self.is_weights = is_weights
+        self.input_shape = input_shape
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
     def __str__(self):
-        if self.mode == QuantizationMode.BLOCKFP:
-            return "Man:{man} Exp:{exp} Blk:{blk} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
-                man=self.mantissa_bits,
-                exp=self.exponent_bits,
-                blk=self.block_size,
-                mode='BFP',
-                signedness='S',
-                is_weights='Y' if self.is_weights else 'N',
-                per_channel='Y')
-
         return "B:{bits} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
             bits=self.bits,
             mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
@@ -89,23 +129,56 @@ class QuantizerConfig:
         return hash(str(self))
 
     def __lt__(self, other):
-        if self.mode == QuantizationMode.BLOCKFP:
-            if other.mode == QuantizationMode.BLOCKFP:
-                # Both bfp
-                return self.mantissa_bits < other.mantissa_bits or \
-                    self.exponent_bits < other.exponent_bits or \
-                    self.block_size < other.block_size or \
-                    self.folded != other.folded
-            # BFP < non_bfp
-            return True
-        if other.mode == QuantizationMode.BLOCKFP:
+        if not isinstance(other, IntNQuantizerConfig):
             return False
-
         return self.bits < other.bits or \
                (self.mode == QuantizationMode.SYMMETRIC and other.mode == QuantizationMode.ASYMMETRIC) or \
                (self.signedness_to_force is None and other.signedness_to_force is not None) or \
                (not self.per_channel and other.per_channel)
 
+class BFPQuantizerConfig(QuantizerConfig):
+    def __init__(self,
+                 create_key,
+                 bits,
+                 signedness_to_force=None,
+                 input_shape=None,
+                 is_weights=False,
+                 exponent_bits=0,
+                 block_size=0,
+                 folded=None
+                 ):
+        super().__init__(create_key,
+                         bits,
+                         mode=QuantizationMode.BLOCKFP,
+                         input_shape=input_shape,
+                         is_weights=is_weights)
+        self.exponent_bits = exponent_bits
+        self.block_size = block_size
+        self.folded = folded
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def __str__(self):
+        return "Bits:{bits} Exp:{exp} Blk:{blk} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
+            bits=self.bits,
+            exp=self.exponent_bits,
+            blk=self.block_size,
+            mode='BFP',
+            signedness='S',
+            is_weights='Y' if self.is_weights else 'N',
+            per_channel='Y')
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __lt__(self, other):
+        if not isinstance(other, BFPQuantizerConfig):
+            return True
+        return self.bits < other.bits or \
+                self.exponent_bits < other.exponent_bits or \
+                self.block_size < other.block_size or \
+                self.folded != other.folded
 
 class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"
@@ -456,11 +529,13 @@ class BlockfpQuantizer(BaseQuantizer):
 
     def __init__(self, config):
         super().__init__(config)
+        if not isinstance(config, BFPQuantizerConfig):
+            raise Exception("Construct BFP quantizer with a non BFP Quantizer config")
         self.input_shape = config.input_shape
         self.is_weights = config.is_weights
 
         self.exponent_bits = config.exponent_bits
-        self.mantissa_bits = config.mantissa_bits
+        self.bits = config.bits
         self.block_size = config.block_size
         self.scope_string = "scope"
         if config.folded:
@@ -486,7 +561,7 @@ class BlockfpQuantizer(BaseQuantizer):
     def quantize(self, x):
         result = blockfp_quantize(x,
                                   self.exponent_bits,
-                                  self.mantissa_bits,
+                                  self.bits,
                                   self.block_size,
                                   self.folded_config,
                                   self.is_weights,
@@ -513,7 +588,7 @@ class BlockfpQuantizer(BaseQuantizer):
         if self._export_mode == QuantizerExportMode.BFP_FAKE_QUANTIZE:
             return ExportBlockfp.apply(x,
                                        self.exponent_bits,
-                                       self.mantissa_bits,
+                                       self.bits,
                                        self.block_size,
                                        self.scope_string,
                                        self.folded_config)
