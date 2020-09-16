@@ -193,7 +193,7 @@ class NetworkQuantizationShareMetric(BaseMetric):
         table.add_rows(data)
         return table
 
-class MemoryСostMetric(BaseMetric):
+class MemoryCostMetric(BaseMetric):
     """
 
     This metric considers:

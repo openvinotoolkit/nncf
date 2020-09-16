@@ -30,7 +30,7 @@ from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.structures import BNAdaptationInitArgs
-from nncf.utils import in_scope_list, should_consider_scope
+from nncf.utils import should_consider_scope
 
 
 class CompressionLoss(nn.Module):

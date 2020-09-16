@@ -46,7 +46,7 @@ from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
     QuantizerExportMode, QuantizersSwitcher
-from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryСostMetric, ShareEdgesQuantizedDataPath
+from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
@@ -829,7 +829,7 @@ class QuantizationController(QuantizationControllerBase):
             self.non_stable_metric_collectors = [NetworkQuantizationShareMetric(target_model, self.weight_quantizers, \
                                                                                 self.non_weight_quantizers,
                                                                                 quantizer_setup_type),
-                                                 MemoryСostMetric(target_model, self.weight_quantizers,
+                                                 MemoryCostMetric(target_model, self.weight_quantizers,
                                                                   self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
@@ -967,7 +967,7 @@ class QuantizationController(QuantizationControllerBase):
                     'but the initializing data loader is not provided as an extra struct. '
                     'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
             data_loader = range_init_args.data_loader
-        
+
             self._do_range_init(data_loader, max_num_init_steps, global_init_range_config,
                                 range_init_args.device)
 
@@ -976,7 +976,7 @@ class QuantizationController(QuantizationControllerBase):
         global_init_range_config.update(init_range_config)
         if global_init_range_config.get("type") is None:
             global_init_range_config["type"] = "mean_min_max"
-        
+
         if global_init_range_config.get("num_init_steps") is None:
             global_init_range_config["num_init_steps"] = 1
 
@@ -1058,7 +1058,7 @@ class QuantizationController(QuantizationControllerBase):
     def _get_local_init_range_config(self, scope: Scope, scope_overrides: Dict[str, Dict],
                                      global_init_range_config: Dict, quantizer_group: str):
         if isinstance(global_init_range_config, dict):
-           module_init_range_config = global_init_range_config     
+            module_init_range_config = global_init_range_config
         else:
             module_init_range_config = None
             matched_init_range_config = []
@@ -1066,14 +1066,16 @@ class QuantizationController(QuantizationControllerBase):
                 target_scopes = range_init_subconfig.get("target_scopes", None)
                 ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
                 target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
-                if quantizer_group == target_quantizer_group and should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                if quantizer_group == target_quantizer_group and\
+                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
                     matched_init_range_config.append(range_init_subconfig)
 
-            if len(matched_init_range_config) > 1:
-                raise AssertionError("The range initialization configs conflict with each other. "
-                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config, str(scope)))
-            elif len(matched_init_range_config) == 1:
+            if len(matched_init_range_config) == 1:
                 module_init_range_config = matched_init_range_config[0]
+            else:
+                raise AssertionError("The range initialization configs conflict with each other. "
+                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
+                                                                                    str(scope)))
 
         for overridden_scope in scope_overrides.keys():
             if in_scope_list(str(scope), overridden_scope):

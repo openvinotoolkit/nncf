@@ -178,21 +178,21 @@ BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
         "num_init_steps": with_attributes(_NUMBER,
-                                            description="Number of batches from the training dataset to "
-                                                        "consume as sample model inputs for purposes of "
-                                                        "setting initial minimum and maximum quantization "
-                                                        "ranges"),
+                                          description="Number of batches from the training dataset to "
+                                                      "consume as sample model inputs for purposes of "
+                                                      "setting initial minimum and maximum quantization "
+                                                      "ranges"),
         "type": with_attributes(_STRING, description="Type of the initializer - determines which "
-                                                        "statistics gathered during initialization will be "
-                                                        "used to initialize the quantization ranges"),
+                                                     "statistics gathered during initialization will be "
+                                                     "used to initialize the quantization ranges"),
         "min_percentile": with_attributes(_NUMBER,
-                                            description="For 'percentile' type - specify the percentile of "
-                                                        "input value histograms to be set as the initial "
-                                                        "value for minimum quantizer input"),
+                                          description="For 'percentile' type - specify the percentile of "
+                                                      "input value histograms to be set as the initial "
+                                                      "value for minimum quantizer input"),
         "max_percentile": with_attributes(_NUMBER,
-                                            description="For 'percentile' type - specify the percentile of "
-                                                        "input value histograms to be set as the initial "
-                                                        "value for maximum quantizer input"),
+                                          description="For 'percentile' type - specify the percentile of "
+                                                      "input value histograms to be set as the initial "
+                                                      "value for maximum quantizer input"),
     },
     "additionalProperties": False,
 }
@@ -201,9 +201,9 @@ PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
     "properties": {
         **BASIC_RANGE_INIT_CONFIG_PROPERTIES["properties"],
         "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                            description=TARGET_SCOPES_DESCRIPTION),
+                                         description=TARGET_SCOPES_DESCRIPTION),
         "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                            description=IGNORED_SCOPES_DESCRIPTION),
+                                          description=IGNORED_SCOPES_DESCRIPTION),
         "target_quantizer_qroup": with_attributes(_STRING, description="The target group of quantizers for which "
                                                                        "specified type of range initialization will "
                                                                        "be applied. It can take 'activations' or "
@@ -217,13 +217,13 @@ RANGE_INIT_CONFIG_PROPERTIES = {
         "type": "object",
         "properties": {
             "range": {
-                    "oneOf": [
-                        {
-                            "type": "array",
-                            "items": PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES
-                        },
-                        BASIC_RANGE_INIT_CONFIG_PROPERTIES
-                    ],
+                "oneOf": [
+                    {
+                        "type": "array",
+                        "items": PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES
+                    },
+                    BASIC_RANGE_INIT_CONFIG_PROPERTIES
+                ],
             },
         },
         "additionalProperties": False,

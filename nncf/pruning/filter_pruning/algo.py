@@ -193,6 +193,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._apply_masks()
         model = self._model.eval().cpu()
         graph = model.get_original_graph()
+        # pylint: disable=protected-access
         nx_graph = graph._nx_graph
 
         parameters_count_before = model.get_parameters_count_in_model()
