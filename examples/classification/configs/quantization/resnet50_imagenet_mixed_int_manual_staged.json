@@ -24,7 +24,6 @@
             "mode": "asymmetric",
             "bits": 4
         },
-        "quantize_inputs": true,
         "initializer": {
             "precision": {
                 "type": "manual",

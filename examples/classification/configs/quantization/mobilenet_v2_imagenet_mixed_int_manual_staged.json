@@ -22,13 +22,12 @@
             "bits": 4
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 8
+            "mode": "asymmetric"
         },
         "quantize_inputs": true,
         "initializer": {
             "precision": {
-                "type": "manuak",
+                "type": "manual",
                 "bitwidth_per_scope": [
                     // [8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 4, 8, 8, 4, 8, 8, 4, 8, 8, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 4, 8, 4, 8, 4, 4, 8, 4, 4, 8, 4, 4, 4]
                     // Acc@1 70.89%

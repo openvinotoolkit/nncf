@@ -26,7 +26,7 @@ and Semantic Segmentation.
 
 ## New in Release 1.3:
 - Filter pruning algorithm added
-- Mixed precision quantization with manual and automatic (HAWQ-powered) precision setup
+- Mixed-precision quantization with manual and automatic (HAWQ-powered) precision setup
 - Support for DistilBERT
 - Selecting quantization parameters based on hardware configuration preset (CPU, GPU, VPU)
 - Propagation-based quantizer position setup mode (quantizers are position as early in the network control flow graph as possible while keeping inputs of target operation quantized)

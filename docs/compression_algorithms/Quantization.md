@@ -98,13 +98,13 @@ For symmetric:
 ![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
 
 
-#### Mixed Precision Quantization
+#### Mixed-Precision Quantization
 
 Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. Though
 NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, choosing
 ultra low bitwidth could noticeably affect the model's accuracy.
 A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers.
-NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed precision
+NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
 calculated by multiplying the average Hessian trace with the L2 norm of quantization perturbation:
@@ -138,9 +138,64 @@ where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of 
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.   
 
-Automatic mixed precision selection can be enabled by specifying `"type": "hawq"` in `precision` group within
-`initializer` section of the quantization algorithm. The manual mode is also available by explicitly setting the number
-of bits per layer through `bitwidth_per_scope` parameter.
+For automatic mixed-precision selection it's recommended to use the following template of configuration file:
+```
+    "optimizer": {
+        "base_lr": 3.1e-4,
+        "schedule_type": "plateau",
+        "type": "Adam",
+        "scheduler_params": {
+            "threshold": 0.1,
+            "cooldown": 3
+        },
+        "weight_decay": 1e-05
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "weights": {
+            "mode": "asymmetric",
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric"
+        },
+        "initializer": {
+            "precision": {
+                "type": "hawq",
+                "bits": [4,8]
+            }
+        }
+    }
+```
+
+Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
+
+Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+using the template in the full configuration file.
+
+On the initialization stage, the HAWQ algorithm chooses the most accurate mixed-precision configuration with compression 
+ratio no less than the specified. The ratio is computed between **bits complexity** of fully INT8 model and mixed-precision 
+lower-bit one. The bit complexity of the model is a sum of bit complexities for each quantized layer, which are a 
+multiplication of FLOPS for the layer by a number of bits for its quantization.
+By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
+But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
+configuration file.
+
+This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
+model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than 
+two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files 
+ending by `*_staged` for an example of this method.     
+
+The manual mode of mixed-precision quantization is also available by explicitly setting the number of bits per layer
+ through `bitwidth_per_scope` parameter.
+
+---
+**NOTE**
+
+Precision initialization overrides bits settings specified in `weights` and `activations` sections of configuration 
+file. 
+
+---
 
 #### Batch-norm statistics adaptation
 
@@ -164,9 +219,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
             "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
-            "num_data_points": 200, // Number of data points to iteratively estimate Hessian trace, 200 by default.
-            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
+            "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
+            "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
             "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
+            "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
                     4,

@@ -12,6 +12,7 @@
 """
 
 from collections import OrderedDict, Counter
+from enum import Enum
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
@@ -19,7 +20,6 @@ import networkx as nx
 import numpy as np
 import torch
 from copy import deepcopy
-from enum import Enum
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
@@ -666,27 +666,27 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             count = count + param.numel()
         return count
 
-    def get_MACs_in_model(self):
+    def get_flops_per_module(self):
         """
-        Calculates MAC units count for model.
+        Calculates FLOPS count for modules.
         """
         model = self
-        ops_count_dict = {}
+        flops_count_dict = {}
 
         def get_hook(name):
-            def compute_flops_hook(module, input_, output):
+            def compute_MACs_hook(module, input_, output):
                 if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
                     ks = module.weight.data.shape
-                    ops_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
+                    mac_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
                 elif isinstance(module, nn.Linear):
-                    ops_count = input_[0].shape[1] * output.shape[1]
+                    mac_count = input_[0].shape[1] * output.shape[-1]
                 elif isinstance(module, nn.BatchNorm2d):
-                    ops_count = np.prod(list(input_[0].shape))
+                    mac_count = np.prod(list(input_[0].shape))
                 else:
                     return
-                ops_count_dict[name] = ops_count
+                flops_count_dict[name] = 2 * mac_count
 
-            return compute_flops_hook
+            return compute_MACs_hook
 
         hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
 
@@ -694,6 +694,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         for h in hook_list:
             h.remove()
+        return flops_count_dict
 
-        total_ops_count = sum(v for v in ops_count_dict.values())
-        return total_ops_count
+    def get_MACs_in_model(self):
+        """
+            Calculates MAC units count for model.
+        """
+        flops_count_dict = self.get_flops_per_module()
+        total_MACs_count = sum(v // 2 for v in flops_count_dict.values())
+        return total_MACs_count

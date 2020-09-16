@@ -263,15 +263,27 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                             examples=[[4, 8]]),
                     "num_data_points": with_attributes(_NUMBER,
                                                        description="Number of data points to iteratively estimate "
-                                                                   "Hessian trace, 200 by default."),
+                                                                   "Hessian trace, 1000 by default."),
                     "iter_number": with_attributes(_NUMBER,
                                                    description="Maximum number of iterations of Hutchinson algorithm "
-                                                               "to Estimate Hessian trace, 200 by default"),
+                                                               "to Estimate Hessian trace, 500 by default"),
                     "tolerance": with_attributes(_NUMBER,
                                                  description="Minimum relative tolerance for stopping the Hutchinson "
                                                              "algorithm. It's calculated  between mean average trace "
                                                              "from previous iteration and current one. 1e-5 by default"
                                                              "bitwidth_per_scope"),
+                    "compression_ratio": with_attributes(_NUMBER,
+                                                         description="The desired ratio between bits complexity of "
+                                                                     "fully INT8 model and mixed-precision lower-bit "
+                                                                     "one. On precision initialization stage the HAWQ "
+                                                                     "algorithm chooses the most accurate "
+                                                                     "mixed-precision configuration with ratio no less "
+                                                                     "than the specified. Bit complexity of the model "
+                                                                     "is a sum of bit complexities for each quantized "
+                                                                     "layer, which are a multiplication of FLOPS for "
+                                                                     "the layer by number of bits for its "
+                                                                     "quantization.",
+                                                         default=1.5),
                     "bitwidth_per_scope": {
                         "type": "array",
                         "items": {

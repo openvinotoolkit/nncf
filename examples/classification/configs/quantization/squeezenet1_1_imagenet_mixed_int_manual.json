@@ -26,12 +26,11 @@
         "algorithm": "quantization",
         "weights": {
             "mode": "asymmetric",
-            "bits": 4,
-            "per_channel": true
+            "per_channel": true,
+            "bits": 4
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 8
+            "mode": "asymmetric"
         },
         "initializer": {
             "precision": {
