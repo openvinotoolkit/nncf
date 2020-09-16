@@ -578,7 +578,7 @@ class QuantizerPropagationSolver:
        when the model has the most contol flow graph edges quantized according to HW
        capabilities."""
 
-    DEFAULT_QUANTIZATION_TYPES = [QuantizerConfig(
+    DEFAULT_QUANTIZATION_TYPES = [QuantizerConfig.create(
         bits=8,
         mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=None,

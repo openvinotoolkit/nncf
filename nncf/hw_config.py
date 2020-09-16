@@ -166,17 +166,17 @@ class HWConfig(List):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         if  mode == QuantizationMode.BLOCKFP:
-            mantissa_bits = quantization_subdict["mantissa_bits"]
+            bits = quantization_subdict["bits"]
             exponent_bits = quantization_subdict["exponent_bits"]
             block_size = quantization_subdict["block_size"]
             folded = quantization_subdict.get("folded", False)
 
-            return QuantizerConfig(mode=mode,
-                                   exponent_bits=exponent_bits,
-                                   mantissa_bits=mantissa_bits,
-                                   block_size=block_size,
-                                   folded=folded
-                                  )
+            return QuantizerConfig.create(mode=mode,
+                                          exponent_bits=exponent_bits,
+                                          bits=bits,
+                                          block_size=block_size,
+                                          folded=folded
+                                         )
 
 
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -199,11 +199,11 @@ class HWConfig(List):
                     "Invalid value of quantizer parameter `level_high`.\
                         The parameter must be consistent with other parameters!"
 
-        return QuantizerConfig(bits=bits,
-                               mode=mode,
-                               per_channel=is_per_channel,
-                               signedness_to_force=signedness_to_force,
-                               is_weights=for_weights)
+        return QuantizerConfig.create(bits=bits,
+                                      mode=mode,
+                                      per_channel=is_per_channel,
+                                      signedness_to_force=signedness_to_force,
+                                      is_weights=for_weights)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):

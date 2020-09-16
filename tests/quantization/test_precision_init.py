@@ -212,7 +212,7 @@ PrecisionConstraintsTestParams = namedtuple('PrecisionConstraintsTestParams',
 def get_mock_precision_constraints(constraints, ordered_weight_keys):
     hw_precision_constraints = HWPrecisionConstraints(True)
     for key, bits in zip(ordered_weight_keys, constraints):
-        bit_constraints = [QuantizerConfig(bits=bitwidth) for bitwidth in bits]
+        bit_constraints = [QuantizerConfig.create(bits=bitwidth) for bitwidth in bits]
         hw_precision_constraints.add(key, bit_constraints)
     return hw_precision_constraints
 
@@ -587,7 +587,8 @@ def test_flops(config_creator, ref_values):
     assert flops_counter.ratio_for_bits_configuration([8, 4]) == ref_values[1]
     assert flops_counter.ratio_limits([4, 8]) == ref_values[2]
     assert flops_counter.ratio_limits([2, 4, 8]) == ref_values[3]
-    constraints = HWPrecisionConstraints(True).add(list(quantizers)[0], [QuantizerConfig(bits=8)])
+    constraints = HWPrecisionConstraints(True).add(list(quantizers)[0], 
+                                                        [QuantizerConfig.create(bits=8)])
     order = list(range(len(quantizers)))
     order.reverse()
     assert flops_counter.ratio_limits([2, 8], order, constraints) == ref_values[4]

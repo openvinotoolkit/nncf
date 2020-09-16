@@ -412,7 +412,7 @@ def fold(src, fold_config):
                           [64, 3, 7, 7],
                           [2, 32, 56, 56]],
                          ids=idfn)
-@pytest.mark.parametrize('mantissa_bits', (2, 3, 10), ids=('int4bfp', 'int5bfp', 'fp16bfp'))
+@pytest.mark.parametrize('bits', (4, 5, 12), ids=('int4bfp', 'int5bfp', 'fp16bfp'))
 @pytest.mark.parametrize('block_size', (1, 8, 32), ids=('block1', 'block8', 'block32'))
 @pytest.mark.parametrize("is_weights", (True, False), ids=('weights', 'activation'))
 @pytest.mark.parametrize("fold_config", [None,
@@ -440,7 +440,7 @@ class TestBlockfp:
         return tmp.value
 
     @staticmethod
-    def check_block(ref_block, dut_block, exponent_bits, mantissa_bits, block_size):
+    def check_block(ref_block, dut_block, exponent_bits, bits, block_size):
         assert ref_block.shape == dut_block.shape
         ref_signs = np.sign(ref_block)
         dut_signs = np.sign(dut_block)
@@ -458,7 +458,8 @@ class TestBlockfp:
         assert(ref_exponent == dut_exponent_max or \
               (ref_exponent == dut_exponent_max-1 and dut_mantissa_max == 0) or \
               (dut_exponent_max == 0 and ref_exponent <= 128-(1<<exponent_bits-1)))
-
+        mantissa_bits = bits - 2
+        assert mantissa_bits >= 0
         mantissa_mask = (1<<(23-mantissa_bits))-1
         if block_size > 1:
             for dut_val in dut_block:
@@ -480,7 +481,7 @@ class TestBlockfp:
                 assert((scaled_ref >= scaled_dut).all and (scaled_ref <= scaled_dut +1).all)
 
     @staticmethod
-    def check_bfp_outputs_for_quantization_functions(ref, dut, exponent_bits, mantissa_bits, block_size):
+    def check_bfp_outputs_for_quantization_functions(ref, dut, exponent_bits, bits, block_size):
         assert ref.shape == dut.shape
 
         for n in range(ref.shape[0]):
@@ -489,9 +490,9 @@ class TestBlockfp:
                     for c in range(0, ref.shape[1], block_size):
                         ref_block = ref[n, c:c+block_size, y, x]
                         dut_block = dut[n, c:c+block_size, y, x]
-                        TestBlockfp.check_block(ref_block, dut_block, exponent_bits, mantissa_bits, block_size)
+                        TestBlockfp.check_block(ref_block, dut_block, exponent_bits, bits, block_size)
 
-    def test_quantize_blockfp(self, _seed, input_size, mantissa_bits, block_size, is_weights, fold_config):
+    def test_quantize_blockfp(self, _seed, input_size, bits, block_size, is_weights, fold_config):
         exponent_bits = 5
         ref_input = np.float32(generate_input(input_size))
 
@@ -504,9 +505,9 @@ class TestBlockfp:
         [test_input_cuda] = get_test_data([ref_input], is_cuda=True, is_fp16=False)#
         [test_input_cpu] = get_test_data([ref_input], is_cuda=False, is_fp16=False)#
 
-        dut_output_cuda = blockfp_quantize(test_input_cuda, exponent_bits, mantissa_bits, block_size,
+        dut_output_cuda = blockfp_quantize(test_input_cuda, exponent_bits, bits, block_size,
                                            fold_config, is_weights, name="").cpu().numpy()
-        dut_output_cpu = blockfp_quantize(test_input_cpu, exponent_bits, mantissa_bits, block_size,
+        dut_output_cpu = blockfp_quantize(test_input_cpu, exponent_bits, bits, block_size,
                                           fold_config, is_weights, name="").cpu().numpy()
         assert (dut_output_cuda == dut_output_cpu).all
 
@@ -514,7 +515,7 @@ class TestBlockfp:
             folded_input = fold(ref_input, fold_config)
             folded_output = fold(dut_output_cpu, fold_config)
             self.check_bfp_outputs_for_quantization_functions(folded_input, folded_output, exponent_bits,
-                                                              mantissa_bits, block_size)
+                                                              bits, block_size)
         else:
             self.check_bfp_outputs_for_quantization_functions(ref_input, dut_output_cpu, exponent_bits,
-                                                              mantissa_bits, block_size)
+                                                              bits, block_size)

@@ -157,183 +157,181 @@ class TestQuantizerPropagationSolver:
     QCONFIG_MASTER_SLAVE_BEFORE_AND_AFTER_MERGING = [
         # Compatible configs on all branches
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=8)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=8)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=8)],
-                "bar": [QuantizerConfig(bits=8)]
+                "foo": [QuantizerConfig.create(bits=8)],
+                "bar": [QuantizerConfig.create(bits=8)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=8)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=8)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=8)],
-                "bar": [QuantizerConfig(bits=8)]
+                "foo": [QuantizerConfig.create(bits=8)],
+                "bar": [QuantizerConfig.create(bits=8)]
             }),
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=6,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=6,
+                                                                    mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "baz": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "baz": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=6,
-                                                            mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=6,
+                                                                   mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "baz": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "baz": [QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             }),
 
         # Precision narrowed relative to master config on some branches, but master
         # config is still compatible
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=6)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=4)],
+                "bar": [QuantizerConfig.create(bits=5)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=6)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=4)],
+                "bar": [QuantizerConfig.create(bits=5)]
             }),
 
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=8,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=8,
+                                                                    mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=4)],
+                "bar": [QuantizerConfig.create(bits=5)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=8,
-                                                            mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=8,
+                                                                   mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=4)],
+                "bar": [QuantizerConfig.create(bits=5)]
             }),
 
         # Potential master configs excluded due to conflict with a branch
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=8),
-                                             QuantizerConfig(bits=6)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=8),
+                                             QuantizerConfig.create(bits=6)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7)],
-                "bar": [QuantizerConfig(bits=8)],
-                "baz": [QuantizerConfig(bits=7)]
+                "foo": [QuantizerConfig.create(bits=7)],
+                "bar": [QuantizerConfig.create(bits=8)],
+                "baz": [QuantizerConfig.create(bits=7)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=8)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=8)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7)],
-                "bar": [QuantizerConfig(bits=8)],
-                "baz": [QuantizerConfig(bits=7)]
+                "foo": [QuantizerConfig.create(bits=7)],
+                "bar": [QuantizerConfig.create(bits=8)],
+                "baz": [QuantizerConfig.create(bits=7)]
             }),
 
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=7),
-                                             QuantizerConfig(bits=7,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=7),
+                                             QuantizerConfig.create(bits=7,
+                                                                    mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=7,
-                                                            mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=7,
+                                                                   mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             }),
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=7),
-                                             QuantizerConfig(bits=7,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=7),
+                                             QuantizerConfig.create(bits=7,
+                                                                    mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=7,
-                                                            mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=7,
+                                                                   mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+                "foo": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC)]
             }),
 
         # Master config propagation-induced config exclusion on branches:
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=6)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5)],
+                "foo": [QuantizerConfig.create(bits=8),
+                        QuantizerConfig.create(bits=7),
+                        QuantizerConfig.create(bits=6),],
+                "bar": [QuantizerConfig.create(bits=8),
+                        QuantizerConfig.create(bits=5)],
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=6)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=6)],
+                "bar": [QuantizerConfig.create(bits=5)]
             }),
 
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=6)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5),
-                        QuantizerConfig(bits=4,
-                                        mode=QuantizationMode.ASYMMETRIC)
+                "foo": [QuantizerConfig.create(bits=7),
+                        QuantizerConfig.create(bits=6),
+                        QuantizerConfig.create(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=8),
+                        QuantizerConfig.create(bits=5),
+                        QuantizerConfig.create(bits=4, mode=QuantizationMode.ASYMMETRIC)
                         ],
             },
-            master_config_list_after_merge=[QuantizerConfig(bits=6)],
+            master_config_list_after_merge=[QuantizerConfig.create(bits=6)],
             slave_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6)],
-                "bar": [QuantizerConfig(bits=5)]
+                "foo": [QuantizerConfig.create(bits=6)],
+                "bar": [QuantizerConfig.create(bits=5)]
             }),
 
         # Cases with conflicts resulting in no master configs left after merge and,
         # consequently, no propagation:
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=3)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=3)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5),
-                        QuantizerConfig(bits=4,
-                                        mode=QuantizationMode.ASYMMETRIC)
+                "foo": [QuantizerConfig.create(bits=7),
+                        QuantizerConfig.create(bits=6),
+                        QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=8),
+                        QuantizerConfig.create(bits=5),
+                        QuantizerConfig.create(bits=4,
+                                               mode=QuantizationMode.ASYMMETRIC)
                         ],
             },
             master_config_list_after_merge=[],
             slave_config_list_dict_after_merge={}),
 
         MergeQConfigTestStruct(
-            master_config_list_before_merge=[QuantizerConfig(bits=8),
-                                             QuantizerConfig(bits=4,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
+            master_config_list_before_merge=[QuantizerConfig.create(bits=8),
+                                             QuantizerConfig.create(bits=4,
+                                                                    mode=QuantizationMode.ASYMMETRIC)],
             slave_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5)
+                "foo": [QuantizerConfig.create(bits=7,
+                                               mode=QuantizationMode.ASYMMETRIC),
+                        QuantizerConfig.create(bits=6,
+                                               mode=QuantizationMode.ASYMMETRIC)],
+                "bar": [QuantizerConfig.create(bits=8),
+                        QuantizerConfig.create(bits=5)
                         ],
             },
             master_config_list_after_merge=[],
@@ -398,7 +396,7 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -413,11 +411,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -432,11 +430,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -450,11 +448,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
                 'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -469,11 +467,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -487,11 +485,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()]),
+                      [QuantizerConfig.create()]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -506,11 +504,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=7)]),
+                      [QuantizerConfig.create(bits=7)]),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=8), QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=8), QuantizerConfig.create(bits=6)]),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4)]),
+                      [QuantizerConfig.create(bits=4)]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -524,11 +522,12 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
+                      [QuantizerConfig.create(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=8), QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)]),
+                      [QuantizerConfig.create(bits=8),
+                       QuantizerConfig.create(bits=6, mode=QuantizationMode.ASYMMETRIC)]),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4), QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=4), QuantizerConfig.create(bits=6)]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -543,20 +542,21 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4), QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=4), QuantizerConfig.create(bits=6)]),
 
                 'C': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
+                      [QuantizerConfig.create(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
 
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=8), QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)]),
+                      [QuantizerConfig.create(bits=8),
+                       QuantizerConfig.create(bits=6, mode=QuantizationMode.ASYMMETRIC)]),
 
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4)]),
+                      [QuantizerConfig.create(bits=4)]),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4)]),
+                      [QuantizerConfig.create(bits=4)]),
                 'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4)]),
+                      [QuantizerConfig.create(bits=4)]),
 
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
@@ -572,11 +572,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=5)]),
+                      [QuantizerConfig.create(bits=5)]),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=6)]),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4), QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=4), QuantizerConfig.create(bits=6)]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -592,11 +592,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_and_configs_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
+                      [QuantizerConfig.create(bits=7, mode=QuantizationMode.ASYMMETRIC)]),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=8)]),
+                      [QuantizerConfig.create(bits=6), QuantizerConfig.create(bits=8)]),
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4), QuantizerConfig(bits=6)]),
+                      [QuantizerConfig.create(bits=4), QuantizerConfig.create(bits=6)]),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
@@ -694,7 +694,7 @@ class TestQuantizerPropagationSolver:
             {
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('J'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('E'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
@@ -707,11 +707,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_post_hook_node_key('A')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('C'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
@@ -724,17 +724,17 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6)],
+                      [QuantizerConfig.create(bits=6)],
                       InsertionPointGraph.get_pre_hook_node_key('C')),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
                 'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
@@ -747,19 +747,19 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=8)],
+                      [QuantizerConfig.create(bits=6), QuantizerConfig.create(bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('C')),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
+                      [QuantizerConfig.create(bits=6),
+                       QuantizerConfig.create(bits=5, mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
                 'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
+                      [QuantizerConfig.create(bits=6),
+                       QuantizerConfig.create(bits=5, mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
-            master_quantizer_qconfigs=[QuantizerConfig(bits=6)],
+            master_quantizer_qconfigs=[QuantizerConfig.create(bits=6)],
             target_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -772,14 +772,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('A')),
                 'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('A'))
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_MERGE,
@@ -791,14 +791,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('A')),
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=2)],
+                      [QuantizerConfig.create(bits=2)],
                       InsertionPointGraph.get_pre_hook_node_key('C'))
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('H'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_MERGE,
@@ -813,14 +813,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'C': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('B')),
                 'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=4)],
+                      [QuantizerConfig.create(bits=4)],
                       InsertionPointGraph.get_pre_hook_node_key('I')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('C'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -833,14 +833,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('H')),
                 'B': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('A'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -854,14 +854,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_post_hook_node_key('B')),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -874,11 +874,11 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(6)],
+                      [QuantizerConfig.create(6)],
                       InsertionPointGraph.get_post_hook_node_key('A')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -890,14 +890,14 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(6)],
+                      [QuantizerConfig.create(bits=6)],
                       InsertionPointGraph.get_post_hook_node_key('A')),
                 'C': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(6)],
+                      [QuantizerConfig.create(bits=6)],
                       InsertionPointGraph.get_post_hook_node_key('A')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
-            master_quantizer_qconfigs=[QuantizerConfig()],
+            master_quantizer_qconfigs=[QuantizerConfig.create()],
             target_node_for_master_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -910,19 +910,19 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=8)],
+                      [QuantizerConfig.create(bits=6), QuantizerConfig.create(bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('C')),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
+                      [QuantizerConfig.create(bits=6),
+                       QuantizerConfig.create(bits=5, mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
                 'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
+                      [QuantizerConfig.create(bits=6),
+                       QuantizerConfig.create(bits=5, mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
             },
             starting_master_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
-            master_quantizer_qconfigs=[QuantizerConfig(bits=4)],
+            master_quantizer_qconfigs=[QuantizerConfig.create(bits=4)],
             target_node_for_master_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
             strategy_vs_expected_status_dict={
                 PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
@@ -973,7 +973,7 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('A'))
             },
             expected_finished_status=True,
@@ -983,7 +983,7 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('C'))
             },
             expected_finished_status=False,
@@ -992,13 +992,13 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('A')),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('E')),
                 'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
+                      [QuantizerConfig.create()],
                       InsertionPointGraph.get_pre_hook_node_key('I'))
             },
             expected_finished_status=True,
@@ -1063,8 +1063,8 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             list_ops=['conv2d', 'gelu', 'conv2d'],
             expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
-                InsertionInfo(OperationExecutionContext('gelu', Scope(), 0, [None])): [QuantizerConfig()]
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig.create()],
+                InsertionInfo(OperationExecutionContext('gelu', Scope(), 0, [None])): [QuantizerConfig.create()]
             },
             expected_count_finished_quant=2,
             expected_count_active_quant=0,
@@ -1073,7 +1073,7 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             list_ops=['conv2d', 'matmul', 'gelu', 'softmax'],
             expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig.create()],
             },
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
@@ -1082,7 +1082,8 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             list_ops=['conv2d', 'matmul'],
             expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])):
+                    [QuantizerConfig.create()],
             },
             expected_count_finished_quant=1,
             expected_count_active_quant=0,

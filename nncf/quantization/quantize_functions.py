@@ -107,7 +107,8 @@ class QuantizeAsymmetric(torch.autograd.Function):
 class QuantizeBlockfp(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights):
+    def forward(ctx, input_, exponent_bits, bits, block_size, fold_config, is_weights):
+        mantissa_bits = bits - 2
         if  fold_config:
             offsetX = fold_config["offset"][0]
             offsetY = fold_config["offset"][1]
@@ -205,7 +206,7 @@ class ExportQuantizeDummy(torch.autograd.Function):
 
 class ExportBlockfp(torch.autograd.Function):
     @staticmethod
-    def symbolic(g, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
+    def symbolic(g, input_, exponent_bits, bits, block_size, name, fold_config):
         if fold_config:
             offsetX = fold_config["offset"][0]
             offsetY = fold_config["offset"][1]
@@ -220,7 +221,7 @@ class ExportBlockfp(torch.autograd.Function):
         return g.op("FakeQuantizeBfp",
                     input_,
                     exponent_i=torch.tensor(exponent_bits),
-                    mantissa_i=torch.tensor(mantissa_bits),
+                    bits_i=torch.tensor(bits),
                     blocksize_i=torch.tensor(block_size),
                     offsetX_i=offsetX,
                     offsetY_i=offsetY,
@@ -230,7 +231,7 @@ class ExportBlockfp(torch.autograd.Function):
 
 
     @staticmethod
-    def forward(ctx, input_, exponent_bits, mantissa_bits, block_size, name, fold_config):
+    def forward(ctx, input_, exponent_bits, bits, block_size, name, fold_config):
         output = input_
         return output
 
@@ -291,12 +292,12 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
 @register_operator()
-def blockfp_quantize(input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights, name=""):
+def blockfp_quantize(input_, exponent_bits, bits, block_size, fold_config, is_weights, name=""):
     if is_tracing_state():
         #with no_jit_trace():
-        return ExportBlockfp.apply(input_, exponent_bits, mantissa_bits, block_size, name, fold_config)
+        return ExportBlockfp.apply(input_, exponent_bits, bits, block_size, name, fold_config)
 
-    output = QuantizeBlockfp.apply(input_, exponent_bits, mantissa_bits, block_size, fold_config, is_weights)
+    output = QuantizeBlockfp.apply(input_, exponent_bits, bits, block_size, fold_config, is_weights)
     return output
 
 class TuneRange(torch.autograd.Function):
