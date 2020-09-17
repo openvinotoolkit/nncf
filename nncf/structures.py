@@ -89,3 +89,16 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return "bn_adaptation_init_args"
+
+class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
+    def __init__(self, train_loader, val_loader, train_fn, val_fn, criterion, app_config):
+        self.train_loader=train_loader
+        self.val_loader=val_loader
+        self.train_fn=train_fn
+        self.val_fn=val_fn
+        self.criterion = criterion
+        self.config = app_config
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "autoq_precision_init_args"

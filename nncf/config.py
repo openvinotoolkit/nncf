@@ -42,7 +42,7 @@ class NNCFConfig(dict):
     def from_json(cls, path) -> 'NNCFConfig':
         with open(path) as f:
             loaded_json = json.load(f)
-        NNCFConfig.validate(loaded_json)
+        # NNCFConfig.validate(loaded_json)
         return cls(loaded_json)
 
     def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]):

@@ -52,6 +52,8 @@ from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
+from datetime import datetime
+import numpy as np
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -81,7 +83,7 @@ def main(argv):
 
     configure_paths(config)
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
-    source_root = Path(__file__).absolute().parents[2]  # nncf root
+    source_root = Path(__file__).absolute().parents[1]  # supposed to be nncf root; but only current directory
     create_code_snapshot(source_root, osp.join(config.log_dir, "snapshot.tar.gz"))
 
     if config.seed is not None:
@@ -120,6 +122,9 @@ def main_worker(current_gpu, config: SampleConfig):
 
     config.device = get_device(config)
 
+    if config.execution_mode == ExecutionMode.SINGLE_GPU:
+        torch.cuda.set_device(config.current_gpu)
+
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
@@ -148,8 +153,10 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
-                                                 config.device)
+        nncf_config = register_default_init_args(
+            nncf_config, train_loader, val_loader, 
+            autox_train_epoch, autox_validate, 
+            criterion, train_criterion_fn, config , config.device)
 
     # create model
     model = load_model(model_name,
@@ -195,6 +202,10 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
+
+    logger.info("Logging precision per quantizer")
+    for k,v in compression_ctrl.all_quantizations.items():
+        logger.info("{} | {}".format(v, k))
 
     if config.mode.lower() == 'test':
         print_statistics(compression_ctrl.statistics())
@@ -269,9 +280,21 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 def get_dataset(dataset_config, config, transform, is_train):
     if dataset_config == 'imagenet':
         prefix = 'train' if is_train else 'val'
-        return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
-    return create_cifar(config, dataset_config, is_train, transform)
+        dataset = datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
+    else:
+        dataset = create_cifar(config, dataset_config, is_train, transform)
 
+    if is_train:
+        if config.get("train_subset_ratio", None) is not None:
+            subset_ratio = config['train_subset_ratio']
+            indices = list(range(0, np.floor(len(dataset)*subset_ratio).astype('int')))
+            dataset = torch.utils.data.Subset(dataset, indices)
+    else:
+        if config.get("val_subset_ratio", None) is not None:
+            subset_ratio = config['val_subset_ratio']
+            indices = list(range(0, np.floor(len(dataset)*subset_ratio).astype('int')))
+            dataset = torch.utils.data.Subset(dataset, indices)
+    return dataset
 
 def create_cifar(config, dataset_config, is_train, transform):
     create_cifar_fn = None
@@ -435,6 +458,90 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                 if isinstance(stat_value, (int, float)):
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
+def autox_train_epoch(
+        train_loader, 
+        model, 
+        criterion,
+        optimizer, 
+        compression_ctrl, 
+        epoch, 
+        config,
+        is_inception=False):
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    compression_losses = AverageMeter()
+    criterion_losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    compression_scheduler = compression_ctrl.scheduler
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    for i, (input_, target) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        input_ = input_.to(config.device)
+        target = target.to(config.device)
+
+        # compute output
+        if is_inception:
+            # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+            output, aux_outputs = model(input_)
+            loss1 = criterion(output, target)
+            loss2 = criterion(aux_outputs, target)
+            criterion_loss = loss1 + 0.4 * loss2
+        else:
+            output = model(input_)
+            criterion_loss = criterion(output, target)
+
+        # compute compression loss
+        compression_loss = compression_ctrl.loss()
+        loss = criterion_loss + compression_loss
+
+        # measure accuracy and record loss
+        acc1, acc5 = topk_accuracy(output, target, topk=(1, 5))
+        losses.update(loss.item(), input_.size(0))
+        comp_loss_val = compression_loss.item() if isinstance(compression_loss, torch.Tensor) else compression_loss
+        compression_losses.update(comp_loss_val, input_.size(0))
+        criterion_losses.update(criterion_loss.item(), input_.size(0))
+        top1.update(acc1, input_.size(0))
+        top5.update(acc5, input_.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        compression_scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % config.print_freq == 0:
+            logger.info(
+                '{rank}: '
+                'Epoch: [{0}][{1}/{2}] '
+                'Lr: {3:.3} '
+                'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                'Data: {data_time.val:.3f} ({data_time.avg:.3f}) '
+                'CE_loss: {ce_loss.val:.4f} ({ce_loss.avg:.4f}) '
+                'CR_loss: {cr_loss.val:.4f} ({cr_loss.avg:.4f}) '
+                'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
+                'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
+                'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
+                    epoch, i, len(train_loader), get_lr(optimizer), batch_time=batch_time,
+                    data_time=data_time, ce_loss=criterion_losses, cr_loss=compression_losses,
+                    loss=losses, top1=top1, top5=top5,
+                    rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
+                ))
+
 
 def validate(val_loader, model, criterion, config):
     batch_time = AverageMeter()
@@ -492,6 +599,61 @@ def validate(val_loader, model, criterion, config):
     return top1.avg, top5.avg
 
 
+def autox_validate(val_loader, model, criterion, config):
+
+    num_val_steps = config.compression.initializer.precision.num_val_steps
+
+    batch_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to evaluate mode
+    model.eval()
+
+    with torch.no_grad():
+        end = time.time()
+        for i, (input_, target) in enumerate(val_loader):
+            if i < num_val_steps:
+                input_ = input_.to(config.device)
+                target = target.to(config.device)
+
+                # compute output
+                output = model(input_)
+                loss = criterion(output, target)
+
+                # measure accuracy and record loss
+                acc1, acc5 = accuracy(output, target, topk=(1, 5))
+                losses.update(loss, input_.size(0))
+                top1.update(acc1, input_.size(0))
+                top5.update(acc5, input_.size(0))
+
+                # measure elapsed time
+                batch_time.update(time.time() - end)
+                end = time.time()
+
+                if i % config.print_freq == 0:
+                    logger.info(
+                        '{rank}'
+                        'Test: [{0}/{1}] '
+                        'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                        'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
+                        'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
+                        'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
+                            i, num_val_steps-1, batch_time=batch_time, loss=losses,
+                            top1=top1, top5=top5,
+                            rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
+                        ))
+
+        logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
+
+        acc = top1.avg / 100
+        if config.metrics_dump is not None:
+            write_metrics(acc, config.metrics_dump)
+
+    # return top1.avg, top5.avg
+    return top5.avg
+    
 class AverageMeter:
     """Computes and stores the average and current value"""
 

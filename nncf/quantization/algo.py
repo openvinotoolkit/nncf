@@ -53,7 +53,7 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph, \
     QuantizersBetweenQuantizableLayers, QuantizerInsertionInfo
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
 from nncf.utils import get_state_dict_names_with_modules
 
@@ -867,16 +867,6 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             quantizer.set_export_mode(export_mode)
 
-        if is_main_process() and should_init:
-            self.initialize_quantizer_params()
-
-        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
-        params = quantization_config.get('params', None)
-        self.is_staged_scheduler = bool(params)
-        if self.is_staged_scheduler:
-            scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
-            self._scheduler = scheduler_cls(self, params)
-
         if self._collect_compression_metrics:
             self.metric_store = {}
             quantizer_setup_type = self.quantization_config.get('quantizer_setup_type')
@@ -889,7 +879,16 @@ class QuantizationController(QuantizationControllerBase):
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
+        # params = quantization_config.get('params', None)
+        # self.is_staged_scheduler = bool(params)
 
+        # if is_main_process() and should_init:
+        #     self.initialize_quantizer_params()
+
+        # # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
+        # if self.is_staged_scheduler:
+        #     scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+        #     self._scheduler = scheduler_cls(self, params)
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():
             if not quantizer.is_enabled_quantization():
@@ -967,7 +966,7 @@ class QuantizationController(QuantizationControllerBase):
         if init_precision_config:
             precision_init_type = init_precision_config.get('type', 'manual')
             precision_init_args = None
-            if precision_init_type != 'manual':
+            if precision_init_type == 'manual':
                 try:
                     precision_init_args = self.quantization_config.get_extra_struct(QuantizationPrecisionInitArgs)
                 except KeyError:
@@ -975,7 +974,15 @@ class QuantizationController(QuantizationControllerBase):
                         'Specified non-manual precision initialization in the NNCF config, '
                         'but the initializing data loader and loss criterion are not provided as an extra struct. '
                         'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` class')
-
+            elif precision_init_type == 'autoq':
+                try:
+                    precision_init_args = self.quantization_config.get_extra_struct(AutoQPrecisionInitArgs)
+                except KeyError:
+                    raise ValueError(
+                        'Specified Automated precision initialization in the NNCF config, '
+                        'but the initializing data loader and loss criterion are not provided as an extra struct. '
+                        'Refer to `NNCFConfig.register_extra_structs` and the `AutoQPrecisionInitArgs` class')
+            
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
             initializer = init_impl(self, init_precision_config, precision_init_args)
             nncf_logger.info("Initialization of quantization precisions")
