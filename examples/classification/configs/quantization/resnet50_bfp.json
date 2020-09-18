@@ -5,10 +5,10 @@
     "input_info": {
       "sample_size":  [2, 3, 32, 32]
     },
-    "num_classes": 1000,
+    "num_classes": 100,
     "epochs": 100,
     "dataset": "CIFAR100",
-    "batch_size": 256,
+    "batch_size": 2500,
     "optimizer": {
         "type": "Adam",
         "base_lr": 1e-5,

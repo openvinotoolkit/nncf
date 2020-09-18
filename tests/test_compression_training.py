@@ -65,7 +65,7 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'resnet50_bfp.json': {
-                            'expected_accuracy': 67.5,
+                            'expected_accuracy': 65.7,
                             'weights': 'resnet50_68.86.sd',
                             'absolute_tolerance_eval': 1,
                         },
@@ -81,9 +81,9 @@ GLOBAL_CONFIG = {
                             'execution_arg': {'multiprocessing-distributed'},
                         },
                         'mobilenet_v2_bfp.json': {
-                            'expected_accuracy': 56.5,
+                            'expected_accuracy': 64,
                             'weights': 'mobilenetV2_64.53.sd',
-                            'absolute_tolerance_eval': 1.25,
+                            'absolute_tolerance_eval': 0.5,
                         }
                     }
                 },
