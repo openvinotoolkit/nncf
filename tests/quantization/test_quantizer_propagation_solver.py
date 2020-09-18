@@ -106,7 +106,7 @@ class TestQuantizerPropagationSolver:
                 if op_quant_traits_map[quant_det_id] == QuantizationTrait.INPUTS_QUANTIZABLE:
                     # TODO: check for correspondence of operator type and HW config to initial
                     # quantization types
-                    assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES
+                    assert quant_types == [QuantizerConfig.get_default_quantizer_config()]
 
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
         ops_to_quantize = ['conv2d', 'matmul', 'gelu']
