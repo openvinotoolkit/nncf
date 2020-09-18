@@ -42,6 +42,10 @@ class QuantizerConfig:
     # Blocks direct access to the __init__
     __create_key = object()
 
+    # Default quantizer configurations for different notes - lazy construction via the getter
+    __DEFAULT_QUANTIZER_CONFIG_INTN = None
+    __DEFAULT_QUANTIZER_CONFIG_BFP = None
+
     def __init__(self,
                  create_key,
                  bits,
@@ -87,6 +91,24 @@ class QuantizerConfig:
                                    per_channel=per_channel,
                                    input_shape=input_shape,
                                    is_weights=is_weights)
+
+    @classmethod
+    def get_default_quantizer_config(cls, mode=None):
+        # Lazy construction
+        if cls.__DEFAULT_QUANTIZER_CONFIG_INTN is None:
+            cls.__DEFAULT_QUANTIZER_CONFIG_INTN = QuantizerConfig.create(bits=8,
+                                                                         mode=QuantizationMode.SYMMETRIC,
+                                                                         signedness_to_force=None,
+                                                                         per_channel=False)
+            cls.__DEFAULT_QUANTIZER_CONFIG_BFP = QuantizerConfig.create(bits=5,
+                                                                        mode=QuantizationMode.BLOCKFP,
+                                                                        block_size=32,
+                                                                        exponent_bits=5,
+                                                                        per_channel=False)
+
+        if mode == QuantizationMode.BLOCKFP:
+            return cls.__DEFAULT_QUANTIZER_CONFIG_BFP
+        return cls.__DEFAULT_QUANTIZER_CONFIG_INTN
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__

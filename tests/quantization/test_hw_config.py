@@ -20,7 +20,7 @@ from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizerSetupType, QuantizationController
 from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, \
-     BlockfpQuantizer, BaseQuantizer
+     BlockfpQuantizer, BaseQuantizer, QuantizerConfig
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.helpers import TwoConvFoldableTestModel
@@ -55,7 +55,7 @@ class TestHWConfigRules:
 
     @staticmethod
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
-        default_qconfig = QuantizationBuilder.get_default_quantizer_config()
+        default_qconfig = QuantizerConfig.get_default_quantizer_config()
         is_ok = True
         is_ok &= (quantizer.num_bits == default_qconfig.bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)

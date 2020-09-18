@@ -29,7 +29,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import InsertionInfo, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, \
     InsertionPoint
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode
+from nncf.quantization.layers import QuantizerConfig
 from nncf.utils import in_scope_list
 from nncf.nncf_logger import logger as nncf_logger
 
@@ -578,12 +578,6 @@ class QuantizerPropagationSolver:
        when the model has the most contol flow graph edges quantized according to HW
        capabilities."""
 
-    DEFAULT_QUANTIZATION_TYPES = [QuantizerConfig.create(
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=None,
-        per_channel=False)]
-
     def __init__(self, ignored_scopes=None, hw_config: HWConfig = None,
                  debug_interface: 'QuantizationDebugInterface' = None,
                  propagation_strategy: PropagationStrategy = PropagationStrategy.AGGRESSIVE,
@@ -813,7 +807,7 @@ class QuantizerPropagationSolver:
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
-                        retval[op_meta] = deepcopy(self.DEFAULT_QUANTIZATION_TYPES)
+                        retval[op_meta] = deepcopy([QuantizerConfig.get_default_quantizer_config()])
                 elif trait == QuantizationTrait.NON_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
                         retval[op_meta] = None
