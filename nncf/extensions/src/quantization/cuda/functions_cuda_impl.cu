@@ -526,34 +526,31 @@ std::vector<at::Tensor> q_cuda_backward(
 __global__ void block_align_floats_kernel(float* out, float* in, uint32_t exp_width,
     uint32_t mantissa_width, uint32_t block_size,  uint32_t N, uint32_t C, uint32_t HxW, bool sw_rnd) {
  
-  int n = blockIdx.x / HxW;
-  int hw = blockIdx.x % HxW;
-  int c = threadIdx.x;
-  float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
+  int n  = blockIdx.x;
+  int hw = blockIdx.y;
+  int c  = blockIdx.z;
+  int b  = threadIdx.x;
+
+  __shared__ float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
   assert (BLOCKFP_MAX_BLOCK_SIZE >= block_size);
 
   // Load block_size number of values into local array
-  for (int b = 0; b < block_size; ++b) {
-    int c_idx = c * block_size + b;
-    int idx = (n * C + c_idx) * HxW + hw;
-    if (c_idx < C) {
-      c_vec[b] = in[idx];
-    } else {
-      // fully initialize c_vec[], as all values participate in max exponent selection
-      c_vec[b] = 0.0f;
-    }
+  int c_idx = c * block_size + b;
+  int idx = (n * C + c_idx) * HxW + hw;
+
+  if (c_idx < C) {
+    c_vec[b] = in[idx];
+  } else {
+    // fully initialize c_vec[], as all values participate in max exponent selection
+    c_vec[b] = 0.0f;
   }
 
   // Block gathered c_vec[]
-  dla_block_c_vec (c_vec, block_size, exp_width, mantissa_width, sw_rnd, false /* not input layer */);
+  dla_block_c_vec_cuda (c_vec, b, block_size, exp_width, mantissa_width, sw_rnd, false /* not input layer */);
 
   // Write blocked c_vec to global out[]
-  for (int b = 0; b < block_size; ++b) {
-    int c_idx = c * block_size + b;
-    int idx = (n * C + c_idx) * HxW + hw;
-    if (c_idx < C) {
-      out[idx] = c_vec[b];
-    }
+  if (c_idx < C) {
+    out[idx] = c_vec[b];
   }
 }
 
@@ -569,89 +566,80 @@ __global__ void block_align_floats_kernel(float* out, float* in, uint32_t exp_wi
 /// Therefore blocking needs to take this into account by performing the blocking in a folded manner
 /// (while keeping the original tensor unfolded)
 /// @param in     Pointer to the original floating point input
-/// @param out		Pointer to output buffer
-/// @param exp_width    	Width of the floating-point exponent (e.g. 5 for half precision, 8 for single precision)
-/// @param mantissa_width	Width of the unblocked floating-point mantissa (e.g. 10 for half precision, 23 for single precision, 5 for FP11)
-/// @param block_size		The number of elements to be grouped together in a block for a dot product (e.g. 16, 32, etc.)
-/// @param N         		Batch size (or number of output channels for filters)
+/// @param out    Pointer to output buffer
+/// @param exp_width      Width of the floating-point exponent (e.g. 5 for half precision, 8 for single precision)
+/// @param mantissa_width  Width of the unblocked floating-point mantissa (e.g. 10 for half precision, 23 for single precision, 5 for FP11)
+/// @param block_size    The number of elements to be grouped together in a block for a dot product (e.g. 16, 32, etc.)
+/// @param N             Batch size (or number of output channels for filters)
 /// @param C                Depth or number of channels
-/// @param H				Height of the tensor
-/// @param W				Width of the tensor
-/// @param SY				Stride in the height dimension of the convolution 
-/// @param SX				Stride in the width dimension of the convolution
-/// @param PY				Padding in the height dimension, currently assumes symmetric padding
-/// @param PX				Padding in the width dimension, currently assumes symmetric padding
-/// @param sw_rnd			Flag to enable additional rounding only used in software (e.g. subnormal rounding)
+/// @param H        Height of the tensor
+/// @param W        Width of the tensor
+/// @param SY        Stride in the height dimension of the convolution 
+/// @param SX        Stride in the width dimension of the convolution
+/// @param PY        Padding in the height dimension, currently assumes symmetric padding
+/// @param PX        Padding in the width dimension, currently assumes symmetric padding
+/// @param sw_rnd      Flag to enable additional rounding only used in software (e.g. subnormal rounding)
+
 __global__ void block_align_folded_inputs_kernel(float *out, float *in, uint32_t exp_width, uint32_t mantissa_width,
       uint32_t block_size, uint32_t N, uint32_t C, uint32_t H, uint32_t W, uint32_t SY, uint32_t SX, uint32_t PY, uint32_t PX, bool sw_rnd) {
-    int n = blockIdx.x;
-    int h = threadIdx.x;
 
-    // ceil(C * SY * SX / block_size) is how many blocks there are
-    // e.g. ceil(3x2x2/16.0) = 1 block per folded height and folded width
-    int32_t num_blocks = (int)ceil(C * SY * SX / (float) block_size);
+  int n = blockIdx.x;
+  int w = blockIdx.y;
+  int h = blockIdx.z;
+
+  int c = threadIdx.x;
+  int sy = threadIdx.y;
+  int sx = threadIdx.z;
+
+  // ceil(C * SY * SX / block_size) is how many blocks there are
+  // e.g. ceil(3x2x2/16.0) = 1 block per folded height and folded width
+  int num_blocks = (int)ceil(C * SY * SX / (float) block_size);
     
-    // Compute the folded width
-    int32_t w_end = ceil((W + 2 * PX) / (float) SX);
-    for (int w = 0; w < w_end; ++w) {
-
-      int32_t block = 0;
-      assert (BLOCKFP_MAX_BLOCK_SIZE >= (num_blocks * block_size));
-      float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
-
-      for (int i = 0; i < num_blocks * block_size; ++i) {
-        c_vec[i] = 0.0f;
-      }
-
-      // Blocking along these loops, first round used to find the max exps
-      for (int c = 0; c < C; ++c) {
-        for (int sy = 0; sy < SY; ++sy) {
-          for (int sx = 0; sx < SX; ++sx) {
-            int h_idx = h * SY + sy - PY;
-            int w_idx = w * SX + sx - PX;
-            int idx = (((n * C) + c) * H + h_idx) * W + w_idx;
-            // Bounds check to make sure we're not outside of the tensor
-            if ((w_idx < W) &&
-                (h_idx < H) &&
-                (w_idx >= 0) &&
-                (h_idx >= 0)) {
-
-              c_vec[block] = in[idx];
-            }
-            block++;
-          }
-        }
-      }
-      for (int b = 0; b < num_blocks; ++b) {
-        // Block gathered c_vec[]
-        dla_block_c_vec (c_vec + b * block_size, block_size, exp_width, mantissa_width, sw_rnd, true /*input layer*/);
-      }
-
-      block = 0;
-      // Second round, now that we know the max exp perform block alignment
-      // for each element in the folded C * SY * SX depth
-      for (int c = 0; c < C; ++c) {
-        for (int sy = 0; sy < SY; ++sy) {
-          for (int sx = 0; sx < SX; ++sx) {
-            int h_idx = h * SY + sy - PY;
-            int w_idx = w * SX + sx - PX;
-            int idx = (((n * C) + c) * H + h_idx) * W + w_idx;
-            if ((w_idx < W) && 
-                (h_idx < H) &&
-                (w_idx >= 0) &&
-                (h_idx >= 0)) {
-                out[idx] = c_vec[block];
-            }
-            block++;
-          }
-        }
-      }
-    }
-}
-
   
+  assert (BLOCKFP_MAX_BLOCK_SIZE >= (num_blocks * block_size));
+  __shared__ float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
+
+  int c_vec_idx = (c * SY + sy) * SX + sx;
+
+  c_vec[c_vec_idx] = 0.0f;
+
+  if (c == 0 && sx == 0 && sy == 0) {
+    // initialize the rest to 0 by first thread
+    for (int i = C*SY*SX; i < (num_blocks * block_size); ++i) {
+      c_vec[i] = 0.0f;
+    }
+  }
 
 
+  // Blocking along these loops
+  int h_idx = h * SY + sy - PY;
+  int w_idx = w * SX + sx - PX;
+  int idx = (((n * C) + c) * H + h_idx) * W + w_idx;
+  // Bounds check to make sure we're not outside of the tensor
+  if ((w_idx < W) &&
+    (h_idx < H) &&
+    (w_idx >= 0) &&
+    (h_idx >= 0)) {
+
+    c_vec[c_vec_idx] = in[idx];
+  }
+
+
+  __syncthreads();
+
+
+  int idx_within_blk = c_vec_idx % block_size;
+  int blk_idx        = c_vec_idx / block_size;
+  dla_block_c_vec_cuda (c_vec + blk_idx * block_size, idx_within_blk, block_size, exp_width, mantissa_width, sw_rnd, true /*input layer*/);
+
+
+  if ((w_idx < W) && 
+    (h_idx < H) &&
+    (w_idx >= 0) &&
+    (h_idx >= 0)) {
+    out[idx] = c_vec[c_vec_idx];
+  }
+}
 
 
 at::Tensor bfp_cuda_forward(
@@ -671,21 +659,24 @@ at::Tensor bfp_cuda_forward(
   }
   // weights are rounded in software, activations are rounded in hardware
   bool sw_rnd = is_weights;
-  
+ 
   auto output = at::empty_like(input);
+  dim3 numBlocks (N, HxW, std::ceil(C/ (float) (block_size)));
+  dim3 threadsPerBlock (block_size);
+
   AT_DISPATCH_FLOATING_TYPES(input.type(), "bfp_cuda_forward", ([&] {
-    block_align_floats_kernel<<<N * HxW, std::ceil(C/ (float) (block_size))>>>(
-        (float*)output.data_ptr(), //output.data<scalar_t>(),
+    block_align_floats_kernel<<< numBlocks, threadsPerBlock >>>(
+        (float*)output.data_ptr(),
         (float*)input.data_ptr(),
         exp_width, mantissa_width, block_size, 
         N, C, HxW, sw_rnd);
   }));
 
-return output;
+  return output;
 }
 
 
-  at::Tensor bfp_cuda_forward_fold(
+at::Tensor bfp_cuda_forward_fold(
     at::Tensor input,
     uint32_t exp_width, 
     uint32_t mantissa_width, 
@@ -704,13 +695,18 @@ return output;
 
     bool sw_rnd = is_weights;
   
+    int32_t w_end = std::ceil((W + 2 * PX) / (float) SX);
+    int32_t h_end = std::ceil((H + 2 * PY) / (float) SY);
+
+    dim3 numBlocks(N, w_end, h_end);
+    dim3 threadsPerBlock (C, SY, SX);
 
     AT_DISPATCH_FLOATING_TYPES(input.type(), "bfp_cuda_forward_fold", ([&] {
-    block_align_folded_inputs_kernel<<<N, std::ceil((H +  PY*2) / (float) SY)>>>(
-      (float*)output.data_ptr(), 
-      (float*)input.data_ptr(),
-      exp_width, mantissa_width, block_size, 
-      N, C, H, W, SY, SX, PY, PX, sw_rnd);
+      block_align_folded_inputs_kernel<<<numBlocks, threadsPerBlock>>>(
+        (float*)output.data_ptr(), 
+        (float*)input.data_ptr(),
+        exp_width, mantissa_width, block_size, 
+        N, C, H, W, SY, SX, PY, PX, sw_rnd);
     }));
 
     return output;

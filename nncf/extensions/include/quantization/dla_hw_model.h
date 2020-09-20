@@ -37,6 +37,14 @@ STATIC uint32_t extract_exponent(float x) {
     uint32_t exponent = (number & 0x7f800000) >> FP32_MANTISSA_WIDTH;
     return exponent;
 }
+STATIC uint32_t clz_common(uint32_t x) {
+#ifdef __NVCC__
+    return __clz(x);
+#else
+    return __builtin_clz(x);
+#endif
+}
+
 STATIC float reassemble_float(uint32_t sign, uint32_t exponent, uint32_t mantissa, uint32_t input_mantissa_width) {
 
     int32_t exp;
@@ -44,13 +52,10 @@ STATIC float reassemble_float(uint32_t sign, uint32_t exponent, uint32_t mantiss
         exp = 0;
     }
     else {
-        int pos = input_mantissa_width;
-        for (int j = input_mantissa_width; j >= 0; j--) {
-            if ((mantissa >> j) & 0x1) {
-                pos = j;
-                break;
-            }
-        }
+        int num_leading_zeroes = clz_common(mantissa);
+        int pos = 31 - num_leading_zeroes;
+        // pos now is the position of the first 1 in mantissa
+
         mantissa <<= (input_mantissa_width - pos);
         mantissa &= ((1 << input_mantissa_width) - 1);
         mantissa <<= (23 - input_mantissa_width);
