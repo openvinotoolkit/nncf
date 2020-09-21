@@ -1,0 +1,1439 @@
+From f48d88b6046bf0fac27d2270bbce046e52084955 Mon Sep 17 00:00:00 2001
+From: Aleksei Kashapov <aleksei.kashapov@intel.com>
+Date: Tue, 22 Sep 2020 10:48:41 +0300
+Subject: [PATCH] MMDetection patch integrating NNCF support
+
+---
+ .../retinanet_r50_fpn_1x_voc0712_int8.py      |  49 +++++
+ ..._fpn_1x_voc0712_magnitude_sparsity_int8.py |  66 +++++++
+ .../nncf_compression/ssd/ssd300_coco_int8.py  |  87 +++++++++
+ .../ssd300_coco_magnitude_sparsity_int8.py    | 104 +++++++++++
+ configs/pascal_voc/ssd300_voc_int8.py         |  96 ++++++++++
+ .../retinanet/retinanet_r50_fpn_1x_int8.py    |  48 +++++
+ mmdet/apis/train.py                           |  35 +++-
+ mmdet/core/__init__.py                        |   1 +
+ mmdet/core/evaluation/eval_hooks.py           |  20 +++
+ mmdet/core/nncf/__init__.py                   |  11 ++
+ mmdet/core/nncf/compression_hooks.py          |  26 +++
+ mmdet/core/nncf/utils.py                      | 112 ++++++++++++
+ mmdet/datasets/coco.py                        | 168 ++++--------------
+ mmdet/models/dense_heads/anchor_head.py       |   1 +
+ mmdet/models/dense_heads/base_dense_head.py   |   5 +-
+ mmdet/models/detectors/base.py                |  17 +-
+ mmdet/models/detectors/single_stage.py        |   1 +
+ tools/pytorch2onnx.py                         |  39 ++--
+ tools/test.py                                 |  38 ++--
+ tools/train.py                                |  12 +-
+ 20 files changed, 772 insertions(+), 164 deletions(-)
+ create mode 100644 configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_int8.py
+ create mode 100644 configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_magnitude_sparsity_int8.py
+ create mode 100644 configs/nncf_compression/ssd/ssd300_coco_int8.py
+ create mode 100644 configs/nncf_compression/ssd/ssd300_coco_magnitude_sparsity_int8.py
+ create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
+ create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
+ create mode 100644 mmdet/core/nncf/__init__.py
+ create mode 100644 mmdet/core/nncf/compression_hooks.py
+ create mode 100644 mmdet/core/nncf/utils.py
+
+diff --git a/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_int8.py b/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_int8.py
+new file mode 100644
+index 0000000..d856275
+--- /dev/null
++++ b/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_int8.py
+@@ -0,0 +1,49 @@
++_base_ = [
++    '../../_base_/models/retinanet_r50_fpn.py', '../../_base_/datasets/voc0712.py',
++    '../../_base_/default_runtime.py'
++]
++model = dict(bbox_head=dict(num_classes=20))
++# optimizer
++optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
++optimizer_config = dict(grad_clip=None)
++# learning policy
++# actual epoch = 3 * 3 = 9
++lr_config = dict(policy='step', step=[3])
++# runtime settings
++total_epochs = 4  # actual epoch = 4 * 3 = 12
++
++load_from = "https://open-mmlab.s3.ap-northeast-2.amazonaws.com/mmdetection/v2.0/pascal_voc/retinanet_r50_fpn_1x_voc0712/retinanet_r50_fpn_1x_voc0712_20200617-47cbdd0e.pth"
++
++data = dict(
++    samples_per_gpu=8,  # Batch size of a single GPU
++    workers_per_gpu=3,
++)
++
++# nncf config
++dist_params = dict(backend='nccl')
++log_level = 'INFO'
++
++work_dir = './output'
++workflow = [('train', 1)]
++
++find_unused_parameters = True
++nncf_load_from = None
++
++nncf_config = {
++    "input_info": {
++        "sample_size": [1, 3, 1000, 600]
++    },
++    "compression": {
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_steps": 10
++            },
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_steps": 30,
++            }
++
++        }
++    },
++    "log_dir": work_dir
++}
+diff --git a/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_magnitude_sparsity_int8.py b/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_magnitude_sparsity_int8.py
+new file mode 100644
+index 0000000..87d147f
+--- /dev/null
++++ b/configs/nncf_compression/pascal_voc/retinanet_r50_fpn_1x_voc0712_magnitude_sparsity_int8.py
+@@ -0,0 +1,66 @@
++_base_ = [
++    '../../_base_/models/retinanet_r50_fpn.py', '../../_base_/datasets/voc0712.py',
++    '../../_base_/default_runtime.py'
++]
++model = dict(bbox_head=dict(num_classes=20))
++# optimizer
++optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
++optimizer_config = dict(grad_clip=None)
++# learning policy
++# actual epoch = 3 * 3 = 9
++lr_config = dict(policy='step', step=[3])
++# runtime settings
++total_epochs = 4  # actual epoch = 4 * 3 = 12
++
++load_from = "https://open-mmlab.s3.ap-northeast-2.amazonaws.com/mmdetection/v2.0/pascal_voc/retinanet_r50_fpn_1x_voc0712/retinanet_r50_fpn_1x_voc0712_20200617-47cbdd0e.pth"
++
++data = dict(
++    samples_per_gpu=8,  # Batch size of a single GPU
++    workers_per_gpu=3,
++)
++
++# nncf config
++dist_params = dict(backend='nccl')
++log_level = 'INFO'
++
++work_dir = './output'
++workflow = [('train', 1)]
++
++find_unused_parameters = True
++nncf_load_from = None
++
++nncf_config = {
++    "input_info": {
++        "sample_size": [1, 3, 1000, 600]
++    },
++    "compression": [
++        {
++            "algorithm": "quantization",
++            "initializer": {
++                "range": {
++                    "num_init_steps": 10
++                },
++                "batchnorm_adaptation": {
++                    "num_bn_adaptation_steps": 30,
++                }
++
++            }
++        },
++        {
++            "algorithm": "magnitude_sparsity",
++            "params": {
++                "schedule": "multistep",
++                "multistep_sparsity_levels": [
++                    0.3,
++                    0.5,
++                    0.7
++                ],
++                "multistep_steps": [
++                    40,
++                    80
++                ]
++            }
++        },
++    ],
++    "log_dir": work_dir
++}
+diff --git a/configs/nncf_compression/ssd/ssd300_coco_int8.py b/configs/nncf_compression/ssd/ssd300_coco_int8.py
+new file mode 100644
+index 0000000..7284c12
+--- /dev/null
++++ b/configs/nncf_compression/ssd/ssd300_coco_int8.py
+@@ -0,0 +1,87 @@
++_base_ = [
++    '../../_base_/models/ssd300.py', '../../_base_/datasets/coco_detection.py',
++    '../../_base_/schedules/schedule_2x.py', '../../_base_/default_runtime.py'
++]
++# dataset settings
++dataset_type = 'CocoDataset'
++data_root = 'data/coco/'
++img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
++train_pipeline = [
++    dict(type='LoadImageFromFile', to_float32=True),
++    dict(type='LoadAnnotations', with_bbox=True),
++    dict(
++        type='PhotoMetricDistortion',
++        brightness_delta=32,
++        contrast_range=(0.5, 1.5),
++        saturation_range=(0.5, 1.5),
++        hue_delta=18),
++    dict(
++        type='Expand',
++        mean=img_norm_cfg['mean'],
++        to_rgb=img_norm_cfg['to_rgb'],
++        ratio_range=(1, 4)),
++    dict(
++        type='MinIoURandomCrop',
++        min_ious=(0.1, 0.3, 0.5, 0.7, 0.9),
++        min_crop_size=0.3),
++    dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
++    dict(type='Normalize', **img_norm_cfg),
++    dict(type='RandomFlip', flip_ratio=0.5),
++    dict(type='DefaultFormatBundle'),
++    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
++]
++test_pipeline = [
++    dict(type='LoadImageFromFile'),
++    dict(
++        type='MultiScaleFlipAug',
++        img_scale=(300, 300),
++        flip=False,
++        transforms=[
++            dict(type='Resize', keep_ratio=False),
++            dict(type='Normalize', **img_norm_cfg),
++            dict(type='ImageToTensor', keys=['img']),
++            dict(type='Collect', keys=['img']),
++        ])
++]
++data = dict(
++    samples_per_gpu=8,
++    workers_per_gpu=3,
++    train=dict(
++        _delete_=True,
++        type='RepeatDataset',
++        times=5,
++        dataset=dict(
++            type=dataset_type,
++            ann_file=data_root + 'annotations/instances_train2017.json',
++            img_prefix=data_root + 'train2017/',
++            pipeline=train_pipeline)),
++    val=dict(pipeline=test_pipeline),
++    test=dict(pipeline=test_pipeline))
++# optimizer
++optimizer = dict(type='SGD', lr=2e-5, momentum=0.9, weight_decay=5e-4)
++optimizer_config = dict(_delete_=True)
++
++work_dir = './output'
++load_from = 'http://download.openmmlab.com/mmdetection/v2.0/ssd/ssd300_coco/ssd300_coco_20200307-a92d2092.pth'
++
++find_unused_parameters = True
++nncf_load_from = None
++
++nncf_config = {
++    "input_info": {
++        "sample_size": [1, 3, 300, 300]
++    },
++    "compression": {
++        "algorithm": "quantization",
++        "initializer": {
++            "range": {
++                "num_init_steps": 10
++            },
++            "batchnorm_adaptation": {
++                "num_bn_adaptation_steps": 30,
++            }
++
++        }
++    },
++    "log_dir": work_dir
++}
+diff --git a/configs/nncf_compression/ssd/ssd300_coco_magnitude_sparsity_int8.py b/configs/nncf_compression/ssd/ssd300_coco_magnitude_sparsity_int8.py
+new file mode 100644
+index 0000000..71ef29b
+--- /dev/null
++++ b/configs/nncf_compression/ssd/ssd300_coco_magnitude_sparsity_int8.py
+@@ -0,0 +1,104 @@
++_base_ = [
++    '../../_base_/models/ssd300.py', '../../_base_/datasets/coco_detection.py',
++    '../../_base_/schedules/schedule_2x.py', '../../_base_/default_runtime.py'
++]
++# dataset settings
++dataset_type = 'CocoDataset'
++data_root = 'data/coco/'
++img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
++train_pipeline = [
++    dict(type='LoadImageFromFile', to_float32=True),
++    dict(type='LoadAnnotations', with_bbox=True),
++    dict(
++        type='PhotoMetricDistortion',
++        brightness_delta=32,
++        contrast_range=(0.5, 1.5),
++        saturation_range=(0.5, 1.5),
++        hue_delta=18),
++    dict(
++        type='Expand',
++        mean=img_norm_cfg['mean'],
++        to_rgb=img_norm_cfg['to_rgb'],
++        ratio_range=(1, 4)),
++    dict(
++        type='MinIoURandomCrop',
++        min_ious=(0.1, 0.3, 0.5, 0.7, 0.9),
++        min_crop_size=0.3),
++    dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
++    dict(type='Normalize', **img_norm_cfg),
++    dict(type='RandomFlip', flip_ratio=0.5),
++    dict(type='DefaultFormatBundle'),
++    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
++]
++test_pipeline = [
++    dict(type='LoadImageFromFile'),
++    dict(
++        type='MultiScaleFlipAug',
++        img_scale=(300, 300),
++        flip=False,
++        transforms=[
++            dict(type='Resize', keep_ratio=False),
++            dict(type='Normalize', **img_norm_cfg),
++            dict(type='ImageToTensor', keys=['img']),
++            dict(type='Collect', keys=['img']),
++        ])
++]
++data = dict(
++    samples_per_gpu=8,
++    workers_per_gpu=3,
++    train=dict(
++        _delete_=True,
++        type='RepeatDataset',
++        times=5,
++        dataset=dict(
++            type=dataset_type,
++            ann_file=data_root + 'annotations/instances_train2017.json',
++            img_prefix=data_root + 'train2017/',
++            pipeline=train_pipeline)),
++    val=dict(pipeline=test_pipeline),
++    test=dict(pipeline=test_pipeline))
++# optimizer
++optimizer = dict(type='SGD', lr=2e-5, momentum=0.9, weight_decay=5e-4)
++optimizer_config = dict(_delete_=True)
++
++work_dir = './output'
++load_from = 'http://download.openmmlab.com/mmdetection/v2.0/ssd/ssd300_coco/ssd300_coco_20200307-a92d2092.pth'
++
++find_unused_parameters = True
++nncf_load_from = None
++
++nncf_config = {
++    "input_info": {
++        "sample_size": [1, 3, 1000, 600]
++    },
++    "compression": [
++        {
++            "algorithm": "quantization",
++            "initializer": {
++                "range": {
++                    "num_init_steps": 10
++                },
++                "batchnorm_adaptation": {
++                    "num_bn_adaptation_steps": 30,
++                }
++
++            }
++        },
++        {
++            "algorithm": "magnitude_sparsity",
++            "params": {
++                "schedule": "multistep",
++                "multistep_sparsity_levels": [
++                    0.3,
++                    0.5,
++                    0.7
++                ],
++                "multistep_steps": [
++                    40,
++                    80
++                ]
++            }
++        },
++    ],
++    "log_dir": work_dir
++}
+\ No newline at end of file
+diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
+new file mode 100644
+index 0000000..e472a58
+--- /dev/null
++++ b/configs/pascal_voc/ssd300_voc_int8.py
+@@ -0,0 +1,96 @@
++_base_ = [
++    '../_base_/models/ssd300.py', '../_base_/datasets/voc0712.py',
++    '../_base_/default_runtime.py'
++]
++model = dict(
++    bbox_head=dict(
++        num_classes=20, anchor_generator=dict(basesize_ratio_range=(0.2,
++                                                                    0.9))))
++# dataset settings
++dataset_type = 'VOCDataset'
++data_root = 'voc/'
++img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
++train_pipeline = [
++    dict(type='LoadImageFromFile', to_float32=True),
++    dict(type='LoadAnnotations', with_bbox=True),
++    dict(
++        type='PhotoMetricDistortion',
++        brightness_delta=32,
++        contrast_range=(0.5, 1.5),
++        saturation_range=(0.5, 1.5),
++        hue_delta=18),
++    dict(
++        type='Expand',
++        mean=img_norm_cfg['mean'],
++        to_rgb=img_norm_cfg['to_rgb'],
++        ratio_range=(1, 4)),
++    dict(
++        type='MinIoURandomCrop',
++        min_ious=(0.1, 0.3, 0.5, 0.7, 0.9),
++        min_crop_size=0.3),
++    dict(type='Resize', img_scale=(300, 300), keep_ratio=False),
++    dict(type='Normalize', **img_norm_cfg),
++    dict(type='RandomFlip', flip_ratio=0.5),
++    dict(type='DefaultFormatBundle'),
++    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
++]
++test_pipeline = [
++    dict(type='LoadImageFromFile'),
++    dict(
++        type='MultiScaleFlipAug',
++        img_scale=(300, 300),
++        flip=False,
++        transforms=[
++            dict(type='Resize', keep_ratio=False),
++            dict(type='Normalize', **img_norm_cfg),
++            dict(type='ImageToTensor', keys=['img']),
++            dict(type='Collect', keys=['img']),
++        ])
++]
++data = dict(
++    samples_per_gpu=4,
++    workers_per_gpu=4,
++    train=dict(
++        type='RepeatDataset', times=10, dataset=dict(pipeline=train_pipeline)),
++    val=dict(pipeline=test_pipeline),
++    test=dict(pipeline=test_pipeline))
++# optimizer
++optimizer = dict(type='SGD', lr=1e-4, momentum=0.9, weight_decay=5e-4)
++optimizer_config = dict()
++# learning policy
++lr_config = dict(
++    policy='step',
++    warmup='linear',
++    warmup_iters=500,
++    warmup_ratio=0.1,
++    step=[16, 20])
++checkpoint_config = dict(interval=1)
++
++# yapf:disable
++log_config = dict(
++    interval=50,
++    hooks=[
++        dict(type='TextLoggerHook'),
++        # dict(type='TensorboardLoggerHook')
++    ])
++# yapf:enable
++
++# runtime settings
++total_epochs = 1
++
++dist_params = dict(backend='nccl')
++log_level = 'INFO'
++work_dir = './work_dirs/ssd300_voc_int8'
++workflow = [('train', 1)]
++
++# we start from the pre-trained checkpoint available from the mmdet github repo
++# download from here: https://s3.ap-northeast-2.amazonaws.com/open-mmlab/mmdetection/models/ssd300_voc_vgg16_caffe_240e_20190501-7160d09a.pth
++load_from = None
++find_unused_parameters = True
++resume_from = None
++
++# nncf config
++nncf_config = dict(compression=[dict(algorithm='quantization',
++                                     initializer=dict(range=dict(num_init_steps=10,
++                                                                 type="threesigma")))],
++                   log_dir=work_dir)
+diff --git a/configs/retinanet/retinanet_r50_fpn_1x_int8.py b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
+new file mode 100644
+index 0000000..7d84d92
+--- /dev/null
++++ b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
+@@ -0,0 +1,48 @@
++_base_ = [
++    '../_base_/models/retinanet_r50_fpn.py',
++    '../_base_/datasets/coco_detection.py',
++    '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
++]
++# optimizer
++optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
++optimizer_config = dict(_delete_=True, grad_clip=dict(max_norm=35, norm_type=2))
++
++# learning policy
++lr_config = dict(
++    policy='step',
++    warmup='linear',
++    warmup_iters=500,
++    warmup_ratio=1.0 / 10,
++    step=[8, 11])
++checkpoint_config = dict(interval=1)
++# yapf:disable
++log_config = dict(
++    interval=50,
++    hooks=[
++        dict(type='TextLoggerHook'),
++        # dict(type='TensorboardLoggerHook')
++    ])
++# yapf:enable
++# runtime settings
++total_epochs = 3
++dist_params = dict(backend='nccl')
++log_level = 'INFO'
++work_dir = './work_dirs/retinanet_r50_fpn_1x_int8'
++# we start from the pre-trained checkpoint available from the mmdet github repo
++# download from here: https://open-mmlab.s3.ap-northeast-2.amazonaws.com/mmdetection/models/retinanet_r50_fpn_2x_20190616-75574209.pth
++load_from = "https://open-mmlab.s3.ap-northeast-2.amazonaws.com/mmdetection/v2.0/pascal_voc/retinanet_r50_fpn_1x_voc0712/retinanet_r50_fpn_1x_voc0712_20200617-47cbdd0e.pth"
++
++data = dict(
++    samples_per_gpu=6,  # Batch size of a single GPU
++    workers_per_gpu=3,
++)
++
++resume_from = None
++workflow = [('train', 1)]
++# nncf config
++input_size = 800
++
++# find_unused_parameters = True
++# nncf_config = dict(compression=[dict(algorithm='quantization',
++#                                      initializer=dict(range=dict(num_init_steps=10)))],
++#                    log_dir=work_dir)
+diff --git a/mmdet/apis/train.py b/mmdet/apis/train.py
+index c314d42..16d49ff 100644
+--- a/mmdet/apis/train.py
++++ b/mmdet/apis/train.py
+@@ -3,14 +3,17 @@ import random
+ import numpy as np
+ import torch
+ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
+-from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner,
+-                         OptimizerHook, build_optimizer)
++from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner, OptimizerHook,
++                         build_optimizer, load_checkpoint)
+ from mmcv.utils import build_from_cfg
+ 
+-from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook
++from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook, CompressionHook
+ from mmdet.datasets import build_dataloader, build_dataset
+ from mmdet.utils import get_root_logger
+ 
++from nncf.utils import get_all_modules
++from mmdet.core.nncf import wrap_nncf_model
++
+ 
+ def set_random_seed(seed, deterministic=False):
+     """Set random seed.
+@@ -67,13 +70,25 @@ def train_detector(model,
+             seed=cfg.seed) for ds in dataset
+     ]
+ 
++    if cfg.load_from:
++        load_checkpoint(model=model, filename=cfg.load_from)
++
+     # put model on gpus
++    if torch.cuda.is_available():
++        model = model.cuda()
++
++    # nncf model wrapper
++    if cfg.ENABLE_COMPRESSION:
++        compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0])
++    else:
++        compression_ctrl = None
++
+     if distributed:
+         find_unused_parameters = cfg.get('find_unused_parameters', False)
+         # Sets the `find_unused_parameters` parameter in
+         # torch.nn.parallel.DistributedDataParallel
+         model = MMDistributedDataParallel(
+-            model.cuda(),
++            model,
+             device_ids=[torch.cuda.current_device()],
+             broadcast_buffers=False,
+             find_unused_parameters=find_unused_parameters)
+@@ -81,6 +96,9 @@ def train_detector(model,
+         model = MMDataParallel(
+             model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
+ 
++    if cfg.ENABLE_COMPRESSION and distributed:
++        compression_ctrl.distributed()
++
+     # build runner
+     optimizer = build_optimizer(model, cfg.optimizer)
+     runner = EpochBasedRunner(
+@@ -136,8 +154,11 @@ def train_detector(model,
+             hook = build_from_cfg(hook_cfg, HOOKS)
+             runner.register_hook(hook, priority=priority)
+ 
++    if cfg.ENABLE_COMPRESSION:
++        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
++
+     if cfg.resume_from:
+         runner.resume(cfg.resume_from)
+-    elif cfg.load_from:
+-        runner.load_checkpoint(cfg.load_from)
+-    runner.run(data_loaders, cfg.workflow, cfg.total_epochs)
++
++    runner.run(data_loaders, cfg.workflow, cfg.total_epochs,
++               compression_ctrl=compression_ctrl)
+diff --git a/mmdet/core/__init__.py b/mmdet/core/__init__.py
+index f8eb6cb..14f2c89 100644
+--- a/mmdet/core/__init__.py
++++ b/mmdet/core/__init__.py
+@@ -5,3 +5,4 @@ from .fp16 import *  # noqa: F401, F403
+ from .mask import *  # noqa: F401, F403
+ from .post_processing import *  # noqa: F401, F403
+ from .utils import *  # noqa: F401, F403
++from .nncf import *
+diff --git a/mmdet/core/evaluation/eval_hooks.py b/mmdet/core/evaluation/eval_hooks.py
+index 31ef23f..aa683cf 100644
+--- a/mmdet/core/evaluation/eval_hooks.py
++++ b/mmdet/core/evaluation/eval_hooks.py
+@@ -27,6 +27,13 @@ class EvalHook(Hook):
+         results = single_gpu_test(runner.model, self.dataloader, show=False)
+         self.evaluate(runner, results)
+ 
++    # def before_train_epoch(self, runner):
++    #     if not self.every_n_epochs(runner, self.interval):
++    #         return
++    #     from mmdet.apis import single_gpu_test
++    #     results = single_gpu_test(runner.model, self.dataloader, show=False)
++    #     self.evaluate(runner, results)
++
+     def evaluate(self, runner, results):
+         eval_res = self.dataloader.dataset.evaluate(
+             results, logger=runner.logger, **self.eval_kwargs)
+@@ -72,3 +79,16 @@ class DistEvalHook(EvalHook):
+         if runner.rank == 0:
+             print('\n')
+             self.evaluate(runner, results)
++
++    # def before_train_epoch(self, runner):
++    #     if not self.every_n_epochs(runner, self.interval):
++    #         return
++    #     from mmdet.apis import multi_gpu_test
++    #     results = multi_gpu_test(
++    #         runner.model,
++    #         self.dataloader,
++    #         tmpdir=osp.join(runner.work_dir, '.eval_hook'),
++    #         gpu_collect=self.gpu_collect)
++    #     if runner.rank == 0:
++    #         print('\n')
++    #         self.evaluate(runner, results)
+diff --git a/mmdet/core/nncf/__init__.py b/mmdet/core/nncf/__init__.py
+new file mode 100644
+index 0000000..1e6e350
+--- /dev/null
++++ b/mmdet/core/nncf/__init__.py
+@@ -0,0 +1,11 @@
++from .compression_hooks import CompressionHook
++from .utils import wrap_nncf_model
++from .utils import check_nncf_is_enabled
++from .utils import load_checkpoint
++
++__all__ = [
++    'CompressionHook',
++    'wrap_nncf_model',
++    'check_nncf_is_enabled',
++    'load_checkpoint',
++]
+diff --git a/mmdet/core/nncf/compression_hooks.py b/mmdet/core/nncf/compression_hooks.py
+new file mode 100644
+index 0000000..81c7f52
+--- /dev/null
++++ b/mmdet/core/nncf/compression_hooks.py
+@@ -0,0 +1,26 @@
++from texttable import Texttable
++from mmcv.runner.hooks.hook import Hook
++
++
++class CompressionHook(Hook):
++    def __init__(self, compression_ctrl=None):
++        self.compression_ctrl = compression_ctrl
++
++    def after_train_iter(self, runner):
++        self.compression_ctrl.scheduler.step()
++
++    def after_train_epoch(self, runner):
++        self.compression_ctrl.scheduler.epoch_step()
++
++    def before_run(self, runner):
++        if runner.rank == 0:
++            print_statistics(self.compression_ctrl.statistics(), runner.logger)
++
++
++def print_statistics(stats, logger):
++    for key, val in stats.items():
++        if isinstance(val, Texttable):
++            logger.info(key)
++            logger.info(val.draw())
++        else:
++            logger.info('{}: {}'.format(key, val))
+diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
+new file mode 100644
+index 0000000..abbc212
+--- /dev/null
++++ b/mmdet/core/nncf/utils.py
+@@ -0,0 +1,112 @@
++import pathlib
++from collections import OrderedDict
++
++import torch
++
++try:
++    import nncf
++
++    _is_nncf_enabled = True
++except:
++    _is_nncf_enabled = False
++
++
++def is_nncf_enabled():
++    return _is_nncf_enabled
++
++
++def check_nncf_is_enabled():
++    if not is_nncf_enabled():
++        raise RuntimeError("Tried to use NNCF, but NNCF is not installed")
++
++
++if is_nncf_enabled():
++    try:
++        from nncf.initialization import InitializingDataLoader
++        from nncf.structures import QuantizationRangeInitArgs
++
++        from nncf import NNCFConfig
++        from nncf import load_state
++        from nncf import create_compressed_model, register_default_init_args
++        from nncf.utils import get_all_modules
++        from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
++
++        class_InitializingDataLoader = InitializingDataLoader
++    except:
++        raise RuntimeError("Incompatible version of NNCF")
++else:
++    class DummyInitializingDataLoader:
++        pass
++
++
++    class_InitializingDataLoader = DummyInitializingDataLoader
++
++
++class MMInitializeDataLoader(class_InitializingDataLoader):
++    def get_inputs(self, dataloader_output):
++        # redefined InitializingDataLoader because
++        # of DataContainer format in mmdet
++        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
++        return (), kwargs
++
++    # TODO: not tested; need to test
++    def get_target(self, dataloader_output):
++        return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
++
++
++def wrap_nncf_model(model, cfg, data_loader_for_init=None):
++    check_nncf_is_enabled()
++    pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
++    nncf_config = NNCFConfig(cfg.nncf_config)
++
++    if data_loader_for_init is not None:
++        wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
++
++        nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
++    elif not cfg.nncf_load_from:
++        raise RuntimeError("Tried to load NNCF checkpoint, but there is no path")
++
++    if cfg.nncf_load_from:
++        resuming_state_dict = load_checkpoint(model, cfg.nncf_load_from)
++        print(f"loaded NNCF checkpoint from {cfg.nncf_load_from}")
++    else:
++        resuming_state_dict = None
++
++    def dummy_forward(model):
++        input_size = nncf_config.get("input_info").get('sample_size')
++        device = next(model.parameters()).device
++        input_args = ([torch.randn(input_size).to(device), ],)
++        input_kwargs = dict(return_loss=False, dummy_forward=True)
++        model(*input_args, **input_kwargs)
++
++    model.dummy_forward_fn = dummy_forward
++
++    compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward,
++                                                      resuming_state_dict=resuming_state_dict)
++    return compression_ctrl, model
++
++
++def load_checkpoint(model, filename, map_location=None, strict=False):
++    """Load checkpoint from a file or URI.
++
++    Args:
++        model (Module): Module to load checkpoint.
++        filename (str): Either a filepath or URL or modelzoo://xxxxxxx.
++        map_location (str): Same as :func:`torch.load`.
++        strict (bool): Whether to allow different params for the model and
++            checkpoint.
++
++    Returns:
++        dict or OrderedDict: The loaded checkpoint.
++    """
++    # load checkpoint from modelzoo or file or url
++    checkpoint = torch.load(filename, map_location=map_location)
++    # get state_dict from checkpoint
++    if isinstance(checkpoint, OrderedDict):
++        state_dict = checkpoint
++    elif isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
++        state_dict = checkpoint['state_dict']
++    else:
++        raise RuntimeError('No state_dict found in checkpoint file {}'.format(filename))
++    _ = load_state(model, state_dict, strict)
++    return checkpoint
+diff --git a/mmdet/datasets/coco.py b/mmdet/datasets/coco.py
+index 7538099..345de1b 100644
+--- a/mmdet/datasets/coco.py
++++ b/mmdet/datasets/coco.py
+@@ -34,54 +34,27 @@ class CocoDataset(CustomDataset):
+                'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush')
+ 
+     def load_annotations(self, ann_file):
+-        """Load annotation from COCO style annotation file.
+-
+-        Args:
+-            ann_file (str): Path of annotation file.
+-
+-        Returns:
+-            list[dict]: Annotation info from COCO api.
+-        """
+-
+         self.coco = COCO(ann_file)
+-        self.cat_ids = self.coco.get_cat_ids(cat_names=self.CLASSES)
++        self.cat_ids = self.coco.getCatIds(catNms=self.CLASSES)
+         self.cat2label = {cat_id: i for i, cat_id in enumerate(self.cat_ids)}
+-        self.img_ids = self.coco.get_img_ids()
++        self.img_ids = self.coco.getImgIds()
+         data_infos = []
+         for i in self.img_ids:
+-            info = self.coco.load_imgs([i])[0]
++            info = self.coco.loadImgs([i])[0]
+             info['filename'] = info['file_name']
+             data_infos.append(info)
+         return data_infos
+ 
+     def get_ann_info(self, idx):
+-        """Get COCO annotation by index.
+-
+-        Args:
+-            idx (int): Index of data.
+-
+-        Returns:
+-            dict: Annotation info of specified index.
+-        """
+-
+         img_id = self.data_infos[idx]['id']
+-        ann_ids = self.coco.get_ann_ids(img_ids=[img_id])
+-        ann_info = self.coco.load_anns(ann_ids)
++        ann_ids = self.coco.getAnnIds(imgIds=[img_id])
++        ann_info = self.coco.loadAnns(ann_ids)
+         return self._parse_ann_info(self.data_infos[idx], ann_info)
+ 
+     def get_cat_ids(self, idx):
+-        """Get COCO category ids by index.
+-
+-        Args:
+-            idx (int): Index of data.
+-
+-        Returns:
+-            list[int]: All categories in the image of specified index.
+-        """
+-
+         img_id = self.data_infos[idx]['id']
+-        ann_ids = self.coco.get_ann_ids(img_ids=[img_id])
+-        ann_info = self.coco.load_anns(ann_ids)
++        ann_ids = self.coco.getAnnIds(imgIds=[img_id])
++        ann_info = self.coco.loadAnns(ann_ids)
+         return [ann['category_id'] for ann in ann_info]
+ 
+     def _filter_imgs(self, min_size=32):
+@@ -110,12 +83,12 @@ class CocoDataset(CustomDataset):
+ 
+         ids = set()
+         for i, class_id in enumerate(self.cat_ids):
+-            ids |= set(self.coco.cat_img_map[class_id])
++            ids |= set(self.coco.catToImgs[class_id])
+         self.img_ids = list(ids)
+ 
+         data_infos = []
+         for i in self.img_ids:
+-            info = self.coco.load_imgs([i])[0]
++            info = self.coco.loadImgs([i])[0]
+             info['filename'] = info['file_name']
+             data_infos.append(info)
+         return data_infos
+@@ -128,22 +101,19 @@ class CocoDataset(CustomDataset):
+             with_mask (bool): Whether to parse mask annotations.
+ 
+         Returns:
+-            dict: A dict containing the following keys: bboxes, bboxes_ignore,\
+-                labels, masks, seg_map. "masks" are raw annotations and not \
++            dict: A dict containing the following keys: bboxes, bboxes_ignore,
++                labels, masks, seg_map. "masks" are raw annotations and not
+                 decoded into binary masks.
+         """
+         gt_bboxes = []
+         gt_labels = []
+         gt_bboxes_ignore = []
+         gt_masks_ann = []
++
+         for i, ann in enumerate(ann_info):
+             if ann.get('ignore', False):
+                 continue
+             x1, y1, w, h = ann['bbox']
+-            inter_w = max(0, min(x1 + w, img_info['width']) - max(x1, 0))
+-            inter_h = max(0, min(y1 + h, img_info['height']) - max(y1, 0))
+-            if inter_w * inter_h == 0:
+-                continue
+             if ann['area'] <= 0 or w < 1 or h < 1:
+                 continue
+             if ann['category_id'] not in self.cat_ids:
+@@ -180,17 +150,6 @@ class CocoDataset(CustomDataset):
+         return ann
+ 
+     def xyxy2xywh(self, bbox):
+-        """Convert ``xyxy`` style bounding boxes to ``xywh`` style for COCO
+-        evaluation.
+-
+-        Args:
+-            bbox (numpy.ndarray): The bounding boxes, shape (4, ), in
+-                ``xyxy`` order.
+-
+-        Returns:
+-            list[float]: The converted bounding boxes, in ``xywh`` order.
+-        """
+-
+         _bbox = bbox.tolist()
+         return [
+             _bbox[0],
+@@ -200,7 +159,6 @@ class CocoDataset(CustomDataset):
+         ]
+ 
+     def _proposal2json(self, results):
+-        """Convert proposal results to COCO json style."""
+         json_results = []
+         for idx in range(len(self)):
+             img_id = self.img_ids[idx]
+@@ -215,7 +173,6 @@ class CocoDataset(CustomDataset):
+         return json_results
+ 
+     def _det2json(self, results):
+-        """Convert detection results to COCO json style."""
+         json_results = []
+         for idx in range(len(self)):
+             img_id = self.img_ids[idx]
+@@ -232,7 +189,6 @@ class CocoDataset(CustomDataset):
+         return json_results
+ 
+     def _segm2json(self, results):
+-        """Convert instance segmentation results to COCO json style."""
+         bbox_json_results = []
+         segm_json_results = []
+         for idx in range(len(self)):
+@@ -270,7 +226,7 @@ class CocoDataset(CustomDataset):
+         return bbox_json_results, segm_json_results
+ 
+     def results2json(self, results, outfile_prefix):
+-        """Dump the detection results to a COCO style json file.
++        """Dump the detection results to a json file.
+ 
+         There are 3 types of results: proposals, bbox predictions, mask
+         predictions, and they have different data types. This method will
+@@ -285,7 +241,7 @@ class CocoDataset(CustomDataset):
+                 "somepath/xxx.proposal.json".
+ 
+         Returns:
+-            dict[str: str]: Possible keys are "bbox", "segm", "proposal", and \
++            dict[str: str]: Possible keys are "bbox", "segm", "proposal", and
+                 values are corresponding filenames.
+         """
+         result_files = dict()
+@@ -312,8 +268,8 @@ class CocoDataset(CustomDataset):
+     def fast_eval_recall(self, results, proposal_nums, iou_thrs, logger=None):
+         gt_bboxes = []
+         for i in range(len(self.img_ids)):
+-            ann_ids = self.coco.get_ann_ids(img_ids=self.img_ids[i])
+-            ann_info = self.coco.load_anns(ann_ids)
++            ann_ids = self.coco.getAnnIds(imgIds=self.img_ids[i])
++            ann_info = self.coco.loadAnns(ann_ids)
+             if len(ann_info) == 0:
+                 gt_bboxes.append(np.zeros((0, 4)))
+                 continue
+@@ -337,15 +293,14 @@ class CocoDataset(CustomDataset):
+         """Format the results to json (standard format for COCO evaluation).
+ 
+         Args:
+-            results (list[tuple | numpy.ndarray]): Testing results of the
+-                dataset.
++            results (list): Testing results of the dataset.
+             jsonfile_prefix (str | None): The prefix of json files. It includes
+                 the file path and the prefix of filename, e.g., "a/b/prefix".
+                 If not specified, a temp file will be created. Default: None.
+ 
+         Returns:
+-            tuple: (result_files, tmp_dir), result_files is a dict containing \
+-                the json filepaths, tmp_dir is the temporal directory created \
++            tuple: (result_files, tmp_dir), result_files is a dict containing
++                the json filepaths, tmp_dir is the temporal directory created
+                 for saving json files when jsonfile_prefix is not specified.
+         """
+         assert isinstance(results, list), 'results must be a list'
+@@ -368,14 +323,12 @@ class CocoDataset(CustomDataset):
+                  jsonfile_prefix=None,
+                  classwise=False,
+                  proposal_nums=(100, 300, 1000),
+-                 iou_thrs=None,
+-                 metric_items=None):
++                 iou_thrs=np.arange(0.5, 0.96, 0.05)):
+         """Evaluation in COCO protocol.
+ 
+         Args:
+-            results (list[list | tuple]): Testing results of the dataset.
+-            metric (str | list[str]): Metrics to be evaluated. Options are
+-                'bbox', 'segm', 'proposal', 'proposal_fast'.
++            results (list): Testing results of the dataset.
++            metric (str | list[str]): Metrics to be evaluated.
+             logger (logging.Logger | str | None): Logger used for printing
+                 related information during evaluation. Default: None.
+             jsonfile_prefix (str | None): The prefix of json files. It includes
+@@ -385,20 +338,12 @@ class CocoDataset(CustomDataset):
+             proposal_nums (Sequence[int]): Proposal number used for evaluating
+                 recalls, such as recall@100, recall@1000.
+                 Default: (100, 300, 1000).
+-            iou_thrs (Sequence[float], optional): IoU threshold used for
+-                evaluating recalls/mAPs. If set to a list, the average of all
+-                IoUs will also be computed. If not specified, [0.50, 0.55,
+-                0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95] will be used.
+-                Default: None.
+-            metric_items (list[str] | str, optional): Metric items that will
+-                be returned. If not specified, ``['AR@100', 'AR@300',
+-                'AR@1000', 'AR_s@1000', 'AR_m@1000', 'AR_l@1000' ]`` will be
+-                used when ``metric=='proposal'``, ``['mAP', 'mAP_50', 'mAP_75',
+-                'mAP_s', 'mAP_m', 'mAP_l']`` will be used when
+-                ``metric=='bbox' or metric=='segm'``.
++            iou_thrs (Sequence[float]): IoU threshold used for evaluating
++                recalls. If set to a list, the average recall of all IoUs will
++                also be computed. Default: 0.5.
+ 
+         Returns:
+-            dict[str, float]: COCO style evaluation metric.
++            dict[str: float]
+         """
+ 
+         metrics = metric if isinstance(metric, list) else [metric]
+@@ -406,12 +351,6 @@ class CocoDataset(CustomDataset):
+         for metric in metrics:
+             if metric not in allowed_metrics:
+                 raise KeyError(f'metric {metric} is not supported')
+-        if iou_thrs is None:
+-            iou_thrs = np.linspace(
+-                .5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
+-        if metric_items is not None:
+-            if not isinstance(metric_items, list):
+-                metric_items = [metric_items]
+ 
+         result_files, tmp_dir = self.format_results(results, jsonfile_prefix)
+ 
+@@ -449,43 +388,18 @@ class CocoDataset(CustomDataset):
+             cocoEval = COCOeval(cocoGt, cocoDt, iou_type)
+             cocoEval.params.catIds = self.cat_ids
+             cocoEval.params.imgIds = self.img_ids
+-            cocoEval.params.maxDets = list(proposal_nums)
+-            cocoEval.params.iouThrs = iou_thrs
+-            # mapping of cocoEval.stats
+-            coco_metric_names = {
+-                'mAP': 0,
+-                'mAP_50': 1,
+-                'mAP_75': 2,
+-                'mAP_s': 3,
+-                'mAP_m': 4,
+-                'mAP_l': 5,
+-                'AR@100': 6,
+-                'AR@300': 7,
+-                'AR@1000': 8,
+-                'AR_s@1000': 9,
+-                'AR_m@1000': 10,
+-                'AR_l@1000': 11
+-            }
+-            if metric_items is not None:
+-                for metric_item in metric_items:
+-                    if metric_item not in coco_metric_names:
+-                        raise KeyError(
+-                            f'metric item {metric_item} is not supported')
+-
+             if metric == 'proposal':
+                 cocoEval.params.useCats = 0
++                cocoEval.params.maxDets = list(proposal_nums)
+                 cocoEval.evaluate()
+                 cocoEval.accumulate()
+                 cocoEval.summarize()
+-                if metric_items is None:
+-                    metric_items = [
+-                        'AR@100', 'AR@300', 'AR@1000', 'AR_s@1000',
+-                        'AR_m@1000', 'AR_l@1000'
+-                    ]
+-
+-                for item in metric_items:
+-                    val = float(
+-                        f'{cocoEval.stats[coco_metric_names[item]]:.3f}')
++                metric_items = [
++                    'AR@100', 'AR@300', 'AR@1000', 'AR_s@1000', 'AR_m@1000',
++                    'AR_l@1000'
++                ]
++                for i, item in enumerate(metric_items):
++                    val = float(f'{cocoEval.stats[i + 6]:.3f}')
+                     eval_results[item] = val
+             else:
+                 cocoEval.evaluate()
+@@ -525,16 +439,12 @@ class CocoDataset(CustomDataset):
+                     table = AsciiTable(table_data)
+                     print_log('\n' + table.table, logger=logger)
+ 
+-                if metric_items is None:
+-                    metric_items = [
+-                        'mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l'
+-                    ]
+-
+-                for metric_item in metric_items:
+-                    key = f'{metric}_{metric_item}'
+-                    val = float(
+-                        f'{cocoEval.stats[coco_metric_names[metric_item]]:.3f}'
+-                    )
++                metric_items = [
++                    'mAP', 'mAP_50', 'mAP_75', 'mAP_s', 'mAP_m', 'mAP_l'
++                ]
++                for i in range(len(metric_items)):
++                    key = f'{metric}_{metric_items[i]}'
++                    val = float(f'{cocoEval.stats[i]:.3f}')
+                     eval_results[key] = val
+                 ap = cocoEval.stats[:6]
+                 eval_results[f'{metric}_mAP_copypaste'] = (
+diff --git a/mmdet/models/dense_heads/anchor_head.py b/mmdet/models/dense_heads/anchor_head.py
+index 2faec70..7d0676b 100644
+--- a/mmdet/models/dense_heads/anchor_head.py
++++ b/mmdet/models/dense_heads/anchor_head.py
+@@ -1,6 +1,7 @@
+ import torch
+ import torch.nn as nn
+ from mmcv.cnn import normal_init
++from nncf.dynamic_graph.context import no_nncf_trace
+ 
+ from mmdet.core import (anchor_inside_flags, build_anchor_generator,
+                         build_assigner, build_bbox_coder, build_sampler,
+diff --git a/mmdet/models/dense_heads/base_dense_head.py b/mmdet/models/dense_heads/base_dense_head.py
+index de11e4a..0fcdc4d 100644
+--- a/mmdet/models/dense_heads/base_dense_head.py
++++ b/mmdet/models/dense_heads/base_dense_head.py
+@@ -1,6 +1,7 @@
+ from abc import ABCMeta, abstractmethod
+ 
+ import torch.nn as nn
++from nncf.dynamic_graph.context import no_nncf_trace
+ 
+ 
+ class BaseDenseHead(nn.Module, metaclass=ABCMeta):
+@@ -51,7 +52,9 @@ class BaseDenseHead(nn.Module, metaclass=ABCMeta):
+             loss_inputs = outs + (gt_bboxes, img_metas)
+         else:
+             loss_inputs = outs + (gt_bboxes, gt_labels, img_metas)
+-        losses = self.loss(*loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
++
++        with no_nncf_trace():
++            losses = self.loss(*loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
+         if proposal_cfg is None:
+             return losses
+         else:
+diff --git a/mmdet/models/detectors/base.py b/mmdet/models/detectors/base.py
+index ddecb8f..708e50a 100644
+--- a/mmdet/models/detectors/base.py
++++ b/mmdet/models/detectors/base.py
+@@ -130,6 +130,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+                 augs (multiscale, flip, etc.) and the inner list indicates
+                 images in a batch.
+         """
++        if 'dummy_forward' in kwargs:
++            return self.forward_dummy(imgs[0])
++
+         for var, name in [(imgs, 'imgs'), (img_metas, 'img_metas')]:
+             if not isinstance(var, list):
+                 raise TypeError(f'{name} must be a list, but got {type(var)}')
+@@ -156,8 +159,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+             assert 'proposals' not in kwargs
+             return self.aug_test(imgs, img_metas, **kwargs)
+ 
+-    @auto_fp16(apply_to=('img', ))
+-    def forward(self, img, img_metas, return_loss=True, **kwargs):
++    @abstractmethod
++    def forward_dummy(self, img, **kwargs):
++        pass
++
++    @auto_fp16(apply_to=('img',))
++    def forward(self, img, img_metas=[], return_loss=True, **kwargs):
+         """Calls either :func:`forward_train` or :func:`forward_test` depending
+         on whether ``return_loss`` is ``True``.
+ 
+@@ -207,7 +214,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+ 
+         return loss, log_vars
+ 
+-    def train_step(self, data, optimizer):
++    def train_step(self, data, optimizer, compression_ctrl=None):
+         """The iteration step during training.
+ 
+         This method defines an iteration step during training, except for the
+@@ -237,6 +244,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+         losses = self(**data)
+         loss, log_vars = self._parse_losses(losses)
+ 
++        if compression_ctrl is not None:
++            compression_loss = compression_ctrl.loss()
++            loss += compression_loss
++
+         outputs = dict(
+             loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
+ 
+diff --git a/mmdet/models/detectors/single_stage.py b/mmdet/models/detectors/single_stage.py
+index 9622537..cc51cf9 100644
+--- a/mmdet/models/detectors/single_stage.py
++++ b/mmdet/models/detectors/single_stage.py
+@@ -1,5 +1,6 @@
+ import torch
+ import torch.nn as nn
++from nncf.dynamic_graph.context import no_nncf_trace
+ 
+ from mmdet.core import bbox2result
+ from ..builder import DETECTORS, build_backbone, build_head, build_neck
+diff --git a/tools/pytorch2onnx.py b/tools/pytorch2onnx.py
+index 1f6db66..f475411 100644
+--- a/tools/pytorch2onnx.py
++++ b/tools/pytorch2onnx.py
+@@ -16,6 +16,7 @@ try:
+ except ModuleNotFoundError:
+     raise NotImplementedError('please update mmcv to version>=v1.0.4')
+ 
++from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
+ 
+ def pytorch2onnx(model,
+                  input_img,
+@@ -49,13 +50,16 @@ def pytorch2onnx(model,
+     # pytorch has some bug in pytorch1.3, we have to fix it
+     # by replacing these existing op
+     register_extra_symbolics(opset_version)
++
++
++
+     torch.onnx.export(
+         model, ([one_img]),
+         output_file,
+         export_params=True,
+         keep_initializers_as_inputs=True,
+         verbose=show,
+-        opset_version=opset_version)
++        opset_version=10)
+     model.forward = origin_forward
+     print(f'Successfully exported ONNX model: {output_file}')
+     if verify:
+@@ -154,13 +158,28 @@ if __name__ == '__main__':
+     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
+     checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+ 
++    # BEGIN nncf part
++    if 'nncf_config' in cfg:
++        check_nncf_is_enabled()
++
++        cfg.nncf_load_from = args.checkpoint
++        compression_ctrl, model = wrap_nncf_model(model, cfg, None)
++
++        input_size = input_shape
++        device = "cpu"
++        input_args = ([torch.randn(input_size).to(device), ],)
++        input_kwargs = dict(return_loss=False, dummy_forward=True)
++        compression_ctrl.export_model(args.output_file, *input_args, **input_kwargs)
++        print ("Successfully convert compressed model to ONNX format")
++    # END nncf part
++    else:
+     # conver model to onnx file
+-    pytorch2onnx(
+-        model,
+-        args.input_img,
+-        input_shape,
+-        opset_version=args.opset_version,
+-        show=args.show,
+-        output_file=args.output_file,
+-        verify=args.verify,
+-        normalize_cfg=normalize_cfg)
++        pytorch2onnx(
++            model,
++            args.input_img,
++            input_shape,
++            opset_version=args.opset_version,
++            show=args.show,
++            output_file=args.output_file,
++            verify=args.verify,
++            normalize_cfg=normalize_cfg)
+diff --git a/tools/test.py b/tools/test.py
+index 47502d4..2301344 100644
+--- a/tools/test.py
++++ b/tools/test.py
+@@ -1,5 +1,6 @@
+ import argparse
+ import os
++from collections import OrderedDict
+ 
+ import mmcv
+ import torch
+@@ -13,6 +14,8 @@ from mmdet.core import wrap_fp16_model
+ from mmdet.datasets import build_dataloader, build_dataset
+ from mmdet.models import build_detector
+ 
++from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
++
+ 
+ def parse_args():
+     parser = argparse.ArgumentParser(
+@@ -24,19 +27,19 @@ def parse_args():
+         '--fuse-conv-bn',
+         action='store_true',
+         help='Whether to fuse conv and bn, this will slightly increase'
+-        'the inference speed')
++             'the inference speed')
+     parser.add_argument(
+         '--format-only',
+         action='store_true',
+         help='Format the output results without perform evaluation. It is'
+-        'useful when you want to format the result to a specific format and '
+-        'submit it to the test server')
++             'useful when you want to format the result to a specific format and '
++             'submit it to the test server')
+     parser.add_argument(
+         '--eval',
+         type=str,
+         nargs='+',
+         help='evaluation metrics, which depends on the dataset, e.g., "bbox",'
+-        ' "segm", "proposal" for COCO, and "mAP", "recall" for PASCAL VOC')
++             ' "segm", "proposal" for COCO, and "mAP", "recall" for PASCAL VOC')
+     parser.add_argument('--show', action='store_true', help='show results')
+     parser.add_argument(
+         '--show-dir', help='directory where painted images will be saved')
+@@ -52,7 +55,7 @@ def parse_args():
+     parser.add_argument(
+         '--tmpdir',
+         help='tmp directory used for collecting results from multiple '
+-        'workers, available when gpu-collect is not specified')
++             'workers, available when gpu-collect is not specified')
+     parser.add_argument(
+         '--options', nargs='+', action=DictAction, help='arguments in dict')
+     parser.add_argument(
+@@ -71,7 +74,7 @@ def main():
+     args = parse_args()
+ 
+     assert args.out or args.eval or args.format_only or args.show \
+-        or args.show_dir, \
++           or args.show_dir, \
+         ('Please specify at least one operation (save/eval/format/show the '
+          'results / save the results) with the argument "--out", "--eval"'
+          ', "--format-only", "--show" or "--show-dir"')
+@@ -112,12 +115,23 @@ def main():
+ 
+     # build the model and load checkpoint
+     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
+-    fp16_cfg = cfg.get('fp16', None)
+-    if fp16_cfg is not None:
+-        wrap_fp16_model(model)
+-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+-    if args.fuse_conv_bn:
+-        model = fuse_conv_bn(model)
++
++    # nncf model wrapper
++    if 'nncf_config' in cfg:
++        check_nncf_is_enabled()
++        cfg.nncf_load_from = args.checkpoint
++        model.cuda()  # for wrap_nncf_model
++        _, model = wrap_nncf_model(model, cfg, None)
++        checkpoint = torch.load(args.checkpoint, map_location=None)
++        # FIXME: TODO: check why checkpoint does not have "meta" inside
++    else:
++        fp16_cfg = cfg.get('fp16', None)
++        if fp16_cfg is not None:
++            wrap_fp16_model(model)
++        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
++        if args.fuse_conv_bn:
++            model = fuse_conv_bn(model)
++
+     # old versions did not save class info in checkpoints, this walkaround is
+     # for backward compatibility
+     if 'CLASSES' in checkpoint['meta']:
+diff --git a/tools/train.py b/tools/train.py
+index fb05b58..3fddd46 100644
+--- a/tools/train.py
++++ b/tools/train.py
+@@ -16,6 +16,8 @@ from mmdet.datasets import build_dataset
+ from mmdet.models import build_detector
+ from mmdet.utils import collect_env, get_root_logger
+ 
++from mmdet.core.nncf import check_nncf_is_enabled
++
+ 
+ def parse_args():
+     parser = argparse.ArgumentParser(description='Train a detector')
+@@ -32,13 +34,13 @@ def parse_args():
+         '--gpus',
+         type=int,
+         help='number of gpus to use '
+-        '(only applicable to non-distributed training)')
++             '(only applicable to non-distributed training)')
+     group_gpus.add_argument(
+         '--gpu-ids',
+         type=int,
+         nargs='+',
+         help='ids of gpus to use '
+-        '(only applicable to non-distributed training)')
++             '(only applicable to non-distributed training)')
+     parser.add_argument('--seed', type=int, default=None, help='random seed')
+     parser.add_argument(
+         '--deterministic',
+@@ -115,6 +117,12 @@ def main():
+     logger.info(f'Distributed training: {distributed}')
+     logger.info(f'Config:\n{cfg.pretty_text}')
+ 
++    if 'nncf_config' in cfg:
++        check_nncf_is_enabled()
++        cfg.ENABLE_COMPRESSION = True
++    else:
++        cfg.ENABLE_COMPRESSION = False
++
+     # set random seeds
+     if args.seed is not None:
+         logger.info(f'Set random seed to {args.seed}, '
+-- 
+2.17.1
+
