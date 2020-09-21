@@ -1,7 +1,7 @@
 #include "dla_hw_model.h"
 #include "dla_floating_point_utils.h"
 
-#if 1
+
 // When we have a lower number of exponent bits, we may need to deal with floats becoming subnormal
 // Unclear what happens if the exponent is too big
 STATIC float dla_v1_sw_round_subnorm(float in, uint32_t exp_width) {
@@ -117,8 +117,7 @@ STATIC float dla_v1_sw_block_align(float in_out, uint32_t max_exp, uint32_t mant
     result = *((float *)&hbits);
     return result;
 }
-#endif
-#if 1
+
 STATIC float round_subnorm(float in, uint32_t exp_width, uint32_t mantissa_width, bool sw_rnd, bool is_input_layer) {
     float rounded;
     if (sw_rnd) {
@@ -142,9 +141,9 @@ STATIC float block_align(float in, uint32_t max_exp, uint32_t mantissa_width,
     }
     return aligned;
 }
-#endif
 
 
+#ifndef __NVCC__
 STATIC void dla_block_c_vec(float *inout, uint32_t block_size, uint32_t exp_width, uint32_t mantissa_width, bool sw_rnd, bool is_input_layer) {
 
     uint32_t max_exp = 0;
@@ -162,31 +161,32 @@ STATIC void dla_block_c_vec(float *inout, uint32_t block_size, uint32_t exp_widt
     }
 }
 
-#ifdef __NVCC__
-__device__ void dla_block_c_vec_cuda(float *inout, uint32_t idx, uint32_t block_size, uint32_t exp_width, uint32_t mantissa_width, bool sw_rnd, bool is_input_layer) {
+#else // NVCC defined -> CUDA-specific code
+__device__ void dla_block_c_vec_cuda(float *inout, uint32_t *max_exp, uint32_t idx, uint32_t block_size, uint32_t exp_width, uint32_t mantissa_width, bool sw_rnd, bool is_input_layer) {
 
-	// This must be PER BLOCK (for folded version)
-    __shared__ uint32_t max_exp;
-	uint32_t i = idx;
+    // This must be PER BLOCK (for folded version)
+    // __shared__ uint32_t max_exp;
+    uint32_t i = idx;
 
     inout[i] = round_subnorm(inout[i], exp_width, mantissa_width, sw_rnd, is_input_layer);
 
-	__syncthreads();
+    __syncthreads();
 
-	// only first thread calculates max exp. not bothering with fancy reduction here
-	if (i == 0) {
-		max_exp = 0;
-		for (uint32_t b = 0; b < block_size; b++) {
-			float *temp = &inout[b];
-		    uint32_t bits = *((uint32_t *)temp);
-			uint32_t exp = ((bits >> 23) & 0xFF);
-		    if (exp > max_exp) {
-		        max_exp = exp;
-		    }
-		}
-	}
-	__syncthreads();
+    // only first thread calculates max exp. not bothering with fancy reduction here
+    if (i == 0) {
+        *max_exp = 0;
+        for (uint32_t b = 0; b < block_size; b++) {
+            float *temp = &inout[b];
+            uint32_t bits = *((uint32_t *)temp);
+            uint32_t exp = ((bits >> 23) & 0xFF);
+            if (exp > *max_exp) {
+                *max_exp = exp;
+            }
+        }
+    }
 
-    inout[i] = block_align(inout[i], max_exp, mantissa_width, exp_width, sw_rnd);
+    __syncthreads();
+
+    inout[i] = block_align(inout[i], *max_exp, mantissa_width, exp_width, sw_rnd);
 }
 #endif

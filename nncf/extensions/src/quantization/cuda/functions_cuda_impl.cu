@@ -532,6 +532,7 @@ __global__ void block_align_floats_kernel(float* out, float* in, uint32_t exp_wi
   int b  = threadIdx.x;
 
   __shared__ float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
+  __shared__ uint32_t max_exp;
   assert (BLOCKFP_MAX_BLOCK_SIZE >= block_size);
 
   // Load block_size number of values into local array
@@ -546,7 +547,7 @@ __global__ void block_align_floats_kernel(float* out, float* in, uint32_t exp_wi
   }
 
   // Block gathered c_vec[]
-  dla_block_c_vec_cuda (c_vec, b, block_size, exp_width, mantissa_width, sw_rnd, false /* not input layer */);
+  dla_block_c_vec_cuda (c_vec, &max_exp, b, block_size, exp_width, mantissa_width, sw_rnd, false /* not input layer */);
 
   // Write blocked c_vec to global out[]
   if (c_idx < C) {
@@ -595,9 +596,11 @@ __global__ void block_align_folded_inputs_kernel(float *out, float *in, uint32_t
   // e.g. ceil(3x2x2/16.0) = 1 block per folded height and folded width
   int num_blocks = (int)ceil(C * SY * SX / (float) block_size);
     
-  
+  assert (MAX_NUM_BLOCKS >= num_blocks);
   assert (BLOCKFP_MAX_BLOCK_SIZE >= (num_blocks * block_size));
+
   __shared__ float c_vec[BLOCKFP_MAX_BLOCK_SIZE];
+  __shared__ uint32_t max_exp[MAX_NUM_BLOCKS];
 
   int c_vec_idx = (c * SY + sy) * SX + sx;
 
@@ -630,7 +633,7 @@ __global__ void block_align_folded_inputs_kernel(float *out, float *in, uint32_t
 
   int idx_within_blk = c_vec_idx % block_size;
   int blk_idx        = c_vec_idx / block_size;
-  dla_block_c_vec_cuda (c_vec + blk_idx * block_size, idx_within_blk, block_size, exp_width, mantissa_width, sw_rnd, true /*input layer*/);
+  dla_block_c_vec_cuda (c_vec + blk_idx * block_size, &(max_exp[blk_idx]), idx_within_blk, block_size, exp_width, mantissa_width, sw_rnd, true /*input layer*/);
 
 
   if ((w_idx < W) && 
