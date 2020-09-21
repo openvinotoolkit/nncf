@@ -34,7 +34,6 @@ from nncf import register_default_init_args, NNCFConfig
 from nncf.checkpoint_loading import load_state
 from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.context import Scope, ScopeElement
-from nncf.hw_config import HWConfigType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import HAWQPrecisionInitializer, TracesPerLayer, Perturbations, \
@@ -94,7 +93,7 @@ def compare_with_ref_if_exists(actual_state, path_to_ref):
 def create_hawq_test_config(batch_size=10, num_data_points=100):
     config = get_quantization_config_without_range_init()
     config['input_info'] = {
-        "sample_size": [1, 3, 10, 10],
+        "sample_size": [2, 3, 10, 10],
     }
     config['batch_size'] = batch_size
     config['compression'].update({
@@ -128,7 +127,7 @@ def create_config_with_ratio(config_creator, ratio):
 
 def create_hawq_hw_test_config(batch_size):
     config = create_hawq_test_config(batch_size)
-    config["hw_config_type"] = HWConfigType.VPU.value
+    config['target_device'] = 'VPU'
     return config
 
 
@@ -178,6 +177,10 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
                              avg_traces_creator: Callable):
     batch_size = 10
     config = config_creator(batch_size)
+    if filename_suffix == 'pattern_based':
+        config['quantizer_setup_type'] = 'pattern_based'
+    else:
+        config['target_device'] = 'VPU'
     model = MobileNetV2(num_classes=10)
     model.eval()
 
@@ -371,6 +374,7 @@ def disable_quantizer_gradients():
     config['input_info'] = {
         "sample_size": [1, 3, 10, 10],
     }
+    config['quantizer_setup_type'] = 'pattern_based'
     model = MobileNetV2(num_classes=10)
     model.eval()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -413,7 +417,6 @@ def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
     num_data_points = 10
     batch_size = 2
     config = create_hawq_test_config(batch_size, num_data_points)
-
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
     torch.multiprocessing.spawn(hawq_dumping_worker,
@@ -447,16 +450,14 @@ MANUAL_CONFIG_TEST_PARAMS = [
 ]
 
 
-@pytest.mark.parametrize('hw_config', [None, HWConfigType.VPU],
-                         ids=['no_constraints', 'vpu_constraints'])
+
 @pytest.mark.parametrize('manual_config_params', MANUAL_CONFIG_TEST_PARAMS,
                          ids=[pair[0] for pair in MANUAL_CONFIG_TEST_PARAMS])
-def test_hawq_manual_configs(manual_config_params, hw_config):
+def test_hawq_manual_configs(manual_config_params):
     config_name, bit_stats = manual_config_params
     config = NNCFConfig.from_json(str(EXAMPLES_DIR.joinpath('classification', 'configs', 'quantization') / config_name))
+    config['quantizer_setup_type'] = 'pattern_based'
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
-    if hw_config:
-        config['hw_config'] = hw_config.value
     model = load_model(config['model'], pretrained=False)
     model.eval()
 
@@ -467,15 +468,32 @@ def test_hawq_manual_configs(manual_config_params, hw_config):
     assert table._rows == bit_stats
 
 
-@pytest.mark.parametrize('method_name', ['_calc_traces', '_filter_configs_by_precision_constraints'])
-def test_hawq_raises_error_if_method_returns_none(mocker, method_name):
+def test_hawq_warns__if_method_returns_none(mocker):
     config = create_hawq_test_config()
+    config['quantizer_setup_type'] = 'pattern_based'
     model = MockModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
     mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
     mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer._calc_traces')
 
-    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.' + method_name)
+    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer'
+                                '._filter_configs_by_precision_constraints')
+    mocked_trace.return_value = None
+
+    with pytest.warns(RuntimeWarning):
+        create_compressed_model_and_algo_for_test(model, config)
+
+
+def test_hawq__warns__if_method_returns_none(mocker):
+    config = create_hawq_test_config()
+    config['quantizer_setup_type'] = 'pattern_based'
+    model = MockModel()
+    config = register_default_init_args(config, mocker.stub(), mocker.stub())
+    mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
+    mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer._calc_traces')
+
+    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer'
+                                '._calc_traces')
     mocked_trace.return_value = None
 
     with pytest.raises(RuntimeError):
@@ -545,7 +563,7 @@ def test_quantization_configs__with_precisions_list():
                  [4, 'ModelForTest/NNCFConv2d[conv2]']]
         }})
     config['compression']["activations"] = {"bits": 6}
-
+    config['quantizer_setup_type'] = 'pattern_based'
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     ref_bits = [('ModelForTest/NNCFConv2d[conv1]module_weight', 2),

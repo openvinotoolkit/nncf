@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=1, scope="AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
-"2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"1 AsymmetricQuantizer/asymmetric_quantize" [id=1, scope=AsymmetricQuantizer, type=asymmetric_quantize];
+"2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d" [id=3, scope="AlexNet/Sequential[features]/NNCFConv2d[0]", type=conv2d];
 "4 AlexNet/Sequential[features]/ReLU[1]/RELU" [id=4, scope="AlexNet/Sequential[features]/ReLU[1]", type=RELU];
 "5 AlexNet/Sequential[features]/ReLU[1]/AsymmetricQuantizer/asymmetric_quantize" [id=5, scope="AlexNet/Sequential[features]/ReLU[1]/AsymmetricQuantizer", type=asymmetric_quantize];
@@ -36,9 +36,9 @@ strict digraph  {
 "34 AlexNet/Sequential[classifier]/ReLU[5]/AsymmetricQuantizer/asymmetric_quantize" [id=34, scope="AlexNet/Sequential[classifier]/ReLU[5]/AsymmetricQuantizer", type=asymmetric_quantize];
 "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=35, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" [id=36, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]", type=linear];
-"0 /nncf_model_input" -> "2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize";
-"1 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
-"2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
+"0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
+"1 AsymmetricQuantizer/asymmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
+"2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d" -> "4 AlexNet/Sequential[features]/ReLU[1]/RELU";
 "4 AlexNet/Sequential[features]/ReLU[1]/RELU" -> "5 AlexNet/Sequential[features]/ReLU[1]/AsymmetricQuantizer/asymmetric_quantize";
 "5 AlexNet/Sequential[features]/ReLU[1]/AsymmetricQuantizer/asymmetric_quantize" -> "6 AlexNet/Sequential[features]/MaxPool2d[2]/max_pool2d";

@@ -477,7 +477,7 @@ def main_worker(current_gpu, config):
         criterion = get_criterion(w_class, config)
 
     if not resuming_checkpoint_path:
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,

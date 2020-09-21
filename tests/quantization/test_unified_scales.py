@@ -413,6 +413,7 @@ class QuantizerLinkingTestModel(torch.nn.Module):
 
 def test_quantizer_scale_linking():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
+    nncf_config['quantizer_setup_type'] = 'pattern_based'
     nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
         {
@@ -510,7 +511,7 @@ def test_unified_scales_for_vpu():
             "sample_size": [1, 1, 1, 1],
         }
     ]
-    nncf_config["hw_config_type"] = "vpu"
+    nncf_config["target_device"] = "VPU"
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(QuantizerLinkingTestModel(),
                                                                     nncf_config)
@@ -552,7 +553,7 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
             "sample_size": [1, 1, 1, 2],
         },
     ]
-    nncf_config["hw_config_type"] = "vpu"
+    nncf_config["target_device"] = "VPU"
 
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
         SimplerModelForUnifiedScalesTesting(),

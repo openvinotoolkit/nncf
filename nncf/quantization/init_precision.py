@@ -5,6 +5,8 @@ from typing import List, Dict, Union, Tuple, NamedTuple
 
 import os
 import torch
+import warnings
+
 from bisect import bisect_left
 from operator import itemgetter
 from torch import Tensor, nn
@@ -144,64 +146,62 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
 
     def apply_init(self):
-        original_device = next(self._model.parameters()).device
-        self._model.to(self._init_device)
+        bits_configurations = None
+        if len(self._quantizers_handler.get_ordered_weight_quantizers_per_id()):
+            original_device = next(self._model.parameters()).device
+            self._model.to(self._init_device)
 
-        traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
-        if not traces_per_layer:
-            raise RuntimeError('Failed to calculate hessian traces!')
+            traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
+            if not traces_per_layer:
+                raise RuntimeError('Failed to calculate hessian traces!')
 
-        traces_order = traces_per_layer.get_order_of_traces()
-        num_weights = len(self._ordered_weight_quantizations)
-        bits_configurations = self.get_configs_constrained_by_order(self._bits, num_weights)
+            traces_order = traces_per_layer.get_order_of_traces()
+            num_weights = len(self._ordered_weight_quantizations)
+            bits_configurations = self.get_configs_constrained_by_order(self._bits, num_weights)
 
-        ordered_weight_quantization_ids = list(self._ordered_weight_quantizations.keys())
-        bits_configurations = self._filter_configs_by_precision_constraints(bits_configurations,
-                                                                            self._hw_precision_constraints,
-                                                                            ordered_weight_quantization_ids,
-                                                                            traces_order)
+            ordered_weight_quantization_ids = list(self._ordered_weight_quantizations.keys())
+            bits_configurations = self._filter_configs_by_precision_constraints(bits_configurations,
+                                                                                self._hw_precision_constraints,
+                                                                                ordered_weight_quantization_ids,
+                                                                                traces_order)
+        ordered_metric_per_layer = None
         if not bits_configurations:
-            raise RuntimeError('All bits configurations are incompatible with HW Config!')
+            warnings.warn('All bits configurations are incompatible with HW Config!', RuntimeWarning)
+        else:
+            perturbations, weight_observers = self.calc_quantization_noise()
 
-        skipped_quantizers = self._quantizers_handler.get_skipped_weight_quantizers_per_id()
-        min_ratio, max_ratio = self.flops_counter.ratio_limits(self._bits, traces_order, self._hw_precision_constraints,
-                                                               skipped_quantizers)
-        if not min_ratio <= self._compression_ratio <= max_ratio:
-            raise AttributeError('Invalid compression ratio={}. Should be between within range [{:.2f}, {:.2f}]'.format(
-                self._compression_ratio, min_ratio, max_ratio))
+            configuration_metric = self.calc_hawq_metric_per_configuration(bits_configurations, perturbations,
+                                                                           traces_per_layer, self._init_device)
 
-        perturbations, weight_observers = self.calc_quantization_noise()
+            flops_bits_per_config = self.get_flops_bits_per_config(bits_configurations, traces_order)
+            config_index = self.choose_configuration(configuration_metric, flops_bits_per_config)
+            chosen_config_per_layer = bits_configurations[config_index]
+            chosen_config_per_layer = self.get_ordered_config(chosen_config_per_layer, traces_order)
+            nncf_logger.info('Chosen HAWQ configuration with ratio={:.2f}, bitwidth per weightable layer={}'.format(
+                flops_bits_per_config[config_index], chosen_config_per_layer))
+            nncf_logger.debug('Order of the weightable layers in the HAWQ configuration={}'.format(traces_order))
 
-        configuration_metric = self.calc_hawq_metric_per_configuration(bits_configurations, perturbations,
-                                                                       traces_per_layer, self._init_device)
+            self.set_chosen_config(chosen_config_per_layer)
 
-        flops_bits_per_config = self.get_flops_bits_per_config(bits_configurations, traces_order)
-        config_index = self.choose_configuration(configuration_metric, flops_bits_per_config)
-        chosen_config_per_layer = bits_configurations[config_index]
-        chosen_config_per_layer = self.get_ordered_config(chosen_config_per_layer, traces_order)
-        nncf_logger.info('Chosen HAWQ configuration with ratio={:.2f}, bitwidth per weightable layer={}'.format(
-            flops_bits_per_config[config_index], chosen_config_per_layer))
-        nncf_logger.debug('Order of the weightable layers in the HAWQ configuration={}'.format(traces_order))
+            if is_debug():
+                hawq_debugger = HAWQDebugger(bits_configurations, perturbations,
+                                             weight_observers, traces_per_layer, self._bits)
+                hawq_debugger.dump_metric_MB(configuration_metric)
+                hawq_debugger.dump_metric_flops(configuration_metric, flops_bits_per_config, config_index)
+                hawq_debugger.dump_avg_traces()
+                hawq_debugger.dump_density_of_quantization_noise()
+                hawq_debugger.dump_perturbations_ratio()
+                hawq_debugger.dump_bitwidth_graph(self._algo, self._model)
 
-        self.set_chosen_config(chosen_config_per_layer)
+            self._model.rebuild_graph()
+            str_bw = [str(element) for element in self.get_bitwidth_per_scope()]
+            nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
-        if is_debug():
-            hawq_debugger = HAWQDebugger(bits_configurations, perturbations,
-                                         weight_observers, traces_per_layer, self._bits)
-            hawq_debugger.dump_metric_MB(configuration_metric)
-            hawq_debugger.dump_metric_flops(configuration_metric, flops_bits_per_config, config_index)
-            hawq_debugger.dump_avg_traces()
-            hawq_debugger.dump_density_of_quantization_noise()
-            hawq_debugger.dump_perturbations_ratio()
-            hawq_debugger.dump_bitwidth_graph(self._algo, self._model)
+            self._model.to(original_device)
 
-        self._model.rebuild_graph()
-        str_bw = [str(element) for element in self.get_bitwidth_per_scope()]
-        nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
-
-        self._model.to(original_device)
-
-        ordered_metric_per_layer = self.get_metric_per_layer(chosen_config_per_layer, perturbations, traces_per_layer)
+            ordered_metric_per_layer = self.get_metric_per_layer(chosen_config_per_layer,
+                                                                 perturbations,
+                                                                 traces_per_layer)
         return ordered_metric_per_layer
 
     def get_flops_bits_per_config(self, bits_configurations, traces_order):
@@ -330,10 +330,13 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     @staticmethod
     def get_configs_constrained_by_order(bits_: List[int], num_layers: int) -> List[List[int]]:
+        bit_configs = []
+        if num_layers == 0:
+            return bit_configs
+
         bits = sorted(bits_)
         m = len(bits)
         L = num_layers
-        bit_configs = []
         for j in range(1, m + 1):
             for combo_bits in itertools.combinations(bits, j):
                 for combo_partitions in itertools.combinations(list(range(1, L)), j - 1):

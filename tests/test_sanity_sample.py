@@ -389,6 +389,7 @@ def test_get_default_weight_decay(algo, ref_weight_decay):
 
 def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
+    #config['nncf_config']['device'] = 'cpu'
     args = {
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
@@ -400,7 +401,6 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     }
 
     command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
-
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
         if is_staged_quantization(config['nncf_config']):

@@ -211,7 +211,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         group = QuantizerGroup.WEIGHTS if is_weights else QuantizerGroup.ACTIVATIONS
         qconfig = self.__get_default_qconfig(constraints=self.global_quantizer_contraints[group])
         qconfig.is_weights = is_weights
-
         scope_overrides = self.config.get("scope_overrides", {})
         for overridden_scope in scope_overrides.keys():
             if in_scope_list(parent_module_scope_str, overridden_scope):
@@ -296,8 +295,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
             if self.hw_config is not None:
                 try:
+                    qconfig_overrides = None
+                    if in_scope_list(str(module_scope), self.config.get("scope_overrides", {})):
+                        qconfig_overrides = self.__get_scoped_quantizer_config(target_model,
+                                                                               str(module_scope),
+                                                                               is_weights=True)
                     qconfig = self._select_final_qconfig(qconfig_list,
-                                                         self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])
+                                                         self.global_quantizer_contraints[QuantizerGroup.WEIGHTS],
+                                                         qconfig_overrides)
                 except RuntimeError:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
@@ -359,14 +364,20 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             original_nncf_graph = target_model.get_original_graph()
             for insertion_info, quantizer_config_list in insertion_data.items():
                 ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
+                operator_scope_str = str(ia_op_exec_context)
                 # Tailored for post-hook quantization and first output quantization only
                 quantizer_input_shape = original_nncf_graph.get_output_shapes_for_ia_op_exec_context(
                     ia_op_exec_context)[0]
-
                 try:
+                    qconfig_overrides = None
+                    if in_scope_list(operator_scope_str, self.config.get("scope_overrides", {})):
+                        qconfig_overrides = self.__get_scoped_quantizer_config(target_model,
+                                                                               operator_scope_str,
+                                                                               is_weights=True)
                     quantizer_config = self._select_final_qconfig(quantizer_config_list,
                                                                   self.global_quantizer_contraints[
-                                                                      QuantizerGroup.ACTIVATIONS])
+                                                                      QuantizerGroup.ACTIVATIONS],
+                                                                  qconfig_overrides)
                 except RuntimeError:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
@@ -387,8 +398,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return insertion_commands
 
     def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig],
-                              constraints: QuantizationConstraints) -> QuantizerConfig:
+                              constraints: QuantizationConstraints, qconfig_overrides=None) -> QuantizerConfig:
         assert quantizer_config_list is not None
+
+        if self.hw_config is None and qconfig_overrides is not None:
+            return qconfig_overrides
 
         if HWConfig.is_wildcard_quantization(quantizer_config_list):
             # Set a default, most basic quantization config in case wildcard propagating quantizer did
@@ -400,6 +414,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             quantizer_config_list
         ))
 
+
+        if qconfig_overrides is not None:
+            constrained_quantizer_config_list =\
+                 [qconfig for qconfig in constrained_quantizer_config_list if qconfig_overrides == qconfig]
+
+        # TODO: Make the logic more flexible when the flag "warning as error" is implemented.
+        # It means that the qconfig from overrides must be selected as final config
+        # even if it is not valid in hw-config.
         if not constrained_quantizer_config_list:
             raise RuntimeError()
 
@@ -1065,8 +1087,13 @@ class QuantizationController(QuantizationControllerBase):
                 ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
                 target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
                 if quantizer_group == target_quantizer_group and\
-                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                     should_consider_scope(str(scope), target_scopes, ignored_scopes):
                     matched_init_range_config.append(range_init_subconfig)
+
+            if len(matched_init_range_config) > 1:
+                raise AssertionError("The range initialization configs conflict with each other. "
+                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
+                                                                                    str(scope)))
 
             if len(matched_init_range_config) == 1:
                 module_init_range_config = matched_init_range_config[0]

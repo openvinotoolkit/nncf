@@ -125,7 +125,6 @@ def main_worker(current_gpu, config: SampleConfig):
     train_loader = train_sampler = val_loader = None
     resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
-
     pretrained = is_pretrained_model_requested(config)
 
     if config.to_onnx is not None:
@@ -134,7 +133,7 @@ def main_worker(current_gpu, config: SampleConfig):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
 
     # create model
     model_name = config['model']

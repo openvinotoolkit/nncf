@@ -54,7 +54,7 @@ def get_basic_quantization_config(quantization_type, input_sample_sizes=None):
 # pylint:disable=redefined-outer-name
 def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_sample_size):
     config = get_empty_config(input_sample_sizes=input_sample_size)
-    config["hw_config_type"] = hw_config_type
+    config["target_device"] = hw_config_type
     config["compression"] = {"algorithm": "quantization", }
     return config
 
@@ -124,7 +124,8 @@ def check_graph(graph: NNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     for k, attrs in nx_graph.nodes.items():
         attrs = {k: str(v) for k, v in attrs.items()}
         load_attrs = {k: str(v).strip('"') for k, v in load_graph.nodes[k].items()}
-        assert attrs == load_attrs
+        if attrs != load_attrs:
+            assert attrs == load_attrs
 
     assert load_graph.nodes.keys() == nx_graph.nodes.keys()
     assert nx.DiGraph(load_graph).edges == nx_graph.edges
@@ -152,7 +153,8 @@ def gnmt_forward_fn(seq_len, batch_size, vocab_size):
 
         def gen_packed_sequence():
             seq_list = []
-            seq_lens = torch.LongTensor(batch_size_).random_(1, seq_len_ + 1).to(device)
+            #seq_lens = torch.LongTensor(batch_size_).random_(1, seq_len_ + 1).to(device)
+            seq_lens = torch.LongTensor((batch_size_)).random_(1, seq_len_ + 1).type(torch.int32).to(device)
             seq_lens = torch.sort(seq_lens, descending=True).values
             for seq_size in seq_lens:
                 seq_list.append(torch.LongTensor(seq_size.item()).random_(1, vocab_size_).to(device))
@@ -313,6 +315,7 @@ def test_gnmt_quantization(_case_config):
     forward_fn_ = gnmt_forward_fn(seq_len=10, batch_size=3, vocab_size=32)
 
     config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=[3, 10])
+    config["quantizer_setup_type"] = 'pattern_based'
     config["compression"].update({
         "quantizable_subgraph_patterns": [["linear", "__add__"],
                                           ["sigmoid", "__mul__", "__add__"],
