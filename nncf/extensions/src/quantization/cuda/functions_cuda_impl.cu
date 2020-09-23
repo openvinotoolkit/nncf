@@ -581,6 +581,10 @@ __global__ void block_align_floats_kernel(float* out, float* in, uint32_t exp_wi
 /// @param PX        Padding in the width dimension, currently assumes symmetric padding
 /// @param sw_rnd      Flag to enable additional rounding only used in software (e.g. subnormal rounding)
 
+// Maximum number of c_vector blocks to cover C * SX * SY
+// Usually will be 1 (C = 3, SX and SY = 2, block_size is 16 or 32).
+#define MAX_NUM_BLOCKS   4
+
 __global__ void block_align_folded_inputs_kernel(float *out, float *in, uint32_t exp_width, uint32_t mantissa_width,
       uint32_t block_size, uint32_t N, uint32_t C, uint32_t H, uint32_t W, uint32_t SY, uint32_t SX, uint32_t PY, uint32_t PX, bool sw_rnd) {
 
