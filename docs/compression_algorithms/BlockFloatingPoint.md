@@ -17,6 +17,8 @@ Block floating point is usually combined with smaller mantissa sizes. For exampl
 - block size 32
 Without blocking, this would be comparable to FP9 floating point format: 1 sign bit, 1 implicit mantissa bit, 3 explicit mantissa bits, 5 exponent bits.
 
+Note that BFP format with block size of 1 is a regular floating point format, since no exponents are shared.
+
 **INSERT NICE IMAGES HERE**
 
 Note that BFP computation need not be symmetric. For example, network activations could be represented as **int5bfp** but network weights as **int4bfp**. Selection of appropriate BFP format depends on what the hardware supports and achieved accuracy of network of interest with selected precisions.
@@ -33,3 +35,67 @@ Need for precision conversions between host, accelerator hw, and between differe
 To successfully train to BFP-enabled hardware, NNCF must model as close as possible target hardware's arithmetic. Current implementation models hardware as implemented in Intel FPGA Deep Learning Accelerator Suite, supported by the Intel OpenVINO™ toolkit. 
 
 NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer performs converts to lower precision and blocks FP32 activations/weights, and then converts them back to FP32. The exact conversion mechanism is described in hardware models. Such models include number of integer and exponent bits, block size, and also exact rounding methods.
+
+##### BFP configuration
+There are many user-configurable parameters that control BFP support in NNCF. Retraining configuration file selects `hw_config_type` and `hw_config_subtype` to select a desired set of BFP parameters. For example,
+
+```
+{
+  "model": "mobilenet_v2",
+  "hw_config_type": "dla",
+  "hw_config_subtype": "int5bfp",
+  ...
+  "compression": {
+    "algorithm": "quantization",
+    "name": "int5bfp_onnx"
+  }
+}
+```
+
+Selected `hw_config_subtype` corresponds to a file under `nncf/hw_configs`. It first defines in `config` section BFP formats. For example: 
+
+```
+        "quantization": {
+            "int4bfp": {
+                "mantissa_bits": 2,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "int5bfp": {
+                "mantissa_bits": 3,
+                "exponent_bits": 5,
+                "block_size": 32,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            },
+            "fp16": {
+                "mantissa_bits": 10,
+                "exponent_bits": 5,
+                "block_size": 1,
+                "mode": "blockfp",
+                "granularity": "perblock"
+            }
+        }
+```
+
+and then in `operations` section of the hw_config file defines how each compute operation in NNCF should have its inputs quantized:
+
+```
+    "operations": [
+        {
+            "type": "Convolution",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+        {
+            "type": "DepthWiseConvolution",
+            "quantization": {
+                "activations": "int5bfp",
+                "weights": "int4bfp"
+            }
+        },
+```
