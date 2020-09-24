@@ -2,17 +2,32 @@
 ### Block Floating Point Quantization
 Block floating point quantisation is numerical format that allows the majority of computations in a neural network to take place using integer maths for efficiency, while maintaining much of the automatic scaling ability of floating point arithmatic. It also provides significant reduction in storage and bandwidth requirements compared to normal floating point formats. As with other numerical formats employed in neural network accelerators, any deviation from full precision arithmetic comes at the risk of loss of network accuracy. One way to handle custom arithmetic is with [Quantization](Quantization.md). Another way is to model the custom arithmetic in training framework such as NNCF, and run a few re-training epochs to fine-tune the weights. This document describes addition of block floating point arithmetic to NNCF.
 
+#### Comparison with integer quantization
+Both block floating point and integer quantization reduce the computations employed to low bit width integers.
+Block floating point use a scale factor (exponent) per block, compared to one scale / offset per layer or tensor.
+Block floating point calculates scale factors for activations dynamically rather than during training.
+Block floating point scale factors are 2^n where integer quantization allows full **fp32** scaling and offset. 
+
 #### BFP Format Description
-[Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) performs floating point operations by:
-1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimension of a tensor.
-1. For each block:-
-1.     Round each value to the required, non blocked precision. Different rounding mechanisms can be used - round towards zero (truncate), round to nearest, round to even etc.
-1.     Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the c
-1.     Performing integer arithmetic on mantissas of the blocked values, along with the one exponent calculation required for the block
-1.     Converting result back to standard floating point format.
+The block floating point is defined by 3 parameters
+1. Blocksize
+1. Exponent bits
+1. Mantissa bits
+
+A block consists of 1 exponent and "blocksize" mantissas. Unlike normal floating point representation, there is no implicit 1 bit  used in block floating point representation because each mantissa is not normalised as a result of using the shared exponent.
+
+#### BFP Format Calculation
+[Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) on a target platform performs floating point dot product operations by:
+1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimension of a tensor. Blocks for both weights and activations should align
+1. Round each value in the block to the required, non blocked precision. Different rounding mechanisms can be used - round towards zero (truncate), round to nearest, round to even etc.
+1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the c
+1. Performing integer arithmetic on mantissas of the blocked values, along with the one exponent calculation required for the block
+1. Converting result back to standard floating point format.
 1. Accumulate results over the full calculation in fp32.
 
-Step 3 above (performing integer arithmetic) usually consumes vast majority of compute resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of processing. Using block floating point instead of regular floating point uses less resources but may cause accuracy degration due to effect of blocking.
+During training, each block is quantized then converted back to full **fp32** precision, rather than performing dot products directly in the block floating point format.
+
+Step 4 above (performing integer arithmetic) usually consumes vast majority of compute resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of processing. Using block floating point instead of regular floating point uses less resources but may cause accuracy degration due to effect of blocking.
 
 Block floating point is usually combined with smaller mantissa sizes. For example, **int5bfp** block floating point format has:
 - 5 integer bits (including 1 sign bit)
@@ -28,7 +43,6 @@ To clarify naming, **FPX** refers to non-blocked representation, **intYfp** refe
 ![FP32 to FP9 conversion](../pics/bfp_figure1.png)
 Above, mantissa bits are rounded from 23 to 3 bits. 
 
-
 **Figure 2** shows blocking four **FP9** floating point values into a block of four **int5bfp** values. Now the sign bit and the possibly shifted mantissa bits comprise a signed 5-bit integer. Exponent is carried separately.
 ![Blocking of four FP9 values](../pics/bfp_figure2.png)
 
@@ -36,7 +50,6 @@ Above, mantissa bits are rounded from 23 to 3 bits.
 BFP with block size of 1 is a regular floating point format, since no exponent is shared.
 
 BFP computation need not be symmetric. For example, network activations could be represented as **int5bfp** but network weights as **int4bfp**. Selection of appropriate BFP format depends on what the hardware supports and achieved accuracy of network of interest with selected precisions.
-
 
 #### Example Hardware Support for BFP
 An AI accelerator hardware usually but not always has the following main parts:
@@ -56,7 +69,7 @@ Activations are handled very differently. Host CPU may convert **FP32** input ac
 #### BFP Handling in NNCF
 To successfully train to BFP-enabled hardware, NNCF must model as close as possible target hardware's arithmetic. Current implementation models hardware as implemented in Intel FPGA Deep Learning Accelerator Suite, supported by the Intel OpenVINO™ toolkit. 
 
-NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer performs converts to lower precision and blocks FP32 activations/weights, and then converts them back to FP32. The exact conversion mechanism is described in hardware models. Such models include number of integer and exponent bits, block size, and also exact rounding methods.
+NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer performs converts to lower precision and blocks FP32 activations/weights, and then converts them back to FP32. During training, all convolution operations are performed in full fp32 arithmetic to exploit optimised GPU support, but using weights and activations that are a **FP32** represntation of the **intXbfp** weights and activations. Because there are no learnt parameters in a block floating point model, and weights are stored at **FP32**, the exported Onnx is fully compatible with the rest of the OpenVino flow without modification. The model will run on fp32 hardware, but with some reduction in accuracy.
 
 ##### BFP configuration
 There are many user-configurable parameters that control BFP support in NNCF. Retraining configuration file selects `hw_config_type` and `hw_config_subtype` to select a desired set of BFP parameters. For example,
