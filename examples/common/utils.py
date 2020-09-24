@@ -45,8 +45,8 @@ def get_name(config):
     for algo_dict in compression_config:
         algo_name = algo_dict["algorithm"]
         if algo_name == "quantization":
-            if "name" in algo_dict:
-                retval += "_"+algo_dict["name"]
+            if "logfile_name" in algo_dict:
+                retval += "_"+algo_dict["logfile_name"]
             else:
                 initializer = algo_dict.get("initializer", {})
                 precision = initializer.get("precision", {})

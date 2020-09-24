@@ -20,6 +20,6 @@
     },
     "compression": {  
         "algorithm": "quantization",
-	"name": "int54bfp"
+	"logfile_name": "int54bfp"
     }
 }

@@ -21,6 +21,6 @@
   },
   "compression": {
     "algorithm": "quantization",
-    "name": "int54bfp_onnx" 
+    "logfile_name": "int54bfp_onnx" 
   }
 }

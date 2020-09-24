@@ -363,8 +363,8 @@ QUANTIZATION_SCHEMA = {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
-        "name": with_attributes(_STRING,
-                                description="Explicit name used for logfile"),
+        "logfile_name": with_attributes(_STRING,
+                                        description="Explicit name used for logfile"),
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only. "
