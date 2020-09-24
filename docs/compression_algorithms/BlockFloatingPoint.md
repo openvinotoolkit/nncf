@@ -17,7 +17,7 @@ A block consists of 1 exponent and **blocksize** mantissas. Unlike normal floati
 [Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) on a target platform performs floating point dot product operations by:
 1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimension of a tensor. Blocks for both weights and activations should align
 1. Round each value in the block to the required, non blocked precision. Different rounding mechanisms can be used - round towards zero (truncate), round to nearest, round to even etc.
-1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the c
+1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the constraint that no value is allowed to round up if it would change the exponent.
 1. Performing integer arithmetic on mantissas of the blocked values, along with the one exponent calculation required for the block
 1. Converting result back to standard floating point format.
 1. Accumulate results over the full calculation in **FP32**.
