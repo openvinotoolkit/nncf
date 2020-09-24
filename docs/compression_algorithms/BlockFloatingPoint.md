@@ -14,7 +14,7 @@ The block floating point is defined by 3 parameters
 1. Exponent bits
 1. Mantissa bits
 
-A block consists of 1 exponent and "blocksize" mantissas. Unlike normal floating point representation, there is no implicit 1 bit  used in block floating point representation because each mantissa is not normalised as a result of using the shared exponent.
+A block consists of 1 exponent and **blocksize** mantissas. Unlike normal floating point representation, there is no implicit 1 bit  used in block floating point representation because each mantissa is not normalised as a result of using the shared exponent.
 
 #### BFP Format Calculation
 [Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) on a target platform performs floating point dot product operations by:
@@ -35,7 +35,7 @@ Block floating point is usually combined with smaller mantissa sizes. For exampl
 - block size 32
 Without blocking, this would be comparable to **FP9** floating point format: 1 sign bit, 1 implicit mantissa bit, 3 explicit mantissa bits, 5 exponent bits. 
 
-To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 127.
+To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3.m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3.m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 127.
 
 To clarify naming, **FPX** refers to non-blocked representation, **intYfp** refers to blocked representation.
 
