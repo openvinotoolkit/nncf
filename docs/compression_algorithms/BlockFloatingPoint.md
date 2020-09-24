@@ -1,9 +1,9 @@
 
 ### Block Floating Point Quantization
-Block floating point is a numerical format that allows the majority of computations in a neural network to take place using integer maths for efficiency, while maintaining much of the automatic scaling ability of floating point arithmatic. It also provides a significant reduction in storage and bandwidth requirements as compared to normal floating point formats. As with all numerical formats employed in neural network accelerators, any deviation from full precision arithmetic comes at the risk of a loss of network accuracy, hence the requirement for retraining frameworks - such as NNCF - to fine-tune the weights. One such deviation is a generic [integer quantization](Quantization.md). Another involves modelling the destination hardware arithmetic in the retraining framework. This document describes addition of block floating point arithmetic to NNCF which falls into the second category.
+Block floating point is a numerical format that allows the majority of computations in a neural network to take place using integer maths for efficiency, while maintaining much of the automatic scaling ability of floating point arithmetic. It also provides a significant reduction in storage and bandwidth requirements as compared to normal floating point formats. As with all numerical formats employed in neural network accelerators, any deviation from full precision arithmetic comes at the risk of a loss of network accuracy, hence the requirement for retraining frameworks - such as NNCF - to fine-tune the weights. One such deviation is a generic [integer quantization](Quantization.md). Another involves modelling the destination hardware arithmetic in the retraining framework. This document describes addition of block floating point arithmetic to NNCF which falls into the second category.
 
 #### Comparison with integer quantization
-Both block floating point and integer quantization reduce the computations employed to low bitwidth integer maths. Block floating point uses a scale factor (exponent) per block, compared to one scale / offset per layer or tensor, calculating scale factors for activations dynamically rather than during training. Additionally, block floating point scale factors are 2^n where integer quantization allows full **fp32** scaling and offset. 
+Both block floating point and integer quantization reduce the computations employed to low bitwidth integer maths. Block floating point uses a scale factor (exponent) per block, compared to one scale / offset per layer or tensor, calculating scale factors for activations dynamically rather than during training. Additionally, block floating point scale factors are 2^n where integer quantization allows full **FP32** scaling and offset. 
 
 #### BFP Format Description
 The block floating point is defined by 3 parameters:
@@ -11,7 +11,7 @@ The block floating point is defined by 3 parameters:
 1. Exponent bits
 1. Mantissa bits
 
-A block consists of 1 exponent and "blocksize" mantissas. Unlike normal floating point representation, there is no implicit 1 bit  used in block floating point representation because each mantissa is not normalised as a result of using the shared exponent.
+A block consists of 1 exponent and **blocksize** mantissas. Unlike normal floating point representation, there is no implicit 1 bit  used in block floating point representation because each mantissa is not normalised as a result of using the shared exponent.
 
 #### BFP Format Calculation
 [Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) on a target platform performs floating point dot product operations by:
@@ -32,9 +32,9 @@ Block floating point is usually combined with smaller mantissa sizes. For exampl
 - block size 32
 Without blocking, this would be comparable to **FP9** floating point format: 1 sign bit, 1 implicit mantissa bit, 3 explicit mantissa bits, 5 exponent bits. 
 
-To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 15.
+To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3.m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3.m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 15.
 
-To clarify naming, **FPX** refers to non-blocked representation, **intYfp** refers to blocked representation.
+To clarify naming, **FPX** refers to non-blocked representation, **intYbfp** refers to blocked representation.
 
 **Figure 1** shows conversion from **FP32** to **FP9** non-blocked floating point. Yellow __S__ is the sign bit, blue __e__ are the exponent bits, orange __1__ is the implicit 1 in [floating point representation](https://en.wikipedia.org/wiki/Single-precision_floating-point_format), and green __m__ are the mantissa bits. **FP32** has 8-bit exponent and 23-bit mantissa (not counting implicit 1). **FP9** has 5-bit exponent and 3-bit mantissa.
 ![FP32 to FP9 conversion](../pics/bfp_figure1.png)
@@ -42,9 +42,6 @@ Above, mantissa bits are rounded from 23 to 3 bits.
 
 **Figure 2** shows blocking four **FP9** floating point values into a block of four **int5bfp** values. Now the sign bit and the possibly shifted mantissa bits comprise a signed 5-bit integer. Exponent is carried separately.
 ![Blocking of four FP9 values](../pics/bfp_figure2.png)
-
-##### Additional properties of BFP
-BFP with block size of 1 is a regular floating point format, since no exponent is shared.
 
 BFP computation need not be symmetric. For example, network activations could be represented as **int5bfp** but network weights as **int4bfp**. Selection of appropriate BFP format depends on what the hardware supports and achieved accuracy of network of interest with selected precisions.
 
@@ -66,7 +63,7 @@ Activations are handled very differently. Host CPU may convert **FP32** input ac
 #### BFP Handling in NNCF
 To successfully train to BFP-enabled hardware, NNCF must model as close as possible target hardware's arithmetic. Current implementation models hardware as implemented in Intel FPGA Deep Learning Accelerator Suite, supported by the Intel OpenVINO™ toolkit. 
 
-NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer performs converts to lower precision and blocks FP32 activations/weights, and then converts them back to FP32. During training, all convolution operations are performed in full **FP32** arithmetic to exploit optimised GPU support, but using weights and activations that are a **FP32** representation of the **intXbfp** weights and activations. Because there are no learnt parameters in a block floating point model, and weights are stored at **FP32**, the exported Onnx is fully compatible with the rest of the OpenVino flow without modification. The model will run on **FP32** hardware, but with some reduction in accuracy.
+NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer converts **FP32** activations/weights to lower precision, blocks them, and then converts them back to **FP32**. During training, all convolution operations are performed in full **FP32** arithmetic to exploit optimised GPU support, but using weights and activations that are a **FP32** representation of the **intXbfp** weights and activations. Because there are no learnt parameters in a block floating point model, and weights are stored at **FP32**, the exported ONNX is fully compatible with the rest of the OpenVino flow without modification. The model will run on **FP32** hardware, but with some reduction in accuracy.
 
 ##### BFP configuration
 There are many user-configurable parameters that control BFP support in NNCF. Retraining configuration file selects `hw_config_type` and `hw_config_subtype` to select a desired set of BFP parameters. For example,
