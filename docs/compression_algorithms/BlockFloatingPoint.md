@@ -6,7 +6,7 @@ Block floating point quantization is numerical format that allows the majority o
 Both block floating point and integer quantization reduce the computations employed to low bit width integers.
 Block floating point use a scale factor (exponent) per block, compared to one scale / offset per layer or tensor.
 Block floating point calculates scale factors for activations dynamically rather than during training.
-Block floating point scale factors are 2^n where integer quantization allows full **fp32** scaling and offset. 
+Block floating point scale factors are 2^n where integer quantization allows full **FP32** scaling and offset. 
 
 #### BFP Format Description
 The block floating point is defined by 3 parameters
@@ -23,9 +23,9 @@ A block consists of 1 exponent and **blocksize** mantissas. Unlike normal floati
 1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the c
 1. Performing integer arithmetic on mantissas of the blocked values, along with the one exponent calculation required for the block
 1. Converting result back to standard floating point format.
-1. Accumulate results over the full calculation in fp32.
+1. Accumulate results over the full calculation in **FP32**.
 
-During training, each block is quantized then converted back to full **fp32** precision, rather than performing dot products directly in the block floating point format.
+During training, each block is quantized then converted back to full **FP32** precision, rather than performing dot products directly in the block floating point format.
 
 Step 4 above (performing integer arithmetic) usually consumes vast majority of compute resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of processing. Using block floating point instead of regular floating point uses less resources but may cause accuracy degradation due to effect of blocking.
 
