@@ -4,10 +4,13 @@ Block floating point quantisation is numerical format that allows the majority o
 
 #### BFP Format Description
 [Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) performs floating point operations by:
-1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimensionof a tensor.
-1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent.
-1. Performing integer arithmetic on mantissas of the blocked values.
-1. Converting result back to standard floating point format.
+1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimension of a tensor.
+1. For each block:-
+1.     Round each value to the required, non blocked precision. Different rounding mechanisms can be used - round towards zero (truncate), round to nearest, round to even etc.
+1.     Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent. Rounding can be applied, with the c
+1.     Performing integer arithmetic on mantissas of the blocked values, along with the one exponent calculation required for the block
+1.     Converting result back to standard floating point format.
+1. Accumulate results over the full calculation in fp32.
 
 Step 3 above (performing integer arithmetic) usually consumes vast majority of compute resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of processing. Using block floating point instead of regular floating point uses less resources but may cause accuracy degration due to effect of blocking.
 
@@ -23,7 +26,7 @@ To clarify naming, **FPX** refers to non-blocked representation, **intYfp** refe
 
 **Figure 1** shows conversion from **FP32** to **FP9** non-blocked floating point. Yellow __S__ is the sign bit, blue __e__ are the exponent bits, orange __1__ is the implicit 1 in [floating point representation](https://en.wikipedia.org/wiki/Single-precision_floating-point_format), and green __m__ are the mantissa bits. **FP32** has 8-bit exponent and 23-bit mantissa (not counting implicit 1). **FP9** has 5-bit exponent and 3-bit mantissa.
 ![FP32 to FP9 conversion](../pics/bfp_figure1.png)
-Above, mantissa bits are rounded from 23 to 3 bits. The exact rounding mechanism is hardware specific (i.e. exact rounding may not be used).
+Above, mantissa bits are rounded from 23 to 3 bits. 
 
 
 **Figure 2** shows blocking four **FP9** floating point values into a block of four **int5bfp** values. Now the sign bit and the possibly shifted mantissa bits comprise a signed 5-bit integer. Exponent is carried separately.
