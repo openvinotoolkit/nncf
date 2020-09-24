@@ -1,21 +1,21 @@
 
-### Block Floating Point Hardware Modelling
-Some AI hardware accelerators use custom floating point arithmetic to achieve higher performance. Computations using custom arithmetic usually lead to different results from IEEE-compliant FP32 or FP16 arithmetic. These differences, if left unhandled, may lead to lower accuracy when evaluating deep learning networks. One way to handle custom arithmetic is with [Quantization](Quantization.md). Another way is to model the custom arithmetic in training framework such as NNCF, and run a few re-training epochs to fine-tune the weights. This document describes addition of block floating point arithmetic to NNCF.
+### Block Floating Point Quantization
+Block floating point quantisation is numerical format that allows the majority of computations in a neural network to take place using integer maths for efficiency, while maintaining much of the automatic scaling ability of floating point arithmatic. It also provides significant reduction in storage and bandwidth requirements compared to normal floating point formats. As with other numerical formats employed in neural network accelerators, any deviation from full precision arithmetic comes at the risk of loss of network accuracy. One way to handle custom arithmetic is with [Quantization](Quantization.md). Another way is to model the custom arithmetic in training framework such as NNCF, and run a few re-training epochs to fine-tune the weights. This document describes addition of block floating point arithmetic to NNCF.
 
 #### BFP Format Description
 [Block floating point](https://en.wikipedia.org/wiki/Block_floating_point) performs floating point operations by:
-1. Grouping nearby floating point values into fixed-size blocks.
+1. Grouping nearby floating point values into fixed-size blocks. In this case, blocking is performed along the depth dimensionof a tensor.
 1. Choosing a common exponent for values within each block and re-aligning mantissas to match the new exponent.
 1. Performing integer arithmetic on mantissas of the blocked values.
 1. Converting result back to standard floating point format.
 
-Step 3 above (performing integer arithmetic) usually consumes vast majority of hardware resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of hardware. Using block floating point instead of regular floating point uses less hardware resources but may cause accuracy degration due to effect of blocking.
+Step 3 above (performing integer arithmetic) usually consumes vast majority of compute resources, whereas all other steps can either be done once on host CPU attached to hardware accelerator (e.g. blocking of weights for a network only needs to be done once), or consume relatively small amount of processing. Using block floating point instead of regular floating point uses less resources but may cause accuracy degration due to effect of blocking.
 
 Block floating point is usually combined with smaller mantissa sizes. For example, **int5bfp** block floating point format has:
 - 5 integer bits (including 1 sign bit)
 - 5 exponent bits
 - block size 32
-Without blocking, this would be comparable to **FP9** floating point format: 1 sign bit, 1 implicit mantissa bit, 3 explicit mantissa bits, 5 exponent bits.
+Without blocking, this would be comparable to **FP9** floating point format: 1 sign bit, 1 implicit mantissa bit, 3 explicit mantissa bits, 5 exponent bits. 
 
 To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 127.
 
