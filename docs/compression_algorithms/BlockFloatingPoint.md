@@ -63,7 +63,10 @@ Activations are handled very differently. Host CPU may convert **FP32** input ac
 #### BFP Handling in NNCF
 To successfully train to BFP-enabled hardware, NNCF must model as close as possible target hardware's arithmetic. Current implementation models hardware as implemented in Intel FPGA Deep Learning Accelerator Suite, supported by the Intel OpenVINO™ toolkit. 
 
-NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer converts **FP32** activations/weights to lower precision, blocks them, and then converts them back to **FP32**. During training, all convolution operations are performed in full **FP32** arithmetic to exploit optimised GPU support, but using weights and activations that are a **FP32** representation of the **intXbfp** weights and activations. Because there are no learnt parameters in a block floating point model, and weights are stored at **FP32**, the exported ONNX is fully compatible with the rest of the OpenVino flow without modification. The model will run on **FP32** hardware, but with some reduction in accuracy.
+NNCF inserts a Quantization layer for each input of every convolution layer. This quantization layer converts **FP32** activations/weights to lower precision, blocks them, and then converts them back to **FP32**. During training, all convolution operations are performed in full **FP32** arithmetic to exploit optimised GPU support, but using weights and activations that are a **FP32** representation of the **intXbfp** weights and activations. 
+
+#### BFP in the OpenVino flow
+Because there are no learnt parameters in a block floating point model, and weights are stored at **FP32**, the exported ONNX is fully compatible with the rest of the OpenVino flow without modification. Model Optimiser and the inference engine can be used as normal. The model will run on **FP32** hardware, but with some reduction in accuracy. To achieve the full accuracy gained through training with NNCF, the final engine used for inference should support block floating point in a configuration that matched the hardware config used during training.
 
 ##### BFP configuration
 There are many user-configurable parameters that control BFP support in NNCF. Retraining configuration file selects `hw_config_type` and `hw_config_subtype` to select a desired set of BFP parameters. For example,
