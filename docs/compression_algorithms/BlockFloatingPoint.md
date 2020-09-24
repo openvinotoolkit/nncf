@@ -37,7 +37,7 @@ Without blocking, this would be comparable to **FP9** floating point format: 1 s
 
 To be exact, an **int5bfp** value represented by integer bits ![sm_3m_2m_1m_0](https://latex.codecogs.com/svg.latex?sm_3m_2m_1m_0) and common exponent ![e_4e_3e_2e_1e_0](https://latex.codecogs.com/svg.latex?e_4e_3e_2e_1e_0) has value ![(-1)^s * 2^{e_4e_3e_2e_1e_0 - bias} * m_3.m_2m_1m_0](https://latex.codecogs.com/svg.latex?(-1)^s%20*%202^{e_4e_3e_2e_1e_0%20-%20bias}%20*%20m_3.m_2m_1m_0), where __bias__ is **FP16** exponent bias equal to 127.
 
-To clarify naming, **FPX** refers to non-blocked representation, **intYfp** refers to blocked representation.
+To clarify naming, **FPX** refers to non-blocked representation, **intYbfp** refers to blocked representation.
 
 **Figure 1** shows conversion from **FP32** to **FP9** non-blocked floating point. Yellow __S__ is the sign bit, blue __e__ are the exponent bits, orange __1__ is the implicit 1 in [floating point representation](https://en.wikipedia.org/wiki/Single-precision_floating-point_format), and green __m__ are the mantissa bits. **FP32** has 8-bit exponent and 23-bit mantissa (not counting implicit 1). **FP9** has 5-bit exponent and 3-bit mantissa.
 ![FP32 to FP9 conversion](../pics/bfp_figure1.png)
