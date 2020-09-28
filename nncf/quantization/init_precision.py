@@ -610,7 +610,7 @@ class HAWQDebugger:
                     node['color'] = color
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
-        bits_color_map = {4: 'red', 8: 'green', 6: 'orange'}
+        bits_color_map = {4: 'red', 5: 'orangered', 6: 'orange', 7:'olivedrab1', 8: 'green'}
         for quantizer_id, quantizer_info in non_weight_quantizers.items():
             affected_iap_ctx_list = quantizer_info.affected_ia_op_exec_contexts
 
@@ -625,7 +625,7 @@ class HAWQDebugger:
                     activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
                     bits = non_weight_quantizers[quantizer_id].quantizer_module_ref.num_bits
 
-                    activation_fq_node['color'] = bits_color_map[bits]
+                    activation_fq_node['color'] = bits_color_map.get(bits,'magenta')
                     node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
                     activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
 
@@ -638,7 +638,7 @@ class HAWQDebugger:
                     bits = quantizer.num_bits
                     node_id = node[NNCFGraph.ID_NODE_ATTR]
                     node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
-                    node['color'] = bits_color_map[bits]
+                    node['color'] = bits_color_map.get(bits,'magenta')
         return nncf_graph
 
     def dump_avg_traces(self):
