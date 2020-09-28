@@ -557,7 +557,6 @@ class BlockfpQuantizer(BaseQuantizer):
         self.is_weights = config.is_weights
 
         self.exponent_bits = config.exponent_bits
-        self.bits = config.bits
         self.block_size = config.block_size
         self.scope_string = "scope"
         if config.folded:
@@ -583,7 +582,7 @@ class BlockfpQuantizer(BaseQuantizer):
     def quantize(self, x):
         result = blockfp_quantize(x,
                                   self.exponent_bits,
-                                  self.bits,
+                                  self.num_bits,
                                   self.block_size,
                                   self.folded_config,
                                   self.is_weights,
@@ -610,7 +609,7 @@ class BlockfpQuantizer(BaseQuantizer):
         if self._export_mode == QuantizerExportMode.BFP_FAKE_QUANTIZE:
             return ExportBlockfp.apply(x,
                                        self.exponent_bits,
-                                       self.bits,
+                                       self.num_bits,
                                        self.block_size,
                                        self.scope_string,
                                        self.folded_config)
