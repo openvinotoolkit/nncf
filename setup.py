@@ -71,7 +71,8 @@ INSTALL_REQUIRES = ["ninja",
                     "mdutils",
                     "yattag",
                     "jsonschema",
-                    "wheel"]
+                    "wheel",
+                    "more-itertools"]
 
 DEPENDENCY_LINKS = []
 
