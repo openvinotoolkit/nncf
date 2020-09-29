@@ -19,7 +19,6 @@ import networkx as nx
 import warnings
 from copy import deepcopy
 
-from more_itertools import consume
 
 from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph
 # pylint: disable=wildcard-import
@@ -541,7 +540,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 continue
             curr_elt_iter = iter(group_pq_node_keys)
             next_elt_iter = iter(group_pq_node_keys)
-            consume(next_elt_iter, 1)
+            _ = next(next_elt_iter)  # in order not to use more_itertools.consume
             done = False
             while not done:
                 curr_pq_node_key = next(curr_elt_iter)
