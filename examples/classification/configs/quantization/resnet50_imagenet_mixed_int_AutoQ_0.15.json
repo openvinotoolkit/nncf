@@ -1,0 +1,77 @@
+{
+    "model": "resnet50",
+    "pretrained": true,
+    "input_info": {
+        "sample_size": [
+            1,
+            3,
+            224,
+            224
+        ]
+    },
+    "num_classes": 1000,
+    "batch_size" : 128,
+    // "train_subset_ratio": 0.02, // should we move as local setting of the AutoQ initializer?
+    // "val_subset_ratio": 0.2,    // should we move as local setting of the AutoQ initializer?
+    "epochs": 30,
+    "optimizer": {
+        "base_lr": 0.00031,
+        "schedule_type": "plateau",
+        "type": "Adam",
+        "scheduler_params": {
+            "threshold": 0.1,
+            "cooldown": 3
+        },
+        "weight_decay": 1e-05
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "weights": {
+            "mode": "asymmetric",
+            "bits": 8,
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric",
+            "bits": 8,
+            "per_channel": false
+        },
+        "initializer": {
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_steps": 50
+            },
+            "range":
+            {
+                "type": "mean_min_max",
+                "num_init_steps": 50
+            },
+            "precision": {
+                "type": "autoq",
+                "precision_set": [2, 4, 8],
+                "train_episode": 600, //should rename to search_iteration
+                "compress_ratio": 0.15,
+                "finetune": false,
+                "num_val_steps": 80,    
+                // TODO: Following should be default/hidden to users.
+                "seed": 528,
+                "min_bit": 2,
+                "max_bit": 8,
+                "hidden1": 300,
+                "hidden2": 300,
+                "init_w": 0.003,
+                "lr_c": 0.001,
+                "lr_a": 0.0001,
+                "rmsize": 2048,
+                "window_length": 1,
+                "bsize": 64,
+                "tau": 0.01,
+                "discount": 1.0,
+                "epsilon": 50000,
+                "init_delta": 0.5,
+                "delta_decay": 0.995,
+                "warmup": 20,
+                "n_update": 1,
+            }
+        }
+    }
+}
