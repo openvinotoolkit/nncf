@@ -29,7 +29,8 @@ The basic workflow is loading a JSON configuration script containing NNCF-specif
 This function returns a wrapped model ready for compression fine-tuning, and handle to the object allowing you to control the compression during the training process:
 
 ```python
-import nncf
+import torch
+import nncf  # Important - should be imported directly after torch
 from nncf import create_compressed_model, Config as NNCFConfig
 
 # Instantiate your uncompressed model
