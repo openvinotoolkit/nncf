@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export PYTHONPATH=/home/vchua/autox
+export PYTHONPATH=~/workdir/nncf_pytorch:~/workdir/autox
 
 python main.py \
     -m test \
