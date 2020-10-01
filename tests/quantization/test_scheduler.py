@@ -167,7 +167,7 @@ def test_staged_scheduler_with_range_init():
     input_sample_size = input_infos_list[0].shape
     data_loader = DataLoader(OnesDatasetMock(input_sample_size[1:]),
                              batch_size=1,
-                             num_workers=1,
+                             num_workers=0, # Workaround for PyTorch MultiprocessingDataLoader issues
                              shuffle=False)
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
 
@@ -228,7 +228,7 @@ def test_staged_scheduler_with_hawq():
     input_sample_size = input_infos_list[0].shape
     data_loader = DataLoader(HawqDatasetMock(input_sample_size[1:], num_classes),
                              batch_size=1,
-                             num_workers=1,
+                             num_workers=0,  # Workaround for PyTorch MultiprocessingDataLoader issues
                              shuffle=False)
     criterion = nn.CrossEntropyLoss().cuda()
     config = register_default_init_args(config, data_loader, criterion)

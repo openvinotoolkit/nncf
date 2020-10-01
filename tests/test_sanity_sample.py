@@ -214,7 +214,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
 
     if multiprocessing_distributed:
@@ -240,7 +240,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--dist-url": "tcp://127.0.0.1:8989"
@@ -273,7 +273,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--weights": ckpt_path,
     }
 
@@ -308,7 +308,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--resume": ckpt_path,
@@ -394,7 +394,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--cpu-only": None
     }

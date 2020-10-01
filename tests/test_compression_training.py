@@ -226,7 +226,7 @@ def test_compression_train(_params, tmp_path):
 
     args['mode'] = 'train'
     args['log-dir'] = tmp_path
-    args['workers'] = 4
+    args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
@@ -250,7 +250,7 @@ def test_compression_eval_trained(_params, tmp_path):
 
     args['mode'] = 'test'
     args['log-dir'] = tmp_path
-    args['workers'] = 4
+    args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     args['resume'] = checkpoint_path

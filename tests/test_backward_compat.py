@@ -112,7 +112,7 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path):
     args['config'] = str(config_path)
     args['mode'] = 'test'
     args['log-dir'] = tmp_path
-    args['workers'] = 4
+    args['workers'] = 0  # Workaroundr the PyTorch MultiProcessingDataLoader issue
     args['seed'] = 1
     args['resume'] = checkpoint_path
 
