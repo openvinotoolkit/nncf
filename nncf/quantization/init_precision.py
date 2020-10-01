@@ -298,7 +298,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                         disabled_gradients.append(param_name)
                         param.requires_grad = False
                     else:
-                        gradients_to_enable.append(param_name)
+                        gradients_to_enable.append([quantized_module, param_name])
 
         # disable all gradients, except already disabled
         for param_name, param in model.named_parameters():
@@ -310,7 +310,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         # enable gradients of quantized modules that were disabled
         for quantized_module in quantized_weight_modules_registry.values():
             for param_name, param in quantized_module.named_parameters():
-                if param_name in gradients_to_enable and not 'bias' in param_name:
+                if [quantized_module, param_name] in gradients_to_enable and not 'bias' in param_name:
                     param.requires_grad = True
         return disabled_gradients
 
@@ -371,7 +371,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                                                  traces_order: List[int]) -> List[List[int]]:
         if not hw_precision_constraints:
             return bits_configurations
-
+                
         filtered_bits_configurations = []
         for bits_configuration in bits_configurations:
             is_all_bitwidth_compatible = True
@@ -471,7 +471,8 @@ class WeightQuantizersHandler:
                 if len(constraints.get(quantizer_id)) != 1:
                     ordered_weight_quantization_list.append((quantizer_id, quantizer))
                 else:
-                    self._scopes_of_skipped_weight_quantizers.append(str(scope))
+                    parent_scope = Scope(scope.scope_elements[:-3])
+                    self._scopes_of_skipped_weight_quantizers.append(str(parent_scope))
                     self._skipped_weight_quantizers[quantizer_id] = quantizer
         self._ordered_weight_quantizations = OrderedDict(ordered_weight_quantization_list)
 
