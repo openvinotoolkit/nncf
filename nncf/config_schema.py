@@ -289,6 +289,8 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                      "the layer by number of bits for its "
                                                                      "quantization.",
                                                          default=1.5),
+                    "cost_function": with_attributes(_STRING,
+                                                     description="Cost function for hawq optimisation"),
                     "bitwidth_per_scope": {
                         "type": "array",
                         "items": {

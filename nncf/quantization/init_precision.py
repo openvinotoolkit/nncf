@@ -23,7 +23,10 @@ from ..dynamic_graph.transform_graph import is_nncf_module
 from ..layers import NNCFConv2d
 from ..structures import QuantizationPrecisionInitArgs
 from ..utils import in_scope_list, get_all_modules_by_type
+from ..registry import Registry
+from nncf.dynamic_graph.context import Scope, ScopeElement
 
+MODEL_COST_FUNCTIONS = Registry('model_cost_functions')
 
 class ManualPrecisionInitializer:
     def __init__(self, algo: 'QuantizationController', config: 'NNCFConfig',
@@ -127,6 +130,36 @@ class TracesPerLayer:
         return bool(self._traces_order)
 
 
+class ModelCostCalculator :
+    @staticmethod
+    def calc(flops, weights_bits, activation_bits):
+        raise NotImplementedError
+
+@MODEL_COST_FUNCTIONS.register('size')
+class ModelCostCalculatorSize(ModelCostCalculator):
+    @staticmethod
+    def calc(flops, weights_bits, activation_bits):
+        # For pure model size - cost is just a function of bitdepth
+        return weights_bits
+
+@MODEL_COST_FUNCTIONS.register('default')
+class ModelCostCalculatorDefault(ModelCostCalculator):
+    @staticmethod
+    def calc(flops, weights_bits, activation_bits):
+        # For architectures where both activations and weights must share same bitdepth 
+        # and ops/cycle is inversely proportional to bitdepth
+        # E.g. many simd
+        cost = flops * weights_bits
+        return cost
+
+@MODEL_COST_FUNCTIONS.register('multipass')
+class ModelSizeCalculatorMultipass(ModelCostCalculator):
+    @staticmethod
+    def calc(flops, weights_bits, activation_bits):
+        # Where high precision multiplys are performed by multipass long multiplication
+        # Both activation and weight bit depth affect speed 
+        return flops * weights_bits * activation_bits
+
 class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     def __init__(self, algo: 'QuantizationController', config: 'NNCFConfig',
                  init_args: QuantizationPrecisionInitArgs):
@@ -141,8 +174,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
             if self._hw_precision_constraints else config.get('bits', [4, 8])
         self._init_device = init_args.device
-        self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
-
+        cost_func_name = config.get('cost_function','default')
+        cost_function = MODEL_COST_FUNCTIONS.get(cost_func_name)
+        self.flops_counter = CompressionRatioCalculator(self._model,
+                                                        self._quantizers_handler,
+                                                        cost_function)
+        
     def apply_init(self):
         original_device = next(self._model.parameters()).device
         self._model.to(self._init_device)
@@ -464,12 +501,15 @@ class CompressionRatioCalculator:
     """
     DEFAULT_NUMBER_OF_BITS = 8
 
-    def __init__(self, model, quantizers_handler: WeightQuantizersHandler):
+    def __init__(self, model, 
+                 quantizers_handler: WeightQuantizersHandler, 
+                 cost_function: ModelCostCalculator = ModelCostCalculatorDefault):
         flops_count_per_module_name = model.get_flops_per_module()
 
         self._ordered_weight_quantizations = quantizers_handler.get_ordered_weight_quantizers_per_id()
-
+        self._cost_function = cost_function
         self.ops_per_quantizer_id = {}
+
         for name, module in model.named_modules():
             curr_ops = flops_count_per_module_name.get(name, 0)
             if is_nncf_module(module):
@@ -480,7 +520,13 @@ class CompressionRatioCalculator:
                         quantizer_id = quantizers_handler.get_id(quantizer)
                         self.ops_per_quantizer_id[quantizer_id] = curr_ops
 
-        self.total_ops_count = sum(v for v in self.ops_per_quantizer_id.values()) * self.DEFAULT_NUMBER_OF_BITS
+        #@todo assume activation bit depth = weight bitdepth - need to deal with the two separatly.
+        self.total_ops_count = self.calc_cost(sum(v for v in self.ops_per_quantizer_id.values()), 
+                                                        self.DEFAULT_NUMBER_OF_BITS, 
+                                                        self.DEFAULT_NUMBER_OF_BITS)
+
+    def calc_cost(self, flops, weights_bits, activation_bits):
+        return self._cost_function.calc(flops, weights_bits, activation_bits)
 
     def ratio_for_bits_configuration(self, bits_config: List[int],
                                      skipped: Dict[QuantizerId, BaseQuantizer] = None) -> float:
@@ -497,10 +543,14 @@ class CompressionRatioCalculator:
         """
         quantizer_ops = 0
         for num_bits, (quantizer_id, quantizer) in zip(bits_config, self._ordered_weight_quantizations.items()):
-            quantizer_ops += num_bits * self.ops_per_quantizer_id[quantizer_id]
+            quantizer_ops += self.calc_cost(self.ops_per_quantizer_id[quantizer_id], 
+                                            num_bits, 
+                                            num_bits)
         if skipped:
             for quantizer_id, quantizer in skipped.items():
-                quantizer_ops += quantizer.num_bits * self.ops_per_quantizer_id[quantizer_id]
+                quantizer_ops += self.calc_cost(self.ops_per_quantizer_id[quantizer_id],
+                                                quantizer.num_bits,
+                                                quantizer.num_bits)
 
         return self.total_ops_count / quantizer_ops
 
