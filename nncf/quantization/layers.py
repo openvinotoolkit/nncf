@@ -205,7 +205,7 @@ class BFPQuantizerConfig(QuantizerConfig):
 class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"
     ONNX_QUANTIZE_DEQUANTIZE_PAIRS = "quantize_dequantize"
-    BFP_FAKE_QUANTIZE = "blockfp_face_quant" # Artificial node for visualising effects on HW - debug only
+    BFP_FAKE_QUANTIZE = "blockfp_fake_quant" # Artificial node for visualising effects on HW - debug only
 
     @staticmethod
     def from_str(config_value: str) -> 'QuantizerExportMode':
