@@ -164,10 +164,7 @@ STATIC void dla_block_c_vec(float *inout, uint32_t block_size, uint32_t exp_widt
 #else // NVCC defined -> CUDA-specific code
 __device__ void dla_block_c_vec_cuda(float *inout, uint32_t *max_exp, uint32_t idx, uint32_t block_size, uint32_t exp_width, uint32_t mantissa_width, bool sw_rnd, bool is_input_layer) {
 
-    // This must be PER BLOCK (for folded version)
-    // __shared__ uint32_t max_exp;
     uint32_t i = idx;
-
     inout[i] = round_subnorm(inout[i], exp_width, mantissa_width, sw_rnd, is_input_layer);
 
     __syncthreads();
