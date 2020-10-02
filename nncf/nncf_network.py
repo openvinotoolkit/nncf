@@ -73,34 +73,49 @@ class InsertionType(Enum):
 
 class InsertionInfo:
     def __init__(self, op_exec_context: OperationExecutionContext,
+                 in_port_id: Optional[int] = None,
                  is_input=False,
                  is_output=False,
                  shape_to_operate_on=None):
         self.op_exec_context = op_exec_context  # type: OperationExecutionContext
+        self.in_port_id = in_port_id  # None for post-hook quantization, otherwise - pre-hook
         self.is_input = is_input
         self.is_output = is_output
         self.shape_to_operate_on = shape_to_operate_on
-        self.linked_op_exec_contexts = []  # type: List[OperationExecutionContext]
+        self.linked_insertion_infos = []  # type: List[InsertionInfo]
 
     def __eq__(self, other: 'InsertionInfo'):
-        return self.op_exec_context == other.op_exec_context and Counter(self.linked_op_exec_contexts) == Counter(
-            other.linked_op_exec_contexts)
+        # TODO: ensure no circular refs via self.linked_insertion_infos?
+        return self.op_exec_context == other.op_exec_context and Counter(self.linked_insertion_infos) == Counter(
+            other.linked_insertion_infos) and self.in_port_id == other.in_port_id
+
+    def __str__(self):
+        postfix = ''
+        if self.in_port_id is not None:
+            postfix = "|INPUT{}".format(self.in_port_id)
+        return str(self.op_exec_context.input_agnostic) + postfix
 
     def __hash__(self):
-        return self.op_exec_context.__hash__()
+        return hash(str(self))
 
 
 class InsertionPoint:
     def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
-                 insertion_type: InsertionType):
+                 insertion_type: InsertionType,
+                 input_port_id: int = None):
         self.ia_op_exec_context = ia_op_exec_context
         self.insertion_type = insertion_type
+        self.input_port_id = input_port_id
 
     def __eq__(self, other: 'InsertionPoint'):
-        return self.insertion_type == other.insertion_type and self.ia_op_exec_context == other.ia_op_exec_context
+        return self.insertion_type == other.insertion_type and self.ia_op_exec_context == other.ia_op_exec_context \
+               and self.input_port_id == other.input_port_id
 
     def __str__(self):
-        return str(self.insertion_type) + " " + str(self.ia_op_exec_context)
+        prefix = str(self.insertion_type)
+        if self.input_port_id is not None:
+            prefix += " {}".format(self.input_port_id)
+        return prefix + " " + str(self.ia_op_exec_context)
 
     def __hash__(self):
         return hash(str(self))
@@ -173,8 +188,13 @@ class InsertionPointGraph(nx.DiGraph):
                      InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR: set(),
                      InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR: None}
             self.add_node(node_key, **attrs)
-        for from_node, to_node in self._base_nx_graph.edges:
-            self.add_edge(from_node, to_node)
+
+        IN_PORT_ID_ATTR_NAME = "in_port_id"
+        for edge in self._base_nx_graph.edges:
+            in_port_id = self._base_nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            from_node, to_node = edge
+            attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
+            self.add_edge(from_node, to_node, **attrs)
 
         # TODO: Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
@@ -189,35 +209,47 @@ class InsertionPointGraph(nx.DiGraph):
             ia_op_exec_context = original_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
 
             # Pre-hook insertion point nodes
-            pre_hook_insertion_point = InsertionPoint(ia_op_exec_context,
-                                                      InsertionType.OPERATOR_PRE_HOOK)
-            attrs = {
-                InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
-                InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
-            }
-            ip_node_key = self.get_pre_hook_node_key(str(operator_node_key))
-            self.add_node(ip_node_key, **attrs)
+            # Will insert a pre-hook IP for each input edge. The input edge must be marked with
+            # a port ID attribute.
+            operator_node = self.nodes[operator_node_key]
             in_edges = list(self.in_edges(operator_node_key))
-            for from_node_key, to_node_key in in_edges:
+            for edge in in_edges:
+                port_id = self.edges[edge][IN_PORT_ID_ATTR_NAME]
+                from_node_key, to_node_key = edge
+                ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
+
+                pre_hook_insertion_point = InsertionPoint(ia_op_exec_context,
+                                                          InsertionType.OPERATOR_PRE_HOOK,
+                                                          port_id)
+                pre_hook_ip_attrs = {
+                    InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
+                    InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
+                }
+
+                self.add_node(ip_node_key, **pre_hook_ip_attrs)
+
                 self.remove_edge(from_node_key, to_node_key)
                 self.add_edge(from_node_key, ip_node_key)
-            self.add_edge(ip_node_key, operator_node_key)
-            operator_node = self.nodes[operator_node_key]
-            operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
+                self.add_edge(ip_node_key, operator_node_key)
+                operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             # Post-hook insertion point nodes
             post_hook_insertion_point = InsertionPoint(ia_op_exec_context,
                                                        InsertionType.OPERATOR_POST_HOOK)
-            attrs = {
+            post_hook_ip_attrs = {
                 InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                 InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: post_hook_insertion_point
             }
             ip_node_key = self.get_post_hook_node_key(str(operator_node_key))
-            self.add_node(ip_node_key, **attrs)
+            self.add_node(ip_node_key, **post_hook_ip_attrs)
             out_edges = list(self.out_edges(operator_node_key))
-            for from_node_key, to_node_key in out_edges:
+            for out_edge in out_edges:
+                # Need to preserve original edge attributes in order not to lose
+                # input port ID information
+                original_edge_attrs = self.edges[out_edge]
+                from_node_key, to_node_key = out_edge
                 self.remove_edge(from_node_key, to_node_key)
-                self.add_edge(ip_node_key, to_node_key)
+                self.add_edge(ip_node_key, to_node_key, **original_edge_attrs)
                 # TODO: introduce separate insertion points for operator outputs if
                 # the outputs are semantically different
             self.add_edge(operator_node_key, ip_node_key)
@@ -266,18 +298,14 @@ class InsertionPointGraph(nx.DiGraph):
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
 
-            assert len(in_edges) <= 1  # TODO: change to == 1 when input nodes are handled correctly
-
-            if in_edges:
-                in_edge_key = in_edges[0]
-                in_edge_copy = deepcopy(self.edges[in_edge_key])
+            in_edge_copies_dict = {}
+            for in_edge_key in in_edges:
+                in_edge_copies_dict[in_edge_key] = deepcopy(self.edges[in_edge_key])
             out_edge_copies_dict = {}
             for out_edge_key in out_edges:
                 out_edge_copies_dict[out_edge_key] = deepcopy(self.edges[out_edge_key])
 
-            conserved_edges_list = out_edges
-            if in_edges:
-                conserved_edges_list.append(in_edge_key)
+            conserved_edges_list = out_edges + in_edges
 
             merged_node_attrs = deepcopy(self.nodes[input_node_key])
             merged_node_attrs[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR] = set()
@@ -298,16 +326,16 @@ class InsertionPointGraph(nx.DiGraph):
                 merged_node_key += node_key + '\n'
 
             merged_ip_graph.add_node(merged_node_key, **merged_node_attrs)
-            if in_edges:
-                merged_ip_graph.add_edge(in_edge_key[0], merged_node_key, **in_edge_copy)
+            for in_edge_key, in_edge_attrs in in_edge_copies_dict.items():
+                merged_ip_graph.add_edge(in_edge_key[0], merged_node_key, **in_edge_attrs)
             for out_edge_key, out_edge_attrs in out_edge_copies_dict.items():
                 merged_ip_graph.add_edge(merged_node_key, out_edge_key[1], **out_edge_attrs)
 
         return merged_ip_graph
 
     @staticmethod
-    def get_pre_hook_node_key(node_key: str):
-        return InsertionPointGraph.PRE_HOOK_ID_PREFIX + node_key
+    def get_pre_hook_node_key(node_key: str, in_port_id: int = 0):
+        return InsertionPointGraph.PRE_HOOK_ID_PREFIX + str(in_port_id) + ' ' + node_key
 
     @staticmethod
     def get_post_hook_node_key(node_key: str):
@@ -464,7 +492,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def _insert_at_point(self, point: InsertionPoint, fn_list: List[Callable]):
         if point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
-            self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context)
+            self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context, point.input_port_id)
         elif point.insertion_type == InsertionType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
         else:

@@ -12,7 +12,7 @@
 """
 from collections import OrderedDict
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 import os
 import torch
@@ -21,6 +21,7 @@ from torch import Tensor
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import CompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.quantizer_propagation import QuantizerInsertionInfo
 from .hawq_init import GroupsOfAdjacentQuantizers
 from .perturbations import Perturbations, PerturbationObserver
 from .traces_order import TracesPerLayer
@@ -78,10 +79,89 @@ class HAWQDebugger:
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 
-    # pylint: disable=too-many-branches
+    @staticmethod
+    def _paint_activation_quantizer_node(nncf_graph: NNCFGraph,
+                                         quantizer_info: 'NonWeightQuantizerInfo',
+                                         bits_color_map: Dict[int, str],
+                                         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
+        affected_insertion_infos_list = quantizer_info.affected_insertions  # type: List[QuantizerInsertionInfo]
+
+        for insertion_info in affected_insertion_infos_list:
+            input_agnostic_op_exec_context = insertion_info.op_exec_context.input_agnostic
+            affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
+            affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
+            operator_name = affected_nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+            node_id = affected_nx_node[NNCFGraph.ID_NODE_ATTR]
+
+            affected_nncf_node = nncf_graph.get_node_by_id(node_id)
+            affected_nx_node['label'] = '_#'.join([operator_name, str(node_id)])
+
+            if insertion_info.is_input:
+                # Module UpdateInputs pre-op used for activation quantization
+                previous_nodes = nncf_graph.get_previous_nodes(affected_nncf_node)
+
+                # Relying on the _quantize_inputs behaviour of only being able to quantize 0-th input
+
+                # previous_nodes are either UpdateWeights, or UpdateWeights + UpdateInputs
+                assert len(previous_nodes) == 2 or len(previous_nodes) == 1
+
+                if len(previous_nodes) == 2:
+                    if "UpdateInputs" in str(previous_nodes[0].op_exec_context.input_agnostic):
+                        target_node = previous_nodes[0]
+                    else:
+                        target_node = previous_nodes[1]
+                else:
+                    target_node = previous_nodes[0]
+                target_nncf_node_id = target_node.node_id
+                target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
+            else:
+                in_port_id = insertion_info.in_port_id
+
+                if in_port_id is None:
+                    # Post-hooking used for activation quantization
+                    # Currently only a single post-hook can immediately follow an operation
+                    succs = list(nncf_graph.get_successors(affected_nncf_node_key))
+                    assert len(succs) == 1
+                    target_nncf_node_key = succs[0]
+                else:
+                    # Pre-hooking used for activation quantization
+                    previous_nodes = nncf_graph.get_previous_nodes(affected_nncf_node)
+                    target_node = None
+                    for prev_node in previous_nodes:
+                        prev_edge = nncf_graph.get_nx_edge(prev_node, affected_nncf_node)
+                        if prev_edge[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                            target_node = prev_node
+                            break
+
+                    assert target_node is not None, "Could not find a pre-hook quantizer node for a specific " \
+                                                    "input port!"
+                    target_nncf_node_id = target_node.node_id
+                    target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
+
+            activation_fq_node = nncf_graph.get_nx_node_by_key(target_nncf_node_key)
+            bits = quantizer_info.quantizer_module_ref.num_bits
+            activation_fq_node['color'] = bits_color_map[bits]
+            activation_fq_node['style'] = 'filled'
+            node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+            activation_quantizer = quantizer_info.quantizer_module_ref
+
+            grouped_mode = bool(groups_of_adjacent_quantizers)
+            if grouped_mode:
+                node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
+                if node_id is None:
+                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
+                    node_id = 'UNDEFINED'
+
+            activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+
+
     @staticmethod
     def get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
                            groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers) -> NNCFGraph:
+        # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
+        # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
+        # of the quantizer's bitwidth.
+
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -105,30 +185,9 @@ class HAWQDebugger:
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
         bits_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
-        for quantizer_id, quantizer_info in non_weight_quantizers.items():
-            affected_iap_ctx_list = quantizer_info.affected_ia_op_exec_contexts
-            for activation_iap_ctx in affected_iap_ctx_list:
-                post_hooked_nx_node_key = nncf_graph.get_node_id_by_iap_context(activation_iap_ctx)
-                post_hooked_module_node = nncf_graph.get_nx_node_by_key(post_hooked_nx_node_key)
-                operator_name = post_hooked_module_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-                if not grouped_mode:
-                    operator_name += '_#{}'.format(str(post_hooked_module_node[NNCFGraph.ID_NODE_ATTR]))
-                post_hooked_module_node['label'] = operator_name
-
-                for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
-                    activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
-                    activation_quantizer = non_weight_quantizers[quantizer_id].quantizer_module_ref
-                    bits = activation_quantizer.num_bits
-
-                    activation_fq_node['color'] = bits_color_map[bits]
-                    activation_fq_node['style'] = 'filled'
-                    node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
-                    if grouped_mode:
-                        node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
-                        if node_id is None:
-                            nncf_logger.error('No group for activation quantizer: {}'.format(next_nx_node_key))
-                            node_id = 'UNDEFINED'
-                    activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+        for quantizer_info in non_weight_quantizers.values():
+            HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_info, bits_color_map,
+                                                          groups_of_adjacent_quantizers)
 
         for scope, quantizer in all_quantizers_per_full_scope.items():
             if quantizer.is_weights:

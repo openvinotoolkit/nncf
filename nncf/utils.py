@@ -296,6 +296,17 @@ def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 
+def maybe_get_iterator(obj):
+    it = None
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    if isinstance(obj, Mapping):
+        it = iteritems
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
+        it = enumerate
+    return it
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     if memo is None:
         memo = set()
@@ -303,16 +314,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     is_tuple = isinstance(obj, tuple)
     if is_tuple:
         obj = list(obj)
-
-    def maybe_get_iterator(obj):
-        it = None
-        # pylint:disable=isinstance-second-argument-not-valid-type
-        if isinstance(obj, Mapping):
-            it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
-        elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
-            it = enumerate
-        return it
 
     iterator = maybe_get_iterator(obj)
 
@@ -346,6 +347,9 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         return tuple(obj)
 
     return obj
+
+
+
 
 
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):

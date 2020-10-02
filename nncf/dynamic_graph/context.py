@@ -13,24 +13,130 @@
 
 import re
 import threading
-from collections import deque
+from collections import deque, OrderedDict
 from contextlib import contextmanager
-from typing import Callable, List
+from functools import partial
+from typing import Callable, List, Dict, Tuple, Union
 from copy import deepcopy
+from itertools import islice
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
 from nncf.dynamic_graph.trace_tensor import make_input_infos
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
+
+
+def nth(iterable, n, default=None):
+    return next(islice(iterable, n, None), default)
+
+
+class InputIndexEntry:
+    def __init__(self, path: Tuple[Union[int, str], ...], getter: Callable, setter: Callable):
+        self.path = path
+        self.getter = getter
+        self.setter = setter
+
+class TupleRebuildingSetter:
+    def __init__(self, idx_to_set, current_tuple, previous_level_setter_for_current_tuple):
+        self._previous_level_setter = previous_level_setter_for_current_tuple
+        self._current_tuple = current_tuple
+        self._idx_to_set = idx_to_set
+
+    def __call__(self, value):
+        tmp_list = list(self._current_tuple)
+        tmp_list[self._idx_to_set] = value
+        new_tuple = tuple(tmp_list)
+        self._current_tuple = new_tuple
+        self._previous_level_setter(new_tuple)
 
 
 class OperatorInput:
     def __init__(self, op_args, op_kwargs):
         self.op_args = op_args
         self.op_kwargs = op_kwargs
+        self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
+
+        op_args_index_entries = []
+        self._nested_object_paths_generator(self.op_args, op_args_index_entries,
+                                            previous_level_setter=partial(setattr, self, "op_args"))
+        op_kwargs_index_entries = []
+        self._nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
+
+        #pylint:disable=unnecessary-comprehension
+        self._index = {idx: entry for idx, entry in
+                       enumerate(op_args_index_entries + op_kwargs_index_entries)}
+
+    @staticmethod
+    def _nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
+        if memo is None:
+            memo = set()
+        iterator = maybe_get_iterator(obj)
+        if iterator is not None:
+            if id(obj) not in memo:
+                memo.add(id(obj))
+                current_level_getters = []
+                current_level_setters = []
+                for idx, iterval in enumerate(iterator(obj)):
+                    path_component, value = iterval
+                    current_level_getters.append(partial(obj.__getitem__, path_component))
+                    if not isinstance(obj, tuple):
+                        current_level_setters.append(partial(obj.__setitem__, path_component))
+                    else:
+                        current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
+
+                for idx, iterval in enumerate(iterator(obj)):
+                    path_component, value = iterval
+                    retval = OperatorInput._nested_object_paths_generator(value, out_entries_list,
+                                                                          path + (path_component,), memo,
+                                                                          current_level_setters[idx])
+                    was_leaf = retval[1]
+                    if was_leaf:
+                        leaf_entry_path = retval
+                        # getter = partial(obj.__getitem__, path_component)
+                        getter = current_level_getters[idx]
+                        setter = current_level_setters[idx]
+
+                        out_entries_list.append(InputIndexEntry(leaf_entry_path,
+                                                                getter,
+                                                                setter))
+
+                memo.remove(id(obj))
+            is_leaf = False
+            return path, is_leaf
+
+        is_leaf = True
+        return path, is_leaf
+
+    def __iter__(self):
+        return iter(self._index.values())
+
+    def __getitem__(self, n):
+        return self._index[n].getter()
+
+    def __setitem__(self, n, value):
+        # if n < 0:
+        #     raise AttributeError("OperatorInput only works with non-negative indices")
+        # arglen = len(self.op_args)
+        # if n < arglen:
+        #     self.op_args[n] = value
+        # else:
+        #     kwarg_idx = n - arglen
+        #     if kwarg_idx >= len(self.op_kwargs):
+        #         raise AttributeError("Invalid index {} for OperatorInput - max idx is {}".format(n,
+        #                                                                                          len(self.op_args) +
+        #                                                                                          len(self.op_kwargs)))
+        #     for curr_idx, (key, value) in enumerate(self.op_kwargs.items()):
+        #         if curr_idx == kwarg_idx:
+        #             self.op_kwargs[key] = value
+        #             break
+        self._index[n].setter(value)
+
+    def __len__(self):
+        return len(self._index)
 
 
 class ScopeElement:
@@ -110,6 +216,22 @@ class Scope:
         return Scope([ScopeElement.from_str(s) for s in elts])
 
 
+class PreHookId:
+    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                 input_port_id: int):
+        self.ia_op_exec_context = ia_op_exec_context
+        self.input_port_id = input_port_id
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def __str__(self):
+        return str(self.ia_op_exec_context) + "|INPUT{}".format(self.input_port_id)
+
+    def __hash__(self):
+        return hash(str(self))
+
+
 # pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
@@ -117,7 +239,7 @@ class TracingContext:
 
         self._save_context = None
         self._post_hooks = {}
-        self._pre_hooks = {}
+        self._pre_hooks = {}  # type: Dict[PreHookId, List[Callable]]
         self._num_nested_hooks = 0
 
         self._thread_local = threading.local()
@@ -141,7 +263,7 @@ class TracingContext:
         self.reset_scope_operator_call_counters()
         self.leave()
 
-    def find_operator_node(self, inputs,
+    def find_operator_node(self, inputs: OperatorInput,
                            ia_op_exec_context: InputAgnosticOperationExecutionContext) -> NNCFNode:
         with self._cond:
             self._n_instance += 1
@@ -235,19 +357,26 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.scope_modules.pop()
 
-    def register_pre_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext):
-        if ia_op_exec_context in self._pre_hooks:
-            raise KeyError("Pre hook for context {} is already registered".format(str(ia_op_exec_context)))
-        self._pre_hooks[ia_op_exec_context] = fn_list
+    def register_pre_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                           input_port_id: int):
+        pre_hook_id = PreHookId(ia_op_exec_context, input_port_id)
+        if pre_hook_id in self._pre_hooks:
+            raise KeyError("Pre hook for context {} is already registered".format(str(pre_hook_id)))
+        self._pre_hooks[pre_hook_id] = fn_list
 
     def execute_pre_hooks(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
                           op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, 'in_operator', False)
         self.in_operator = False
         self._thread_local.num_nested_hooks += 1
-        if ia_op_exec_context in self._pre_hooks:
-            for hook in self._pre_hooks[ia_op_exec_context]:
-                op_inputs = hook(op_inputs)
+
+        pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.ia_op_exec_context == ia_op_exec_context]
+        pre_hook_ids_for_curr_op = sorted(pre_hook_ids_for_curr_op, key=lambda x: x.input_port_id)
+        for pre_hook_id in pre_hook_ids_for_curr_op:
+            hook_list_for_current_input_port = self._pre_hooks[pre_hook_id]
+            input_arg_to_process = pre_hook_id.input_port_id
+            for hook in hook_list_for_current_input_port:
+                op_inputs[input_arg_to_process] = hook(op_inputs[input_arg_to_process])
         self._thread_local.num_nested_hooks -= 1
         self.in_operator = in_op
         return op_inputs
