@@ -1,19 +1,17 @@
 strict digraph  {
-A [associated_ip_node_keys="{'POST HOOK A', 'PRE HOOK A'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f5dc8b0e8d0>}"];
-B [associated_ip_node_keys="{'POST HOOK B', 'PRE HOOK B'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f5dc8b0ea10>}"];
-"PRE HOOK conv2d" [insertion_point_data="InsertionType.OPERATOR_PRE_HOOK /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
+A [associated_ip_node_keys="{'POST HOOK A'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f9e7357e8d0>}"];
+B [associated_ip_node_keys="{'PRE HOOK 0 B', 'POST HOOK B'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f9e7357eb90>}"];
+"PRE HOOK 0 conv2d" [insertion_point_data="InsertionType.OPERATOR_PRE_HOOK 0 /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK RELU" [insertion_point_data="InsertionType.OPERATOR_POST_HOOK /RELU_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"PRE HOOK A" [insertion_point_data="InsertionType.OPERATOR_PRE_HOOK /A_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK A" [insertion_point_data="InsertionType.OPERATOR_POST_HOOK /A_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"PRE HOOK B" [insertion_point_data="InsertionType.OPERATOR_PRE_HOOK /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
+"PRE HOOK 0 B" [insertion_point_data="InsertionType.OPERATOR_PRE_HOOK 0 /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK B" [insertion_point_data="InsertionType.OPERATOR_POST_HOOK /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"conv2d\nbatch_norm\nRELU\n" [associated_ip_node_keys="{'PRE HOOK conv2d', 'POST HOOK RELU'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f5dc8b1d090>}"];
+"conv2d\nbatch_norm\nRELU\n" [associated_ip_node_keys="{'POST HOOK RELU', 'PRE HOOK 0 conv2d'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_ref="{'op_exec_context': <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7f9e7358b050>}"];
 A -> "POST HOOK A";
 B -> "POST HOOK B";
-"PRE HOOK conv2d" -> "conv2d\nbatch_norm\nRELU\n";
-"POST HOOK RELU" -> "PRE HOOK B";
-"PRE HOOK A" -> A;
-"POST HOOK A" -> "PRE HOOK conv2d";
-"PRE HOOK B" -> B;
+"PRE HOOK 0 conv2d" -> "conv2d\nbatch_norm\nRELU\n";
+"POST HOOK RELU" -> "PRE HOOK 0 B";
+"POST HOOK A" -> "PRE HOOK 0 conv2d";
+"PRE HOOK 0 B" -> B;
 "conv2d\nbatch_norm\nRELU\n" -> "POST HOOK RELU";
 }

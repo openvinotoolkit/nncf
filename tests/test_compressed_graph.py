@@ -480,7 +480,7 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
                                                                              Optional[List[QuantizerConfig]]],
                                       potential_weights_modules: List[PotentialQuantizedModule]) -> NNCFGraph:
     quantizers_weights_attr = {}
-    quantizers_activations_attr = {}
+    quantizers_activations_attr = {}  # type: Dict[InputAgnosticOperationExecutionContext, Tuple[int, str]]
     # pylint:disable=protected-access
     for _, module_scope, qconfig_list in potential_weights_modules:
         matching_graph_op_nodes = graph.get_op_nodes_in_scope(module_scope)
@@ -500,9 +500,11 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
         str_qconfig_list = ''
         for qconfig in qconfig_list:
             str_qconfig_list += '[' + str(qconfig) + '] '
-        quantizers_activations_attr[ia_op_exec_context] = str_qconfig_list
-        for linked_op_exec_context in insertion_info.linked_op_exec_contexts:
-            quantizers_activations_attr[linked_op_exec_context.input_agnostic] = str_qconfig_list
+
+        quantizers_activations_attr[ia_op_exec_context] = (insertion_info.in_port_id, str_qconfig_list)
+        for linked_insertion_info in insertion_info.linked_insertion_infos:
+            quantizers_activations_attr[linked_insertion_info.op_exec_context.input_agnostic] = \
+                (linked_insertion_info.in_port_id, str_qconfig_list)
 
     nx_graph = graph._nx_graph
     nodes = deepcopy(nx_graph.nodes)
@@ -510,15 +512,40 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
         ia_op_exec_context_for_node = nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
         node_scope = str(ia_op_exec_context_for_node)
         if ia_op_exec_context_for_node in quantizers_activations_attr:
-            label = "Quantizer: {}".format(quantizers_activations_attr[ia_op_exec_context_for_node])
-            nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
-                              op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
-            next_nodes = deepcopy(nx_graph._succ[node_name])
-            for next_node_name, _ in next_nodes.items():
-                nx_graph.add_edge(node_scope, next_node_name)
-                nx_graph.remove_edge(node_name, next_node_name)
-            nx_graph.add_edge(node_name, node_scope)
-        elif ia_op_exec_context_for_node in quantizers_weights_attr:
+            in_port_id, qconf_str = quantizers_activations_attr[ia_op_exec_context_for_node]
+            label = "Quantizer: {}".format(qconf_str)
+
+            additional_node_attrs = dict(label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+                                         op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+
+            if in_port_id is None:
+                # Adding a post-hook quantizer for the op
+                nx_graph.add_node(node_scope, **additional_node_attrs)
+                next_nodes = deepcopy(nx_graph._succ[node_name])
+                for next_node_name, next_node_attrs in next_nodes.items():
+                    existing_edge_attrs = deepcopy(next_node_attrs)
+                    nx_graph.add_edge(node_scope, next_node_name, **existing_edge_attrs)
+                    nx_graph.remove_edge(node_name, next_node_name)
+                nx_graph.add_edge(node_name, node_scope)
+            else:
+                node_scope_for_input = node_scope + '|IN' + str(in_port_id)
+                nx_graph.add_node(node_scope_for_input, **additional_node_attrs)
+                # Adding a pre-hook quantizer to a corresponding input port
+                edges_with_matching_in_port_id = []
+
+                for from_key, to_key, edge_attrs in nx_graph.in_edges(node_name, data=True):
+                    if edge_attrs[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                        edges_with_matching_in_port_id.append((from_key, to_key))
+
+                assert len(edges_with_matching_in_port_id) == 1
+                input_edge_to_break = edges_with_matching_in_port_id[0]
+
+                existing_edge_attrs = deepcopy(nx_graph.edges[input_edge_to_break])
+                nx_graph.remove_edge(input_edge_to_break[0], input_edge_to_break[1])
+                nx_graph.add_edge(input_edge_to_break[0], node_scope_for_input)
+                nx_graph.add_edge(node_scope_for_input, input_edge_to_break[1], **existing_edge_attrs)
+
+        if ia_op_exec_context_for_node in quantizers_weights_attr:
             label = "Quantizer: {}".format(quantizers_weights_attr[ia_op_exec_context_for_node])
             nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                               op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])

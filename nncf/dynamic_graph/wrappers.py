@@ -4,7 +4,7 @@ from torch.nn import DataParallel
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import get_current_context, OperatorInput
-from nncf.dynamic_graph.trace_tensor import flatten_args, trace_tensors
+from nncf.dynamic_graph.trace_tensor import trace_tensors
 from nncf.layers import ITERATION_MODULES
 
 _IGNORED_SCOPES = []
@@ -51,14 +51,13 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
             op_input = OperatorInput(list(args), kwargs)
             processed_input = ctx.execute_pre_hooks(ia_op_exec_context, op_input)
-            args = tuple(processed_input.op_args)
-            kwargs = processed_input.op_kwargs
-            fargs = flatten_args(args, kwargs)
 
-            node = ctx.find_operator_node(fargs, ia_op_exec_context)
+            node = ctx.find_operator_node(processed_input, ia_op_exec_context)
             if is_debug():
                 ctx.register_node_call(ctx.graph.get_node_key_by_id(node.node_id))
 
+            args = tuple(processed_input.op_args)
+            kwargs = processed_input.op_kwargs
             result = operator(*args, **kwargs)
 
             result = trace_tensors(result, node)

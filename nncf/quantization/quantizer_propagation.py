@@ -11,7 +11,7 @@
  limitations under the License.
 """
 # pylint:disable=too-many-lines
-from collections import deque
+from collections import deque, OrderedDict
 from enum import Enum
 from typing import Dict, Tuple, Set, Any, Callable
 
@@ -77,20 +77,24 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
 
 
 class QuantizerInsertionInfo(InsertionInfo):
-    def __init__(self, op_exec_context: OperationExecutionContext, is_input=False, is_output=False,
+    def __init__(self, op_exec_context: OperationExecutionContext,
+                 in_port_id: Optional[int] = None,
+                 is_input=False, is_output=False,
                  shape_to_operate_on=None,
                  quantizers_between_quantizable_layers: 'QuantizersBetweenQuantizableLayers' = None):
-        super().__init__(op_exec_context, is_input, is_output, shape_to_operate_on)
+        super().__init__(op_exec_context, in_port_id, is_input, is_output, shape_to_operate_on)
         self.quantizers_between_quantizable_layers = quantizers_between_quantizable_layers
 
     @staticmethod
     def from_insertion_info(insertion_info: InsertionInfo) -> 'QuantizerInsertionInfo':
         result = QuantizerInsertionInfo(op_exec_context=insertion_info.op_exec_context,
+                                        in_port_id=insertion_info.in_port_id,
                                         is_input=insertion_info.is_input,
                                         is_output=insertion_info.is_output,
                                         shape_to_operate_on=insertion_info.shape_to_operate_on)
-        result.linked_op_exec_contexts = insertion_info.linked_op_exec_contexts
+        result.linked_insertion_infos = insertion_info.linked_insertion_infos
         return result
+
 
 class PropagatingQuantizer:
     """Used in conjunction with QuantizerPropagationStateGraph to keep track of
@@ -208,6 +212,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     OPERATOR_SCOPE = "op_scope"
     INSERTION_POINT_DATA_NODE_ATTR = "insertion_point"
     NODE_TYPE_NODE_ATTR = "node_type"
+    IS_IN_IGNORED_SCOPES = "is_ignored"
     BARRIER_NODE_KEY_POSTFIX = "BARRIER"
 
     def __init__(self, ip_graph: InsertionPointGraph, ignored_scopes=None):
@@ -237,10 +242,15 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     self.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.NON_QUANTIZABLE
                 qpg_node[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
                 qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
+                qpg_node[self.IS_IN_IGNORED_SCOPES] = False
+
                 node_ia_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
                     NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model
                 node_scope = str(node_ia_op_exec_context)
+
+                if in_scope_list(node_scope, self._ignored_scopes):
+                    qpg_node[self.IS_IN_IGNORED_SCOPES] = True
 
                 op_name = node_ia_op_exec_context.operator_name
                 if op_name == MODEL_INPUT_OP_NAME:
@@ -386,12 +396,17 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return prop_quantizer
 
     def add_propagating_quantizer(self, qconf_list: List[QuantizerConfig], ip_node_key: str,
-                                  unified_scale: bool = False) -> PropagatingQuantizer:
+                                  unified_scale: bool = False,
+                                  unified_scale_group_id_override: Optional[int] = None) -> PropagatingQuantizer:
         prop_quantizer = PropagatingQuantizer(self._get_next_prop_quantizer_id(), qconf_list, ip_node_key,
                                               unified_scale)
 
         if unified_scale:
-            self._unified_scale_group_manager.register_group({prop_quantizer})
+            if unified_scale_group_id_override is None:
+                self._unified_scale_group_manager.register_group({prop_quantizer})
+            else:
+                self._unified_scale_group_manager.add_to_group(unified_scale_group_id_override,
+                                                               prop_quantizer)
 
         ip_node = self.nodes[ip_node_key]
         ip_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = prop_quantizer
@@ -432,7 +447,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         return cloned_prop_quant
 
-    def remove_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer):
+    def remove_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer,
+                                     keep_propagating_quantizer_at_current_node=False):
         for edge_tuple in prop_quantizer.affected_edges:
             edge = self.edges[edge_tuple]
             affecting_quantizers = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
@@ -442,8 +458,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             affecting_quantizers = node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             affecting_quantizers.remove(prop_quantizer)
 
-        node_key = prop_quantizer.current_location_node_key
-        self.nodes[node_key][QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = None
+        if not keep_propagating_quantizer_at_current_node:
+            node_key = prop_quantizer.current_location_node_key
+            self.nodes[node_key][QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = None
         prop_quantizer.affected_ip_nodes.clear()
         prop_quantizer.affected_edges.clear()
         if prop_quantizer.unified_scale:
@@ -606,11 +623,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return self._created_prop_quantizer_counter
 
     def _is_position_accepting(self, ip_node_key: str):
-        node = self.nodes[ip_node_key]
-        insertion_type = node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR].insertion_type
-        if insertion_type == InsertionType.OPERATOR_POST_HOOK:
-            return True
-        return False
+        # node = self.nodes[ip_node_key]
+        # insertion_type = node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR].insertion_type
+        # if insertion_type == InsertionType.OPERATOR_POST_HOOK:
+        #     return True
+        # return False
+        return True
 
     def get_unified_scale_group_id_by_propagating_quantizer_id(self, pqid: int) -> int:
         return self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(pqid)
@@ -700,7 +718,6 @@ class QuantizerPropagationSolver:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
                 trait = self._operator_quantization_trait_map[op_meta]
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    # !!! FIXME !!! Ensure that INPUTS_QUANTIZABLE ops always have non-None qconf_list
                     if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
                         self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
@@ -768,7 +785,7 @@ class QuantizerPropagationSolver:
                                          key=lambda x: str(x.op_exec_context.input_agnostic))
             primary_insertion_info = all_insertion_infos[0]
             linked_insertion_infos = all_insertion_infos[1:]
-            primary_insertion_info.linked_op_exec_contexts = [x.op_exec_context for x in linked_insertion_infos]
+            primary_insertion_info.linked_insertion_infos = linked_insertion_infos
             retval[primary_insertion_info] = insertion_infos_vs_qconfigs[primary_insertion_info]
 
         return retval
@@ -780,13 +797,21 @@ class QuantizerPropagationSolver:
         final_node = quant_prop_graph.nodes[final_node_key]
         insertion_point = final_node[
             QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
-        # TODO: fix this, rethink InsertionInfo here and elsewhere
-        insertion_info = QuantizerInsertionInfo(OperationExecutionContext(
+
+        in_port_id = None
+        if insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
+            in_port_id = insertion_point.input_port_id
+
+        op_exec_context = OperationExecutionContext(
             operator_name=insertion_point.ia_op_exec_context.operator_name,
             scope_in_model=insertion_point.ia_op_exec_context.scope_in_model,
             call_order=insertion_point.ia_op_exec_context.call_order,
-            tensor_metas=[None],
-        ), quantizers_between_quantizable_layers=self.quantizers_between_quantizable_layers_per_key[final_node_key])
+            tensor_metas=[None]  # TODO: fix this, rethink InsertionInfo here and elsewhere
+        )
+        quant_betw_layers = self.quantizers_between_quantizable_layers_per_key[final_node_key]
+        insertion_info = QuantizerInsertionInfo(op_exec_context,
+                                                in_port_id=in_port_id,
+                                                quantizers_between_quantizable_layers=quant_betw_layers)
         return insertion_info
 
     def propagation_step(self, curr_prop_quantizer: PropagatingQuantizer,
@@ -815,17 +840,27 @@ class QuantizerPropagationSolver:
         surviving_prop_quantizers = []
 
         prop_quantizers_to_process = [curr_prop_quantizer]
+        did_clone = False
+
         for _ in range(1, len(paths)):
             additional_prop_quantizer = quant_prop_graph.clone_propagating_quantizer(curr_prop_quantizer)
             prop_quantizers_to_process.append(additional_prop_quantizer)
+            did_clone = True
+
+        cloned_prop_quantizers = prop_quantizers_to_process if did_clone else None
 
         pqs_and_paths = zip(paths, prop_quantizers_to_process)
         for path, prop_quantizer in pqs_and_paths:
-            status = self.check_transition_via_path(prop_quantizer, path, quant_prop_graph)
+            status = self.check_transition_via_path(prop_quantizer, path, quant_prop_graph,
+                                                    cloned_prop_quantizers)
             if status == TransitionStatus.SHOULD_NOT_TRANSITION:
-                prop_quantizer = quant_prop_graph.backtrack_propagation_until_accepting_location(prop_quantizer)
-                if prop_quantizer is not None:
-                    self._finished_propagating_quantizers.append(prop_quantizer)
+                if did_clone and prop_quantizer is not curr_prop_quantizer:
+                    quant_prop_graph.remove_propagating_quantizer(prop_quantizer,
+                                                                  keep_propagating_quantizer_at_current_node=True)
+                else:
+                    prop_quantizer = quant_prop_graph.backtrack_propagation_until_accepting_location(prop_quantizer)
+                    if prop_quantizer is not None:
+                        self._finished_propagating_quantizers.append(prop_quantizer)
             elif status == TransitionStatus.SHOULD_TRANSITION:
                 prop_quantizer = quant_prop_graph.propagate_quantizer_via_path(prop_quantizer, path)
                 surviving_prop_quantizers.append(prop_quantizer)
@@ -848,6 +883,11 @@ class QuantizerPropagationSolver:
         for node_key, node in quant_prop_graph.nodes.items():
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                if node[QuantizerPropagationStateGraph.IS_IN_IGNORED_SCOPES]:
+                    trait = QuantizationTrait.NON_QUANTIZABLE
+                    node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] = trait
+                    continue
+
                 quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if quant_det_id is None:
                     warnings.warn("Unknown metatype for operator node: {}".format(node_key))
@@ -947,57 +987,85 @@ class QuantizerPropagationSolver:
             if node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 if node_key in quant_prop_graph.ignored_node_keys:
                     continue
-
-                preds = list(quant_prop_graph.predecessors(node_key))
-                if not preds:
-                    continue  # TODO: remove this once module insertion points are included in the IP graph
-                # Should be immediately preceded by an insertion point.
-                pred_ip_key = preds[0]
-                pred_node = quant_prop_graph.nodes[pred_ip_key]
-                pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
-                assert pred_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT, \
-                    "Invalid insertion point graph supplied for quantizer propagation!"
-
-                if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in [
-                        QuantizationTrait.NON_QUANTIZABLE,
-                        QuantizationTrait.QUANTIZATION_AGNOSTIC]:
-                    continue
-
-                quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
-                qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
-
-                # No need to place quantizers for FP32-forced ops, naturally
-                assert qconf_list is not None
-
-                is_unified_scale = quant_det_id in self._unified_scales_operation_set
-                if is_unified_scale:
-                    # Filtering out the per-channel cases in the unified scale scenario.
-                    # In order to support unified per-channel scales, we will need to handle a situation
-                    # when a per-channel shared (unified) quantizer on one branch passes a shape-chaning
-                    # operation such as `view` or `transpose`, and the linked unified quantizer does not do
-                    # so due to one or the other reason; the per-channel scale shapes to be applied therefore
-                    # will be different.
-                    # TODO: What possibly needs to be done in this direction:
-                    # 1. keep ForwardTraceOnly ops in graph after all, to be able to track shape changes
-                    # 2. transpose input tensors to the quantization modules on the fly to accomodate scale,
-                    #    or vice versa, transpose scale to accomodate shape; need to handle exporting as well
-                    per_tensor_qconf_list = list(filter(lambda x: x.per_channel is False, qconf_list))
-                    op_meta_name = quant_det_id.__class__.__name__
-                    if len(per_tensor_qconf_list) != len(qconf_list):
-                        if not per_tensor_qconf_list:
-                            raise RuntimeError(
-                                "Unified scales currently do not support per-channel configuration - dropping"
-                                "per-channel configuration options for {} resulted in no valid quantization "
-                                "configs!".format(op_meta_name))
-                        nncf_logger.warning(
-                            "Unified scales currently do not support per-channel configuration - dropping"
-                            "per-channel configuration options for {}".format(op_meta_name))
-                        qconf_list = per_tensor_qconf_list
-
-                prop_quantizer = quant_prop_graph.add_propagating_quantizer(qconf_list, pred_ip_key, is_unified_scale)
-                self._active_propagating_quantizers_queue.appendleft(prop_quantizer)
+                self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 
         return quant_prop_graph
+
+    def _setup_initial_quantizers_for_operator_node(self, operator_node_key: str,
+                                                    quant_prop_graph: QuantizerPropagationStateGraph):
+        node = quant_prop_graph.nodes[operator_node_key]
+        preds = list(quant_prop_graph.predecessors(operator_node_key))
+
+        if not preds:
+            return  # TODO: remove this once module insertion points are included in the IP graph
+
+        # No need to place quantizers for FP32-forced ops, naturally
+        if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
+                [QuantizationTrait.NON_QUANTIZABLE,
+                 QuantizationTrait.QUANTIZATION_AGNOSTIC]:
+            return
+
+        quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+        qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+        assert qconf_list is not None
+
+        is_unified_scale = quant_det_id in self._unified_scales_operation_set
+        if is_unified_scale:
+            # Filtering out the per-channel cases in the unified scale scenario.
+            # In order to support unified per-channel scales, we will need to handle a situation
+            # when a per-channel shared (unified) quantizer on one branch passes a shape-chaning
+            # operation such as `view` or `transpose`, and the linked unified quantizer does not do
+            # so due to one or the other reason; the per-channel scale shapes to be applied therefore
+            # will be different.
+            # TODO: What possibly needs to be done in this direction:
+            # 1. keep ForwardTraceOnly ops in graph after all, to be able to track shape changes
+            # 2. transpose input tensors to the quantization modules on the fly to accomodate scale,
+            #    or vice versa, transpose scale to accomodate shape; need to handle exporting as well
+            per_tensor_qconf_list = list(filter(lambda x: x.per_channel is False, qconf_list))
+            op_meta_name = quant_det_id.__class__.__name__
+            if len(per_tensor_qconf_list) != len(qconf_list):
+                if not per_tensor_qconf_list:
+                    raise RuntimeError(
+                        "Unified scales currently do not support per-channel configuration - dropping"
+                        "per-channel configuration options for {} resulted in no valid quantization "
+                        "configs!".format(op_meta_name))
+                nncf_logger.warning(
+                    "Unified scales currently do not support per-channel configuration - dropping"
+                    "per-channel configuration options for {}".format(op_meta_name))
+                qconf_list = per_tensor_qconf_list
+
+        pred_ip_key_vs_qconf_dict = OrderedDict()
+        # Should be immediately preceded by insertion points (pre-hook)
+        for pred_ip_key in preds:
+            pred_node = quant_prop_graph.nodes[pred_ip_key]
+            pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            assert pred_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT, \
+                "Invalid insertion point graph supplied for quantizer propagation!"
+
+            pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list
+
+        # Cloning a single propagating quantizer onto all node inputs - revise if separate
+        # quantizer configuration for different inputs is required
+        pred_ip_key_vs_qconf_list = list(iter(pred_ip_key_vs_qconf_dict.items()))
+        main_pq_ip_key, main_pq_qconf_list = pred_ip_key_vs_qconf_list[0]
+        main_prop_quantizer = quant_prop_graph.add_propagating_quantizer(main_pq_qconf_list, main_pq_ip_key,
+                                                                         is_unified_scale)
+        main_prop_quantizer.last_accepting_location_node_key = main_pq_ip_key
+        self._active_propagating_quantizers_queue.appendleft(main_prop_quantizer)
+
+        main_pq_gid = None
+
+        if is_unified_scale:
+            main_pq_gid = quant_prop_graph.get_unified_scale_group_id_by_propagating_quantizer_id(
+                main_prop_quantizer.id)
+
+        for additional_pq_ip_key, _ in pred_ip_key_vs_qconf_list[1:]:
+            additional_pq = quant_prop_graph.add_propagating_quantizer(main_pq_qconf_list,
+                                                                       additional_pq_ip_key,
+                                                                       unified_scale=is_unified_scale,
+                                                                       unified_scale_group_id_override=main_pq_gid)
+            additional_pq.last_accepting_location_node_key = additional_pq_ip_key
+            self._active_propagating_quantizers_queue.appendleft(additional_pq)
 
     # pylint:disable=too-many-return-statements
     def check_branching_transition(self, quant_prop_graph: QuantizerPropagationStateGraph,
@@ -1038,8 +1106,38 @@ class QuantizerPropagationSolver:
 
         return None
 
+    def _check_affecting_quantizers_in_common_path(self,
+                                                   affecting_quantizers: List[PropagatingQuantizer],
+                                                   cloned_prop_quantizers: List[PropagatingQuantizer]):
+        # Handling the case where multiple freshly cloned quantizers have to follow paths that are different,
+        # but have a common edge or node
+        safe_affecting_quantizers = [pq for pq in affecting_quantizers if pq in cloned_prop_quantizers]
+        assert safe_affecting_quantizers == affecting_quantizers
+
+    def _check_for_affecting_quantizer_conflicts(self,
+                                                 curr_prop_quantizer: PropagatingQuantizer,
+                                                 affecting_quantizers: List[PropagatingQuantizer],
+                                                 cloned_prop_quantizers: Optional[List[PropagatingQuantizer]]
+                                                 ) -> Optional[TransitionStatus]:
+        if cloned_prop_quantizers is not None:
+            self._check_affecting_quantizers_in_common_path(affecting_quantizers, cloned_prop_quantizers)
+            return None
+
+        # Affecting quantizers should have the same configs by construction, so we only
+        # check the first
+        curr_pq_configs = curr_prop_quantizer.potential_quant_configs
+        target_pq_configs = affecting_quantizers[0].potential_quant_configs
+        if curr_pq_configs == target_pq_configs or \
+                HWConfig.is_wildcard_quantization(curr_pq_configs) or \
+                HWConfig.is_wildcard_quantization(target_pq_configs):
+            return TransitionStatus.SHOULD_MERGE
+        return TransitionStatus.SHOULD_NOT_TRANSITION
+
+
     def check_transition_via_path(self, prop_quantizer: PropagatingQuantizer, path: List,
-                                  quant_prop_graph: QuantizerPropagationStateGraph) -> TransitionStatus:
+                                  quant_prop_graph: QuantizerPropagationStateGraph,
+                                  cloned_prop_quantizers: Optional[
+                                      List[PropagatingQuantizer]] = None) -> TransitionStatus:
         """Determines which action should be taken regarding the
            prop_quantizer's propagation via path, which may be one of many possible
            propagation paths."""
@@ -1058,47 +1156,45 @@ class QuantizerPropagationSolver:
                 if status is not None:
                     return status
 
-            # Check if current edge to traverse is affected by any of the quantizers
             from_node_type = from_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if from_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 trait = from_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
                 if trait in [QuantizationTrait.NON_QUANTIZABLE,
                              QuantizationTrait.INPUTS_QUANTIZABLE]:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
+
+            # Check if current edge to traverse is affected by any of the quantizers
             edge = quant_prop_graph.edges[from_node_key, to_node_key]
             potential_quantizers = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if potential_quantizers:
-                # Assuming that multiple affecting quantizers should all have the same quantization config
-                # by construction
-                curr_pq_configs = prop_quantizer.potential_quant_configs
-                target_pq_configs = potential_quantizers[0].potential_quant_configs
-                if curr_pq_configs == target_pq_configs or \
-                        HWConfig.is_wildcard_quantization(curr_pq_configs) or \
-                        HWConfig.is_wildcard_quantization(target_pq_configs):
-                    return TransitionStatus.SHOULD_MERGE
-                return TransitionStatus.SHOULD_NOT_TRANSITION
+                sts = self._check_for_affecting_quantizer_conflicts(prop_quantizer,
+                                                                    potential_quantizers,
+                                                                    cloned_prop_quantizers)
+
+                if sts is not None:
+                    return sts
 
             # Check if the target node is affected by any of the quantizers
             from_node_type = from_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if from_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
                 potential_quantizers = from_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
                 if potential_quantizers:
-                    # Affecting quantizers should have the same configs by construction, so we only
-                    # check the first
-                    curr_pq_configs = prop_quantizer.potential_quant_configs
-                    target_pq_configs = potential_quantizers[0].potential_quant_configs
-                    if curr_pq_configs == target_pq_configs or \
-                            HWConfig.is_wildcard_quantization(curr_pq_configs) or \
-                            HWConfig.is_wildcard_quantization(target_pq_configs):
-                        return TransitionStatus.SHOULD_MERGE
+                    sts = self._check_for_affecting_quantizer_conflicts(prop_quantizer,
+                                                                        potential_quantizers,
+                                                                        cloned_prop_quantizers)
+                    if sts == TransitionStatus.SHOULD_NOT_TRANSITION:
 
-                    # Did not merge - the edge will remain untraversed, but the quantizers at the next node will
-                    # still be affecting it
-                    for pq in potential_quantizers:
-                        pq.affected_edges.add((from_node_key, to_node_key))
-                        edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(pq)
+                        # Did not merge - the edge will remain untraversed, but the quantizers at the next node will
+                        # still be affecting it
+                        for pq in potential_quantizers:
+                            pq.affected_edges.add((from_node_key, to_node_key))
+                            edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(pq)
 
-                    return TransitionStatus.SHOULD_NOT_TRANSITION
+                        return sts
+
+                    if sts is not None:
+                        return sts
+
         return TransitionStatus.SHOULD_TRANSITION
 
     def get_merged_qconfigs(self, primary_potential_qconfigs_list: List[QuantizerConfig],
@@ -1138,6 +1234,9 @@ class QuantizerPropagationSolver:
 
     def get_active_propagating_quantizers_queue(self):
         return self._active_propagating_quantizers_queue
+
+    def get_total_quantizer_count(self):
+        return len(self.get_finished_propagating_quantizers()) + len(self.get_active_propagating_quantizers_queue())
 
     def _filter_integer_input_quantizers(self, quant_prop_graph: QuantizerPropagationStateGraph):
         input_node_vs_qid_dict = quant_prop_graph.get_input_quantizer_ids()

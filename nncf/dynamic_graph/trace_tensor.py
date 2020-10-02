@@ -17,6 +17,7 @@ import numpy as np
 import torch
 
 
+
 class TensorMeta:
     @staticmethod
     def default_comparator(lhs: 'TensorMeta', rhs: 'TensorMeta'):
@@ -84,9 +85,10 @@ def trace_tensors(operator_output, node: 'NNCFNode'):
     raise ValueError("Unknown return type. Can not trace function call")
 
 
-def make_input_infos(inputs):
+def make_input_infos(inputs: 'OperatorInput'):
     input_infos = []
-    for i, node_input in enumerate(inputs):
+    for i, node_input_index_entry in enumerate(inputs):
+        node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
             input_infos.append(node_input.tensor_meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):

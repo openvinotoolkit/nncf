@@ -21,7 +21,8 @@ from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.layers import QuantizerConfig
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait
-from tests.test_nncf_network import get_two_branch_mock_model_graph, get_mock_nncf_node_attrs
+from tests.test_nncf_network import get_two_branch_mock_model_graph, get_mock_nncf_node_attrs, \
+    mark_input_ports_lexicographically_based_on_input_node_key
 
 
 def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
@@ -117,10 +118,14 @@ class TestQuantizerPropagationStateGraph:
          [[("C", InsertionPointGraph.get_post_hook_node_key("C")),
            (InsertionPointGraph.get_pre_hook_node_key("C"), "C")]]),
 
-        # Branching case - starting from "F" pre-hook
+        # Branching case - starting from "F" pre-hook port 0
         (InsertionPointGraph.get_pre_hook_node_key("F"),
-         [[(InsertionPointGraph.get_post_hook_node_key("D"), InsertionPointGraph.get_pre_hook_node_key("F"))],
-          [(InsertionPointGraph.get_post_hook_node_key("E"), InsertionPointGraph.get_pre_hook_node_key("F"))]]),
+         [[(InsertionPointGraph.get_post_hook_node_key("D"), InsertionPointGraph.get_pre_hook_node_key("F"))]]),
+
+        # Branching case - starting from "F" pre-hook port 1
+        (InsertionPointGraph.get_pre_hook_node_key("F", in_port_id=1),
+         [[(InsertionPointGraph.get_post_hook_node_key("E"),
+            InsertionPointGraph.get_pre_hook_node_key("F", in_port_id=1))]]),
 
     ]
 
@@ -149,7 +154,7 @@ class TestQuantizerPropagationStateGraph:
         (InsertionPointGraph.get_pre_hook_node_key("H"),
          InsertionPointGraph.get_pre_hook_node_key("F")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("F"),
+        (InsertionPointGraph.get_pre_hook_node_key("F", in_port_id=1),
          InsertionPointGraph.get_pre_hook_node_key("E")),
 
         (InsertionPointGraph.get_pre_hook_node_key("F"),
@@ -206,17 +211,13 @@ class TestQuantizerPropagationStateGraph:
          InsertionPointGraph.get_post_hook_node_key("F"),
          InsertionPointGraph.get_post_hook_node_key("F")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("A"),
-         None,
-         None),
-
-        (InsertionPointGraph.get_pre_hook_node_key("F"),
+        (InsertionPointGraph.get_pre_hook_node_key("F", in_port_id=1),
          InsertionPointGraph.get_pre_hook_node_key("C"),
          InsertionPointGraph.get_post_hook_node_key("C")),
 
         (InsertionPointGraph.get_pre_hook_node_key("D"),
-         InsertionPointGraph.get_pre_hook_node_key("A"),
-         InsertionPointGraph.get_post_hook_node_key("A")),
+         InsertionPointGraph.get_pre_hook_node_key("B"),
+         InsertionPointGraph.get_post_hook_node_key("B")),
     ]
 
     @staticmethod
@@ -228,38 +229,33 @@ class TestQuantizerPropagationStateGraph:
     def test_backtrack_propagation_until_accepting_location(self, start_target_accepting_nodes, mock_qp_graph):
         start_ip_node_key = start_target_accepting_nodes[0]
         target_ip_node_key = start_target_accepting_nodes[1]
-        ref_last_accepting_location = start_target_accepting_nodes[2]
+        forced_last_accepting_location = start_target_accepting_nodes[2]
 
         prop_quant = mock_qp_graph.add_propagating_quantizer([QuantizerConfig()],
                                                              start_ip_node_key)
         ref_affected_edges = deepcopy(prop_quant.affected_edges)
 
-        if target_ip_node_key is not None:
-            # Here, the tested graph should have such a structure that there is only one path from target to start
-            path = get_edge_paths_for_propagation(mock_qp_graph, target_ip_node_key, start_ip_node_key)[0]
-            prop_quant = mock_qp_graph.propagate_quantizer_via_path(prop_quant, path)
-            if ref_last_accepting_location is not None:
-                resulting_path = get_edge_paths_for_propagation(mock_qp_graph,
-                                                                ref_last_accepting_location, start_ip_node_key)[0]
-                ref_affected_edges.update(set(resulting_path))
+        # Here, the tested graph should have such a structure that there is only one path from target to start
+        path = get_edge_paths_for_propagation(mock_qp_graph, target_ip_node_key, start_ip_node_key)[0]
+        prop_quant = mock_qp_graph.propagate_quantizer_via_path(prop_quant, path)
+        prop_quant.last_accepting_location_node_key = forced_last_accepting_location
+        if forced_last_accepting_location is not None:
+            resulting_path = get_edge_paths_for_propagation(mock_qp_graph,
+                                                            forced_last_accepting_location, start_ip_node_key)[0]
+            ref_affected_edges.update(set(resulting_path))
 
-        assert prop_quant.last_accepting_location_node_key == ref_last_accepting_location
         prop_quant = mock_qp_graph.backtrack_propagation_until_accepting_location(prop_quant)
 
-        if ref_last_accepting_location is None:
-            assert prop_quant is None
-        else:
-            assert prop_quant.current_location_node_key == ref_last_accepting_location
-            assert prop_quant.affected_edges == ref_affected_edges
-            assert prop_quant.propagation_path == resulting_path
+        assert prop_quant.current_location_node_key == forced_last_accepting_location
+        assert prop_quant.affected_edges == ref_affected_edges
+        assert prop_quant.propagation_path == resulting_path
 
-        if target_ip_node_key is not None and ref_last_accepting_location is not None:
-            target_node = mock_qp_graph.nodes[target_ip_node_key]
-            accepting_node = mock_qp_graph.nodes[ref_last_accepting_location]
-            if ref_last_accepting_location != target_ip_node_key:
-                assert target_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] is None
-                assert target_ip_node_key not in prop_quant.affected_ip_nodes
-            assert accepting_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] == prop_quant
+        target_node = mock_qp_graph.nodes[target_ip_node_key]
+        accepting_node = mock_qp_graph.nodes[forced_last_accepting_location]
+        if forced_last_accepting_location != target_ip_node_key:
+            assert target_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] is None
+            assert target_ip_node_key not in prop_quant.affected_ip_nodes
+        assert accepting_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] == prop_quant
 
     @pytest.mark.dependency(depends="propagate_via_path")
     def test_clone_propagating_quantizer(self, mock_qp_graph, start_target_nodes):
@@ -432,8 +428,8 @@ class TestQuantizerPropagationStateGraph:
             mock_graph.add_node(node_key, **mock_node_attrs)
 
         mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F')])
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
         return mock_graph
-
 
 
     StateQuantizerTestStruct = namedtuple('StateQuantizerTestStruct',
@@ -584,7 +580,6 @@ class TestQuantizerPropagationStateGraph:
         return request.param
 
     def test_merge_quantizer_into_path(self, merge_quantizer_into_path_test_struct):
-
         mock_graph = self.get_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
         quant_prop_graph = QPSG(ip_graph)

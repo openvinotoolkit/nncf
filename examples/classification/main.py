@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import os.path as osp
 import sys
 import time
@@ -56,7 +55,6 @@ from nncf.utils import manual_seed, safe_thread_call, is_main_process
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
-
 
 def get_argument_parser():
     parser = get_common_argument_parser()
