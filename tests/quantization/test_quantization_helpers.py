@@ -77,7 +77,7 @@ def get_squeezenet_quantization_config(model_size=32, batch_size=3):
 
 def distributed_init_test_default(gpu, ngpus_per_node, config):
     config.batch_size = 3
-    config.workers = 3
+    config.workers = 0 #  workaround for the pytorch multiprocessingdataloader issue/
     config.gpu = gpu
     config.ngpus_per_node = ngpus_per_node
     config.rank = gpu
@@ -90,7 +90,7 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
     input_sample_size = input_infos_list[0].shape
     data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], config.rank),
                                               batch_size=3,
-                                              num_workers=1,
+                                              num_workers=0, #  workaround
                                               shuffle=False)
     return data_loader
 
