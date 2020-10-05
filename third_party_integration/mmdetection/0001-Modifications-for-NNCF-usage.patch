@@ -1,4 +1,4 @@
-From 3e31041f8f990446be4d993fa481f2d6e1d4a7b6 Mon Sep 17 00:00:00 2001
+From 6ca30efa578d12df5e8e4368a08c91a2bcd24aef Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -10,13 +10,13 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/core/__init__.py                        |  1 +
  mmdet/core/nncf/__init__.py                   |  9 ++
  mmdet/core/nncf/hooks.py                      | 24 +++++
- mmdet/core/nncf/utils.py                      | 74 +++++++++++++++
+ mmdet/core/nncf/utils.py                      | 72 ++++++++++++++
  mmdet/models/dense_heads/anchor_head.py       |  1 +
  mmdet/models/dense_heads/base_dense_head.py   |  5 +-
  mmdet/models/detectors/base.py                | 15 ++-
  mmdet/models/detectors/single_stage.py        |  1 +
  tools/train.py                                |  6 ++
- 12 files changed, 298 insertions(+), 9 deletions(-)
+ 12 files changed, 296 insertions(+), 9 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -311,10 +311,10 @@ index 0000000..d6b3887
 +            return '{}: {}'.format(key, val)
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
-index 0000000..64bee15
+index 0000000..ae0d6f7
 --- /dev/null
 +++ b/mmdet/core/nncf/utils.py
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,72 @@
 +import pathlib
 +from collections import OrderedDict
 +
@@ -387,8 +387,6 @@ index 0000000..64bee15
 +        return (), kwargs
 +
 +    # get_targets TBD
-+
-+
 diff --git a/mmdet/models/dense_heads/anchor_head.py b/mmdet/models/dense_heads/anchor_head.py
 index 2faec70..7d0676b 100644
 --- a/mmdet/models/dense_heads/anchor_head.py
@@ -425,10 +423,10 @@ index de11e4a..0fcdc4d 100644
              return losses
          else:
 diff --git a/mmdet/models/detectors/base.py b/mmdet/models/detectors/base.py
-index ddecb8f..6c63de8 100644
+index 914f476..d6672ca 100644
 --- a/mmdet/models/detectors/base.py
 +++ b/mmdet/models/detectors/base.py
-@@ -134,6 +134,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -131,6 +131,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              if not isinstance(var, list):
                  raise TypeError(f'{name} must be a list, but got {type(var)}')
  
@@ -438,7 +436,7 @@ index ddecb8f..6c63de8 100644
          num_augs = len(imgs)
          if num_augs != len(img_metas):
              raise ValueError(f'num of augmentations ({len(imgs)}) '
-@@ -156,8 +159,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -153,8 +156,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              assert 'proposals' not in kwargs
              return self.aug_test(imgs, img_metas, **kwargs)
  
@@ -452,7 +450,7 @@ index ddecb8f..6c63de8 100644
          """Calls either :func:`forward_train` or :func:`forward_test` depending
          on whether ``return_loss`` is ``True``.
  
-@@ -207,7 +214,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -204,7 +211,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
  
          return loss, log_vars
  
@@ -461,7 +459,7 @@ index ddecb8f..6c63de8 100644
          """The iteration step during training.
  
          This method defines an iteration step during training, except for the
-@@ -237,6 +244,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -234,6 +241,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
          losses = self(**data)
          loss, log_vars = self._parse_losses(losses)
  
@@ -473,7 +471,7 @@ index ddecb8f..6c63de8 100644
              loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
  
 diff --git a/mmdet/models/detectors/single_stage.py b/mmdet/models/detectors/single_stage.py
-index 9622537..cc51cf9 100644
+index 3977bdf..4159ea4 100644
 --- a/mmdet/models/detectors/single_stage.py
 +++ b/mmdet/models/detectors/single_stage.py
 @@ -1,5 +1,6 @@
@@ -484,10 +482,10 @@ index 9622537..cc51cf9 100644
  from mmdet.core import bbox2result
  from ..builder import DETECTORS, build_backbone, build_head, build_neck
 diff --git a/tools/train.py b/tools/train.py
-index fb05b58..2f3cdb2 100644
+index c36b2a0..519e915 100644
 --- a/tools/train.py
 +++ b/tools/train.py
-@@ -115,6 +115,12 @@ def main():
+@@ -139,6 +139,12 @@ def main():
      logger.info(f'Distributed training: {distributed}')
      logger.info(f'Config:\n{cfg.pretty_text}')
  
