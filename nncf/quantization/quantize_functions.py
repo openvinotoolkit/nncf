@@ -156,10 +156,14 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
     if level_low < 0:
         level_low = torch.ones([1]).to(torch.int8) * level_low
         level_high = torch.ones([1]).to(torch.int8) * level_high
+        level_low = level_low.to(y_zero_point.device)
+        level_high = level_high.to(y_zero_point.device)
         y_zero_point = min(max(level_low, (y_zero_point.to(torch.int8))), level_high)
     else:
         level_low = torch.ones([1]).to(torch.uint8) * level_low
         level_high = torch.ones([1]).to(torch.uint8) * level_high
+        level_low = level_low.to(y_zero_point.device)
+        level_high = level_high.to(y_zero_point.device)
         y_zero_point = min(max(level_low, (y_zero_point.to(torch.uint8))), level_high)
 
     return y_scale, y_zero_point
