@@ -118,7 +118,7 @@ def get_cli_dict_args(args):
     for key, val in args.items():
         cli_key = '--{}'.format(str(key))
         cli_args[cli_key] = None
-        if val:
+        if val is not None:
             cli_args[cli_key] = str(val)
     return cli_args
 
