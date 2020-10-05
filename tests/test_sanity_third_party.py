@@ -21,7 +21,7 @@ from tests.conftest import PROJECT_ROOT
 
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
-MMDETECTION_COMMIT = "7ab8f440749df44bb222401b98bef7c25f74ae06"
+MMDETECTION_COMMIT = "039ad4dd64edaa5efe69f00574a0c24240adac97"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "data", "mock_datasets")
 
@@ -238,7 +238,9 @@ class TestMmdetection:
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
-        subprocess.run("{}; pip install mmcv-full==1.0.5".format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
+        subprocess.run(
+            "{}; pip install mmcv-full==1.1.4 -f https://download.openmmlab.com/mmcv/dist/index.html".format(
+                self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -v -e .".format(self.activate_venv), check=True, shell=True,
