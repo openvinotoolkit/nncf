@@ -239,8 +239,9 @@ class TestMmdetection:
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run(
-            "{}; pip install mmcv-full==1.1.4 -f https://download.openmmlab.com/mmcv/dist/index.html".format(
-                self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
+            "{}; pip install mmcv-full==1.1.4+torch1.5.0+cu102 "
+            "-f https://download.openmmlab.com/mmcv/dist/index.html".format(self.activate_venv), check=True, shell=True,
+            cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -v -e .".format(self.activate_venv), check=True, shell=True,
