@@ -248,7 +248,10 @@ class TestMmdetection:
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -U \"git+https://github.com/open-mmlab/cocoapi.git#subdirectory=pycocotools\""
                        .format(self.activate_venv), check=True, shell=True, cwd=self.MMDET_PATH)
-        subprocess.run("{}; ln -s {} data".format(self.activate_venv, DATASET_PATH), check=True, shell=True,
+
+        subprocess.run("{}; mkdir {}".format(self.activate_venv, self.MMDET_PATH + "/data"), check=True, shell=True,
+                       cwd=self.MMDET_PATH)
+        subprocess.run("{}; ln -s {}/voc data/VOCdevkit".format(self.activate_venv, DATASET_PATH), check=True, shell=True,
                        cwd=self.MMDET_PATH)
 
     def test_ssd300_train(self):
