@@ -1,10 +1,10 @@
-From 6ca30efa578d12df5e8e4368a08c91a2bcd24aef Mon Sep 17 00:00:00 2001
+From c732333003b7993875437eb375c5a9416e584867 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Tue, 28 Apr 2020 17:47:34 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
- configs/pascal_voc/ssd300_voc_int8.py         | 95 +++++++++++++++++++
+ configs/pascal_voc/ssd300_voc_int8.py         | 94 +++++++++++++++++++
  .../retinanet/retinanet_r50_fpn_1x_int8.py    | 40 ++++++++
  mmdet/apis/train.py                           | 36 +++++--
  mmdet/core/__init__.py                        |  1 +
@@ -16,7 +16,7 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/models/detectors/base.py                | 15 ++-
  mmdet/models/detectors/single_stage.py        |  1 +
  tools/train.py                                |  6 ++
- 12 files changed, 296 insertions(+), 9 deletions(-)
+ 12 files changed, 295 insertions(+), 9 deletions(-)
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
  create mode 100644 mmdet/core/nncf/__init__.py
@@ -25,10 +25,10 @@ Subject: [PATCH] Modifications for NNCF usage
 
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
 new file mode 100644
-index 0000000..cae6870
+index 0000000..4112ea7
 --- /dev/null
 +++ b/configs/pascal_voc/ssd300_voc_int8.py
-@@ -0,0 +1,95 @@
+@@ -0,0 +1,94 @@
 +_base_ = [
 +    '../_base_/models/ssd300.py', '../_base_/datasets/voc0712.py',
 +    '../_base_/default_runtime.py'
@@ -39,7 +39,6 @@ index 0000000..cae6870
 +                                                                    0.9))))
 +# dataset settings
 +dataset_type = 'VOCDataset'
-+data_root = 'voc/'
 +img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 +train_pipeline = [
 +    dict(type='LoadImageFromFile', to_float32=True),
