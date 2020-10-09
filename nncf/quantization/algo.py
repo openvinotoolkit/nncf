@@ -1164,7 +1164,7 @@ class QuantizationDebugInterface(DebugInterface):
             # Important - this will not work for DataParallel since it copies the
             # entire parent module for each thread and the `call_count` attributes
             # are incremented for thread local copies of `qm_module`, which are not
-            # the same as the master copies of `qm_module` iterated over at this point
+            # the same as the primary copies of `qm_module` iterated over at this point
             self.register_quantizer_module_call(str(qm_scope), qm_module.call_count)
             self.dump_scale(qm_module.get_trainable_params(), str(qm_scope))
             qm_module.reset_call_counter()

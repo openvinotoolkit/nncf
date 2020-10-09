@@ -105,9 +105,9 @@ QUANTIZER_CONFIG_PROPERTIES = {
 }
 
 IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be ignored for this " \
-                             "operation - functions as a 'blacklist'. Optional."
+                             "operation - functions as a 'allowlist'. Optional."
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
-                            " - functions as a 'whitelist'. Optional."
+                            " - functions as a 'denylist'. Optional."
 
 QUANTIZER_GROUP_PROPERTIES = {
     **QUANTIZER_CONFIG_PROPERTIES,

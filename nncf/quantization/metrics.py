@@ -505,7 +505,6 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
             out_graph.add_node(node_key)
         for u, v in merged_original_graph.edges:
             edge = merged_original_graph.edges[u, v]
-            attrs = {"color": "black"}
             if edge[ShareEdgesQuantizedDataPath.QUANTIZED_EDGES_ATTR]:
                 attrs = {"color": "blue"}
             out_graph.add_edge(u, v, **attrs)

@@ -905,8 +905,8 @@ class QuantizerPropagationSolver:
            configs of the quantizers it might affect by doing so."""
         dom_op_node_keys = quant_prop_graph.get_quantizable_op_nodes_immediately_dominated_by_node(
             branching_node_key)
-        master_possible_qconfigs = prop_quantizer.potential_quant_configs
-        slave_possible_qconfigs_dict = {}
+        primary_possible_qconfigs = prop_quantizer.potential_quant_configs
+        secondary_possible_qconfigs_dict = {}
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
             affecting_prop_quantizers = op_node[
@@ -914,19 +914,19 @@ class QuantizerPropagationSolver:
             if not affecting_prop_quantizers:
                 # The branch op is forced to be FP32 - should not proceed through the branch node.
                 return TransitionStatus.SHOULD_NOT_TRANSITION
-            slave_possible_qconfigs = affecting_prop_quantizers[0].potential_quant_configs
-            slave_possible_qconfigs_dict[op_node_key] = slave_possible_qconfigs
-        master_merged_qconfigs, \
-        slave_merged_qconfigs_dict = self.get_merged_qconfigs(master_possible_qconfigs,
-                                                              slave_possible_qconfigs_dict)
-        if not master_merged_qconfigs:
+            secondary_possible_qconfigs = affecting_prop_quantizers[0].potential_quant_configs
+            secondary_possible_qconfigs_dict[op_node_key] = secondary_possible_qconfigs
+        primary_merged_qconfigs, \
+        secondary_merged_qconfigs_dict = self.get_merged_qconfigs(primary_possible_qconfigs,
+                                                                  secondary_possible_qconfigs_dict)
+        if not primary_merged_qconfigs:
             # This quantizer's precision does not encompass the precisions of quantizers
             # propagating through downward branches.
             return TransitionStatus.SHOULD_NOT_TRANSITION
 
         if self._propagation_strategy == PropagationStrategy.CONSERVATIVE:
-            for op_node_key, slave_merged_qconfigs_list in slave_merged_qconfigs_dict.items():
-                if len(slave_possible_qconfigs_dict[op_node_key]) != len(slave_merged_qconfigs_list):
+            for op_node_key, secondary_merged_qconfigs_list in secondary_merged_qconfigs_dict.items():
+                if len(secondary_possible_qconfigs_dict[op_node_key]) != len(secondary_merged_qconfigs_list):
                     return TransitionStatus.SHOULD_NOT_TRANSITION
 
         return None
@@ -994,37 +994,37 @@ class QuantizerPropagationSolver:
                     return TransitionStatus.SHOULD_NOT_TRANSITION
         return TransitionStatus.SHOULD_TRANSITION
 
-    def get_merged_qconfigs(self, master_potential_qconfigs_list: List[QuantizerConfig],
-                            slave_potential_qconfigs_dict: Dict[str, List[QuantizerConfig]]) -> Tuple[
+    def get_merged_qconfigs(self, primary_potential_qconfigs_list: List[QuantizerConfig],
+                            secondary_potential_qconfigs_dict: Dict[str, List[QuantizerConfig]]) -> Tuple[
                                 List[QuantizerConfig], Dict[str, QuantizerConfig]]:
-        """Returns potential qconfigs lists for 'master' and 'slave' quantizers
+        """Returns potential qconfigs lists for 'primary' and 'secondary' quantizers
         that are compatible with each other. Compatibility is decided in terms of
-        master quantizer having configs which all have higher precision than all the
-        slave potential quantizer configs."""
-        final_master_merged_qconfigs_list = deepcopy(master_potential_qconfigs_list)
-        curr_slave_merged_qconfigs_dict = deepcopy(slave_potential_qconfigs_dict)
+        primary quantizer having configs which all have higher precision than all the
+        secondary potential quantizer configs."""
+        final_primary_merged_qconfigs_list = deepcopy(primary_potential_qconfigs_list)
+        curr_secondary_merged_qconfigs_dict = deepcopy(secondary_potential_qconfigs_dict)
         # TODO: implement variant solutions, i.e. for each set of resultant merged
-        # master potential qconfig lists we have, in general, different merged slave potential
+        # primary potential qconfig lists we have, in general, different merged secondary potential
         # config lists. Currently greedy approach is used.
-        for m_qconfig in master_potential_qconfigs_list:
-            should_persist_slave_merged_qconfigs_dict = True
-            candidate_slave_merged_qconfigs_dict = deepcopy(curr_slave_merged_qconfigs_dict)
-            for node_key, s_qconfig_list in curr_slave_merged_qconfigs_dict.items():
+        for m_qconfig in primary_potential_qconfigs_list:
+            should_persist_secondary_merged_qconfigs_dict = True
+            candidate_secondary_merged_qconfigs_dict = deepcopy(curr_secondary_merged_qconfigs_dict)
+            for node_key, s_qconfig_list in curr_secondary_merged_qconfigs_dict.items():
                 for s_qconfig in s_qconfig_list:
-                    if m_qconfig < s_qconfig and s_qconfig in candidate_slave_merged_qconfigs_dict[node_key]:
-                        candidate_slave_merged_qconfigs_dict[node_key].remove(s_qconfig)
-            for _, s_qconfig_list in candidate_slave_merged_qconfigs_dict.items():
+                    if m_qconfig < s_qconfig and s_qconfig in candidate_secondary_merged_qconfigs_dict[node_key]:
+                        candidate_secondary_merged_qconfigs_dict[node_key].remove(s_qconfig)
+            for _, s_qconfig_list in candidate_secondary_merged_qconfigs_dict.items():
                 if not s_qconfig_list:
-                    # No options left for slave configs on one of the branches to accomodate the master
-                    # config - this master config cannot be used to be merged into.
-                    final_master_merged_qconfigs_list.remove(m_qconfig)
-                    should_persist_slave_merged_qconfigs_dict = False
+                    # No options left for secondary configs on one of the branches to accomodate the primary
+                    # config - this primary config cannot be used to be merged into.
+                    final_primary_merged_qconfigs_list.remove(m_qconfig)
+                    should_persist_secondary_merged_qconfigs_dict = False
                     break
-            if should_persist_slave_merged_qconfigs_dict:
-                curr_slave_merged_qconfigs_dict = candidate_slave_merged_qconfigs_dict
-        if not final_master_merged_qconfigs_list:
+            if should_persist_secondary_merged_qconfigs_dict:
+                curr_secondary_merged_qconfigs_dict = candidate_secondary_merged_qconfigs_dict
+        if not final_primary_merged_qconfigs_list:
             return [], {}
-        return final_master_merged_qconfigs_list, curr_slave_merged_qconfigs_dict
+        return final_primary_merged_qconfigs_list, curr_secondary_merged_qconfigs_dict
 
     def get_finished_propagating_quantizers(self):
         return self._finished_propagating_quantizers

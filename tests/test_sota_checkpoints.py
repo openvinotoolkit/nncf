@@ -152,7 +152,7 @@ class TestSotaCheckpoints:
         with tag('p'):
             with tag('span', style="Background-color: #{}".format(BG_COLOR_RED_HEX)):
                 text('Thresholds for FP32 and Expected are failed')
-        with tag('table', border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid black;"):
+        with tag('table', border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid;"):
             with tag('tr'):
                 for i in init_table_string:
                     with tag('td'):
