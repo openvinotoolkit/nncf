@@ -47,12 +47,14 @@ GLOBAL_CONFIG = {
                             'expected_accuracy': 64.53,
                             'weights': 'mobilenetV2_64.53.sd',
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed', 'cpu-only'},
                             'expected_accuracy': 64.53,
                             'weights': 'mobilenetV2_64.53.sd',
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'inceptionV3_int8.json': {
                             'expected_accuracy': 77.53,
@@ -69,11 +71,13 @@ GLOBAL_CONFIG = {
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
                             'expected_accuracy': 62.71,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed'},
+                            'absolute_tolerance_eval': 2e-2
                         }
                     }
                 },

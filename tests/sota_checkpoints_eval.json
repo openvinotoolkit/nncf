@@ -292,7 +292,7 @@
                 "target": 80.26,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc.pth",
-                "batch": 40,
+                "batch": 32,
                 "model_description": "SSD512-BN"
             },
             "ssd512_vgg_voc_int8": {
@@ -301,7 +301,7 @@
                 "target": 80.02,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
-                "batch": 40,
+                "batch": 32,
                 "model_description": "SSD512-BN",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
@@ -313,7 +313,7 @@
                 "target": 79.88,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_magnitude_sparsity_int8.pth",
-                "batch": 40,
+                "batch": 32,
                 "model_description": "SSD512-BN",
                 "compression_description": "INT8 + Sparsity 70% (Magnitude)",
                 "diff_fp32_min": -1,
