@@ -94,10 +94,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "zero_grad": true // Whether to setting gradients corresponding to zeroed filters to zero during training, `True` by default.    
     },
 
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": []
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": []
 }
 ```

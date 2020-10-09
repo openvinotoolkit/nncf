@@ -245,10 +245,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
         "ignored_scopes": []
 
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
     },
     "activations": { // Constraints to be applied to model activations quantization only. Overrides higher-level settings.
@@ -257,10 +257,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
         "ignored_scopes": []
 
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
 
         // Specifies points in the model which will share the same quantizer module for activations. This is helpful in case one and the same quantizer scale is required for inputs to the same operation. Each sub-array will define a group of activation quantizer insertion points that have to share a single actual quantization module, each entry in this subarray should correspond to exactly one node in the NNCF graph and the groups should not overlap. The finalquantizer for each sub-array will be associated with the first element of this sub-array.
@@ -285,10 +285,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         }
     },
 
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": [],
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": [],
 
     // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
@@ -307,8 +307,8 @@ Per layer ranges initiaization can be enabled by specifying  in `"initializer"` 
 
             "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
 
-            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
-            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
+            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
             "target_quantizer_group": "weights" // Type of quantizer group to which this initialization of ranges will be applied. Optional. (By default this initialization of ranges will be applied to weights and activations quantizers)
         },
         ...

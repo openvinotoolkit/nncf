@@ -55,10 +55,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },
 
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": []
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": []
 }
 ```
@@ -92,10 +92,10 @@ The magnitude sparsity method implements a naive approach that is based on the a
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },
 
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": []
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": []
 }
 ```
@@ -107,10 +107,10 @@ This special algorithm takes no additional parameters and is used when you want 
 ```
 {
     "algorithm": "const_sparsity",
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": []
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": []
 }).
 ```
