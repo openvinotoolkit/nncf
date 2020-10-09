@@ -204,6 +204,20 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, config_creato
     check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)
 
 
+def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
+    batch_size = 10
+    config = create_hawq_hw_test_config(batch_size)
+    model = MobileNetV2(num_classes=10)
+    model.eval()
+    criterion = nn.CrossEntropyLoss()
+    if not dataset_dir:
+        dataset_dir = str(tmp_path)
+    train_loader, _ = create_test_dataloaders(config.get("model_size"), dataset_dir, batch_size)
+    config = register_default_init_args(config, train_loader, criterion)
+
+    create_compressed_model_and_algo_for_test(model, config)
+
+
 PrecisionConstraintsTestParams = namedtuple('PrecisionConstraintsTestParams',
                                             ('bits_configurations', 'constraints', 'survived_configurations_id',
                                              'order'))
@@ -329,24 +343,27 @@ def get_requires_grad_per_param(model):
 
 
 def get_scopes_of_skipped_weight_quantizers():
-    return ['MobileNetV2/Sequential[features]/ConvBNReLU[18]/NNCFConv2d[0]',
-            'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]',
-            'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]']
+    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNReLU[18]/NNCFConv2d[0]',
+                   'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]',
+                   'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]']
+    return [Scope.from_str(s) for s in scopes_list]
 
 
 def test_disable_quantizer_gradients():
-    _, disabled_parameters, model, _ = disable_quantizer_gradients()
-    assert len(disabled_parameters) == 357
+    _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
+    assert len(parameters_to_restore.originally_disabled_gradients) == 354
+    assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / 'data/hawq_reference/mobilenet_v2_requires_grad_per_param.json')
     compare_with_ref_if_exists(actual_requires_grad_per_param, path_to_ref)
 
 
 def test_enable_quantizer_gradients():
-    quantizers_swicther, disabled_parameters, model, original_requires_grad_per_param = disable_quantizer_gradients()
-    HAWQPrecisionInitializer.restore_disabled_gradients(quantizers_swicther, model, disabled_parameters)
+    switcher, params_to_restore, model, ctrl, origi_requires_grad_per_param = disable_quantizer_gradients()
+    quantized_modules = ctrl.quantized_weight_modules_registry
+    HAWQPrecisionInitializer.restore_disabled_gradients(switcher, model, quantized_modules, params_to_restore)
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
-    assert original_requires_grad_per_param == actual_requires_grad_per_param
+    assert origi_requires_grad_per_param == actual_requires_grad_per_param
 
 
 def disable_quantizer_gradients():
@@ -361,12 +378,12 @@ def disable_quantizer_gradients():
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     all_quantizations = get_all_modules_by_type(model, quantization_types)
     quantizers_switcher = QuantizersSwitcher(list(all_quantizations.values()))
-    disabled_parameters = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
+    params_to_restore = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
         quantizers_switcher,
         compression_ctrl.quantized_weight_modules_registry,
         model,
         get_scopes_of_skipped_weight_quantizers())
-    return quantizers_switcher, disabled_parameters, model, original_requires_grad_per_param
+    return quantizers_switcher, params_to_restore, model, compression_ctrl, original_requires_grad_per_param
 
 
 def get_path_to_bitwidth_dump(tmp_path, rank):
