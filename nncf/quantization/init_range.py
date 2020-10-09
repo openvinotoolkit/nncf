@@ -129,8 +129,8 @@ class MeanMinMaxInitializer(QuantizeRangeInitializer):
         self.all_max_values.clear()
 
     def apply_init(self):
-        min_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-        max_values = torch.ones(self.scale_shape).to(self.device) * np.inf
+        min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
+        max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
         if self.all_min_values:
             stacked_min = torch.stack(self.all_min_values)
             min_values = stacked_min.mean(dim=0).view(self.scale_shape)
