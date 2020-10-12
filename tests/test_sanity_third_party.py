@@ -251,7 +251,11 @@ class TestMmdetection:
 
         subprocess.run("{}; mkdir {}".format(self.activate_venv, self.MMDET_PATH + "/data"), check=True, shell=True,
                        cwd=self.MMDET_PATH)
-        subprocess.run("{}; ln -s {}/voc data/VOCdevkit".format(self.activate_venv, DATASET_PATH), check=True, shell=True,
+        subprocess.run("{}; ln -s {}/voc data/VOCdevkit".format(self.activate_venv, DATASET_PATH), check=True,
+                       shell=True,
+                       cwd=self.MMDET_PATH)
+        subprocess.run("{}; ln -s {}/coco data/coco".format(self.activate_venv, DATASET_PATH), check=True,
+                       shell=True,
                        cwd=self.MMDET_PATH)
 
     def test_ssd300_train(self):
