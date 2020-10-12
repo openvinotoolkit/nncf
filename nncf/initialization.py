@@ -25,8 +25,8 @@ class RangeInitializerFactory:
         if init_type == "mean_min_max":
             return MeanMinMaxInitializer(module, num_init_steps, log_module_name)
         if init_type == "percentile":
-            min_percentile = init_config["min_percentile"]
-            max_percentile = init_config["max_percentile"]
+            min_percentile = init_config.get("min_percentile", 10)
+            max_percentile = init_config.get("max_percentile", 90)
             return PercentileInitializer(module, num_init_steps, min_percentile, max_percentile, log_module_name)
         raise NotImplementedError
 
