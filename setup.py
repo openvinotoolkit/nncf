@@ -51,10 +51,9 @@ def write_install_type(install_type: str):
 
 INSTALL_REQUIRES = ["ninja",
                     "addict",
-                    "pillow==6.2.1",
+                    "pillow",
                     "texttable",
                     "scipy==1.3.2",
-                    "pyyaml",
                     "networkx",
                     "graphviz",
                     "jsonschema",
