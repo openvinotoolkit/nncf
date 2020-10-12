@@ -1,7 +1,7 @@
 import itertools
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple, NamedTuple
 
 import os
 import torch
@@ -11,7 +11,7 @@ from torch import Tensor, nn
 from torch.nn.modules.loss import _Loss
 
 from nncf.debug import is_debug
-from nncf.dynamic_graph.context import no_nncf_trace
+from nncf.dynamic_graph.context import no_nncf_trace, Scope
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, CompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizersSwitcher, BaseQuantizer
@@ -228,12 +228,16 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             ordered_config[order[i]] = bitwidth
         return ordered_config
 
+    class ParamsToRestore(NamedTuple):
+        originally_disabled_gradients: List[str]
+        skipped_gradients_to_enable: List[Tuple[nn.Module, str]]
+
     @staticmethod
     def disable_all_gradients_except_weights_of_quantized_modules(
             quantizers_switcher: QuantizersSwitcher,
             quantized_weight_modules_registry: Dict[str, torch.nn.Module],
             model: nn.Module,
-            scopes_of_skipped_weight_quantizers: List[str] = None) -> List[str]:
+            scopes_of_skipped_weight_quantizers: List['Scope'] = None) -> ParamsToRestore: # pylint: disable=undefined-variable
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.
@@ -244,7 +248,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         constraint and which weights should be skipped from bitwidth initialization
         :return: list of names of the parameters that were originally disabled
         """
-        disabled_gradients = []
+        originally_disabled_gradients = []
+        skipped_gradients_to_enable = []
 
         # Some quantizers can be disabled in a staged scenario on creation of staged scheduler
         # Need to save originally disabled quantizers for restoring their state after initialization
@@ -253,36 +258,40 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         # remember gradients of quantized modules that were enabled
         gradients_to_enable = []
         for scope, quantized_module in quantized_weight_modules_registry.items():
-            is_skipped = bool(scopes_of_skipped_weight_quantizers) and (scope in scopes_of_skipped_weight_quantizers)
+            is_skipped = False
+            for skipped_weight_quantizer_scope in scopes_of_skipped_weight_quantizers:
+                if skipped_weight_quantizer_scope in Scope.from_str(scope):
+                    is_skipped = True
+                    break
             for param_name, param in quantized_module.named_parameters():
                 if param.requires_grad:
                     # disable gradients for skipped module for optimization of Hessian Trace search
                     if is_skipped:
-                        disabled_gradients.append(param_name)
+                        skipped_gradients_to_enable.append((quantized_module, param_name))
                         param.requires_grad = False
                     else:
-                        gradients_to_enable.append(param_name)
+                        gradients_to_enable.append((quantized_module, param_name))
 
         # disable all gradients, except already disabled
         for param_name, param in model.named_parameters():
             if not param.requires_grad:
-                disabled_gradients.append(param_name)
+                originally_disabled_gradients.append(param_name)
             else:
                 param.requires_grad = False
 
         # enable gradients of quantized modules that were disabled
         for quantized_module in quantized_weight_modules_registry.values():
             for param_name, param in quantized_module.named_parameters():
-                if param_name in gradients_to_enable and not 'bias' in param_name:
+                if (quantized_module, param_name) in gradients_to_enable and not 'bias' in param_name:
                     param.requires_grad = True
-        return disabled_gradients
+        return HAWQPrecisionInitializer.ParamsToRestore(originally_disabled_gradients, skipped_gradients_to_enable)
 
     def _calc_traces(self, criterion: _Loss, iter_number: int, tolerance: float) -> TracesPerLayer:
         if self._traces_per_layer_path:
             return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
 
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
-        disabled_gradients = self.disable_all_gradients_except_weights_of_quantized_modules(
+        params_to_restore = self.disable_all_gradients_except_weights_of_quantized_modules(
             quantizers_switcher,
             self._algo.quantized_weight_modules_registry,
             self._model,
@@ -292,21 +301,30 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                                                 self._num_data_points)
         avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
 
-        self.restore_disabled_gradients(quantizers_switcher, self._model, disabled_gradients)
+        self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.quantized_weight_modules_registry,
+                                        params_to_restore)
 
         return TracesPerLayer(avg_traces)
 
     @staticmethod
     def restore_disabled_gradients(quantizers_switcher: QuantizersSwitcher,
-                                   model: nn.Module, disabled_gradients: List[str]):
+                                   model: nn.Module,
+                                   quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+                                   params_to_restore: ParamsToRestore):
         """
-        Enables gradients of all parameters back, except for ones that were originally disabled
+        Restore requires_grad property of all parameters back, except for ones that were originally disabled
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
-        :param disabled_gradients:  list of names of the parameters that were originally disabled
+        :param quantized_weight_modules_registry: modules with quantized weights per scope
+        :param params_to_restore: storage names of the parameters that should restore reguires_grad property
         """
+        for quantized_module in quantized_weight_modules_registry.values():
+            for param_name, param in quantized_module.named_parameters():
+                if (quantized_module, param_name) in params_to_restore.skipped_gradients_to_enable:
+                    param.requires_grad = True
+
         for param_name, param in model.named_parameters():
-            if param_name not in disabled_gradients:
+            if param_name not in params_to_restore.originally_disabled_gradients:
                 param.requires_grad = True
         quantizers_switcher.enable_quantizers()
 
@@ -434,7 +452,7 @@ class WeightQuantizersHandler:
                 if len(constraints.get(quantizer_id)) != 1:
                     ordered_weight_quantization_list.append((quantizer_id, quantizer))
                 else:
-                    self._scopes_of_skipped_weight_quantizers.append(str(scope))
+                    self._scopes_of_skipped_weight_quantizers.append(scope)
                     self._skipped_weight_quantizers[quantizer_id] = quantizer
         self._ordered_weight_quantizations = OrderedDict(ordered_weight_quantization_list)
 
