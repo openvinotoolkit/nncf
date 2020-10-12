@@ -18,7 +18,7 @@ import sysconfig
 import codecs
 import os
 import re
-import setuptools
+from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -138,7 +138,7 @@ EXTRAS_REQUIRE = {
     "docs": []
 }
 
-setuptools.setup(
+setup(
     name="nncf",
     version=find_version(os.path.join(here, "nncf/version.py")),
     author="Intel",
@@ -147,9 +147,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/openvinotoolkit/nncf_pytorch",
-    packages=setuptools.find_packages(exclude=["tests", "tests.*",
-                                               "examples", "examples.*",
-                                               "tools", "tools.*"]),
+    packages=find_packages(exclude=["tests", "tests.*",
+                                    "examples", "examples.*",
+                                    "tools", "tools.*"]),
     dependency_links=DEPENDENCY_LINKS,
     classifiers=[
         "Programming Language :: Python :: 3",
