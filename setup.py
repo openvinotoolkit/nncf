@@ -12,6 +12,7 @@
 """
 
 import glob
+import stat
 import sys
 import sysconfig
 
@@ -71,7 +72,8 @@ INSTALL_REQUIRES = ["ninja",
                     "mdutils",
                     "yattag",
                     "jsonschema",
-                    "wheel"]
+                    "wheel",
+                    "defusedxml"]
 
 DEPENDENCY_LINKS = []
 
@@ -172,4 +174,5 @@ path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"]+"/ninja*/ninja/da
 if path_to_ninja:
     path_to_ninja = str(path_to_ninja[0]+"ninja")
     if not os.access(path_to_ninja, os.X_OK):
-        os.chmod(path_to_ninja, 755)
+        st = os.stat(path_to_ninja)
+        os.chmod(path_to_ninja, st.st_mode | stat.S_IEXEC)

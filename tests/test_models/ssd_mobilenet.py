@@ -62,7 +62,7 @@ def mobilenet(start_input_channels=3):
     return model
 
 
-def extra(start_input_channels):
+def extra_layers(start_input_channels):
     return MultiOutputSequential(
         [1, 3, 5, 7],
         [
@@ -85,7 +85,7 @@ class MobileNetSSD(nn.Module):
         self.num_classes = num_classes
 
         self.basenet = mobilenet()
-        self.extras = extra(1024)
+        self.extras = extra_layers(1024)
 
         NUM_INPUT_FEATURES = [512, 1024, 512, 256, 256, 128]
         self.detection_head = SSDDetectionOutput(NUM_INPUT_FEATURES, num_classes, cfg)
