@@ -393,17 +393,20 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
     #    |
     # (batch_norm)
     #    |
+    #   (D)
+    #    |
     #  (RELU)
     #    |
     #   (B)
 
-    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C']
+    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C', 'D']
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
     mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'C'),
                                ('C', 'batch_norm'),
-                               ('batch_norm', VersionAgnosticNames.RELU),
+                               ('batch_norm', 'D'),
+                               ('D', VersionAgnosticNames.RELU),
                                (VersionAgnosticNames.RELU, 'B')])
     return mock_graph
 
@@ -433,6 +436,13 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
                                (VersionAgnosticNames.RELU, 'C'),
                                ('C', 'B')])
     return mock_graph
+
+
+MERGE_PATTERN_TEST_CASES = (
+    [get_mock_model_graph_with_mergeable_pattern, "basic_pattern"],
+    [get_mock_model_graph_with_no_mergeable_pattern, "no_pattern"],
+    [get_mock_model_graph_with_broken_output_edge_pattern, "broken_output_edges_pattern"]
+)
 
 
 class TestInsertionPointGraph:
@@ -574,13 +584,6 @@ class TestInsertionPointGraph:
                 ref_metatype = ref_scope_vs_metatype_dict[scope_str]
                 assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
 
-
-    MERGE_PATTERN_TEST_CASES = (
-        [get_mock_model_graph_with_mergeable_pattern, "basic_pattern"],
-        [get_mock_model_graph_with_no_mergeable_pattern, "no_pattern"],
-        [get_mock_model_graph_with_broken_output_edge_pattern, "broken_output_edges_pattern"]
-    )
-
     @pytest.mark.parametrize(("mock_graph_factory", "dot_file_name"),
                              MERGE_PATTERN_TEST_CASES,
                              ids=[x[1] for x in MERGE_PATTERN_TEST_CASES])
@@ -610,4 +613,3 @@ class TestInsertionPointGraph:
 
         assert Counter(sanitized_loaded_keys) == Counter(list(merged_ip_graph.nodes.keys()))
         assert Counter(sanitized_loaded_edges) == Counter(list(merged_ip_graph.edges))
-
