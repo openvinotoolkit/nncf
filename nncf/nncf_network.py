@@ -235,6 +235,31 @@ class InsertionPointGraph(nx.DiGraph):
 
             input_node_key = match[0]
             output_node_key = match[-1]
+
+            # If a subgraph has output edges in its middle, should skip merging it
+            # Example:
+            #       (conv2d)
+            #          |------\
+            #         (BN)    |
+            #          |      |
+            #        (RELU)   |
+            #          |      |
+            #        (cat)----/
+            #          |
+            #         ...
+
+            has_breaking_output_edges = False
+            for node_key in match[:-1]:
+                succs = list(self._base_nx_graph.succ[node_key].keys())
+                for succ_key in succs:
+                    if succ_key not in match:
+                        has_breaking_output_edges = True
+                if has_breaking_output_edges:
+                    break
+
+            if has_breaking_output_edges:
+                continue
+
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
 
