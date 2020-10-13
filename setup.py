@@ -41,15 +41,6 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
-INSTALL_TYPE_RESOURCE_NAME = 'install_type'
-INSTALL_TYPE_RESOURCE_LOCATION = "{}/nncf/{}".format(here, INSTALL_TYPE_RESOURCE_NAME)
-
-
-def write_install_type(install_type: str):
-    with open(INSTALL_TYPE_RESOURCE_LOCATION, 'wb') as f:
-        f.write(install_type.encode("ASCII"))
-
-
 INSTALL_REQUIRES = ["ninja",
                     "addict",
                     "pillow",
@@ -114,8 +105,6 @@ if "--cpu-only" in sys.argv:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    write_install_type("CPU")
-    sys.argv.remove("--cpu-only")
 else:
     mode = "cu{}".format(CUDA_VERSION)
     whl_mode = '' if IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER else WHL_MODE_TEMPLATE.format(mode=mode)
@@ -130,7 +119,6 @@ else:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    write_install_type("GPU")
 
 
 EXTRAS_REQUIRE = {
@@ -159,9 +147,6 @@ setup(
     ],
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
-    package_data={
-        INSTALL_TYPE_RESOURCE_NAME: [INSTALL_TYPE_RESOURCE_LOCATION]
-    },
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",
               "pruning", "object-detection", "semantic-segmentation", "nlp",
