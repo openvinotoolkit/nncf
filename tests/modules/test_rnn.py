@@ -216,7 +216,7 @@ def test_export_lstm_cell(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 13
+    assert onnx_num == 14
 
 
 @pytest.mark.parametrize('sizes',
@@ -392,7 +392,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 51
+    assert onnx_num == 55
 
 
 class TestNumberOfNodes:
@@ -437,8 +437,8 @@ class TestNumberOfNodes:
                 continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 108  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 1 == 51 # 8 WQ + 42 AQ + 1 input AQ
+        assert model.get_graph().get_nodes_count() == 112  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) + 1 == 55 # 8 WQ + 46 AQ + 1 input AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1

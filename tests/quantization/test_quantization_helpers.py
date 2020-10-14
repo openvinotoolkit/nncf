@@ -26,8 +26,8 @@ def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
             with other_file_path.open('rb') as in_file:
                 data_to_compare = torch.load(in_file)
                 for ref_tuple, tuple_to_compare in zip(ref_data, data_to_compare):
-                    for ref_data, data_to_compare in zip(ref_tuple, tuple_to_compare):
-                        if torch.tensor(ref_data != data_to_compare).sum():
+                    for ref_info, info_to_compare in zip(ref_tuple, tuple_to_compare):
+                        if torch.tensor(ref_info != info_to_compare).sum():
                             mismatching = True
     return mismatching
 

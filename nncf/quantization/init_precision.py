@@ -147,7 +147,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     def apply_init(self):
         bits_configurations = None
-        if len(self._quantizers_handler.get_ordered_weight_quantizers_per_id()):
+        if len(self._quantizers_handler.get_ordered_weight_quantizers_per_id()) != 0:
             original_device = next(self._model.parameters()).device
             self._model.to(self._init_device)
 
