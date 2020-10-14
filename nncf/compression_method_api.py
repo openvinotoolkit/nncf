@@ -46,7 +46,7 @@ class CompressionLoss(nn.Module):
         """
         Returns the compression loss value.
         """
-        return 0
+        return torch.zeros([])
 
     def statistics(self):
         """
