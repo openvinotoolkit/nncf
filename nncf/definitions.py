@@ -11,17 +11,6 @@
  limitations under the License.
 """
 
-import pkg_resources
 import os
 NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 HW_CONFIG_RELATIVE_DIR = "hw_configs"
-
-
-def get_install_type():
-    try:
-        _ = pkg_resources.get_distribution('nncf')
-        install_type = pkg_resources.resource_string(__name__, 'install_type').decode("ASCII")
-    except pkg_resources.DistributionNotFound:
-        # Working with NNCF while not installed as a package
-        install_type = "GPU"
-    return install_type
