@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import json
 
 import os
 import pytest
@@ -22,7 +23,7 @@ from examples.common.sample_config import SampleConfig
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
 from tests.conftest import TEST_ROOT
-from tests.test_compression_training import get_cli_dict_args, parse_best_acc1
+from tests.test_compression_training import get_cli_dict_args
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_sanity_sample import Command, create_command_line
 
@@ -100,14 +101,17 @@ def test_model_can_be_loaded_with_resume(_params):
     load_state(model, checkpoint['state_dict'], is_resume=True)
 
 
-def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path):
+def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_dir):
     p = _params
     config_path = p['sample_config_path']
     checkpoint_path = p['checkpoint_path']
 
+    metrics_path = str(tmp_path.joinpath('metrics.json'))
     tmp_path = str(tmp_path)
     args = {}
-    args['data'] = tmp_path + '/' + p['dataset']
+    if not dataset_dir:
+        dataset_dir = tmp_path
+    args['data'] = dataset_dir
     args['dataset'] = p['dataset']
     args['config'] = str(config_path)
     args['mode'] = 'test'
@@ -115,6 +119,7 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path):
     args['workers'] = 0  # Workaroundr the PyTorch MultiProcessingDataLoader issue
     args['seed'] = 1
     args['resume'] = checkpoint_path
+    args['metrics-dump'] = metrics_path
 
     if p['execution_mode'] == ExecutionMode.MULTIPROCESSING_DISTRIBUTED:
         args['multiprocessing-distributed'] = ''
@@ -125,5 +130,6 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path):
     res = runner.run()
     assert res == 0
 
-    acc1 = parse_best_acc1(tmp_path)
-    assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(acc1)
+    with open(metrics_path) as metric_file:
+        metrics = json.load(metric_file)
+        assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(metrics['Accuracy'])
