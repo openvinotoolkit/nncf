@@ -223,8 +223,17 @@ class InsertionPointGraph(nx.DiGraph):
             operator_node = self.nodes[operator_node_key]
             operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
+    def _base_graph_match_has_breaking_output_edges(self, match):
+        for node_key in match[:-1]:
+            succs = list(self._base_nx_graph.succ[node_key].keys())
+            for succ_key in succs:
+                if succ_key not in match:
+                    return True
+        return False
+
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
+        #pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config)
         from nncf.dynamic_graph.graph_matching import search_all
@@ -235,6 +244,24 @@ class InsertionPointGraph(nx.DiGraph):
 
             input_node_key = match[0]
             output_node_key = match[-1]
+
+            # If a subgraph has output edges in its middle, should skip merging it
+            # Example:
+            #       (conv2d)
+            #          |------\
+            #         (BN)    |
+            #          |      |
+            #        (RELU)   |
+            #          |      |
+            #        (cat)----/
+            #          |
+            #         ...
+
+            has_breaking_output_edges = self._base_graph_match_has_breaking_output_edges(match)
+
+            if has_breaking_output_edges:
+                continue
+
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
 
@@ -291,7 +318,8 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS |\
+                  p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         return pattern
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
