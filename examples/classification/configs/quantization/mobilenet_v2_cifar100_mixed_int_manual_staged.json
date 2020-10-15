@@ -11,6 +11,7 @@
     "num_classes": 100,
     "batch_size": 256,
     "epochs": 100,
+    "quantizer_setup_type": "pattern_based",
     "compression": {
         "algorithm": "quantization",
         "weights": {

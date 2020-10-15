@@ -155,7 +155,7 @@ def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFCo
     -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
-    algo, model = create_compressed_model(model, config, dump_graphs=True, dummy_forward_fn=dummy_forward_fn)
+    algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn)
     return model, algo
 
 

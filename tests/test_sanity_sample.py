@@ -389,7 +389,6 @@ def test_get_default_weight_decay(algo, ref_weight_decay):
 
 def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
-    #config['nncf_config']['device'] = 'cpu'
     args = {
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),

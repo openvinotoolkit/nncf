@@ -34,7 +34,7 @@ from nncf.dynamic_graph.context import OperatorInput, TracingContext, Scope
 from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
 from nncf.dynamic_graph.graph import NNCFNode, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
-from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize
+from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
 from nncf.initialization import DataLoaderRangeInitializeRunner
@@ -365,6 +365,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             for insertion_info, quantizer_config_list in insertion_data.items():
                 ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
                 operator_scope_str = str(ia_op_exec_context)
+                if not self.quantize_inputs and ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                    continue
+
                 # Tailored for post-hook quantization and first output quantization only
                 quantizer_input_shape = original_nncf_graph.get_output_shapes_for_ia_op_exec_context(
                     ia_op_exec_context)[0]
