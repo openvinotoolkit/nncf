@@ -45,6 +45,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         params = config.get('params', {})
         self._params = params
 
+        self.ignore_frozen_layers = True
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
         self.prune_batch_norms = params.get('prune_batch_norms', False)
@@ -76,6 +77,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 continue
 
             module_scope_str = str(module_scope)
+            if self.ignore_frozen_layers and not module.weight.requires_grad:
+                nncf_logger.info("Ignored adding Weight Pruner in scope: {} because"
+                                 " the layer appears to be frozen (requires_grad=False)".format(module_scope_str))
+                continue
+
             if not self._should_consider_scope(module_scope_str):
                 nncf_logger.info("Ignored adding Weight Pruner in scope: {}".format(module_scope_str))
                 continue
