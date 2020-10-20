@@ -26,6 +26,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.quantization.algo import QuantizerSetupType
+from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
 from nncf.nncf_logger import logger
 
@@ -42,12 +43,12 @@ def create_compression_algorithm_builders(config: NNCFConfig,
     compression_config_json_section = deepcopy(compression_config_json_section)
 
     hw_config_type = None
-    hw_config_type_str = config.get("hw_config_type")
-    if hw_config_type_str is not None:
-        hw_config_type = HWConfigType.from_str(config.get("hw_config_type"))
-    default_quantizer_setup_type = 'pattern_based' if hw_config_type is None else "propagation_based"
-    quantizer_setup_type_str = config.get("quantizer_setup_type", default_quantizer_setup_type)
+    quantizer_setup_type_str = config.get("quantizer_setup_type", "propagation_based")
     quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
+    if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
+        target_device = config.get("target_device", "ANY")
+        if target_device != 'NONE':
+            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
     if isinstance(compression_config_json_section, dict):
         compression_config = NNCFConfig(compression_config_json_section)

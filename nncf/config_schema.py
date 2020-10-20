@@ -612,12 +612,12 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
-ALL_SUPPORTED_ALGO_SCHEMAE = [BINARIZATION_SCHEMA,
-                              QUANTIZATION_SCHEMA,
-                              CONST_SPARSITY_SCHEMA,
-                              MAGNITUDE_SPARSITY_SCHEMA,
-                              RB_SPARSITY_SCHEMA,
-                              FILTER_PRUNING_SCHEMA]
+ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
+                             QUANTIZATION_SCHEMA,
+                             CONST_SPARSITY_SCHEMA,
+                             MAGNITUDE_SPARSITY_SCHEMA,
+                             RB_SPARSITY_SCHEMA,
+                             FILTER_PRUNING_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
@@ -625,6 +625,11 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
                       FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA}
+
+TARGET_DEVICE_SCHEMA = {
+    "type": "string",
+    "enum": ["ANY", "CPU", "GPU", "VPU", "NONE"]
+}
 
 ROOT_NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft/2019-09/schema#",
@@ -648,10 +653,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-        "hw_config_type": with_attributes(_STRING,
-                                          description="If specified, the compression algorithms will use parameter "
-                                                      "presets that are more likely to result in best performance on "
-                                                      "a given HW type."),
+        "target_device": TARGET_DEVICE_SCHEMA,
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,
@@ -666,13 +668,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                             "this mode it is possible to use hw config."),
     },
     "required": ["input_info"],
-    "definitions": REF_VS_ALGO_SCHEMA,
-    "dependencies": {
-        "hw_config_type": {
-            "properties": {
-                "quantizer_setup_type": {"const": "propagation_based"}}
-        }
-    }
+    "definitions": REF_VS_ALGO_SCHEMA
 }
 
 

@@ -24,6 +24,7 @@
         },
         "weight_decay": 1e-05
     },
+    "quantizer_setup_type": "pattern_based",
     "compression": {
         "algorithm": "quantization",
         "weights": {

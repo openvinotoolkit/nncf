@@ -14,6 +14,7 @@
     "workers": 6,
     "epochs": 60,
     "multiprocessing_distributed": true,
+    "quantizer_setup_type": "pattern_based",
     "compression": {
         "algorithm": "quantization",
         "weights": {

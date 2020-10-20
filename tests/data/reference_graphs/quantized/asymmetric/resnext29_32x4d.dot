@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=1, scope="ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
-"2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"1 AsymmetricQuantizer/asymmetric_quantize" [id=1, scope=AsymmetricQuantizer, type=asymmetric_quantize];
+"2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "3 ResNeXt/NNCFConv2d[conv1]/conv2d" [id=3, scope="ResNeXt/NNCFConv2d[conv1]", type=conv2d];
 "4 ResNeXt/BatchNorm2d[bn1]/batch_norm" [id=4, scope="ResNeXt/BatchNorm2d[bn1]", type=batch_norm];
 "5 ResNeXt/RELU" [id=5, scope=ResNeXt, type=RELU];
@@ -175,9 +175,9 @@ strict digraph  {
 "173 ResNeXt/AsymmetricQuantizer/asymmetric_quantize" [id=173, scope="ResNeXt/AsymmetricQuantizer", type=asymmetric_quantize];
 "174 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=174, scope="ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "175 ResNeXt/NNCFLinear[linear]/linear" [id=175, scope="ResNeXt/NNCFLinear[linear]", type=linear];
-"0 /nncf_model_input" -> "2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize";
-"1 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
-"2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
+"0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
+"1 AsymmetricQuantizer/asymmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
+"2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
 "3 ResNeXt/NNCFConv2d[conv1]/conv2d" -> "4 ResNeXt/BatchNorm2d[bn1]/batch_norm";
 "4 ResNeXt/BatchNorm2d[bn1]/batch_norm" -> "5 ResNeXt/RELU";
 "5 ResNeXt/RELU" -> "6 ResNeXt/AsymmetricQuantizer/asymmetric_quantize";

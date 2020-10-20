@@ -94,7 +94,7 @@ def main_worker(current_gpu, config):
 
     config.device = get_device(config)
     config.start_iter = 0
-
+    nncf_config = config.nncf_config
     ##########################
     # Prepare metrics log file
     ##########################
@@ -132,7 +132,7 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader = create_dataloaders(config)
-        config.nncf_config = register_default_init_args(config.nncf_config, train_data_loader, criterion)
+        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, config.device)
 
     ##################
     # Prepare model
