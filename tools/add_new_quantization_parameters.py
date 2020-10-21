@@ -13,6 +13,7 @@
 
 import sys
 from argparse import ArgumentParser
+from typing import NamedTuple, Any
 
 import torch
 from os import listdir, makedirs
@@ -20,6 +21,11 @@ from os.path import isfile, join, exists
 from shutil import copyfile
 
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer
+
+
+class ParameterToAdd(NamedTuple):
+    name: str
+    value: Any
 
 
 def main(argv):
@@ -38,7 +44,8 @@ def main(argv):
     if not exists(dst_dir):
         makedirs(dst_dir)
 
-    PRECISION_PARAM_NAME = '_num_bits'
+    param_list = [ParameterToAdd('_num_bits', torch.IntTensor([args.bitwidth])),
+                  ParameterToAdd('enabled', torch.IntTensor([1]))]
 
     pth_files = [(join(src_dir, f), join(dst_dir, f)) for f in listdir(src_dir) if
                  isfile(join(src_dir, f)) and ('.pth' in f or '.sd' in f)]
@@ -54,18 +61,20 @@ def main(argv):
             sd = pth['state_dict']
 
         hooks = [SymmetricQuantizer.SCALE_PARAM_NAME, AsymmetricQuantizer.INPUT_LOW_PARAM_NAME]
-        new_keys = []
-        for k in sd.keys():
-            for h in hooks:
-                if '.' + h in k and '.' + PRECISION_PARAM_NAME not in k:
-                    new_key = k.replace(h, PRECISION_PARAM_NAME)
-                    new_keys.append(new_key)
+        new_keys = {}
+        for new_parameter in param_list:
+            old_keys = list(sd.keys())
+            for k in sd.keys():
+                for h in hooks:
+                    new_key = k.replace(h, new_parameter.name)
+                    if ('.' + h in k) and ('.' + new_parameter.name not in k) and (new_key not in old_keys):
+                        new_keys[new_key] = new_parameter.value
         if new_keys:
-            print('\nAdding {} {}-bit params to {}'.format(len(new_keys), args.bitwidth, dst_file))
+            print(f'\nAdding #{len(new_keys)} of new keys')
             if args.verbose:
-                print('New keys: {}'.format(new_keys))
-            for new_key in new_keys:
-                sd[new_key] = torch.Tensor([args.bitwidth])
+                print('New keys:', new_keys, sep='\n')
+            for new_key, value in new_keys.items():
+                sd[new_key] = value
             pth['state_dict'] = sd
             torch.save(pth, dst_file)
         else:

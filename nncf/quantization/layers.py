@@ -98,7 +98,7 @@ class BaseQuantizer(nn.Module):
 
         self.levels = 0
 
-        self._is_enabled = True
+        self.register_buffer('enabled', torch.IntTensor([1]))
         self.initialized = False
         self.state_dict_name = None
         self.call_count = 0
@@ -134,14 +134,14 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     def is_enabled_quantization(self):
-        return self._is_enabled
+        return self.enabled[0] == 1
 
     def enable_quantization(self):
-        self._is_enabled = True
+        self.enabled[0] = 1
         self.enable_gradients()
 
     def disable_quantization(self):
-        self._is_enabled = False
+        self.enabled[0] = 0
         self.disable_gradients()
 
     def forward(self, x):
