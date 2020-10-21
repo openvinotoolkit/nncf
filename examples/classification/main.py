@@ -50,10 +50,12 @@ from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
 import mlflow
+from texttable import Texttable
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
+
 
 def mlflow_log_config(config, mode='standart'):
     if mode == 'middle':
@@ -66,15 +68,14 @@ def mlflow_log_config(config, mode='standart'):
             mlflow.log_param('algorithm', config.nncf_config['compression']['algorithm'])
             if config.nncf_config['compression']['algorithm'] == "quantization":
                 mlflow.log_param('weights/bits', config.nncf_config['compression'].get('weights', {}).get('bits', 8))
-                mlflow.log_param('activations/bits', config.nncf_config['compression'].get('activations', {}).get('bits', 8))
-
+                mlflow.log_param('activations/bits',
+                                 config.nncf_config['compression'].get('activations', {}).get('bits', 8))
     else:
         if is_main_process():
             mlflow.log_artifact(config.config)
             mlflow.log_param('epochs', config.nncf_config['epochs'])
             mlflow.log_param('optimizer', config.nncf_config['optimizer']['type'])
             mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
-
 
 
 def get_argument_parser():
@@ -88,6 +89,16 @@ def get_argument_parser():
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')
     return parser
+
+def get_compression_stats(stats, config):
+    uri = mlflow.get_registry_uri()
+    with open(mlflow.get_tracking_uri(), 'w+') as stats_file:
+        for key, val in stats.items():
+            if isinstance(val, Texttable):
+                logger.info(key)
+                logger.info(val.draw())
+            else:
+                logger.info("{}: {}".format(key, val))
 
 
 def main(argv):
@@ -126,9 +137,13 @@ def main(argv):
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-
     if is_main_process():
-        mlflow.set_experiment(config.name)
+        #try:
+        #    mlflow.create_experiment(config.name + '_new054', osp.join(config.log_dir, config.name))
+        #except:
+        #    mlflow.set_experiment(config.name)
+        #mlflow.create_experiment(config.name + '_new05', osp.join(config.log_dir, config.name))
+        mlflow.set_experiment(config.name + '_new05')
         mlflow.start_run()
         mlflow_log_config(config, mode='middle')
 
@@ -209,6 +224,8 @@ def main_worker(current_gpu, config: SampleConfig):
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
+
+    get_compression_stats(compression_ctrl.statistics(), config)
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
