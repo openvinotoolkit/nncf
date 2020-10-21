@@ -286,7 +286,7 @@ class SigmoidMetatype(OperatorMetatype):
     torch_nn_functional_patch_spec = PatchSpec([name])
     torch_module_patch_spec = PatchSpec([name])
     torch_tensor_patch_spec = PatchSpec([name])
-    
+
 
 @OPERATOR_METATYPES.register()
 class AddMetatype(OperatorMetatype):
