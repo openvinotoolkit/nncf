@@ -20,7 +20,7 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
-from tests.quantization.test_precision_init import create_hawq_test_config
+from tests.quantization.test_precision_init import HAWQConfigBuilder
 from torch.utils.data import DataLoader
 
 import nncf
@@ -523,7 +523,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
                          ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])
 def test_range_init_is_called(config_cutter, range_init_call_count, precision_init_call_count,
                               bn_adaptation_call_count, mocker):
-    config = create_hawq_test_config()
+    config = HAWQConfigBuilder().build()
     config['compression']['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_steps': 5}})
     config['input_info'] = {"sample_size": [1, 1, 4, 4]}
 

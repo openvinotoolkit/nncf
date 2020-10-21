@@ -40,7 +40,7 @@ from nncf.hw_config import HWConfig
 from nncf.initialization import DataLoaderRangeInitializeRunner
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo, InsertionCommand, OperationPriority, \
+from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionCommand, OperationPriority, \
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -49,7 +49,8 @@ from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, Qua
 from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph, \
+    QuantizersBetweenQuantizableLayers, QuantizerInsertionInfo
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
@@ -110,9 +111,11 @@ PotentialQuantizedModule = namedtuple('PotentialQuantizedModule', 'module module
 
 class NonWeightQuantizerInfo:
     def __init__(self, quantizer_module_ref: BaseQuantizer,
-                 affected_ia_op_exec_contexts: List[InputAgnosticOperationExecutionContext]):
+                 affected_ia_op_exec_contexts: List[InputAgnosticOperationExecutionContext],
+                 quantizers_between_quantizable_layers: QuantizersBetweenQuantizableLayers = None):
         self.quantizer_module_ref = quantizer_module_ref
         self.affected_ia_op_exec_contexts = affected_ia_op_exec_contexts
+        self.quantizers_between_quantizable_layers = quantizers_between_quantizable_layers
 
 
 @COMPRESSION_ALGORITHMS.register('quantization')
@@ -457,7 +460,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             qconfig = self.__get_scoped_quantizer_config(target_model, operator_scope_str,
                                                          is_weights=False,
                                                          input_shape=insertion_info.shape_to_operate_on)
-            insertion_commands += self._add_single_activation_quantizer(target_model, insertion_info, qconfig)
+            quantizer_insertion_info = QuantizerInsertionInfo.from_insertion_info(insertion_info)
+            insertion_commands += self._add_single_activation_quantizer(target_model, quantizer_insertion_info, qconfig)
 
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
@@ -466,7 +470,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return insertion_commands
 
     def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
-                                         insertion_info: InsertionInfo,
+                                         insertion_info: QuantizerInsertionInfo,
                                          quantizer_config: QuantizerConfig) -> List[InsertionCommand]:
         """Will return one or more insertion commands - depending on whether insertion_info specifies
         a single input agnostic operation execution context or there are linked contexts along with it."""
@@ -494,7 +498,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             nncf_logger.info(
                 "Processing linked activation quantizer group:\n {}\n".format("\n".join(serialized_context_list)))
 
-        self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(quantizer, affected_ia_op_exec_contexts)
+        self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(
+            quantizer, affected_ia_op_exec_contexts, insertion_info.quantizers_between_quantizable_layers)
 
         insertion_commands = []
         for curr_ia_op_exec_context in affected_ia_op_exec_contexts:
@@ -605,7 +610,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             ia_op_exec_context = module_input_node.op_exec_context.input_agnostic
             quantizer_id = InputQuantizerId(ia_op_exec_context)
             self._hw_precision_constraints.add(quantizer_id, [qconfig])
-            self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(quantizer, [ia_op_exec_context])
+            self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(
+                quantizer, [ia_op_exec_context], QuantizersBetweenQuantizableLayers())
 
         return insertion_commands
 
@@ -725,8 +731,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return pattern
 
     @staticmethod
-    def coalesce_insertion_infos(target_insertion_infos: List[InsertionInfo],
-                                 linked_scopes_groups_list: List[List[str]]) -> List[InsertionInfo]:
+    def coalesce_insertion_infos(target_insertion_infos: List[QuantizerInsertionInfo],
+                                 linked_scopes_groups_list: List[List[str]]) -> List[QuantizerInsertionInfo]:
         """Accepts a list of InsertionInfos that each correspond only to one InputAgnosticOperationExecutionContext,
         and merges these according to linked_scope_groups_list so that some or all of the resulting InsertionInfo
         objects have non-empty linked_op_exec_contexts lists.
@@ -774,10 +780,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for intra_group_indices in group_indices_list:
             main_info_idx = intra_group_indices[0]
             main_info = target_insertion_infos[main_info_idx]
-            new_info = InsertionInfo(main_info.op_exec_context,
-                                     main_info.is_input,
-                                     main_info.is_output,
-                                     shape_to_operate_on=main_info.shape_to_operate_on)
+            new_info = QuantizerInsertionInfo(main_info.op_exec_context,
+                                              main_info.is_input,
+                                              main_info.is_output,
+                                              shape_to_operate_on=main_info.shape_to_operate_on)
             for linked_info_idx in intra_group_indices[1:]:
                 new_info.linked_op_exec_contexts.append(target_insertion_infos[linked_info_idx].op_exec_context)
             retval.append(new_info)

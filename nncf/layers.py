@@ -135,7 +135,6 @@ NNCF_MODULES_DICT = {
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
 NNCF_MODULES = list(NNCF_MODULES_MAP.keys())
 
-
 NNCF_CONV_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
@@ -168,11 +167,13 @@ def add_nncf_functionality_to_user_module(module: torch.nn.Module):
     module.__class__ = NNCF_WRAPPED_USER_MODULES_DICT[user_class]
     _NNCFModuleMixin.add_mixin_fields(module)
     return module
+
+
 class RNNCellBaseNNCF(nn.Module):
     __constants__ = ['input_size', 'hidden_size', 'bias']
 
     def __init__(self, input_size, hidden_size, bias, num_chunks):
-        super(RNNCellBaseNNCF, self).__init__()
+        super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
@@ -222,6 +223,7 @@ class RNNCellBaseNNCF(nn.Module):
 
 ITERATION_MODULES = Registry('iteration_modules')
 
+
 @ITERATION_MODULES.register()
 class LSTMCellForwardNNCF(nn.Module):
     def __init__(self, input_linear, hidden_linear):
@@ -248,7 +250,7 @@ class LSTMCellForwardNNCF(nn.Module):
 
 class LSTMCellNNCF(RNNCellBaseNNCF):
     def __init__(self, input_size=1, hidden_size=1, bias=True):
-        super(LSTMCellNNCF, self).__init__(input_size, hidden_size, bias, num_chunks=4)
+        super().__init__(input_size, hidden_size, bias, num_chunks=4)
         self.cell = LSTMCellForwardNNCF(self.linear_list[0], self.linear_list[1])
 
     def forward(self, input_, hidden=None):
@@ -438,7 +440,7 @@ class NNCF_RNN(nn.Module):
 
     def __init__(self, mode='LSTM', input_size=1, hidden_size=1, num_layers=1, batch_first=False,
                  dropout=0, bidirectional=False, bias=True):
-        super(NNCF_RNN, self).__init__()
+        super().__init__()
         self.mode = mode
         self.input_size = input_size
         self.hidden_size = hidden_size

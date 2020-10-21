@@ -94,7 +94,7 @@ class HessianTraceEstimator:
 
     def __init__(self, model: nn.Module, criterion: _Loss, device: torch.device, data_loader: DataLoader,
                  num_data_points: int):
-        self._model = model.eval()
+        self._model = model
         parameters = [p for p in model.parameters() if p.requires_grad]
         self._parameter_handler = ParameterHandler(parameters, device)
         self._batch_size = data_loader.batch_size

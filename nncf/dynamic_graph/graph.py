@@ -577,7 +577,7 @@ class NNCFGraph:
         return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
 
     def _traverse_graph_recursive_helper(self, curr_node: NNCFNode,
-                                         traverse_function: Callable[[NNCFNode], Tuple[bool, List[Any]]],
+                                         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
                                          output: List[Any], traverse_forward: bool):
         is_finished, output = traverse_function(curr_node, output)
         get_nodes_fn = self.get_next_nodes if traverse_forward else self.get_previous_nodes
@@ -617,6 +617,8 @@ class NNCFGraph:
                 attrs_node['color'] = node['color']
             if 'label' in node:
                 attrs_node['label'] = node['label']
+            if 'style' in node:
+                attrs_node['style'] = node['style']
 
             out_graph.add_node(node_name, **attrs_node)
         if extended:

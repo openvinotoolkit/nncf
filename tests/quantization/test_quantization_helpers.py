@@ -68,11 +68,11 @@ def get_quantization_config_without_range_init(model_size=4):
     return config
 
 
-def get_squeezenet_quantization_config(model_size=32, batch_size=3):
-    config = get_quantization_config_without_range_init(model_size)
+def get_squeezenet_quantization_config(image_size=32, batch_size=3):
+    config = get_quantization_config_without_range_init(image_size)
     config['model'] = 'squeezenet1_1_custom'
     config['input_info'] = {
-        "sample_size": [batch_size, 3, model_size, model_size],
+        "sample_size": [batch_size, 3, image_size, image_size],
     }
     return config
 
