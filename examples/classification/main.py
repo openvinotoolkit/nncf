@@ -51,31 +51,19 @@ from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
 import mlflow
 from texttable import Texttable
+import datetime
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
 
-def mlflow_log_config(config, mode='standart'):
-    if mode == 'middle':
-        if is_main_process():
-            mlflow.log_artifact(config.config)
-            mlflow.log_param('epochs', config.nncf_config['epochs'])
-            mlflow.log_param('optimizer', config.nncf_config['optimizer']['type'])
-            mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
-            mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
-            mlflow.log_param('algorithm', config.nncf_config['compression']['algorithm'])
-            if config.nncf_config['compression']['algorithm'] == "quantization":
-                mlflow.log_param('weights/bits', config.nncf_config['compression'].get('weights', {}).get('bits', 8))
-                mlflow.log_param('activations/bits',
-                                 config.nncf_config['compression'].get('activations', {}).get('bits', 8))
-    else:
-        if is_main_process():
-            mlflow.log_artifact(config.config)
-            mlflow.log_param('epochs', config.nncf_config['epochs'])
-            mlflow.log_param('optimizer', config.nncf_config['optimizer']['type'])
-            mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
+def mlflow_log_config(config):
+    if is_main_process():
+        mlflow.log_artifact(config.config)
+        mlflow.log_param('epochs', config.nncf_config['epochs'])
+        mlflow.log_param('optimizer', config.nncf_config['optimizer']['type'])
+        mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
 
 
 def get_argument_parser():
@@ -90,15 +78,19 @@ def get_argument_parser():
                         help='Enables running validation every given number of epochs')
     return parser
 
-def get_compression_stats(stats, config):
-    uri = mlflow.get_registry_uri()
-    with open(mlflow.get_tracking_uri(), 'w+') as stats_file:
+
+# hope it works
+def log_compression_stats(stats, config):
+    logging_path = mlflow.active_run().info.artifact_uri
+    stats_path = osp.join(logging_path, 'comp_stats.txt')
+    with open(stats_path, 'w+') as stats_file:
         for key, val in stats.items():
             if isinstance(val, Texttable):
-                logger.info(key)
-                logger.info(val.draw())
+                stats_file.write(key)
+                stats_file.write(val.draw())
             else:
-                logger.info("{}: {}".format(key, val))
+                stats_file.write("{}: {}".format(key, val))
+    mlflow.log_artifact(stats_path)
 
 
 def main(argv):
@@ -138,15 +130,14 @@ def main(argv):
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
     if is_main_process():
-        #try:
+        # try:
         #    mlflow.create_experiment(config.name + '_new054', osp.join(config.log_dir, config.name))
-        #except:
+        # except:
         #    mlflow.set_experiment(config.name)
-        #mlflow.create_experiment(config.name + '_new05', osp.join(config.log_dir, config.name))
-        mlflow.set_experiment(config.name + '_new05')
+        # mlflow.create_experiment(config.name + '_new05', osp.join(config.log_dir, config.name))
+        mlflow.set_experiment(config.name)
+        #mlflow.start_run('{:%Y-%m-%d__%H-%M-%S}'.format(datetime.datetime.now()))
         mlflow.start_run()
-        mlflow_log_config(config, mode='middle')
-
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
@@ -225,7 +216,8 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    get_compression_stats(compression_ctrl.statistics(), config)
+    mlflow_log_config(config)
+    log_compression_stats(compression_ctrl.statistics(), config)
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -299,7 +291,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
-                    mlflow.log_metric("compression/statistics/{0}".format(key), value)
+                    mlflow.log_metric("compression/statistics/{0}".format(key), value, step=len(train_loader) * epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
@@ -478,16 +470,16 @@ def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epo
             config.tb.add_scalar("train/loss", losses.avg, i + global_step)
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
-            mlflow.log_metric("train/learning_rate", float(get_lr(optimizer)))
-            mlflow.log_metric("train/criterion_loss", float(criterion_losses.avg))
-            mlflow.log_metric("train/compression_loss", float(compression_losses.avg))
-            mlflow.log_metric("train/loss", float(losses.avg))
-            mlflow.log_metric("train/top1", float(top1.avg))
-            mlflow.log_metric("train/top5", float(top5.avg))
+            mlflow.log_metric("train/learning_rate", float(get_lr(optimizer)), step=i + global_step)
+            mlflow.log_metric("train/criterion_loss", float(criterion_losses.avg), step=i + global_step)
+            mlflow.log_metric("train/compression_loss", float(compression_losses.avg), step=i + global_step)
+            mlflow.log_metric("train/loss", float(losses.avg), step=i + global_step)
+            mlflow.log_metric("train/top1", float(top1.avg), step=i + global_step)
+            mlflow.log_metric("train/top5", float(top5.avg), step=i + global_step)
 
             for stat_name, stat_value in compression_ctrl.statistics().items():
                 if isinstance(stat_value, (int, float)):
-                    mlflow.log_metric('train/statistics/{}'.format(stat_name), stat_value)
+                    mlflow.log_metric('train/statistics/{}'.format(stat_name), stat_value, step=i + global_step)
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
@@ -537,9 +529,9 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
-            mlflow.log_metric("val/loss", float(losses.avg))
-            mlflow.log_metric("val/top1", float(top1.avg))
-            mlflow.log_metric("val/top1", float(top1.avg))
+            mlflow.log_metric("val/loss", float(losses.avg), step=len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top1", float(top1.avg), step=len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top1", float(top1.avg), step=len(val_loader) * config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
