@@ -285,6 +285,7 @@ class SigmoidMetatype(OperatorMetatype):
     name = "sigmoid"
     torch_nn_functional_patch_spec = PatchSpec([name])
     torch_module_patch_spec = PatchSpec([name])
+    torch_tensor_patch_spec = PatchSpec([name])
 
 
 @OPERATOR_METATYPES.register()
@@ -310,7 +311,8 @@ class SubMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class MulMetatype(OperatorMetatype):
     name = "mul"
-    torch_tensor_patch_spec = PatchSpec(["__mul__",
+    torch_tensor_patch_spec = PatchSpec(["mul",
+                                         "__mul__",
                                          "__imul__",
                                          "__rmul__"])
     hw_config_names = [HWConfigOpName.MULTIPLY]
