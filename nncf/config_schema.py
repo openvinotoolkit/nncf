@@ -668,7 +668,13 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                             "this mode it is possible to use hw config."),
     },
     "required": ["input_info"],
-    "definitions": REF_VS_ALGO_SCHEMA
+    "definitions": REF_VS_ALGO_SCHEMA,
+    "dependencies": {
+        "target_device": {
+            "properties": {
+                "quantizer_setup_type": {"const": "propagation_based"}}
+        }
+    }
 }
 
 
