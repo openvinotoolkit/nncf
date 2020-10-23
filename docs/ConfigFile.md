@@ -26,7 +26,8 @@ Below is an example of the NNCF configuration file
                 },
             ],
         },
-        "hw_config_type": "cpu", // If specified, the compression algorithms will use parameter presets that are more likely to result in best performance on a given HW type. Optional.
+        "target_device": "VPU", // The target device, the specificity of which will be taken into account when optimizing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter can takes values from the set ('CPU', 'GPU', 'VPU', 'NONE') Optional.
+        "quantizer_setup_type": "propagation_based" // Selects the mode of placement quantizers - either 'pattern_based' or 'propagation_based'.
         "compression": [ // One or more definitions for the compression algorithms to be applied to the model; either a single JSON object or an array of JSON objects. See README for each compression algorithm for a description of the available config parameters.
             {
                 "algorithm": quantization,
