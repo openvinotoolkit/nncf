@@ -57,7 +57,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         return stats
 
     def freeze(self):
-        pass
+        for layer in self.sparsified_module_info:
+            layer.operand.frozen = True
 
     def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
         if sparsity_level >= 1 or sparsity_level < 0:
@@ -81,9 +82,11 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
     def _set_masks_for_threshold(self, threshold_val, target_sparsified_module_info_list):
         for layer in target_sparsified_module_info_list:
-            layer.operand.binary_mask = calc_magnitude_binary_mask(layer.module.weight,
-                                                                   self.weight_importance,
-                                                                   threshold_val)
+            if not layer.operand.frozen:
+                layer.operand.binary_mask = calc_magnitude_binary_mask(layer.module.weight,
+                                                                       self.weight_importance,
+                                                                       threshold_val)
+
 
     def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
         all_weights = []

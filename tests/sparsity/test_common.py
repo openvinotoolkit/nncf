@@ -99,8 +99,8 @@ class TestSparseModules:
             assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
         for m in compression_ctrl.sparsified_module_info:
-            if hasattr(m.operand, "sparsify"):
-                assert not m.operand.sparsify
+            if hasattr(m.operand, "frozen"):
+                assert  m.operand.frozen
 
 
 @pytest.fixture(name="magnitude_algo_mock")
