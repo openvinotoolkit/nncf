@@ -100,7 +100,8 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
         # 2. Clusters for nodes that should be pruned together (taking into account clusters for eltwises)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
-            all_pruned_inputs = set()
+            all_pruned_inputs = []
+            pruned_inputs_idxs = set()
             for node in cluster.nodes:
                 sources = get_sources_of_node(node, graph, pruned_types)
                 for source_node in sources:
@@ -110,9 +111,12 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                         source_module = target_model.get_module_by_scope(source_scope)
                         source_node_info = NodeInfo(source_node, source_module, source_scope)
 
-                        all_pruned_inputs.add(source_node_info)
-            cluster = NodesCluster(i, list(all_pruned_inputs), [n.id for n in all_pruned_inputs])
-            pruned_nodes_clusterization.add_cluster(cluster, i)
+                        if source_node.node_id not in pruned_inputs_idxs:
+                            all_pruned_inputs.append(source_node_info)
+                            pruned_inputs_idxs.add(source_node.node_id)
+            if all_pruned_inputs:
+                cluster = NodesCluster(i, list(all_pruned_inputs), [n.id for n in all_pruned_inputs])
+                pruned_nodes_clusterization.add_cluster(cluster, i)
 
         last_cluster_idx = len(special_ops_clusterization.get_all_clusters())
 
@@ -141,11 +145,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                     pruned_nodes_clusterization.union_clusters(cluster_id, previous_conv_cluster_id)
 
         # 5. Checks for groups (all nodes in group can prune or not).
-        for cluster in pruned_nodes_clusterization.get_all_clusters():
+        for cluster in list(pruned_nodes_clusterization.get_all_clusters()):
             can_prune_nodes = [self._can_prune_module(target_model, node_info.module, node_info.module_scope) for node_info in cluster.nodes]
             if not all([can_prune[0] for can_prune in can_prune_nodes]):
                 # TODO: beautiful informative logging here
-                nncf_logger.info("Group of nodes {} can't be pruned".format(cluster.nodes))
+                nncf_logger.info("Group of nodes {} can't be pruned, msg = {}".format(cluster.nodes, can_prune_nodes))
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
         return pruned_nodes_clusterization
 

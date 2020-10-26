@@ -257,7 +257,8 @@ class Elementwise(DefaultMetaOp):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nx_node['input_masks'] = input_masks
-        assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
+        if input_masks[0] is not None:
+            assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
         nx_node['output_mask'] = input_masks[0]
         nx_node['accept_pruned_input'] = True
 
