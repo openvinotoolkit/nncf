@@ -209,3 +209,19 @@ def get_previous_conv(target_model: NNCFNetwork, module, module_scope):
     if len(sources) == 1 and sources[0].op_exec_context.operator_name in conv_types:
         return sources[0]
     return None
+
+
+def _find_next_nodes_of_types(model, nncf_node, types):
+    sources_types = types
+    graph = model.get_original_graph()
+    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=sources_types,
+                                        visited=visited)
+    nncf_nodes = [nncf_node]
+    if nncf_node.op_exec_context.operator_name in sources_types:
+        nncf_nodes = graph.get_next_nodes(nncf_node)
+
+    next_nodes = []
+    for node in nncf_nodes:
+        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
+    return next_nodes

@@ -764,6 +764,17 @@ class NNCFGraph:
                 matching_graph_op_nodes.append(node)
         return matching_graph_op_nodes
 
+    def get_all_nodes_of_type(self, type_list) -> List[NNCFNode]:
+        all_nodes_of_type = []
+        for node_key in self.get_all_node_keys():
+            nx_node = self._nx_graph.nodes[node_key]
+            nncf_node = self._nx_node_to_nncf_node(nx_node)
+            node_type = self.node_type_fn(nx_node)
+            if node_type in type_list:
+                all_nodes_of_type.append(nncf_node)
+        return all_nodes_of_type
+
+
 class NNCFNodeExpression(NodeExpression):
     def __init__(self, node_type: str = None, filter_fn=None):
         super().__init__(node_type, filter_fn, node_type_fn=NNCFGraph.node_type_fn)

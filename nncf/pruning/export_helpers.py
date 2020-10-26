@@ -82,7 +82,7 @@ class Input(DefaultMetaOp):
 class IdentityMaskForwardOps(DefaultMetaOp):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype]
-    additional_types = ["h_sigmoid", "h_swish"]
+    additional_types = ["h_sigmoid", "h_swish", 'RELU']
 
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
@@ -257,8 +257,9 @@ class Elementwise(DefaultMetaOp):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nx_node['input_masks'] = input_masks
-        nx_node['output_mask'] = None
-        nx_node['accept_pruned_input'] = False
+        assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
+        nx_node['output_mask'] = input_masks[0]
+        nx_node['accept_pruned_input'] = True
 
 
 @PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
