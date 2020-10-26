@@ -1,5 +1,4 @@
-FROM ubuntu:16.04
- 
+FROM ubuntu:18.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
         apt-transport-https \
         git  && \
@@ -24,12 +23,16 @@ RUN apt-get update && \
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends  python3-dev  python3-pip  && \
+    apt-get install -y --no-install-recommends \
+    python3.6 \
+    python3.6-dev \
+    python3-pip \
+    virtualenv && \
     cd /usr/bin && \
-    ln -s python3.5 python && \
+    ln -s python3.6 python && \
     curl https://bootstrap.pypa.io/get-pip.py | python \
-    && \    
-    rm -rf /var/lib/apt/lists/* 
+    && \
+    rm -rf /var/lib/apt/lists/*
 
 
 ARG https_proxy
@@ -39,4 +42,4 @@ ENV no_proxy=$no_proxy
 
 RUN pip install setuptools
 
-ENTRYPOINT cd /home/nncf/nn-compression-framework/ && python setup.py install --cpu-only  && bash
+ENTRYPOINT cd /home/nncf/ && python setup.py develop --cpu-only && bash
