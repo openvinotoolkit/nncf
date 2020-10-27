@@ -860,6 +860,11 @@ class QuantizationController(QuantizationControllerBase):
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
 
+    def prepare_for_export(self):
+        for quantizer_id, quantizer in self.all_quantizations.items():
+            if not quantizer.is_enabled_quantization():
+                nncf_logger.warning('Disabled quantization on export to ONNX: {}'.format(quantizer_id))
+
     def update_metric_store(self, do_all: bool = False):
         for collector in self.non_stable_metric_collectors:
             collector.collect()
@@ -1031,7 +1036,7 @@ class QuantizationController(QuantizationControllerBase):
         nncf_network = self._model
         nncf_graph = nncf_network.get_original_graph()
         non_weight_quantizers = {key: quantizer_info.quantizer_module_ref for key, quantizer_info \
-                                in self.non_weight_quantizers.items() if not isinstance(key, InputQuantizerId)}
+                                 in self.non_weight_quantizers.items() if not isinstance(key, InputQuantizerId)}
 
         def traverse_graph(curr_nx_node_key: str, weight_quantizers: List[nn.Module]) -> Optional[List[nn.Module]]:
             nx_node = nncf_graph.get_nx_node_by_key(curr_nx_node_key)
@@ -1118,10 +1123,9 @@ class QuantizationController(QuantizationControllerBase):
 
     def statistics(self):
         stats = super().statistics()
-        if self.is_staged_scheduler:
-            num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
-            multiplier = 100 / len(self.all_quantizations)
-            stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
+        multiplier = 100 / len(self.all_quantizations)
+        stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
         if self._collect_compression_metrics:
             self.update_metric_store()
             for metric in self.metric_store.values():

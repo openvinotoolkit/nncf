@@ -43,7 +43,7 @@ from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
 from tests.helpers import create_compressed_model_and_algo_for_test, MockModel, create_conv, \
-    create_mock_dataloader
+    create_mock_dataloader, BasicConvTestModel
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
     get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
     get_squeezenet_quantization_config
@@ -626,3 +626,20 @@ def test_flops(config_creator, ref_values):
     order = list(range(len(quantizers)))
     order.reverse()
     assert flops_counter.ratio_limits([2, 8], order, constraints) == ref_values[4]
+
+
+def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
+    config = get_quantization_config_without_range_init()
+    config["compression"]["params"] = {
+        "activations_quant_start_epoch": 2,
+        "weights_quant_start_epoch": 1
+    }
+    model_save, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
+    ctrl_save.scheduler.epoch_step()
+
+    _, ctrl_load = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
+                                                             resuming_state_dict=model_save.state_dict())
+    for quantizer_info in ctrl_load.non_weight_quantizers.values():
+        assert not quantizer_info.quantizer_module_ref.is_enabled_quantization()
+    for quantizer in ctrl_load.weight_quantizers.values():
+        assert quantizer.is_enabled_quantization()
