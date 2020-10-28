@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+import os
 import os.path as osp
 import sys
 import time
@@ -60,13 +60,11 @@ model_names = sorted(name for name in models.__dict__
 
 def mlflow_log_config(config):
     if is_main_process():
-        mlflow.log_artifact(config.config)
-        mlflow.log_param('model', config.model)
-        mlflow.log_param('dataset', config.dataset)
         mlflow.log_param('epochs', config.nncf_config['epochs'])
-        mlflow.log_param('optimizer', config.nncf_config['optimizer']['type'])
+        mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
         mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
-        mlflow.log_param('algoritm', config.nncf_config.get('compression', {}).get('algoritm', 'None'))
+        mlflow.set_tag('Log Dir Path', config.log_dir)
+        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, config.log_dir.split('/')[-1]))
 
 
 def get_argument_parser():
@@ -82,18 +80,6 @@ def get_argument_parser():
     return parser
 
 
-def log_compression_stats(stats):
-    logging_path = mlflow.active_run().info.artifact_uri
-    stats_path = osp.join(logging_path, 'comp_stats.txt')
-    with open(stats_path, 'w+') as stats_file:
-        for key, val in stats.items():
-            if isinstance(val, Texttable):
-                stats_file.write(key)
-                stats_file.write(val.draw())
-            else:
-                stats_file.write("{}: {}".format(key, val))
-
-
 def main(argv):
     parser = get_argument_parser()
     args = parser.parse_args(args=argv)
@@ -103,10 +89,14 @@ def main(argv):
         config.update_from_env()
 
     mlflow.set_tracking_uri(osp.join(config.log_dir, 'mlruns'))
+    # ToDo: naming experiment problem
     try:
-       mlflow.create_experiment('Folder_of_experiments', osp.join(config.log_dir, 'results'))
+        config.name = get_name(config)
+        if not osp.exists(osp.join(osp.join(config.log_dir, 'mlruns'), config.name)):
+            os.mkdir(osp.join(osp.join(config.log_dir, 'mlruns'), config.name))
+        mlflow.create_experiment(config.name, osp.join(osp.join(osp.join(config.log_dir), 'mlruns')), config.name)
     except:
-       mlflow.set_experiment('Folder_of_experiments')
+        mlflow.set_experiment(config.name)
 
     configure_paths(config)
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
@@ -217,8 +207,6 @@ def main_worker(current_gpu, config: SampleConfig):
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
     mlflow_log_config(config)
-    if is_main_process() and config.mode.lower() == 'test':
-        log_compression_stats(compression_ctrl.statistics())
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -233,7 +221,6 @@ def main_worker(current_gpu, config: SampleConfig):
               train_loader, train_sampler, val_loader, best_acc1)
 
     if is_main_process():
-        mlflow.log_artifact(logger.handlers[1].baseFilename)
         mlflow.end_run()
 
 
@@ -247,9 +234,6 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
 
         # train for one epoch
         train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epoch, config, is_inception)
-
-        if is_main_process():
-            mlflow.log_artifact(logger.handlers[1].baseFilename)
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
@@ -475,16 +459,9 @@ def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epo
             config.tb.add_scalar("train/loss", losses.avg, i + global_step)
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
-            mlflow.log_metric("train/learning_rate", float(get_lr(optimizer)), step=i + global_step)
-            mlflow.log_metric("train/criterion_loss", float(criterion_losses.avg), step=i + global_step)
-            mlflow.log_metric("train/compression_loss", float(compression_losses.avg), step=i + global_step)
-            mlflow.log_metric("train/loss", float(losses.avg), step=i + global_step)
-            mlflow.log_metric("train/top1", float(top1.avg), step=i + global_step)
-            mlflow.log_metric("train/top5", float(top5.avg), step=i + global_step)
 
             for stat_name, stat_value in compression_ctrl.statistics().items():
                 if isinstance(stat_value, (int, float)):
-                    mlflow.log_metric('train/statistics/{}'.format(stat_name), stat_value, step=i + global_step)
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
@@ -536,7 +513,7 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
             mlflow.log_metric("val/loss", float(losses.avg), step=len(val_loader) * config.get('cur_epoch', 0))
             mlflow.log_metric("val/top1", float(top1.avg), step=len(val_loader) * config.get('cur_epoch', 0))
-            mlflow.log_metric("val/top1", float(top1.avg), step=len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top5", float(top5.avg), step=len(val_loader) * config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
