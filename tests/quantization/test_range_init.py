@@ -433,6 +433,7 @@ class SingleConv2dSyntheticWeightModel(torch.nn.Module):
 def test_percentile_init(quantization_mode: str, per_channel: bool):
     class SyntheticDataset(torch.utils.data.Dataset):
         def __init__(self):
+            super().__init__()
             self._length = 1
 
         def __getitem__(self, idx):

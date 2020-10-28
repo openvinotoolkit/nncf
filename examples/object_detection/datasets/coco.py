@@ -77,6 +77,7 @@ class COCODataset(data.Dataset):
 
     def __init__(self, annotation_file, images_folder, transform=None, target_transform=None, scale_bboxes=True,
                  return_image_info=False, rgb=True):
+        super().__init__()
         self.rgb = rgb
         self.target_transform = target_transform
         self.return_image_info = return_image_info

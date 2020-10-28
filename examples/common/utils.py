@@ -246,6 +246,7 @@ def is_pretrained_model_requested(config: SampleConfig) -> bool:
 class MockDataset(data.Dataset):
     def __init__(self, img_size: Tuple[int, int] = (32, 32), num_images: int = 1000,
                  transform=None):
+        super().__init__()
         self._img_size = img_size
         self._num_images = num_images
         self._transform = transform

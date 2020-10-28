@@ -243,7 +243,8 @@ class CompressionAlgorithmController:
                               filename, input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
-                              opset_version=10)
+                              opset_version=10,
+                              training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
         model.forward = original_forward
 
 
