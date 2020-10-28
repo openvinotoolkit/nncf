@@ -42,4 +42,4 @@ ENV no_proxy=$no_proxy
 
 RUN pip install setuptools
 
-ENTRYPOINT cd /home/nncf/ && python setup.py develop --cpu-only && bash
+ENTRYPOINT cd /home/nncf/ && python setup.py install --cpu-only && bash
