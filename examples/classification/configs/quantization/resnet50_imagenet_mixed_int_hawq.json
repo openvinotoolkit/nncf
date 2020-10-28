@@ -24,17 +24,15 @@
         },
         "weight_decay": 1e-05
     },
+    "quantizer_setup_type": "pattern_based",
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "mode": "asymmetric",
-            "bits": 4
+            "mode": "asymmetric"
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 4
+            "mode": "asymmetric"
         },
-        "quantize_inputs": true,
         "initializer": {
             "precision": {
                 "type": "hawq",

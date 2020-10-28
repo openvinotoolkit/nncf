@@ -42,7 +42,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                  config, weight_importance: str):
         super().__init__(target_model, sparsified_module_info)
         self.config = config
-        params = self.config.get("params", {})        
+        params = self.config.get("params", {})
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
         self._scheduler = scheduler_cls(self, params)

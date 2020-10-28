@@ -10,12 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
 from copy import deepcopy
+
 from torchvision.models import resnet50
 
 from examples.common.models.classification import squeezenet1_1_custom
@@ -34,7 +36,7 @@ from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
     get_squeezenet_quantization_config
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, MockModel, create_conv
+    create_compressed_model_and_algo_for_test, create_conv
 
 
 def compare_qconfigs(config: QuantizerConfig, quantizer: BaseQuantizer):
@@ -54,7 +56,7 @@ def test_quantization_configs__with_defaults():
     weight_quantizers = compression_ctrl.weight_quantizers
     activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
-    ref_weight_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, True)
+    ref_weight_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, True, True, None, True)
     for wq in weight_quantizers.values():
         compare_qconfigs(ref_weight_qconfig, wq)
 
@@ -79,6 +81,7 @@ def test_quantization_configs__custom():
             "signed": True,
         },
     })
+    config['target_device'] = 'NONE'
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
@@ -107,6 +110,8 @@ def test_quantization_configs__custom():
 
 def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name):
     def get_name(name):
+        if name == '/nncf_model_input_0':
+            return name
         return '/'.join([model_name, name])
 
     all_quantizations = {str(key): quantizer for key, quantizer in algo.all_quantizations.items()}
@@ -134,7 +139,7 @@ def test_get_weight_activation_pairs():
 
     actual_pairs = algo.get_weights_activation_quantizers_pairs()
     ref_pair_names = [(['Sequential[features]/Sequential[0]/NNCFConv2d[0]module_weight'],
-                       'Sequential[features]/Sequential[0]/NNCFConv2d[0]module_input',
+                       '/nncf_model_input_0',
                        ),
                       (['Sequential[features]/Sequential[1]/NNCFConv2d[0]module_weight'],
                        'Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0',
@@ -173,7 +178,7 @@ def test_get_weight_activation_pairs__with_double_weights_per_activation():
 
     actual_pairs = algo.get_weights_activation_quantizers_pairs()
     ref_pair_names = [(['NNCFConv2d[conv1]module_weight', 'NNCFConv2d[conv2]module_weight'],
-                       'ReLU[relu]/RELU_0')]
+                       '/nncf_model_input_0')]
 
     compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name)
 
@@ -192,22 +197,21 @@ class DoubleWeightsPerActivationWithExtraModule(DoubleWeightsPerActivation):
 #         \            \
 #         sigmoid - conv2d
 #
+
 def test_get_weight_activation_pairs__with_extra_module():
     model_cls = DoubleWeightsPerActivationWithExtraModule
     model_name = model_cls.__name__
     config = get_quantization_config_without_range_init()
+    config['quantizer_setup_type'] = 'pattern_based'
     config["compression"].update({
         "quantizable_subgraph_patterns": [["sigmoid", "conv2d"]],
         "quantize_inputs": False})
-
     _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
-
     actual_pairs = algo.get_weights_activation_quantizers_pairs()
     ref_pair_names = [(['NNCFConv2d[conv1]module_weight', 'NNCFConv2d[conv2]module_weight'],
                        'ReLU[relu]/RELU_0')]
 
     compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name)
-
 
 def test_can_load_quant_algo__with_defaults():
     model = BasicConvTestModel()
@@ -238,7 +242,7 @@ def test_can_load_quant_algo__with_defaults():
 
 def test_can_create_quant_loss_and_scheduler():
     config = get_quantization_config_without_range_init()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     loss = compression_ctrl.loss
     assert isinstance(loss, CompressionLoss)
@@ -443,23 +447,16 @@ def test_quantize_inputs():
         }
     ]
 
-    model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_INPUT_MODULE_SCOPES = [
-        "QuantizeInputsTestModel/NNCFConv2d[conv1]",
-        "QuantizeInputsTestModel/NNCFConv2d[conv2]",
-        "QuantizeInputsTestModel/NNCFConv2d[conv5]",
-        "QuantizeInputsTestModel/NNCFConv2d[conv6]",
+        '/nncf_model_input_0',
+        '/nncf_model_input_1',
+        '/nncf_model_input_2',
+        '/nncf_model_input_3',
+        '/nncf_model_input_4'
     ]
-    for ref_qinput_module_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
-        scope = Scope.from_str(ref_qinput_module_scope_str)
-        assert model.get_module_by_scope(scope) is not None
-        assert ref_qinput_module_scope_str in compression_ctrl.quantized_inputs_modules_registry
-
-    nncf_modules_dict = model.get_nncf_modules()
-    for scope, nncf_module in nncf_modules_dict.items():
-        scope_str = str(scope)
-        update_inputs_count = sum(1 for pre_op in nncf_module.pre_ops.values() if isinstance(pre_op, UpdateInputs))
-        if scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
-            assert update_inputs_count == 1
-        else:
-            assert update_inputs_count == 0
+    actual_input_quantizer_str_scopes =\
+         [str_scope for str_scope in model.activation_quantizers if 'nncf_model_input' in str_scope]
+    assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
+    for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
+        assert isinstance(model.activation_quantizers[ref_qinput_scope_str], SymmetricQuantizer)

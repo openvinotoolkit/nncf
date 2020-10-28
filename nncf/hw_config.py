@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Type, List, Dict
+from typing import Type, List, Dict, Set, Optional
 
 import addict as ad
 import jstyleson as json
@@ -27,9 +27,9 @@ from nncf.quantization.layers import QuantizerConfig, QuantizationMode, Symmetri
 
 
 class HWConfigType(Enum):
-    CPU = "cpu"
-    GPU = "gpu"
-    VPU = "vpu"
+    CPU = 'CPU'
+    GPU = 'GPU'
+    VPU = 'VPU'
 
     @staticmethod
     def from_str(config_value: str) -> 'HWConfigType':
@@ -41,6 +41,13 @@ class HWConfigType(Enum):
             return HWConfigType.VPU
         raise RuntimeError("Unknown HW config type string")
 
+HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
+    'ANY': HWConfigType.CPU.value,
+    'CPU': HWConfigType.CPU.value,
+    'VPU': HWConfigType.VPU.value,
+    'GPU': HWConfigType.GPU.value,
+    'NONE': None
+}
 
 def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['OperatorMetatype']:
     retval = []
@@ -52,6 +59,9 @@ def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['Ope
 
 class HWConfig(List):
     QUANTIZATION_ALGORITHM_NAME = "quantization"
+    ATTRIBUTES_NAME = "attributes"
+    SCALE_ATTRIBUTE_NAME = "scales"
+    UNIFIED_TYPE_NAME = "unified"
 
     TYPE_TO_CONF_NAME_DICT = {
         HWConfigType.CPU: "cpu.json",
@@ -70,49 +80,53 @@ class HWConfig(List):
                          HWConfig.TYPE_TO_CONF_NAME_DICT[hw_config_type]])
 
     @classmethod
-    def from_json(cls, path):
+    def from_dict(cls, dct: dict):
         # pylint:disable=too-many-nested-blocks,too-many-branches
+        hw_config = cls()
+        hw_config.target_device = dct['target_device']
+
+        for algorithm_name, algorithm_configs in dct.get('config', {}).items():
+            hw_config.registered_algorithm_configs[algorithm_name] = {}
+            for algo_config_alias, algo_config in algorithm_configs.items():
+                for key, val in algo_config.items():
+                    if not isinstance(val, list):
+                        algo_config[key] = [val]
+
+                hw_config.registered_algorithm_configs[algorithm_name][algo_config_alias] = list(
+                    product_dict(algo_config))
+
+        for op_dict in dct.get('operations', []):
+            for algorithm_name in op_dict:
+                if algorithm_name not in hw_config.registered_algorithm_configs:
+                    continue
+                tmp_config = {}
+                for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
+                    if not isinstance(algorithm_configs, list):
+                        algorithm_configs = [algorithm_configs]
+
+                    tmp_config[algo_and_op_specific_field_name] = []
+                    for algorithm_config in algorithm_configs:
+                        if isinstance(algorithm_config, str):  # Alias was supplied
+                            tmp_config[algo_and_op_specific_field_name].extend(
+                                hw_config.registered_algorithm_configs[algorithm_name][algorithm_config])
+                        else:
+                            for key, val in algorithm_config.items():
+                                if not isinstance(val, list):
+                                    algorithm_config[key] = [val]
+
+                            tmp_config[algo_and_op_specific_field_name].extend(list(product_dict(algorithm_config)))
+
+                op_dict[algorithm_name] = tmp_config
+
+            hw_config.append(ad.Dict(op_dict))
+
+        return hw_config
+
+    @classmethod
+    def from_json(cls, path):
         with open(path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
-            hw_config = cls()
-            hw_config.target_device = json_config['target_device']
-
-            for algorithm_name, algorithm_configs in json_config.get('config', {}).items():
-                hw_config.registered_algorithm_configs[algorithm_name] = {}
-                for algo_config_alias, algo_config in algorithm_configs.items():
-                    for key, val in algo_config.items():
-                        if not isinstance(val, list):
-                            algo_config[key] = [val]
-
-                    hw_config.registered_algorithm_configs[algorithm_name][algo_config_alias] = list(
-                        product_dict(algo_config))
-
-            for op_dict in json_config.get('operations', []):
-                for algorithm_name in op_dict:
-                    if algorithm_name not in hw_config.registered_algorithm_configs:
-                        continue
-                    tmp_config = {}
-                    for algo_and_op_specific_field_name, algorithm_configs in op_dict[algorithm_name].items():
-                        if not isinstance(algorithm_configs, list):
-                            algorithm_configs = [algorithm_configs]
-
-                        tmp_config[algo_and_op_specific_field_name] = []
-                        for algorithm_config in algorithm_configs:
-                            if isinstance(algorithm_config, str):  # Alias was supplied
-                                tmp_config[algo_and_op_specific_field_name].extend(
-                                    hw_config.registered_algorithm_configs[algorithm_name][algorithm_config])
-                            else:
-                                for key, val in algorithm_config.items():
-                                    if not isinstance(val, list):
-                                        algorithm_config[key] = [val]
-
-                                tmp_config[algo_and_op_specific_field_name].extend(list(product_dict(algorithm_config)))
-
-                    op_dict[algorithm_name] = tmp_config
-
-                hw_config.append(ad.Dict(op_dict))
-
-            return hw_config
+            return HWConfig.from_dict(json_config)
 
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
@@ -159,9 +173,19 @@ class HWConfig(List):
                                signedness_to_force=signedness_to_force,
                                is_weights=for_weights)
 
+    @staticmethod
+    def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
+        return qconf_list is None
+
+    @staticmethod
+    def is_wildcard_quantization(qconf_list: Optional[List[QuantizerConfig]]):
+        # Corresponds to an op itself being specified in the HW config, but having no associated quantization
+        # configs specified
+        return qconf_list is not None and len(qconf_list) == 0
+
     def get_metatype_vs_quantizer_configs_map(self, for_weights=False) -> Dict[Type['OperatorMetatype'],
-                                                                               List[QuantizerConfig]]:
-        # 'None' for marking ops as quantization agnostic by default if not specified otherwise by HW config
+                                                                               Optional[List[QuantizerConfig]]]:
+        # 'None' for ops unspecified in HW config, empty list for wildcard quantization ops
         retval = {k: None for k in OPERATOR_METATYPES.registry_dict.values()}
         config_key = "weights" if for_weights else "activations"
         for op_dict in self:
@@ -175,24 +199,31 @@ class HWConfig(List):
             if self.QUANTIZATION_ALGORITHM_NAME in op_dict:
                 allowed_qconfs = op_dict[self.QUANTIZATION_ALGORITHM_NAME][config_key]
             else:
-                # TODO: Ops without specified quantization configs actually have to be associated
-                # with a special "wildcard" quantizer that can be merged with any non-wildcard quantizer
-                # or, if no merge occured during propagation, use any quantizer configuration. This is
-                # to ensure that as many ops in the model control flow graph as possible are executed in
-                # low precision to conserve memory.
-                allowed_qconfs = None
+                allowed_qconfs = []
 
-            if allowed_qconfs is not None:
-                qconf_list_with_possible_duplicates = []
-                for hw_config_qconf_dict in allowed_qconfs:
-                    qconf_list_with_possible_duplicates.append(
-                        self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
+            qconf_list_with_possible_duplicates = []
+            for hw_config_qconf_dict in allowed_qconfs:
+                qconf_list_with_possible_duplicates.append(
+                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
 
-                qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
-            else:
-                qconf_list = None
+            qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 
             for meta in metatypes:
                 retval[meta] = qconf_list
 
+        return retval
+
+    def get_operations_with_unified_scales(self) -> Set[Type['OperatorMetatype']]:
+        retval = set()
+        for op_dict in self:
+            if self.ATTRIBUTES_NAME in op_dict:
+                if self.SCALE_ATTRIBUTE_NAME in op_dict[self.ATTRIBUTES_NAME]:
+                    if op_dict[self.ATTRIBUTES_NAME][self.SCALE_ATTRIBUTE_NAME] == self.UNIFIED_TYPE_NAME:
+                        hw_config_op_name = op_dict.type  # type: HWConfigOpName
+                        metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
+                        if not metatypes:
+                            warnings.warn(
+                                "Operation name {} in HW config is not registered in NNCF under any supported "
+                                "operation metatype - will be ignored".format(hw_config_op_name))
+                        retval.update(metatypes)
         return retval

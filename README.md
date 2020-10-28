@@ -29,8 +29,9 @@ The basic workflow is loading a JSON configuration script containing NNCF-specif
 This function returns a wrapped model ready for compression fine-tuning, and handle to the object allowing you to control the compression during the training process:
 
 ```python
-import nncf
-from nncf import create_compressed_model, Config as NNCFConfig
+import torch
+import nncf  # Important - should be imported directly after torch
+from nncf import create_compressed_model, NNCFConfig, register_default_init_args
 
 # Instantiate your uncompressed model
 from torchvision.models.resnet import resnet50
@@ -40,7 +41,7 @@ model = resnet50()
 nncf_config = NNCFConfig.from_json("resnet50_int8.json")
 
 # Provide data loaders for compression algorithm initialization, if necessary
-nncf_config = register_default_init_args(nncf_config, loss_criterion, train_loader)
+nncf_config = register_default_init_args(nncf_config, train_loader, loss_criterion)
 
 # Apply the specified compression algorithms to the model
 comp_ctrl, compressed_model = create_compressed_model(model, nncf_config)
@@ -181,6 +182,7 @@ Quick jump to sample type:
 |RoBERTa-large|INT8|MNLI|90.6 (matched)|89.25 (matched)|
 |DistilBERT-base|INT8|SST-2|91.1|90.3|
 |MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.4 (F1)|
+|GPT-2|INT8|WikiText-2 (raw)|19.73 (perplexity) | 20.9 (perplexity)|
 
 
 #### Object detection (3rd party)
@@ -192,6 +194,16 @@ Quick jump to sample type:
 |RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
 
 
+## Citing
+
+```
+@article{kozlov2020neural,
+    title =   {Neural network compression framework for fast model inference},
+    author =  {Kozlov, Alexander and Lazarevich, Ivan and Shamporov, Vasily and Lyalyushkin, Nikolay and Gorbachev, Yury},
+    journal = {arXiv preprint arXiv:2002.08679},
+    year =    {2020}
+}
+```
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.

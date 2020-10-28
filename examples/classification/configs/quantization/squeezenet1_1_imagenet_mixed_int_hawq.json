@@ -22,16 +22,15 @@
         },
         "weight_decay": 1e-05
     },
+    "quantizer_setup_type": "pattern_based",
     "compression": {
         "algorithm": "quantization",
         "weights": {
             "mode": "asymmetric",
-            "bits": 4,
             "per_channel": true
         },
         "activations": {
-            "mode": "asymmetric",
-            "bits": 8
+            "mode": "asymmetric"
         },
         "initializer": {
             "precision": {
@@ -39,10 +38,7 @@
                 "bits": [
                     4,
                     8
-                ],
-                "tolerance": 1e-5,
-                "num_data_points": 1000,
-                "iter_number": 500
+                ]
             },
             "range": {
                 "type": "min_max"

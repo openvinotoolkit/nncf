@@ -182,9 +182,12 @@ def load_dataset(dataset, config):
         sampler=train_sampler, num_workers=num_workers,
         collate_fn=data_utils.collate_fn, drop_last=True)
 
+    val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
         val_set,
         batch_size=1, num_workers=num_workers,
+        shuffle=False,
+        sampler=val_sampler,
         collate_fn=data_utils.collate_fn)
 
     # Get encoding between pixel values in label images and RGB colors
@@ -474,7 +477,7 @@ def main_worker(current_gpu, config):
         criterion = get_criterion(w_class, config)
 
     if not resuming_checkpoint_path:
-        nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -525,15 +528,12 @@ def main(argv):
     if arguments.dist_url == "env://":
         config.update_from_env()
 
-    if config.mode.lower() != 'test':
-        if not osp.exists(config.log_dir):
-            os.makedirs(config.log_dir)
+    if not osp.exists(config.log_dir):
+        os.makedirs(config.log_dir)
 
-        config.log_dir = str(config.log_dir)
-        configure_paths(config)
-        logger.info("Save directory: {}".format(config.log_dir))
-    else:
-        config.log_dir = "/tmp/"
+    config.log_dir = str(config.log_dir)
+    configure_paths(config)
+    logger.info("Save directory: {}".format(config.log_dir))
 
     config.execution_mode = get_execution_mode(config)
     start_worker(main_worker, config)

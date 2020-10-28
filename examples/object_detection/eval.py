@@ -13,8 +13,8 @@
 
 from __future__ import print_function
 
+import json
 import pathlib
-import pickle
 import time
 
 import numpy as np
@@ -181,7 +181,7 @@ def extract_gt_bboxes(classname, dataset, gt, imagenames):
 
 
 def load_detection_annotations(cachedir, dataset):
-    cachefile = os.path.join(cachedir, 'annots_{}.pkl'.format(dataset.name))
+    cachefile = os.path.join(cachedir, 'annots_{}.json'.format(dataset.name))
     imagenames = dataset.get_img_names()
     if is_main_process():
         if not os.path.isfile(cachefile):
@@ -196,12 +196,12 @@ def load_detection_annotations(cachedir, dataset):
             # save
             logger.info('Saving cached annotations to {:s}'.format(cachefile))
             pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
-            with open(cachefile, 'wb') as f:
-                pickle.dump(gt, f)
+            with open(cachefile, 'w') as f:
+                json.dump(gt, f)
     if is_dist_avail_and_initialized():
         dist.barrier()
-    with open(cachefile, 'rb') as f:
-        gt = pickle.load(f)
+    with open(cachefile, 'r') as f:
+        gt = json.load(f)
     return gt, imagenames
 
 

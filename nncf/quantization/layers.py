@@ -98,7 +98,7 @@ class BaseQuantizer(nn.Module):
 
         self.levels = 0
 
-        self._is_enabled = True
+        self.register_buffer('enabled', torch.IntTensor([1]))
         self.initialized = False
         self.state_dict_name = None
         self.call_count = 0
@@ -134,14 +134,14 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     def is_enabled_quantization(self):
-        return self._is_enabled
+        return self.enabled[0] == 1
 
     def enable_quantization(self):
-        self._is_enabled = True
+        self.enabled[0] = 1
         self.enable_gradients()
 
     def disable_quantization(self):
-        self._is_enabled = False
+        self.enabled[0] = 0
         self.disable_gradients()
 
     def forward(self, x):
@@ -290,7 +290,8 @@ class SymmetricQuantizer(BaseQuantizer):
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
         self.scale.fill_(SCALE_LOWER_THRESHOLD)
-        self.scale.masked_scatter_(torch.gt(abs_max, SCALE_LOWER_THRESHOLD), abs_max)
+        mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
+        self.scale = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self.scale)))
 
         nncf_logger.info(
             "Set sign: {} and scale: {} for {}".format(self.signed,
@@ -393,15 +394,10 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
-            with no_jit_trace():
-                input_range_safe = abs(self.input_range) + self.eps
-                input_low_tuned, input_range_tuned = TuneRange.apply(self.input_low, input_range_safe, self.levels)
-                input_high_tuned = input_low_tuned + input_range_tuned
+            input_range_safe = abs(self.input_range) + self.eps
+            input_low_tuned, input_range_tuned = TuneRange.apply(self.input_low, input_range_safe, self.levels)
+            input_high_tuned = input_low_tuned + input_range_tuned
 
-                y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(self.level_low,
-                                                                               self.level_high,
-                                                                               input_low_tuned,
-                                                                               input_high_tuned)
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(self.level_low,
                                                                                self.level_high,

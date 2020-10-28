@@ -25,9 +25,10 @@ class HWPrecisionConstraints:
     def add(self, quantizer_id: QuantizerId, quantizer_configs: List[QuantizerConfig]):
         if self._is_hw_config_enabled:
             self._constraints[quantizer_id] = {quantizer_config.bits for quantizer_config in quantizer_configs}
+        return self
 
     def get(self, quantizer_id: QuantizerId) -> Set[int]:
-        if self._is_hw_config_enabled:
+        if self._is_hw_config_enabled and quantizer_id in self._constraints:
             return self._constraints[quantizer_id]
         return set()
 

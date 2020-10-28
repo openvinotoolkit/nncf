@@ -1,5 +1,5 @@
 import queue
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import torch
@@ -11,10 +11,12 @@ from ..utils import get_flat_tensor_contents_string
 
 
 class QuantizeRangeInitializer:
-    def __init__(self, quantize_module: BaseQuantizer):
+    def __init__(self, quantize_module: BaseQuantizer, num_init_steps: int):
         self.quantize_module = quantize_module
         self.device = next(self.quantize_module.parameters()).device
         self.scale_shape = self.quantize_module.scale_shape
+        self.num_init_steps = num_init_steps
+        self.num_register_init_steps = 0
 
     def register_input(self, x: torch.Tensor):
         raise NotImplementedError
@@ -23,7 +25,9 @@ class QuantizeRangeInitializer:
         raise NotImplementedError
 
     def forward_hook(self, module, input_, output):
-        return self.register_input(input_[0])
+        if self.num_register_init_steps < self.num_init_steps:
+            self.register_input(input_[0])
+            self.num_register_init_steps += 1
 
     def apply_init(self):
         raise NotImplementedError
@@ -58,8 +62,21 @@ def get_channel_count_and_dim_idx(scale_shape):
         for dim_idx, dim in enumerate(scale_shape):
             if dim != 1:
                 channel_dim_idx = dim_idx
-                channel_count = 1
+                channel_count = dim
     return channel_count, channel_dim_idx
+
+
+def expand_like(input_: torch.Tensor, scale_shape: Union[List, int]):
+    retval = input_
+    count, idx = get_channel_count_and_dim_idx(scale_shape)
+    assert input_.numel() == count
+    assert len(input_.size()) == 1
+    if isinstance(scale_shape, List):
+        for _ in range(0, idx):
+            retval = retval.unsqueeze(0)
+        for _ in range(idx + 1, len(scale_shape)):
+            retval = retval.unsqueeze(-1)
+    return retval
 
 
 def split_into_channels(input_: np.ndarray, scale_shape) -> List[np.ndarray]:
@@ -72,8 +89,8 @@ def split_into_channels(input_: np.ndarray, scale_shape) -> List[np.ndarray]:
 
 
 class MinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
         self.max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
         self.log_module_name = log_module_name
@@ -96,8 +113,8 @@ class MinMaxInitializer(QuantizeRangeInitializer):
 
 
 class MeanMinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.log_module_name = log_module_name
         self.all_min_values = []
         self.all_max_values = []
@@ -112,8 +129,8 @@ class MeanMinMaxInitializer(QuantizeRangeInitializer):
         self.all_max_values.clear()
 
     def apply_init(self):
-        min_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-        max_values = torch.ones(self.scale_shape).to(self.device) * np.inf
+        min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
+        max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
         if self.all_min_values:
             stacked_min = torch.stack(self.all_min_values)
             min_values = stacked_min.mean(dim=0).view(self.scale_shape)
@@ -147,8 +164,8 @@ def get_per_channel_history(raw_input_history: queue.Queue, scale_shape: List[in
 
 
 class ThreeSigmaInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', log_module_name: str = None):
-        super().__init__(quantize_module)
+    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
+        super().__init__(quantize_module, num_init_steps)
         self.input_history = queue.Queue()
         self.log_module_name = log_module_name
 
@@ -184,10 +201,11 @@ class ThreeSigmaInitializer(QuantizeRangeInitializer):
 
 class PercentileInitializer(QuantizeRangeInitializer):
     def __init__(self, quantize_module: 'BaseQuantizer',
+                 num_init_steps: int,
                  min_percentile: float,
                  max_percentile: float,
                  log_module_name: str = None):
-        super().__init__(quantize_module)
+        super().__init__(quantize_module, num_init_steps)
         self.input_history = queue.Queue()
         self.log_module_name = log_module_name
         self.min_percentile = min_percentile  # NB: Both min_percentile and max_percentile
@@ -215,9 +233,13 @@ class PercentileInitializer(QuantizeRangeInitializer):
         mins_tensor = torch.from_numpy(numpy_mins).to(self.device, dtype=torch.float)
         maxs_tensor = torch.from_numpy(numpy_maxs).to(self.device, dtype=torch.float)
 
+        mins_tensor = expand_like(mins_tensor, self.scale_shape)
+        maxs_tensor = expand_like(maxs_tensor, self.scale_shape)
+
         nncf_logger.debug("Statistics: Min ({}%th) percentile = {},"
                           " Max ({}%th) percentile = {}".format(self.min_percentile,
                                                                 get_flat_tensor_contents_string(mins_tensor),
                                                                 self.max_percentile,
                                                                 get_flat_tensor_contents_string(maxs_tensor)))
-        self.quantize_module.apply_minmax_init(mins_tensor, maxs_tensor, self.log_module_name)
+        self.quantize_module.apply_minmax_init(mins_tensor,
+                                               maxs_tensor, self.log_module_name)

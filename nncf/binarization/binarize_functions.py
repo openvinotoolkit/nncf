@@ -14,9 +14,7 @@
 import warnings
 
 import torch
-from nncf.definitions import get_install_type
-if get_install_type() == 'GPU':
-    from .extensions import BinarizedFunctionsCUDA
+from .extensions import BinarizedFunctionsCUDA
 
 
 class XNORBinarizeFn(torch.autograd.Function):

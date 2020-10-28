@@ -90,7 +90,6 @@ strict digraph  {
 "88 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=88, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=cat];
 "89 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=89, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=cat];
 "90 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=90, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=softmax];
-"91 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=91, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=cat];
 "0 SSD_VGG/MultiOutputSequential[basenet]/Conv2d[0]/conv2d" -> "1 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[1]/batch_norm";
 "1 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[1]/batch_norm" -> "2 SSD_VGG/MultiOutputSequential[basenet]/ReLU[2]/RELU";
 "2 SSD_VGG/MultiOutputSequential[basenet]/ReLU[2]/RELU" -> "3 SSD_VGG/MultiOutputSequential[basenet]/Conv2d[3]/conv2d";

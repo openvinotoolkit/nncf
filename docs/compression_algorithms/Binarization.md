@@ -31,14 +31,14 @@ Training binarized networks requires special scheduling of the training process.
         "disable_wd_start_epoch": 60  // Epoch to disable weight decay in the optimizer
     },
 
-    //A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    //A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": ["ResNet/Linear[fc]",
                        "ResNet/Conv2d[conv1]",
                        "ResNet/Sequential[layer2]/BasicBlock[0]/Sequential[downsample]",
                        "ResNet/Sequential[layer3]/BasicBlock[0]/Sequential[downsample]",
                        "ResNet/Sequential[layer4]/BasicBlock[0]/Sequential[downsample]"],
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": [],
 }
 

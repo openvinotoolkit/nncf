@@ -104,7 +104,7 @@ class HessianTraceEstimator:
                                                          self._parameter_handler)
         self._diff_eps = 1e-6
 
-    def get_average_traces(self, max_iter=100, tolerance=1e-3) -> Tensor:
+    def get_average_traces(self, max_iter=500, tolerance=1e-5) -> Tensor:
         """
         Estimates average hessian trace for each parameter
         :param max_iter: maximum number of iterations for Hutchinson algorithm

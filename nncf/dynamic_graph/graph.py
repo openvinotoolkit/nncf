@@ -103,6 +103,16 @@ class InputAgnosticOperationExecutionContext:
     def __hash__(self):
         return hash((self.operator_name, self.scope_in_model, self.call_order))
 
+    @staticmethod
+    def from_str(s: str):
+        scope_and_op, _, call_order_str = s.rpartition('_')
+        scope_str, _, op_name = scope_and_op.rpartition('/')
+
+        from nncf.dynamic_graph.context import Scope
+        return InputAgnosticOperationExecutionContext(op_name,
+                                                      Scope.from_str(scope_str),
+                                                      int(call_order_str))
+
 
 class OperationExecutionContext:
     """Information that allows to uniquely identify an operation inside the NNCF graph,
@@ -543,6 +553,12 @@ class NNCFGraph:
             if deg == 0:
                 outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
         return outputs
+
+    # pylint:disable=protected-access
+    def get_nx_edge(self, node_u: NNCFNode, node_v: NNCFNode):
+        nx_node_u = self._nx_graph._node[self._node_id_to_key_dict[node_u.node_id]]
+        nx_node_v = self._nx_graph._node[self._node_id_to_key_dict[node_v.node_id]]
+        return self._nx_graph.edges[nx_node_u['key'], nx_node_v['key']]
 
     def get_next_nodes(self, node: NNCFNode) -> Optional[List[NNCFNode]]:
         nx_node_keys = self._nx_graph.succ[self._node_id_to_key_dict[node.node_id]]

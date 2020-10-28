@@ -10,12 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from copy import deepcopy
 from functools import partial
 from torch import nn
 from typing import List
 
-from nncf.layers import NNCF_MODULES_DICT, NNCF_MODULES
+from nncf.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
+    add_nncf_functionality_to_user_module, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.utils import  in_scope_list
 from nncf.dynamic_graph.context import Scope, ScopeElement
 
@@ -25,6 +26,10 @@ def is_nncf_module(module):
     for nncf_module_name in NNCF_MODULES:
         if module.__class__.__name__ == nncf_module_name:
             return True
+    for nncf_user_wrapped_class in NNCF_WRAPPED_USER_MODULES_DICT.values():
+        if module.__class__.__name__ == nncf_user_wrapped_class.__name__:
+            return True
+
     return False
 
 
@@ -35,6 +40,11 @@ def replace_module_by_nncf_module(module: nn.Module):
             if not module.__class__.__name__ == nncf_module_type.__name__:
                 nncf_module = nncf_module_type.from_module(module)
             return nncf_module
+    from nncf.layers import UNWRAPPED_USER_MODULES
+    for _, user_module_type in UNWRAPPED_USER_MODULES.registry_dict.items():
+        if module.__class__ == user_module_type:
+            nncf_module = deepcopy(module)
+            return add_nncf_functionality_to_user_module(nncf_module)
     return module
 
 

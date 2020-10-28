@@ -58,12 +58,13 @@ def test_forward_trace_functor():
     func = ForwardTraceOnly()
     shape1, shape2 = ([32, 1, 4, 8], [1, 8, 12, 16])
     meta1, meta2 = (TensorMeta(5, 1, shape1), TensorMeta(3, 8, shape2))
-    input_tensor1 = TracedTensor.from_torch_tensor(torch.Tensor(shape1), meta1)
-    input_tensor2 = TracedTensor.from_torch_tensor(torch.Tensor(shape2), meta2)
+    input_tensor1 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape1), meta1)
+    input_tensor2 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape2), meta2)
 
     # 1 -> 1
     output_tensor = func(torch.Tensor.view, input_tensor1, [-1])
-    assert output_tensor.tensor_meta == input_tensor1.tensor_meta
+    assert output_tensor.tensor_meta != input_tensor1.tensor_meta
+    assert output_tensor.tensor_meta.shape == (1024, )
 
     # 1 -> N
     outputs = func(torch.Tensor.chunk, input_tensor1, 3)

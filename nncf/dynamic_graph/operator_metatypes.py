@@ -163,7 +163,7 @@ class DepthwiseConv1dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
@@ -184,7 +184,8 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
@@ -205,7 +206,8 @@ class DepthwiseConv3dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels:
+
+        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
 
@@ -237,6 +239,7 @@ class LinearMetatype(OperatorMetatype):
     name = "linear"
     hw_config_names = [HWConfigOpName.MATMUL]
     torch_nn_functional_patch_spec = PatchSpec([name])
+    torch_module_patch_spec = PatchSpec(["addmm"])
 
 
 @OPERATOR_METATYPES.register()
@@ -282,6 +285,7 @@ class SigmoidMetatype(OperatorMetatype):
     name = "sigmoid"
     torch_nn_functional_patch_spec = PatchSpec([name])
     torch_module_patch_spec = PatchSpec([name])
+    torch_tensor_patch_spec = PatchSpec([name])
 
 
 @OPERATOR_METATYPES.register()
@@ -307,7 +311,8 @@ class SubMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class MulMetatype(OperatorMetatype):
     name = "mul"
-    torch_tensor_patch_spec = PatchSpec(["__mul__",
+    torch_tensor_patch_spec = PatchSpec(["mul",
+                                         "__mul__",
                                          "__imul__",
                                          "__rmul__"])
     hw_config_names = [HWConfigOpName.MULTIPLY]
@@ -340,6 +345,8 @@ class MatMulMetatype(OperatorMetatype):
     name = "matmul"
     torch_module_patch_spec = PatchSpec([name, "bmm"])
     torch_tensor_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.MATMUL]
+
 
 
 @OPERATOR_METATYPES.register()
@@ -416,7 +423,7 @@ class PadMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class CatMetatype(OperatorMetatype):
     name = "cat"
-    torch_module_patch_spec = PatchSpec([name])
+    torch_module_patch_spec = PatchSpec([name, "stack"])
     hw_config_names = [HWConfigOpName.CONCAT]
 
 
@@ -458,7 +465,7 @@ class TransposeMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class GatherMetatype(OperatorMetatype):
     name = "gather"
-    torch_module_patch_spec = PatchSpec(["index_select", ], ForwardTraceOnly())
+    torch_module_patch_spec = PatchSpec(["index_select", "where"], ForwardTraceOnly())
     torch_tensor_patch_spec = PatchSpec(["index_select", "__getitem__"], ForwardTraceOnly())
 
 
@@ -488,7 +495,7 @@ class ContiguousMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class SplitMetatype(OperatorMetatype):
     name = "split"
-    torch_tensor_patch_spec = PatchSpec(["chunk"], ForwardTraceOnly())
+    torch_tensor_patch_spec = PatchSpec([name, "chunk"], ForwardTraceOnly())
     hw_config_names = [HWConfigOpName.SPLIT]
 
 

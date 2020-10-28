@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 
-import xml.etree.cElementTree as ET
+import defusedxml.cElementTree as ET
 import numpy as np
 
 
