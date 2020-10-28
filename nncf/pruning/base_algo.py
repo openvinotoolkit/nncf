@@ -262,7 +262,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         self.pruned_module_groups = pruned_module_groups
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
-        self.prune_batch_norms = params.get('prune_batch_norms', False)
+        self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.zero_grad = params.get('zero_grad', True)
         self._hooks = []
 
@@ -283,7 +283,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
             mask = mask.to(grad.device)
             return apply_filter_binary_mask(mask, grad)
 
-        for minfo in self.pruned_module_info[:1]:
+        for minfo in self.pruned_module_info:
             mask = minfo.operand.binary_filter_pruning_mask
             weight = minfo.module.weight
             partial_hook = update_wrapper(partial(hook, mask=mask), hook)
