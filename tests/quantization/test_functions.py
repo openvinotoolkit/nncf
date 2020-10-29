@@ -182,17 +182,15 @@ class TestParametrized:
                 return scales
 
         @staticmethod
-        def get_range_level(is_signed, is_weights, bits):
+        def get_range_level(is_signed, bits):
             levels = 2 ** bits
             if is_signed:
-                level_high = 2 ** (bits - 1) - 1
-                level_low = -(level_high + 1)
-                if is_weights:
-                    level_low += 1
+                level_high = (levels / 2.0) - 1
+                level_low = -(levels / 2.0)
             else:
-                level_high = 2 ** bits - 1
+                level_high = levels - 1
                 level_low = 0
-            return level_low, level_high, levels
+            return level_high, level_low, levels
 
         def test_quantize_symmetric_forward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
                                             scale_mode):
@@ -206,7 +204,7 @@ class TestParametrized:
                 ref_scale = ref_scale.astype(np.float16)
 
             test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_fp16=is_fp16)
-            level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
+            level_high, level_low, levels = self.get_range_level(is_signed, bits)
 
             ref_scale = abs(ref_scale) + EPS
 
@@ -225,7 +223,7 @@ class TestParametrized:
             ref_input = generate_input(input_size)
 
             ref_scale = self.generate_scale(ref_input, scale_mode, is_weights)
-            level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
+            level_high, level_low, levels = self.get_range_level(is_signed, bits)
             test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_backward=True,
                                                    is_fp16=is_fp16)
 
@@ -305,12 +303,12 @@ class TestParametrized:
             levels = 2 ** bits
             level_low = 0
             level_high = levels - 1
-            return level_low, level_high, levels
+            return level_high, level_low, levels
 
         def test_quantize_asymmetric_forward(self, _seed, input_size, bits, use_cuda, is_weights,
                                              is_fp16, scale_mode):
             skip_if_half_on_cpu(is_fp16, use_cuda)
-            level_low, level_high, levels = self.get_range_level(bits)
+            level_high, level_low, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)
             if is_fp16:
                 ref_input = ref_input.astype(np.float16)
@@ -333,7 +331,7 @@ class TestParametrized:
         def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
                                               is_fp16, scale_mode):
             skip_if_half_on_cpu(is_fp16, use_cuda)
-            level_low, level_high, levels = self.get_range_level(bits)
+            level_high, level_low, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)
             if is_fp16:
                 ref_input = ref_input.astype(np.float16)
