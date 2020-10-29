@@ -168,7 +168,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         insertion_commands = self._quantize_weights(target_model) + self._quantize_activations(target_model)
-        if self.quantize_inputs:
+        if self.quantize_inputs and self.quantizer_setup_type is not QuantizerSetupType.PROPAGATION_BASED:
             insertion_commands += self._quantize_inputs(target_model, insertion_commands)
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
