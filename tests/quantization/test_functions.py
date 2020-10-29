@@ -185,8 +185,6 @@ class TestParametrized:
         def get_range_level(is_signed, is_weights, bits):
             levels = 2 ** bits
             if is_signed:
-                if is_weights:
-                    levels -= 1
                 level_high = 2 ** (bits - 1) - 1
                 level_low = -(level_high + 1)
                 if is_weights:
