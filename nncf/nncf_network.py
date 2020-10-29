@@ -731,3 +731,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         flops_count_dict = self.get_flops_per_module()
         total_MACs_count = sum(v // 2 for v in flops_count_dict.values())
         return total_MACs_count
+
+    def get_input_infos(self) -> List[ModelInputInfo]:
+        return deepcopy(self.input_infos)

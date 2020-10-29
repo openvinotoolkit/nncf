@@ -22,6 +22,7 @@ from copy import deepcopy
 from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
@@ -215,6 +216,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self.ignored_node_keys = []
 
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
+        self._input_node_keys_vs_contexts = {}  # type: Dict[str, InputAgnosticOperationExecutionContext]
 
         barrier_node_extra_edges = []
         for node_key, node in ip_graph.nodes.items():
@@ -232,12 +234,16 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     self.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.NON_QUANTIZABLE
                 qpg_node[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
                 qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
-                iap_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
-                qpg_node[self.OPERATOR_SCOPE] = iap_context.scope_in_model
-                scope_node = str(iap_context)
+                node_ia_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
+                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
+                qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model
+                node_scope = str(node_ia_op_exec_context)
 
-                if in_scope_list(scope_node, self._ignored_scopes):
+                op_name = node_ia_op_exec_context.operator_name
+                if op_name == MODEL_INPUT_OP_NAME:
+                    self._input_node_keys_vs_contexts[node_key] = node_ia_op_exec_context
+
+                if in_scope_list(node_scope, self._ignored_scopes):
                     self.ignored_node_keys.append(node_key)
                     qpg_node_barrier = {
                         self.NODE_TYPE_NODE_ATTR: QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER,
@@ -606,6 +612,35 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     def get_unified_scale_group_id_by_propagating_quantizer_id(self, pqid: int) -> int:
         return self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(pqid)
 
+    def get_input_quantizer_ids(self) -> Dict[InputAgnosticOperationExecutionContext, List[int]]:
+        retval = {}  # type: Dict[InputAgnosticOperationExecutionContext, List[int]]
+
+        def recursive_helper(curr_node_key: str, curr_input_quantizer_ids_list: List[int]):
+            curr_node = self.nodes[curr_node_key]
+            curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+
+            if curr_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
+                pq = curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
+                if pq is not None:
+                    curr_input_quantizer_ids_list.append(pq.id)
+                    return
+            elif curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                trait = curr_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                if not trait == QuantizationTrait.QUANTIZATION_AGNOSTIC:
+                    return
+            elif curr_node_type == QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
+                return
+
+            for successor_key in self.successors(curr_node_key):
+                recursive_helper(successor_key, curr_input_quantizer_ids_list)
+
+        for input_node_key, input_node_context in self._input_node_keys_vs_contexts.items():
+            current_input_quantizer_ids = []
+            recursive_helper(input_node_key, current_input_quantizer_ids)
+            retval[input_node_context] = current_input_quantizer_ids
+
+        return retval
+
 
 class QuantizersBetweenQuantizableLayers:
     """ Contains locations of quantizers between inputs quantizable layers: input agnostic operation execution context
@@ -641,7 +676,8 @@ class QuantizerPropagationSolver:
     def __init__(self, ignored_scopes=None, hw_config: HWConfig = None,
                  debug_interface: 'QuantizationDebugInterface' = None,
                  propagation_strategy: PropagationStrategy = PropagationStrategy.AGGRESSIVE,
-                 default_qconfig_list: List[QuantizerConfig] = None):
+                 default_qconfig_list: List[QuantizerConfig] = None,
+                 input_infos: List[ModelInputInfo] = None):
         self.quantizers_between_quantizable_layers_per_key = {}  # type: Dict[str, QuantizersBetweenQuantizableLayers]
         self.default_qlobal_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
@@ -649,6 +685,7 @@ class QuantizerPropagationSolver:
         self._propagation_strategy = propagation_strategy  # TODO: determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
+        self._input_infos = input_infos
 
         if self._hw_config is not None:
             self._unified_scales_operation_set = self._hw_config.get_operations_with_unified_scales()
@@ -684,6 +721,9 @@ class QuantizerPropagationSolver:
                 self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, str(iteration_counter))
             quant_prop_graph = self.propagation_step(prop_quantizer, quant_prop_graph)
             iteration_counter += 1
+
+        if self._input_infos is not None:
+            self._filter_integer_input_quantizers(quant_prop_graph)
 
         if self._debug_interface is not None:
             self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "final")
@@ -1095,6 +1135,20 @@ class QuantizerPropagationSolver:
 
     def get_active_propagating_quantizers_queue(self):
         return self._active_propagating_quantizers_queue
+
+    def _filter_integer_input_quantizers(self, quant_prop_graph: QuantizerPropagationStateGraph):
+        input_node_vs_qid_dict = quant_prop_graph.get_input_quantizer_ids()
+        integer_input_quantizer_ids = set()
+
+        for input_node_context, input_quantizer_ids in input_node_vs_qid_dict.items():
+            assert input_node_context.operator_name == MODEL_INPUT_OP_NAME
+            input_id = input_node_context.call_order
+            if self._input_infos[input_id].is_integer_input():
+                integer_input_quantizer_ids.update(set(input_quantizer_ids))
+
+        filtered_finished_pqs = list(filter(lambda pq: pq.id not in integer_input_quantizer_ids,
+                                            self._finished_propagating_quantizers))
+        self._finished_propagating_quantizers = filtered_finished_pqs
 
     @staticmethod
     def _get_quantizers_between_quantizable_layers_per_node_key(
