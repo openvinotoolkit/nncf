@@ -16,6 +16,7 @@ import torch
 from ...compression_method_api import CompressionLoss
 
 
+
 # Actually in responsible to lean density to target value
 class SparseLoss(CompressionLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
@@ -67,3 +68,37 @@ class SparseLoss(CompressionLoss):
 
     def statistics(self):
         return {'mean_sparse_prob': 1 - self.mean_sparse_prob}
+
+    def set_target_sparsity_loss(self, sparsity_level):
+        self.target = 1 - sparsity_level
+
+class SparseLossForPerLayerSparsity(SparseLoss):
+    def __init__(self, sparse_layers=None, target=1.0, p=0.05):
+        super().__init__(sparse_layers, target, p)
+        self.per_layer_target = {}
+        for sparse_layer in self._sparse_layers:
+            self.per_layer_target[sparse_layer] = self.target
+
+    def forward(self):
+        if self.disabled:
+            return 0
+
+        params = 0
+        sparse_prob_sum = 0
+        sparse_layers_loss = 0
+        for sparse_layer in self._sparse_layers:
+            if not self.disabled and not sparse_layer.sparsify:
+                raise AssertionError(
+                    "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
+            if sparse_layer.sparsify:
+                sw_loss = sparse_layer.loss()
+                params_layer = sw_loss.view(-1).size(0)
+                params += params_layer
+                sparse_layers_loss -= torch.abs(sw_loss.sum() / params_layer - self.per_layer_target[sparse_layer])
+                sparse_prob_sum += torch.sigmoid(sparse_layer.mask).sum()
+
+        self.mean_sparse_prob = (sparse_prob_sum / params).item()
+        return (sparse_layers_loss / self.p).pow(2)
+
+    def set_target_sparsity_loss(self, target, sparse_layer):
+        self.per_layer_target[sparse_layer] = 1 - target

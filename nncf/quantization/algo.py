@@ -1103,6 +1103,7 @@ class QuantizationController(QuantizationControllerBase):
                                      "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
                                                                                     str(scope)))
 
+
             if len(matched_init_range_config) == 1:
                 module_init_range_config = matched_init_range_config[0]
             else:

@@ -483,7 +483,11 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                              "sparsity level will be applied "
                                                              "immediately, so the length of this list "
                                                              "should be larger than the length of the "
-                                                             "'steps' by one.")
+                                                             "'steps' by one."),
+    "sparsity_level_setting_mode":with_attributes(_STRING,
+                                                  description="The mode of sparsity level setting( "
+                                                              "'global' - one sparsity level is set for all layer, "
+                                                              "'local' - sparsity level is set per-layer.)"),
 }
 
 MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
