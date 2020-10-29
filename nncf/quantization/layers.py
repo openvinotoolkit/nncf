@@ -243,8 +243,7 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def set_level_ranges(self):
         self.level_high, self.level_low, self.levels = self.calculate_level_ranges(self.num_bits,
-                                                                                   self.signed,
-                                                                                   self.is_weights)
+                                                                                   self.signed)
 
     @staticmethod
     def calculate_level_ranges(num_bits, signed):

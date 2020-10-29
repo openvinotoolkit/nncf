@@ -155,7 +155,7 @@ class HWConfig(List):
             if mode == QuantizationMode.SYMMETRIC:
                 if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
                     signedness_to_force = True
-                true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
+                true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True)
             else:
                 signedness_to_force = True
                 true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
