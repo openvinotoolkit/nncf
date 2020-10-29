@@ -48,8 +48,7 @@ class PruningScheduler(CompressionScheduler):
     def _set_pruning_level(self):
         self.algo.set_pruning_rate(self.current_pruning_level)
 
-        curr_epoch = self.last_epoch + 1
-        if curr_epoch >= (self.pruning_steps + self.num_init_steps):
+        if self.current_epoch >= (self.pruning_steps + self.num_init_steps):
             self.algo.freeze()
 
     def _calc_pruning_level(self):
@@ -57,8 +56,7 @@ class PruningScheduler(CompressionScheduler):
 
     @property
     def current_pruning_level(self):
-        curr_epoch = self.last_epoch + 1
-        if curr_epoch >= self.num_init_steps:
+        if self.current_epoch >= self.num_init_steps:
             return self._calc_pruning_level()
         return 0
 
@@ -80,8 +78,7 @@ class BaselinePruningScheduler(PruningScheduler):
 
     def _set_pruning_level(self):
         self.algo.set_pruning_rate(self.current_pruning_level)
-        curr_epoch = self.last_epoch + 1
-        if curr_epoch >= self.num_init_steps:
+        if self.current_epoch >= self.num_init_steps:
             self.algo.freeze()
 
 
@@ -101,8 +98,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         self._set_pruning_level()
 
     def _calc_pruning_level(self):
-        curr_epoch = self.last_epoch + 1
-        curr_pruning = 1 - self.a * np.exp(-self.k * (curr_epoch - self.num_init_steps))
+        curr_pruning = 1 - self.a * np.exp(-self.k * (self.current_epoch - self.num_init_steps))
         max_pruning = self.pruning_target
         return max_pruning if curr_pruning >= max_pruning else curr_pruning
 
@@ -131,8 +127,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         self._set_pruning_level()
 
     def _calc_pruning_level(self):
-        curr_epoch = self.last_epoch
-        curr_pruning = self.a * np.exp(-self.k * (curr_epoch - self.num_init_steps)) + self.b
+        curr_pruning = self.a * np.exp(-self.k * (self.current_epoch - self.num_init_steps - 1)) + self.b
         max_pruning = self.pruning_target
         return max_pruning if curr_pruning >= max_pruning else curr_pruning
 

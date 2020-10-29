@@ -71,6 +71,7 @@ class CompressionScheduler:
         self.last_epoch = -1
         self.last_step = -1
         self._steps_in_current_epoch = 0
+        self._current_epoch = -1
 
     def step(self, last=None):
         """
@@ -91,6 +92,9 @@ class CompressionScheduler:
         """
         if last is None:
             last = self.last_epoch + 1
+            self._current_epoch += 1
+        else:
+            self._current_epoch = last + 1
         self.last_epoch = last
         self._steps_in_current_epoch = 0
 
@@ -104,6 +108,9 @@ class CompressionScheduler:
     def initialize(self):
         pass
 
+    @property
+    def current_epoch(self):
+        return 0 if self._current_epoch == -1 else self._current_epoch 
 
 @functools.total_ordering
 class CompressionLevel(Enum):

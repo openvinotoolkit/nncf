@@ -175,6 +175,9 @@ def test_can_get_compression_level(test_struct: CompressionLevelTestStruct):
     assert compression_ctrl.compression_level() == compression_levels[0]
 
     compression_scheduler.epoch_step()
+    assert compression_ctrl.compression_level() == compression_levels[0]
+
+    compression_scheduler.epoch_step()
     assert compression_ctrl.compression_level() == compression_levels[1]
 
     compression_scheduler.epoch_step()

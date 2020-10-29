@@ -315,6 +315,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                    config.model)
 
     for epoch in range(config.start_epoch, config.epochs):
+        compression_ctrl.scheduler.epoch_step()
         logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
 
         if config.distributed:
@@ -324,7 +325,6 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
-        compression_ctrl.scheduler.epoch_step()
 
         logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
                     format(epoch, epoch_loss, miou))

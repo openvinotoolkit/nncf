@@ -110,13 +110,14 @@ def test_can_create_sparse_loss_and_scheduler():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
+    scheduler = compression_ctrl.scheduler
+    scheduler.epoch_step()
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
     assert not loss.disabled
     assert loss.target_sparsity_rate == approx(0.02)
     assert loss.p == approx(0.05)
 
-    scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, PolynomialSparseScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
     assert scheduler.sparsity_target == approx(0.5)
@@ -182,6 +183,11 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     for module_info in compression_ctrl.sparsified_module_info:
         assert not module_info.operand.frozen
     scheduler.epoch_step()
+    assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.2
+    assert pytest.approx(loss().item(), abs=1e-3) == 16
+    assert not loss.disabled
+
+    scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.4
     assert pytest.approx(loss().item(), abs=1e-3) == 64
     assert not loss.disabled
@@ -192,14 +198,10 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert not loss.disabled
 
     scheduler.epoch_step()
-    assert not loss.disabled
-    assert loss.target_sparsity_rate == 0.6
-    assert loss().item() == 144
-
-    scheduler.epoch_step()
     assert loss.disabled
     assert loss.target_sparsity_rate == 0.6
     assert loss() == 0
+
     for module_info in compression_ctrl.sparsified_module_info:
         assert module_info.operand.frozen
 
