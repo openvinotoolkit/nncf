@@ -143,6 +143,8 @@ class OperatorMetatypeRegistry(Registry):
         return wrap
 
     def get_operator_metatype_by_op_name(self, op_name: str) -> 'OperatorMetatype':
+        if op_name not in self._op_name_to_op_meta_dict:
+            return self._op_name_to_op_meta_dict["noop"]  # avoiding the dependency on the class def below
         return self._op_name_to_op_meta_dict[op_name]
 
 
@@ -152,7 +154,7 @@ OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 @OPERATOR_METATYPES.register()
 class NoopMetatype(OperatorMetatype):
     name = "noop"
-    external_op_names = [MODEL_INPUT_OP_NAME]
+    external_op_names = [name, MODEL_INPUT_OP_NAME]
 
 
 @OPERATOR_METATYPES.register()

@@ -24,6 +24,7 @@ DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
 METRICS_DUMP_PATH = PROJECT_ROOT / 'metrics_dump'
+
 OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
 MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
