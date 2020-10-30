@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import csv
 from typing import Tuple, List, Optional
 
 import pytest
@@ -24,6 +25,11 @@ DIFF_FP32_MAX_GLOBAL = 0.1
 
 METRICS_DUMP_PATH = PROJECT_ROOT / 'metrics_dump'
 
+OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
+ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
+MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+
+
 class EvalRunParamsStruct:
     def __init__(self,
                  config_name_: str,
@@ -34,6 +40,8 @@ class EvalRunParamsStruct:
                  sample_type_: str,
                  resume_file_: str,
                  batch_: int,
+                 mean_val_: Optional[str],
+                 scale_val_: Optional[str],
                  diff_fp32_min_: float,
                  diff_fp32_max_: float,
                  model_name_: str,
@@ -48,6 +56,8 @@ class EvalRunParamsStruct:
         self.sample_type_ = sample_type_
         self.resume_file_ = resume_file_
         self.batch_ = batch_
+        self.mean_val_ = mean_val_
+        self.scale_val_ = scale_val_
         self.diff_fp32_min_ = diff_fp32_min_
         self.diff_fp32_max_ = diff_fp32_max_
         self.model_name_ = model_name_
@@ -80,7 +90,7 @@ class TestSotaCheckpoints:
         com_line = shlex.split(comm)
 
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(PROJECT_ROOT)
+        env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
         result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env)
         exit_code = result.poll()
@@ -107,6 +117,11 @@ class TestSotaCheckpoints:
 
         err_string = "\n".join(error_lines) if error_lines else None
         return exit_code, err_string
+
+    @staticmethod
+    def get_onnx_model_file_path(name):
+        onnx_name = PROJECT_ROOT / "onnx" / str(name + ".onnx")
+        return onnx_name
 
     @staticmethod
     def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target, fp32_metric_=None,
@@ -194,6 +209,11 @@ class TestSotaCheckpoints:
         return color, within_thresholds
 
     @staticmethod
+    def add_openvino_metric_entry_to_row(row, metric):
+        row.join(metric)
+        return row
+
+    @staticmethod
     def write_common_metrics_file(per_model_metric_file_dump_path: Path):
         metric_value = OrderedDict()
         for model_name in TestSotaCheckpoints.ids_list:
@@ -238,6 +258,14 @@ class TestSotaCheckpoints:
                     batch = model_dict[model_name].get('batch', {})
                 else:
                     batch = None
+                if model_dict[model_name].get('mean_value', {}):
+                    mean_val = model_dict[model_name].get('mean_value', {})
+                else:
+                    mean_val = None
+                if model_dict[model_name].get('scale_value', {}):
+                    scale_val = model_dict[model_name].get('scale_value', {})
+                else:
+                    scale_val = None
                 diff_fp32_min = model_dict[model_name].get('diff_fp32_min') if not None else None
                 diff_fp32_max = model_dict[model_name].get('diff_fp32_max') if not None else None
                 diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
@@ -250,6 +278,8 @@ class TestSotaCheckpoints:
                                                       sample_type_,
                                                       resume_file,
                                                       batch,
+                                                      mean_val,
+                                                      scale_val,
                                                       diff_fp32_min,
                                                       diff_fp32_max,
                                                       model_name,
@@ -269,7 +299,6 @@ class TestSotaCheckpoints:
                              ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
         test = "eval"
-
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = METRICS_DUMP_PATH / metric_file_name
         log_dir = METRICS_DUMP_PATH / "logs"
@@ -327,6 +356,70 @@ class TestSotaCheckpoints:
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
 
+    @pytest.mark.parametrize("eval_test_struct", param_list,
+                             ids=ids_list)
+    def test_openvino_eval(self, openvino, sota_checkpoints_dir, sota_data_dir, ov_data_dir,
+                           eval_test_struct: EvalRunParamsStruct):
+        if openvino is None:
+            pytest.skip()
+        os.chdir(PROJECT_ROOT)
+        onnx_path = PROJECT_ROOT / 'onnx'
+        ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
+        if not os.path.exists(onnx_path):
+            os.mkdir(onnx_path)
+        self.CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
+             --data {dataset}/{data_name} --to-onnx={onnx_path}"
+        self.test = "openvino_eval"
+        onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
+                                                 dataset=sota_data_dir,
+                                                 data_name=eval_test_struct.dataset_name_,
+                                                 sample_type=eval_test_struct.sample_type_,
+                                                 onnx_path=(onnx_path / str(eval_test_struct.model_name_ + ".onnx")))
+        if eval_test_struct.resume_file_:
+            resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
+            onnx_cmd += " --resume {}".format(resume_file_path)
+        else:
+            onnx_cmd += " --pretrained"
+        exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
+        if exit_code != 0:
+            self.row_dict[eval_test_struct.model_name_].append(err_str)
+            self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
+            assert False
+        if eval_test_struct.mean_val_:
+            mean_val = eval_test_struct.mean_val_
+        else:
+            mean_val = '[123.675,116.28,103.53]'
+        if eval_test_struct.scale_val_:
+            scale_val = eval_test_struct.scale_val_
+        else:
+            scale_val = '[58.4795,57.1429,57.4713]'
+        onnx_model = self.get_onnx_model_file_path(eval_test_struct.model_name_)
+        mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                 " --mean_values={} --scale_values={} --output_dir {}" \
+            .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
+        exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
+        if exit_code != 0:
+            self.row_dict[eval_test_struct.model_name_].append(err_str)
+            self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
+            assert False
+
+        config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
+        ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
+                 "{}/{config}.csv".format(config_folder, ov_data_dir, ir_model_folder,
+                                          PROJECT_ROOT, config=eval_test_struct.model_name_)
+        exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+        if exit_code != 0:
+            self.row_dict[eval_test_struct.model_name_].append(err_str)
+            self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
+            assert False
+
+        with open('{}.csv'.format(eval_test_struct.model_name_)) as csv_file:
+            reader = csv.DictReader(csv_file)
+            for row in reader:
+                ac_metric = round(float(row["metric_value"]) * 100, 2)
+        self.row_dict[eval_test_struct.model_name_].append(ac_metric)
+
+    @pytest.mark.train
     @pytest.mark.parametrize("config_name_, expected_, metric_type_, dataset_name_, _sample_type_, model_name_",
                              train_param_list, ids=train_ids_list)
     def test_train(self, sota_data_dir, config_name_, expected_, metric_type_, dataset_name_, _sample_type_,
@@ -359,12 +452,26 @@ def skip_params(sota_data_dir):
 
 
 @pytest.fixture(autouse=True, scope="class")
-def results():
+def openvino_preinstall(openvino):
+    if openvino is not None:
+        # To avoid AC setup error
+        subprocess.run("pip uninstall setuptools -y && pip install setuptools", check=True, shell=True)
+        subprocess.run("pip install -r requirements_onnx.txt",
+                       cwd=MO_DIR, check=True, shell=True)
+        subprocess.run("{} setup.py install".format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
+
+
+@pytest.fixture(autouse=True, scope="class")
+def results(openvino):
     yield
     Tsc.write_common_metrics_file(per_model_metric_file_dump_path=METRICS_DUMP_PATH)
-    if Tsc.test == "eval":
+    if openvino:
         header = ["Model", "Expected", "Measured", "Reference FP32", "Metrics type", "Diff FP32", "Diff Expected",
-                  "Error"]
+                  "Error", "AC Measured"]
     else:
-        header = ["Model", "Expected", "Measured", "Metrics type", "Diff Expected", "Error"]
+        if Tsc.test == "eval":
+            header = ["Model", "Expected", "Measured", "Reference FP32", "Metrics type", "Diff FP32", "Diff Expected",
+                      "Error"]
+        else:
+            header = ["Model", "Expected", "Measured", "Metrics type", "Diff Expected", "Error"]
     Tsc().write_results_table(header)

@@ -1,0 +1,14 @@
+models:
+  - name: ssd512_vgg_voc
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter: ssd
+
+    datasets:
+      - name: VOC2012
+        preprocessing:
+          - type: resize
+            size: 512
+        postprocessing:
+          - type: resize_prediction_boxes

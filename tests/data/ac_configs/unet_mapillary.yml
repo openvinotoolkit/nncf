@@ -1,0 +1,20 @@
+models:
+- name: unet_mapillary
+  launchers:
+  - framework: dlsdk
+    device: CPU
+    adapter: segmentation
+    inputs:
+      - name: data
+        type: INPUT
+        precision: U8
+  datasets:
+  - name: mapillary_20
+    data_source: Mapillary_20/imgs
+    segmentation_masks_source: Mapillary_20/masks
+    annotation: mapillary_20.pickle
+    dataset_meta: mapillary_20.json
+    metrics:
+    - type: mean_iou
+      use_argmax: false
+      presenter: print_vector

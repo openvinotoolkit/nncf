@@ -1,0 +1,15 @@
+models:
+  - name: ssd300_vgg_voc_magnitude_sparsity_int8
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter: ssd
+    datasets:
+      - name: VOC2012
+        preprocessing:
+          - type: resize
+            size: 300
+          - type: normalization
+            mean: 123.675, 116.28, 103.53
+        postprocessing:
+          - type: resize_prediction_boxes
