@@ -95,16 +95,17 @@ class DataLoaderBaseRunner:
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
-        for i, loaded_item in tqdm(
-                enumerate(data_loader),
+        with tqdm(
+                data_loader,
                 total=num_init_steps,
                 desc=self.progressbar_description,
                 bar_format=bar_format,
-        ):
-            if num_init_steps is not None and i >= num_init_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
+        ) as tqdm_it:
+            for i, loaded_item in enumerate(tqdm_it):
+                if num_init_steps is not None and i >= num_init_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
 
     def _infer_batch(self, args_kwargs_tuple, device):
         to_device_fn = partial(torch.Tensor.to, device=device)
@@ -199,16 +200,17 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         self.model.apply(partial(set_bn_momentum,
                                  momentum_value=self.momentum_base))
 
-        for i, loaded_item in tqdm(
-                enumerate(data_loader),
+        with tqdm(
+                data_loader,
                 total=num_init_steps,
                 desc=self.progressbar_description,
                 bar_format=bar_format,
-        ):
-            if num_init_steps is not None and i >= num_init_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
+        ) as tqdm_it:
+            for i, loaded_item in enumerate(tqdm_it):
+                if num_init_steps is not None and i >= num_init_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
 
     def _prepare_initialization(self):
         pass
