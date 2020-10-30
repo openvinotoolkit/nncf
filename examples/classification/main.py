@@ -58,15 +58,6 @@ model_names = sorted(name for name in models.__dict__
                      and callable(models.__dict__[name]))
 
 
-def mlflow_log_config(config):
-    if is_main_process():
-        mlflow.log_param('epochs', config.nncf_config['epochs'])
-        mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
-        mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
-        mlflow.set_tag('Log Dir Path', config.log_dir)
-        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, config.log_dir.split('/')[-1]))
-
-
 def get_argument_parser():
     parser = get_common_argument_parser()
     parser.add_argument(
@@ -87,16 +78,6 @@ def main(argv):
 
     if config.dist_url == "env://":
         config.update_from_env()
-
-    mlflow.set_tracking_uri(osp.join(config.log_dir, 'mlruns'))
-    # ToDo: naming experiment problem
-    try:
-        config.name = get_name(config)
-        if not osp.exists(osp.join(osp.join(config.log_dir, 'mlruns'), config.name)):
-            os.mkdir(osp.join(osp.join(config.log_dir, 'mlruns'), config.name))
-        mlflow.create_experiment(config.name, osp.join(osp.join(osp.join(config.log_dir), 'mlruns')), config.name)
-    except:
-        mlflow.set_experiment(config.name)
 
     configure_paths(config)
     copyfile(args.config, osp.join(config.log_dir, 'config.json'))
@@ -124,10 +105,6 @@ def main(argv):
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-
-    if is_main_process():
-        mlflow.start_run()
-
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
@@ -137,6 +114,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         configure_logging(logger, config)
+        mlflow.start_run()
         print_args(config)
 
     if config.seed is not None:
@@ -206,7 +184,12 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    mlflow_log_config(config)
+    if is_main_process():
+        mlflow.log_param('epochs', config.nncf_config['epochs'])
+        mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
+        mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
+        mlflow.set_tag('Log Dir Path', config.log_dir)
+        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, config.log_dir.split('/')[-1]))
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -256,6 +239,8 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
         is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         best_acc1 = max(acc1, best_acc1)
+        if is_main_process():
+            mlflow.log_param("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
@@ -274,7 +259,6 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
                 'optimizer': optimizer.state_dict(),
                 'scheduler': compression_ctrl.scheduler.state_dict()
             }
-
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 

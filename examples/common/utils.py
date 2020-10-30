@@ -26,6 +26,7 @@ from shutil import copyfile
 from examples.common.sample_config import SampleConfig
 from tensorboardX import SummaryWriter
 from texttable import Texttable
+import mlflow
 
 from examples.common.example_logger import logger as default_logger
 
@@ -97,6 +98,11 @@ def configure_paths(config):
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
 
+    mlflow.set_tracking_uri(osp.join("/home/skholkin/projects/all_results", 'mlruns'))
+    config.name = get_name(config)
+    if mlflow.get_experiment_by_name(config.name) is None:
+        mlflow.create_experiment(config.name)
+    mlflow.set_experiment(config.name)
     training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
     training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
     sample_logger.addHandler(training_pipeline_log_file_handler)
