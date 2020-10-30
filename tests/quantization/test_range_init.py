@@ -12,6 +12,7 @@
 """
 import itertools
 from collections import namedtuple
+from typing import Tuple, List
 
 import pytest
 import re
@@ -28,9 +29,9 @@ from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader
+from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader, RangeInitializerFactory
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
-    BaseQuantizer
+    BaseQuantizer, QuantizerConfig, QuantizationMode, QUANTIZATION_MODULES
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
@@ -631,3 +632,84 @@ def test_per_layer_range_init_is_called_the_required_number_of_times(range_init_
          range_init_call_count_test_struct.expected_call_count_register_input['mean_min_max']
     assert range_threesigma_init_register_input_spy.call_count ==\
          range_init_call_count_test_struct.expected_call_count_register_input['three_sigma']
+
+
+
+QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percentile"]
+
+
+class QuantizeRangeInitScaleShapeTestStruct:
+    def __init__(self, per_channel: bool, is_weights: bool,
+                 input_shape: List[int], ref_scale_shape: List[int]):
+        self.per_channel = per_channel
+        self.is_weights = is_weights
+        self.input_shape = input_shape
+        self.ref_scale_shape = ref_scale_shape
+
+QRISSTS = QuantizeRangeInitScaleShapeTestStruct
+
+QUANTIZER_RANGE_INIT_TEST_CASES = [
+    QRISSTS(per_channel=False,
+            is_weights=False,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1]),
+    QRISSTS(per_channel=True,
+            is_weights=False,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1, 42, 1, 1]),
+    QRISSTS(per_channel=False,
+            is_weights=True,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1]),
+    QRISSTS(per_channel=True,
+            is_weights=True,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[41, 1, 1, 1]),
+]
+
+def quantizer_range_init_scale_shape_idfn(fixture_value):
+    test_struct = fixture_value[0]  # type: QRISSTS
+    postfix = ""
+    if test_struct.is_weights:
+        postfix += "-W"
+    else:
+        postfix += "-A"
+
+    if test_struct.per_channel:
+        postfix += "-PC"
+    else:
+        postfix += "-PT"
+    return fixture_value[1] + postfix
+
+
+@pytest.fixture(params=itertools.product(QUANTIZER_RANGE_INIT_TEST_CASES, QUANTIZER_RANGE_INITIALIZERS),
+                ids=quantizer_range_init_scale_shape_idfn)
+def quantizer_range_init_test_struct(request):
+    return request.param
+
+
+def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: Tuple[QRISSTS, str]):
+    test_struct = quantizer_range_init_test_struct[0]
+    initializer_type = quantizer_range_init_test_struct[1]
+    for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:
+        qconfig = QuantizerConfig(mode=quantization_mode, per_channel=test_struct.per_channel,
+                                  is_weights=test_struct.is_weights,
+                                  input_shape=test_struct.input_shape)
+        q_cls = QUANTIZATION_MODULES.get(quantization_mode)
+        quantizer = q_cls(qconfig)  # type: BaseQuantizer
+        init_config = {"type": initializer_type,
+                       "num_init_steps": 1}
+        initializer = RangeInitializerFactory.create(init_config, quantizer, "")
+        initializer.register_input(torch.ones(test_struct.input_shape))
+
+        with torch.no_grad():
+            initializer.apply_init()
+
+        assert quantizer.scale_shape == test_struct.ref_scale_shape
+        if quantization_mode == QuantizationMode.SYMMETRIC:
+            assert list(quantizer.scale.shape) == test_struct.ref_scale_shape
+        elif quantization_mode == QuantizationMode.ASYMMETRIC:
+            assert list(quantizer.input_low.shape) == test_struct.ref_scale_shape
+            assert list(quantizer.input_range.shape) == test_struct.ref_scale_shape
+        else:
+            assert False  # options above should be exhaustive
