@@ -253,6 +253,27 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 full_pattern = full_pattern | custom_pattern
         return full_pattern
 
+    def _check_if_ip_graph_nodes_point_to_single_module(self, ip_graph_node_list: List[dict]):
+        """Does not access actual modules - only uses the InputAgnosticOperationExecutionContext info."""
+        ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
+        for ip_graph_op_node in ip_graph_node_list:
+            nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+            ia_op_exec_context = nncf_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_contexts_list.append(ia_op_exec_context)
+
+        contexts_correspond_to_single_module = True
+        first_op_context = ia_op_exec_contexts_list[0]
+        for other_op_context in ia_op_exec_contexts_list:
+            if other_op_context.scope_in_model != first_op_context.scope_in_model or \
+                    other_op_context.operator_name != first_op_context.operator_name:
+                contexts_correspond_to_single_module = False
+                break
+
+        if not contexts_correspond_to_single_module:
+            raise RuntimeError("NNCF module has more than 1 associated graph operation node corresponding"
+                               "to different module hierarchy locations - cannot make sure that weight "
+                               "quantization will be correct")
+
     def get_potential_quantized_modules(self, target_model: NNCFNetwork) -> List[PotentialQuantizedModule]:
         modules = target_model.get_nncf_modules()
         insertion_point_graph = target_model.get_insertion_point_graph()
@@ -274,8 +295,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     raise RuntimeError(
                         "Could not find a patched operation corresponding to NNCF module scope {}".format(
                             str(module_scope)))
-                assert len(associated_ops) == 1, "NNCF module has more than 1 associated graph operation node - " \
-                                                 "cannot make sure that weight quantization will be correct"
+
+                if len(associated_ops) > 1:
+                    self._check_if_ip_graph_nodes_point_to_single_module(associated_ops)
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
