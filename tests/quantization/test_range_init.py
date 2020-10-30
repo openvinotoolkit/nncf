@@ -530,7 +530,7 @@ def test_range_init_is_called(config_cutter, range_init_call_count, precision_in
     model = BasicConvTestModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
     range_init_spy = mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
-    precision_init_spy = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.apply_init')
+    precision_init_spy = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init')
     bn_adaptation_spy = mocker.patch('nncf.initialization.DataLoaderBNAdaptationRunner.run')
 
     config_cutter(config['compression'])
