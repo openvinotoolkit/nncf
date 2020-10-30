@@ -12,12 +12,12 @@
 """
 import itertools
 import json
-import numpy as np
 from collections import namedtuple, OrderedDict
 from pathlib import Path
 from typing import Callable, NamedTuple, List
 
 import math
+import numpy as np
 import os
 import pytest
 import torch
@@ -42,10 +42,14 @@ from nncf.hw_config import HWConfigType
 from nncf.quantization.algo import QuantizerSetupType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
-from nncf.quantization.init_precision import HAWQPrecisionInitializer, TracesPerLayer, Perturbations, \
-    PerturbationObserver, HAWQDebugger, CompressionRatioCalculator, WeightQuantizersHandler, \
-    GroupsOfAdjacentQuantizers, TracesOrder
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig, QuantizersSwitcher
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
+from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
+from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
+from nncf.quantization.precision_init.manual_init import WeightQuantizersHandler
+from nncf.quantization.precision_init.perturbations import PerturbationObserver, Perturbations
+from nncf.quantization.precision_init.traces_order import TracesOrder, TracesPerLayer
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
@@ -574,9 +578,9 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
     model = MockModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
     mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
-    mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer._calc_traces')
+    mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
 
-    mocked_trace = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.' + method_name)
+    mocked_trace = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.' + method_name)
     mocked_trace.return_value = None
 
     with expected_behavior:
