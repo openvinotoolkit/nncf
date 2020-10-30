@@ -12,7 +12,7 @@
     "num_classes": 1000,
     "batch_size" : 128,
     // "train_subset_ratio": 0.02, // should we move as local setting of the AutoQ initializer?
-    // "val_subset_ratio": 0.2,    // should we move as local setting of the AutoQ initializer?
+    "val_subset_ratio": 0.2,    // should we move as local setting of the AutoQ initializer?
     "epochs": 30,
     "optimizer": {
         "base_lr": 0.00031,
