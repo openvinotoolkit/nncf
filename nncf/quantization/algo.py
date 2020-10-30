@@ -381,7 +381,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                            hw_config=self.hw_config,
                                                            default_qconfig_list=[self.__get_default_qconfig(
                                                                constraints=self.global_quantizer_contraints[
-                                                                   QuantizerGroup.ACTIVATIONS])])
+                                                                   QuantizerGroup.ACTIVATIONS])],
+                                                           input_infos=target_model.get_input_infos())
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
             insertion_data = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
             insertion_commands = []

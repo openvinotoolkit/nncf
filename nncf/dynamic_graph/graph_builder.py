@@ -38,6 +38,9 @@ class ModelInputInfo:
             return torch.long
         return torch.float32
 
+    def is_integer_input(self):
+        return self.type != torch.float32
+
 
 def create_input_infos(config) -> List[ModelInputInfo]:
     input_infos = config.get("input_info", [])
