@@ -249,8 +249,8 @@ class SymmetricQuantizer(BaseQuantizer):
     def calculate_level_ranges(num_bits, signed):
         levels = 2 ** num_bits
         if signed:
-            level_high = (levels / 2.0) - 1
-            level_low = -(levels / 2.0)
+            level_high = (levels // 2) - 1
+            level_low = -(levels // 2)
         else:
             level_high = levels - 1
             level_low = 0
