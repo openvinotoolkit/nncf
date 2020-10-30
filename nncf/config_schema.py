@@ -230,6 +230,16 @@ RANGE_INIT_CONFIG_PROPERTIES = {
     },
 }
 
+BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
+    "type": "string",
+    "enum": ['strict', 'liberal'],
+    "default": "liberal",
+    "description": "The mode for assignment bitwidth to activation quantizers. A group of quantizers between modules "
+                   "with quantizable inputs has the same bitwidth in the strict mode. Liberal one allows different "
+                   "precisions within the group. Bitwidth is assigned based on hardware constraints. If multiple "
+                   "variants are possible the minimal compatible bitwidth is chosen."
+}
+
 QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
@@ -298,7 +308,18 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                         },
                         "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
                                        "the quantizers."
-                    }
+                    },
+                    "traces_per_layer_path": with_attributes(_STRING,
+                                                             description="Path to serialized PyTorch Tensor with "
+                                                                         "average Hessian traces per quantized modules."
+                                                                         " It can be used to accelerate mixed precision"
+                                                                         "initialization by using average Hessian "
+                                                                         "traces from previous run of HAWQ algorithm."),
+                    "dump_hawq_data": with_attributes(_BOOLEAN,
+                                                      description="Whether to dump data related to HAWQ algorithm:"
+                                                                  "bitwidth graph, average traces and different plots.",
+                                                      default=True),
+                    "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
                 },
                 "additionalProperties": False,
             }
