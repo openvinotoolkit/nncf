@@ -476,8 +476,13 @@ def main_worker(current_gpu, config):
         train_loader, val_loader = loaders
         criterion = get_criterion(w_class, config)
 
+    def criterion_fn(model_outputs, target, criterion_):
+        labels, loss_outputs, _ = \
+            loss_funcs.do_model_specific_postprocessing(config.model, target, model_outputs)
+        return criterion_(loss_outputs, labels)
+
     if not resuming_checkpoint_path:
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, criterion_fn, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,

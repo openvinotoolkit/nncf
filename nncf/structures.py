@@ -10,7 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Callable, Any
 
+import torch
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
@@ -33,7 +35,9 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
     """
 
-    def __init__(self, criterion: _Loss, data_loader: DataLoader, device: str = 'cuda'):
+    def __init__(self, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
+                 data_loader: DataLoader, device: str = 'cuda'):
+        self.criterion_fn = criterion_fn
         self.criterion = criterion
         self.data_loader = data_loader
         self.device = device

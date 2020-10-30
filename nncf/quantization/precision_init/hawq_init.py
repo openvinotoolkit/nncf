@@ -13,7 +13,7 @@
 import itertools
 from collections import OrderedDict
 from enum import Enum
-from typing import List, Dict, Union, Tuple, NamedTuple
+from typing import List, Dict, Union, Tuple, NamedTuple, Callable, Any
 
 import torch
 import warnings
@@ -57,6 +57,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     def __init__(self, algo: 'QuantizationController', config: 'NNCFConfig',
                  init_args: QuantizationPrecisionInitArgs):
         super().__init__(algo, config, init_args)
+        self._criterion_fn = init_args.criterion_fn
         self._criterion = init_args.criterion
         self._data_loader = init_args.data_loader
         self._traces_per_layer_path = config.get('traces_per_layer_path', None)
@@ -69,7 +70,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo)
-        self._dump_hawq_data = config.get('dump_hawq_data', True)
+        self._dump_hawq_data = config.get('dump_hawq_data', False)
         bitwidth_assignment_mode_str = config.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
         self._bitwidth_assignment_mode = BitwidthAssignmentMode.from_str(bitwidth_assignment_mode_str)
 
@@ -79,7 +80,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         original_device = next(self._model.parameters()).device
         self._model.to(self._init_device)
 
-        traces_per_layer = self._calc_traces(self._criterion, self._iter_number, self._tolerance)
+        traces_per_layer = self._calc_traces(self._criterion_fn, self._criterion, self._iter_number, self._tolerance)
         if not traces_per_layer:
             raise RuntimeError('Failed to calculate hessian traces!')
 
@@ -246,7 +247,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                     param.requires_grad = True
         return HAWQPrecisionInitializer.ParamsToRestore(originally_disabled_gradients, skipped_gradients_to_enable)
 
-    def _calc_traces(self, criterion: _Loss, iter_number: int, tolerance: float) -> TracesPerLayer:
+    def _calc_traces(self, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
+                     iter_number: int, tolerance: float) -> TracesPerLayer:
         if self._traces_per_layer_path:
             return TracesPerLayer(torch.load(self._traces_per_layer_path).to(self._init_device))
 
@@ -257,8 +259,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             self._model,
             self._quantizers_handler.get_scope_of_skipped_weight_quantizers())
 
-        trace_estimator = HessianTraceEstimator(self._model, criterion, self._init_device, self._data_loader,
-                                                self._num_data_points)
+        trace_estimator = HessianTraceEstimator(self._model, criterion_fn, criterion, self._init_device,
+                                                self._data_loader, self._num_data_points)
         avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
 
         self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.quantized_weight_modules_registry,

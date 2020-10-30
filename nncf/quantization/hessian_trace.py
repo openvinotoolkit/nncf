@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from functools import partial
-from typing import List, Union
+from typing import List, Union, Any, Callable
 
 import torch
 from nncf.utils import objwalk, is_tensor
@@ -53,9 +53,11 @@ class ParameterHandler:
 
 class GradientsCalculator:
 
-    def __init__(self, model: nn.Module, criterion: _Loss, data_loader: InitializingDataLoader, num_data_iter: int,
+    def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
+                 data_loader: InitializingDataLoader, num_data_iter: int,
                  paramerter_handler: ParameterHandler):
         self._model = model
+        self._criterion_fn = criterion_fn
         self._criterion = criterion
         self._data_loader = data_loader
         self._num_data_iter = num_data_iter
@@ -79,8 +81,11 @@ class GradientsCalculator:
         args, kwargs = self._data_loader.get_inputs(dataloader_output)
 
         self._model.zero_grad()
+
+        target = self._data_loader.get_target(dataloader_output)
         outputs = self._model(*args, **kwargs)
-        loss = self._criterion(outputs, self._data_loader.get_target(dataloader_output))
+        loss = self._criterion_fn(outputs, target, self._criterion)
+
         loss.backward(create_graph=True)
         grads = self._parameter_handler.get_gradients()
         self._model.zero_grad()
@@ -92,7 +97,8 @@ class HessianTraceEstimator:
     Performs estimation of Hessian Trace based on Hutchinson algorithm.
     """
 
-    def __init__(self, model: nn.Module, criterion: _Loss, device: torch.device, data_loader: DataLoader,
+    def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
+                 device: torch.device, data_loader: DataLoader,
                  num_data_points: int):
         self._model = model
         parameters = [p for p in model.parameters() if p.requires_grad]
@@ -100,7 +106,8 @@ class HessianTraceEstimator:
         self._batch_size = data_loader.batch_size
         data_loader = wrap_dataloader_for_init(data_loader)
         self._num_data_iter = num_data_points // self._batch_size if num_data_points >= self._batch_size else 1
-        self._gradients_calculator = GradientsCalculator(self._model, criterion, data_loader, self._num_data_iter,
+        self._gradients_calculator = GradientsCalculator(self._model, criterion_fn, criterion, data_loader,
+                                                         self._num_data_iter,
                                                          self._parameter_handler)
         self._diff_eps = 1e-6
 
