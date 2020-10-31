@@ -170,29 +170,29 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.decay_step = params.get('step', 0.05)
         self.eps = params.get('eps', 0.03)
         self.patience = params.get('patience', 1)
-        self.sparsity_target = self.initial_sparsity
+        self.current_sparsity_target = self.initial_sparsity
         self.num_bad_epochs = 0
         self._set_sparsity_level()
 
     def epoch_step(self, epoch=None):
-        super().step(epoch)
-        if self.sparsity_loss.current_sparsity >= self.sparsity_target - self.eps:
+        super().epoch_step(epoch)
+        if self.sparsity_loss.current_sparsity >= self.current_sparsity_target - self.eps:
             self.num_bad_epochs += 1
 
         if self.num_bad_epochs >= self.patience:
             self.num_bad_epochs = 0
-            self.sparsity_target = min(self.sparsity_target + self.decay_step, self.sparsity_target)
+            self.current_sparsity_target = min(self.current_sparsity_target + self.decay_step, self.sparsity_target)
         self._set_sparsity_level()
 
     def state_dict(self):
         sd = super().state_dict()
         sd['num_bad_epochs'] = self.num_bad_epochs
-        sd['current_sparsity_level'] = self.sparsity_target
+        sd['current_sparsity_level'] = self.current_sparsity_level
         return sd
 
     @property
     def current_sparsity_level(self):
-        return self.sparsity_target
+        return self.current_sparsity_target
 
 
 @SPARSITY_SCHEDULERS.register("multistep")
