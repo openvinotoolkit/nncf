@@ -50,8 +50,6 @@ from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
 import mlflow
-from texttable import Texttable
-import datetime
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
