@@ -774,6 +774,14 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
+    def get_all_nodes(self) -> List[NNCFNode]:
+        all_nodes = []
+        for node_key in self.get_all_node_keys():
+            nx_node = self._nx_graph.nodes[node_key]
+            nncf_node = self._nx_node_to_nncf_node(nx_node)
+            all_nodes.append(nncf_node)
+        return all_nodes
+
 
 class NNCFNodeExpression(NodeExpression):
     def __init__(self, node_type: str = None, filter_fn=None):

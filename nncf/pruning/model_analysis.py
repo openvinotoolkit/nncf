@@ -1,4 +1,7 @@
-from nncf.pruning.utils import _find_next_nodes_of_types
+from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES, Convolution, \
+    Concat
+
+from nncf.pruning.utils import _find_next_nodes_of_types, is_depthwise_conv
 
 from nncf.nncf_network import NNCFNetwork
 import networkx as nx
@@ -131,3 +134,98 @@ def cluster_special_ops_in_model(model: object, special_types: object, identity_
         unit_groups_of_clusters(all_output_special_nodes, clusterization)
 
     return clusterization
+
+
+class ModelAnalyser:
+    """
+    Analyse model architecture before pruning
+    """
+    def __init__(self, target_model: NNCFNetwork):
+        self.model = target_model
+        self.graph = target_model.get_original_graph()
+        self.nx_graph = self.graph._nx_graph
+
+        self.can_prune = {idx: True for idx in self.graph.get_all_node_idxs()}
+        self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_idxs()}
+
+    def node_propagate_can_prune_attr(self, nncf_node):
+        node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+        node_type = nncf_node.op_exec_context.operator_name
+        is_conv = node_type in Convolution().get_all_op_aliases()
+        return not is_conv or (is_conv and is_depthwise_conv(node_module))
+
+    def node_accept_different_inputs(self, nncf_node):
+        """
+        Return whether nx_node accept pruned and not pruned inputs as inputs at the same time.
+        """
+        node_type = nncf_node.op_exec_context.operator_name
+        return node_type in Concat.get_all_op_aliases()
+
+    @staticmethod
+    def get_class_by_type_name(type_name):
+        """
+        Return class of metaop that corresponds to type_name type.
+        """
+        cls = PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
+        if cls is None:
+            raise RuntimeError("Class {} is not found".format(type_name))
+            # cls = StopMaskForwardOps
+        return cls
+
+    def propagate_can_prune_attr_up(self):
+        """
+        Propagating can_prune attribute in reversed topological order.
+        This attribute depends on accept_pruned_input and can_prune attributes of output nodes.
+        Node can_prune is True if all outputs accept_pruned_input is True and all outputs
+        (except convs because conv can be pruned by input and output independently).
+        """
+        reversed_sorted_nodes = reversed([self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)])
+        for nx_node in reversed_sorted_nodes:
+            nncf_node = self.graph._nx_node_to_nncf_node(nx_node)
+
+            # Check all output nodes accept_pruned_input attribute
+            out_nodes = self.graph.get_next_nodes(nncf_node)
+            outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
+
+            # Check all output nodes can_prune attribute
+            outputs_will_be_pruned = all([self.can_prune[node.node_id] for node in out_nodes if self.node_propagate_can_prune_attr(node)])
+            self.can_prune[nncf_node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
+
+        # nncf_logger.info('Propagated can_prune attribute up')
+
+    def propagate_can_prune_attr_down(self):
+        """
+        Propagating can_prune attribute down to fix all branching cases with one pruned and one not pruned
+        branches.
+        """
+        sorted_nodes = [self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)]
+        for nx_node in sorted_nodes:
+            nncf_node = self.graph._nx_node_to_nncf_node(nx_node)
+            # Propagate attribute only in not conv case
+            if self.node_propagate_can_prune_attr(nncf_node):
+                in_nodes = self.graph.get_previous_nodes(nncf_node)
+                can_prune = all([self.can_prune[node.node_id] for node in in_nodes])
+                can_prune_any = any([self.can_prune[node.node_id] for node in in_nodes])
+
+                if (not self.node_accept_different_inputs(nncf_node) and not can_prune) or \
+                        (self.node_accept_different_inputs(nncf_node) and not can_prune_any):
+                    self.can_prune[nncf_node.node_id] = can_prune
+
+        # nncf_logger.info('Propagated can_prune attribute down')
+
+    def set_accept_pruned_input_attr(self):
+        for nncf_node in self.graph.get_all_nodes():
+            node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+            node_type = nncf_node.op_exec_context.operator_name
+            cls = self.get_class_by_type_name(node_type)()
+            self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(self.model, self.graph, node_module)
+
+    def _set_can_prune_attr(self):
+        # set accept prune input attrs
+        self.set_accept_pruned_input_attr()
+        self.propagate_can_prune_attr_up()
+        self.propagate_can_prune_attr_down()
+
+    def analyse_model_before_pruning(self):
+        self._set_can_prune_attr()
+        return self.can_prune

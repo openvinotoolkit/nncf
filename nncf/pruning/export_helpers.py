@@ -22,7 +22,7 @@ from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
     fill_input_masks
-from nncf.pruning.utils import get_sources_of_node
+from nncf.pruning.utils import get_sources_of_node, is_depthwise_conv
 
 PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -31,6 +31,9 @@ PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatyp
 class DefaultMetaOp:
     subtypes = []
     additional_types = []
+
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        raise NotImplementedError
 
     def mask_propagation(self, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
         """
@@ -46,12 +49,12 @@ class DefaultMetaOp:
         """
         raise NotImplementedError
 
-    def input_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(self, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
         """
         Prune nx_node by input_masks (if masks is not none and operation support it).
         """
 
-    def output_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def output_prune(self, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
         """
         Prune nx_node by output_mask (if mask is not none and operation support it).
         """
@@ -72,10 +75,12 @@ class DefaultMetaOp:
 class Input(DefaultMetaOp):
     subtypes = [NoopMetatype]
 
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return False
+
     def mask_propagation(self, model, nx_node, graph, nx_graph):
         nx_node['input_masks'] = []
         nx_node['output_mask'] = None
-        nx_node['accept_pruned_input'] = False
 
 
 @PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
@@ -84,18 +89,26 @@ class IdentityMaskForwardOps(DefaultMetaOp):
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype]
     additional_types = ["h_sigmoid", "h_swish", 'RELU']
 
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return True
+
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
-        nx_node['accept_pruned_input'] = True
 
 
 @PRUNING_OPERATOR_METATYPES.register('convolution')
 class Convolution(DefaultMetaOp):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        accept_pruned_input = True
+        if node_module.groups != 1:
+            if not is_depthwise_conv(node_module):
+                accept_pruned_input = False
+        return accept_pruned_input
+
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         output_mask = None
-        accept_pruned_input = True
         is_depthwise = False
         input_masks = get_input_masks(nx_node, nx_graph)
 
@@ -112,12 +125,10 @@ class Convolution(DefaultMetaOp):
                 is_depthwise = True
                 output_mask = input_masks[0]
             else:
-                accept_pruned_input = False
                 output_mask = None
 
         nx_node['input_masks'] = input_masks
         nx_node['output_mask'] = output_mask
-        nx_node['accept_pruned_input'] = accept_pruned_input
         nx_node['is_depthwise'] = is_depthwise
 
     def input_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
@@ -173,9 +184,11 @@ class Convolution(DefaultMetaOp):
 class BatchNorm(DefaultMetaOp):
     subtypes = [BatchNormMetatype]
 
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return True
+
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
-        nx_node['accept_pruned_input'] = True
 
     def input_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
@@ -202,6 +215,9 @@ class BatchNorm(DefaultMetaOp):
 @PRUNING_OPERATOR_METATYPES.register('concat')
 class Concat(DefaultMetaOp):
     subtypes = [CatMetatype]
+
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return True
 
     def all_inputs_from_convs(self, nx_node, nx_graph, graph):
         """
@@ -233,7 +249,6 @@ class Concat(DefaultMetaOp):
 
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         result_mask = None
-        accept_pruned_input = False
 
         if self.check_concat(nx_node, nx_graph, graph):
             input_masks, filled_input_masks = fill_input_masks(nx_node, nx_graph)
@@ -242,16 +257,17 @@ class Concat(DefaultMetaOp):
                 result_mask = None
             else:
                 result_mask = torch.cat(filled_input_masks)
-                accept_pruned_input = True
 
         nx_node['input_masks'] = input_masks
         nx_node['output_mask'] = result_mask
-        nx_node['accept_pruned_input'] = accept_pruned_input
 
 
 @PRUNING_OPERATOR_METATYPES.register('elementwise')
 class Elementwise(DefaultMetaOp):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
+
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return True
 
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         input_masks = get_input_masks(nx_node, nx_graph)
@@ -260,40 +276,27 @@ class Elementwise(DefaultMetaOp):
         if input_masks[0] is not None:
             assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
         nx_node['output_mask'] = input_masks[0]
-        nx_node['accept_pruned_input'] = True
 
 
 @PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class StopMaskForwardOps(DefaultMetaOp):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return False
+
     def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nx_node['input_masks'] = input_masks
         nx_node['output_mask'] = None
-        nx_node['accept_pruned_input'] = False
 
 
 class ModelPruner:
-    CAN_PRUNE_ATTR = 'can_prune'
-
     def __init__(self, model: NNCFNetwork, graph: NNCFGraph, nx_graph: nx.DiGraph):
         self.model = model
         self.graph = graph
         self.nx_graph = nx_graph
-
-    def node_propagate_can_prune_attr(self, nx_node_key):
-        nx_node = self.nx_graph.nodes[nx_node_key]
-        is_conv = self.graph.node_type_fn(nx_node) in Convolution().get_all_op_aliases()
-        return not is_conv or (is_conv and nx_node['is_depthwise'])
-
-    def node_accept_different_inputs(self, nx_node):
-        """
-        Return whether nx_node accept pruned and not pruned inputs as inputs at the same time.
-        """
-        node_type = self.graph.node_type_fn(nx_node)
-        return node_type in Concat.get_all_op_aliases()
 
     @staticmethod
     def get_class_by_type_name(type_name):
@@ -318,48 +321,6 @@ class ModelPruner:
             cls.mask_propagation(self.model, node, self.graph, self.nx_graph)
         nncf_logger.info('Finished mask propagation in graph')
 
-    def propagate_can_prune_attr_up(self):
-        """
-        Propagating can_prune attribute in reversed topological order.
-        This attribute depends on accept_pruned_input and can_prune attributes of output nodes.
-        Node can_prune is True if all outputs accept_pruned_input is True and all outputs
-        (except convs because conv can be pruned by input and output independently).
-        """
-        for node_name in self.nx_graph.nodes:
-            self.nx_graph.nodes[node_name][ModelPruner.CAN_PRUNE_ATTR] = True
-
-        reversed_sorted_nodes = reversed([self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)])
-        for node in reversed_sorted_nodes:
-            # Check all output nodes accept_pruned_input attribute
-            out_edges = self.nx_graph.out_edges(node['key'])
-            outputs_accept_pruned_input = all(self.nx_graph.nodes[key]['accept_pruned_input'] for _, key in out_edges)
-
-            # Check all output nodes can_prune attribute
-            outputs_will_be_pruned = all([self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for _, key in out_edges
-                                          if self.node_propagate_can_prune_attr(key)])
-            node[ModelPruner.CAN_PRUNE_ATTR] = outputs_accept_pruned_input and outputs_will_be_pruned
-
-        nncf_logger.info('Propagated can_prune attribute up')
-
-    def propagate_can_prune_attr_down(self):
-        """
-        Propagating can_prune attribute down to fix all branching cases with one pruned and one not pruned
-        branches.
-        """
-        sorted_nodes = [self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)]
-        for node in sorted_nodes:
-            # Propagate attribute only in not conv case
-            if self.node_propagate_can_prune_attr(node['key']):
-                in_edges = self.nx_graph.in_edges(node['key'])
-                can_prune = all(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
-                can_prune_any = any(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
-
-                if (not self.node_accept_different_inputs(node) and not can_prune) or \
-                        (self.node_accept_different_inputs(node) and not can_prune_any):
-                    node[ModelPruner.CAN_PRUNE_ATTR] = can_prune
-
-        nncf_logger.info('Propagated can_prune attribute down')
-
     def apply_mask(self):
         """
         Applying propagated masks for all nodes in topological order:
@@ -372,13 +333,8 @@ class ModelPruner:
                 node_type = self.graph.node_type_fn(node)
                 node_cls = self.get_class_by_type_name(node_type)()
 
-                in_edges = self.nx_graph.in_edges(node['key'])
-                can_prune_input = all(self.nx_graph.nodes[key][ModelPruner.CAN_PRUNE_ATTR] for key, _ in in_edges)
-                if can_prune_input:
-                    node_cls.input_prune(self.model, node, self.graph, self.nx_graph)
-
-                if node[ModelPruner.CAN_PRUNE_ATTR]:
-                    node_cls.output_prune(self.model, node, self.graph, self.nx_graph)
+                node_cls.input_prune(self.model, node, self.graph, self.nx_graph)
+                node_cls.output_prune(self.model, node, self.graph, self.nx_graph)
         nncf_logger.info('Finished mask applying step')
 
     def prune_model(self):
@@ -392,7 +348,5 @@ class ModelPruner:
         """
         nncf_logger.info('Start pruning model')
         self.mask_propagation()
-        self.propagate_can_prune_attr_up()
-        self.propagate_can_prune_attr_down()
         self.apply_mask()
         nncf_logger.info('Finished pruning model')

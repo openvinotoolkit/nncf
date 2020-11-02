@@ -26,7 +26,7 @@ from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.pruning.model_analysis import cluster_special_ops_in_model, NodesCluster, Clusterization
+from nncf.pruning.model_analysis import cluster_special_ops_in_model, NodesCluster, Clusterization, ModelAnalyser
 from nncf.pruning.utils import get_bn_for_module_scope, \
     get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
     get_previous_conv, get_sources_of_node
@@ -34,8 +34,6 @@ from nncf.pruning.utils import get_bn_for_module_scope, \
 
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
-    # TODO: delete next bn + rewrite all places with it
-    DEPTHWISE_BN_NAME = 'next_bn_module'
 
     def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict):
         self.module_name = module_name
@@ -60,12 +58,10 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
-        self.prune_batch_norms = params.get('prune_batch_norms', False)
+        self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
-        # TODO: are we need this common list without groups?
-        self._pruned_module_info = []
-        self.pruned_module_groups = []
+        self.pruned_module_groups_info = []
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         insertion_commands = self._prune_weights(target_model)
@@ -74,7 +70,33 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         target_model.register_algorithm(self)
         return target_model
 
-    def _get_modules_that_should_be_pruned_together(self, target_model: NNCFNetwork):
+    def _check_pruned_groups(self, target_model: NNCFNetwork, pruned_nodes_clusterization: Clusterization, can_prune: dict):
+        """
+
+        :param target_model:
+        :param pruned_nodes_clusterization:
+        :param can_prune:
+        :return:
+        """
+        # TODO: beautiful informative logging here
+        for cluster in list(pruned_nodes_clusterization.get_all_clusters()):
+            # Check whether this node should be pruned from point of customer settings view
+            should_prune_modules = [self._should_prune_module_check(target_model, node_info.module, node_info.module_scope)
+                                    for node_info in cluster.nodes]
+
+            # Check whether this node can be potentially pruned from architecture point of view
+            can_prune_nodes = [can_prune[node_info.id] for node_info in cluster.nodes]
+            if not all([can_prune[0] for can_prune in should_prune_modules]):
+                nncf_logger.info("Group of nodes {} can't be pruned, msg = {}".format(cluster.nodes, can_prune_nodes))
+                pruned_nodes_clusterization.delete_cluster(cluster.id)
+            elif not all(can_prune_nodes):
+                nncf_logger.info("Group of nodes {} can't be pruned, msg = {}".format(cluster.nodes, can_prune_nodes))
+                pruned_nodes_clusterization.delete_cluster(cluster.id)
+            else:
+                nncf_logger.info("Group of nodes {} will be pruned together, msg = {}".format(cluster.nodes, can_prune_nodes))
+        return pruned_nodes_clusterization
+
+    def _get_pruned_nodes_groups(self, target_model: NNCFNetwork):
         """
         This function groups ALL modules with pruning types to groups that should be pruned together.
         1. Create clusters for special ops (eltwises) that should be pruned together
@@ -92,13 +114,15 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         all_nodes_to_prune = graph.get_all_nodes_of_type(self.get_types_of_pruned_modules())  # NNCFNodes here
         assert len(all_nodes_to_prune) <= len(all_modules_to_prune)
 
-        # 1. Clusters for special ops (eltwises)
-        special_ops_clusterization = cluster_special_ops_in_model(target_model, Elementwise.get_all_op_aliases(),
-                                                            IdentityMaskForwardOps.get_all_op_aliases())
+        # 1. Clusters for special ops
+        special_ops_types = self.get_types_of_grouping_ops()
+        identity_like_types = IdentityMaskForwardOps.get_all_op_aliases()
+        special_ops_clusterization = cluster_special_ops_in_model(target_model, special_ops_types,
+                                                                  identity_like_types)
 
         pruned_nodes_clusterization = Clusterization("id")
 
-        # 2. Clusters for nodes that should be pruned together (taking into account clusters for eltwises)
+        # 2. Clusters for nodes that should be pruned together (taking into account clusters for special ops)
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
             all_pruned_inputs = []
             pruned_inputs_idxs = set()
@@ -144,16 +168,22 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                     previous_conv_cluster_id = pruned_nodes_clusterization.get_cluster_for_node(previous_conv.node_id).id
                     pruned_nodes_clusterization.union_clusters(cluster_id, previous_conv_cluster_id)
 
-        # 5. Checks for groups (all nodes in group can prune or not).
-        for cluster in list(pruned_nodes_clusterization.get_all_clusters()):
-            can_prune_nodes = [self._can_prune_module(target_model, node_info.module, node_info.module_scope) for node_info in cluster.nodes]
-            if not all([can_prune[0] for can_prune in can_prune_nodes]):
-                # TODO: beautiful informative logging here
-                nncf_logger.info("Group of nodes {} can't be pruned, msg = {}".format(cluster.nodes, can_prune_nodes))
-                pruned_nodes_clusterization.delete_cluster(cluster.id)
+        # 5. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
+        model_analyser = ModelAnalyser(target_model)
+        can_prune_analysis = model_analyser.analyse_model_before_pruning()
+        pruned_nodes_clusterization = self._check_pruned_groups(target_model, pruned_nodes_clusterization, can_prune_analysis)
         return pruned_nodes_clusterization
 
-    def _can_prune_module(self, target_model: NNCFNetwork, module, module_scope):
+    def _should_prune_module_check(self, target_model: NNCFNetwork, module, module_scope: Scope):
+        """
+        Check whether we should prune module according to algorithm parameters.
+        :param target_model:
+        :param module:
+        :param module_scope:
+        :return: (prune: bool, msg: str)
+        prune: Whether we should prune module
+        msg: additional information why we should/shouldn't prune
+        """
         prune = True
         msg = None
 
@@ -179,10 +209,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 msg = "Ignored adding Weight Pruner in scope: {} because" \
                       " this scope is grouped convolution".format(module_scope_str)
                 prune = False
-            #     previous_conv = get_previous_conv(target_model, module, module_scope)
-            #     if previous_conv:
-            #         depthwise_bn = get_bn_for_module_scope(target_model, module_scope)
-            #         bn_for_depthwise[str(previous_conv.op_exec_context.scope_in_model)] = depthwise_bn
         elif not self.prune_downsample_convs and is_conv_with_downsampling(module):
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                              " this scope is convolution with downsample".format(module_scope_str)
@@ -190,11 +216,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         return prune, msg
 
     def _prune_weights(self, target_model: NNCFNetwork):
-        grops_of_modules_to_prune = self._get_modules_that_should_be_pruned_together(target_model)
+        grops_of_modules_to_prune = self._get_pruned_nodes_groups(target_model)
 
         device = next(target_model.parameters()).device
         insertion_commands = []
-        self.pruned_module_groups = Clusterization('module_name')
+        self.pruned_module_groups_info = Clusterization('module_name')
 
         for i, group in enumerate(grops_of_modules_to_prune.get_all_clusters()):
             group_minfos = []
@@ -220,7 +246,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 )
 
                 related_modules = {}
-                # TODO: discuss this param: it seems like we should ALWAYS prune BN
                 if self.prune_batch_norms:
                     related_modules[PrunedModuleInfo.BN_MODULE_NAME] = get_bn_for_module_scope(target_model, module_scope)
 
@@ -228,11 +253,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 self._pruned_module_info.append(minfo)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.id for n in group.nodes])
-            self.pruned_module_groups.add_cluster(cluster, cluster.id)
+            self.pruned_module_groups_info.add_cluster(cluster, cluster.id)
         return insertion_commands
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
-        return BasePruningAlgoController(target_model, self._pruned_module_info, self.pruned_module_groups, self._params)
+        return BasePruningAlgoController(target_model, self.pruned_module_groups_info, self._params)
 
     def create_weight_pruning_operation(self, module):
         raise NotImplementedError
@@ -249,20 +274,22 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         """
         raise NotImplementedError
 
+    def get_types_of_grouping_ops(self):
+        raise NotImplementedError
+
 
 class BasePruningAlgoController(CompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  pruned_module_info: List[PrunedModuleInfo],
-                 pruned_module_groups: Clusterization,
+                 pruned_module_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
         self.config = config
         params = self.config.get("params", {})
-        self.pruned_module_info = pruned_module_info
-        self.pruned_module_groups = pruned_module_groups
+        self.pruned_module_groups_info = pruned_module_groups_info
+        self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
-        self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.zero_grad = params.get('zero_grad', True)
         self._hooks = []
 
@@ -283,7 +310,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
             mask = mask.to(grad.device)
             return apply_filter_binary_mask(mask, grad)
 
-        for minfo in self.pruned_module_info:
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             mask = minfo.operand.binary_filter_pruning_mask
             weight = minfo.module.weight
             partial_hook = update_wrapper(partial(hook, mask=mask), hook)
@@ -338,7 +365,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]
         data = [header]
 
-        for minfo in self.pruned_module_info:
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             drow = {h: 0 for h in header}
             drow["Name"] = minfo.module_name
             drow["Weight's Shape"] = list(minfo.module.weight.size())
@@ -371,7 +398,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
          'mask_pr': proportion of zero elements in filter pruning mask.
         """
         stats = {}
-        for minfo in self.pruned_module_info:
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             layer_info = {}
             layer_info["w_shape"] = list(minfo.module.weight.size())
             layer_info["b_shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
