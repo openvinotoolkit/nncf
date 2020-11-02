@@ -80,6 +80,9 @@ def expand_like(input_: torch.Tensor, scale_shape: List[int]):
 def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.ndarray]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
+    if channel_count == 1:
+        return [channel_first_tensor]
+
     ret_list = []
     for i in range(channel_count):
         ret_list.append(channel_first_tensor[i, ...])
