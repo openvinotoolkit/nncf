@@ -12,6 +12,7 @@
 """
 import itertools
 from collections import OrderedDict
+from enum import Enum
 from typing import List, Dict, Union, Tuple, NamedTuple
 
 import torch
@@ -25,7 +26,7 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QuantizersSwitcher
-from .adjacent_quantizers import GroupsOfAdjacentQuantizers
+from .adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 from .compression_ratio import CompressionRatioCalculator
 from .hawq_debug import HAWQDebugger
 from .manual_init import ManualPrecisionInitializer
@@ -37,6 +38,19 @@ from ..quantizer_id import QuantizerId
 from ...layer_utils import ProxyModule
 from ...module_operations import UpdateParameter
 from ...structures import QuantizationPrecisionInitArgs
+
+
+class BitwidthAssignmentMode(Enum):
+    STRICT = 'strict'
+    LIBERAL = 'liberal'
+
+    @staticmethod
+    def from_str(config_value: str) -> 'BitwidthAssignmentMode':
+        if config_value == BitwidthAssignmentMode.STRICT.value:
+            return BitwidthAssignmentMode.STRICT
+        if config_value == BitwidthAssignmentMode.LIBERAL.value:
+            return BitwidthAssignmentMode.LIBERAL
+        raise RuntimeError("Unknown bitwidth assignment mode")
 
 
 class HAWQPrecisionInitializer(ManualPrecisionInitializer):
@@ -55,6 +69,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo)
+        self._dump_hawq_data = config.get('dump_hawq_data', True)
+        bitwidth_assignment_mode_str = config.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
+        self._bitwidth_assignment_mode = BitwidthAssignmentMode.from_str(bitwidth_assignment_mode_str)
 
     def apply_init(self):
         if not self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id():
@@ -72,8 +89,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         weight_quantizer_ids_in_execution_order = list(self._weight_quantizations_by_execution_order.keys())
 
-        self._merge_constraints_for_adjacent_quantizers(self._groups_of_adjacent_quantizers,
-                                                        self._hw_precision_constraints)
+        if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
+            self._merge_constraints_for_adjacent_quantizers(self._groups_of_adjacent_quantizers,
+                                                            self._hw_precision_constraints)
 
         bits_configurations = self._filter_configs_by_precision_constraints(bits_configurations,
                                                                             self._hw_precision_constraints,
@@ -83,11 +101,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             warnings.warn('All bits configurations are incompatible with HW Config!', RuntimeWarning)
             return None
 
-        bits_configurations = self._filter_configs_by_grouped_weight_quantizers(bits_configurations,
-                                                                                weight_quantizer_ids_in_execution_order,
-                                                                                self._groups_of_adjacent_quantizers,
-                                                                                traces_order)
-
+        if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
+            bits_configurations = \
+                self._filter_configs_by_grouped_weight_quantizers(bits_configurations,
+                                                                  weight_quantizer_ids_in_execution_order,
+                                                                  self._groups_of_adjacent_quantizers,
+                                                                  traces_order)
         if not bits_configurations:
             warnings.warn('No bits configurations are left after removing inconsistent groups of weight quantizers'
                           ' with adjacent activation quantizers!', RuntimeWarning)
@@ -115,7 +134,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         self.set_chosen_config(chosen_config_in_execution_order)
         self._model.rebuild_graph()
-        if is_debug():
+        if is_debug() or self._dump_hawq_data:
             hawq_debugger = HAWQDebugger(bits_configurations, perturbations,
                                          weight_observers, traces_per_layer, self._bits)
             hawq_debugger.dump_metric_MB(configuration_metric)
@@ -370,19 +389,47 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             wq.num_bits = bits
         if self._groups_of_adjacent_quantizers:
             for group in self._groups_of_adjacent_quantizers:
-                bitwidth_set = {wq.num_bits for _, wq in group.weight_quantizers}
-                if len(bitwidth_set) > 1:
-                    raise RuntimeError('Invalid grouping of weight quantizers')
-                if bitwidth_set:
-                    bitwidth = bitwidth_set.pop()
-                    for _, aq in group.activation_quantizers:
-                        aq.num_bits = bitwidth
+                weight_bitwidth_set = {wq.num_bits for _, wq in group.weight_quantizers}
+                if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
+                    self._set_activations_bitwidth_strictly(group, weight_bitwidth_set)
+                else:
+                    self._set_activation_bitwidth_liberally(group, weight_bitwidth_set)
         else:
             # TODO: delete not-consistent pairs of activation and weights for pattern-based approach
             pairs = self._algo.get_weights_activation_quantizers_pairs()
             for pair in pairs:
                 wqs, aq = pair
                 aq.num_bits = max([wq.num_bits for wq in wqs])
+
+    def _set_activation_bitwidth_liberally(self, group: AdjacentQuantizers, weight_bitwidth_set):
+        for quantizer_id, aq in group.activation_quantizers:
+            activation_bitwidth_set = self._hw_precision_constraints.get(quantizer_id)
+            intersection = activation_bitwidth_set.intersection(weight_bitwidth_set)
+            if activation_bitwidth_set.__len__() == 1:
+                aq.num_bits = activation_bitwidth_set.pop()
+            elif intersection:
+                aq.num_bits = min(intersection)
+            elif activation_bitwidth_set:
+                aq.num_bits = min(activation_bitwidth_set)
+            elif weight_bitwidth_set:
+                aq.num_bits = min(weight_bitwidth_set)
+
+    def _set_activations_bitwidth_strictly(self, group: AdjacentQuantizers, weight_bitwidth_set):
+        if len(weight_bitwidth_set) > 1:
+            raise RuntimeError('Invalid grouping of weight quantizers')
+        all_constraints = set()
+        for quantizer_id, aq in group.activation_quantizers:
+            all_constraints.update(self._hw_precision_constraints.get(quantizer_id))
+        common_constraints = set(all_constraints)
+        for quantizer_id, aq in group.activation_quantizers:
+            constraint = self._hw_precision_constraints.get(quantizer_id)
+            common_constraints = common_constraints.intersection(constraint)
+        if weight_bitwidth_set:
+            common_constraints = common_constraints.intersection(weight_bitwidth_set)
+        if not common_constraints:
+            raise RuntimeError('No hardware compatible bitwidth for activation quantizers')
+        for quantizer_id, aq in group.activation_quantizers:
+            aq.num_bits = sorted(list(common_constraints))[0]
 
     def get_metric_per_layer(self, chosen_config_in_execution_order: List[int], perturbations: Perturbations,
                              traces_per_layer: TracesPerLayer):

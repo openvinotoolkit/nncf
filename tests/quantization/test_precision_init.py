@@ -14,7 +14,7 @@ import itertools
 import json
 from collections import namedtuple, OrderedDict
 from pathlib import Path
-from typing import Callable, NamedTuple, List
+from typing import Callable, NamedTuple, List, Dict
 
 import math
 import numpy as np
@@ -46,7 +46,7 @@ from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig, Quan
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
-from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
+from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode, HAWQPrecisionInitializer
 from nncf.quantization.precision_init.manual_init import WeightQuantizersHandler
 from nncf.quantization.precision_init.perturbations import PerturbationObserver, Perturbations
 from nncf.quantization.precision_init.traces_order import TracesOrder, TracesPerLayer
@@ -110,16 +110,28 @@ class HAWQConfigBuilder:
             self._config = config_creator_fn()
         else:
             self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
-        self._name: str = ''
+        self._options: Dict[str, str] = OrderedDict()
+        self._extra_params: str = ''
 
     def with_ratio(self, ratio: float):
         self._config['compression']['initializer']['precision']['compression_ratio'] = ratio
-        self._name += '_'.join(['ratio', str(ratio)])
+        self._options['ratio'] = str(ratio)
         return self
+
+    def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
+        self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
+        self._options['mode'] = str(mode.value)
+        return self
+
+    def strict_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.STRICT)
+
+    def liberal_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.LIBERAL)
 
     def _with_quantizer_setup_type(self, setup_type: QuantizerSetupType):
         self._config['quantizer_setup_type'] = setup_type.value
-        self._name += f'_{setup_type.value}'
+        self._options['setup_type'] = setup_type.value
         return self
 
     def prop_based(self):
@@ -137,16 +149,16 @@ class HAWQConfigBuilder:
             "activations_quant_start_epoch": 0,
             "weights_quant_start_epoch": 1
         }
-        self._name += 'staged'
+        self._extra_params += 'staged'
         return self
 
     def _set_target_device(self, config_type: str):
         self._config["target_device"] = config_type
-        self._name += f'_{config_type}'
+        self._options['device'] = config_type
         return self
 
     def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value).prop_based()
+        return self._set_target_device(HWConfigType.VPU.value).prop_based().strict_mode()
 
     def for_cpu(self):
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
@@ -161,7 +173,13 @@ class HAWQConfigBuilder:
         return self._config
 
     def __str__(self):
-        return self._name
+        if self._extra_params:
+            return '_'.join([self.filename_suffix(), self._extra_params])
+        return self.filename_suffix()
+
+    def filename_suffix(self) -> str:
+        ordered_options = OrderedDict(sorted(self._options.items()))
+        return '__'.join(['_'.join([k, v]) for k, v in ordered_options.items()])
 
     @staticmethod
     def create_hawq_test_config(batch_size=10, num_data_points=100, image_size=10):
@@ -253,30 +271,35 @@ class HAWQTestStruct(NamedTuple):
 
 TEST_PARAMS = (
     HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based(),
-                   filename_suffix='pattern_based',
                    avg_traces_creator=get_avg_traces),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based(),
-                   filename_suffix='pattern_based',
                    avg_traces_creator=get_avg_traces),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_none(),
-                   avg_traces_creator=get_avg_traces,
-                   filename_suffix='prop_based_none'),
+                   avg_traces_creator=get_avg_traces),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu(),
-                   avg_traces_creator=get_avg_traces,
-                   filename_suffix='prop_based_cpu'),
+                   avg_traces_creator=get_avg_traces),
+    HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
+                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.4)),
     HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
                    config_builder=HAWQConfigBuilder().with_ratio(1.15).for_vpu()),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.03).for_vpu(),
-                   filename_suffix='hw_config_vpu_ratio'),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.03).for_vpu()),
     HAWQTestStruct(model_creator=squeezenet1_1_custom,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
+    HAWQTestStruct(model_creator=resnet50,
+                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=get_avg_traces_for_vpu,
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1.01)),
+    HAWQTestStruct(model_creator=inception_v3,
+                   avg_traces_creator=get_avg_traces_for_vpu,
+                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09),
+                   avg_traces_creator=get_avg_traces_for_vpu),
+    HAWQTestStruct(model_creator=ssd_vgg_512_test,
+                   config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().liberal_mode(),
                    avg_traces_creator=get_avg_traces_for_vpu),
 )
 
@@ -304,7 +327,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo_ctrl)
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
                                             groups_of_adjacent_quantizers)
-    path_to_dot = '{}_mixed_bitwidth_graph_{}.dot'.format(params.model_creator.__name__, params.filename_suffix)
+    path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
     check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)
 
 
