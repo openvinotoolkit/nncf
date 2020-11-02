@@ -132,7 +132,12 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader = create_dataloaders(config)
-        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, config.device)
+
+        def criterion_fn(model_outputs, target, criterion):
+            loss_l, loss_c = criterion(model_outputs, target)
+            return loss_l + loss_c
+
+        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, criterion_fn, config.device)
 
     ##################
     # Prepare model

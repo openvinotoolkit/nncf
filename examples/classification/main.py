@@ -15,6 +15,7 @@ import os.path as osp
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -29,6 +30,7 @@ import torchvision.transforms as transforms
 import warnings
 from functools import partial
 from shutil import copyfile
+from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 
@@ -47,7 +49,7 @@ from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import register_default_init_args
+from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import manual_seed, safe_thread_call, is_main_process
 
 model_names = sorted(name for name in models.__dict__
@@ -100,6 +102,14 @@ def main(argv):
         start_worker(staged_quantization_main_worker, config)
 
 
+def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) -> torch.Tensor:
+    # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+    output, aux_outputs = model_outputs
+    loss1 = criterion(output, target)
+    loss2 = criterion(aux_outputs, target)
+    return loss1 + 0.4 * loss2
+
+
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
     config.current_gpu = current_gpu
@@ -122,6 +132,9 @@ def main_worker(current_gpu, config: SampleConfig):
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(config.device)
 
+    model_name = config['model']
+    train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
+
     train_loader = train_sampler = val_loader = None
     resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
@@ -133,10 +146,11 @@ def main_worker(current_gpu, config: SampleConfig):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
+                                                 config.device)
 
     # create model
-    model_name = config['model']
     model = load_model(model_name,
                        pretrained=pretrained,
                        num_classes=config.get('num_classes', 1000),
@@ -187,12 +201,11 @@ def main_worker(current_gpu, config: SampleConfig):
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
-        is_inception = 'inception' in model_name
-        train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
+        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
 
 
-def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
+def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
@@ -201,7 +214,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epoch, config, is_inception)
+        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
@@ -347,7 +360,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
     return train_loader, train_sampler, val_loader
 
 
-def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epoch, config, is_inception=False):
+def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -370,15 +383,8 @@ def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epo
         target = target.to(config.device)
 
         # compute output
-        if is_inception:
-            # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-            output, aux_outputs = model(input_)
-            loss1 = criterion(output, target)
-            loss2 = criterion(aux_outputs, target)
-            criterion_loss = loss1 + 0.4 * loss2
-        else:
-            output = model(input_)
-            criterion_loss = criterion(output, target)
+        output = model(input_)
+        criterion_loss = criterion_fn(output, target, criterion)
 
         # compute compression loss
         compression_loss = compression_ctrl.loss()
@@ -453,7 +459,7 @@ def validate(val_loader, model, criterion, config):
 
             # compute output
             output = model(input_)
-            loss = criterion(output, target)
+            loss = default_criterion_fn(output, target, criterion)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))

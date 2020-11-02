@@ -1,0 +1,27 @@
+{
+    "model": "inception_v3",
+    "dataset": "CIFAR10",
+    "input_info": {
+        "sample_size": [
+            2,
+            3,
+            299,
+            299
+        ]
+    },
+    "num_classes": 10,
+    "pretrained": false,
+    "target_device": "VPU",
+    "compression": [
+        {
+            "algorithm": "quantization",
+            "initializer": {
+                "precision": {
+                    "type": "hawq",
+                    "num_data_points": 2,
+                    "iter_number": 1
+                }
+            }
+        }
+    ]
+}

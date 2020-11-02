@@ -1,9 +1,10 @@
 import logging
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Callable
 
 import torch
+from torch.nn.modules.loss import _Loss
 from tqdm import tqdm
 
 from nncf.nncf_logger import logger as nncf_logger
@@ -216,9 +217,20 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         pass
 
 
-def register_default_init_args(nncf_config: 'NNCFConfig', train_loader, criterion=None, device='cuda') -> 'NNCFConfig':
+def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Tensor:
+    return criterion(outputs, target)
+
+
+def register_default_init_args(nncf_config: 'NNCFConfig',
+                               train_loader,
+                               criterion: _Loss = None,
+                               criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
+                               device='cuda') -> 'NNCFConfig':
     if criterion:
-        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion,
+        if not criterion_fn:
+            criterion_fn = default_criterion_fn
+        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
+                                                                          criterion=criterion,
                                                                           data_loader=train_loader,
                                                                           device=device),
                                             QuantizationRangeInitArgs(data_loader=train_loader,
