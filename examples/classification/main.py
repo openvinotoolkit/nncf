@@ -237,7 +237,8 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
         # order: NONE, PARTIAL, FULL.
         is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
         is_best = is_best_by_accuracy or compression_level > best_compression_level
-        best_acc1 = max(acc1, best_acc1)
+        if is_best:
+            best_acc1 = acc1
         if is_main_process():
             mlflow.log_metric("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
@@ -258,6 +259,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
                 'optimizer': optimizer.state_dict(),
                 'scheduler': compression_ctrl.scheduler.state_dict()
             }
+
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 

@@ -6,7 +6,7 @@ The framework is organized as a Python\* package that can be built and used in a
 The framework architecture is unified to make it easy to add different compression methods.
  
 The samples demonstrate the usage of compression algorithms for three different use cases on public models and datasets: Image Classification, Object Detection and Semantic Segmentation.
-Compression results achievable with the NNCF-powered samples are reported [here](#nncf-compression-results).
+[Compression results](#nncf-compression-results) achievable with the NNCF-powered samples can be found in a table at the end of this document.
 
 ## Key Features
 
@@ -21,7 +21,7 @@ Compression results achievable with the NNCF-powered samples are reported [here]
 - Distributed training support
 - Configuration file examples for each supported compression algorithm.
 - Git patches for prominent third-party repositories ([mmdetection](https://github.com/open-mmlab/mmdetection), [huggingface-transformers](https://github.com/huggingface/transformers)) demonstrating the process of integrating NNCF into custom training pipelines
-- Exporting compressed models to ONNX\* checkpoints ready for usage with [OpenVINO&trade; toolkit](https://github.com/opencv/dldt).
+- Exporting compressed models to ONNX\* checkpoints ready for usage with [OpenVINO&trade; toolkit](https://github.com/openvinotoolkit/).
 
 ## Usage
 The NNCF is organized as a regular Python package that can be imported in your target training pipeline script.
@@ -104,48 +104,81 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 
 Achieved using sample scripts and NNCF configuration files provided with this repository. See README.md files for [sample scripts](#model-compression-samples) for links to exact configuration files and final PyTorch checkpoints.
 
+Quick jump to sample type:
+
+[Classification](#classification)
+
+[Object detection](#object-detection)
+
+[Semantic segmentation](#semantic-segmentation)
+
+[Natural language processing (3rd-party training pipelines)](#nlp)
+
+[Object detection (3rd-party training pipelines)](#object-detection-3rd-party)
+
+
+#### Classification
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|None|ImageNet|-|76.13|
 |ResNet-50|INT8|ImageNet|76.13|76.05|
 |ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.3|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.28|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.22|
 |ResNet-50|Filter pruning, 30%, magnitude criterion|ImageNet|76.13|75.7|
 |ResNet-50|Filter pruning, 30%, geometric median criterion|ImageNet|76.13|75.7|
-|Inception V3|None|ImageNet|-|77.32|
-|Inception V3|INT8|ImageNet|77.32|76.92|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.32|76.98|
-|MobileNet V2|None|ImageNet|-|71.81|
+|Inception V3|INT8|ImageNet|77.32|76.96|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.32|77.02|
 |MobileNet V2|INT8|ImageNet|71.81|71.34|
 |MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.81|70.89|
 |MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.81|70.99|
-|SqueezeNet V1.1|None|ImageNet|-|58.18|
 |SqueezeNet V1.1|INT8|ImageNet|58.18|58.02|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.84|
-|ResNet-18|None|ImageNet|-|69.76|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.61|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
-|ResNet-18|Filter pruning, 30%, magnitude criterion|ImageNet|69.76|68.69|
+|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.85|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.56|
+|ResNet-18|Filter pruning, 30%, magnitude criterion|ImageNet|69.76|68.73|
 |ResNet-18|Filter pruning, 30%, geometric median criterion|ImageNet|69.76|68.97|
-|ResNet-34|None|ImageNet|-|73.31|
 |ResNet-34|Filter pruning, 30%, magnitude criterion|ImageNet|73.31|72.54|
-|ResNet-34|Filter pruning, 30%, geometric median criterion|ImageNet|73.31|72.60|
-|SSD300-BN|None|VOC12+07|-|78.28|
-|SSD300-BN|INT8|VOC12+07|78.28|78.07|
-|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|78.28|78.01|
-|SSD512-BN|None|VOC12+07|-|80.26|
-|SSD512-BN|INT8|VOC12+07|80.26|80.02|
-|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|80.26|79.98|
-|UNet|None|CamVid|-|71.95|
+|ResNet-34|Filter pruning, 30%, geometric median criterion|ImageNet|73.31|72.62|
+
+#### Object detection
+
+|Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
+| :---: | :---: | :---: | :---: | :---: |
+|SSD300-BN|INT8|VOC12+07|78.28|78.12|
+|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|78.28|77.94|
+|SSD512-BN|INT8|VOC12+07|80.26|80.09|
+|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|80.26|79.88|
+
+#### Semantic segmentation
+
+|Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
+| :---: | :---: | :---: | :---: | :---: |
 |UNet|INT8|CamVid|71.95|71.66|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|None|CamVid|-|67.89|
 |ICNet|INT8|CamVid|67.89|67.87|
 |ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.24|
-|UNet|None|Mapillary|-|56.23|
 |UNet|INT8|Mapillary|56.23|56.12|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.0|
+
+
+#### NLP
+
+|Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
+| :---: | :---: | :---: | :---: | :---: |
+|BERT-base-chinese|INT8|XNLI|77.68|77.22|
+|BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|93.21 (F1)|92.68 (F1)|
+|RoBERTa-large|INT8|MNLI|90.6 (matched)|89.25 (matched)|
+|DistilBERT-base|INT8|SST-2|91.1|90.3|
+|MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.3 (F1)|
+
+
+#### Object detection (3rd party)
+
+|Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
+| :---: | :---: | :---: | :---: | :---: |
+|RetinaNet-ResNet50-FPN|INT8|COCO2017|35.6 (avg box mAP)|35.3 (avg box mAP)|
+|RetinaNet-ResNet50-FPN|INT8 + Sparsity 50%|COCO2017|35.6 (avg box mAP)|34.7 (avg box mAP)|
+|RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
 
 
 

@@ -47,7 +47,8 @@ The framework is designed so that the modifications to your original training co
     ```
     The `create_compressed_model` function parses the loaded configuration file and returns two objects. `compression_ctrl` is a "controller" object that can be used during compressed model training to adjust certain parameters of the compression algorithm (according to a scheduler, for instance), or to gather statistics related to your compression algorithm (such as the current level of sparsity in your model).
 
- 5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training. If you do so, add the following call afterwards:
+ 5. (Optional) Wrap your model with `DataParallel` or `DistributedDataParallel` classes for multi-GPU training. 
+If you use `DistributedDataParallel`, add the following call afterwards:
    ```python
    compression_ctrl.distributed()
    ```

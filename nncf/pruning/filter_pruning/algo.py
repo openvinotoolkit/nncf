@@ -33,7 +33,6 @@ from nncf.pruning.utils import get_rounded_pruned_element_number
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
-        self._params = self.config.get("params", {})
 
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(0))
@@ -41,7 +40,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self._pruned_module_info,
-                                       self._params)
+                                       self.config)
 
     def _is_pruned_module(self, module):
         # Currently prune only Convolutions
@@ -56,8 +55,9 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  pruned_module_info: List[PrunedModuleInfo],
-                 params: dict):
-        super().__init__(target_model, pruned_module_info, params)
+                 config):
+        super().__init__(target_model, pruned_module_info, config)
+        params = self.config.get("params", {})
         self.frozen = False
         self.pruning_rate = 0
 
@@ -89,6 +89,7 @@ class FilterPruningController(BasePruningAlgoController):
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
         self._apply_masks()
+        self.run_batchnorm_adaptation(self.config)
 
     def _set_binary_masks_for_filters(self):
         nncf_logger.debug("Setting new binary masks for pruned modules.")
@@ -144,7 +145,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Applying mask to the BatchNorm node
             related_modules = minfo.related_modules
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
@@ -190,7 +191,8 @@ class FilterPruningController(BasePruningAlgoController):
     # pylint: disable=protected-access
     def export_model(self, filename, *args, **kwargs):
         """
-        This function saving model without actually pruning the layers, just nullifies the necessary filters by mask.
+        This function discards the pruned filters based on the binary masks
+        before exporting the model to ONNX.
         """
         self._apply_masks()
         model = self._model.eval().cpu()
