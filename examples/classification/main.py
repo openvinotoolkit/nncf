@@ -39,7 +39,7 @@ from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
     prepare_model_for_execution, start_worker
-from examples.common.model_loader import load_model
+from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
@@ -160,10 +160,9 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     resuming_model_sd = None
-    resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
-        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-        resuming_model_sd = resuming_checkpoint['state_dict']
+        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
+            resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
 
@@ -264,14 +263,6 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
-
-
-def load_resuming_checkpoint(resuming_checkpoint_path: str):
-    if osp.isfile(resuming_checkpoint_path):
-        logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
-        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
-        return checkpoint
-    raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
 
 
 def get_dataset(dataset_config, config, transform, is_train):

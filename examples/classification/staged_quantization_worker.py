@@ -24,11 +24,12 @@ import torch.utils.data
 import torch.utils.data.distributed
 
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
-    create_datasets, load_resuming_checkpoint, inception_criterion_fn
+    create_datasets, inception_criterion_fn
 from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
-from examples.common.model_loader import load_model
+from examples.common.model_loader import load_model, \
+    load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested
 from nncf.binarization.algo import BinarizationController
@@ -156,8 +157,8 @@ def staged_quantization_main_worker(current_gpu, config):
     resuming_model_sd = None
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
-        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-        resuming_model_sd = resuming_checkpoint['state_dict']
+        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
+            resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
