@@ -335,6 +335,8 @@ class InsertionPointGraph(nx.DiGraph):
 
 
 # pylint: disable=too-many-public-methods
+
+
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo] = None,

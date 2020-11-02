@@ -17,10 +17,7 @@ import torch
 from torch.utils.cpp_extension import load
 
 from nncf.extensions import CudaNotAvailableStub
-from nncf.utils import set_build_dir_for_venv
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-
-set_build_dir_for_venv()
 
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/binarization")
