@@ -36,7 +36,7 @@ class SparseLoss(CompressionLoss):
             self.disabled = True
 
             for sparse_layer in self._sparse_layers:
-                sparse_layer.sparsify = False
+                sparse_layer.frozen = True
 
     def forward(self):
         if self.disabled:
@@ -46,10 +46,10 @@ class SparseLoss(CompressionLoss):
         loss = 0
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
-            if not self.disabled and not sparse_layer.sparsify:
+            if not self.disabled and sparse_layer.frozen:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
-            if sparse_layer.sparsify:
+            if not sparse_layer.frozen:
                 sw_loss = sparse_layer.loss()
                 params = params + sw_loss.view(-1).size(0)
                 loss = loss + sw_loss.sum()

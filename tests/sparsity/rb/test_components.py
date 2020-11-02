@@ -22,14 +22,14 @@ from nncf.sparsity.rb.loss import SparseLoss
 
 
 class TestModel(nn.Module):
-    def __init__(self, layer, sparsify, size=1):
+    def __init__(self, layer, frozen, size=1):
         super().__init__()
         self.size = size
         self.layer = layer
-        if sparsify is None:
+        if frozen is None:
             sparsifier = RBSparsifyingWeight(size=size)
         else:
-            sparsifier = RBSparsifyingWeight(sparsify=sparsify, size=size)
+            sparsifier = RBSparsifyingWeight(frozen=frozen, size=size)
         self.op_key = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
 
     @property
@@ -40,9 +40,9 @@ class TestModel(nn.Module):
         return self.layer(x)
 
 
-def sparse_model(module, sparsify, size=1):
+def sparse_model(module, frozen, size=1):
     layer = module(size, size, size)
-    return TestModel(layer, sparsify, size)
+    return TestModel(layer, frozen, size)
 
 
 @pytest.mark.parametrize('module',
@@ -61,7 +61,7 @@ class TestSparseModules:
                               (0.3, 1),
                               (-0.3, 0)), ids=('default', 'zero', 'positive', 'negative'))
     def test_can_forward_sparse_module__with_frozen_mask(self, module, mask_value, ref_loss):
-        model = sparse_model(module, False)
+        model = sparse_model(module, True)
         sm = model.layer
         sm.weight.data.fill_(1)
         sm.bias.data.fill_(0)
@@ -73,12 +73,12 @@ class TestSparseModules:
         input_ = torch.ones([1, 1, 1, 1])
         assert model(input_).item() == ref_loss
 
-    @pytest.mark.parametrize(('sparsify', 'raising'), ((None, True), (True, False), (False, True)),
-                             ids=('default', 'sparsify', 'frozen'))
-    def test_calc_loss(self, module, sparsify, raising):
-        model = sparse_model(module, sparsify)
+    @pytest.mark.parametrize(('frozen', 'raising'), ((None, True), (True, True), (False, False)),
+                             ids=('default', 'frozen', 'not_frozen'))
+    def test_calc_loss(self, module, frozen, raising):
+        model = sparse_model(module, frozen)
         sw = model.sparsifier
-        assert sw.sparsify is (False if sparsify is None else sparsify)
+        assert sw.frozen is (True if frozen is None else frozen)
         loss = SparseLoss([model.sparsifier])
         try:
             assert loss() == 0
@@ -88,23 +88,23 @@ class TestSparseModules:
             if not raising:
                 pytest.fail("Exception is not expected")
 
-    @pytest.mark.parametrize('sparsify', (None, True, False), ids=('default', 'sparsify', 'frozen'))
+    @pytest.mark.parametrize('frozen', (None, False, True), ids=('default', 'sparsify', 'frozen'))
     class TestWithSparsify:
-        def test_can_freeze_mask(self, module, sparsify):
-            model = sparse_model(module, sparsify)
+        def test_can_freeze_mask(self, module, frozen):
+            model = sparse_model(module, frozen)
             sw = model.sparsifier
-            if sparsify is None:
-                sparsify = False
-            assert sw.sparsify is sparsify
+            if frozen is None:
+                frozen = True
+            assert sw.frozen is frozen
             assert sw.mask.numel() == 1
 
-        def test_disable_loss(self, module, sparsify):
-            model = sparse_model(module, sparsify)
+        def test_disable_loss(self, module, frozen):
+            model = sparse_model(module, frozen)
             sw = model.sparsifier
-            assert sw.sparsify is (False if sparsify is None else sparsify)
+            assert sw.frozen is (True if frozen is None else frozen)
             loss = SparseLoss([model.sparsifier])
             loss.disable()
-            assert not sw.sparsify
+            assert sw.frozen
 
     @pytest.mark.parametrize(('target', 'expected_rate'),
                              ((None, 0),

@@ -24,6 +24,7 @@ class BinaryMask(nn.Module):
     def __init__(self, size):
         super().__init__()
         self.register_buffer("_binary_mask", torch.ones(size))
+        self.frozen = False
 
     @property
     def binary_mask(self):

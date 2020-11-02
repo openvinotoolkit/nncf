@@ -70,7 +70,7 @@ def test_can_load_sparse_algo__with_defaults():
         for op in sparse_module.pre_ops.values():
             if isinstance(op, UpdateWeight) and isinstance(op.operand, RBSparsifyingWeight):
                 assert torch.allclose(op.operand.binary_mask, torch.ones_like(sparse_module.weight))
-                assert op.operand.sparsify
+                assert not op.operand.frozen
                 assert op.__class__.__name__ not in store
                 store.append(op.__class__.__name__)
 
@@ -180,7 +180,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert not loss.disabled
 
     for module_info in compression_ctrl.sparsified_module_info:
-        assert module_info.operand.sparsify
+        assert not module_info.operand.frozen
     scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.4
     assert pytest.approx(loss().item(), abs=1e-3) == 64
@@ -201,7 +201,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert loss.target_sparsity_rate == 0.6
     assert loss() == 0
     for module_info in compression_ctrl.sparsified_module_info:
-        assert not module_info.operand.sparsify
+        assert module_info.operand.frozen
 
 def test_create_rb_algo_with_per_layer_loss():
     config = get_empty_config()
