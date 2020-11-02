@@ -250,7 +250,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                     related_modules[PrunedModuleInfo.BN_MODULE_NAME] = get_bn_for_module_scope(target_model, module_scope)
 
                 minfo = PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules)
-                self._pruned_module_info.append(minfo)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.id for n in group.nodes])
             self.pruned_module_groups_info.add_cluster(cluster, cluster.id)
@@ -280,7 +279,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
 class BasePruningAlgoController(CompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
-                 pruned_module_info: List[PrunedModuleInfo],
                  pruned_module_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
