@@ -151,11 +151,13 @@ def check_equal(test, reference, rtol=1e-4):
 
 
 def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFConfig,
-                                              dummy_forward_fn: Callable[[Module], Any] = None) \
+                                              dummy_forward_fn: Callable[[Module], Any] = None,
+                                              resuming_state_dict: dict = None) \
     -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
-    algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn)
+    algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
+                                          resuming_state_dict=resuming_state_dict)
     return model, algo
 
 
@@ -193,22 +195,23 @@ def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model:
 
 
 class OnesDatasetMock:
-    def __init__(self, input_size):
+    def __init__(self, input_size, num_samples=1):
         self.input_size = input_size
         super().__init__()
+        self._len = num_samples
 
     def __getitem__(self, index):
         return torch.ones(self.input_size), torch.ones(1)
 
     def __len__(self):
-        return 1
+        return self._len
 
 
-def create_mock_dataloader(config):
+def create_mock_dataloader(config, num_samples=1):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:]),
+    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
                                               batch_size=1,
-                                              num_workers=1,
+                                              num_workers=0, # Workaround
                                               shuffle=False)
     return data_loader

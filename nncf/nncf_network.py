@@ -11,7 +11,8 @@
  limitations under the License.
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, Counter
+from enum import Enum
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
@@ -19,7 +20,6 @@ import networkx as nx
 import numpy as np
 import torch
 from copy import deepcopy
-from enum import Enum
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
@@ -32,7 +32,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope, nncf_model_input, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES
+from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules
@@ -79,9 +79,11 @@ class InsertionInfo:
         self.is_input = is_input
         self.is_output = is_output
         self.shape_to_operate_on = shape_to_operate_on
+        self.linked_op_exec_contexts = []  # type: List[OperationExecutionContext]
 
     def __eq__(self, other: 'InsertionInfo'):
-        return self.op_exec_context == other.op_exec_context
+        return self.op_exec_context == other.op_exec_context and Counter(self.linked_op_exec_contexts) == Counter(
+            other.linked_op_exec_contexts)
 
     def __hash__(self):
         return self.op_exec_context.__hash__()
@@ -221,8 +223,17 @@ class InsertionPointGraph(nx.DiGraph):
             operator_node = self.nodes[operator_node_key]
             operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
+    def _base_graph_match_has_breaking_output_edges(self, match):
+        for node_key in match[:-1]:
+            succs = list(self._base_nx_graph.succ[node_key].keys())
+            for succ_key in succs:
+                if succ_key not in match:
+                    return True
+        return False
+
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
+        #pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config)
         from nncf.dynamic_graph.graph_matching import search_all
@@ -233,6 +244,24 @@ class InsertionPointGraph(nx.DiGraph):
 
             input_node_key = match[0]
             output_node_key = match[-1]
+
+            # If a subgraph has output edges in its middle, should skip merging it
+            # Example:
+            #       (conv2d)
+            #          |------\
+            #         (BN)    |
+            #          |      |
+            #        (RELU)   |
+            #          |      |
+            #        (cat)----/
+            #          |
+            #         ...
+
+            has_breaking_output_edges = self._base_graph_match_has_breaking_output_edges(match)
+
+            if has_breaking_output_edges:
+                continue
+
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
 
@@ -289,7 +318,8 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_RELU_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS |\
+                  p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         return pattern
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
@@ -305,6 +335,8 @@ class InsertionPointGraph(nx.DiGraph):
 
 
 # pylint: disable=too-many-public-methods
+
+
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo] = None,
@@ -467,7 +499,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return self._nncf_module_scopes
 
     def get_nncf_modules(self) -> Dict['Scope', torch.nn.Module]:
-        return get_all_modules_by_type(self.get_nncf_wrapped_model(), NNCF_MODULES)
+        nncf_module_names_list = NNCF_MODULES + [x.__name__ for x in NNCF_WRAPPED_USER_MODULES_DICT.values()]
+        return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()
@@ -663,27 +696,27 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             count = count + param.numel()
         return count
 
-    def get_MACs_in_model(self):
+    def get_flops_per_module(self):
         """
-        Calculates MAC units count for model.
+        Calculates FLOPS count for modules.
         """
         model = self
-        ops_count_dict = {}
+        flops_count_dict = {}
 
         def get_hook(name):
-            def compute_flops_hook(module, input_, output):
+            def compute_MACs_hook(module, input_, output):
                 if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
                     ks = module.weight.data.shape
-                    ops_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
+                    mac_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
                 elif isinstance(module, nn.Linear):
-                    ops_count = input_[0].shape[1] * output.shape[1]
+                    mac_count = input_[0].shape[1] * output.shape[-1]
                 elif isinstance(module, nn.BatchNorm2d):
-                    ops_count = np.prod(list(input_[0].shape))
+                    mac_count = np.prod(list(input_[0].shape))
                 else:
                     return
-                ops_count_dict[name] = ops_count
+                flops_count_dict[name] = 2 * mac_count
 
-            return compute_flops_hook
+            return compute_MACs_hook
 
         hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
 
@@ -691,6 +724,15 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         for h in hook_list:
             h.remove()
+        return flops_count_dict
 
-        total_ops_count = sum(v for v in ops_count_dict.values())
-        return total_ops_count
+    def get_MACs_in_model(self):
+        """
+            Calculates MAC units count for model.
+        """
+        flops_count_dict = self.get_flops_per_module()
+        total_MACs_count = sum(v // 2 for v in flops_count_dict.values())
+        return total_MACs_count
+
+    def get_input_infos(self) -> List[ModelInputInfo]:
+        return deepcopy(self.input_infos)

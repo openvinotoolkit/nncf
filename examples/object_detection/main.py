@@ -94,7 +94,7 @@ def main_worker(current_gpu, config):
 
     config.device = get_device(config)
     config.start_iter = 0
-
+    nncf_config = config.nncf_config
     ##########################
     # Prepare metrics log file
     ##########################
@@ -132,7 +132,7 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         test_data_loader, train_data_loader = create_dataloaders(config)
-        config.nncf_config = register_default_init_args(config.nncf_config, criterion, train_data_loader)
+        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, config.device)
 
     ##################
     # Prepare model
@@ -210,7 +210,7 @@ def create_dataloaders(config):
     if config.distributed:
         test_sampler = DistributedSampler(test_dataset, config.rank, config.world_size)
     else:
-        test_sampler = None
+        test_sampler = torch.utils.data.SequentialSampler(test_dataset)
     test_data_loader = data.DataLoader(
         test_dataset, config.batch_size,
         num_workers=config.workers,

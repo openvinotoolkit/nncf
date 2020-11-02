@@ -34,13 +34,14 @@ from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
 class Command:
-    def __init__(self, cmd):
+    def __init__(self, cmd, path=None):
         self.cmd = cmd
         self.process = None
         self.exec_time = -1
         self.output = []  # store output here
         self.kwargs = {}
         self.timeout = False
+        self.path = path
 
         # set system/version dependent "start_new_session" analogs
         if sys.platform == "win32":
@@ -64,7 +65,7 @@ class Command:
         def target():
             start_time = time.time()
             self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, **self.kwargs)
+                                            bufsize=1, cwd=self.path, **self.kwargs)
             self.timeout = False
 
             self.output = []
@@ -202,7 +203,6 @@ def case_common_dirs(tmp_path_factory):
         "checkpoint_save_dir": str(tmp_path_factory.mktemp("models"))
     }
 
-
 @pytest.mark.parametrize(" multiprocessing_distributed",
                          (True, False),
                          ids=['distributed', 'dataparallel'])
@@ -214,7 +214,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
 
     if multiprocessing_distributed:
@@ -240,7 +240,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--dist-url": "tcp://127.0.0.1:8989"
@@ -273,7 +273,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--weights": ckpt_path,
     }
 
@@ -308,7 +308,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--resume": ckpt_path,
@@ -358,7 +358,7 @@ def test_export_with_pretrained(tmp_path):
             "sample_size": [2, 3, 299, 299]
         },
         "num_classes": 1000,
-        "compression": {"algorithm": "magnitude_sparsity"}
+        "compression":  {"algorithm": "magnitude_sparsity"}
     })
     config_factory = ConfigFactory(config, tmp_path / 'config.json')
 
@@ -394,13 +394,12 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 1,
+        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--cpu-only": None
     }
 
     command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
-
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
         if is_staged_quantization(config['nncf_config']):

@@ -598,7 +598,7 @@ class TestQuantizerPropagationStateGraph:
             prop_path = quantizers_test_struct.prop_path
             for node in quant_prop_graph.nodes.values():
                 node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
-            master_prop_quant = None
+            primary_prop_quant = None
             merged_prop_quant = []
             for node_key, trait_and_configs_tuple in init_node_to_trait_and_configs_dict.items():
                 trait = trait_and_configs_tuple[0]
@@ -609,22 +609,21 @@ class TestQuantizerPropagationStateGraph:
                     prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs,
                                                                             ip_node_key)
                     if ip_node_key == starting_quantizer_ip_node:
-                        master_prop_quant = prop_quant
+                        primary_prop_quant = prop_quant
 
             path = get_edge_paths_for_propagation(quant_prop_graph,
                                                   target_node,
                                                   starting_quantizer_ip_node)
-            master_prop_quant = quant_prop_graph.propagate_quantizer_via_path(master_prop_quant,
-                                                                              path[0])
+            primary_prop_quant = quant_prop_graph.propagate_quantizer_via_path(primary_prop_quant,
+                                                                               path[0])
             if is_merged:
-                merged_prop_quant.append((master_prop_quant, prop_path))
+                merged_prop_quant.append((primary_prop_quant, prop_path))
 
         for prop_quant, prop_path in merged_prop_quant:
             quant_prop_graph.merge_quantizer_into_path(prop_quant, prop_path)
 
         expected_quantizers_test_struct = merge_quantizer_into_path_test_struct.expected_set_quantizers
         self.check_final_state_qpsg(quant_prop_graph, expected_quantizers_test_struct)
-
 
     @staticmethod
     def check_final_state_qpsg(final_quant_prop_graph, expected_quantizers_test_struct):

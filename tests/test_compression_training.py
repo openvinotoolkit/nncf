@@ -47,12 +47,14 @@ GLOBAL_CONFIG = {
                             'expected_accuracy': 64.53,
                             'weights': 'mobilenetV2_64.53.sd',
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed', 'cpu-only'},
                             'expected_accuracy': 64.53,
                             'weights': 'mobilenetV2_64.53.sd',
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'inceptionV3_int8.json': {
                             'expected_accuracy': 77.53,
@@ -65,15 +67,17 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'mobilenet_v2_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 64.53,
+                            'expected_accuracy': 57.3,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
+                            'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
-                            'expected_accuracy': 64.53,
+                            'expected_accuracy': 62.71,
                             'weights': 'mobilenetV2_64.53.sd',
                             'execution_arg': {'multiprocessing-distributed'},
+                            'absolute_tolerance_eval': 2e-2
                         }
                     }
                 },
@@ -118,7 +122,7 @@ def get_cli_dict_args(args):
     for key, val in args.items():
         cli_key = '--{}'.format(str(key))
         cli_args[cli_key] = None
-        if val:
+        if val is not None:
             cli_args[cli_key] = str(val)
     return cli_args
 
@@ -226,7 +230,7 @@ def test_compression_train(_params, tmp_path):
 
     args['mode'] = 'train'
     args['log-dir'] = tmp_path
-    args['workers'] = 4
+    args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
@@ -250,7 +254,7 @@ def test_compression_eval_trained(_params, tmp_path):
 
     args['mode'] = 'test'
     args['log-dir'] = tmp_path
-    args['workers'] = 4
+    args['workers'] = 0  # Workaround for PyTorch MultiprocessingDataLoader issues
     args['seed'] = 1
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     args['resume'] = checkpoint_path

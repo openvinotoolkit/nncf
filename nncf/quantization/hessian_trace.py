@@ -94,7 +94,7 @@ class HessianTraceEstimator:
 
     def __init__(self, model: nn.Module, criterion: _Loss, device: torch.device, data_loader: DataLoader,
                  num_data_points: int):
-        self._model = model.eval()
+        self._model = model
         parameters = [p for p in model.parameters() if p.requires_grad]
         self._parameter_handler = ParameterHandler(parameters, device)
         self._batch_size = data_loader.batch_size
@@ -104,7 +104,7 @@ class HessianTraceEstimator:
                                                          self._parameter_handler)
         self._diff_eps = 1e-6
 
-    def get_average_traces(self, max_iter=100, tolerance=1e-3) -> Tensor:
+    def get_average_traces(self, max_iter=500, tolerance=1e-5) -> Tensor:
         """
         Estimates average hessian trace for each parameter
         :param max_iter: maximum number of iterations for Hutchinson algorithm

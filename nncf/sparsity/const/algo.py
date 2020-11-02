@@ -33,4 +33,3 @@ class ConstSparsityController(BaseSparsityAlgoController):
 
     def set_sparsity_level(self, sparsity_level: float):
         pass
-

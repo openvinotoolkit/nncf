@@ -12,13 +12,14 @@
 """
 
 import glob
+import stat
 import sys
 import sysconfig
 
 import codecs
 import os
 import re
-import setuptools
+from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -40,28 +41,18 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
-INSTALL_TYPE_RESOURCE_NAME = 'install_type'
-INSTALL_TYPE_RESOURCE_LOCATION = "{}/nncf/{}".format(here, INSTALL_TYPE_RESOURCE_NAME)
-
-
-def write_install_type(install_type: str):
-    with open(INSTALL_TYPE_RESOURCE_LOCATION, 'wb') as f:
-        f.write(install_type.encode("ASCII"))
-
-
 INSTALL_REQUIRES = ["ninja",
                     "addict",
-                    "pillow==6.2.1",
+                    "pillow",
                     "texttable",
                     "scipy==1.3.2",
-                    "pyyaml",
                     "networkx",
                     "graphviz",
                     "jsonschema",
                     "pydot",
                     "tensorboardX",
                     "jstyleson",
-                    "matplotlib==3.0.3",
+                    "matplotlib",
                     "numpy",
                     "tqdm",
                     "onnx",
@@ -72,6 +63,7 @@ INSTALL_REQUIRES = ["ninja",
                     "yattag",
                     "jsonschema",
                     "wheel",
+                    "defusedxml",
                     "mlflow"]
 
 DEPENDENCY_LINKS = []
@@ -99,7 +91,6 @@ TORCHVISION_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torch
                                   'ver}m-linux_x86_64.whl'
 WHL_MODE_TEMPLATE = '%2B{mode}'
 
-
 if "--cpu-only" in sys.argv:
     mode = 'cpu'
     whl_mode = WHL_MODE_TEMPLATE.format(mode=mode)
@@ -114,7 +105,6 @@ if "--cpu-only" in sys.argv:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    write_install_type("CPU")
     sys.argv.remove("--cpu-only")
 else:
     mode = "cu{}".format(CUDA_VERSION)
@@ -130,7 +120,6 @@ else:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-    write_install_type("GPU")
 
 
 EXTRAS_REQUIRE = {
@@ -139,7 +128,7 @@ EXTRAS_REQUIRE = {
     "docs": []
 }
 
-setuptools.setup(
+setup(
     name="nncf",
     version=find_version(os.path.join(here, "nncf/version.py")),
     author="Intel",
@@ -148,7 +137,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/openvinotoolkit/nncf_pytorch",
-    packages=setuptools.find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*",
+                                    "examples", "examples.*",
+                                    "tools", "tools.*"]),
     dependency_links=DEPENDENCY_LINKS,
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -157,17 +148,16 @@ setuptools.setup(
     ],
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
-    package_data={
-        INSTALL_TYPE_RESOURCE_NAME: [INSTALL_TYPE_RESOURCE_LOCATION]
-    },
     keywords=["compression", "quantization", "sparsity", "mixed-precision-training",
               "quantization-aware-training", "hawq", "classification",
               "pruning", "object-detection", "semantic-segmentation", "nlp",
-              "bert", "transformers", "mmdetection"]
+              "bert", "transformers", "mmdetection"],
+    include_package_data=True
 )
 
 path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"]+"/ninja*/ninja/data/bin/"))
 if path_to_ninja:
     path_to_ninja = str(path_to_ninja[0]+"ninja")
     if not os.access(path_to_ninja, os.X_OK):
-        os.chmod(path_to_ninja, 755)
+        st = os.stat(path_to_ninja)
+        os.chmod(path_to_ninja, st.st_mode | stat.S_IEXEC)

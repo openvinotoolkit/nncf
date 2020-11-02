@@ -29,8 +29,9 @@ The basic workflow is loading a JSON configuration script containing NNCF-specif
 This function returns a wrapped model ready for compression fine-tuning, and handle to the object allowing you to control the compression during the training process:
 
 ```python
-import nncf
-from nncf import create_compressed_model, Config as NNCFConfig
+import torch
+import nncf  # Important - should be imported directly after torch
+from nncf import create_compressed_model, NNCFConfig, register_default_init_args
 
 # Instantiate your uncompressed model
 from torchvision.models.resnet import resnet50
@@ -40,7 +41,7 @@ model = resnet50()
 nncf_config = NNCFConfig.from_json("resnet50_int8.json")
 
 # Provide data loaders for compression algorithm initialization, if necessary
-nncf_config = register_default_init_args(nncf_config, loss_criterion, train_loader)
+nncf_config = register_default_init_args(nncf_config, train_loader, loss_criterion)
 
 # Apply the specified compression algorithms to the model
 comp_ctrl, compressed_model = create_compressed_model(model, nncf_config)
@@ -74,7 +75,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 
 
 ## System requirements
-- Ubuntu\* 16.04 or later (64-bit)
+- Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6 or later
 - NVidia CUDA\* Toolkit 10.2 or later
 - PyTorch\* 1.5 or later.
@@ -82,7 +83,8 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-#### As a package built from checked-out repository:
+
+#### As a package built from a checked-out repository:
 1) Install the following system dependencies:
 
 `sudo apt-get install python3-dev`
@@ -93,6 +95,15 @@ We suggest to install or use the package in the [Python virtual environment](htt
 `python setup.py install`
 - For CPU-only installation
 `python setup.py install --cpu-only`
+
+_NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
+
+#### As a PyPI package:
+NNCF can be installed as a regular PyPI package via pip:
+```
+sudo apt install python3-dev
+pip install nncf
+```
 
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
@@ -124,6 +135,7 @@ Quick jump to sample type:
 |ResNet-50|INT8|ImageNet|76.13|76.05|
 |ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.3|
 |ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.22|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.13|75.60|
 |ResNet-50|Filter pruning, 30%, magnitude criterion|ImageNet|76.13|75.7|
 |ResNet-50|Filter pruning, 30%, geometric median criterion|ImageNet|76.13|75.7|
 |Inception V3|INT8|ImageNet|77.32|76.96|
@@ -169,7 +181,8 @@ Quick jump to sample type:
 |BERT-large (Whole Word Masking)|INT8|SQuAD v1.1|93.21 (F1)|92.68 (F1)|
 |RoBERTa-large|INT8|MNLI|90.6 (matched)|89.25 (matched)|
 |DistilBERT-base|INT8|SST-2|91.1|90.3|
-|MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.3 (F1)|
+|MobileBERT|INT8|SQuAD v1.1|89.98 (F1)|89.4 (F1)|
+|GPT-2|INT8|WikiText-2 (raw)|19.73 (perplexity) | 20.9 (perplexity)|
 
 
 #### Object detection (3rd party)
@@ -181,6 +194,16 @@ Quick jump to sample type:
 |RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
 
 
+## Citing
+
+```
+@article{kozlov2020neural,
+    title =   {Neural network compression framework for fast model inference},
+    author =  {Kozlov, Alexander and Lazarevich, Ivan and Shamporov, Vasily and Lyalyushkin, Nikolay and Gorbachev, Yury},
+    journal = {arXiv preprint arXiv:2002.08679},
+    year =    {2020}
+}
+```
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.

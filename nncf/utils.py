@@ -10,11 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import os
-import pathlib
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Dict, Callable, Any, Mapping, Sequence, Set
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
 
 import numpy as np
 import random
@@ -341,9 +339,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     return obj
 
 
-def set_build_dir_for_venv():
-    # Set build directory for C++/CUDA extensions to virtual environment if it is present
-    if "VIRTUAL_ENV" in os.environ:
-        build_dir = os.path.join(os.environ["VIRTUAL_ENV"], "torch_extensions")
-        pathlib.Path(build_dir).mkdir(parents=True, exist_ok=True)
-        os.environ["TORCH_EXTENSIONS_DIR"] = build_dir
+def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
+    return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
+               and not in_scope_list(scope_str, ignored_scopes)

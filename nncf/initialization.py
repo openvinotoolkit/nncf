@@ -1,5 +1,4 @@
 import logging
-import warnings
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Tuple, Any
@@ -18,16 +17,17 @@ class RangeInitializerFactory:
     @staticmethod
     def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
         init_type = init_config["type"]
+        num_init_steps = init_config["num_init_steps"]
         if init_type == "min_max":
-            return MinMaxInitializer(module, log_module_name)
+            return MinMaxInitializer(module, num_init_steps, log_module_name)
         if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, log_module_name)
+            return ThreeSigmaInitializer(module, num_init_steps, log_module_name)
         if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, log_module_name)
+            return MeanMinMaxInitializer(module, num_init_steps, log_module_name)
         if init_type == "percentile":
-            min_percentile = init_config["min_percentile"]
-            max_percentile = init_config["max_percentile"]
-            return PercentileInitializer(module, min_percentile, max_percentile, log_module_name)
+            min_percentile = init_config.get("min_percentile", 10)
+            max_percentile = init_config.get("max_percentile", 90)
+            return PercentileInitializer(module, num_init_steps, min_percentile, max_percentile, log_module_name)
         raise NotImplementedError
 
 
@@ -216,8 +216,18 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         pass
 
 
-def register_default_init_args(nncf_config: 'NNCFConfig', criterion, train_loader) -> 'NNCFConfig':
-    nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion, data_loader=train_loader),
-                                        QuantizationRangeInitArgs(data_loader=train_loader),
-                                        BNAdaptationInitArgs(data_loader=train_loader)])
+def register_default_init_args(nncf_config: 'NNCFConfig', train_loader, criterion=None, device='cuda') -> 'NNCFConfig':
+    if criterion:
+        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion,
+                                                                          data_loader=train_loader,
+                                                                          device=device),
+                                            QuantizationRangeInitArgs(data_loader=train_loader,
+                                                                      device=device),
+                                            BNAdaptationInitArgs(data_loader=train_loader,
+                                                                 device=device)])
+    else:
+        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
+                                                                      device=device),
+                                            BNAdaptationInitArgs(data_loader=train_loader,
+                                                                 device=device)])
     return nncf_config

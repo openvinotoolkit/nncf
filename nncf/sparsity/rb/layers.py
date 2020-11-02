@@ -25,11 +25,11 @@ from ...layer_utils import COMPRESSION_MODULES
 
 @COMPRESSION_MODULES.register()
 class RBSparsifyingWeight(BinaryMask):
-    def __init__(self, size, sparsify=False, eps=1e-6):
+    def __init__(self, size, frozen=True, eps=1e-6):
         super().__init__(size)
-        self.sparsify = sparsify
+        self.frozen = frozen
         self.eps = eps
-        self._mask = nn.Parameter(logit(torch.ones(size) * 0.99), requires_grad=self.sparsify)
+        self._mask = nn.Parameter(logit(torch.ones(size) * 0.99), requires_grad=not self.frozen)
         self.binary_mask = binary_mask(self._mask)
         self.register_buffer("uniform", torch.zeros(size))
         self.mask_calculation_hook = MaskCalculationHook(self)
@@ -44,7 +44,7 @@ class RBSparsifyingWeight(BinaryMask):
         self.binary_mask = binary_mask(self._mask)
 
     def _calc_training_binary_mask(self, weight):
-        u = self.uniform if self.training and self.sparsify else None
+        u = self.uniform if self.training and not self.frozen else None
         return calc_rb_binary_mask(self._mask, u, self.eps)
 
     def loss(self):

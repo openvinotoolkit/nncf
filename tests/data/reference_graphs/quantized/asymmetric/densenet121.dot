@@ -1,12 +1,12 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=1, scope="DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
-"2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"1 AsymmetricQuantizer/asymmetric_quantize" [id=1, scope=AsymmetricQuantizer, type=asymmetric_quantize];
+"2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "3 DenseNet/NNCFConv2d[conv1]/conv2d" [id=3, scope="DenseNet/NNCFConv2d[conv1]", type=conv2d];
 "4 DenseNet/NNCFConv2d[conv1]/AsymmetricQuantizer/asymmetric_quantize" [id=4, scope="DenseNet/NNCFConv2d[conv1]/AsymmetricQuantizer", type=asymmetric_quantize];
 "5 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/batch_norm" [id=5, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]", type=batch_norm];
-"6 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU" [id=6, scope="DenseNet/Sequential[dense1]/Bottleneck[0]", type=RELU];
-"7 DenseNet/Sequential[dense1]/Bottleneck[0]/AsymmetricQuantizer/asymmetric_quantize" [id=7, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/AsymmetricQuantizer", type=asymmetric_quantize];
+"6 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize" [id=6, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/AsymmetricQuantizer", type=asymmetric_quantize];
+"7 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU" [id=7, scope="DenseNet/Sequential[dense1]/Bottleneck[0]", type=RELU];
 "8 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=8, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d" [id=9, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]", type=conv2d];
 "10 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn2]/batch_norm" [id=10, scope="DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn2]", type=batch_norm];
@@ -731,14 +731,14 @@ strict digraph  {
 "729 DenseNet/AsymmetricQuantizer/asymmetric_quantize" [id=729, scope="DenseNet/AsymmetricQuantizer", type=asymmetric_quantize];
 "730 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=730, scope="DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "731 DenseNet/NNCFLinear[linear]/linear" [id=731, scope="DenseNet/NNCFLinear[linear]", type=linear];
-"0 /nncf_model_input" -> "2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize";
-"1 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
-"2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
+"0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
+"1 AsymmetricQuantizer/asymmetric_quantize" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
+"2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
 "3 DenseNet/NNCFConv2d[conv1]/conv2d" -> "4 DenseNet/NNCFConv2d[conv1]/AsymmetricQuantizer/asymmetric_quantize";
 "4 DenseNet/NNCFConv2d[conv1]/AsymmetricQuantizer/asymmetric_quantize" -> "5 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/batch_norm";
-"5 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/batch_norm" -> "6 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU";
-"6 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU" -> "7 DenseNet/Sequential[dense1]/Bottleneck[0]/AsymmetricQuantizer/asymmetric_quantize";
-"7 DenseNet/Sequential[dense1]/Bottleneck[0]/AsymmetricQuantizer/asymmetric_quantize" -> "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d";
+"5 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/batch_norm" -> "6 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize";
+"6 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn1]/AsymmetricQuantizer/asymmetric_quantize" -> "7 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU";
+"7 DenseNet/Sequential[dense1]/Bottleneck[0]/RELU" -> "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d";
 "8 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d";
 "4 DenseNet/NNCFConv2d[conv1]/AsymmetricQuantizer/asymmetric_quantize" -> "16 DenseNet/Sequential[dense1]/Bottleneck[0]/cat";
 "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d" -> "10 DenseNet/Sequential[dense1]/Bottleneck[0]/BatchNorm2d[bn2]/batch_norm";

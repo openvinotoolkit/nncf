@@ -1,10 +1,10 @@
-# Integrating NNCF into MMLab mmdetection repository
+## Integrating NNCF into MMLab mmdetection repository
 https://github.com/open-mmlab/mmdetection
 
 This folder contains a git patch to enable NNCF-based quantization-aware training for the object detection models on the COCO/Pascal VOC datasets from the *mmdetection* repository. Tested on SSD (with a VGG backbone) and RetinaNet (ResNet50 & ResNeXt101-64x4d backbones) models only (both quantization and quantization+sparsity pipelines).
 
 Instructions:
-1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the mmdetection repository checked out at commit id: `c77ccbbf235c0eb50a4440698eefc2ae199f837f`
+1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the mmdetection repository checked out at commit id: `039ad4dd64edaa5efe69f00574a0c24240adac97`
 
 2. To start quantization-aware fine-tuning of a model on the COCO dataset, you can use the regular configuration scripts provided in the repository for the specific model and dataset of interest. The only modification that is needed to be done is the addition of the `nncf_config` part to the full mmdetection config script. Examples of such configs are provided within the supplied patch (`configs/pascal_voc/ssd300_voc_int8.py` and `configs/retinanet/retinanet_r50_fpn_1x_int8.py` files).
 Make sure to download the uncompressed model checkpoint files to start from using the links specified in each .py config file.
@@ -16,7 +16,7 @@ Model fine-tuning can be run using the common mmdetection command lines. For ins
 
     Note that in all cases the training hyperparameters might have to be adjusted to accomodate the hardware you have available.
 
-# Current best results:
+### Current best results:
 
 **RetinaNet-ResNet50-FPN**:
 
