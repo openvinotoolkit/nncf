@@ -102,7 +102,7 @@ class BaseQuantizer(nn.Module):
         self.initialized = False
         self.state_dict_name = None
         self.call_count = 0
-        self.scale_shape = 1
+        self.scale_shape = [1]
         self._export_mode = QuantizerExportMode.FAKE_QUANTIZE
 
         class LoadStateListener:
@@ -166,6 +166,7 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
+        """min_values and max_values must have the same shape as specified in self.scale_shape"""
         raise NotImplementedError
 
     def set_level_ranges(self):
@@ -331,7 +332,6 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def __init__(self, config):
         super().__init__(config)
-        self.scale_shape = 1
         if self.per_channel:
             self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
 

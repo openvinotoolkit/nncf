@@ -78,7 +78,7 @@ class ReferenceQuantize(nn.Module):
         super().__init__()
         self.input_shape = input_shape
         self.is_weights = is_weights
-        scale_shape = 1
+        scale_shape = [1]
         if per_channel:
             scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
 
