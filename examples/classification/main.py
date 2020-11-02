@@ -185,11 +185,11 @@ def main_worker(current_gpu, config: SampleConfig):
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
     if is_main_process():
-        mlflow.log_param('epochs', config.nncf_config['epochs'])
-        mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
-        mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
+        mlflow.log_param('epochs', nncf_config['epochs'])
+        mlflow.log_param('schedule_type', nncf_config['optimizer']['schedule_type'])
+        mlflow.log_param('lr', nncf_config['optimizer']['base_lr'])
         mlflow.set_tag('Log Dir Path', config.log_dir)
-        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, config.log_dir.split('/')[-1]))
+        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
