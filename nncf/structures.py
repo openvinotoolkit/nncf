@@ -28,6 +28,8 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     Stores arguments for initialization of quantization's bitwidth.
     Initialization is based on calculating a measure reflecting layers' sensitivity to perturbations. The measure is
     calculated by estimation of average trace of Hessian for modules using the Hutchinson algorithm.
+    :param criterion_fn: functor, that implements calculation of loss given outputs of the model, targets, and loss
+    function.
     :param criterion: loss function, instance of descendant of `torch.nn.modules.loss._Loss`,
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
