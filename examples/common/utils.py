@@ -97,12 +97,12 @@ def configure_paths(config):
 
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
-
-    mlflow.set_tracking_uri(osp.join("/home/skholkin/projects/all_results", 'mlruns'))
     config.name = get_name(config)
-    if mlflow.get_experiment_by_name(config.name) is None:
-        mlflow.create_experiment(config.name)
-    mlflow.set_experiment(config.name)
+    if config.mode.lower() == 'train' and config.to_onnx is None:
+        mlflow.set_tracking_uri(osp.join("/home/skholkin/projects/all_results", 'mlruns'))
+        if mlflow.get_experiment_by_name(config.name) is None:
+            mlflow.create_experiment(config.name)
+        mlflow.set_experiment(config.name)
     training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
     training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
     sample_logger.addHandler(training_pipeline_log_file_handler)

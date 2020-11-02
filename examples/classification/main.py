@@ -112,7 +112,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         configure_logging(logger, config)
-        mlflow.start_run()
+        if config.mode.lower() == 'train' and config.to_onnx is None:
+            mlflow.start_run()
         print_args(config)
 
     if config.seed is not None:
@@ -182,7 +183,7 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    if is_main_process():
+    if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
         mlflow.log_param('epochs', nncf_config['epochs'])
         mlflow.log_param('schedule_type', nncf_config['optimizer']['schedule_type'])
         mlflow.log_param('lr', nncf_config['optimizer']['base_lr'])
@@ -201,7 +202,7 @@ def main_worker(current_gpu, config: SampleConfig):
         train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
 
-    if is_main_process():
+    if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
         mlflow.end_run()
 
 
@@ -238,7 +239,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         best_acc1 = max(acc1, best_acc1)
         if is_main_process():
-            mlflow.log_param("best_acc1", best_acc1)
+            mlflow.log_metric("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
