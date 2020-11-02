@@ -123,6 +123,14 @@ def get_class_weights(train_set, num_classes, config):
     return class_weights
 
 
+def load_resuming_checkpoint(resuming_checkpoint_path: str):
+    if osp.isfile(resuming_checkpoint_path):
+        logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
+        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+        return checkpoint
+    raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
+
+
 def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
     # Import the requested dataset
     if dataset_name.lower() == 'camvid':
@@ -477,7 +485,10 @@ def main_worker(current_gpu, config):
         criterion = get_criterion(w_class, config)
 
     if not resuming_checkpoint_path:
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
+    else:
+        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
+        resuming_model_sd = resuming_checkpoint['state_dict']
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -486,7 +497,7 @@ def main_worker(current_gpu, config):
                        weights_path=config.get('weights'))
 
     model.to(config.device)
-    compression_ctrl, model = create_compressed_model(model, nncf_config)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
     model, model_without_dp = prepare_model_for_execution(model, config)
 
     if config.distributed:
