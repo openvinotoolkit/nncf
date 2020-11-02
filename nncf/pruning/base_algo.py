@@ -48,7 +48,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         self.ignore_frozen_layers = True
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
-        self.prune_batch_norms = params.get('prune_batch_norms', False)
+        self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
         self._pruned_module_info = []
