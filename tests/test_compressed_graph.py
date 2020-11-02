@@ -498,20 +498,20 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
     nodes = deepcopy(nx_graph.nodes)
     for node_name, node in sorted(nodes.items()):
         ia_op_exec_context_for_node = nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
-        scope_node = str(ia_op_exec_context_for_node)
+        node_scope = str(ia_op_exec_context_for_node)
         if ia_op_exec_context_for_node in quantizers_activations_attr:
             label = "Quantizer: {}".format(quantizers_activations_attr[ia_op_exec_context_for_node])
-            nx_graph.add_node(scope_node, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+            nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                               op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
             next_nodes = deepcopy(nx_graph._succ[node_name])
             for next_node_name, _ in next_nodes.items():
-                nx_graph.add_edge(scope_node, next_node_name)
+                nx_graph.add_edge(node_scope, next_node_name)
                 nx_graph.remove_edge(node_name, next_node_name)
-            nx_graph.add_edge(node_name, scope_node)
+            nx_graph.add_edge(node_name, node_scope)
         elif ia_op_exec_context_for_node in quantizers_weights_attr:
             label = "Quantizer: {}".format(quantizers_weights_attr[ia_op_exec_context_for_node])
-            nx_graph.add_node(scope_node, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+            nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                               op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
-            nx_graph.add_edge(scope_node, node_name)
+            nx_graph.add_edge(node_scope, node_name)
 
     return graph
