@@ -99,7 +99,7 @@ def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
     config.name = get_name(config)
     if config.mode.lower() == 'train' and config.to_onnx is None:
-        mlflow.set_tracking_uri(osp.join("/home/skholkin/projects/all_results", 'mlruns'))
+        mlflow.set_tracking_uri(osp.join(config.log_dir, 'mlruns'))
         if mlflow.get_experiment_by_name(config.name) is None:
             mlflow.create_experiment(config.name)
         mlflow.set_experiment(config.name)
