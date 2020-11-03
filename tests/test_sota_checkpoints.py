@@ -90,7 +90,10 @@ class TestSotaCheckpoints:
         com_line = shlex.split(comm)
 
         env = os.environ.copy()
-        env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
+        else:
+            env["PYTHONPATH"] = str(PROJECT_ROOT)
         result = subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   cwd=cwd, env=env)
         exit_code = result.poll()
@@ -360,7 +363,7 @@ class TestSotaCheckpoints:
                              ids=ids_list)
     def test_openvino_eval(self, openvino, sota_checkpoints_dir, sota_data_dir, ov_data_dir,
                            eval_test_struct: EvalRunParamsStruct):
-        if openvino is None:
+        if not openvino:
             pytest.skip()
         os.chdir(PROJECT_ROOT)
         onnx_path = PROJECT_ROOT / 'onnx'
@@ -453,7 +456,7 @@ def skip_params(sota_data_dir):
 
 @pytest.fixture(autouse=True, scope="class")
 def openvino_preinstall(openvino):
-    if openvino is not None:
+    if openvino:
         # To avoid AC setup error
         subprocess.run("pip uninstall setuptools -y && pip install setuptools", check=True, shell=True)
         subprocess.run("pip install -r requirements_onnx.txt",
