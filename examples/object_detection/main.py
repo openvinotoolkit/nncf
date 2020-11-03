@@ -18,6 +18,7 @@ from pathlib import Path
 
 import torch
 import torch.utils.data as data
+from examples.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -143,17 +144,13 @@ def main_worker(current_gpu, config):
     # Prepare model
     ##################
     resuming_checkpoint_path = config.resuming_checkpoint_path
-    resuming_checkpoint = None
-    resuming_model_state_dict = None
 
-    if resuming_checkpoint_path:
-        logger.info('Resuming from checkpoint {}...'.format(resuming_checkpoint_path))
-        resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
-        # use checkpoint itself in case only the state dict was saved,
-        # i.e. the checkpoint was created with `torch.save(module.state_dict())`
-        resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
+    resuming_model_sd = None
+    if resuming_checkpoint_path is not None:
+        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
+            resuming_checkpoint_path)
 
-    compression_ctrl, net = create_model(config, resuming_model_state_dict)
+    compression_ctrl, net = create_model(config, resuming_model_sd)
     if config.distributed:
         config.batch_size //= config.ngpus_per_node
         config.workers //= config.ngpus_per_node
@@ -170,7 +167,7 @@ def main_worker(current_gpu, config):
     # Load additional checkpoint data
     #################################
 
-    if resuming_checkpoint is not None and config.mode.lower() == 'train' and config.to_onnx is None:
+    if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
         compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_iter = resuming_checkpoint.get('iter', 0) + 1
