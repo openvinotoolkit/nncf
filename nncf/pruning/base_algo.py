@@ -94,7 +94,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 pruned_nodes_clusterization.delete_cluster(cluster.id)
             else:
                 nncf_logger.info("Group of nodes {} will be pruned together, msg = {}".format(cluster.nodes, can_prune_nodes))
-        return pruned_nodes_clusterization
 
     def _get_pruned_nodes_groups(self, target_model: NNCFNetwork):
         """
@@ -106,7 +105,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         5. Checks for groups (all nodes in group can prune or all group can't be pruned)
         Return groups of modules that
         :param target_model:
-        :return:
+        :return: clusterisation of pruned nodes
         """
         graph = target_model._original_graph
         pruned_types = self.get_types_of_pruned_modules()
@@ -126,18 +125,17 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
             all_pruned_inputs = []
             pruned_inputs_idxs = set()
+
             for node in cluster.nodes:
                 sources = get_sources_of_node(node, graph, pruned_types)
                 for source_node in sources:
-                    # TODO: Is this check is really needed here?
-                    if source_node.op_exec_context.operator_name in pruned_types:
-                        source_scope = source_node.op_exec_context.scope_in_model
-                        source_module = target_model.get_module_by_scope(source_scope)
-                        source_node_info = NodeInfo(source_node, source_module, source_scope)
+                    source_scope = source_node.op_exec_context.scope_in_model
+                    source_module = target_model.get_module_by_scope(source_scope)
+                    source_node_info = NodeInfo(source_node, source_module, source_scope)
 
-                        if source_node.node_id not in pruned_inputs_idxs:
-                            all_pruned_inputs.append(source_node_info)
-                            pruned_inputs_idxs.add(source_node.node_id)
+                    if source_node.node_id not in pruned_inputs_idxs:
+                        all_pruned_inputs.append(source_node_info)
+                        pruned_inputs_idxs.add(source_node.node_id)
             if all_pruned_inputs:
                 cluster = NodesCluster(i, list(all_pruned_inputs), [n.id for n in all_pruned_inputs])
                 pruned_nodes_clusterization.add_cluster(cluster, i)
@@ -156,7 +154,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
                 last_cluster_idx += 1
 
-        # 4. Unite clusters for Conv + Depthwise conv (should be pruned together too)
+        # 4. Merge clusters for Conv + Depthwise conv (should be pruned together too)
         for node in all_nodes_to_prune:
             scope = node.op_exec_context.scope_in_model
             module = target_model.get_module_by_scope(scope)
@@ -166,12 +164,12 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 previous_conv = get_previous_conv(target_model, module, scope)
                 if previous_conv:
                     previous_conv_cluster_id = pruned_nodes_clusterization.get_cluster_for_node(previous_conv.node_id).id
-                    pruned_nodes_clusterization.union_clusters(cluster_id, previous_conv_cluster_id)
+                    pruned_nodes_clusterization.merge_clusters(cluster_id, previous_conv_cluster_id)
 
         # 5. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
         model_analyser = ModelAnalyser(target_model)
         can_prune_analysis = model_analyser.analyse_model_before_pruning()
-        pruned_nodes_clusterization = self._check_pruned_groups(target_model, pruned_nodes_clusterization, can_prune_analysis)
+        self._check_pruned_groups(target_model, pruned_nodes_clusterization, can_prune_analysis)
         return pruned_nodes_clusterization
 
     def _should_prune_module_check(self, target_model: NNCFNetwork, module, module_scope: Scope):

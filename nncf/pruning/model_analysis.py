@@ -1,7 +1,7 @@
 from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES, Convolution, \
-    Concat
+    Concat, StopMaskForwardOps
 
-from nncf.pruning.utils import _find_next_nodes_of_types, is_depthwise_conv
+from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_types, find_next_nodes_of_types
 
 from nncf.nncf_network import NNCFNetwork
 import networkx as nx
@@ -62,7 +62,7 @@ class Clusterization:
             all_nodes.extend(cluster.nodes)
         return all_nodes
 
-    def union_clusters(self, first_id, second_id):
+    def merge_clusters(self, first_id, second_id):
         cluster_1 = self.clusters[first_id]
         cluster_2 = self.clusters[second_id]
         if cluster_1.importance > cluster_2.importance:
@@ -83,17 +83,29 @@ def get_position(nx_nodes_list, idx):
             return i
 
 
-def unit_groups_of_clusters(nodes_to_merge, clusterization):
-    # TODO: refactor this function to something more clear
+def unit_clusters_for_nodes(nodes_to_merge, clusterization):
+    """
+
+    :param nodes_to_merge: all nodes are clusters for which should be тerged
+    :param clusterization:
+    """
     if len(nodes_to_merge) <= 1:
         return
 
-    max_order_node_id = max([(node.node_id, clusterization.get_cluster_for_node(node.node_id).importance) for node in nodes_to_merge], key=lambda x: x[1])[0]
-    max_order_cluster_id = clusterization.get_cluster_for_node(max_order_node_id).id
+    # Will merge cluster with highest importance with others pairwise
+    max_importance_node_id = None
+    max_importance = 0
     for node in nodes_to_merge:
-        if node.node_id != max_order_node_id:
+        importance = clusterization.get_cluster_for_node(node.node_id).importance
+        if importance > max_importance:
+            max_importance_node_id = node.node_id
+            max_importance = importance
+
+    max_importance_cluster_id = clusterization.get_cluster_for_node(max_importance_node_id).id
+    for node in nodes_to_merge:
+        if node.node_id != max_importance_node_id:
             current_node_cluster_id = clusterization.get_cluster_for_node(node.node_id).id
-            clusterization.union_clusters(max_order_cluster_id, current_node_cluster_id)
+            clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
 
 
 def cluster_special_ops_in_model(model: object, special_types: object, identity_types: object) -> Clusterization:
@@ -107,11 +119,9 @@ def cluster_special_ops_in_model(model: object, special_types: object, identity_
     """
     graph = model.get_original_graph()
     nx_graph = graph._nx_graph
-    # TODO: rewrite (need new function to find next nodes and this list will not be needed anymore)
-    other_types = set([graph.node_type_fn(nx_graph.nodes[node_name])for node_name in nx_graph.nodes if graph.node_type_fn(nx_graph.nodes[node_name]) not in identity_types])  # not identity
     topologically_sorted_nodes = [nx_graph.nodes[node_name] for node_name in nx.topological_sort(nx_graph)]
-
-    all_special_nodes = [nx_graph.nodes[node_name] for node_name in nx_graph.nodes if graph.node_type_fn(nx_graph.nodes[node_name]) in special_types]
+    all_special_nodes = [nx_graph.nodes[node_name] for node_name in nx_graph.nodes
+                         if graph.node_type_fn(nx_graph.nodes[node_name]) in special_types]
 
     # 0. Initially all nodes is a separate clusters
     clusterization = Clusterization("node_id")
@@ -126,12 +136,11 @@ def cluster_special_ops_in_model(model: object, special_types: object, identity_
 
         nncf_node = graph._nx_node_to_nncf_node(node)
 
-        # TODO: rewrite (need new function to find next nodes)
-        all_outputs = _find_next_nodes_of_types(model, nncf_node, other_types)
+        all_outputs = find_next_nodes_not_types(model, nncf_node, identity_types)
         all_output_special_nodes = [node for node in all_outputs if node.op_exec_context.operator_name in special_types]
         if graph.node_type_fn(node) in special_types:
             all_output_special_nodes.append(nncf_node)
-        unit_groups_of_clusters(all_output_special_nodes, clusterization)
+        unit_clusters_for_nodes(all_output_special_nodes, clusterization)
 
     return clusterization
 
@@ -168,8 +177,7 @@ class ModelAnalyser:
         """
         cls = PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
         if cls is None:
-            raise RuntimeError("Class {} is not found".format(type_name))
-            # cls = StopMaskForwardOps
+            cls = StopMaskForwardOps
         return cls
 
     def propagate_can_prune_attr_up(self):
@@ -188,10 +196,9 @@ class ModelAnalyser:
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
-            outputs_will_be_pruned = all([self.can_prune[node.node_id] for node in out_nodes if self.node_propagate_can_prune_attr(node)])
+            outputs_will_be_pruned = all([self.can_prune[node.node_id]
+                                          for node in out_nodes if self.node_propagate_can_prune_attr(node)])
             self.can_prune[nncf_node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
-
-        # nncf_logger.info('Propagated can_prune attribute up')
 
     def propagate_can_prune_attr_down(self):
         """
@@ -211,8 +218,6 @@ class ModelAnalyser:
                         (self.node_accept_different_inputs(nncf_node) and not can_prune_any):
                     self.can_prune[nncf_node.node_id] = can_prune
 
-        # nncf_logger.info('Propagated can_prune attribute down')
-
     def set_accept_pruned_input_attr(self):
         for nncf_node in self.graph.get_all_nodes():
             node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
@@ -220,12 +225,8 @@ class ModelAnalyser:
             cls = self.get_class_by_type_name(node_type)()
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(self.model, self.graph, node_module)
 
-    def _set_can_prune_attr(self):
-        # set accept prune input attrs
+    def analyse_model_before_pruning(self):
         self.set_accept_pruned_input_attr()
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
-
-    def analyse_model_before_pruning(self):
-        self._set_can_prune_attr()
         return self.can_prune
