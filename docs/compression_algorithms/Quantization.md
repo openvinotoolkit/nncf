@@ -127,9 +127,9 @@ For symmetric:
 
 #### Mixed-Precision Quantization
 
-Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. Though
-NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, choosing
-ultra low bitwidth could noticeably affect the model's accuracy.
+Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. 
+Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, 
+choosing ultra-low bitwidth could noticeably affect the model's accuracy.
 A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers.
 NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
@@ -138,10 +138,23 @@ calculated by multiplying the average Hessian trace with the L2 norm of quantiza
 
 ![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
 
-The sum of the sensitivities for each layer forms a metric that is used to determine the specific bit precision
-configuration. The optimal configuration is found by calculating this metric for all possible bitwidth settings and
-selecting the median one. To reduce exponential search the following restriction is used: layers with a small value of
-average Hessian trace are quantized to lower bits, and vice versa.
+The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed 
+model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation 
+dataset. 
+
+To find the optimal trade-off between accuracy and performance of the mixed precision model we also compute a 
+compression ratio - the ratio between **bit complexity** of a fully INT8 model and mixed-precision lower bitwidth one. 
+The bit complexity of the model is a sum of bit complexities for each quantized layer, which are defined as a product 
+of the layer FLOPS and the quantization bitwidth. The optimal configuration is found by calculating the sensitivity 
+metric and the compression ratio for all possible bitwidth settings and selecting the one with the minimal metric value 
+among all configurations with a compression ratio below the specified threshold.
+
+By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
+But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
+configuration file.
+
+To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian 
+trace value are quantized to lower bitwidth and vice versa. 
 
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
@@ -165,6 +178,13 @@ where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of 
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.   
 
+The aforementioned procedure sets bitwidth for weight quantizers only. Bitwidth for activation quantizers is assigned 
+on the next step in two ways: strict or liberal. All quantizers between modules with quantizable inputs have the same 
+bitwidth in the strict mode. Liberal mode allows different precisions within the group. For both cases, bitwidth is 
+assigned based on the rules of the hardware config. If multiple variants are possible the minimal compatible bitwidth 
+is chosen. By default, liberal mode is used as it does not reject a large number of possible bitwidth settings.   
+The `bitwidth_assignment_mode` parameter can override it to the strict one. 
+
 For automatic mixed-precision selection it's recommended to use the following template of configuration file:
 ```
     "optimizer": {
@@ -179,17 +199,11 @@ For automatic mixed-precision selection it's recommended to use the following te
     },
     "compression": {
         "algorithm": "quantization",
-        "weights": {
-            "mode": "asymmetric",
-            "per_channel": true
-        },
-        "activations": {
-            "mode": "asymmetric"
-        },
         "initializer": {
             "precision": {
                 "type": "hawq",
                 "bits": [4,8]
+                "compression_ratio": 1.5,
             }
         }
     }
@@ -200,20 +214,12 @@ Note, optimizer parameters are model specific, this template contains optimal on
 Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
 using the template in the full configuration file.
 
-On the initialization stage, the HAWQ algorithm chooses the most accurate mixed-precision configuration with compression 
-ratio no less than the specified. The ratio is computed between **bits complexity** of fully INT8 model and mixed-precision 
-lower-bit one. The bit complexity of the model is a sum of bit complexities for each quantized layer, which are a 
-multiplication of FLOPS for the layer by a number of bits for its quantization.
-By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
-But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
-configuration file.
-
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than 
 two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files 
 ending by `*_staged` for an example of this method.     
 
-The manual mode of mixed-precision quantization is also available by explicitly setting the number of bits per layer
+The manual mode of mixed-precision quantization is also available by explicitly setting the bitwidth per layer
  through `bitwidth_per_scope` parameter.
 
 ---

@@ -9,8 +9,10 @@ and Semantic Segmentation.
 
 ## New in Release 1.5:
 - Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config.
-- HAWQ mixed precision initialization now supports a compression ration parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bit widths.
-- HAWQ mixed precision initialization allows to specify a more generic `criterion_fn` callable to calculate the related loss in case of complex loss input argument signatures
+- HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.    
+- HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.  
+- Improved algorithm of assigning bitwidth for activation quantizers in HAWQ mixed-precision initialization. If after taking into account the corresponding rules of hardware config there're 
+ multiple options for choosing bitwidth, it chooses a common bitwidth for all adjacent weight quantizers. Adjacent quantizers refer to all quantizers between inputs-quantizable layers.
 - Custom user modules can be registered to have their `weight` attribute considered for compression using the @nncf.register_module
 - Possible to perform quantizer linking in various points in graph - such quantizers will share the quantization parameters, trainable and non-trainable
 - VPU HW config now uses unified scales for elementwise operations (utilising the quantizer linking mechanism)

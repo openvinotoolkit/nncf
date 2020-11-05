@@ -235,7 +235,7 @@ BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
     "enum": ['strict', 'liberal'],
     "default": "liberal",
     "description": "The mode for assignment bitwidth to activation quantizers. A group of quantizers between modules "
-                   "with quantizable inputs has the same bitwidth in the strict mode. Liberal one allows different "
+                   "with quantizable inputs have the same bitwidth in the strict mode. Liberal one allows different "
                    "precisions within the group. Bitwidth is assigned based on hardware constraints. If multiple "
                    "variants are possible the minimal compatible bitwidth is chosen."
 }
