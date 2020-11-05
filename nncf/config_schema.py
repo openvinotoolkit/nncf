@@ -664,7 +664,11 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                       description="Required - describe the specifics of your model inputs here."
                                                   "This information is used to build the internal graph representation"
                                                   "that is leveraged for proper compression functioning, and for "
-                                                  "exporting the compressed model to ONNX."),
+                                                  "exporting the compressed model to ONNX - a dummy tensor with a "
+                                                  "corresponding shape and filler will be generated for each entry"
+                                                  "and passed as a corresponding argument into the model's forward"
+                                                  "method. Keywords can be specified for each entry - if left "
+                                                  "unspecified, the dummy tensor will be passed as a positional arg."),
         "disable_shape_matching": with_attributes(_BOOLEAN,
                                                   description="Whether to enable strict input tensor"
                                                               "shape matching when building the internal graph"

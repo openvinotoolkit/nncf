@@ -26,7 +26,7 @@ from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
-from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
