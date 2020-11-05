@@ -127,6 +127,8 @@ Quick jump to sample type:
 
 [Object detection (3rd-party training pipelines)](#object-detection-mmdetection)
 
+[Instance Segmentation (3rd-party training pipelines)](#instance-segmentation-mmdetection)
+
 
 #### Classification
 
