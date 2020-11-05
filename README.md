@@ -125,7 +125,7 @@ Quick jump to sample type:
 
 [Natural language processing (3rd-party training pipelines)](#nlp)
 
-[Object detection (3rd-party training pipelines)](#object-detection-3rd-party)
+[Object detection (3rd-party training pipelines)](#object-detection-mmdetection)
 
 
 #### Classification
