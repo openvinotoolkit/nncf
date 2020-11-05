@@ -21,9 +21,6 @@ from ..functions import STRound, clamp
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, level_low, level_high, levels):
-        assert isinstance(level_low, int), 'level_low parameter must be an integer type'
-        assert isinstance(level_high, int), 'level_high parameter must be an integer type'
-        assert isinstance(levels, int), 'levels parameter must be an integer type'
         input_low = scale * (level_low / level_high)
         input_range = scale - input_low
 
@@ -68,9 +65,6 @@ class QuantizeSymmetric(torch.autograd.Function):
 class QuantizeAsymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, input_low, input_range, level_low, level_high, levels):
-        assert isinstance(level_low, int), 'level_low parameter must be an integer type'
-        assert isinstance(level_high, int), 'level_high parameter must be an integer type'
-        assert isinstance(levels, int), 'levels parameter must be an integer type'
         if input_.is_cuda:
             if not input_.is_contiguous():
                 warnings.warn("input_ is not contiguous!", RuntimeWarning)
