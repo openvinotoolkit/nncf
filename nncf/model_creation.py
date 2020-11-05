@@ -88,7 +88,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     Otherwise, the *forward* call of the model during graph tracing will be made with mock tensors according
     to the shape specified in the config object.
     :param wrap_inputs_fn: if supplied, will be used on the module's input arguments during a regular, non-dummy
-    forward call before passing the inputs to the  underlying compressed model. This is required if the model's input
+    forward call before passing the inputs to the underlying compressed model. This is required if the model's input
     tensors that are important for compression are not supplied as arguments to the model's forward call directly, but
     instead are located in a container (such as list), and the model receives the container as an argument.
     wrap_inputs_fn should take as input two arguments - the tuple of positional arguments to the underlying
