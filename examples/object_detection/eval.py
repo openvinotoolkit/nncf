@@ -245,7 +245,10 @@ def gather_detections(all_detections, samples_per_rank):
 def convert_detections(all_detection):
     """Returns (num_dets x 7) array with detections (img_ing, label, conf, x0, y0, x1, y1)"""
     all_boxes = []
+    # all_detection are different on cpu and gpu
+    torch.set_printoptions(threshold=5000)
     for img_ind, dets in enumerate(all_detection):
+        logger.info(dets)
         # remove predictions with zero confidence
         mask = dets[:, 2].gt(0.).expand(7, dets.size(0)).t()
         dets = torch.masked_select(dets, mask).view(-1, 7).cpu()
@@ -262,13 +265,20 @@ def predict_detections(data_loader, device, net):
     num_batches = len(data_loader)
     all_detections = []
     timer = Timer()
+    i = 0
+    torch.set_printoptions(threshold=5000)
     for batch_ind, (ims, _gts, hs, ws) in enumerate(data_loader):
+        if i > 2:
+            break
+        i += 1
         x = ims.to(device)
         hs = x.new_tensor(hs).view(-1, 1)
         ws = x.new_tensor(ws).view(-1, 1)
 
         timer.tic()
+        # batch_detection are different
         batch_detections = net(x)
+        logger.info(batch_detections)
         top_k = batch_detections.size(2)
         batch_detections = batch_detections.view(-1, top_k, 7)
         detect_time = timer.toc(average=False)
