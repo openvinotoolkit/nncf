@@ -1,11 +1,11 @@
-From f1eff8ba92179cb4016d736bd989c9b00d5947f5 Mon Sep 17 00:00:00 2001
+From a4900fa16617cb2d112e363a3d9c02b2690c6d3f Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
-Date: Thu, 8 Oct 2020 04:41:43 +0300
+Date: Thu, 5 Nov 2020 21:39:52 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
  .../mask_rcnn_r50_caffe_fpn_1x_coco_int8.py   | 62 ++++++++++++
- configs/pascal_voc/ssd300_voc_int8.py         | 95 +++++++++++++++++++
+ configs/pascal_voc/ssd300_voc_int8.py         | 94 +++++++++++++++++++
  .../retinanet/retinanet_r50_fpn_1x_int8.py    | 39 ++++++++
  mmdet/apis/train.py                           | 35 +++++--
  mmdet/core/__init__.py                        |  1 +
@@ -15,11 +15,10 @@ Subject: [PATCH] Modifications for NNCF usage
  mmdet/models/dense_heads/anchor_head.py       |  1 +
  mmdet/models/dense_heads/base_dense_head.py   |  5 +-
  mmdet/models/detectors/base.py                | 15 ++-
- mmdet/models/detectors/single_stage.py        |  1 +
  .../roi_heads/mask_heads/fcn_mask_head.py     | 13 ++-
  mmdet/models/roi_heads/standard_roi_head.py   |  8 +-
  tools/train.py                                |  6 ++
- 15 files changed, 369 insertions(+), 17 deletions(-)
+ 14 files changed, 367 insertions(+), 17 deletions(-)
  create mode 100644 configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
@@ -29,7 +28,7 @@ Subject: [PATCH] Modifications for NNCF usage
 
 diff --git a/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 new file mode 100644
-index 0000000..3ac25f8
+index 0000000..387dd6d
 --- /dev/null
 +++ b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 @@ -0,0 +1,62 @@
@@ -97,10 +96,10 @@ index 0000000..3ac25f8
 +                   log_dir=work_dir)
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
 new file mode 100644
-index 0000000..cae6870
+index 0000000..4112ea7
 --- /dev/null
 +++ b/configs/pascal_voc/ssd300_voc_int8.py
-@@ -0,0 +1,95 @@
+@@ -0,0 +1,94 @@
 +_base_ = [
 +    '../_base_/models/ssd300.py', '../_base_/datasets/voc0712.py',
 +    '../_base_/default_runtime.py'
@@ -111,7 +110,6 @@ index 0000000..cae6870
 +                                                                    0.9))))
 +# dataset settings
 +dataset_type = 'VOCDataset'
-+data_root = 'voc/'
 +img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 +train_pipeline = [
 +    dict(type='LoadImageFromFile', to_float32=True),
@@ -252,22 +250,22 @@ index c314d42..a45ee5f 100644
 -                         OptimizerHook, build_optimizer)
 +                         Fp16OptimizerHook, OptimizerHook, build_optimizer, load_checkpoint)
  from mmcv.utils import build_from_cfg
-
+ 
 -from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook
 +from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook, CompressionHook
  from mmdet.datasets import build_dataloader, build_dataset
  from mmdet.utils import get_root_logger
-
+ 
 +from nncf.utils import get_all_modules
 +from mmdet.core.nncf import wrap_nncf_model
 +
-
+ 
  def set_random_seed(seed, deterministic=False):
      """Set random seed.
 @@ -67,13 +70,25 @@ def train_detector(model,
              seed=cfg.seed) for ds in dataset
      ]
-
+ 
 +    if cfg.load_from:
 +        load_checkpoint(model=model, filename=cfg.load_from)
 +
@@ -294,7 +292,7 @@ index c314d42..a45ee5f 100644
 @@ -81,6 +96,9 @@ def train_detector(model,
          model = MMDataParallel(
              model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
-
+ 
 +    if cfg.ENABLE_COMPRESSION and distributed:
 +        compression_ctrl.distributed()
 +
@@ -307,13 +305,13 @@ index c314d42..a45ee5f 100644
          runner.register_hook(DistSamplerSeedHook())
 +    if cfg.ENABLE_COMPRESSION:
 +        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
-
+ 
      # register eval hooks
      if validate:
 @@ -136,8 +156,11 @@ def train_detector(model,
              hook = build_from_cfg(hook_cfg, HOOKS)
              runner.register_hook(hook, priority=priority)
-
+ 
 +    if cfg.ENABLE_COMPRESSION:
 +        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
 +
@@ -466,7 +464,7 @@ index 2faec70..7d0676b 100644
  import torch.nn as nn
  from mmcv.cnn import normal_init
 +from nncf.dynamic_graph.context import no_nncf_trace
-
+ 
  from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                          build_assigner, build_bbox_coder, build_sampler,
 diff --git a/mmdet/models/dense_heads/base_dense_head.py b/mmdet/models/dense_heads/base_dense_head.py
@@ -475,11 +473,11 @@ index de11e4a..0fcdc4d 100644
 +++ b/mmdet/models/dense_heads/base_dense_head.py
 @@ -1,6 +1,7 @@
  from abc import ABCMeta, abstractmethod
-
+ 
  import torch.nn as nn
 +from nncf.dynamic_graph.context import no_nncf_trace
-
-
+ 
+ 
  class BaseDenseHead(nn.Module, metaclass=ABCMeta):
 @@ -51,7 +52,9 @@ class BaseDenseHead(nn.Module, metaclass=ABCMeta):
              loss_inputs = outs + (gt_bboxes, img_metas)
@@ -499,7 +497,7 @@ index 914f476..d6672ca 100644
 @@ -131,6 +131,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              if not isinstance(var, list):
                  raise TypeError(f'{name} must be a list, but got {type(var)}')
-
+ 
 +        if 'dummy_forward' in kwargs:
 +            return self.forward_dummy(imgs[0])
 +
@@ -509,7 +507,7 @@ index 914f476..d6672ca 100644
 @@ -153,8 +156,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              assert 'proposals' not in kwargs
              return self.aug_test(imgs, img_metas, **kwargs)
-
+ 
 +    @abstractmethod
 +    def forward_dummy(self, img, **kwargs):
 +        pass
@@ -519,38 +517,27 @@ index 914f476..d6672ca 100644
 +    def forward(self, img, img_metas=[], return_loss=True, **kwargs):
          """Calls either :func:`forward_train` or :func:`forward_test` depending
          on whether ``return_loss`` is ``True``.
-
+ 
 @@ -204,7 +211,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
-
+ 
          return loss, log_vars
-
+ 
 -    def train_step(self, data, optimizer):
 +    def train_step(self, data, optimizer, compression_ctrl=None):
          """The iteration step during training.
-
+ 
          This method defines an iteration step during training, except for the
 @@ -234,6 +241,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
          losses = self(**data)
          loss, log_vars = self._parse_losses(losses)
-
+ 
 +        if compression_ctrl is not None:
 +            compression_loss = compression_ctrl.loss()
 +            loss += compression_loss
 +
          outputs = dict(
              loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-diff --git a/mmdet/models/detectors/single_stage.py b/mmdet/models/detectors/single_stage.py
-index 3977bdf..4159ea4 100644
---- a/mmdet/models/detectors/single_stage.py
-+++ b/mmdet/models/detectors/single_stage.py
-@@ -1,5 +1,6 @@
- import torch
- import torch.nn as nn
-+from nncf.dynamic_graph.context import no_nncf_trace
-
- from mmdet.core import bbox2result
- from ..builder import DETECTORS, build_backbone, build_head, build_neck
+ 
 diff --git a/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py b/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py
 index 1885f7c..0f02a9e 100644
 --- a/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py
@@ -558,7 +545,7 @@ index 1885f7c..0f02a9e 100644
 @@ -10,6 +10,8 @@ from torch.nn.modules.utils import _pair
  from mmdet.core import auto_fp16, force_fp32, mask_target
  from mmdet.models.builder import HEADS, build_loss
-
+ 
 +from nncf.dynamic_graph.context import no_nncf_trace
 +
  BYTES_PER_FLOAT = 4
@@ -581,7 +568,7 @@ index 1885f7c..0f02a9e 100644
 +                    loss_mask = self.loss_mask(mask_pred, mask_targets, labels)
          loss['loss_mask'] = loss_mask
          return loss
-
+ 
 diff --git a/mmdet/models/roi_heads/standard_roi_head.py b/mmdet/models/roi_heads/standard_roi_head.py
 index 8822f8f..ace3cbe 100644
 --- a/mmdet/models/roi_heads/standard_roi_head.py
@@ -589,11 +576,11 @@ index 8822f8f..ace3cbe 100644
 @@ -1,4 +1,5 @@
  import torch
 +from nncf.dynamic_graph.context import no_nncf_trace
-
+ 
  from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
  from ..builder import HEADS, build_head, build_roi_extractor
 @@ -153,9 +154,10 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
-
+ 
          bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                    gt_labels, self.train_cfg)
 -        loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
@@ -603,7 +590,7 @@ index 8822f8f..ace3cbe 100644
 +            loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
 +                                            bbox_results['bbox_pred'], rois,
 +                                            *bbox_targets)
-
+ 
          bbox_results.update(loss_bbox=loss_bbox)
          return bbox_results
 diff --git a/tools/train.py b/tools/train.py
@@ -613,7 +600,7 @@ index c36b2a0..519e915 100644
 @@ -139,6 +139,12 @@ def main():
      logger.info(f'Distributed training: {distributed}')
      logger.info(f'Config:\n{cfg.pretty_text}')
-
+ 
 +    if 'nncf_config' in cfg:
 +        logger.info('NNCF config: {}'.format(cfg.nncf_config))
 +        cfg.ENABLE_COMPRESSION = True
@@ -623,5 +610,6 @@ index c36b2a0..519e915 100644
      # set random seeds
      if args.seed is not None:
          logger.info(f'Set random seed to {args.seed}, '
---
+-- 
 2.27.0
+
