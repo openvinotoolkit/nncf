@@ -313,6 +313,13 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                                input_high)
 
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+            if self.per_channel:
+                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
+                        y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                    return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                else:
+                    raise RuntimeError("PyTorch export to ONNX doesn't support per_channel quantization")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
@@ -400,7 +407,13 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                                input_high_tuned)
 
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
-            return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+            if self.per_channel:
+                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
+                        y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                    return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                else:
+                    raise RuntimeError("PyTorch export to ONNX doesn't support per_channel quantization")
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels,
                                                       input_low_tuned, input_high_tuned,
