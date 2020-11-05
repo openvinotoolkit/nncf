@@ -243,24 +243,19 @@ class SymmetricQuantizer(BaseQuantizer):
         self.scale.requires_grad = False
 
     def set_level_ranges(self):
-        self.level_high, self.level_low, self.levels = self.calculate_level_ranges(self.num_bits,
-                                                                                   self.signed,
-                                                                                   self.is_weights)
+        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits,
+                                                                                   self.signed)
 
     @staticmethod
-    def calculate_level_ranges(num_bits, signed, is_weights):
-        if signed:
-            level_high = 2 ** (num_bits - 1) - 1
-            level_low = -(level_high + 1)
-            if is_weights:
-                level_low += 1
-        else:
-            level_high = 2 ** num_bits - 1
-            level_low = 0
+    def calculate_level_ranges(num_bits, signed):
         levels = 2 ** num_bits
-        if is_weights:
-            levels -= 1
-        return level_high, level_low, levels
+        if signed:
+            level_high = (levels // 2) - 1
+            level_low = -(levels // 2)
+        else:
+            level_high = levels - 1
+            level_low = 0
+        return level_low, level_high, levels
 
     @property
     def signed(self):
@@ -353,14 +348,14 @@ class AsymmetricQuantizer(BaseQuantizer):
         return True
 
     def set_level_ranges(self):
-        self.level_high, self.level_low, self.levels = self.calculate_level_ranges(self.num_bits)
+        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits)
 
     @staticmethod
     def calculate_level_ranges(num_bits):
         level_high = 2 ** num_bits - 1
         level_low = 0
         levels = 2 ** num_bits
-        return level_high, level_low, levels
+        return level_low, level_high, levels
 
     def quantize(self, x):
         return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,
