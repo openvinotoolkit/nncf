@@ -1,10 +1,10 @@
 # Neural Network Compression Framework (NNCF)
 
 This repository contains a PyTorch\*-based framework and samples for neural networks compression.
- 
-The framework is organized as a Python\* package that can be built and used in a standalone mode. 
+
+The framework is organized as a Python\* package that can be built and used in a standalone mode.
 The framework architecture is unified to make it easy to add different compression methods.
- 
+
 The samples demonstrate the usage of compression algorithms for three different use cases on public models and datasets: Image Classification, Object Detection and Semantic Segmentation.
 [Compression results](#nncf-compression-results) achievable with the NNCF-powered samples can be found in a table at the end of this document.
 
@@ -185,14 +185,19 @@ Quick jump to sample type:
 |GPT-2|INT8|WikiText-2 (raw)|19.73 (perplexity) | 20.9 (perplexity)|
 
 
-#### Object detection (3rd party)
+#### Object detection (MMDetection)
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet-ResNet50-FPN|INT8|COCO2017|35.6 (avg box mAP)|35.3 (avg box mAP)|
-|RetinaNet-ResNet50-FPN|INT8 + Sparsity 50%|COCO2017|35.6 (avg box mAP)|34.7 (avg box mAP)|
-|RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg box mAP)|39.1 (avg box mAP)|
+|RetinaNet-ResNet50-FPN|INT8|COCO2017|35.6 (avg bbox mAP)|35.3 (avg bbox mAP)|
+|RetinaNet-ResNet50-FPN|INT8 + Sparsity 50%|COCO2017|35.6 (avg bbox mAP)|34.7 (avg bbox mAP)|
+|RetinaNet-ResNeXt101-64x4d-FPN|INT8|COCO2017|39.6 (avg bbox mAP)|39.1 (avg bbox mAP)|
 
+#### Instance Segmentation (MMDetection)
+
+|Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
+| :---: | :---: | :---: | :---: | :---: |
+|Mask-RCNN-ResNet50-FPN|INT8|COCO2017|40.8 (avg bbox mAP), 37.0 (avg segm mAP)|40.6 (avg bbox mAP), 36.5 (avg segm mAP)|
 
 ## Citing
 
