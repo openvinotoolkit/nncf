@@ -33,6 +33,7 @@ from shutil import copyfile
 from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.models import InceptionOutputs
 
 from examples.common.argparser import get_common_argument_parser
 from examples.common.distributed import configure_distributed
@@ -381,6 +382,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         compression_loss = compression_ctrl.loss()
         loss = criterion_loss + compression_loss
 
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), input_.size(0))
