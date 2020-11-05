@@ -318,8 +318,8 @@ class SymmetricQuantizer(BaseQuantizer):
                         y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                     y_scale, y_zero_point = y_scale[0], y_zero_point[0]
                     return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-                raise RuntimeError(
-                    "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear doesn't support per channel quantization")
+                raise RuntimeError("""PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear
+                     doesn't support per channel quantization""")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
@@ -412,8 +412,8 @@ class AsymmetricQuantizer(BaseQuantizer):
                         y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                     y_scale, y_zero_point = y_scale[0], y_zero_point[0]
                     return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-                raise RuntimeError(
-                    "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear doesn't support per channel quantization")
+                raise RuntimeError("""PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear
+                     doesn't support per channel quantization""")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels,
