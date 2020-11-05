@@ -7,6 +7,21 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 1.5:
+- Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config.
+- HAWQ mixed precision initialization now supports a compression ration parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bit widths.
+- HAWQ mixed precision initialization allows to specify a more generic `criterion_fn` callable to calculate the related loss in case of complex loss input argument signatures
+- Custom user modules can be registered to have their `weight` attribute considered for compression using the @nncf.register_module
+- Possible to perform quantizer linking in various points in graph - such quantizers will share the quantization parameters, trainable and non-trainable
+- VPU HW config now uses unified scales for elementwise operations (utilising the quantizer linking mechanism)
+- Quantization "scope_overrides" config section now allows to set specific initializers and quantizer configuration
+- Calculation of metrics representing the degree of quantization using the quantization algorithm - example scripts now display it if a quantization algorithm is used
+- `create_compressed_model` now accepts a custom `wrap_inputs_fn` callable that should mark tensors among the model's `forward` arguments as "input" tensors for the model - useful for models that accept a list of tensors as their `forward` argument instead of tensors directly.
+- `prepare_for_export` method added for `CompressionAlgorithmController` objects so that the users can signal the compressed model to finalize internal compression states and prepare for subsequent ONNX export
+- GPT2 compression enabled, configuration file added to the `transformers` integration patch
+- Added GoogLeNet as a filter-pruned sample model (with final checkpoints)
+
+
 ## New in Release 1.4:
 - Models with filter pruning applied are now exportable to ONNX
 - BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config

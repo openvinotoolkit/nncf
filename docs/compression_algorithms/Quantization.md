@@ -83,6 +83,33 @@ For better accuracy, floating-point zero should be within quantization range and
 
 You can use the `num_init_steps` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics during given number of steps.
 
+#### Quantizer setup and hardware config files
+NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime. 
+To achieve this, the quantizer setup should be performed with following considerations in mind:
+1) every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
+2) the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
+3) for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
+4) certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
+
+These requirements are fulfilled by the quantizer propagation algorithm. 
+The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusable", and apply the fusing to the internal graph representation as well.
+Next, the operations in the graph that can be associated to input-quantizable operations on a given target hardware are assigned a single quantizer for each its quantizable activation input, with a number of possible quantizer configurations attached to it (that are feasible on target HW).
+The quantizers are then "propagated" against the data flow in the model's control flow graph as far as possible, potentially merging with other quantizers.
+Once all quantizers have reached a standstill in their propagation process, each will have a final (possibly reduced) set of possible quantizer configurations, from which a single one is either chosen manually, or using a precision initialization algorithm (which accepts the potential quantizer locations and associated potential quantizer configuration sets).
+The resulting configuration is then applied as a final quantizer setup configuration. 
+
+Note that this algorithm applies to activation quantization only - the weight quantizers do not require propagation. 
+However, the possible configurations of weight quantizers themselves are also sourced from the HW config file definitions.
+
+The HW to target for a given quantization algorithm run can be specified in NNCF config using the global `"target_device"` option.
+The default corresponds to CPU-friendly quantization.
+`"NONE"` corresponds to a configuration that uses the general quantizer propagation algorithm, but does not use any HW-specific information about quantizability of given operation types or possible quantizer configs for associated inputs or operation weights.
+Instead it uses a default, basic 8-bit symmetric per-tensor quantization configuration for each quantizer, and quantizes inputs of a certain default operation set, which at the moment is defined internally in NNCF.
+The quantization configuration in the `"target_device": "NONE"` case may be overridden using the regular `"activations"` and `"weights"` sections in the quantization compression algorithm sub-config, see below.
+
+For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
+
+
 #### Quantization Implementation
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
@@ -292,7 +319,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     // "target_scopes": [],
 
     // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
-    "export_to_onnx_standard_ops": false
+    "export_to_onnx_standard_ops": false,
 }
 ```
 

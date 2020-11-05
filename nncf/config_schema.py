@@ -678,7 +678,14 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-        "target_device": TARGET_DEVICE_SCHEMA,
+        "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
+                                         description="The target device, the specificity of which will be taken into "
+                                                     "account while compressing in order to obtain the best "
+                                                     "performance for this type of device. The default 'ANY' means "
+                                                     "compatible quantization supported by any HW. The parameter takes "
+                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). If you "
+                                                     "don't want to have any constraints on quantizer parameters you "
+                                                     "should set this value to 'NONE'. Optional."),
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,
