@@ -1183,9 +1183,10 @@ class QuantizerPropagationSolver:
             elif node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] \
                     == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    raise RuntimeError('Should not reach quantizable operator on backward traverse!')
+                    raise RuntimeError('Should not reach quantizable operator on backward traverse from quantizer!')
             else:
-                raise RuntimeError('Final graph is expected to be without barrier!')
+                # reached barrier for nodes in ignored_scopes, no need to go further - this nodes shouldn't be quantized
+                is_finished = True
             return is_finished, output
 
         def traverse_function_down(node_key: str, output: QuantizersBetweenQuantizableLayers) -> Tuple[bool, Any]:
@@ -1213,9 +1214,10 @@ class QuantizerPropagationSolver:
                     is_finished = True
                 elif node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] \
                     == QuantizationTrait.NON_QUANTIZABLE:
-                    raise RuntimeError('Should not reach non-quantizable operator!')
+                    raise RuntimeError('Should not reach non-quantizable operator on forward traverse from quantizer!')
             else:
-                raise RuntimeError('Final graph is expected to be without barrier!')
+                # reached barrier for nodes in ignored_scopes, no need to go further - this nodes shouldn't be quantized
+                is_finished = True
             return is_finished, output
 
         for finished_prop_quantizer in finished_propagating_quantizers:
