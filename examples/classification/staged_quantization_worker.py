@@ -22,6 +22,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torchvision.models import InceptionOutputs
 
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
     create_datasets, inception_criterion_fn
@@ -302,6 +303,9 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
 
         output = model(input_)
         criterion_loss = criterion_fn(output, target, criterion)
+
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
 
         # compute KD loss
         kd_loss = kd_loss_calculator.loss(input_, output)
