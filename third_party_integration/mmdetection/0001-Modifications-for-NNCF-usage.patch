@@ -1,12 +1,12 @@
-From a4900fa16617cb2d112e363a3d9c02b2690c6d3f Mon Sep 17 00:00:00 2001
+From 992880d52ec11e2f9bf34b2a2a6514b2cef9a56a Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
-Date: Thu, 5 Nov 2020 21:39:52 +0300
+Date: Fri, 6 Nov 2020 14:14:42 +0300
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
  .../mask_rcnn_r50_caffe_fpn_1x_coco_int8.py   | 62 ++++++++++++
  configs/pascal_voc/ssd300_voc_int8.py         | 94 +++++++++++++++++++
- .../retinanet/retinanet_r50_fpn_1x_int8.py    | 39 ++++++++
+ .../retinanet/retinanet_r50_fpn_1x_int8.py    | 40 ++++++++
  mmdet/apis/train.py                           | 35 +++++--
  mmdet/core/__init__.py                        |  1 +
  mmdet/core/nncf/__init__.py                   |  9 ++
@@ -18,7 +18,7 @@ Subject: [PATCH] Modifications for NNCF usage
  .../roi_heads/mask_heads/fcn_mask_head.py     | 13 ++-
  mmdet/models/roi_heads/standard_roi_head.py   |  8 +-
  tools/train.py                                |  6 ++
- 14 files changed, 367 insertions(+), 17 deletions(-)
+ 14 files changed, 368 insertions(+), 17 deletions(-)
  create mode 100644 configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
  create mode 100644 configs/pascal_voc/ssd300_voc_int8.py
  create mode 100644 configs/retinanet/retinanet_r50_fpn_1x_int8.py
@@ -196,10 +196,10 @@ index 0000000..4112ea7
 +                   log_dir=work_dir)
 diff --git a/configs/retinanet/retinanet_r50_fpn_1x_int8.py b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
 new file mode 100644
-index 0000000..0c8c572
+index 0000000..7788165
 --- /dev/null
 +++ b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,40 @@
 +_base_ = [
 +    '../_base_/models/retinanet_r50_fpn.py',
 +    '../_base_/datasets/coco_detection.py',
@@ -236,6 +236,7 @@ index 0000000..0c8c572
 +resume_from = None
 +workflow = [('train', 1)]
 +# nncf config
++input_size = 800
 +nncf_config = dict(compression=[dict(algorithm='quantization',
 +                                     initializer=dict(range=dict(num_init_steps=10)))],
 +                   log_dir=work_dir)
