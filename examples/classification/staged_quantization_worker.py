@@ -30,7 +30,7 @@ from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested
+    print_statistics, is_pretrained_model_requested, log_main_params, finish_logging
 from nncf.binarization.algo import BinarizationController
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
@@ -190,6 +190,8 @@ def staged_quantization_main_worker(current_gpu, config):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
+    log_main_params(config)
+
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
@@ -207,6 +209,8 @@ def staged_quantization_main_worker(current_gpu, config):
         train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name,
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
+
+    finish_logging(config)
 
 
 def train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,

@@ -42,7 +42,7 @@ from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested
+    is_pretrained_model_requested, finish_logging, log_main_params
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -112,8 +112,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         configure_logging(logger, config)
-        if config.mode.lower() == 'train' and config.to_onnx is None:
-            mlflow.start_run()
+        #if config.mode.lower() == 'train' and config.to_onnx is None:
+        #    mlflow.start_run()
         print_args(config)
 
     if config.seed is not None:
@@ -182,12 +182,13 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
-        mlflow.log_param('epochs', nncf_config['epochs'])
-        mlflow.log_param('schedule_type', nncf_config['optimizer']['schedule_type'])
-        mlflow.log_param('lr', nncf_config['optimizer']['base_lr'])
-        mlflow.set_tag('Log Dir Path', config.log_dir)
-        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
+    log_main_params(config)
+    #if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
+    #    mlflow.log_param('epochs', nncf_config['epochs'])
+    #    mlflow.log_param('schedule_type', nncf_config['optimizer']['schedule_type'])
+    #    mlflow.log_param('lr', nncf_config['optimizer']['base_lr'])
+    #    mlflow.set_tag('Log Dir Path', config.log_dir)
+    #    os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -201,8 +202,9 @@ def main_worker(current_gpu, config: SampleConfig):
         train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
 
-    if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
-        mlflow.end_run()
+    finish_logging(config)
+    #if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
+    #    mlflow.end_run()
 
 
 def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
