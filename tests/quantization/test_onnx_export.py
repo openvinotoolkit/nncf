@@ -123,8 +123,8 @@ def test_onnx_export_to_quantize_dequantize_per_channel():
         sym_quantizer.run_export_quantization(x)
     except RuntimeError as e:
         assert str(
-            e) == """PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear
-                     doesn't support per channel quantization"""
+            e) == "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear " \
+                  "doesn't support per channel quantization"
     # ASYMMETRIC
     q_config = QuantizerConfig(
         input_shape=(2, 64, 15, 10),
@@ -167,45 +167,5 @@ def test_onnx_export_to_quantize_dequantize_per_channel():
         assym_quantizer.run_export_quantization(x)
     except RuntimeError as e:
         assert str(
-            e) == """PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear
-                 doesn't support per channel quantization"""
-        # ASYMMETRIC
-        q_config = QuantizerConfig(
-            input_shape=(2, 64, 15, 10),
-            bits=8,
-            mode=QuantizationMode.ASYMMETRIC,
-            signedness_to_force=None,
-            per_channel=True)
-        assym_quantizer = AsymmetricQuantizer(q_config)
-        assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-
-        x = torch.rand((2, 64, 15, 10))
-        assym_quantizer.run_export_quantization(x)
-
-        q_config = QuantizerConfig(
-            bits=8,
-            mode=QuantizationMode.ASYMMETRIC,
-            signedness_to_force=None,
-            per_channel=False)
-        assym_quantizer = AsymmetricQuantizer(q_config)
-        assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-
-        x = torch.rand((2, 64, 15, 10))
-        assym_quantizer.run_export_quantization(x)
-
-        q_config = QuantizerConfig(
-            input_shape=(2, 64, 15, 10),
-            bits=8,
-            mode=QuantizationMode.ASYMMETRIC,
-            signedness_to_force=None,
-            per_channel=True)
-        assym_quantizer = AsymmetricQuantizer(q_config)
-        assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-        sym_quantizer.scale = torch.nn.Parameter(torch.rand(1, 64, 1, 1))
-
-        x = torch.rand((2, 64, 15, 10))
-        try:
-            assym_quantizer.run_export_quantization(x)
-        except RuntimeError as e:
-            assert str(
-                e) == "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear doesn't support per channel quantization"
+            e) == "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear" \
+                  " doesn't support per channel quantization"
