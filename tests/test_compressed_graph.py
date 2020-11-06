@@ -51,12 +51,14 @@ def get_basic_quantization_config(quantization_type, input_sample_sizes=None):
                              }}
     return config
 
+
 # pylint:disable=redefined-outer-name
 def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_sample_size):
     config = get_empty_config(input_sample_sizes=input_sample_size)
     config["target_device"] = hw_config_type
     config["compression"] = {"algorithm": "quantization", }
     return config
+
 
 def get_version_agnostic_graph(nx_graph):
     done = False
@@ -254,6 +256,8 @@ TEST_MODELS_DESC = [
 def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref_dot_file_directory: str):
     compressed_model.to('cuda')
     compressed_model.do_dummy_forward()
+    # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
+    compressed_model.train()
     compressed_model.do_dummy_forward()
     check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 
@@ -287,8 +291,6 @@ class TestModelsGraph:
     def test_sparse_network(self, desc: ModelDesc, algo):
         model = desc.model_builder()
         from nncf.layers import NNCF_MODULES_MAP
-        sparsifiable_modules = list(NNCF_MODULES_MAP.values())
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
 
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = {"algorithm": algo}
@@ -296,6 +298,10 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
+
+        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
+        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
@@ -311,8 +317,6 @@ class TestModelsGraph:
         model = desc.model_builder()
 
         from nncf.layers import NNCF_MODULES_MAP
-        sparsifiable_modules = list(NNCF_MODULES_MAP.values())
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = [
             {"algorithm": "rb_sparsity"},
@@ -322,6 +326,10 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
+
+        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
+        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
@@ -368,6 +376,27 @@ def test_resnet18__with_not_qinput(_case_config):
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'resnet18_no_qinput.dot', _case_config.graph_dir)
+
+
+def test_residual_dropout(_case_config):
+    class ResidualDropout(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.dropout = nn.Dropout(p=0.5)
+            self.linear = nn.Linear(1, 1)
+
+        def forward(self, x):
+            x = self.linear(x)
+            residual = x
+            x = self.dropout(x)
+            x = self.linear(x)
+            return x + residual
+
+    model = ResidualDropout()
+    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=[1, 1, 1, 1])
+
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    check_model_graph(compressed_model, 'residual_dropout.dot', _case_config.graph_dir)
 
 
 def test_resnet18__with_ignore(_case_config):
@@ -428,6 +457,7 @@ def test_custom_quantizable_subgraph_patterns(_case_config):
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'senet_custom_patterns.dot', _case_config.graph_dir)
 
+
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50.dot", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3.dot", partial(test_models.Inception3, aux_logits=True, transform_input=True),
@@ -437,16 +467,17 @@ TEST_HW_MODELS_DESC = [
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
 
+
 @pytest.fixture(scope='function', params=TYPE_HW)
 def hw_config_type(request):
     type_hw = request.param
     return type_hw
 
+
 # pylint:disable=too-many-branches
 @pytest.mark.parametrize(
     "desc", TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC]
 )
-
 # pylint:disable=redefined-outer-name
 def test_compressed_graph_models_hw(desc, hw_config_type):
     model = desc.model_builder()
@@ -459,7 +490,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
 
     # pylint:disable=protected-access
     compression_algo_builder = create_compression_algorithm_builders(config)[0]
-    potential_weights_modules =\
+    potential_weights_modules = \
         compression_algo_builder.get_potential_quantized_modules(compressed_model)
     prop_graph_solver = QuantizerPropagationSolver(hw_config=hw_config)
     insertion_point_graph = compressed_model.get_insertion_point_graph()
@@ -471,9 +502,11 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
                                                                   potential_weights_modules)
     check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
 
+
 def _case_dir(type_hw_config):
     graph_dir = os.path.join('quantized', "hw", type_hw_config)
     return graph_dir
+
 
 def prepare_potential_quantizer_graph(graph: NNCFGraph,
                                       potential_activations_quantizers: Dict[InsertionInfo,

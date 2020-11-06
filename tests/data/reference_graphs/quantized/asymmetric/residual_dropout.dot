@@ -1,0 +1,25 @@
+strict digraph  {
+"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
+"1 AsymmetricQuantizer/asymmetric_quantize" [id=1, scope=AsymmetricQuantizer, type=asymmetric_quantize];
+"2 ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=2, scope="ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"3 ResidualDropout/NNCFLinear[linear]/linear" [id=3, scope="ResidualDropout/NNCFLinear[linear]", type=linear];
+"4 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" [id=4, scope="ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer", type=asymmetric_quantize];
+"5 ResidualDropout/Dropout[dropout]/dropout" [id=5, scope="ResidualDropout/Dropout[dropout]", type=dropout];
+"6 ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=6, scope="ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"7 ResidualDropout/NNCFLinear[linear]/linear" [id=7, scope="ResidualDropout/NNCFLinear[linear]", type=linear];
+"8 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" [id=8, scope="ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer", type=asymmetric_quantize];
+"9 ResidualDropout/__add__" [id=9, scope=ResidualDropout, type=__add__];
+"10 ResidualDropout/__add__" [id=10, scope=ResidualDropout, type=__add__];
+"0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
+"1 AsymmetricQuantizer/asymmetric_quantize" -> "3 ResidualDropout/NNCFLinear[linear]/linear";
+"2 ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 ResidualDropout/NNCFLinear[linear]/linear";
+"3 ResidualDropout/NNCFLinear[linear]/linear" -> "4 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize";
+"4 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" -> "5 ResidualDropout/Dropout[dropout]/dropout";
+"5 ResidualDropout/Dropout[dropout]/dropout" -> "7 ResidualDropout/NNCFLinear[linear]/linear";
+"5 ResidualDropout/Dropout[dropout]/dropout" -> "9 ResidualDropout/__add__";
+"6 ResidualDropout/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "7 ResidualDropout/NNCFLinear[linear]/linear";
+"7 ResidualDropout/NNCFLinear[linear]/linear" -> "8 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize";
+"8 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" -> "9 ResidualDropout/__add__";
+"4 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" -> "10 ResidualDropout/__add__";
+"8 ResidualDropout/NNCFLinear[linear]/AsymmetricQuantizer/asymmetric_quantize" -> "10 ResidualDropout/__add__";
+}

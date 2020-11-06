@@ -13,7 +13,7 @@
 import inspect
 from collections import OrderedDict, Counter
 from enum import Enum
-from typing import List, Callable, Tuple, Dict, Optional
+from typing import List, Callable, Tuple, Dict, Optional, Set
 
 import functools
 import networkx as nx
@@ -235,7 +235,7 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config)
         from nncf.dynamic_graph.graph_matching import search_all
@@ -320,7 +320,7 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS |\
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
                   p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         return pattern
 
@@ -371,6 +371,18 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._insertions_into_original_graph = {}  # type: Dict[InsertionPoint, List[Tuple[Callable, OperationPriority]]]
 
 
+        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
+        self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
+
+        nncf_wrapped_model = self.get_nncf_wrapped_model()
+        train_only_module_scopes = self.collect_train_only_module_scopes(nncf_wrapped_model, self._graph_builder)
+        if not self.ignored_scopes:
+            self.ignored_scopes = []
+        # No need to compress modules that are executed in train mode only, thus adding them to ignored_scopes to avoid
+        # replacing by nncf modules. As a consequence, model can be compressed in eval mode. No need to care about
+        # spoiling BN statistics, as there're disabled in eval mode.
+        self.ignored_scopes.extend(train_only_module_scopes)
+
         # all modules should be replaced prior to graph building
         self._replace_modules_by_nncf_modules(device)
 
@@ -384,7 +396,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
 
-        self._original_graph = self._graph_builder.build_graph(self.get_nncf_wrapped_model(), _orig_context)
+        self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context)
 
         self._compressed_context = TracingContext()
 
@@ -747,3 +759,26 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def get_input_infos(self) -> List[ModelInputInfo]:
         return deepcopy(self.input_infos)
+
+    @staticmethod
+    def collect_train_only_module_scopes(model, graph_builder) -> List[str]:
+        """
+        Returns scopes of the modules which are executed in training mode, but not executed in evaluation mode.
+        Model is set to eval mode.
+        """
+        train_graph = graph_builder.build_graph(model.train())
+        eval_graph = graph_builder.build_graph(model.eval())
+
+        def collect_all_scopes(nncf_graph: NNCFGraph) -> Set[str]:
+            result = set()
+            for node_key in nncf_graph.get_all_node_keys():
+                node = nncf_graph.get_nx_node_by_key(node_key)
+                op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                if op_exec_context:
+                    result.add(str(op_exec_context.scope_in_model))
+            return result
+
+        train_scopes = collect_all_scopes(train_graph)
+        eval_scopes = collect_all_scopes(eval_graph)
+
+        return list(train_scopes.difference(eval_scopes))

@@ -35,8 +35,6 @@ from .traces_order import TracesPerLayer, TracesOrder
 from ..hessian_trace import HessianTraceEstimator
 from ..hw_precision_constraints import HWPrecisionConstraints
 from ..quantizer_id import QuantizerId
-from ...layer_utils import ProxyModule
-from ...module_operations import UpdateParameter
 from ...structures import QuantizationPrecisionInitArgs
 
 
@@ -70,7 +68,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo)
-        self._dump_hawq_data = config.get('dump_hawq_data', False)
+        self._dump_hawq_data = config.get('dump_hawq_data', True)
         bitwidth_assignment_mode_str = config.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
         self._bitwidth_assignment_mode = BitwidthAssignmentMode.from_str(bitwidth_assignment_mode_str)
 
@@ -344,15 +342,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             for wi in self._weight_quantizations_by_execution_order.values():
                 wi.num_bits = b
 
-            # TODO: replace with do_dummy_forward call on compressing in eval mode only
-            # Call each UpdateWeight op, instead of calling dummy_forward. It's needed because dummy_forward must be
-            # run with force_eval=False, which overrides BatchNorm statistics. This requirement comes from the models
-            # with quantizers on the branches, which are enabled in train mode (AuxLogits for Inception3)
-            for quantized_module in self._algo.quantized_weight_modules_registry.values():
-                ops = [op for op in quantized_module.pre_ops.values() if isinstance(op, UpdateParameter)]
-                ops += [op for op in quantized_module.post_ops.values() if isinstance(op, UpdateParameter)]
-                for op in ops:
-                    op(ProxyModule(quantized_module), None)
+            self._model.do_dummy_forward(force_eval=True)
 
             for i, observer in enumerate(observers):
                 perturbations.add(layer_id=i, bitwidth=b, perturbation=observer.get_observation().to(self._init_device))

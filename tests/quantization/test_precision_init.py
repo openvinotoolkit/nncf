@@ -173,6 +173,11 @@ class HAWQConfigBuilder:
     def build(self):
         return self._config
 
+    def with_ignored_scope(self, ignored_scopes=List[str]):
+        self._config['ignored_scopes'] = ignored_scopes
+        self._options['with'] = 'ignored_scopes'
+        return self
+
     def __str__(self):
         if self._extra_params:
             return '_'.join([self.filename_suffix(), self._extra_params])
@@ -291,10 +296,14 @@ TEST_PARAMS = (
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=get_avg_traces_for_vpu,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1.01)),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=get_avg_traces_for_vpu,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:93],
+                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
+                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]'])),
+    HAWQTestStruct(model_creator=inception_v3,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09),
@@ -497,11 +506,10 @@ def test_enable_quantizer_gradients():
 def disable_quantizer_gradients():
     config = get_quantization_config_without_range_init()
     config['input_info'] = {
-        "sample_size": [1, 3, 10, 10],
+        "sample_size": [2, 3, 10, 10],
     }
     config['quantizer_setup_type'] = 'pattern_based'
     model = MobileNetV2(num_classes=10)
-    model.eval()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]

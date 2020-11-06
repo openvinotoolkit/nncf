@@ -20,11 +20,12 @@ import pytest
 import torch
 from copy import deepcopy
 from torch import nn
+from torchvision.models import inception_v3
 
 from nncf import register_module
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_builder import ModelInputInfo, GraphBuilder
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
@@ -63,7 +64,6 @@ def test_disable_shape_matching():
     keys_2 = list(graph_2.get_all_node_keys())
     assert len(keys_1) == 2  # 1 input node + 1 operation node
     assert keys_1 == keys_2
-
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
     _ = qnet(torch.zeros(*input_shape_1))
@@ -227,7 +227,7 @@ class TestInsertionCommands:
         self.compressed_model.register_insertion_command(command)
         self.compressed_model.commit_compression_changes()
 
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         if insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             assert ctx._pre_hooks[command.insertion_point.ia_op_exec_context][0] is hook
@@ -256,7 +256,7 @@ class TestInsertionCommands:
     # pylint:disable=undefined-variable
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + '-' + x[0] for x in priority_test_cases])
     def test_priority(self, case, setup):
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
         if insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
@@ -300,7 +300,7 @@ class TestInsertionCommands:
         elif priority_type == "different":
             order = [2, 0, 1]
 
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         if insertion_type == InsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             self.check_order(ctx._pre_hooks[point.ia_op_exec_context], hook_list, order)
@@ -543,6 +543,7 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
             "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype
         }
+
         class ModelForMetatypeTesting(torch.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -613,3 +614,20 @@ class TestInsertionPointGraph:
 
         assert Counter(sanitized_loaded_keys) == Counter(list(merged_ip_graph.nodes.keys()))
         assert Counter(sanitized_loaded_edges) == Counter(list(merged_ip_graph.edges))
+
+
+def test_can_collect_scopes_of_train_only_modules():
+    model = inception_v3()
+    graph_builder = GraphBuilder(custom_forward_fn=lambda model_: model_(torch.randn([2, 3, 299, 299])))
+    actual_scopes = NNCFNetwork.collect_train_only_module_scopes(model, graph_builder)
+    ref_scopes = {
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/Conv2d[conv]',
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/BatchNorm2d[bn]',
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/Conv2d[conv]',
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]',
+        'Inception3/InceptionAux[AuxLogits]/Linear[fc]',
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]',
+        'Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]',
+        'Inception3/InceptionAux[AuxLogits]'
+    }
+    assert set(actual_scopes) == ref_scopes
