@@ -112,8 +112,6 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         configure_logging(logger, config)
-        #if config.mode.lower() == 'train' and config.to_onnx is None:
-        #    mlflow.start_run()
         print_args(config)
 
     if config.seed is not None:
@@ -183,12 +181,6 @@ def main_worker(current_gpu, config: SampleConfig):
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
     log_main_params(config)
-    #if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
-    #    mlflow.log_param('epochs', nncf_config['epochs'])
-    #    mlflow.log_param('schedule_type', nncf_config['optimizer']['schedule_type'])
-    #    mlflow.log_param('lr', nncf_config['optimizer']['base_lr'])
-    #    mlflow.set_tag('Log Dir Path', config.log_dir)
-    #    os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
@@ -203,8 +195,6 @@ def main_worker(current_gpu, config: SampleConfig):
               train_loader, train_sampler, val_loader, best_acc1)
 
     finish_logging(config)
-    #if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
-    #    mlflow.end_run()
 
 
 def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
