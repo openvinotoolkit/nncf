@@ -6,7 +6,7 @@ The framework is organized as a Python\* package that can be built and used in a
 The framework architecture is unified to make it easy to add different compression methods.
  
 The samples demonstrate the usage of compression algorithms for three different use cases on public models and datasets: Image Classification, Object Detection and Semantic Segmentation.
-[Compression results](#nncf-compression-results) achievable with the NNCF-powered samples can be found in a table at the end of this document.
+[Compression results](#nncf-compressed-model-zoo) achievable with the NNCF-powered samples can be found in a table at the end of this document.
 
 ## Key Features
 
@@ -77,8 +77,8 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6 or later
-- NVidia CUDA\* Toolkit 10.2 or later
-- PyTorch\* 1.5 or later.
+- NVidia CUDA\* Toolkit 10.2
+- PyTorch\* 1.5.0
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -111,9 +111,9 @@ Use one of the Dockerfiles in the [docker](./docker) directory to build an image
 ## Contributing
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
-## NNCF compression results
+## NNCF Compressed Model Zoo
 
-Achieved using sample scripts and NNCF configuration files provided with this repository. See README.md files for [sample scripts](#model-compression-samples) for links to exact configuration files and final PyTorch checkpoints.
+Results achieved using sample scripts and NNCF configuration files provided with this repository. See README.md files for [sample scripts](#model-compression-samples) for links to exact configuration files and final PyTorch checkpoints.
 
 Quick jump to sample type:
 
