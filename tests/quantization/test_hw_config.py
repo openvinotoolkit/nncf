@@ -14,7 +14,7 @@
 import torch
 
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizerSetupType, QuantizationController
@@ -39,9 +39,11 @@ class ModelForHWConfigTest(torch.nn.Module):
 
 class TestHWConfigRules:
     @staticmethod
-    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module, hw_config_dict: dict):
+    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module,
+                                                               hw_config_dict: dict,
+                                                               should_be_quantize_inputs: bool = True):
         nncf_config = get_quantization_config_without_range_init(model_size=1)
-        nncf_config["compression"].update({"quantize_inputs": False})
+        nncf_config["compression"].update({"quantize_inputs": should_be_quantize_inputs})
 
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
         qbuilder = QuantizationBuilder(nncf_config["compression"], should_init=False)
@@ -100,7 +102,7 @@ class TestHWConfigRules:
         }
 
         _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
-                                                                              hw_config_dict)
+                                                                              hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 0  # Conv2d weights remain unquantized
         assert len(ctrl.non_weight_quantizers) == 1  # Only the matmul input is quantized
 
@@ -185,12 +187,12 @@ class TestHWConfigRules:
         }
 
         _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
-                                                                              hw_config_dict)
+                                                                              hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
         conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0]
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
 
-        assert len(ctrl.non_weight_quantizers) == 2  # Conv2d input, matmul input
+        assert len(ctrl.non_weight_quantizers) == 1  # Matmul input
         matmul_input_matches = list(filter(lambda x: x.ia_op_exec_context.operator_name == "conv2d",
                                            ctrl.non_weight_quantizers.keys()))
 

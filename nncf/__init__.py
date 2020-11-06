@@ -32,7 +32,7 @@ from .nncf_logger import set_log_level
 from .initialization import register_default_init_args
 from .layers import register_module
 from .dynamic_graph.patch_pytorch import register_operator
-
+from .dynamic_graph.input_wrapping import nncf_model_input
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",

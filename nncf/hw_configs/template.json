@@ -18,11 +18,11 @@
                     "perchannel"
                 ]
             },
-            "q8_sym_tnr_-127_127": { // Alias name for set of hyperparameters
+            "q8_sym_tnr_-128_127": { // Alias name for set of hyperparameters
                 "bits": 8, // Number of quantization bits
                 "mode": "symmetric", // Quantization mode
                 "granularity": "pertensor", // Granularity: one scale for output tensor
-                "level_low": -127, // Low quantization level
+                "level_low": -128, // Low quantization level
                 "level_high": 127  // High quantization level
             }
         }

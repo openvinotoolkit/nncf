@@ -16,7 +16,6 @@ def get_basic_quantization_config():
             {
                 "sample_size": [1, 3, 32, 32],
             },
-        "quantizer_setup_type": "pattern_based",
         "compression":
             {
                 "algorithm": "quantization",
@@ -37,7 +36,7 @@ TestStruct = namedtuple('TestStruct',
                          'weights',
                          'ignored_scopes',
                          'table',
-                         'hw_config_type',
+                         'target_device',
                          'quantizer_setup_type'))
 
 NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
@@ -46,7 +45,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes={},
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.UNSIGNED_STR: 100.0, NQSM.PER_CHANNEL_STR: 0.0,
                                             NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0,
@@ -62,7 +61,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes={},
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='propagation_based',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 100.0,\
                NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0, 8: 100.0},\
@@ -78,7 +77,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 100.0,\
                NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0, 8: 100.0},\
@@ -95,8 +94,8 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[],
-        hw_config_type='cpu',
-        quantizer_setup_type='pattern_based',
+        target_device='CPU',
+        quantizer_setup_type='propagation_based',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 100.0,\
                NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0, 8: 100.0},\
                NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
@@ -124,7 +123,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
             },
         ignored_scopes=['AlexNet/Sequential[classifier]'],
         quantizer_setup_type='pattern_based',
-        hw_config_type=None,
+        target_device='NONE',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 100.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
                NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 0.0, NQSM.ASYMMETRIC_STR: 100.0, 8: 83.33, 2: 16.66,\
                4: 0.0}, NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
@@ -145,7 +144,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={"bits": 8},
         weights={"bits":6},
         ignored_scopes=['AlexNet/Sequential[classifier]'],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={'Quantizer parameter': {NQSM.SIGNED_STR: 0, NQSM.PER_CHANNEL_STR: 0, NQSM.UNSIGNED_STR: 0,\
                NQSM.PER_TENSOR_STR: 0, NQSM.SYMMETRIC_STR: 0, NQSM.ASYMMETRIC_STR: 0, 8: 0, 2: 0, 4: 0, 6: 0},\
@@ -167,7 +166,7 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         activations={},
         weights={"bits":6},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={'Quantizer parameter': {NQSM.SIGNED_STR: 0, NQSM.PER_CHANNEL_STR: 0, NQSM.UNSIGNED_STR: 0,\
                NQSM.PER_TENSOR_STR: 0, NQSM.SYMMETRIC_STR: 0, NQSM.ASYMMETRIC_STR: 0, 8: 0, 2: 0, 4: 0, 6: 0},\
@@ -195,8 +194,7 @@ def test_network_quantization_share_metric(network_quantization_share_metric_tes
     config['compression']["weights"] = network_quantization_share_metric_test_struct.weights
     config['compression']["ignored_scopes"] = network_quantization_share_metric_test_struct.ignored_scopes
     config['quantizer_setup_type'] = network_quantization_share_metric_test_struct.quantizer_setup_type
-    if network_quantization_share_metric_test_struct.hw_config_type is not None:
-        config['hw_config_type'] = network_quantization_share_metric_test_struct.hw_config_type
+    config['target_device'] = network_quantization_share_metric_test_struct.target_device
     cntrl, compressed_model = create_compressed_model(test_models.AlexNet(), config)
     quantizer_setup_type = QuantizerSetupType.PATTERN_BASED if config['quantizer_setup_type'] == 'pattern_based'\
          else QuantizerSetupType.PROPAGATION_BASED
@@ -215,12 +213,12 @@ MEMORY_COST_METRIC_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 4.0,
                MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
                MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 22.18,
-               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0156,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
     TestStruct(
         initializers={"precision": {
@@ -231,19 +229,19 @@ MEMORY_COST_METRIC_TEST_CASES = [
         activations={},
         weights={"bits": 8},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 4.05,
                MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
                MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 21.86,
-               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0156,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
     TestStruct(
         initializers={},
         activations={},
         weights={},
         ignored_scopes=['AlexNet/Sequential[features]/NNCFConv2d[0]'],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 3.99,
                MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
@@ -262,7 +260,7 @@ def test_memory_cost_metric(memory_cost_metric_test_struct):
     config['compression']['initializer'].update(memory_cost_metric_test_struct.initializers)
     config['compression']["weights"] = memory_cost_metric_test_struct.weights
     config['compression']["ignored_scopes"] = memory_cost_metric_test_struct.ignored_scopes
-
+    config['target_device'] = memory_cost_metric_test_struct.target_device
     ctrl, compressed_model = create_compressed_model(test_models.AlexNet(), config)
     qmetric = MemoryCostMetric(compressed_model, ctrl.weight_quantizers, ctrl.non_weight_quantizers)
     qmetric.collect()
@@ -275,7 +273,7 @@ SHARE_EDGES_QUANTIZED_DATA_PATH_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='propagation_based',
         table={ShareEdgesQuantizedDataPath.COUNT_QUANTIZED_EDGES_STR: 100}
     ),
@@ -284,7 +282,7 @@ SHARE_EDGES_QUANTIZED_DATA_PATH_TEST_CASES = [
         activations={},
         weights={},
         ignored_scopes=[],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={ShareEdgesQuantizedDataPath.COUNT_QUANTIZED_EDGES_STR: 100}
     ),
@@ -299,7 +297,7 @@ SHARE_EDGES_QUANTIZED_DATA_PATH_TEST_CASES = [
             "Inception3/__mul___0",
             "Inception3/__mul___1",
             "Inception3/__mul___2"],
-        hw_config_type=None,
+        target_device='NONE',
         quantizer_setup_type='pattern_based',
         table={ShareEdgesQuantizedDataPath.COUNT_QUANTIZED_EDGES_STR: 95.97}
     )

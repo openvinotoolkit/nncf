@@ -230,6 +230,16 @@ RANGE_INIT_CONFIG_PROPERTIES = {
     },
 }
 
+BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
+    "type": "string",
+    "enum": ['strict', 'liberal'],
+    "default": "liberal",
+    "description": "The mode for assignment bitwidth to activation quantizers. A group of quantizers between modules "
+                   "with quantizable inputs has the same bitwidth in the strict mode. Liberal one allows different "
+                   "precisions within the group. Bitwidth is assigned based on hardware constraints. If multiple "
+                   "variants are possible the minimal compatible bitwidth is chosen."
+}
+
 QUANTIZATION_INITIALIZER_SCHEMA = {
     "type": "object",
     "properties": {
@@ -298,7 +308,18 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                         },
                         "description": "Manual settings for the quantizer bitwidths. Scopes are used to identify "
                                        "the quantizers."
-                    }
+                    },
+                    "traces_per_layer_path": with_attributes(_STRING,
+                                                             description="Path to serialized PyTorch Tensor with "
+                                                                         "average Hessian traces per quantized modules."
+                                                                         " It can be used to accelerate mixed precision"
+                                                                         "initialization by using average Hessian "
+                                                                         "traces from previous run of HAWQ algorithm."),
+                    "dump_hawq_data": with_attributes(_BOOLEAN,
+                                                      description="Whether to dump data related to HAWQ algorithm:"
+                                                                  "bitwidth graph, average traces and different plots.",
+                                                      default=True),
+                    "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
                 },
                 "additionalProperties": False,
             }
@@ -483,7 +504,11 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
                                                              "sparsity level will be applied "
                                                              "immediately, so the length of this list "
                                                              "should be larger than the length of the "
-                                                             "'steps' by one.")
+                                                             "'steps' by one."),
+    "sparsity_level_setting_mode":with_attributes(_STRING,
+                                                  description="The mode of sparsity level setting( "
+                                                              "'global' - one sparsity level is set for all layer, "
+                                                              "'local' - sparsity level is set per-layer.)"),
 }
 
 MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG = "magnitude_sparsity"
@@ -612,12 +637,12 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
-ALL_SUPPORTED_ALGO_SCHEMAE = [BINARIZATION_SCHEMA,
-                              QUANTIZATION_SCHEMA,
-                              CONST_SPARSITY_SCHEMA,
-                              MAGNITUDE_SPARSITY_SCHEMA,
-                              RB_SPARSITY_SCHEMA,
-                              FILTER_PRUNING_SCHEMA]
+ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
+                             QUANTIZATION_SCHEMA,
+                             CONST_SPARSITY_SCHEMA,
+                             MAGNITUDE_SPARSITY_SCHEMA,
+                             RB_SPARSITY_SCHEMA,
+                             FILTER_PRUNING_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
@@ -625,6 +650,11 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
                       FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA}
+
+TARGET_DEVICE_SCHEMA = {
+    "type": "string",
+    "enum": ["ANY", "CPU", "GPU", "VPU", "NONE"]
+}
 
 ROOT_NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft/2019-09/schema#",
@@ -634,7 +664,11 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                       description="Required - describe the specifics of your model inputs here."
                                                   "This information is used to build the internal graph representation"
                                                   "that is leveraged for proper compression functioning, and for "
-                                                  "exporting the compressed model to ONNX."),
+                                                  "exporting the compressed model to ONNX - a dummy tensor with a "
+                                                  "corresponding shape and filler will be generated for each entry"
+                                                  "and passed as a corresponding argument into the model's forward"
+                                                  "method. Keywords can be specified for each entry - if left "
+                                                  "unspecified, the dummy tensor will be passed as a positional arg."),
         "disable_shape_matching": with_attributes(_BOOLEAN,
                                                   description="Whether to enable strict input tensor"
                                                               "shape matching when building the internal graph"
@@ -648,10 +682,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-        "hw_config_type": with_attributes(_STRING,
-                                          description="If specified, the compression algorithms will use parameter "
-                                                      "presets that are more likely to result in best performance on "
-                                                      "a given HW type."),
+        "target_device": TARGET_DEVICE_SCHEMA,
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,
@@ -668,7 +699,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
     "required": ["input_info"],
     "definitions": REF_VS_ALGO_SCHEMA,
     "dependencies": {
-        "hw_config_type": {
+        "target_device": {
             "properties": {
                 "quantizer_setup_type": {"const": "propagation_based"}}
         }

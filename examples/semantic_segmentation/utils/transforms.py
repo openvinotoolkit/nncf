@@ -50,7 +50,7 @@ class RandomResize:
         self.max_size = max_size
 
     def __call__(self, image, target):
-        size = random.randint(self.min_size, self.max_size)
+        size = random.randint(self.min_size, self.max_size)  # nosec
         image = F.resize(image, size)
         target = F.resize(target, size, interpolation=Image.NEAREST)
         return image, target
@@ -64,7 +64,7 @@ class RandomScaleAligned:
 
     def __call__(self, image, target):
         w, h = image.size
-        scale = random.uniform(self.min_scale, self.max_scale)
+        scale = random.uniform(self.min_scale, self.max_scale)  # nosec
         w_aligned = math.ceil(w * scale / self.alignment) * self.alignment
         h_aligned = math.ceil(h * scale / self.alignment) * self.alignment
         image = F.resize(image, (w_aligned, h_aligned))
@@ -87,7 +87,7 @@ class RandomHorizontalFlip:
         self.flip_prob = flip_prob
 
     def __call__(self, image, target):
-        if random.random() < self.flip_prob:
+        if random.random() < self.flip_prob:   # nosec
             image = F.hflip(image)
             target = F.hflip(target)
         return image, target
@@ -115,7 +115,7 @@ class RandomSizedCrop:
 
     def __call__(self, image, target):
         w, h = image.size
-        scale = random.uniform(self.min_scale, 1.0)
+        scale = random.uniform(self.min_scale, 1.0)  # nosec
         crop_w = math.ceil(w * scale)
         crop_h = math.ceil(h * scale)
         crop_params = T.RandomCrop.get_params(image, (crop_h, crop_w))

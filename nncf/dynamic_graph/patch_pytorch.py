@@ -204,14 +204,3 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
-
-
-@register_operator()
-def nncf_model_input(tensor: 'torch.Tensor'):
-    return tensor
-
-
-# Access via _original op because by this moment the nncf_model_input name will already be wrapped by wrap_operator
-# and its __name__ attribute changed correspondingly.
-# pylint:disable=protected-access
-MODEL_INPUT_OP_NAME = nncf_model_input._original_op.__name__

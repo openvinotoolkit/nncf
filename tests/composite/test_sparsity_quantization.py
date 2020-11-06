@@ -1,9 +1,9 @@
 from nncf.composite_compression import CompositeCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.module_operations import UpdateWeight, UpdateInputs
+from nncf.module_operations import UpdateWeight
 from nncf.quantization.layers import SymmetricQuantizer
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.utils import get_all_modules_by_type
+from nncf.utils import get_all_modules_by_type, get_all_modules
 from tests.helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test
 
 
@@ -37,12 +37,14 @@ def test_can_quantize_inputs_for_sparsity_plus_quantization():
     sparse_quantized_model_conv = get_all_modules_by_type(sparse_quantized_model, 'NNCFConv2d')
 
     nncf_module = next(iter(sparse_quantized_model_conv.values()))
-    assert len(nncf_module.pre_ops) == 3  # 1x weight sparsifier + 1x weight quantizer + 1x input quantizer
+    assert len(nncf_module.pre_ops) == 2  # 1x weight sparsifier + 1x weight quantizer
     assert isinstance(nncf_module.pre_ops['0'], UpdateWeight)
     assert isinstance(nncf_module.pre_ops['0'].op, RBSparsifyingWeight)
 
     assert isinstance(nncf_module.pre_ops['1'], UpdateWeight)
     assert isinstance(nncf_module.pre_ops['1'].op, SymmetricQuantizer)
 
-    assert isinstance(nncf_module.pre_ops['2'], UpdateInputs)
-    assert isinstance(nncf_module.pre_ops['2'].op, SymmetricQuantizer)
+    input_quantizer = get_all_modules(sparse_quantized_model)['NNCFNetwork/ModuleDict[activation_quantizers]']
+
+    assert len(input_quantizer) == 1
+    assert isinstance(list(input_quantizer.values())[0], SymmetricQuantizer)

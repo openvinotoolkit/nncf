@@ -49,6 +49,9 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+    )
+    parser.addoption(
         "--imagenet", action="store_true", default=False, help="Enable tests with imagenet"
     )
     parser.addoption(
@@ -60,6 +63,9 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--third-party-sanity", action="store_true", default=False, help="To run third party sanity test cases"
+    )
+    parser.addoption(
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
     )
 
 
@@ -89,6 +95,11 @@ def sota_data_dir(request):
 
 
 @pytest.fixture(scope="module")
+def ov_data_dir(request):
+    return request.config.getoption("--ov-data-dir")
+
+
+@pytest.fixture(scope="module")
 def install_type(request):
     return request.config.getoption("--test-install-type")
 
@@ -108,3 +119,8 @@ def torch_home_dir(request, monkeypatch):
 @pytest.fixture(scope="session")
 def third_party(request):
     return request.config.getoption("--third-party-sanity")
+
+
+@pytest.fixture(scope="session")
+def openvino(request):
+    return request.config.getoption("--run-openvino-eval")

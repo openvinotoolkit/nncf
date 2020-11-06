@@ -27,9 +27,9 @@ from nncf.quantization.layers import QuantizerConfig, QuantizationMode, Symmetri
 
 
 class HWConfigType(Enum):
-    CPU = "cpu"
-    GPU = "gpu"
-    VPU = "vpu"
+    CPU = 'CPU'
+    GPU = 'GPU'
+    VPU = 'VPU'
 
     @staticmethod
     def from_str(config_value: str) -> 'HWConfigType':
@@ -41,6 +41,13 @@ class HWConfigType(Enum):
             return HWConfigType.VPU
         raise RuntimeError("Unknown HW config type string")
 
+HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
+    'ANY': HWConfigType.CPU.value,
+    'CPU': HWConfigType.CPU.value,
+    'VPU': HWConfigType.VPU.value,
+    'GPU': HWConfigType.GPU.value,
+    'NONE': None
+}
 
 def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['OperatorMetatype']:
     retval = []
@@ -148,10 +155,10 @@ class HWConfig(List):
             if mode == QuantizationMode.SYMMETRIC:
                 if quantization_subdict['level_low'] < 0 < quantization_subdict['level_high']:
                     signedness_to_force = True
-                true_level_high, true_level_low, _ = SymmetricQuantizer.calculate_level_ranges(bits, True, for_weights)
+                true_level_low, true_level_high, _ = SymmetricQuantizer.calculate_level_ranges(bits, True)
             else:
                 signedness_to_force = True
-                true_level_high, true_level_low, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
+                true_level_low, true_level_high, _ = AsymmetricQuantizer.calculate_level_ranges(bits)
 
             assert quantization_subdict['level_low'] == true_level_low, \
                     "Invalid value of quantizer parameter `level_low`.\

@@ -151,11 +151,15 @@ def check_equal(test, reference, rtol=1e-4):
 
 
 def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFConfig,
-                                              dummy_forward_fn: Callable[[Module], Any] = None) \
+                                              dummy_forward_fn: Callable[[Module], Any] = None,
+                                              wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+                                              resuming_state_dict: dict = None) \
     -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
-    algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn)
+    algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
+                                          wrap_inputs_fn=wrap_inputs_fn,
+                                          resuming_state_dict=resuming_state_dict)
     return model, algo
 
 

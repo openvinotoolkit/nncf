@@ -35,12 +35,13 @@ from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
 from nncf.dynamic_graph.graph import NNCFNode, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
 from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
 from nncf.initialization import DataLoaderRangeInitializeRunner
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionInfo, InsertionCommand, OperationPriority, \
+from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionCommand, OperationPriority, \
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -49,7 +50,8 @@ from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, Qua
 from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph, \
+    QuantizersBetweenQuantizableLayers, QuantizerInsertionInfo
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
@@ -110,9 +112,11 @@ PotentialQuantizedModule = namedtuple('PotentialQuantizedModule', 'module module
 
 class NonWeightQuantizerInfo:
     def __init__(self, quantizer_module_ref: BaseQuantizer,
-                 affected_ia_op_exec_contexts: List[InputAgnosticOperationExecutionContext]):
+                 affected_ia_op_exec_contexts: List[InputAgnosticOperationExecutionContext],
+                 quantizers_between_quantizable_layers: QuantizersBetweenQuantizableLayers = None):
         self.quantizer_module_ref = quantizer_module_ref
         self.affected_ia_op_exec_contexts = affected_ia_op_exec_contexts
+        self.quantizers_between_quantizable_layers = quantizers_between_quantizable_layers
 
 
 @COMPRESSION_ALGORITHMS.register('quantization')
@@ -168,7 +172,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         insertion_commands = self._quantize_weights(target_model) + self._quantize_activations(target_model)
-        if self.quantize_inputs:
+        if self.quantize_inputs and self.quantizer_setup_type is not QuantizerSetupType.PROPAGATION_BASED:
             insertion_commands += self._quantize_inputs(target_model, insertion_commands)
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
@@ -211,7 +215,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         group = QuantizerGroup.WEIGHTS if is_weights else QuantizerGroup.ACTIVATIONS
         qconfig = self.__get_default_qconfig(constraints=self.global_quantizer_contraints[group])
         qconfig.is_weights = is_weights
-
         scope_overrides = self.config.get("scope_overrides", {})
         for overridden_scope in scope_overrides.keys():
             if in_scope_list(parent_module_scope_str, overridden_scope):
@@ -251,6 +254,27 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 full_pattern = full_pattern | custom_pattern
         return full_pattern
 
+    def _check_if_ip_graph_nodes_point_to_single_module(self, ip_graph_node_list: List[dict]):
+        """Does not access actual modules - only uses the InputAgnosticOperationExecutionContext info."""
+        ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
+        for ip_graph_op_node in ip_graph_node_list:
+            nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+            ia_op_exec_context = nncf_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_contexts_list.append(ia_op_exec_context)
+
+        contexts_correspond_to_single_module = True
+        first_op_context = ia_op_exec_contexts_list[0]
+        for other_op_context in ia_op_exec_contexts_list:
+            if other_op_context.scope_in_model != first_op_context.scope_in_model or \
+                    other_op_context.operator_name != first_op_context.operator_name:
+                contexts_correspond_to_single_module = False
+                break
+
+        if not contexts_correspond_to_single_module:
+            raise RuntimeError("NNCF module has more than 1 associated graph operation node corresponding"
+                               "to different module hierarchy locations - cannot make sure that weight "
+                               "quantization will be correct")
+
     def get_potential_quantized_modules(self, target_model: NNCFNetwork) -> List[PotentialQuantizedModule]:
         modules = target_model.get_nncf_modules()
         insertion_point_graph = target_model.get_insertion_point_graph()
@@ -272,8 +296,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     raise RuntimeError(
                         "Could not find a patched operation corresponding to NNCF module scope {}".format(
                             str(module_scope)))
-                assert len(associated_ops) == 1, "NNCF module has more than 1 associated graph operation node - " \
-                                                 "cannot make sure that weight quantization will be correct"
+
+                if len(associated_ops) > 1:
+                    self._check_if_ip_graph_nodes_point_to_single_module(associated_ops)
                 graph_operation = associated_ops[0]
                 metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qconfig_list = meta_vs_qconfig_map[metatype]
@@ -296,8 +321,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
             if self.hw_config is not None:
                 try:
+                    qconfig_overrides = None
+                    if in_scope_list(str(module_scope), self.config.get("scope_overrides", {})):
+                        qconfig_overrides = self.__get_scoped_quantizer_config(target_model,
+                                                                               str(module_scope),
+                                                                               is_weights=True)
                     qconfig = self._select_final_qconfig(qconfig_list,
-                                                         self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])
+                                                         self.global_quantizer_contraints[QuantizerGroup.WEIGHTS],
+                                                         qconfig_overrides)
                 except RuntimeError:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
@@ -351,7 +382,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                            hw_config=self.hw_config,
                                                            default_qconfig_list=[self.__get_default_qconfig(
                                                                constraints=self.global_quantizer_contraints[
-                                                                   QuantizerGroup.ACTIVATIONS])])
+                                                                   QuantizerGroup.ACTIVATIONS])],
+                                                           input_infos=target_model.get_input_infos())
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
             insertion_data = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
             insertion_commands = []
@@ -359,14 +391,23 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             original_nncf_graph = target_model.get_original_graph()
             for insertion_info, quantizer_config_list in insertion_data.items():
                 ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
+                operator_scope_str = str(ia_op_exec_context)
+                if not self.quantize_inputs and ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                    continue
+
                 # Tailored for post-hook quantization and first output quantization only
                 quantizer_input_shape = original_nncf_graph.get_output_shapes_for_ia_op_exec_context(
                     ia_op_exec_context)[0]
-
                 try:
+                    qconfig_overrides = None
+                    if in_scope_list(operator_scope_str, self.config.get("scope_overrides", {})):
+                        qconfig_overrides = self.__get_scoped_quantizer_config(target_model,
+                                                                               operator_scope_str,
+                                                                               is_weights=True)
                     quantizer_config = self._select_final_qconfig(quantizer_config_list,
                                                                   self.global_quantizer_contraints[
-                                                                      QuantizerGroup.ACTIVATIONS])
+                                                                      QuantizerGroup.ACTIVATIONS],
+                                                                  qconfig_overrides)
                 except RuntimeError:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
@@ -387,8 +428,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return insertion_commands
 
     def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig],
-                              constraints: QuantizationConstraints) -> QuantizerConfig:
+                              constraints: QuantizationConstraints, qconfig_overrides=None) -> QuantizerConfig:
         assert quantizer_config_list is not None
+
+        if self.hw_config is None and qconfig_overrides is not None:
+            return qconfig_overrides
 
         if HWConfig.is_wildcard_quantization(quantizer_config_list):
             # Set a default, most basic quantization config in case wildcard propagating quantizer did
@@ -400,6 +444,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             quantizer_config_list
         ))
 
+
+        if qconfig_overrides is not None:
+            constrained_quantizer_config_list =\
+                 [qconfig for qconfig in constrained_quantizer_config_list if qconfig_overrides == qconfig]
+
+        # TODO: Make the logic more flexible when the flag "warning as error" is implemented.
+        # It means that the qconfig from overrides must be selected as final config
+        # even if it is not valid in hw-config.
         if not constrained_quantizer_config_list:
             raise RuntimeError()
 
@@ -432,7 +484,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             qconfig = self.__get_scoped_quantizer_config(target_model, operator_scope_str,
                                                          is_weights=False,
                                                          input_shape=insertion_info.shape_to_operate_on)
-            insertion_commands += self._add_single_activation_quantizer(target_model, insertion_info, qconfig)
+            quantizer_insertion_info = QuantizerInsertionInfo.from_insertion_info(insertion_info)
+            insertion_commands += self._add_single_activation_quantizer(target_model, quantizer_insertion_info, qconfig)
 
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
@@ -441,7 +494,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return insertion_commands
 
     def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
-                                         insertion_info: InsertionInfo,
+                                         insertion_info: QuantizerInsertionInfo,
                                          quantizer_config: QuantizerConfig) -> List[InsertionCommand]:
         """Will return one or more insertion commands - depending on whether insertion_info specifies
         a single input agnostic operation execution context or there are linked contexts along with it."""
@@ -469,7 +522,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             nncf_logger.info(
                 "Processing linked activation quantizer group:\n {}\n".format("\n".join(serialized_context_list)))
 
-        self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(quantizer, affected_ia_op_exec_contexts)
+        self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(
+            quantizer, affected_ia_op_exec_contexts, insertion_info.quantizers_between_quantizable_layers)
 
         insertion_commands = []
         for curr_ia_op_exec_context in affected_ia_op_exec_contexts:
@@ -580,7 +634,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             ia_op_exec_context = module_input_node.op_exec_context.input_agnostic
             quantizer_id = InputQuantizerId(ia_op_exec_context)
             self._hw_precision_constraints.add(quantizer_id, [qconfig])
-            self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(quantizer, [ia_op_exec_context])
+            self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(
+                quantizer, [ia_op_exec_context], QuantizersBetweenQuantizableLayers())
 
         return insertion_commands
 
@@ -700,8 +755,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return pattern
 
     @staticmethod
-    def coalesce_insertion_infos(target_insertion_infos: List[InsertionInfo],
-                                 linked_scopes_groups_list: List[List[str]]) -> List[InsertionInfo]:
+    def coalesce_insertion_infos(target_insertion_infos: List[QuantizerInsertionInfo],
+                                 linked_scopes_groups_list: List[List[str]]) -> List[QuantizerInsertionInfo]:
         """Accepts a list of InsertionInfos that each correspond only to one InputAgnosticOperationExecutionContext,
         and merges these according to linked_scope_groups_list so that some or all of the resulting InsertionInfo
         objects have non-empty linked_op_exec_contexts lists.
@@ -749,10 +804,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         for intra_group_indices in group_indices_list:
             main_info_idx = intra_group_indices[0]
             main_info = target_insertion_infos[main_info_idx]
-            new_info = InsertionInfo(main_info.op_exec_context,
-                                     main_info.is_input,
-                                     main_info.is_output,
-                                     shape_to_operate_on=main_info.shape_to_operate_on)
+            new_info = QuantizerInsertionInfo(main_info.op_exec_context,
+                                              main_info.is_input,
+                                              main_info.is_output,
+                                              shape_to_operate_on=main_info.shape_to_operate_on)
             for linked_info_idx in intra_group_indices[1:]:
                 new_info.linked_op_exec_contexts.append(target_insertion_infos[linked_info_idx].op_exec_context)
             retval.append(new_info)
@@ -834,6 +889,11 @@ class QuantizationController(QuantizationControllerBase):
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
+
+    def prepare_for_export(self):
+        for quantizer_id, quantizer in self.all_quantizations.items():
+            if not quantizer.is_enabled_quantization():
+                nncf_logger.warning('Disabled quantization on export to ONNX: {}'.format(quantizer_id))
 
     def update_metric_store(self, do_all: bool = False):
         for collector in self.non_stable_metric_collectors:
@@ -918,6 +978,7 @@ class QuantizationController(QuantizationControllerBase):
 
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
             initializer = init_impl(self, init_precision_config, precision_init_args)
+            nncf_logger.info("Initialization of quantization precisions")
             initializer.apply_init()
 
     def init_range(self):
@@ -1006,7 +1067,7 @@ class QuantizationController(QuantizationControllerBase):
         nncf_network = self._model
         nncf_graph = nncf_network.get_original_graph()
         non_weight_quantizers = {key: quantizer_info.quantizer_module_ref for key, quantizer_info \
-                                in self.non_weight_quantizers.items() if not isinstance(key, InputQuantizerId)}
+                                 in self.non_weight_quantizers.items() if not isinstance(key, InputQuantizerId)}
 
         def traverse_graph(curr_nx_node_key: str, weight_quantizers: List[nn.Module]) -> Optional[List[nn.Module]]:
             nx_node = nncf_graph.get_nx_node_by_key(curr_nx_node_key)
@@ -1065,8 +1126,14 @@ class QuantizationController(QuantizationControllerBase):
                 ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
                 target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
                 if quantizer_group == target_quantizer_group and\
-                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                     should_consider_scope(str(scope), target_scopes, ignored_scopes):
                     matched_init_range_config.append(range_init_subconfig)
+
+            if len(matched_init_range_config) > 1:
+                raise AssertionError("The range initialization configs conflict with each other. "
+                                     "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
+                                                                                    str(scope)))
+
 
             if len(matched_init_range_config) == 1:
                 module_init_range_config = matched_init_range_config[0]
@@ -1088,10 +1155,9 @@ class QuantizationController(QuantizationControllerBase):
 
     def statistics(self):
         stats = super().statistics()
-        if self.is_staged_scheduler:
-            num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
-            multiplier = 100 / len(self.all_quantizations)
-            stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
+        num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
+        multiplier = 100 / len(self.all_quantizations)
+        stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
         if self._collect_compression_metrics:
             self.update_metric_store()
             for metric in self.metric_store.values():

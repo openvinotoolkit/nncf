@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from os import path as osp
+
 import torch
 import torchvision.models
 from functools import partial
@@ -38,3 +40,20 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
         sd = torch.load(weights_path, map_location='cpu')
         load_state(loaded_model, sd, is_resume=False)
     return loaded_model
+
+
+def load_resuming_model_state_dict_and_checkpoint_from_path(resuming_checkpoint_path):
+    logger.info('Resuming from checkpoint {}...'.format(resuming_checkpoint_path))
+    resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+    # use checkpoint itself in case only the state dict was saved,
+    # i.e. the checkpoint was created with `torch.save(module.state_dict())`
+    resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
+    return resuming_model_state_dict, resuming_checkpoint
+
+
+def load_resuming_checkpoint(resuming_checkpoint_path: str):
+    if osp.isfile(resuming_checkpoint_path):
+        logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
+        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+        return checkpoint
+    raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))

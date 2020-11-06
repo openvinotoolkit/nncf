@@ -12,6 +12,7 @@
 """
 import itertools
 from collections import namedtuple
+from typing import Tuple, List
 
 import pytest
 import re
@@ -20,7 +21,7 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
-from tests.quantization.test_precision_init import create_hawq_test_config
+from tests.quantization.test_precision_init import HAWQConfigBuilder
 from torch.utils.data import DataLoader
 
 import nncf
@@ -28,15 +29,15 @@ from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader
+from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader, RangeInitializerFactory
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
-    BaseQuantizer
+    BaseQuantizer, QuantizerConfig, QuantizationMode, QUANTIZATION_MODULES
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
     get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init
 from tests.helpers import TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_mock_dataloader, MockModel
+    create_compressed_model_and_algo_for_test, create_mock_dataloader, BasicConvTestModel
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
@@ -59,8 +60,8 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
 
     act_sum = 0
     for layer in get_all_modules_by_type(quant_model, "SymmetricQuantizer").values():
-        act_sum += layer.scale
-    ref_sum = 3467.322
+        act_sum += layer.scale.sum()
+    ref_sum = 4447.291
     assert act_sum.item() == approx(ref_sum, 0.01), \
         'sum of scales is not expected {} vs {} rank {}'.format(act_sum.item(), ref_sum, config.rank)
 
@@ -157,7 +158,7 @@ class TestRangeInit:
                 if match:
                     assert isinstance(module, SymmetricQuantizer)
                     assert module.signed == ref_values[0], 'sign is not matched for {}'.format(str(scope))
-                    assert module.scale == ref_values[1], 'scale is not matched for {}'.format(str(scope))
+                    assert (module.scale == ref_values[1]).sum(), 'scale is not matched for {}'.format(str(scope))
 
     @pytest.mark.parametrize("config_creator", (create_config, create_empty_config_without_init_section))
     def test_scale_and_sign_init_for_quant_algo__without_init_section(self, wrap_dataloader, config_creator):
@@ -167,10 +168,10 @@ class TestRangeInit:
         _, compressed_model = self.create_algo_and_compressed_model(config)
 
         self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (True, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 1),
+            '.*Sequential\\[0\\].*UpdateWeight.*': (True, torch.ones(2, 1, 1, 1)),
+            '.*Sequential\\[1\\].*UpdateWeight. *': (True, 1),
             '.*activation_quantizers.*Sequential\\[0\\].*': (True, 4),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (True, 24)
+            '.*activation_quantizers.*nncf_model_input*': (False, 1)
         })
 
     def test_scale_and_sign_init_for_quant_algo__with_zero_init_steps(self, wrap_dataloader):
@@ -182,10 +183,10 @@ class TestRangeInit:
         _, compressed_model = self.create_algo_and_compressed_model(config)
 
         self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (False, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 1),
+            '.*Sequential\\[0\\].*UpdateWeight.*': (True, torch.ones(2, 1, 1, 1)),
+            '.*Sequential\\[1\\].*UpdateWeight. *': (True, 1),
             '.*activation_quantizers.*Sequential\\[0\\].*': (False, 1),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (False, 1)
+            '.*activation_quantizers.*nncf_model_input*': (False, 1)
         })
 
     def test_scale_and_sign_init_for_quant_algo__after_load_state(self, wrap_dataloader):
@@ -199,16 +200,21 @@ class TestRangeInit:
         })
 
         self.check_sign_and_scale(compressed_model, {
-            '.*Sequential\\[0\\].*UpdateWeight.*': (False, 1),
-            '.*Sequential\\[1\\].*UpdateWeight. *': (False, 100),
+            '.*Sequential\\[0\\].*UpdateWeight.*': (False, torch.ones(2, 1, 1, 1)),
+            '.*Sequential\\[1\\].*UpdateWeight. *': (True, 100),
             '.*activation_quantizers.*Sequential\\[0\\].*': (True, 4),
-            '.*activation_quantizers.*Sequential\\[1\\].*': (True, 24)
+            '.*activation_quantizers.*nncf_model_input*': (False, 1)
         })
 
     def test_scope_overrides(self, wrap_dataloader):
         config = create_config()
+        config['target_device'] = 'NONE'
         config["compression"]["scope_overrides"] = {
             r"{re}NNCFConv2d\[[0-9]*\]$": {
+                "bits": 7,
+                "mode": "asymmetric",
+            },
+            "/nncf_model_input_0": {
                 "bits": 7,
                 "mode": "asymmetric",
             },
@@ -227,16 +233,15 @@ class TestRangeInit:
         group_1 = [quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
                                       "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"],
+                   quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/AsymmetricQuantizer"
+                                      "[/nncf_model_input_0]"],
                    quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
-                                      "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/"
-                                      "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict['NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/'
-                                      'Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/'
-                                      'AsymmetricQuantizer[op]']
+                                      "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
+                                      "AsymmetricQuantizer[op]"]
                    ]
-        group_2 = [quantizer_str_dict['NNCFNetwork/ModuleDict[activation_quantizers]/'
-                                      'SymmetricQuantizer[TwoConvTestModel/Sequential[features]'
-                                      '/Sequential[0]/NNCFConv2d[0]/conv2d_0]']]
+        group_2 = [quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/"
+                                      "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
+                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0]"]]
 
         for quantizer in group_1:
             assert isinstance(quantizer, AsymmetricQuantizer)
@@ -258,29 +263,25 @@ class TestRangeInit:
             }],
             expected_modules_to_init={
                 "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
-                "[TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]"
-                "/conv2d_0]": {
-                    "type": "min_max",
-                    "num_init_steps": 1,
-                    "target_scopes": ["NNCFNetwork"]
-                    },
-                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
-                "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]"
-                "/SymmetricQuantizer[op]": {
+                "[/nncf_model_input_0]": {
                     "type": "min_max",
                     "num_init_steps": 1,
                     "target_scopes": ["NNCFNetwork"]
                 },
-                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
-                "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]"
-                "/SymmetricQuantizer[op]": {
+                "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                "[TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0]": {
                     "type": "min_max",
                     "num_init_steps": 1,
                     "target_scopes": ["NNCFNetwork"]
-                    },
-                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
-                "/Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]"
-                "/SymmetricQuantizer[op]": {
+                },
+                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/Sequential[0]"
+                "/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
+                    "type": "min_max",
+                    "num_init_steps": 1,
+                    "target_scopes": ["NNCFNetwork"]
+                },
+                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/Sequential[1]"
+                "/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
                     "type": "min_max",
                     "num_init_steps": 1,
                     "target_scopes": ["NNCFNetwork"]
@@ -298,20 +299,16 @@ class TestRangeInit:
                 "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
             }],
             expected_modules_to_init={
-                "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
-                "[TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]"
-                "/conv2d_0]": {
+                "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer[/nncf_model_input_0]": {
                     "type": "mean_min_max",
                     "num_init_steps": 2,
                     "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
                     },
-                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
-                "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]"
-                "/SymmetricQuantizer[op]": {
-                    "num_init_steps": 1,
-                    "type": "min_max",
-                    "target_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]"
-                                      "/Sequential[features]"]
+                "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer[TwoConvTestModel/"
+                "Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0]": {
+                    "type": "mean_min_max",
+                    "num_init_steps": 2,
+                    "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
                     },
                 "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
                 "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]"
@@ -339,12 +336,15 @@ class TestRangeInit:
             }, {
                 "type": "mean_min_max",
                 "num_init_steps": 2,
-                "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]",
+                                   "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                   "[/nncf_model_input_0]"]
             }, {
                 "type": "threesigma",
                 "num_init_steps": 1,
                 "target_quantizer_group": "activations",
-                "target_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                "target_scopes": ["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                  "[/nncf_model_input_0]"]
             }],
             expected_modules_to_init={
                 "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
@@ -352,15 +352,16 @@ class TestRangeInit:
                 "/conv2d_0]": {
                     "type": "mean_min_max",
                     "num_init_steps": 2,
-                    "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                    "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]",
+                                       "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                       "[/nncf_model_input_0]"]
                     },
-                "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
-                "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]"
-                "/SymmetricQuantizer[op]": {
+                "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer[/nncf_model_input_0]": {
                     "type": "threesigma",
                     "num_init_steps": 1,
                     "target_quantizer_group": "activations",
-                    "target_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                    "target_scopes": ["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                      "[/nncf_model_input_0]"]
                     },
                 "NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"
                 "/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]"
@@ -455,6 +456,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
             "input_info": {
                 "sample_size": [1, 3, 100, 100]
             },
+            "target_device": "NONE",
             "compression": {
                 "algorithm": "quantization",
                 "activations": {
@@ -522,12 +524,14 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
                          ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])
 def test_range_init_is_called(config_cutter, range_init_call_count, precision_init_call_count,
                               bn_adaptation_call_count, mocker):
-    config = create_hawq_test_config()
+    config = HAWQConfigBuilder().build()
     config['compression']['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_steps': 5}})
-    model = MockModel()
+    config['input_info'] = {"sample_size": [1, 1, 4, 4]}
+
+    model = BasicConvTestModel()
     config = register_default_init_args(config, mocker.stub(), mocker.stub())
     range_init_spy = mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
-    precision_init_spy = mocker.patch('nncf.quantization.init_precision.HAWQPrecisionInitializer.apply_init')
+    precision_init_spy = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init')
     bn_adaptation_spy = mocker.patch('nncf.initialization.DataLoaderBNAdaptationRunner.run')
 
     config_cutter(config['compression'])
@@ -568,12 +572,15 @@ RANGE_INIT_CALL_COUNT_TEST_CASES = [
             }, {
                 "type": "mean_min_max",
                 "num_init_steps": 2,
-                "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                "ignored_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]",
+                                   "NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                   "[TwoConvTestModel/Sequential[features]"]
             }, {
                 "type": "threesigma",
                 "num_init_steps": 3,
                 "target_quantizer_group": "activations",
-                "target_scopes": ["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]"]
+                "target_scopes": ["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                  "[TwoConvTestModel/Sequential[features]"]
             }],
             expected_call_count_initializer_create={
                 'min_max': 2,
@@ -625,3 +632,84 @@ def test_per_layer_range_init_is_called_the_required_number_of_times(range_init_
          range_init_call_count_test_struct.expected_call_count_register_input['mean_min_max']
     assert range_threesigma_init_register_input_spy.call_count ==\
          range_init_call_count_test_struct.expected_call_count_register_input['three_sigma']
+
+
+
+QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percentile"]
+
+
+class QuantizeRangeInitScaleShapeTestStruct:
+    def __init__(self, per_channel: bool, is_weights: bool,
+                 input_shape: List[int], ref_scale_shape: List[int]):
+        self.per_channel = per_channel
+        self.is_weights = is_weights
+        self.input_shape = input_shape
+        self.ref_scale_shape = ref_scale_shape
+
+QRISSTS = QuantizeRangeInitScaleShapeTestStruct
+
+QUANTIZER_RANGE_INIT_TEST_CASES = [
+    QRISSTS(per_channel=False,
+            is_weights=False,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1]),
+    QRISSTS(per_channel=True,
+            is_weights=False,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1, 42, 1, 1]),
+    QRISSTS(per_channel=False,
+            is_weights=True,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[1]),
+    QRISSTS(per_channel=True,
+            is_weights=True,
+            input_shape=[41, 42, 43, 44],
+            ref_scale_shape=[41, 1, 1, 1]),
+]
+
+def quantizer_range_init_scale_shape_idfn(fixture_value):
+    test_struct = fixture_value[0]  # type: QRISSTS
+    postfix = ""
+    if test_struct.is_weights:
+        postfix += "-W"
+    else:
+        postfix += "-A"
+
+    if test_struct.per_channel:
+        postfix += "-PC"
+    else:
+        postfix += "-PT"
+    return fixture_value[1] + postfix
+
+
+@pytest.fixture(params=itertools.product(QUANTIZER_RANGE_INIT_TEST_CASES, QUANTIZER_RANGE_INITIALIZERS),
+                ids=quantizer_range_init_scale_shape_idfn)
+def quantizer_range_init_test_struct(request):
+    return request.param
+
+
+def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: Tuple[QRISSTS, str]):
+    test_struct = quantizer_range_init_test_struct[0]
+    initializer_type = quantizer_range_init_test_struct[1]
+    for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:
+        qconfig = QuantizerConfig(mode=quantization_mode, per_channel=test_struct.per_channel,
+                                  is_weights=test_struct.is_weights,
+                                  input_shape=test_struct.input_shape)
+        q_cls = QUANTIZATION_MODULES.get(quantization_mode)
+        quantizer = q_cls(qconfig)  # type: BaseQuantizer
+        init_config = {"type": initializer_type,
+                       "num_init_steps": 1}
+        initializer = RangeInitializerFactory.create(init_config, quantizer, "")
+        initializer.register_input(torch.ones(test_struct.input_shape))
+
+        with torch.no_grad():
+            initializer.apply_init()
+
+        assert quantizer.scale_shape == test_struct.ref_scale_shape
+        if quantization_mode == QuantizationMode.SYMMETRIC:
+            assert list(quantizer.scale.shape) == test_struct.ref_scale_shape
+        elif quantization_mode == QuantizationMode.ASYMMETRIC:
+            assert list(quantizer.input_low.shape) == test_struct.ref_scale_shape
+            assert list(quantizer.input_range.shape) == test_struct.ref_scale_shape
+        else:
+            assert False  # options above should be exhaustive

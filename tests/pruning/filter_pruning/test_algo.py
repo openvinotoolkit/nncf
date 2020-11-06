@@ -56,7 +56,7 @@ def test_check_default_algo_params():
     # Check default algo params
     assert compression_ctrl.prune_first is False
     assert compression_ctrl.prune_last is False
-    assert compression_ctrl.prune_batch_norms is False
+    assert compression_ctrl.prune_batch_norms is True
     assert compression_ctrl.filter_importance is l2_filter_norm
 
     assert compression_ctrl.all_weights is False

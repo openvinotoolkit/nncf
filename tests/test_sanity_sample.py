@@ -18,6 +18,8 @@ import subprocess
 import sys
 import threading
 import time
+from enum import Enum, auto
+from pathlib import Path
 
 import os
 import pytest
@@ -203,6 +205,7 @@ def case_common_dirs(tmp_path_factory):
         "checkpoint_save_dir": str(tmp_path_factory.mktemp("models"))
     }
 
+
 @pytest.mark.parametrize(" multiprocessing_distributed",
                          (True, False),
                          ids=['distributed', 'dataparallel'])
@@ -214,7 +217,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
 
     if multiprocessing_distributed:
@@ -240,7 +243,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--dist-url": "tcp://127.0.0.1:8989"
@@ -273,7 +276,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--weights": ckpt_path,
     }
 
@@ -289,6 +292,7 @@ def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, ch
     return os.path.join(checkpoint_save_dir,
                         "distributed" if multiprocessing_distributed else "data_parallel",
                         get_name(config_factory.config) + "_last.pth")
+
 
 @pytest.mark.parametrize(
     "multiprocessing_distributed", [
@@ -308,7 +312,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--resume": ckpt_path,
@@ -358,7 +362,7 @@ def test_export_with_pretrained(tmp_path):
             "sample_size": [2, 3, 299, 299]
         },
         "num_classes": 1000,
-        "compression":  {"algorithm": "magnitude_sparsity"}
+        "compression": {"algorithm": "magnitude_sparsity"}
     })
     config_factory = ConfigFactory(config, tmp_path / 'config.json')
 
@@ -394,13 +398,12 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
-        "--workers": 0, # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--cpu-only": None
     }
 
     command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
-
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
         if is_staged_quantization(config['nncf_config']):
@@ -436,3 +439,115 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
 
     for p in model_to_be_trained.parameters():
         assert not p.is_cuda
+
+
+class SampleType(Enum):
+    CLASSIFICATION = auto()
+    SEMANTIC_SEGMENTATION = auto()
+    OBJECT_DETECTION = auto()
+
+
+class TestCaseDescriptor:
+    config_name: str
+    config_path: Path
+    sample_type: SampleType
+    dataset_dir: Path
+    dataset_name: str
+    is_real_dataset: bool = False
+    batch_size: int
+    num_weights_to_init: int
+
+    def batch(self, batch_size: int):
+        self.batch_size = batch_size
+        return self
+
+    def config(self, config_name: str):
+        self.config_path = TEST_ROOT.joinpath("data", "configs", "hawq", config_name)
+        self.config_name = config_name
+        return self
+
+    def sample(self, sample_type: SampleType):
+        self.sample_type = sample_type
+        return self
+
+    def real_dataset(self, dataset_name: str):
+        self.dataset_name = dataset_name
+        self.is_real_dataset = True
+        return self
+
+    def mock_dataset(self, dataset_name: str):
+        self.dataset_dir = TEST_ROOT.joinpath("data", "mock_datasets", dataset_name)
+        return self
+
+    def num_weights(self, n: int):
+        self.num_weights_to_init = n
+        return self
+
+    def __str__(self):
+        return '_'.join([self.config_name, ])
+
+
+TEST_CASE_DESCRIPTORS = [
+    TestCaseDescriptor().
+        config("inception_v3_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(96),
+    TestCaseDescriptor().
+        config("inception_v3_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(96),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
+    TestCaseDescriptor().
+        config("ssd300_vgg_voc_mixed_int.json").
+        sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(2).num_weights(35),
+    TestCaseDescriptor().
+        config("unet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(23),
+    TestCaseDescriptor().
+        config("icnet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(66)
+]
+
+
+@pytest.fixture(params=TEST_CASE_DESCRIPTORS, ids=[str(d) for d in TEST_CASE_DESCRIPTORS])
+def hawq_config(request, dataset_dir):
+    desc: TestCaseDescriptor = request.param
+    if desc.is_real_dataset:
+        desc.dataset_dir = Path(
+            dataset_dir if dataset_dir else os.path.join(tempfile.gettempdir(), desc.dataset_name))
+    return desc
+
+
+def test_hawq_init(hawq_config, tmp_path, mocker):
+    args = {
+        "--data": str(hawq_config.dataset_dir),
+        "--config": str(hawq_config.config_path),
+        "--log-dir": tmp_path,
+        "--batch-size": hawq_config.batch_size,
+        "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
+    }
+
+    command_line = " ".join(f'{key} {val}' for key, val in args.items())
+    if hawq_config.sample_type == SampleType.CLASSIFICATION:
+        import examples.classification.main as sample
+        mocker.patch("examples.classification.staged_quantization_worker.train_staged")
+        mocker.patch("examples.classification.main.train")
+    elif hawq_config.sample_type == SampleType.SEMANTIC_SEGMENTATION:
+        import examples.semantic_segmentation.main as sample
+        mocker.patch("examples.semantic_segmentation.main.train")
+    elif hawq_config.sample_type == SampleType.OBJECT_DETECTION:
+        import examples.object_detection.main as sample
+        mocker.patch("examples.object_detection.main.train")
+
+    from nncf.quantization.init_precision import HAWQPrecisionInitializer
+    set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
+
+    sample.main(shlex.split(command_line))
+
+    bitwidth_list = set_chosen_config_spy.call_args[0][1]
+    assert len(bitwidth_list) == hawq_config.num_weights_to_init
+    assert 4 in bitwidth_list
+    assert 8 in bitwidth_list

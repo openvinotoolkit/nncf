@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=1, scope="ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=2, scope="ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"1 SymmetricQuantizer/symmetric_quantize" [id=1, scope=SymmetricQuantizer, type=symmetric_quantize];
+"2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=2, scope="ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "3 ResNet/NNCFConv2d[conv1]/conv2d" [id=3, scope="ResNet/NNCFConv2d[conv1]", type=conv2d];
 "4 ResNet/BatchNorm2d[bn1]/batch_norm" [id=4, scope="ResNet/BatchNorm2d[bn1]", type=batch_norm];
 "5 ResNet/RELU" [id=5, scope=ResNet, type=RELU];
@@ -299,9 +299,9 @@ strict digraph  {
 "297 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" [id=297, scope="ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer", type=symmetric_quantize];
 "298 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=298, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "299 ResNet/NNCFLinear[linear]/linear" [id=299, scope="ResNet/NNCFLinear[linear]", type=linear];
-"0 /nncf_model_input" -> "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"1 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
-"2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
+"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
+"1 SymmetricQuantizer/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
+"2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
 "3 ResNet/NNCFConv2d[conv1]/conv2d" -> "4 ResNet/BatchNorm2d[bn1]/batch_norm";
 "4 ResNet/BatchNorm2d[bn1]/batch_norm" -> "5 ResNet/RELU";
 "5 ResNet/RELU" -> "6 ResNet/SymmetricQuantizer/symmetric_quantize";

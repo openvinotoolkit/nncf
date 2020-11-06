@@ -52,7 +52,7 @@ INSTALL_REQUIRES = ["ninja",
                     "pydot",
                     "tensorboardX",
                     "jstyleson",
-                    "matplotlib==3.0.3",
+                    "matplotlib",
                     "numpy",
                     "tqdm",
                     "onnx",
@@ -90,7 +90,6 @@ TORCHVISION_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torch
                                   'ver}m-linux_x86_64.whl'
 WHL_MODE_TEMPLATE = '%2B{mode}'
 
-
 if "--cpu-only" in sys.argv:
     mode = 'cpu'
     whl_mode = WHL_MODE_TEMPLATE.format(mode=mode)
@@ -105,6 +104,7 @@ if "--cpu-only" in sys.argv:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
+    sys.argv.remove("--cpu-only")
 else:
     mode = "cu{}".format(CUDA_VERSION)
     whl_mode = '' if IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER else WHL_MODE_TEMPLATE.format(mode=mode)

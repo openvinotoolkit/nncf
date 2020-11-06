@@ -15,7 +15,8 @@ from typing import List, Optional
 
 import torch
 
-from nncf.dynamic_graph.patch_pytorch import CustomTraceFunction, ForwardTraceOnly, MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.patch_pytorch import CustomTraceFunction, ForwardTraceOnly
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.hw_config_op_names import HWConfigOpName
 from nncf.registry import Registry
@@ -143,6 +144,8 @@ class OperatorMetatypeRegistry(Registry):
         return wrap
 
     def get_operator_metatype_by_op_name(self, op_name: str) -> 'OperatorMetatype':
+        if op_name not in self._op_name_to_op_meta_dict:
+            return self._op_name_to_op_meta_dict["noop"]  # avoiding the dependency on the class def below
         return self._op_name_to_op_meta_dict[op_name]
 
 
@@ -152,7 +155,7 @@ OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 @OPERATOR_METATYPES.register()
 class NoopMetatype(OperatorMetatype):
     name = "noop"
-    external_op_names = [MODEL_INPUT_OP_NAME]
+    external_op_names = [name, MODEL_INPUT_OP_NAME]
 
 
 @OPERATOR_METATYPES.register()
@@ -285,6 +288,7 @@ class SigmoidMetatype(OperatorMetatype):
     name = "sigmoid"
     torch_nn_functional_patch_spec = PatchSpec([name])
     torch_module_patch_spec = PatchSpec([name])
+    torch_tensor_patch_spec = PatchSpec([name])
 
 
 @OPERATOR_METATYPES.register()
@@ -310,7 +314,8 @@ class SubMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class MulMetatype(OperatorMetatype):
     name = "mul"
-    torch_tensor_patch_spec = PatchSpec(["__mul__",
+    torch_tensor_patch_spec = PatchSpec(["mul",
+                                         "__mul__",
                                          "__imul__",
                                          "__rmul__"])
     hw_config_names = [HWConfigOpName.MULTIPLY]

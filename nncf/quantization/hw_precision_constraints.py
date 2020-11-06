@@ -32,6 +32,10 @@ class HWPrecisionConstraints:
             return self._constraints[quantizer_id]
         return set()
 
+    def replace(self, quantizer_id: QuantizerId, bits: Set[int]):
+        if quantizer_id in self._constraints:
+            self._constraints[quantizer_id] = bits
+
     def get_all_unique_bits(self) -> List[int]:
         result = set()
         for bits_set in self._constraints.values():

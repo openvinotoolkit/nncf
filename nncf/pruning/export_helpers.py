@@ -305,8 +305,9 @@ class ModelPruner:
         """
         cls = PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
         if cls is None:
-            raise RuntimeError("Class {} is not found".format(type_name))
-            # cls = StopMaskForwardOps
+            nncf_logger.warning(
+                "Layer {} is not pruneable - will not propagate pruned filters through it".format(type_name))
+            cls = StopMaskForwardOps
         return cls
 
     def mask_propagation(self):

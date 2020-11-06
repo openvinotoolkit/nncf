@@ -1,5 +1,5 @@
 import queue
-from typing import List, Union
+from typing import List
 
 import numpy as np
 import torch
@@ -55,33 +55,34 @@ def min_reduce_like(input_, ref_tensor_shape):
     return tmp_min
 
 
-def get_channel_count_and_dim_idx(scale_shape):
+def get_channel_count_and_dim_idx(scale_shape: List[int]):
     channel_dim_idx = 0
     channel_count = 1
-    if not isinstance(scale_shape, int):
-        for dim_idx, dim in enumerate(scale_shape):
-            if dim != 1:
-                channel_dim_idx = dim_idx
-                channel_count = dim
+    for dim_idx, dim in enumerate(scale_shape):
+        if dim != 1:
+            channel_dim_idx = dim_idx
+            channel_count = dim
     return channel_count, channel_dim_idx
 
 
-def expand_like(input_: torch.Tensor, scale_shape: Union[List, int]):
+def expand_like(input_: torch.Tensor, scale_shape: List[int]):
     retval = input_
     count, idx = get_channel_count_and_dim_idx(scale_shape)
     assert input_.numel() == count
     assert len(input_.size()) == 1
-    if isinstance(scale_shape, List):
-        for _ in range(0, idx):
-            retval = retval.unsqueeze(0)
-        for _ in range(idx + 1, len(scale_shape)):
-            retval = retval.unsqueeze(-1)
+    for _ in range(0, idx):
+        retval = retval.unsqueeze(0)
+    for _ in range(idx + 1, len(scale_shape)):
+        retval = retval.unsqueeze(-1)
     return retval
 
 
-def split_into_channels(input_: np.ndarray, scale_shape) -> List[np.ndarray]:
+def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.ndarray]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
+    if channel_count == 1:
+        return [channel_first_tensor]
+
     ret_list = []
     for i in range(channel_count):
         ret_list.append(channel_first_tensor[i, ...])
@@ -192,6 +193,9 @@ class ThreeSigmaInitializer(QuantizeRangeInitializer):
         numpy_mad = np.asarray(per_channel_mad)
         median_tensor = torch.from_numpy(numpy_median).to(self.device, dtype=torch.float)
         mad_tensor = torch.from_numpy(numpy_mad).to(self.device, dtype=torch.float)
+
+        median_tensor = expand_like(median_tensor, self.scale_shape)
+        mad_tensor = expand_like(mad_tensor, self.scale_shape)
 
         nncf_logger.debug("Statistics: median={} MAD={}".format(get_flat_tensor_contents_string(median_tensor),
                                                                 get_flat_tensor_contents_string(mad_tensor)))

@@ -25,8 +25,10 @@ def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):
             other_file_path = get_path_by_rank_fn(dump_dir, other_rank)
             with other_file_path.open('rb') as in_file:
                 data_to_compare = torch.load(in_file)
-                if ref_data != data_to_compare:
-                    mismatching = True
+                for ref_tuple, tuple_to_compare in zip(ref_data, data_to_compare):
+                    for ref_info, info_to_compare in zip(ref_tuple, tuple_to_compare):
+                        if torch.tensor(ref_info != info_to_compare).sum():
+                            mismatching = True
     return mismatching
 
 
@@ -66,11 +68,11 @@ def get_quantization_config_without_range_init(model_size=4):
     return config
 
 
-def get_squeezenet_quantization_config(model_size=32, batch_size=3):
-    config = get_quantization_config_without_range_init(model_size)
+def get_squeezenet_quantization_config(image_size=32, batch_size=3):
+    config = get_quantization_config_without_range_init(image_size)
     config['model'] = 'squeezenet1_1_custom'
     config['input_info'] = {
-        "sample_size": [batch_size, 3, model_size, model_size],
+        "sample_size": [batch_size, 3, image_size, image_size],
     }
     return config
 

@@ -109,8 +109,8 @@ class TestQuantizerPropagationSolver:
                     assert quant_types == QuantizerPropagationSolver.DEFAULT_QUANTIZATION_TYPES
 
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
-        ops_to_quantize = ['conv2d', 'matmul', 'gelu']
-        ops_not_to_quantize = ['batch_norm', 'max_pool2d', 'dropout', 'min', 'softmax']
+        ops_to_quantize = ['batch_norm', 'conv2d', 'matmul', 'gelu']
+        ops_not_to_quantize = ['max_pool2d', 'dropout', 'min', 'softmax']
         node_keys = ops_to_quantize + ops_not_to_quantize
         mock_graph = get_sequentially_connected_model_graph(node_keys)
 
@@ -1055,8 +1055,10 @@ class TestQuantizerPropagationSolver:
     RUN_ON_IP_GRAPH_TEST_CASES = [
         RunOnIpGraphTestStruct(
             list_ops=['conv2d', 'batch_norm'],
-            expected_retval={},
-            expected_count_finished_quant=0,
+            expected_retval={
+                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
+            },
+            expected_count_finished_quant=1,
             expected_count_active_quant=0,
             ignored_scope=None
         ),
