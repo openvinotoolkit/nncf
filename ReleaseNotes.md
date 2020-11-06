@@ -25,7 +25,6 @@ and Semantic Segmentation.
 - GPT2 compression enabled, configuration file added to the `transformers` integration patch
 - Added GoogLeNet as a filter-pruned sample model (with final checkpoints)
 
-
 ## New in Release 1.4:
 - Models with filter pruning applied are now exportable to ONNX
 - BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
