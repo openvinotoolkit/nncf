@@ -83,6 +83,33 @@ For better accuracy, floating-point zero should be within quantization range and
 
 You can use the `num_init_steps` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics during given number of steps.
 
+#### Quantizer setup and hardware config files
+NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime. 
+To achieve this, the quantizer setup should be performed with following considerations in mind:
+1) every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
+2) the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
+3) for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
+4) certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
+
+These requirements are fulfilled by the quantizer propagation algorithm. 
+The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusable", and apply the fusing to the internal graph representation as well.
+Next, the operations in the graph that can be associated to input-quantizable operations on a given target hardware are assigned a single quantizer for each its quantizable activation input, with a number of possible quantizer configurations attached to it (that are feasible on target HW).
+The quantizers are then "propagated" against the data flow in the model's control flow graph as far as possible, potentially merging with other quantizers.
+Once all quantizers have reached a standstill in their propagation process, each will have a final (possibly reduced) set of possible quantizer configurations, from which a single one is either chosen manually, or using a precision initialization algorithm (which accepts the potential quantizer locations and associated potential quantizer configuration sets).
+The resulting configuration is then applied as a final quantizer setup configuration. 
+
+Note that this algorithm applies to activation quantization only - the weight quantizers do not require propagation. 
+However, the possible configurations of weight quantizers themselves are also sourced from the HW config file definitions.
+
+The HW to target for a given quantization algorithm run can be specified in NNCF config using the global `"target_device"` option.
+The default corresponds to CPU-friendly quantization.
+`"NONE"` corresponds to a configuration that uses the general quantizer propagation algorithm, but does not use any HW-specific information about quantizability of given operation types or possible quantizer configs for associated inputs or operation weights.
+Instead it uses a default, basic 8-bit symmetric per-tensor quantization configuration for each quantizer, and quantizes inputs of a certain default operation set, which at the moment is defined internally in NNCF.
+The quantization configuration in the `"target_device": "NONE"` case may be overridden using the regular `"activations"` and `"weights"` sections in the quantization compression algorithm sub-config, see below.
+
+For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
+
+
 #### Quantization Implementation
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
@@ -98,23 +125,36 @@ For symmetric:
 ![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
 
 
-#### Mixed Precision Quantization
+#### Mixed-Precision Quantization
 
-Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. Though
-NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, choosing
-ultra low bitwidth could noticeably affect the model's accuracy.
+Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. 
+Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, 
+choosing ultra-low bitwidth could noticeably affect the model's accuracy.
 A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers.
-NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed precision
+NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
 calculated by multiplying the average Hessian trace with the L2 norm of quantization perturbation:
 
 ![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
 
-The sum of the sensitivities for each layer forms a metric that is used to determine the specific bit precision
-configuration. The optimal configuration is found by calculating this metric for all possible bitwidth settings and
-selecting the median one. To reduce exponential search the following restriction is used: layers with a small value of
-average Hessian trace are quantized to lower bits, and vice versa.
+The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed 
+model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation 
+dataset. 
+
+To find the optimal trade-off between accuracy and performance of the mixed precision model we also compute a 
+compression ratio - the ratio between **bit complexity** of a fully INT8 model and mixed-precision lower bitwidth one. 
+The bit complexity of the model is a sum of bit complexities for each quantized layer, which are defined as a product 
+of the layer FLOPS and the quantization bitwidth. The optimal configuration is found by calculating the sensitivity 
+metric and the compression ratio for all possible bitwidth settings and selecting the one with the minimal metric value 
+among all configurations with a compression ratio below the specified threshold.
+
+By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
+But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
+configuration file.
+
+To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian 
+trace value are quantized to lower bitwidth and vice versa. 
 
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
@@ -138,9 +178,57 @@ where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of 
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.   
 
-Automatic mixed precision selection can be enabled by specifying `"type": "hawq"` in `precision` group within
-`initializer` section of the quantization algorithm. The manual mode is also available by explicitly setting the number
-of bits per layer through `bitwidth_per_scope` parameter.
+The aforementioned procedure sets bitwidth for weight quantizers only. Bitwidth for activation quantizers is assigned 
+on the next step in two ways: strict or liberal. All quantizers between modules with quantizable inputs have the same 
+bitwidth in the strict mode. Liberal mode allows different precisions within the group. For both cases, bitwidth is 
+assigned based on the rules of the hardware config. If multiple variants are possible the minimal compatible bitwidth 
+is chosen. By default, liberal mode is used as it does not reject a large number of possible bitwidth settings.   
+The `bitwidth_assignment_mode` parameter can override it to the strict one. 
+
+For automatic mixed-precision selection it's recommended to use the following template of configuration file:
+```
+    "optimizer": {
+        "base_lr": 3.1e-4,
+        "schedule_type": "plateau",
+        "type": "Adam",
+        "scheduler_params": {
+            "threshold": 0.1,
+            "cooldown": 3
+        },
+        "weight_decay": 1e-05
+    },
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "precision": {
+                "type": "hawq",
+                "bits": [4,8]
+                "compression_ratio": 1.5,
+            }
+        }
+    }
+```
+
+Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
+
+Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+using the template in the full configuration file.
+
+This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
+model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than 
+two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files 
+ending by `*_staged` for an example of this method.     
+
+The manual mode of mixed-precision quantization is also available by explicitly setting the bitwidth per layer
+ through `bitwidth_per_scope` parameter.
+
+---
+**NOTE**
+
+Precision initialization overrides bits settings specified in `weights` and `activations` sections of configuration 
+file. 
+
+---
 
 #### Batch-norm statistics adaptation
 
@@ -164,9 +252,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
             "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
-            "num_data_points": 200, // Number of data points to iteratively estimate Hessian trace, 200 by default.
-            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
+            "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
+            "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
             "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
+            "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
                     4,
@@ -189,10 +278,10 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
         "ignored_scopes": []
 
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
     },
     "activations": { // Constraints to be applied to model activations quantization only. Overrides higher-level settings.
@@ -201,11 +290,14 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
-        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+        // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
         "ignored_scopes": []
 
-        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+        // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
+
+        // Specifies points in the model which will share the same quantizer module for activations. This is helpful in case one and the same quantizer scale is required for inputs to the same operation. Each sub-array will define a group of activation quantizer insertion points that have to share a single actual quantization module, each entry in this subarray should correspond to exactly one node in the NNCF graph and the groups should not overlap. The finalquantizer for each sub-array will be associated with the first element of this sub-array.
+        "linked_quantizer_scopes": []
     },
     "quantize_inputs": true, // Whether the model inputs should be immediately quantized prior to any other model operations."
     "quantizable_subgraph_patterns": [ // Each sub-list in this list will correspond to a sequence of operations in the model control flow graph that will have a quantizer appended at the end of the sequence
@@ -226,13 +318,35 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         }
     },
 
-    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'blacklist'. Optional.
+    // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
     "ignored_scopes": [],
 
-    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'whitelist'. Optional.
+    // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
     // "target_scopes": [],
 
     // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
-    "export_to_onnx_standard_ops": false
+    "export_to_onnx_standard_ops": false,
 }
 ```
+
+***Per layer ranges initializations parameters***:
+Per layer ranges initiaization can be enabled by specifying  in `"initializer"` section `"range"` as list of dictionaries in the following format:
+
+```
+{
+    "range": [
+        {
+            "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
+
+            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+
+            "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
+            "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.
+            "target_quantizer_group": "weights" // Type of quantizer group to which this initialization of ranges will be applied. Optional. (By default this initialization of ranges will be applied to weights and activations quantizers)
+        },
+        ...
+    ]
+}
+
+```
+Initialization of ranges defined in this way must specify an unambiguous initialization rule for each module.

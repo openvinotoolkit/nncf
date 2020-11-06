@@ -103,6 +103,16 @@ class InputAgnosticOperationExecutionContext:
     def __hash__(self):
         return hash((self.operator_name, self.scope_in_model, self.call_order))
 
+    @staticmethod
+    def from_str(s: str):
+        scope_and_op, _, call_order_str = s.rpartition('_')
+        scope_str, _, op_name = scope_and_op.rpartition('/')
+
+        from nncf.dynamic_graph.context import Scope
+        return InputAgnosticOperationExecutionContext(op_name,
+                                                      Scope.from_str(scope_str),
+                                                      int(call_order_str))
+
 
 class OperationExecutionContext:
     """Information that allows to uniquely identify an operation inside the NNCF graph,
@@ -481,7 +491,7 @@ class NNCFGraph:
                  inputs) -> NNCFNode:
         node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs)
 
-        from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+        from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:  # TODO: refactorable model input node name
             self._input_nncf_nodes.append(node)
         return node
@@ -544,6 +554,12 @@ class NNCFGraph:
                 outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
         return outputs
 
+    # pylint:disable=protected-access
+    def get_nx_edge(self, node_u: NNCFNode, node_v: NNCFNode):
+        nx_node_u = self._nx_graph._node[self._node_id_to_key_dict[node_u.node_id]]
+        nx_node_v = self._nx_graph._node[self._node_id_to_key_dict[node_v.node_id]]
+        return self._nx_graph.edges[nx_node_u['key'], nx_node_v['key']]
+
     def get_next_nodes(self, node: NNCFNode) -> Optional[List[NNCFNode]]:
         nx_node_keys = self._nx_graph.succ[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
@@ -561,7 +577,7 @@ class NNCFGraph:
         return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
 
     def _traverse_graph_recursive_helper(self, curr_node: NNCFNode,
-                                         traverse_function: Callable[[NNCFNode], Tuple[bool, List[Any]]],
+                                         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
                                          output: List[Any], traverse_forward: bool):
         is_finished, output = traverse_function(curr_node, output)
         get_nodes_fn = self.get_next_nodes if traverse_forward else self.get_previous_nodes
@@ -601,6 +617,8 @@ class NNCFGraph:
                 attrs_node['color'] = node['color']
             if 'label' in node:
                 attrs_node['label'] = node['label']
+            if 'style' in node:
+                attrs_node['style'] = node['style']
 
             out_graph.add_node(node_name, **attrs_node)
         if extended:

@@ -1,9 +1,9 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=1, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
-"2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=2, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
-"3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=3, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[2]/SymmetricQuantizer[op]/symmetric_quantize" [id=4, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[2]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"1 SymmetricQuantizer/symmetric_quantize" [id=1, scope=SymmetricQuantizer, type=symmetric_quantize];
+"2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=2, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
+"3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=3, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
+"4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=4, scope="LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "5 LeNet/NNCFConv2d[conv1]/conv2d" [id=5, scope="LeNet/NNCFConv2d[conv1]", type=conv2d];
 "6 LeNet/RELU" [id=6, scope=LeNet, type=RELU];
 "7 LeNet/SymmetricQuantizer/symmetric_quantize" [id=7, scope="LeNet/SymmetricQuantizer", type=symmetric_quantize];
@@ -31,11 +31,11 @@ strict digraph  {
 "29 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=29, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "30 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=30, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "31 LeNet/NNCFLinear[fc3]/linear" [id=31, scope="LeNet/NNCFLinear[fc3]", type=linear];
-"0 /nncf_model_input" -> "4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[2]/SymmetricQuantizer[op]/symmetric_quantize";
-"1 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
-"2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "5 LeNet/NNCFConv2d[conv1]/conv2d";
-"4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[2]/SymmetricQuantizer[op]/symmetric_quantize" -> "5 LeNet/NNCFConv2d[conv1]/conv2d";
+"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
+"1 SymmetricQuantizer/symmetric_quantize" -> "5 LeNet/NNCFConv2d[conv1]/conv2d";
+"2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
+"3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
+"4 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "5 LeNet/NNCFConv2d[conv1]/conv2d";
 "5 LeNet/NNCFConv2d[conv1]/conv2d" -> "6 LeNet/RELU";
 "6 LeNet/RELU" -> "7 LeNet/SymmetricQuantizer/symmetric_quantize";
 "7 LeNet/SymmetricQuantizer/symmetric_quantize" -> "8 LeNet/max_pool2d";

@@ -27,6 +27,7 @@ from torch.autograd import Variable
 from torch.backends import cudnn
 from torch.nn.utils.rnn import PackedSequence
 
+from nncf import nncf_model_input
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.transform_graph import replace_modules
 from nncf.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
@@ -216,7 +217,7 @@ def test_export_lstm_cell(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 12
+    assert onnx_num == 14
 
 
 @pytest.mark.parametrize('sizes',
@@ -392,7 +393,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 50
+    assert onnx_num == 55
 
 
 class TestNumberOfNodes:
@@ -428,15 +429,21 @@ class TestNumberOfNodes:
             counter.next()
 
         counters = {}
+        counter_for_input_quantizer = None
         for name, quantizer in algo.all_quantizations.items():
             counter = Counter()
-            counters[name] = counter
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
+            if str(name) == '/nncf_model_input_0':
+                counter_for_input_quantizer = counter
+                continue
+            counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 107  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 50
+        assert model.get_graph().get_nodes_count() == 112  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) + 1 == 55 # 8 WQ + 46 AQ + 1 input AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
+        assert counter_for_input_quantizer.count == 1
+
 
     def test_number_of_calling_fq_for_gnmt(self):
         torch.cuda.set_device(0)
@@ -454,6 +461,7 @@ class TestNumberOfNodes:
         sequence_size = 50
         input_sample_size = [batch_size, sequence_size] if batch_first else [sequence_size, batch_size]
         config = get_empty_config(input_sample_sizes=input_sample_size)
+        config['quantizer_setup_type'] = 'pattern_based'
         config['compression'] = \
             {'algorithm': 'quantization',
              'quantize_inputs': True,
@@ -485,7 +493,16 @@ class TestNumberOfNodes:
             input_decoder = gen_packed_sequence()[0]
             model(input_encoder, input_enc_len, input_decoder)
 
-        algo, model = create_compressed_model(model, config, dummy_forward_fn=dummy_forward_fn, dump_graphs=False)
+        def gnmt_wrap_inputs_fn(model_args, model_kwargs):
+            # Assuming 3 args to wrap: input_encoder, input_enc_len, input_decoder, and 0 kwargs to wrap
+            model_args = (nncf_model_input(model_args[0]),
+                          nncf_model_input(model_args[1]),
+                          nncf_model_input(model_args[2]))
+            return model_args, model_kwargs
+
+        algo, model = create_compressed_model(model, config, dummy_forward_fn=dummy_forward_fn,
+                                              wrap_inputs_fn=gnmt_wrap_inputs_fn,
+                                              dump_graphs=False)
         model.to(device)
 
         class Counter:

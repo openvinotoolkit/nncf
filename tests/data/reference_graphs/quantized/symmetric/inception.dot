@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=1, scope="GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=2, scope="GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"1 SymmetricQuantizer/symmetric_quantize" [id=1, scope=SymmetricQuantizer, type=symmetric_quantize];
+"2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=2, scope="GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d" [id=3, scope="GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]", type=conv2d];
 "4 GoogLeNet/Sequential[pre_layers]/BatchNorm2d[1]/batch_norm" [id=4, scope="GoogLeNet/Sequential[pre_layers]/BatchNorm2d[1]", type=batch_norm];
 "5 GoogLeNet/Sequential[pre_layers]/ReLU[2]/RELU" [id=5, scope="GoogLeNet/Sequential[pre_layers]/ReLU[2]", type=RELU];
@@ -345,9 +345,9 @@ strict digraph  {
 "343 GoogLeNet/AvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" [id=343, scope="GoogLeNet/AvgPool2d[avgpool]/SymmetricQuantizer", type=symmetric_quantize];
 "344 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=344, scope="GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "345 GoogLeNet/NNCFLinear[linear]/linear" [id=345, scope="GoogLeNet/NNCFLinear[linear]", type=linear];
-"0 /nncf_model_input" -> "2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"1 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
-"2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
+"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
+"1 SymmetricQuantizer/symmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
+"2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
 "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d" -> "4 GoogLeNet/Sequential[pre_layers]/BatchNorm2d[1]/batch_norm";
 "4 GoogLeNet/Sequential[pre_layers]/BatchNorm2d[1]/batch_norm" -> "5 GoogLeNet/Sequential[pre_layers]/ReLU[2]/RELU";
 "5 GoogLeNet/Sequential[pre_layers]/ReLU[2]/RELU" -> "6 GoogLeNet/Sequential[pre_layers]/ReLU[2]/SymmetricQuantizer/symmetric_quantize";

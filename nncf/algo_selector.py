@@ -10,8 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController
+# pylint:disable=relative-beyond-top-level
+from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from .registry import Registry
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm')
@@ -22,5 +22,11 @@ class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     pass
 
 
+# pylint:disable=abstract-method
 class NoCompressionAlgorithmController(CompressionAlgorithmController):
-    pass
+    def compression_level(self) -> CompressionLevel:
+        """
+        Returns level of compression. Should be used on saving best checkpoints to distinguish between
+        uncompressed, partially compressed and fully compressed models.
+        """
+        return CompressionLevel.NONE

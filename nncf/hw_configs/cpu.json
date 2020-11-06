@@ -21,7 +21,7 @@
             "q8_w_sym": {
                 "bits": 8,
                 "mode": "symmetric",
-                "level_low": -127,
+                "level_low": -128,
                 "level_high": 127,
                 "granularity": "perchannel"
             },

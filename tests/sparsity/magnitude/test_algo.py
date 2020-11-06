@@ -149,3 +149,78 @@ def test_magnitude_algo_binary_masks_are_applied():
     ref_output_3[1] = -2 * torch.ones_like(ref_output_1[1])
     output_3 = compressed_model(input_)
     assert torch.all(torch.eq(output_3, ref_output_3))
+
+
+def test_magnitude_algo_set_independently_sparsity_level_for_one_module():
+    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
+    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]'
+    config = get_basic_magnitude_sparsity_config()
+    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
+     if sparse_info.module_name == module_name_conv1]
+    sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
+     if sparse_info.module_name == module_name_conv2]
+
+    compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
+
+    weights_conv1 = sparse_model.conv1.weight
+    weights_conv2 = sparse_model.conv2.weight
+    count_nonzero_conv1 = sparse_model.conv1.pre_ops['0'].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
+    count_param_conv1 = weights_conv1.view(-1).size(0)
+
+    assert count_param_conv1 - count_nonzero_conv1 == 4 # 8 * 0.5
+
+    compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
+
+    count_nonzero_conv1 = sparse_model.conv1.pre_ops['0'].operand.apply_binary_mask(weights_conv1).nonzero().size(0)
+    count_param_conv1 = weights_conv1.view(-1).size(0)
+
+    count_nonzero_conv2 = sparse_model.conv2.pre_ops['0'].operand.apply_binary_mask(weights_conv2).nonzero().size(0)
+    count_param_conv2 = weights_conv2.view(-1).size(0)
+
+    assert count_param_conv1 - count_nonzero_conv1 == 4 # 8 * 0.5
+    assert count_param_conv2 - count_nonzero_conv2 == 6 # ~ 18 * 0.3
+
+
+def test_can_do_sparsity_freeze_epoch():
+
+    def compare_binary_mask(ref_sparse_module_info, sparse_module_info):
+        for ref_sparse_layer, sparse_layer in zip(ref_sparse_module_info, sparse_module_info):
+            if (ref_sparse_layer.operand.binary_mask != sparse_layer.operand.binary_mask).view(-1).sum() != 0:
+                return False
+        return True
+
+    model = BasicConvTestModel()
+    config = get_empty_config()
+    config['compression'] = {'algorithm': "magnitude_sparsity",
+                             "params": {"sparsity_init": 0.1,
+                                        "sparsity_target": 0.9,
+                                        "sparsity_target_epoch": 3,
+                                        "sparsity_freeze_epoch": 2}}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    sparsified_minfo_before_update = deepcopy(compression_ctrl.sparsified_module_info)
+    compression_ctrl.scheduler.epoch_step() # update binary_masks
+    compression_ctrl.scheduler.epoch_step() # update binary_masks, freeze binary_masks
+    sparsified_minfo_after_update = deepcopy(compression_ctrl.sparsified_module_info)
+
+    assert not compare_binary_mask(sparsified_minfo_after_update, sparsified_minfo_before_update)
+
+    compression_ctrl.scheduler.epoch_step() # don't update binary_masks
+    sparsified_minfo_after_freeze = deepcopy(compression_ctrl.sparsified_module_info)
+
+    assert compare_binary_mask(sparsified_minfo_after_update, sparsified_minfo_after_freeze)
+
+def test_can_freeze_binary_masks():
+    model = BasicConvTestModel()
+    config = get_empty_config()
+    config['compression'] = {'algorithm': "magnitude_sparsity"}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    for sparse_layer in compression_ctrl.sparsified_module_info:
+        assert not sparse_layer.operand.frozen
+
+    compression_ctrl.freeze()
+
+    for sparse_layer in compression_ctrl.sparsified_module_info:
+        assert sparse_layer.operand.frozen

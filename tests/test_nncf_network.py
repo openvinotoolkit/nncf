@@ -11,6 +11,8 @@
  limitations under the License.
 """
 import itertools
+from collections import Counter
+from pathlib import Path
 from typing import List
 
 import networkx as nx
@@ -19,14 +21,18 @@ import torch
 from copy import deepcopy
 from torch import nn
 
+from nncf import register_module
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
-from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
+from tests.conftest import TEST_ROOT
 from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement
 
 
@@ -74,6 +80,44 @@ def test_check_correct_modules_replacement():
 
     _, nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
+
+
+@register_module
+class ModuleOfUser(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones([1]))
+
+    def forward(self, input_):
+        return input_ * self.weight
+
+
+class TwoConvTestModelWithUserModule(TwoConvTestModel):
+    def __init__(self):
+        super().__init__()
+        self.user_module = ModuleOfUser()
+
+    def forward(self, x):
+        x = super().forward(x)
+        x = self.user_module(x)
+        return x
+
+
+def test_custom_module_registering():
+    model = TwoConvTestModelWithUserModule()
+    nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
+
+    from nncf.layers import UNWRAPPED_USER_MODULES
+    assert ModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
+
+    # pylint: disable=protected-access
+    assert isinstance(nncf_model.user_module, ModuleOfUser)
+    assert isinstance(nncf_model.user_module, _NNCFModuleMixin)
+    assert type(nncf_model.user_module).__name__ == "NNCFUserModuleOfUser"
+
+    user_module_attrs = dir(nncf_model.user_module)
+    for attr in dir(_NNCFModuleMixin):
+        assert attr in user_module_attrs
 
 
 # pylint: disable=protected-access
@@ -305,23 +349,109 @@ def get_two_branch_mock_model_graph() -> nx.DiGraph:
 MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
-def get_mock_nncf_node_attrs():
+def get_mock_nncf_node_attrs(op_name=None):
+    op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     return {
-        NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(MOCK_OPERATOR_NAME,
+        NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
                                                                        Scope(),
                                                                        0,
                                                                        [None])
     }
 
 
+def get_mock_model_graph_with_mergeable_pattern() -> nx.DiGraph:
+    mock_graph = nx.DiGraph()
+
+    #   (A)
+    #    |
+    #  (conv2d)
+    #    |
+    # (batch_norm)
+    #    |
+    #  (RELU)
+    #    |
+    #   (B)
+
+    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B']
+    for node_key in node_keys:
+        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+
+    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'batch_norm'),
+                               ('batch_norm', VersionAgnosticNames.RELU),
+                               (VersionAgnosticNames.RELU, 'B')])
+    return mock_graph
+
+
+def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
+    mock_graph = nx.DiGraph()
+
+    #   (A)
+    #    |
+    #  (conv2d)
+    #    |
+    #   (C)
+    #    |
+    # (batch_norm)
+    #    |
+    #   (D)
+    #    |
+    #  (RELU)
+    #    |
+    #   (B)
+
+    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C', 'D']
+    for node_key in node_keys:
+        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+
+    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'C'),
+                               ('C', 'batch_norm'),
+                               ('batch_norm', 'D'),
+                               ('D', VersionAgnosticNames.RELU),
+                               (VersionAgnosticNames.RELU, 'B')])
+    return mock_graph
+
+
+def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
+    mock_graph = nx.DiGraph()
+
+    #   (A)
+    #    |
+    #  (conv2d)----\
+    #    |         |
+    # (batch_norm) |
+    #    |         |
+    #  (RELU)      |
+    #    |         |
+    #   (C)--------/
+    #    |
+    #   (B)
+
+    node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C']
+    for node_key in node_keys:
+        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+
+    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'batch_norm'),
+                               ('conv2d', 'C'),
+                               ('batch_norm', VersionAgnosticNames.RELU),
+                               (VersionAgnosticNames.RELU, 'C'),
+                               ('C', 'B')])
+    return mock_graph
+
+
+MERGE_PATTERN_TEST_CASES = (
+    [get_mock_model_graph_with_mergeable_pattern, "basic_pattern"],
+    [get_mock_model_graph_with_no_mergeable_pattern, "no_pattern"],
+    [get_mock_model_graph_with_broken_output_edge_pattern, "broken_output_edges_pattern"]
+)
+
+
 class TestInsertionPointGraph:
-    def test_insertion_point_setup(self, tmp_path):
+    def test_insertion_point_setup(self):
         # TODO: Change testing premises when module pre/post-op hooks and input/output nodes
         # are correctly handled
         mock_graph = get_two_branch_mock_model_graph()
 
         ip_graph = InsertionPointGraph(mock_graph)
-        nx.drawing.nx_pydot.write_dot(ip_graph, str(tmp_path / "test_ip_graph.dot"))
 
         ref_node_len = 3 * len(mock_graph.nodes)  # 2 additional nodes per each operator node
         ref_edge_len = 3 * len(mock_graph.edges)
@@ -453,3 +583,33 @@ class TestInsertionPointGraph:
                 assert scope_str in ref_scope_vs_metatype_dict
                 ref_metatype = ref_scope_vs_metatype_dict[scope_str]
                 assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
+
+    @pytest.mark.parametrize(("mock_graph_factory", "dot_file_name"),
+                             MERGE_PATTERN_TEST_CASES,
+                             ids=[x[1] for x in MERGE_PATTERN_TEST_CASES])
+    def test_get_ip_graph_with_merged_operations(self, mock_graph_factory, dot_file_name):
+        mock_graph = mock_graph_factory()
+        ip_graph = InsertionPointGraph(mock_graph)
+        merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations()
+
+        data_dir = TEST_ROOT / 'data/reference_graphs/pattern_merging'  # type: Path
+
+        path_to_dot_file = data_dir / '{}.dot'.format(dot_file_name)
+
+        # validate .dot file manually!
+        if not path_to_dot_file.exists():
+            if not data_dir.exists():
+                data_dir.mkdir(parents=True)
+            nx.drawing.nx_pydot.write_dot(merged_ip_graph, str(path_to_dot_file))
+
+        load_graph = nx.drawing.nx_pydot.read_dot(str(path_to_dot_file))
+
+        for key in load_graph.nodes.keys():
+            key.replace(r'\\n', r'\n')  # Somehow pydot mangles the \n characters while writing a .dot file
+
+        sanitized_loaded_keys = [key.replace('\\n', '\n') for key in load_graph.nodes.keys()]
+        sanitized_loaded_edges = [(u.replace('\\n', '\n'),
+                                   v.replace('\\n', '\n')) for u, v in nx.DiGraph(load_graph).edges]
+
+        assert Counter(sanitized_loaded_keys) == Counter(list(merged_ip_graph.nodes.keys()))
+        assert Counter(sanitized_loaded_edges) == Counter(list(merged_ip_graph.edges))

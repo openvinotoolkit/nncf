@@ -20,7 +20,8 @@ The framework is designed so that the modifications to your original training co
 
  1. **Add** the imports required for NNCF:
     ```python
-    import nncf
+    import torch
+    import nncf  # Important - should be imported directly after torch
     from nncf import NNCFConfig, create_compressed_model, load_state
     ```
  2. Load the NNCF JSON configuration file that you prepared during Step 1:
@@ -31,10 +32,12 @@ The framework is designed so that the modifications to your original training co
  passing training data via `nncf_config` prior to starting the compression fine-tuning properly:
     ```python
     from nncf import register_default_init_args
-    nncf_config = register_default_init_args(nncf_config, criterion, train_loader)
+    nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
     ```
     Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
-    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking criterion and data loader.  
+    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking 
+    data loader, criterion and criterion function (for sophisticated calculation of loss different from direct call of the 
+    criterion with 2 arguments: model outputs and targets).  
 
     The initialization expects that the model is called with its first argument equal to the dataloader output.
     If your model has more complex input arguments you can create and pass an instance of
@@ -82,6 +85,16 @@ Important points you should consider when training your networks with compressio
   - Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
+#### Step 4 (optional): Export the compressed model to ONNX
+After the compressed model has been fine-tuned to acceptable accuracy and compression levels, you can export it to ONNX format.
+Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
+```python
+compression_ctrl.export_model("./compressed_model.onnx")
+```
+The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
+In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
+Refer to [compression algorithm documentation](./compression_algorithms) for details.
+
 ## Saving and loading compressed models in PyTorch
 You can save the `compressed_model` object using `torch.save` as usual.
 However, keep in mind that in order to load the resulting checkpoint file the `compressed_model` object should have the
@@ -125,3 +138,22 @@ For instance, below is the same LeNet INT8 model as above, but with `"ignored_sc
 ![alt text](pics/lenet_compressed_graph_ignored.png)
 
 Notice that all RELU operation outputs and the second convolution's weights are no longer quantized. 
+
+
+## Advanced usage
+
+### Compression of custom modules
+With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`
+If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
+
+```python
+import nncf
+
+@nncf.register_module
+class MyModule(torch.nn.Module):
+    def __init__(self, ...):
+        self.weight = torch.nn.Parameter(...)
+    # ...
+```
+
+In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation. 

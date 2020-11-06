@@ -1,10 +1,10 @@
-#Integrating NNCF into Transformers
+## Integrating NNCF into Transformers
 https://github.com/huggingface/transformers
 
 This folder contains a git patch to enable NNCF-based quantization for XNLI, SQuAD and GLUE training pipelines of the huggingface transformers repository. 
 
 Instructions:
-1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the huggingface transformers repository checked out at commit id: `54e9ce785d1b2d3c7c6d4c1d4f5c5850f451ac52`
+1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the huggingface transformers repository checked out at commit id: `b0892fa0e8df02d683e05e625b3903209bff362d`
 
 2. Install the `transformers` library and the example scripts from this patched repository as described in the documentation for the huggingface transformers repository.
 
@@ -26,9 +26,9 @@ For instance, the following command line, while run from the huggingface reposit
 
     Note that in all cases the training hyperparameters might have to be adjusted to accomodate the hardware you have available.
 
-4. While running with the `--nncf_config` option, the training scripts will output NNCF-wrapped model checkpoints instead of the regular ones. You may evaluate these checkpoints using the same command lines for training above, but with the`--do_train` key omitted. In order to export these checkpoints into ONNX format, further add `--to-onnx <path_to_output_onnx_file>` to your evaluation command line parameters.
+4. While running with the `--nncf_config` option, the training scripts will output NNCF-wrapped model checkpoints instead of the regular ones. You may evaluate these checkpoints using the same command lines for training above, but with the`--do_train` key omitted. In order to export these checkpoints into ONNX format, further add `--to_onnx <path_to_output_onnx_file>` to your evaluation command line parameters.
 
-#Current best results:
+### Current best results:
 
 All models use as their baselines the checkpoints obtained with the scripts and command line parameters from the corresponding sections in the original repository documentation. While fine-tuning the quantized model, the hyperparameters were left unchanged, i.e. the difference in the training script invocation was limited to adding `--nncf_config` option and specifying the pre-trained baseline model as the starting point for quantization fine-tuning. For RoBERTa-MNLI, no baseline model finetuning was necessary since the `roberta-large-mnli` model pretrained on MNLI was already available for download.
 
@@ -61,3 +61,14 @@ _Full-precision FP32 baseline model_ - distilbert-base-uncased-finetuned-sst-2-e
 
 _INT8 model (symmetrically quantized)_ - 90.3% accuracy
 
+**MobileBERT-SQuAD v1.1**:
+
+_Full-precision FP32 baseline model_ - google/mobilebert-uncased, trained on SQuAD v1.1 - 89.98% F1, 82.61% EM on the dev set,
+
+_INT8 model (symmetric quantization)_ - 89.4% F1, 82.05% EM on the dev set.
+
+**GPT-2-WikiText 2 (raw) language modeling**:
+
+_Full-precision FP32 baseline model_ - 19.73 perplexity on the test set
+
+_INT8 model (symmetric quantization)_ - 20.9 perplexity on the test set

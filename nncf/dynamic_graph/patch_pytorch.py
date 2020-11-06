@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import Callable, List
 
 import warnings
@@ -20,8 +21,6 @@ from torch.nn.parallel import DistributedDataParallel
 
 from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
-
-
 
 
 class CustomTraceFunction:
@@ -51,25 +50,30 @@ class ForwardTraceOnly(CustomTraceFunction):
             if len(input_traced_tensor_indices) == 1:
                 # Broadcast one and the same creator ID of input to all outputs
                 for out_idx in output_tensors_to_be_traced_indices:
+                    forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
+                    forwarded_meta.shape = tuple(result[out_idx].shape)
                     result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                     fargs[input_traced_tensor_indices[
-                                                                         0]].tensor_meta)
+                                                                     forwarded_meta)
             elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
                 raise RuntimeError("Unable to forward trace through operator {} - "
                                    "input and output tensor count mismatch!".format(operator.__name__))
             else:
                 # Assume that output tensor order corresponds to input tensor order
                 for in_idx, out_idx in zip(input_traced_tensor_indices, output_tensors_to_be_traced_indices):
+                    forwarded_meta = deepcopy(fargs[in_idx].tensor_meta)
+                    forwarded_meta.shape = tuple(result[out_idx].shape)
                     result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                     fargs[in_idx].tensor_meta)
+                                                                     forwarded_meta)
             if was_tuple:
                 result = tuple(result)
         elif len(input_traced_tensor_indices) > 1:
             raise RuntimeError("Unable to forward trace through operator {} - "
                                "input and output tensor count mismatch!".format(operator.__name__))
         elif input_traced_tensor_indices:
+            forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
+            forwarded_meta.shape = tuple(result.shape)
             return TracedTensor.from_torch_tensor(result,
-                                                  fargs[input_traced_tensor_indices[0]].tensor_meta)
+                                                  forwarded_meta)
         # No traced tensors in input, return a usual torch.Tensor as well
         return result
 
@@ -183,6 +187,9 @@ def patch_torch_operators():
             ps = op_meta_class.torch_tensor_patch_spec
             patch_namespace_by_patchspec(TracedTensor, ps)
 
+    # Patch __repr__ methods so that debugging does not add new nodes to the graph
+    patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly))
+
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
     ignore_scope(DataParallel)
@@ -197,14 +204,3 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
-
-
-@register_operator()
-def nncf_model_input(tensor: 'torch.Tensor'):
-    return tensor
-
-
-# Access via _original op because by this moment the nncf_model_input name will already be wrapped by wrap_operator
-# and its __name__ attribute changed correspondingly.
-# pylint:disable=protected-access
-MODEL_INPUT_OP_NAME = nncf_model_input._original_op.__name__

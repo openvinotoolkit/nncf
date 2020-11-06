@@ -20,7 +20,7 @@ from nncf.compression_method_api import CompressionAlgorithmController, Compress
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.sparsity.rb.loss import SparseLoss
+from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.utils import get_world_size
 
@@ -32,7 +32,7 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         return target_model
 
     def create_weight_sparsifying_operation(self, module):
-        return RBSparsifyingWeight(module.weight.size(), sparsify=True)
+        return RBSparsifyingWeight(module.weight.size(), frozen=False)
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         params = self.config.get("params", {})
@@ -45,20 +45,30 @@ class RBSparsityController(BaseSparsityAlgoController):
                  sparsified_module_info: List[SparseModuleInfo],
                  params):
         super().__init__(target_model, sparsified_module_info)
-
+        self._scheduler = None
         self._distributed = False
-        self._loss = SparseLoss()  # type: SparseLoss
-        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "exponential"))
-        self._scheduler = scheduler_cls(self, params)
+        sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         sparsify_operations = [m.operand for m in self.sparsified_module_info]
-        self._loss.set_layers(sparsify_operations)
+        if sparsity_level_mode == 'local':
+            self._loss = SparseLossForPerLayerSparsity(sparsify_operations)
+        else:
+            self._loss = SparseLoss(sparsify_operations)  # type: SparseLoss
+            schedule_type = params.get("schedule", "exponential")
+            scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
+            self._scheduler = scheduler_cls(self, params)
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
 
-    def set_sparsity_level(self, sparsity_level):
-        self._loss.target = 1 - sparsity_level
+    def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
+        if target_sparsified_module_info is None:
+            self._loss.set_target_sparsity_loss(sparsity_level)
+        else:
+            sparse_op = target_sparsified_module_info.operand
+            self._loss.set_target_sparsity_loss(sparsity_level, sparse_op)
 
     def compression_level(self) -> CompressionLevel:
-        return self.scheduler.compression_level()
+        if self.scheduler is not None:
+            return self.scheduler.compression_level()
+        return CompressionLevel.NONE
 
     def freeze(self):
         self._loss.disable()
@@ -107,3 +117,8 @@ class RBSparsityController(BaseSparsityAlgoController):
         if self._distributed and self._check_sparsity_masks:
             stats["masks_consistents"] = self.check_distributed_masks()
         return stats
+
+    def set_sparsity_level_for_module(self, sparsity_level: float,
+                                      target_sparsified_module_info: List[SparseModuleInfo]):
+        sparse_op = target_sparsified_module_info[0].operand
+        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op)
