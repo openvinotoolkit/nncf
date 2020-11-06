@@ -683,9 +683,9 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                      "account while compressing in order to obtain the best "
                                                      "performance for this type of device. The default 'ANY' means "
                                                      "compatible quantization supported by any HW. The parameter takes "
-                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). If you "
-                                                     "don't want to have any constraints on quantizer parameters you "
-                                                     "should set this value to 'NONE'. Optional."),
+                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). Set "
+                                                     "this value to 'NONE' if you are going to use a custom "
+                                                     "quantization schema. Optional."),
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,
