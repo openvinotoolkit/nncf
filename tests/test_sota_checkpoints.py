@@ -82,7 +82,7 @@ class TestSotaCheckpoints:
         return "{}.metrics.json".format(model_name)
 
     CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
-         --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
+         --data {dataset}/{data_name}/ --log-dir={log_dir} --cpu-only --metrics-dump \
           {metrics_dump_file_path}"
 
     @staticmethod
@@ -439,7 +439,7 @@ class TestSotaCheckpoints:
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
         self.CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
-             --data {dataset}/{data_name} --to-onnx={onnx_path}"
+             --data {dataset}/{data_name} --cpu-only --to-onnx={onnx_path}"
         self.test = "openvino_eval"
         onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
                                                  dataset=sota_data_dir,
@@ -466,6 +466,8 @@ class TestSotaCheckpoints:
                          "{}/{config}.csv".format(config_folder, ov_data_dir, ir_model_folder,
                                                   PROJECT_ROOT, config=eval_test_struct.model_name_)
                 exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+                if exit_code != 0:
+                    print("Exit code:", exit_code, "   ERROR: ", err_str)
 
         ac_metric = self.read_csv_metric(eval_test_struct.model_name_)
         fp32_ac_metric = None
