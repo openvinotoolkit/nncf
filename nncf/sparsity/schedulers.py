@@ -30,7 +30,7 @@ class SparsityScheduler(CompressionScheduler):
             self._params = params
 
         self.algo = sparsity_algo
-        self.initial_sparsity = self._params.get('sparsity_init', 0)
+        self.initial_sparsity = self.algo.get_sparsity_init()
         self.sparsity_target = self._params.get('sparsity_target', 0.5)
         self.sparsity_target_epoch = self._params.get('sparsity_target_epoch', 90)
         self.sparsity_freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
@@ -48,7 +48,7 @@ class SparsityScheduler(CompressionScheduler):
 
     def _set_sparsity_level(self):
         self.algo.set_sparsity_level(self.current_sparsity_level)
-        if self.last_epoch + 1 >= self.sparsity_freeze_epoch:
+        if self.current_epoch >= self.sparsity_freeze_epoch:
             self.algo.freeze()
 
     def _calc_density_level(self):
@@ -84,7 +84,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
                                "but steps_per_epoch was not set in config. Will only start updating "
                                "sparsity level after measuring the actual steps per epoch as signaled "
                                "by a .epoch_step() call.")
-        self._set_sparsity_level()
+        #self._set_sparsity_level()
 
     def step(self, last=None):
         super().step(last)
@@ -139,7 +139,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         super().__init__(sparsity_algo, params)
         self.a, self.k = self._init_exp(self.initial_sparsity, self.sparsity_target,
                                         sparsity_steps=self.sparsity_target_epoch)
-        self._set_sparsity_level()
+        #self._set_sparsity_level()
 
     @property
     def current_sparsity_level(self):
@@ -169,7 +169,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.patience = params.get('patience', 1)
         self.current_sparsity_target = self.initial_sparsity
         self.num_bad_epochs = 0
-        self._set_sparsity_level()
+        #self._set_sparsity_level()
 
     def epoch_step(self, epoch=None):
         super().epoch_step(epoch)
@@ -207,7 +207,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.steps = sorted(self.steps)
         self.max_step = self.steps[-1]
         self.prev_ind = 0
-        self._set_sparsity_level()
+        #self._set_sparsity_level()
 
     def epoch_step(self, last=None):
         super().epoch_step(last)

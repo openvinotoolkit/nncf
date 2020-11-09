@@ -367,6 +367,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         # measure data loading time
         data_time.update(time.time() - end)
 
+        compression_scheduler.step()
+
         input_ = input_.to(config.device)
         target = target.to(config.device)
 
@@ -394,7 +396,6 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         loss.backward()
         optimizer.step()
 
-        compression_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)

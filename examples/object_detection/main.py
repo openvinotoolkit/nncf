@@ -298,8 +298,10 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     best_compression_level = CompressionLevel.NONE
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
 
-    compression_ctrl.scheduler.epoch_step(config.start_iter // epoch_size)
+    last_epoch = -1 if config.start_iter == 0 else config.start_iter // epoch_size
+    compression_ctrl.scheduler.epoch_step(last_epoch)
     for iteration in range(config.start_iter, config['max_iter']):
+        compression_ctrl.scheduler.step(iteration - config.start_iter)
         if (not batch_iterator) or (iteration % epoch_size == 0):
             # create batch iterator
             batch_iterator = iter(train_data_loader)
@@ -346,7 +348,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                                             epoch=epoch + 1,
                                             config=config)
 
-        compression_ctrl.scheduler.step(iteration - config.start_iter)
 
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(

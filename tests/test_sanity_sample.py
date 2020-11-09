@@ -259,7 +259,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
-
+# /tmp/pytest-of-inteladmin/pytest-45/models0/distributed/squeezenet1_1_custom_cifar10_rb_sparsity_int8_last.pth
 
 @pytest.mark.parametrize(
     "multiprocessing_distributed", [

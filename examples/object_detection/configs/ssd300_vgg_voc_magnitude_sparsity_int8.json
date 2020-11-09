@@ -37,6 +37,7 @@
   "compression": [
     {
       "algorithm": "magnitude_sparsity",
+      "sparsity_init": 0.3,
       "params": {
           "schedule": "multistep",
           "multistep_sparsity_levels": [

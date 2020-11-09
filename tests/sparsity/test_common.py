@@ -53,7 +53,7 @@ def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
 
 def get_poly_params():
     return {
-        'power': 1, 'sparsity_target_epoch': 2, 'sparsity_init': 0.2, 'sparsity_target': 0.6,
+        'power': 1, 'sparsity_target_epoch': 2, 'sparsity_target': 0.6,
         'sparsity_freeze_epoch': 4
     }
 
@@ -87,7 +87,8 @@ class TestSparseModules:
     def test_scheduler_can_do_epoch_step(self, algo, schedule, get_params, ref_levels):
         model = BasicConvTestModel()
         config = get_empty_config()
-        config['compression'] = {'algorithm': algo, "params": {**get_params(), "schedule": schedule}}
+        config['compression'] = {'algorithm': algo,
+                                 "sparsity_init": 0.2, "params": {**get_params(), "schedule": schedule}}
 
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -109,6 +110,14 @@ def magnitude_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
+            self.sparsity_init = 0
+
+        def set_sparsity_init(self, sparsity_init):
+            self.sparsity_init = sparsity_init
+        
+        def get_sparsity_init(self):
+            return self.sparsity_init
+
     return MockSparsityAlgo()
 
 
@@ -147,16 +156,14 @@ class TestPolynomialSparsityScheduler:
 
         params = {
             "power": 2,
-            "sparsity_init": 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
             "concave": concave,
         }
+        magnitude_algo_mock.set_sparsity_init(0.1)
         scheduler = PolynomialSparseScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
-        mock.assert_called_once_with(ref_sparsity_levels[0])
-        mock.reset_mock()
 
         steps_per_epoch = 3
 
@@ -189,7 +196,6 @@ class TestPolynomialSparsityScheduler:
         steps_per_epoch = 3
         params = {
             "power": 2,
-            "sparsity_init": 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
@@ -200,6 +206,7 @@ class TestPolynomialSparsityScheduler:
         if specify_steps_per_epoch_in_config:
             params["steps_per_epoch"] = steps_per_epoch
 
+        magnitude_algo_mock.set_sparsity_init(0.1)
         scheduler = PolynomialSparseScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
         mock.reset_mock()
@@ -226,28 +233,34 @@ def rb_algo_mock_(mocker):
             from nncf.sparsity.rb.loss import SparseLoss
             self.loss = SparseLoss()
             self.loss.current_sparsity = 0.3
+            self.sparsity_init = 0
+
+        def set_sparsity_init(self, sparsity_init):
+            self.sparsity_init = sparsity_init
+        
+        def get_sparsity_init(self):
+            return self.sparsity_init
+
     return MockSparsityAlgo()
 
-class TestAdaptiveSparsityScheduler: #### NOT FIXED !!!!
+class TestAdaptiveSparsityScheduler:
     @staticmethod
     def run_epoch(steps_per_epoch, scheduler, set_sparsity_mock):
-        for _ in range(steps_per_epoch):
-            scheduler.step()
         set_sparsity_mock.reset_mock()
         scheduler.epoch_step()
+        for _ in range(steps_per_epoch):
+            scheduler.step()
 
     @pytest.mark.parametrize("ref_sparsity_levels", [([0.2, 0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4])])
     def test_adaptive_scheduler_per_epoch_step(self, rb_algo_mock, ref_sparsity_levels):
         params = {
-            "sparsity_init": 0.2,
             'sparsity_target': 0.4,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 7
         }
+        rb_algo_mock.set_sparsity_init(0.2)
         scheduler = AdaptiveSparsityScheduler(rb_algo_mock, params=params)
         mock = rb_algo_mock.set_sparsity_level
-        mock.assert_called_once_with(ref_sparsity_levels[0])
-        mock.reset_mock()
 
         steps_per_epoch = 3
 

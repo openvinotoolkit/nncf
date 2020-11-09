@@ -46,9 +46,11 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         self._scheduler = None
+        self.sparsity_init = self.config.get("sparsity_init", 0)
         if sparsity_level_mode == 'global':
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, params)
+        self.set_sparsity_level(self.sparsity_init)
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
@@ -101,3 +103,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self.scheduler is not None:
             return self.scheduler.compression_level()
         return CompressionLevel.NONE
+
+    def get_sparsity_init(self):
+        return self.sparsity_init

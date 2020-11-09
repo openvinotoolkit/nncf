@@ -475,9 +475,9 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
                                                      "level will be approached in concave manner, and in convex "
                                                      "manner otherwise."),
-    "sparsity_init": with_attributes(_NUMBER,
-                                     description="Initial value of the sparsity level applied to the "
-                                                 "model"),
+    #"sparsity_init": with_attributes(_NUMBER,
+    #                                 description="Initial value of the sparsity level applied to the "
+    #                                             "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
     "sparsity_target_epoch": with_attributes(_NUMBER,
@@ -520,6 +520,9 @@ MAGNITUDE_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
@@ -548,6 +551,9 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "params":
             {
                 "type": "object",

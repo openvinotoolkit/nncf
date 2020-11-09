@@ -44,10 +44,10 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
         "compression":
             {
                 "algorithm": "rb_sparsity",
+                "sparsity_init": sparsity_init,
                 "params":
                     {
                         "schedule": "polynomial",
-                        "sparsity_init": sparsity_init,
                         "sparsity_target": sparsity_target,
                         "sparsity_target_epoch": sparsity_target_epoch,
                         "sparsity_freeze_epoch": sparsity_freeze_epoch
@@ -166,9 +166,12 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     config['input_info'] = [{"sample_size": [1, 1, 32, 32]}]
     config['compression'] = {
         'algorithm': 'rb_sparsity',
+        'sparsity_init': 0.2,
         "params": {
             'schedule': 'polynomial',
-            'power': 1, 'sparsity_target_epoch': 2, 'sparsity_init': 0.2, 'sparsity_target': 0.6,
+            'power': 1,
+            'sparsity_target_epoch': 2,
+            'sparsity_target': 0.6,
             'sparsity_freeze_epoch': 4
         }
     }
