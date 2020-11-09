@@ -32,7 +32,7 @@ class PruningTestModel(nn.Module):
         return x
 
 
-class PruningTestModelBranching(nn.Module):
+class TestModelBranching(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 1, -2)
