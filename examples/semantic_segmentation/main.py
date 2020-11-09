@@ -39,7 +39,7 @@ from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested, log_main_params, finish_logging
+    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
@@ -499,7 +499,7 @@ def main_worker(current_gpu, config):
                 load_checkpoint(model, resuming_checkpoint_path, config.device,
                                 compression_scheduler=compression_ctrl.scheduler)
 
-    log_main_params(config)
+    log_common_mlflow_params(config)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)

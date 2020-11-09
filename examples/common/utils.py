@@ -99,7 +99,7 @@ def configure_paths(config):
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
 
-    if config.mode.lower() == 'train' and config.to_onnx is None:
+    if is_mlflow_logging_enabled(config):
         root_log_dir = osp.dirname(osp.dirname(config.log_dir))
         mlflow.set_tracking_uri(osp.join(root_log_dir, 'mlruns'))
         if mlflow.get_experiment_by_name(config.name) is None:
@@ -118,17 +118,22 @@ def configure_logging(sample_logger, config):
     nncf_logger.addHandler(nncf_log_file_handler)
 
 
-def log_main_params(config):
-    if config.mode.lower() == 'train' and config.to_onnx is None:
-        mlflow.log_param('epochs', config.nncf_config['epochs'])
-        mlflow.log_param('schedule_type', config.nncf_config['optimizer']['schedule_type'])
-        mlflow.log_param('lr', config.nncf_config['optimizer']['base_lr'])
+def log_common_mlflow_params(config):
+    if is_mlflow_logging_enabled(config):
+        mlflow.log_param('epochs', config.get('epochs', 'None'))
+
+
+        mlflow.log_param('schedule_type', config.nncf_config.get('optimizer', {}).get('schedule_type', 'None'))
+        mlflow.log_param('lr', config.nncf_config.get('optimizer', {}).get('base_lr', 'None'))
         mlflow.set_tag('Log Dir Path', config.log_dir)
 
 
 def finish_logging(config):
-    if is_main_process() and config.mode.lower() == 'train' and config.to_onnx is None:
+    if is_main_process() and is_mlflow_logging_enabled(config):
         mlflow.end_run()
+
+def is_mlflow_logging_enabled(config):
+    return config.mode.lower() == 'train' and config.to_onnx is None
 
 
 def is_on_first_rank(config):

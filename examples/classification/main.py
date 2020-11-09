@@ -42,7 +42,7 @@ from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested, finish_logging, log_main_params
+    is_pretrained_model_requested, finish_logging, log_common_mlflow_params
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -180,7 +180,8 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    log_main_params(config)
+    logger.info(config.nncf_config)
+    log_common_mlflow_params(config)
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
