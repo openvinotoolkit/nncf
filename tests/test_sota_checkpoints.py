@@ -81,7 +81,7 @@ class TestSotaCheckpoints:
         return "{}.metrics.json".format(model_name)
 
     CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
-         --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
+         --data {dataset}/{data_name}/ --cpu-only --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
 
     @staticmethod
