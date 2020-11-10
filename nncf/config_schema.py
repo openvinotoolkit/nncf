@@ -93,7 +93,10 @@ QUANTIZER_CONFIG_PROPERTIES = {
     "mode": with_attributes(_STRING,
                             description="Mode of quantization"),
     "bits": with_attributes(_NUMBER,
-                            description="Bitwidth to quantize to."),
+                            description="Bitwidth to quantize to. It is intended for manual bitwidth setting. Can be "
+                                        "overridden by the `bits` parameter from the `precision` initializer section. "
+                                        "An error happens if it doesn't match a corresponding bitwidth constraints "
+                                        "from the hardware configuration."),
     "signed": with_attributes(_BOOLEAN,
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
@@ -268,8 +271,9 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                     "type": with_attributes(_STRING,
                                             description="Type of precision initialization."),
                     "bits": with_attributes(_ARRAY_OF_NUMBERS,
-                                            description="A list of bitwidth to choose from when "
-                                                        "performing precision initialization.",
+                                            description="A list of bitwidth to choose from when performing precision "
+                                                        "initialization. Overrides bits constraints specified in "
+                                                        "`weight` and `activation` sections",
                                             examples=[[4, 8]]),
                     "num_data_points": with_attributes(_NUMBER,
                                                        description="Number of data points to iteratively estimate "
@@ -377,11 +381,9 @@ QUANTIZATION_SCHEMA = {
         },
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
-                                   description="Constraints to be applied to model weights quantization only. "
-                                               "Overrides higher-level settings."),
+                                   description="Constraints to be applied to model weights quantization only."),
         "activations": with_attributes(ACTIVATIONS_GROUP_SCHEMA,
-                                       description="Constraints to be applied to model activations quantization only. "
-                                                   "Overrides higher-level settings."),
+                                       description="Constraints to be applied to model activations quantization only."),
         "quantize_inputs": with_attributes(_BOOLEAN,
                                            description="Whether the model inputs should be immediately quantized prior "
                                                        "to any other model operations.",
