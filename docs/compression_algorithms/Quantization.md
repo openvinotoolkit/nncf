@@ -251,7 +251,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
-            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
+            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
             "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
             "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
             "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
@@ -272,9 +272,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
         }
     }
-    "weights": { // Constraints to be applied to model weights quantization only.Overrides higher-level settings.
+    "weights": { // Constraints to be applied to model weights quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 8, // Bitwidth to quantize to.
+        "bits": 8, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all weights. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module weight specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
@@ -284,9 +284,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
     },
-    "activations": { // Constraints to be applied to model activations quantization only. Overrides higher-level settings.
+    "activations": { // Constraints to be applied to model activations quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 4, // Bitwidth to quantize to.
+        "bits": 4, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all activations. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module inputs specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
