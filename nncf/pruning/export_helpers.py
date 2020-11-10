@@ -33,6 +33,9 @@ class DefaultMetaOp:
     additional_types = []
 
     def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        """
+        :return: accept_pruned_input - can this operation work with pruned input or not
+        """
         raise NotImplementedError
 
     def mask_propagation(self, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
@@ -41,7 +44,6 @@ class DefaultMetaOp:
         Should set the following attributes:
         input_masks - list of masks of input nodes (None if there is no mask in some input)
         output_mask - resulting mask of nx_node operation
-        accept_pruned_input - can this operation work with pruned input or not
         :param model: model to prune
         :param nx_node: node from networkx graph to propagate mask through it
         :param graph: graph of model to prune

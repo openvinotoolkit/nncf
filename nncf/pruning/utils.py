@@ -13,14 +13,13 @@
 import math
 from collections import deque
 
+import networkx as nx
 import torch
 from functools import partial
 
-import networkx as nx
-from nncf.layers import NNCF_CONV_MODULES_DICT
-
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
+from nncf.layers import NNCF_CONV_MODULES_DICT
 from nncf.nncf_network import NNCFNetwork
 
 
@@ -127,7 +126,8 @@ def get_first_pruned_modules(target_model: NNCFNetwork, pruned_ops_types):
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in pruned_ops_types,
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+                                        type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
 
     first_pruned_nodes = []
@@ -151,7 +151,8 @@ def get_last_pruned_modules(target_model: NNCFNetwork, pruned_ops_types):
     graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in pruned_ops_types,
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+                                        type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
     last_pruned_nodes = []
     for output in graph_outputs:
@@ -218,22 +219,6 @@ def find_next_nodes_not_types(model, nncf_node, types):
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.op_exec_context.operator_name not in types:
-        nncf_nodes = graph.get_next_nodes(nncf_node)
-
-    next_nodes = []
-    for node in nncf_nodes:
-        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
-    return next_nodes
-
-
-def find_next_nodes_of_types(model, nncf_node, types):
-    sources_types = types
-    graph = model.get_original_graph()
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
-                                        visited=visited)
-    nncf_nodes = [nncf_node]
-    if nncf_node.op_exec_context.operator_name in sources_types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
 
     next_nodes = []

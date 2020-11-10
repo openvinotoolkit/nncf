@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
 
 import torch
 from texttable import Texttable
@@ -108,7 +107,7 @@ class FilterPruningController(BasePruningAlgoController):
 
                 # 2. Calculate threshold
                 num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
-                                                                            self.pruning_rate)
+                                                                        self.pruning_rate)
                 threshold = sorted(cumulative_filters_importance)[num_of_sparse_elems]
                 mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 

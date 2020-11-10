@@ -1,15 +1,27 @@
-from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES, Convolution, \
-    Concat, StopMaskForwardOps
-
-from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_types, find_next_nodes_of_types
-
-from nncf.nncf_network import NNCFNetwork
+"""
+ Copyright (c) 2020 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
 import networkx as nx
 
+from nncf.nncf_network import NNCFNetwork
+from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES, Convolution, \
+    Concat, StopMaskForwardOps
+from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_types
 
+
+# pylint: disable=protected-access
 class NodesCluster:
-    def __init__(self, id, nodes, nodes_orders):
-        self.id = id
+    def __init__(self, cluster_id, nodes, nodes_orders):
+        self.id = cluster_id
         self.nodes = nodes
         self.importance = max(nodes_orders)
 
@@ -27,11 +39,10 @@ class Clusterization:
         self._node_to_cluster = {}
         self.id_attr = id_attr_name
 
-    def get_cluster_by_id(self, id):
-        if id in self.clusters:
-            return self.clusters[id]
-        else:
-            raise IndexError('No cluster with such index')
+    def get_cluster_by_id(self, cluster_id):
+        if cluster_id in self.clusters:
+            return self.clusters[cluster_id]
+        raise IndexError('No cluster with such index')
 
     def get_cluster_for_node(self, node_id):
         return self.clusters[self._node_to_cluster[node_id]]
@@ -39,19 +50,18 @@ class Clusterization:
     def is_not_in_any_cluster(self, node_id):
         return node_id in self._node_to_cluster
 
-    def add_cluster(self, cluster: NodesCluster, id):
-        if id in self.clusters:
-            raise IndexError
-        else:
-            self.clusters[id] = cluster
-            for node in cluster.nodes:
-                self._node_to_cluster[getattr(node, self.id_attr)] = id
+    def add_cluster(self, cluster: NodesCluster, cluster_id):
+        if cluster_id in self.clusters:
+            raise IndexError('Cluster with such index already exist')
+        self.clusters[cluster_id] = cluster
+        for node in cluster.nodes:
+            self._node_to_cluster[getattr(node, self.id_attr)] = cluster_id
 
-    def delete_cluster(self, id):
-        for node in self.clusters[id].nodes:
+    def delete_cluster(self, cluster_id):
+        for node in self.clusters[cluster_id].nodes:
             node_id = getattr(node, self.id_attr)
             self._node_to_cluster.pop(node_id)
-        self.clusters.pop(id)
+        self.clusters.pop(cluster_id)
 
     def get_all_clusters(self):
         return self.clusters.values()
@@ -81,6 +91,7 @@ def get_position(nx_nodes_list, idx):
     for i, node in enumerate(nx_nodes_list):
         if node['id'] == idx:
             return i
+    return None
 
 
 def unit_clusters_for_nodes(nodes_to_merge, clusterization):
