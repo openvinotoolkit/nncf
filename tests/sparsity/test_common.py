@@ -167,20 +167,20 @@ class TestPolynomialSparsityScheduler:
 
         steps_per_epoch = 3
 
-        # After epoch 0
+        # epoch 0
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[0])
 
-        # After epoch 1
+        # epoch 1
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[1])
 
-        # After epoch 2
+        # epoch 2
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[2])
         assert scheduler.current_sparsity_level == ref_sparsity_levels[2]
 
-        # After epoch 3 - sparsity freeze should occur
+        # epoch 3 - sparsity freeze should occur
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[3])
         magnitude_algo_mock.freeze.assert_called_once()

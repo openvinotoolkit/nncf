@@ -48,7 +48,7 @@ class SparsityScheduler(CompressionScheduler):
 
     def _set_sparsity_level(self):
         self.algo.set_sparsity_level(self.current_sparsity_level)
-        if self.current_epoch >= self.sparsity_freeze_epoch:
+        if self.current_epoch + 1 >= self.sparsity_freeze_epoch:
             self.algo.freeze()
 
     def _calc_density_level(self):
@@ -139,7 +139,6 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         super().__init__(sparsity_algo, params)
         self.a, self.k = self._init_exp(self.initial_sparsity, self.sparsity_target,
                                         sparsity_steps=self.sparsity_target_epoch)
-        #self._set_sparsity_level()
 
     @property
     def current_sparsity_level(self):

@@ -375,11 +375,11 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             # Save the model if it's the best thus far
             if is_main_process():
                 checkpoint_path = save_checkpoint(model,
-                                                  optimizer, epoch + 1, best_miou,
+                                                  optimizer, epoch, best_miou,
                                                   compression_level,
                                                   compression_ctrl.scheduler, config)
 
-                make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
+                make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
                 print_statistics(compression_ctrl.statistics())
 
     return model
