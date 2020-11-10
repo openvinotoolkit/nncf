@@ -219,7 +219,6 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         pass
 
 
-<<<<<<< HEAD
 def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Tensor:
     return criterion(outputs, target)
 
@@ -237,7 +236,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
                                                                     device=device),
                                             BNAdaptationInitArgs(data_loader=train_loader, 
-                                                                device=device)]
+                                                                device=device),
                                             AutoQPrecisionInitArgs(train_loader, val_loader, train_fn, val_fn, criterion, app_config)])                                                
     else:
         if criterion:
@@ -257,19 +256,4 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                 BNAdaptationInitArgs(data_loader=train_loader,
                                                                     device=device)])
 
-# def register_default_init_args(nncf_config: 'NNCFConfig', train_loader, val_loader=None, train_fn=None, val_fn=None, criterion=None, app_config=None) -> 'NNCFConfig':
-#     if 'autoq' == nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
-#         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader),
-#                                             BNAdaptationInitArgs(data_loader=train_loader),
-#                                             AutoQPrecisionInitArgs(train_loader, val_loader, train_fn, val_fn, criterion, app_config)])                                                
-#     else:
-#         if criterion:
-#             nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion=criterion,
-#                                                                               data_loader=train_loader),
-#                                                 QuantizationRangeInitArgs(data_loader=train_loader),
-#                                                 BNAdaptationInitArgs(data_loader=train_loader)])
-#         else:
-#             nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader),
-#                                                 BNAdaptationInitArgs(data_loader=train_loader)])
-# >>>>>>> Changes required to integrate automated layer-wise precision search as AutoQ Precision Initializer
     return nncf_config

@@ -144,6 +144,8 @@ class QuantizerTracer():
         assert len(untagged_qidobj_list) == len(untagged_QId_list), "Assumption Breaks on untagged qid"
         
         for i, qid in enumerate(untagged_qidobj_list):
+            if str(qid) in qid_skiplist:
+                continue
             nx_node = g.get_nx_node_by_key(g.get_node_id_by_iap_context(qid.ia_op_exec_context))
             child_nodes = list(g.get_successors(nx_node['key']))
             assert len(child_nodes) == 1, "multi fan-out, would this be an issue?"
@@ -196,7 +198,13 @@ class QuantizerTracer():
             group_member_indices = list(dict.fromkeys(group_member_indices)) # remove duplicates
             quantizer_groups.append(group_member_indices)
 
-        return quantizer_groups
+        qgroup_dict = OrderedDict()
+        for g in quantizer_groups:
+            sorted_g = natsorted(g)
+            qgroup_dict[sorted_g[0]]=sorted_g
+        qgroups = [qgroup_dict[k] for k in natsorted(qgroup_dict.keys())]
+
+        return qgroups
 
 
 def find_qidobj(quantization_controller, qid_str):
@@ -214,7 +222,7 @@ def uptrace_quantize_nncfnode(nncfgraph, nncfnode, uptrace_node_list):
         # uptrace for non-quantize node
         input_nncfnodes = g.get_previous_nodes(nncfnode)
         for input_nncfnode in input_nncfnodes:
-            return uptrace_quantize_nncfnode(g, input_nncfnode, uptrace_node_list)
+            uptrace_quantize_nncfnode(g, input_nncfnode, uptrace_node_list)
     return uptrace_node_list
 
 def get_non_weight_quantizer_id(nncfgraph, nncfnode):
@@ -233,10 +241,7 @@ def get_non_weight_quantizer_id(nncfgraph, nncfnode):
     innodekey=g.get_node_key_by_id(innodes[0].node_id)
     in_nxnode=g.get_nx_node_by_key(innodekey)
 
-    if 'nncf_model_input' in innodekey:
-        pass
-    else:
-        return NonWeightQuantizerId(in_nxnode['op_exec_context'].input_agnostic)
+    return NonWeightQuantizerId(in_nxnode['op_exec_context'].input_agnostic)
 
 def NWQId_exist_Qctrl(NWQId, quantization_controller):
     for key in quantization_controller.non_weight_quantizers.keys():
@@ -256,7 +261,15 @@ def NWQId_exist_Qctrl(NWQId, quantization_controller):
 # gemm_module as key
 # WQ => (nodekey, quantizer)
 # NWQ => [(nodekey, quantizer),(nodekey, quantizer), ...]
-
+# skiplist store the nncf_module that only exist for training purpose; tracer is not able to prune the nncf_modules to contain eval-only module
+gemm_skiplist =[
+    'ICNet/CascadeFeatureFusion[cff42]/NNCFConv2d[classifier]',
+    'ICNet/CascadeFeatureFusion[cff421]/NNCFConv2d[classifier]'
+]
+qid_skiplist= [
+    'ICNet/CascadeFeatureFusion[cff42]/NNCFConv2d[classifier]module_weight',
+    'ICNet/CascadeFeatureFusion[cff421]/NNCFConv2d[classifier]module_weight',
+]
 def get_gemm_with_input_quantizers(quantization_controller, quantized_network):
     g=quantized_network.get_graph() # compressed nncf graph instance
 
@@ -267,6 +280,10 @@ def get_gemm_with_input_quantizers(quantization_controller, quantized_network):
     print("= Trace input quantizer to GEMM =======")
 
     for gemm in gemm_scope_list:
+        
+        if str(gemm) in gemm_skiplist:
+            continue
+
         print("GEMM Scope | {}".format(str(gemm)))
 
         gemm_quantizer_dict[gemm]=OrderedDict()
@@ -289,9 +306,13 @@ def get_gemm_with_input_quantizers(quantization_controller, quantized_network):
                 
                 # Input nodes to current nx_node, note that the returned node is in NNCFNode
                 input_node_list = g.get_previous_nodes(g._nx_node_to_nncf_node(nx_node))
-                
+
+                # Embedding only take in a single input, the index key
                 if len(input_node_list) !=2:
-                    raise ValueError("Number of Input nodes to GEMM should be 2, assumption breaks, pls debug")
+                    if len(input_node_list)==1 and 'NNCFEmbedding' in nx_node['key']:
+                        pass
+                    else:
+                        raise ValueError("Number of Input nodes to GEMM should be 2, assumption breaks, pls debug")
                     
                 # Filter weight quantizer node as it has been handled earlier
                 uptrace_node_list=[]

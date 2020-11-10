@@ -16,6 +16,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 import warnings
 
+import json
 import math
 import numpy as np
 import pandas as pd
@@ -53,6 +54,15 @@ from autox.environment.nncf.quantizer_tracing import \
 
 from autox.environment.nncf.quantizer_tracing import QuantizerTracer, find_qidobj
 
+from nncf.quantization.layers import BaseQuantizer
+    
+def extra_repr(self):
+    return 'bit={}, ch={}, wt={}'.format(
+            self.num_bits, self.per_channel, self.is_weights)
+
+if hasattr(BaseQuantizer, 'extra_repr') is False:
+    setattr(BaseQuantizer, 'extra_repr', extra_repr)
+
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
 def prGreen(prt): logger.info("\033[92m {}\033[00m" .format(prt))
@@ -71,9 +81,8 @@ class QuantizationEnv:
             val_loader,
             train_epoch_fn,
             validate_fn,
-            config: SampleConfig, tie_quantizers=True):
+            config: SampleConfig):
 
-        self.tie_quantizers = tie_quantizers
         logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
         self.qctrl            = quantization_controller
         self.qmodel           = quantization_controller._model
@@ -113,6 +122,14 @@ class QuantizationEnv:
             self.autoq_cfg = self.config.nncf_config.get('auto_quantization')
         self.finetune = self.autoq_cfg['finetune']
 
+        self.tie_quantizers = True # Default to associate same precision of quantizers that feed into the GEMM compute
+        if 'tie_quantizers' in self.autoq_cfg:
+            self.tie_quantizers = self.autoq_cfg['tie_quantizers']
+
+        self.skip_wall = False # Default to enable resource constraints
+        if 'skip_wall' in self.autoq_cfg:
+            self.tie_quantizers = self.autoq_cfg['skip_wall']
+
         # Action space boundary - need to revise to work with discrete
         self.action_bound = self._get_action_space(self.autoq_cfg)
 
@@ -125,7 +142,14 @@ class QuantizationEnv:
         qtable = qtracer.get_qtable(self.qctrl, self.qmodel)
         qgroups = qtracer.get_quantizer_groups(qtable)
         self.qgroups = qgroups
-        assert len(qtable) == len(self.qctrl.all_quantizations)
+        if len(qtable) != len(self.qctrl.all_quantizations):
+            logger.warning("[Warning][Q.Env] qtable has {} quantizers while qctrl has {} quantizers".format(
+                len(qtable), len(self.qctrl.all_quantizations)
+            ))
+
+            diff = set(list(map(str, self.qctrl.all_quantizations.keys()))) ^ set(qtable.qid.values)
+            for i, qidstr in enumerate(diff):
+                logger.warning("[Warning] Extra quantizer {}: {}".format(i, qidstr))
     
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
@@ -141,6 +165,10 @@ class QuantizationEnv:
         # Log Master Table to run folder        
         self.master_df.drop('state_module', axis=1).to_csv(osp.join(self.config.log_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
+        # Log qgroups
+        with open(osp.join(self.config.log_dir, self.model_name + "_quantizer_groups.json"), "w") as qgroups_log:
+            json.dump(self.qgroups, qgroups_log, indent=4)
+
         # Model Size Calculation
         self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
         self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bit    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
@@ -153,7 +181,7 @@ class QuantizationEnv:
         # ----------------------------------------------------------------------------------------
 
     def _evaluate_pretrained_model(self):
-        # How do we generalize evaluation metrics?
+        # TODO: How do we generalize evaluation metrics?
         # Currently Expect only a scalar output
 
         logger.info("[Q.Env] Evaluating Pretrained Model")
@@ -244,7 +272,7 @@ class QuantizationEnv:
     def reward(self, acc, model_ratio):
         return (acc - self.orig_acc) * 0.1 
 
-    def step(self, action, skip_wall=False):
+    def step(self, action):
         def is_final_step():
             if self.tie_quantizers is True:
                 return len(self.collected_strategy) == sum(self.master_df.is_pred)
@@ -263,9 +291,9 @@ class QuantizationEnv:
             return obs, reward, done, info_set
 
         else:
-            return self.evaluate_strategy(self.collected_strategy, skip_wall=skip_wall)
+            return self.evaluate_strategy(self.collected_strategy, skip_wall=self.skip_wall)
         
-    def evaluate_strategy(self, collected_strategy, skip_wall=False):
+    def evaluate_strategy(self, collected_strategy, skip_wall=True):
         
         # #Expand strategy to full quantization policy
         if self.tie_quantizers:

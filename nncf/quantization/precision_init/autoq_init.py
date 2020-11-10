@@ -154,15 +154,13 @@ class AutoQPrecisionInitializer:
                 agent.reset(observation)
                 
             if episode <= args.warmup:
-                skip_wall = False
                 action = agent.random_action()
 
             else:
-                skip_wall = False
                 action = agent.select_action(observation, episode=episode)
 
             # env response with next_observation, reward, terminate_info
-            observation2, reward, done, info = env.step(map_precision(action), skip_wall)
+            observation2, reward, done, info = env.step(map_precision(action))
             observation2 = deepcopy(observation2)
             T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 

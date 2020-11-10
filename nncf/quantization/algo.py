@@ -879,16 +879,18 @@ class QuantizationController(QuantizationControllerBase):
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
-        # params = quantization_config.get('params', None)
-        # self.is_staged_scheduler = bool(params)
 
-        # if is_main_process() and should_init:
-        #     self.initialize_quantizer_params()
+        params = quantization_config.get('params', None)
+        self.is_staged_scheduler = bool(params)
 
-        # # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
-        # if self.is_staged_scheduler:
-        #     scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
-        #     self._scheduler = scheduler_cls(self, params)
+        if is_main_process() and should_init:
+            self.initialize_quantizer_params()
+
+        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
+        if self.is_staged_scheduler:
+            scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+            self._scheduler = scheduler_cls(self, params)
+
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():
             if not quantizer.is_enabled_quantization():
