@@ -138,18 +138,18 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
 
-    if dump_graphs and is_main_process() and compression_algo_builder_list:
-        if dummy_forward_fn is None:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=
-                                                    create_dummy_forward_fn(input_info_list,
-                                                                            with_input_tracing=False))
-        else:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
+    try:
+        if resuming_state_dict is not None:
+            load_state(compressed_model, resuming_state_dict, is_resume=True)
+    finally:
+        if dump_graphs and is_main_process() and compression_algo_builder_list:
+            if dummy_forward_fn is None:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=
+                                                        create_dummy_forward_fn(input_info_list,
+                                                                                with_input_tracing=False))
+            else:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
-        graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
-        graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
-
-    if resuming_state_dict is not None:
-        load_state(compressed_model, resuming_state_dict, is_resume=True)
-
+            graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
+            graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
     return compression_ctrl, compressed_model
