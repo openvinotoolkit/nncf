@@ -38,6 +38,7 @@ from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
 from nncf import create_compressed_model, load_state
 from nncf.dynamic_graph.graph_builder import create_input_infos
+from tools.debug.common import register_print_hooks
 
 
 def str2bool(v):
@@ -91,7 +92,6 @@ def main_worker(current_gpu, config):
     if is_on_first_rank(config):
         configure_logging(logger, config)
         print_args(config)
-
     config.device = get_device(config)
     config.start_iter = 0
     nncf_config = config.nncf_config
@@ -164,6 +164,8 @@ def main_worker(current_gpu, config):
     #################################
     # Load additional checkpoint data
     #################################
+
+    #register_print_hooks(config.log_dir, net, {}, dump_activations=True)
 
     if resuming_checkpoint is not None and config.mode.lower() == 'train' and config.to_onnx is None:
         compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])

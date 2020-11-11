@@ -1,5 +1,6 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include "nms.h"
+#include <cmath>
 
 
 template <typename scalar_t>
@@ -32,6 +33,8 @@ at::Tensor nms_cpu_kernel(const at::Tensor& boxes,
   auto y2 = y2_t.data<scalar_t>();
   auto areas = areas_t.data<scalar_t>();
 
+  std::cout << 'n' << ndets << std::endl;
+
   for (int64_t _i = 0; _i < ndets; _i++) {
     if (suppressed[_i] == 1)
       continue;
@@ -53,10 +56,16 @@ at::Tensor nms_cpu_kernel(const at::Tensor& boxes,
 
       auto w = std::max(static_cast<scalar_t>(0), xx2 - xx1);
       auto h = std::max(static_cast<scalar_t>(0), yy2 - yy1);
-      auto inter = abs(w * h);
+      std::cout << 'w' << w << 'h' << h << ' ' << std::abs(w * h) << std::endl;
+      auto inter = std::abs(w * h);
+      std::cout << 'i' << inter << std::endl;
       auto ovr = inter / (iarea + areas[j] - inter);
-      if (ovr >= threshold)
+      std::cout << ovr << '>' << threshold << std::endl;
+      if (ovr >= threshold){
         suppressed[_j] = 1;
+        std::cout << '+' << std::endl;
+        }
+      std::cout << suppressed << std::endl;
    }
   }
   return at::nonzero(suppressed_t == 0).squeeze(1);
