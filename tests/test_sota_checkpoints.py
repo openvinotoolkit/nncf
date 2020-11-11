@@ -430,7 +430,7 @@ class TestSotaCheckpoints:
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
         self.CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
-             --data {dataset}/{data_name} --to-onnx={onnx_path}"
+             --data {dataset}/{data_name} --cpu-only --to-onnx={onnx_path}"
         self.test = "openvino_eval"
         onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
                                                  dataset=sota_data_dir,
