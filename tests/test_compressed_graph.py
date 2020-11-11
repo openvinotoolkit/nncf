@@ -25,7 +25,7 @@ from nncf.dynamic_graph.context import get_version_agnostic_name, TracingContext
 from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph_builder import create_input_infos, create_mock_tensor, GraphBuilder, \
     create_dummy_forward_fn, ModelInputInfo
-from nncf.dynamic_graph.patch_pytorch import nncf_model_input
+from nncf import nncf_model_input
 from nncf.layers import LSTMCellNNCF, NNCF_RNN
 from nncf.model_creation import create_compression_algorithm_builders
 from nncf.nncf_network import NNCFNetwork, InsertionInfo
@@ -147,6 +147,13 @@ def _case_config(request):
     return QuantizeTestCaseConfiguration(quantization_type, graph_dir)
 
 
+def gnmt_wrap_inputs_fn(model_args, model_kwargs):
+    # Assuming 3 args to wrap: input_encoder, input_enc_len, input_decoder, and 0 kwargs to wrap
+    model_args = (nncf_model_input(model_args[0]),
+                  nncf_model_input(model_args[1]),
+                  nncf_model_input(model_args[2]))
+    return model_args, model_kwargs
+
 def gnmt_forward_fn(seq_len, batch_size, vocab_size):
     def forward_fn(model, seq_len_, batch_size_, vocab_size_, batch_first_):
         device = next(model.parameters()).device
@@ -165,16 +172,14 @@ def gnmt_forward_fn(seq_len, batch_size, vocab_size):
         input_enc_len = seq_lens
         input_decoder = gen_packed_sequence()[0]
 
-        nncf_model_input(input_encoder)
-        nncf_model_input(input_enc_len)
-        nncf_model_input(input_decoder)
-        model(input_encoder, input_enc_len, input_decoder)
+        args, kwargs = gnmt_wrap_inputs_fn((input_encoder, input_enc_len, input_decoder), {})
+        model(*args, **kwargs)
 
     return partial(forward_fn, seq_len_=seq_len, batch_size_=batch_size, vocab_size_=vocab_size, batch_first_=False)
 
-
 class ModelDesc:
-    def __init__(self, dot_filename: str, model_builder, input_sample_sizes, dummy_forward_fn=None):
+    def __init__(self, dot_filename: str, model_builder, input_sample_sizes, dummy_forward_fn=None,
+                 wrap_inputs_fn=None):
         self.model_name = self._get_model_name(dot_filename)
         self.model_builder = model_builder
         self.dot_filename = dot_filename
@@ -187,6 +192,8 @@ class ModelDesc:
         if dummy_forward_fn:
             self.dummy_forward_fn = dummy_forward_wrapper
 
+        self.wrap_inputs_fn = wrap_inputs_fn
+
     @staticmethod
     def _get_model_name(dot_filename):
         if isinstance(dot_filename, tuple):
@@ -194,14 +201,21 @@ class ModelDesc:
         return dot_filename[:dot_filename.find('.dot')]
 
 
+def sr_wrap_inputs_fn(model_args, model_kwargs):
+    # Assuming 2 tensors in the 0-th arg (tuple) to wrap and 0 kwargs to wrap
+    model_args = ((nncf_model_input(model_args[0][0]),
+                   nncf_model_input(model_args[0][1])), )
+    return model_args, model_kwargs
+
+
 def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
     device = next(model_.parameters()).device
     config = {'input_info': [{"sample_size": sizes} for sizes in input_sample_sizes]}
     input_info_list = create_input_infos(config)
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
-    for idx, tensor in enumerate(tensor_list):
-        tensor_list[idx] = nncf_model_input(tensor)
-    return model_(tuple(tensor_list))
+    args = (tuple(tensor_list), )
+    args, _ = sr_wrap_inputs_fn(args, {})
+    return model_(*args)
 
 
 TEST_MODELS_DESC = [
@@ -231,7 +245,9 @@ TEST_MODELS_DESC = [
     ModelDesc("lstm_uni_stacked.dot", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
     ModelDesc("lstm_bi_seq.dot", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]),
     ModelDesc("lstm_bi_stacked.dot", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
-    ModelDesc("sr_small_model.dot", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]), sr_dummy_forward_fn)
+    ModelDesc("sr_small_model.dot", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]),
+              dummy_forward_fn=sr_dummy_forward_fn,
+              wrap_inputs_fn=sr_wrap_inputs_fn)
 ]
 
 
@@ -255,7 +271,7 @@ class TestModelsGraph:
             input_info_list = [ModelInputInfo(input_sample_sizes)]
         dummy_forward_fn = desc.dummy_forward_fn
         if not dummy_forward_fn:
-            dummy_forward_fn = create_dummy_forward_fn(input_info_list)
+            dummy_forward_fn = create_dummy_forward_fn(input_info_list, desc.wrap_inputs_fn)
         graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
         graph = graph_builder.build_graph(net)
         check_graph(graph, desc.dot_filename, 'original')
@@ -269,9 +285,6 @@ class TestModelsGraph:
         ), ids=['RB', 'Magnitude', 'Const']
     )
     def test_sparse_network(self, desc: ModelDesc, algo):
-        # TODO: Need to fix duplicate graph for sr_small_model.
-        if desc.model_name == 'sr_small_model':
-            pytest.skip()
         model = desc.model_builder()
         from nncf.layers import NNCF_MODULES_MAP
         sparsifiable_modules = list(NNCF_MODULES_MAP.values())
@@ -281,25 +294,20 @@ class TestModelsGraph:
         config["compression"] = {"algorithm": algo}
 
         compressed_model, compression_ctrl = \
-            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn)
+            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
+                                                      wrap_inputs_fn=desc.wrap_inputs_fn)
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
     def test_quantize_network(self, desc: ModelDesc, _case_config):
-        # TODO: Need to fix duplicate graph for sr_small_model.
-        if desc.model_name == 'sr_small_model':
-            pytest.skip()
         model = desc.model_builder()
         config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
         compressed_model, _ = \
-            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn)
+            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
+                                                      wrap_inputs_fn=desc.wrap_inputs_fn)
         check_model_graph(compressed_model, desc.dot_filename, _case_config.graph_dir)
 
     def test_sparse_quantize_network(self, desc: ModelDesc):
-        # TODO: Need to fix duplicate graph for sr_small_model.
-        if desc.model_name == 'sr_small_model':
-            pytest.skip()
-
         model = desc.model_builder()
 
         from nncf.layers import NNCF_MODULES_MAP
@@ -312,7 +320,8 @@ class TestModelsGraph:
         ]
 
         compressed_model, compression_ctrl = \
-            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn)
+            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
+                                                      wrap_inputs_fn=desc.wrap_inputs_fn)
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
@@ -337,6 +346,7 @@ def test_gnmt_quantization(_case_config):
     compressed_model = NNCFNetwork(model,
                                    input_infos=create_input_infos(config),
                                    dummy_forward_fn=forward_fn_,
+                                   wrap_inputs_fn=gnmt_wrap_inputs_fn,
                                    scopes_without_shape_matching=
                                    ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/'
                                     'BahdanauAttention[attn]'])
@@ -498,20 +508,20 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
     nodes = deepcopy(nx_graph.nodes)
     for node_name, node in sorted(nodes.items()):
         ia_op_exec_context_for_node = nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
-        scope_node = str(ia_op_exec_context_for_node)
+        node_scope = str(ia_op_exec_context_for_node)
         if ia_op_exec_context_for_node in quantizers_activations_attr:
             label = "Quantizer: {}".format(quantizers_activations_attr[ia_op_exec_context_for_node])
-            nx_graph.add_node(scope_node, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+            nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                               op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
             next_nodes = deepcopy(nx_graph._succ[node_name])
             for next_node_name, _ in next_nodes.items():
-                nx_graph.add_edge(scope_node, next_node_name)
+                nx_graph.add_edge(node_scope, next_node_name)
                 nx_graph.remove_edge(node_name, next_node_name)
-            nx_graph.add_edge(node_name, scope_node)
+            nx_graph.add_edge(node_name, node_scope)
         elif ia_op_exec_context_for_node in quantizers_weights_attr:
             label = "Quantizer: {}".format(quantizers_weights_attr[ia_op_exec_context_for_node])
-            nx_graph.add_node(scope_node, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+            nx_graph.add_node(node_scope, label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                               op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
-            nx_graph.add_edge(scope_node, node_name)
+            nx_graph.add_edge(node_scope, node_name)
 
     return graph

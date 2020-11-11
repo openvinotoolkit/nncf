@@ -243,24 +243,19 @@ class SymmetricQuantizer(BaseQuantizer):
         self.scale.requires_grad = False
 
     def set_level_ranges(self):
-        self.level_high, self.level_low, self.levels = self.calculate_level_ranges(self.num_bits,
-                                                                                   self.signed,
-                                                                                   self.is_weights)
+        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits,
+                                                                                   self.signed)
 
     @staticmethod
-    def calculate_level_ranges(num_bits, signed, is_weights):
-        if signed:
-            level_high = 2 ** (num_bits - 1) - 1
-            level_low = -(level_high + 1)
-            if is_weights:
-                level_low += 1
-        else:
-            level_high = 2 ** num_bits - 1
-            level_low = 0
+    def calculate_level_ranges(num_bits, signed):
         levels = 2 ** num_bits
-        if is_weights:
-            levels -= 1
-        return level_high, level_low, levels
+        if signed:
+            level_high = (levels // 2) - 1
+            level_low = -(levels // 2)
+        else:
+            level_high = levels - 1
+            level_low = 0
+        return level_low, level_high, levels
 
     @property
     def signed(self):
@@ -318,6 +313,13 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                                input_high)
 
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+            if self.per_channel:
+                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
+                        y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                    return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                raise RuntimeError("PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear "
+                                   "doesn't support per channel quantization")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
@@ -353,14 +355,14 @@ class AsymmetricQuantizer(BaseQuantizer):
         return True
 
     def set_level_ranges(self):
-        self.level_high, self.level_low, self.levels = self.calculate_level_ranges(self.num_bits)
+        self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits)
 
     @staticmethod
     def calculate_level_ranges(num_bits):
         level_high = 2 ** num_bits - 1
         level_low = 0
         levels = 2 ** num_bits
-        return level_high, level_low, levels
+        return level_low, level_high, levels
 
     def quantize(self, x):
         return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,
@@ -405,6 +407,13 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                                input_high_tuned)
 
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+            if self.per_channel:
+                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
+                        y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                    return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                raise RuntimeError("PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear "
+                                   "doesn't support per channel quantization")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
             return ExportQuantizeToFakeQuantize.apply(x, self.levels,

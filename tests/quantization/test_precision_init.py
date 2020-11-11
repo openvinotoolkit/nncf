@@ -39,6 +39,7 @@ from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.context import Scope, ScopeElement
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
+from nncf.initialization import default_criterion_fn
 from nncf.quantization.algo import QuantizerSetupType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
@@ -425,7 +426,8 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     first_conv = next(iter(get_all_modules_by_type(model, 'Conv2d').values()))
     first_conv.weight.requires_grad = True
 
-    trace_estimator = HessianTraceEstimator(model, criterion, device, data_loader, params.num_data_points)
+    trace_estimator = HessianTraceEstimator(model, default_criterion_fn, criterion, device, data_loader,
+                                            params.num_data_points)
     actual_state = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
     assert math.isclose(actual_state.item(), params.ref_trace, rel_tol=1e-09)
 

@@ -29,7 +29,7 @@ from typing import List, Optional
 from mdutils import MdUtils
 import argparse
 
-BASE_PYTORCH_CHECKPOINT_URL = 'https://download.01.org/opencv/openvino_training_extensions/models/nncf/'
+BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.5.0'
 
 SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT = {
     'classification': 'Classification',

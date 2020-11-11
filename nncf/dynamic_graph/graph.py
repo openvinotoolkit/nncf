@@ -491,7 +491,7 @@ class NNCFGraph:
                  inputs) -> NNCFNode:
         node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs)
 
-        from nncf.dynamic_graph.patch_pytorch import MODEL_INPUT_OP_NAME
+        from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:  # TODO: refactorable model input node name
             self._input_nncf_nodes.append(node)
         return node

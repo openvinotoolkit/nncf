@@ -36,14 +36,14 @@ from examples.common.execution import ExecutionMode, get_device, get_execution_m
     prepare_model_for_execution, start_worker
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
-from examples.common.model_loader import load_model
+from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
     write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
-from examples.semantic_segmentation.utils.checkpoint import load_checkpoint, save_checkpoint
+from examples.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf import create_compressed_model
 from nncf.utils import is_main_process
 
@@ -270,7 +270,8 @@ def get_params_to_optimize(model_without_dp, aux_lr, config):
 
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
-def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, class_encoding, config):
+def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, class_encoding, config,
+          resuming_checkpoint):
     logger.info("\nTraining...\n")
 
     # Check if the network architecture is correct
@@ -294,13 +295,15 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
 
     best_miou = -1
     best_compression_level = CompressionLevel.NONE
-    resuming_checkpoint_path = config.resuming_checkpoint_path
     # Optionally resume from a checkpoint
-    if resuming_checkpoint_path is not None:
-        model, optimizer, start_epoch, best_miou, _ = \
-            load_checkpoint(
-                model, resuming_checkpoint_path, config.device,
-                optimizer, compression_ctrl.scheduler)
+    if resuming_checkpoint is not None:
+        if optimizer is not None:
+            optimizer.load_state_dict(resuming_checkpoint['optimizer'])
+        start_epoch = resuming_checkpoint['epoch']
+        best_miou = resuming_checkpoint['miou']
+
+        if "scheduler" in resuming_checkpoint and compression_ctrl.scheduler is not None:
+            compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
         logger.info("Resuming from model: Start epoch = {0} "
                     "| Best mean IoU = {1:.4f}".format(start_epoch, best_miou))
         config.start_epoch = start_epoch
@@ -469,15 +472,18 @@ def main_worker(current_gpu, config):
 
     pretrained = is_pretrained_model_requested(config)
 
+    def criterion_fn(model_outputs, target, criterion_):
+        labels, loss_outputs, _ = \
+            loss_funcs.do_model_specific_postprocessing(config.model, target, model_outputs)
+        return criterion_(loss_outputs, labels)
+
     if config.to_onnx is not None:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         loaders, w_class = load_dataset(dataset, config)
         train_loader, val_loader = loaders
         criterion = get_criterion(w_class, config)
-
-    if not resuming_checkpoint_path:
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, criterion_fn, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -486,18 +492,17 @@ def main_worker(current_gpu, config):
                        weights_path=config.get('weights'))
 
     model.to(config.device)
-    compression_ctrl, model = create_compressed_model(model, nncf_config)
+
+    resuming_model_sd = None
+    resuming_checkpoint = None
+    if resuming_checkpoint_path is not None:
+        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
+            resuming_checkpoint_path)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
     model, model_without_dp = prepare_model_for_execution(model, config)
 
     if config.distributed:
         compression_ctrl.distributed()
-
-    if resuming_checkpoint_path:
-        if not config.pretrained:
-            # Load the previously saved model state
-            model, _, _, _, _ = \
-                load_checkpoint(model, resuming_checkpoint_path, config.device,
-                                compression_scheduler=compression_ctrl.scheduler)
 
     log_common_mlflow_params(config)
 
@@ -515,7 +520,8 @@ def main_worker(current_gpu, config):
         test(model, val_loader, criterion, color_encoding, config)
         print_statistics(compression_ctrl.statistics())
     elif config.mode.lower() == 'train':
-        train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config)
+        train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
+              resuming_checkpoint)
     else:
         # Should never happen...but just in case it does
         raise RuntimeError(

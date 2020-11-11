@@ -34,7 +34,8 @@ from nncf.dynamic_graph.context import OperatorInput, TracingContext, Scope
 from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
 from nncf.dynamic_graph.graph import NNCFNode, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
-from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize, MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.patch_pytorch import get_arg_positions_to_quantize
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
 from nncf.initialization import DataLoaderRangeInitializeRunner
@@ -977,6 +978,7 @@ class QuantizationController(QuantizationControllerBase):
 
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
             initializer = init_impl(self, init_precision_config, precision_init_args)
+            nncf_logger.info("Initialization of quantization precisions")
             initializer.apply_init()
 
     def init_range(self):

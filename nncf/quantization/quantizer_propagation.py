@@ -26,6 +26,7 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.nncf_network import InsertionInfo, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, \
     InsertionPoint
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode
@@ -47,6 +48,8 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         Conv3dMetatype,
         ConvTranspose2dMetatype,
         ConvTranspose3dMetatype,
+        DepthwiseConv2dSubtype,
+        DepthwiseConv3dSubtype,
         LinearMetatype,
         HardTanhMetatype,
         TanhMetatype,
@@ -1181,9 +1184,10 @@ class QuantizerPropagationSolver:
             elif node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] \
                     == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    raise RuntimeError('Should not reach quantizable operator on backward traverse!')
+                    raise RuntimeError('Should not reach quantizable operator on backward traverse from quantizer!')
             else:
-                raise RuntimeError('Final graph is expected to be without barrier!')
+                # reached barrier for nodes in ignored_scopes, no need to go further - this nodes shouldn't be quantized
+                is_finished = True
             return is_finished, output
 
         def traverse_function_down(node_key: str, output: QuantizersBetweenQuantizableLayers) -> Tuple[bool, Any]:
@@ -1211,9 +1215,10 @@ class QuantizerPropagationSolver:
                     is_finished = True
                 elif node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] \
                     == QuantizationTrait.NON_QUANTIZABLE:
-                    raise RuntimeError('Should not reach non-quantizable operator!')
+                    raise RuntimeError('Should not reach non-quantizable operator on forward traverse from quantizer!')
             else:
-                raise RuntimeError('Final graph is expected to be without barrier!')
+                # reached barrier for nodes in ignored_scopes, no need to go further - this nodes shouldn't be quantized
+                is_finished = True
             return is_finished, output
 
         for finished_prop_quantizer in finished_propagating_quantizers:

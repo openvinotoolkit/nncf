@@ -22,18 +22,20 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
+from torchvision.models import InceptionOutputs
 
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
-    create_datasets, load_resuming_checkpoint
+    create_datasets, inception_criterion_fn
 from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
-from examples.common.model_loader import load_model
+from examples.common.model_loader import load_model, \
+    load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
 from nncf.binarization.algo import BinarizationController
 from nncf.compression_method_api import CompressionLevel
-from nncf.initialization import register_default_init_args
+from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController
 from nncf.utils import manual_seed, is_main_process
@@ -123,6 +125,10 @@ def staged_quantization_main_worker(current_gpu, config):
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(config.device)
 
+    model_name = config['model']
+    is_inception = 'inception' in model_name
+    train_criterion_fn = inception_criterion_fn if is_inception else default_criterion_fn
+
     train_loader = train_sampler = val_loader = None
     resuming_checkpoint_path = config.resuming_checkpoint_path
     nncf_config = config.nncf_config
@@ -135,7 +141,8 @@ def staged_quantization_main_worker(current_gpu, config):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
+                                                 config.device)
 
     # create model
     model_name = config['model']
@@ -151,8 +158,8 @@ def staged_quantization_main_worker(current_gpu, config):
     resuming_model_sd = None
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
-        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-        resuming_model_sd = resuming_checkpoint['state_dict']
+        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
+            resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
@@ -206,14 +213,14 @@ def staged_quantization_main_worker(current_gpu, config):
 
     if config.mode.lower() == 'train':
         batch_multiplier = (quantization_config.get("params", {})).get("batch_multiplier", 1)
-        train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name,
+        train_staged(config, compression_ctrl, model, criterion, train_criterion_fn, optimizer_scheduler, model_name,
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
 
     finish_logging(config)
 
 
-def train_staged(config, compression_ctrl, model, criterion, is_inception, optimizer_scheduler, model_name, optimizer,
+def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optimizer_scheduler, model_name, optimizer,
                  train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
@@ -222,8 +229,8 @@ def train_staged(config, compression_ctrl, model, criterion, is_inception, optim
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train_epoch_staged(train_loader, batch_multiplier, model, criterion, optimizer, optimizer_scheduler,
-                           kd_loss_calculator, compression_ctrl, epoch, config, is_inception)
+        train_epoch_staged(train_loader, batch_multiplier, model, criterion, criterion_fn, optimizer,
+                           optimizer_scheduler, kd_loss_calculator, compression_ctrl, epoch, config)
 
         # compute compression algo statistics
         stats = compression_ctrl.statistics()
@@ -274,9 +281,9 @@ def train_staged(config, compression_ctrl, model, criterion, is_inception, optim
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
-def train_epoch_staged(train_loader, batch_multiplier, model, criterion, optimizer,
+def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criterion_fn, optimizer,
                        optimizer_scheduler: PolyLRDropScheduler, kd_loss_calculator: KDLossCalculator,
-                       compression_ctrl, epoch, config, is_inception=False):
+                       compression_ctrl, epoch, config):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -298,16 +305,11 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, optimiz
         input_ = input_.to(config.device)
         target = target.to(config.device)
 
-        # compute output
-        if is_inception:
-            # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-            output, aux_outputs = model(input_)
-            loss1 = criterion(output, target)
-            loss2 = criterion(aux_outputs, target)
-            criterion_loss = loss1 + 0.4 * loss2
-        else:
-            output = model(input_)
-            criterion_loss = criterion(output, target)
+        output = model(input_)
+        criterion_loss = criterion_fn(output, target, criterion)
+
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
 
         # compute KD loss
         kd_loss = kd_loss_calculator.loss(input_, output)

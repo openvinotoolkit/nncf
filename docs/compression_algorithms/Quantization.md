@@ -83,6 +83,33 @@ For better accuracy, floating-point zero should be within quantization range and
 
 You can use the `num_init_steps` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics during given number of steps.
 
+#### Quantizer setup and hardware config files
+NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime. 
+To achieve this, the quantizer setup should be performed with following considerations in mind:
+1) every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
+2) the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
+3) for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
+4) certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
+
+These requirements are fulfilled by the quantizer propagation algorithm. 
+The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusable", and apply the fusing to the internal graph representation as well.
+Next, the operations in the graph that can be associated to input-quantizable operations on a given target hardware are assigned a single quantizer for each its quantizable activation input, with a number of possible quantizer configurations attached to it (that are feasible on target HW).
+The quantizers are then "propagated" against the data flow in the model's control flow graph as far as possible, potentially merging with other quantizers.
+Once all quantizers have reached a standstill in their propagation process, each will have a final (possibly reduced) set of possible quantizer configurations, from which a single one is either chosen manually, or using a precision initialization algorithm (which accepts the potential quantizer locations and associated potential quantizer configuration sets).
+The resulting configuration is then applied as a final quantizer setup configuration. 
+
+Note that this algorithm applies to activation quantization only - the weight quantizers do not require propagation. 
+However, the possible configurations of weight quantizers themselves are also sourced from the HW config file definitions.
+
+The HW to target for a given quantization algorithm run can be specified in NNCF config using the global `"target_device"` option.
+The default corresponds to CPU-friendly quantization.
+`"NONE"` corresponds to a configuration that uses the general quantizer propagation algorithm, but does not use any HW-specific information about quantizability of given operation types or possible quantizer configs for associated inputs or operation weights.
+Instead it uses a default, basic 8-bit symmetric per-tensor quantization configuration for each quantizer, and quantizes inputs of a certain default operation set, which at the moment is defined internally in NNCF.
+The quantization configuration in the `"target_device": "NONE"` case may be overridden using the regular `"activations"` and `"weights"` sections in the quantization compression algorithm sub-config, see below.
+
+For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
+
+
 #### Quantization Implementation
 
 In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
@@ -100,9 +127,9 @@ For symmetric:
 
 #### Mixed-Precision Quantization
 
-Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. Though
-NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, choosing
-ultra low bitwidth could noticeably affect the model's accuracy.
+Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. 
+Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, 
+choosing ultra-low bitwidth could noticeably affect the model's accuracy.
 A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers.
 NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
@@ -111,10 +138,23 @@ calculated by multiplying the average Hessian trace with the L2 norm of quantiza
 
 ![\overline{Tr}(H_{i}) * \left \| Q(W_{i}) - W_{i} \right \|^2_2](https://latex.codecogs.com/png.latex?%5Coverline%7BTr%7D%28H_%7Bi%7D%29%20*%20%5Cleft%20%5C%7C%20Q%28W_%7Bi%7D%29%20-%20W_%7Bi%7D%20%5Cright%20%5C%7C%5E2_2)
 
-The sum of the sensitivities for each layer forms a metric that is used to determine the specific bit precision
-configuration. The optimal configuration is found by calculating this metric for all possible bitwidth settings and
-selecting the median one. To reduce exponential search the following restriction is used: layers with a small value of
-average Hessian trace are quantized to lower bits, and vice versa.
+The sum of the sensitivities for each layer forms a metric which serves as a proxy to the accuracy of the compressed 
+model: the lower the metric, the more accurate should be the corresponding mixed precision model on the validation 
+dataset. 
+
+To find the optimal trade-off between accuracy and performance of the mixed precision model we also compute a 
+compression ratio - the ratio between **bit complexity** of a fully INT8 model and mixed-precision lower bitwidth one. 
+The bit complexity of the model is a sum of bit complexities for each quantized layer, which are defined as a product 
+of the layer FLOPS and the quantization bitwidth. The optimal configuration is found by calculating the sensitivity 
+metric and the compression ratio for all possible bitwidth settings and selecting the one with the minimal metric value 
+among all configurations with a compression ratio below the specified threshold.
+
+By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
+But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
+configuration file.
+
+To avoid the exponential search procedure, we apply the following restriction: layers with a small average Hessian 
+trace value are quantized to lower bitwidth and vice versa. 
 
 The Hessian trace is estimated with the randomized [Hutchinson algorithm](https://www.researchgate.net/publication/220432178_Randomized_Algorithms_for_Estimating_the_Trace_of_an_Implicit_Symmetric_Positive_Semi-Definite_Matrix).
 Given Rademacher distributed random vector v, the trace of symmetric matrix H is equal to the estimation of a quadratic form:
@@ -138,6 +178,13 @@ where ![H_i](https://latex.codecogs.com/png.latex?H_i) is the Hessian matrix of 
 computed by 2 backpropagation passes: first  - with respect to the loss and second - with respect to the product of the
 gradients and a random vector.   
 
+The aforementioned procedure sets bitwidth for weight quantizers only. Bitwidth for activation quantizers is assigned 
+on the next step in two ways: strict or liberal. All quantizers between modules with quantizable inputs have the same 
+bitwidth in the strict mode. Liberal mode allows different precisions within the group. For both cases, bitwidth is 
+assigned based on the rules of the hardware config. If multiple variants are possible the minimal compatible bitwidth 
+is chosen. By default, liberal mode is used as it does not reject a large number of possible bitwidth settings.   
+The `bitwidth_assignment_mode` parameter can override it to the strict one. 
+
 For automatic mixed-precision selection it's recommended to use the following template of configuration file:
 ```
     "optimizer": {
@@ -152,17 +199,11 @@ For automatic mixed-precision selection it's recommended to use the following te
     },
     "compression": {
         "algorithm": "quantization",
-        "weights": {
-            "mode": "asymmetric",
-            "per_channel": true
-        },
-        "activations": {
-            "mode": "asymmetric"
-        },
         "initializer": {
             "precision": {
                 "type": "hawq",
                 "bits": [4,8]
+                "compression_ratio": 1.5,
             }
         }
     }
@@ -173,20 +214,12 @@ Note, optimizer parameters are model specific, this template contains optimal on
 Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
 using the template in the full configuration file.
 
-On the initialization stage, the HAWQ algorithm chooses the most accurate mixed-precision configuration with compression 
-ratio no less than the specified. The ratio is computed between **bits complexity** of fully INT8 model and mixed-precision 
-lower-bit one. The bit complexity of the model is a sum of bit complexities for each quantized layer, which are a 
-multiplication of FLOPS for the layer by a number of bits for its quantization.
-By default, the compression ratio is 1.5. It should be enough to compress the model with no more than 1% accuracy drop. 
-But if it doesn't happen, the lower ratio can be set by `compression_ratio` parameter in the `precision` section of 
-configuration file.
-
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
 model's accuracy, this is the most reliable way. Staged quantization is an alternative approach and can be more than 
 two times faster, but it may require tweaking of hyper-parameters for each model. Please refer to configuration files 
 ending by `*_staged` for an example of this method.     
 
-The manual mode of mixed-precision quantization is also available by explicitly setting the number of bits per layer
+The manual mode of mixed-precision quantization is also available by explicitly setting the bitwidth per layer
  through `bitwidth_per_scope` parameter.
 
 ---
@@ -218,7 +251,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
-            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
+            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
             "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
             "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
             "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
@@ -239,9 +272,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
         }
     }
-    "weights": { // Constraints to be applied to model weights quantization only.Overrides higher-level settings.
+    "weights": { // Constraints to be applied to model weights quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 8, // Bitwidth to quantize to.
+        "bits": 8, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all weights. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module weight specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
@@ -251,9 +284,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
     },
-    "activations": { // Constraints to be applied to model activations quantization only. Overrides higher-level settings.
+    "activations": { // Constraints to be applied to model activations quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 4, // Bitwidth to quantize to.
+        "bits": 4, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all activations. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module inputs specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
@@ -292,7 +325,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     // "target_scopes": [],
 
     // Determines how should the additional quantization operations be exported into the ONNX format. Set this to false for export to OpenVINO-supported FakeQuantize ONNX, or to true for export to ONNX standard QuantizeLinear-DequantizeLinear node pairs (8-bit quantization only in the latter case). Default: false
-    "export_to_onnx_standard_ops": false
+    "export_to_onnx_standard_ops": false,
 }
 ```
 

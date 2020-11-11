@@ -15,7 +15,8 @@ from typing import List, Optional
 
 import torch
 
-from nncf.dynamic_graph.patch_pytorch import CustomTraceFunction, ForwardTraceOnly, MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.patch_pytorch import CustomTraceFunction, ForwardTraceOnly
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.hw_config_op_names import HWConfigOpName
 from nncf.registry import Registry

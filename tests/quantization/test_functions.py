@@ -182,17 +182,13 @@ class TestParametrized:
                 return scales
 
         @staticmethod
-        def get_range_level(is_signed, is_weights, bits):
+        def get_range_level(is_signed, bits):
             levels = 2 ** bits
             if is_signed:
-                if is_weights:
-                    levels -= 1
-                level_high = 2 ** (bits - 1) - 1
-                level_low = -(level_high + 1)
-                if is_weights:
-                    level_low += 1
+                level_high = (levels // 2) - 1
+                level_low = -(levels // 2)
             else:
-                level_high = 2 ** bits - 1
+                level_high = levels - 1
                 level_low = 0
             return level_low, level_high, levels
 
@@ -208,7 +204,7 @@ class TestParametrized:
                 ref_scale = ref_scale.astype(np.float16)
 
             test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_fp16=is_fp16)
-            level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
+            level_low, level_high, levels = self.get_range_level(is_signed, bits)
 
             ref_scale = abs(ref_scale) + EPS
 
@@ -227,7 +223,7 @@ class TestParametrized:
             ref_input = generate_input(input_size)
 
             ref_scale = self.generate_scale(ref_input, scale_mode, is_weights)
-            level_low, level_high, levels = self.get_range_level(is_signed, is_weights, bits)
+            level_low, level_high, levels = self.get_range_level(is_signed, bits)
             test_input, test_scale = get_test_data([ref_input, ref_scale], use_cuda, is_backward=True,
                                                    is_fp16=is_fp16)
 
