@@ -1,5 +1,27 @@
 {
-
+  "classification": {
+        "imagenet": {
+            "mobilenet_v2_imagenet_rb_sparsity_int8": {
+                "config": "examples/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
+                "reference": "mobilenet_v2_imagenet",
+                "target": 70.99,
+                "metric_type": "Acc@1",
+                "resume": "mobilenet_v2_imagenet_rb_sparsity_int8.pth",
+                "model_description": "MobileNet V2",
+                "compression_description": "INT8 + Sparsity 52% (RB)",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.1
+            },
+            "squeezenet1_1_imagenet_int8": {
+                "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
+                "reference": "squeezenet1_1_imagenet",
+                "target": 58.02,
+                "metric_type": "Acc@1",
+                "resume": "squeezenet1_1_imagenet_int8.pth",
+                "model_description": "SqueezeNet V1.1",
+                "compression_description": "INT8",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.1
             }
         }
     }
