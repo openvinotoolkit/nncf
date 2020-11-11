@@ -121,8 +121,6 @@ def configure_logging(sample_logger, config):
 def log_common_mlflow_params(config):
     if is_mlflow_logging_enabled(config):
         mlflow.log_param('epochs', config.get('epochs', 'None'))
-
-
         mlflow.log_param('schedule_type', config.nncf_config.get('optimizer', {}).get('schedule_type', 'None'))
         mlflow.log_param('lr', config.nncf_config.get('optimizer', {}).get('base_lr', 'None'))
         mlflow.set_tag('Log Dir Path', config.log_dir)
