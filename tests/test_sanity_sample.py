@@ -135,7 +135,7 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["cifar10", "cifar100", "cifar10"],
+    "classification": ["cifar10", "cifar100", "cifar10", "cifar10"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
@@ -143,14 +143,15 @@ DATASETS = {
 CONFIGS = {
     "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
-                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json")],
+                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json"),
+                       TEST_ROOT.joinpath("data", "configs", "resnet18_pruning_magnitude.json")],
     "semantic_segmentation": [TEST_ROOT.joinpath("data", "configs", "unet_camvid_int8.json"),
                               TEST_ROOT.joinpath("data", "configs", "unet_camvid_rb_sparsity.json")],
     "object_detection": [TEST_ROOT.joinpath("data", "configs", "ssd300_vgg_voc_int8.json")]
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256, 256],
+    "classification": [256, 256, 256, 128],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }
