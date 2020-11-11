@@ -68,6 +68,8 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
 
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
+    target_compression_weight_dim = 1
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose2d.__name__
@@ -95,6 +97,8 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
 
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
+    target_compression_weight_dim = 1
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose3d.__name__
@@ -146,6 +150,16 @@ NNCF_DECONV_MODULES_DICT = {
 }
 NNCF_CONV_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
 NNCF_CONV_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
+
+NNCF_PRUNING_MODULES_DICT = {
+    NNCFConv1d: nn.Conv1d,
+    NNCFConv2d: nn.Conv2d,
+    NNCFConv3d: nn.Conv3d,
+    NNCFConvTranspose2d: nn.ConvTranspose2d,
+    NNCFConvTranspose3d: nn.ConvTranspose3d,
+}
+NNCF_PRUNING_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
+NNCF_PRUNING_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
 
 UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}

@@ -41,8 +41,11 @@ def test_pruning_export_simple_model(tmp_path):
     check_bias_and_weight_shape('nncf_module.conv2', onnx_model_proto, [16, 16, 3, 3], [16])
     check_bias_and_weight_shape('nncf_module.bn', onnx_model_proto, [16], [16])
 
+    # Check that up was pruned by input filters
+    check_bias_and_weight_shape('nncf_module.up', onnx_model_proto, [16, 32, 3, 3], [32])
+
     # Check that conv3 was pruned by input filters
-    check_bias_and_weight_shape('nncf_module.conv3', onnx_model_proto, [1, 16, 5, 5], [1])
+    check_bias_and_weight_shape('nncf_module.conv3', onnx_model_proto, [1, 32, 5, 5], [1])
 
 
 @pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),

@@ -53,6 +53,10 @@ def test_get_bn_for_module_scope():
     bn = get_bn_for_module_scope(pruned_model, conv2_scope)
     assert bn == pruned_model.bn
 
+    up_scope = Scope.from_str('BigPruningTestModel/NNCFConvTranspose2d[up]')
+    bn = get_bn_for_module_scope(pruned_model, up_scope)
+    assert bn is None
+
     conv3_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv3]')
     bn = get_bn_for_module_scope(pruned_model, conv3_scope)
     assert bn is None

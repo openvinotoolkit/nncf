@@ -317,14 +317,15 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         """
         self._clean_hooks()
 
-        def hook(grad, mask):
+        def hook(grad, mask, dim=0):
             mask = mask.to(grad.device)
-            return apply_filter_binary_mask(mask, grad)
+            return apply_filter_binary_mask(mask, grad, dim=dim)
 
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             mask = minfo.operand.binary_filter_pruning_mask
             weight = minfo.module.weight
-            partial_hook = update_wrapper(partial(hook, mask=mask), hook)
+            dim = minfo.module.target_compression_weight_dim
+            partial_hook = update_wrapper(partial(hook, mask=mask, dim=dim), hook)
             self._hooks.append(weight.register_hook(partial_hook))
             if minfo.module.bias is not None:
                 bias = minfo.module.bias
@@ -357,7 +358,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         Calculates sparsity rate for weight filter-wise.
         """
         weight = minfo.module.weight
-        filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
+        filters_sum = weight.view(weight.size(minfo.module.target_compression_weight_dim), -1).sum(axis=1)
         pruning_rate = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
         return pruning_rate
 

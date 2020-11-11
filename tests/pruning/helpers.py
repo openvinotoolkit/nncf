@@ -15,7 +15,7 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.helpers import create_conv
+from tests.helpers import create_conv, create_transpose_conv
 
 
 class PruningTestModel(nn.Module):
@@ -176,14 +176,18 @@ class BigPruningTestModel(nn.Module):
         for i in range(32):
             self.conv2.weight.data[i] += i
         self.bn = nn.BatchNorm2d(32)
-
-        self.conv3 = create_conv(32, 1, 5, 5, 1)
+        self.up = create_transpose_conv(32, 64, 3, 3, 1, 2)
+        for i in range(64):
+            self.up.weight.data[0][i] += i
+        self.conv3 = create_conv(64, 1, 5, 5, 1)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.relu(x)
         x = self.conv2(x)
         x = self.bn(x)
+        x = self.relu(x)
+        x = self.up(x)
         x = self.relu(x)
         x = self.conv3(x)
         x = x.view(1, -1)
@@ -226,3 +230,7 @@ def get_pruning_exponential_config(input_sample_size=None) -> NNCFConfig:
     compression_config['params']["num_init_steps"] = 1
     compression_config['params']["pruning_steps"] = 20
     return config
+
+
+def gen_ref_masks(desc):
+    return [torch.tensor([0.0] * zeroes + [1.0] * ones) for zeroes, ones in desc]
