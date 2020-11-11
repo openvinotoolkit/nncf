@@ -1,11 +1,5 @@
 {
-    "classification": {
-        "imagenet": {
-            "resnet50_imagenet": {
-                "config": "examples/classification/configs/quantization/resnet50_imagenet.json",
-                "target": 76.13,
-                "metric_type": "Acc@1",
-                "model_description": "ResNet-50"
+
             }
         }
     }
