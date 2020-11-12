@@ -35,11 +35,10 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import ExecutionMode, get_execution_mode, \
     prepare_model_for_execution, start_worker
-from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
+from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
@@ -50,7 +49,8 @@ from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
-from nncf.utils import manual_seed, safe_thread_call, is_main_process
+from nncf.utils import safe_thread_call, is_main_process
+from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
 import mlflow
 
 model_names = sorted(name for name in models.__dict__
@@ -113,21 +113,13 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
-    config.device = get_device(config)
+    configure_device(current_gpu, config)
 
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
 
-    if config.seed is not None:
-        manual_seed(config.seed)
-        cudnn.deterministic = True
-        cudnn.benchmark = False
+    set_seed(config)
 
     # define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
@@ -160,10 +152,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
-    resuming_model_sd = None
-    if resuming_checkpoint_path is not None:
-        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
-            resuming_checkpoint_path)
+    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
 
@@ -489,9 +478,9 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
-            mlflow.log_metric("val/loss", float(losses.avg), step=len(val_loader) * config.get('cur_epoch', 0))
-            mlflow.log_metric("val/top1", float(top1.avg), step=len(val_loader) * config.get('cur_epoch', 0))
-            mlflow.log_metric("val/top5", float(top5.avg), step=len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/loss", float(losses.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top1", float(top1.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top5", float(top5.avg), config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
