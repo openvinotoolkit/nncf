@@ -183,7 +183,7 @@ def main_worker(current_gpu, config):
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
                 model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
-                                        loss_inference=True, criterion=criterion)
+                                      loss_inference=True, criterion=criterion)
                 logger.info("Final model loss: {:.3f}".format(model_loss))
             else:
                 mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)

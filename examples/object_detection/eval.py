@@ -319,7 +319,7 @@ def eval_net_loss(data_loader, device, net, criterion):
 
     # all_detections = []
     timer = Timer()
-    for batch_ind, (ims, _gts, hs, ws) in enumerate(data_loader):
+    for batch_ind, (ims, _gts, _, _) in enumerate(data_loader):
         images = ims.to(device)
         targets = [anno.requires_grad_(False).to(device) for anno in _gts]
 
@@ -337,10 +337,11 @@ def eval_net_loss(data_loader, device, net, criterion):
 
         if batch_ind % print_freq == 0:
             logger.info('Loss_inference: [{}/{}] || Time: {elapsed.val:.4f}s ({elapsed.avg:.4f}s)'
-            ' || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})'
-            ' || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})'
-            ' || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})'.format(
-                batch_ind, num_batches, elapsed=t_elapsed, conf_loss=batch_loss_c, loc_loss=batch_loss_l, model_loss=batch_loss))
+                        ' || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})'
+                        ' || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})'
+                        ' || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})'.format(
+                            batch_ind, num_batches, elapsed=t_elapsed, conf_loss=batch_loss_c,
+                            loc_loss=batch_loss_l, model_loss=batch_loss))
 
     model_loss = batch_loss_l.avg + batch_loss_c.avg
     return model_loss
@@ -352,10 +353,10 @@ def test_net(net, device, data_loader, distributed=False, loss_inference=False, 
         logger.info("Testing... loss function will be evaluated instead of detection mAP")
         if distributed:
             raise NotImplementedError
-        if criterion is not None:
-            return eval_net_loss(data_loader, device, net, criterion)
-        else:
+        if criterion is None:
             raise ValueError("Missing loss inference function (criterion)")
+        else:
+            return eval_net_loss(data_loader, device, net, criterion)
     else:
         logger.info("Testing...")
         num_images = len(data_loader.dataset)
