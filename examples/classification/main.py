@@ -258,7 +258,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
-                    mlflow.log_metric("compression/statistics/{0}".format(key), value, step=len(train_loader) * epoch)
+                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
