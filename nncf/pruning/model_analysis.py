@@ -10,17 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List, Dict
+
 import networkx as nx
+from nncf.dynamic_graph.graph import NNCFNode
 
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES, Convolution, \
-    Concat, StopMaskForwardOps
-from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_types
+    Concat, StopMaskForwardOps, DefaultMetaOp
+from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_of_types
 
 
 # pylint: disable=protected-access
 class NodesCluster:
-    def __init__(self, cluster_id, nodes, nodes_orders):
+    def __init__(self, cluster_id: int, nodes: List, nodes_orders: List[int]):
         self.id = cluster_id
         self.nodes = nodes
         self.importance = max(nodes_orders)
@@ -29,61 +32,68 @@ class NodesCluster:
         self.nodes = []
         self.importance = 0
 
-    def add_nodes(self, nodes):
+    def add_nodes(self, nodes: List, importance: int):
         self.nodes.extend(nodes)
+        self.importance = max(self.importance, importance)
 
 
 class Clusterization:
     def __init__(self, id_attr_name="id"):
         self.clusters = {}
         self._node_to_cluster = {}
-        self.id_attr = id_attr_name
+        self._id_attr = id_attr_name
 
-    def get_cluster_by_id(self, cluster_id):
-        if cluster_id in self.clusters:
-            return self.clusters[cluster_id]
-        raise IndexError('No cluster with such index')
+    def get_cluster_by_id(self, cluster_id: int) -> NodesCluster:
+        if cluster_id not in self.clusters:
+            raise IndexError('No cluster with id = {}'.format(cluster_id))
+        return self.clusters[cluster_id]
 
-    def get_cluster_for_node(self, node_id):
-        return self.clusters[self._node_to_cluster[node_id]]
+    def get_cluster_by_node_id(self, node_id: int) -> NodesCluster:
+        if node_id not in self._node_to_cluster:
+            raise IndexError('No cluster for node with id = {}'.format(node_id))
+        return self.get_cluster_by_id(self._node_to_cluster[node_id])
 
-    def is_not_in_any_cluster(self, node_id):
+    def is_node_in_clusterization(self, node_id: int) -> bool:
         return node_id in self._node_to_cluster
 
-    def add_cluster(self, cluster: NodesCluster, cluster_id):
+    def add_cluster(self, cluster: NodesCluster):
+        cluster_id = cluster.id
         if cluster_id in self.clusters:
-            raise IndexError('Cluster with such index already exist')
+            raise IndexError('Cluster with index = {} already exist'.format(cluster_id))
         self.clusters[cluster_id] = cluster
         for node in cluster.nodes:
-            self._node_to_cluster[getattr(node, self.id_attr)] = cluster_id
+            self._node_to_cluster[getattr(node, self._id_attr)] = cluster_id
 
-    def delete_cluster(self, cluster_id):
+    def delete_cluster(self, cluster_id: int):
+        if cluster_id not in self.clusters:
+            raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
+
         for node in self.clusters[cluster_id].nodes:
-            node_id = getattr(node, self.id_attr)
+            node_id = getattr(node, self._id_attr)
             self._node_to_cluster.pop(node_id)
         self.clusters.pop(cluster_id)
 
-    def get_all_clusters(self):
+    def get_all_clusters(self) -> Dict[int, NodesCluster]:
         return self.clusters.values()
 
-    def get_all_nodes(self):
+    def get_all_nodes(self) -> List:
         all_nodes = []
         for cluster in self.clusters.values():
             all_nodes.extend(cluster.nodes)
         return all_nodes
 
-    def merge_clusters(self, first_id, second_id):
-        cluster_1 = self.clusters[first_id]
-        cluster_2 = self.clusters[second_id]
+    def merge_clusters(self, first_id: int, second_id: int):
+        cluster_1 = self.get_cluster_by_id(first_id)
+        cluster_2 = self.get_cluster_by_id(second_id)
         if cluster_1.importance > cluster_2.importance:
-            cluster_1.add_nodes(cluster_2.nodes)
+            cluster_1.add_nodes(cluster_2.nodes, cluster_2.importance)
             for node in cluster_2.nodes:
-                self._node_to_cluster[getattr(node, self.id_attr)] = first_id
+                self._node_to_cluster[getattr(node, self._id_attr)] = first_id
             self.clusters.pop(second_id)
         else:
-            cluster_2.add_nodes(cluster_1.nodes)
+            cluster_2.add_nodes(cluster_1.nodes, cluster_1.importance)
             for node in cluster_1.nodes:
-                self._node_to_cluster[getattr(node, self.id_attr)] = second_id
+                self._node_to_cluster[getattr(node, self._id_attr)] = second_id
             self.clusters.pop(first_id)
 
 
@@ -94,9 +104,9 @@ def get_position(nx_nodes_list, idx):
     return None
 
 
-def unit_clusters_for_nodes(nodes_to_merge, clusterization):
+def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clusterization):
     """
-
+    Merges clusters to which nodes from nodes_to_merge belongs.
     :param nodes_to_merge: all nodes are clusters for which should be тerged
     :param clusterization:
     """
@@ -107,26 +117,26 @@ def unit_clusters_for_nodes(nodes_to_merge, clusterization):
     max_importance_node_id = None
     max_importance = 0
     for node in nodes_to_merge:
-        importance = clusterization.get_cluster_for_node(node.node_id).importance
+        importance = clusterization.get_cluster_by_node_id(node.node_id).importance
         if importance > max_importance:
             max_importance_node_id = node.node_id
             max_importance = importance
 
-    max_importance_cluster_id = clusterization.get_cluster_for_node(max_importance_node_id).id
+    max_importance_cluster_id = clusterization.get_cluster_by_node_id(max_importance_node_id).id
     for node in nodes_to_merge:
         if node.node_id != max_importance_node_id:
-            current_node_cluster_id = clusterization.get_cluster_for_node(node.node_id).id
+            current_node_cluster_id = clusterization.get_cluster_by_node_id(node.node_id).id
             clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
 
 
-def cluster_special_ops_in_model(model: object, special_types: object, identity_types: object) -> Clusterization:
+def cluster_special_ops(model: NNCFNetwork, special_types: List[str], identity_types: List[str]) -> Clusterization:
     """
     This model will cluster all operations with type from special_types. Connected nodes is nodes that:
         1. Have path between nodes with only identity type nodes on it
         2. Have common input (identity type nodes can be on path from this input)
-    :param model:
-    :param special_types:
-    :return: list of lists with clusters of special_types nodes (of type NNCFNode)
+    :param model: model to work with
+    :param special_types: list of types that should be frouped to groups of dependent nodes
+    :return: Clusterization of special_types nodes to the dependent groups
     """
     graph = model.get_original_graph()
     nx_graph = graph._nx_graph
@@ -139,7 +149,7 @@ def cluster_special_ops_in_model(model: object, special_types: object, identity_
     for i, node in enumerate(all_special_nodes):
         nncf_node = graph._nx_node_to_nncf_node(node)
         cluster = NodesCluster(i, [nncf_node], [get_position(topologically_sorted_nodes, node['id'])])
-        clusterization.add_cluster(cluster, i)
+        clusterization.add_cluster(cluster)
 
     for node in topologically_sorted_nodes:
         if graph.node_type_fn(node) in identity_types:
@@ -147,18 +157,29 @@ def cluster_special_ops_in_model(model: object, special_types: object, identity_
 
         nncf_node = graph._nx_node_to_nncf_node(node)
 
-        all_outputs = find_next_nodes_not_types(model, nncf_node, identity_types)
+        all_outputs = find_next_nodes_not_of_types(model, nncf_node, identity_types)
         all_output_special_nodes = [node for node in all_outputs if node.op_exec_context.operator_name in special_types]
         if graph.node_type_fn(node) in special_types:
             all_output_special_nodes.append(nncf_node)
-        unit_clusters_for_nodes(all_output_special_nodes, clusterization)
+        merge_clusters_for_nodes(all_output_special_nodes, clusterization)
 
     return clusterization
 
 
-class ModelAnalyser:
+class ModelAnalyzer:
     """
-    Analyse model architecture before pruning
+    Analyze the model before pruning to understand which parts could potentially be pruned without conflicts
+     (all nodes that can't get pruned input will receive a non-pruned input).
+
+    The algorithm consists of three steps:
+    1. Set attribute accept_pruned_input to all nodes. This attribute shows can this node potentially get
+     pruned input or node.
+    2.  Calculate can_prune attribute for all nodes by propagating accept_pruned_input up
+     (from the result of the network to the inputs). Node can be pruned if all outputs of this node accept
+      pruned input and all outputs can be pruned.
+    3. Propagates can_prune down from input nodes to the outputs.
+
+    As a result, all nodes marked by the can_prune attribute as potentially prunable or not.
     """
     def __init__(self, target_model: NNCFNetwork):
         self.model = target_model
@@ -168,13 +189,19 @@ class ModelAnalyser:
         self.can_prune = {idx: True for idx in self.graph.get_all_node_idxs()}
         self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_idxs()}
 
-    def node_propagate_can_prune_attr(self, nncf_node):
+    def node_propagate_can_prune_attr(self, nncf_node: NNCFNode) -> bool:
+        """
+        Whether node propagates can_prune attr through. That means a node can propagate pruning mask
+         (for example,  activations propagate mask, but convolutions stop mask propagation)
+        :param nncf_node: node to work with
+        :return: bool: propagates this node can_prune throw or not
+        """
         node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
         node_type = nncf_node.op_exec_context.operator_name
         is_conv = node_type in Convolution().get_all_op_aliases()
         return not is_conv or (is_conv and is_depthwise_conv(node_module))
 
-    def node_accept_different_inputs(self, nncf_node):
+    def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
         """
         Return whether nx_node accept pruned and not pruned inputs as inputs at the same time.
         """
@@ -182,7 +209,7 @@ class ModelAnalyser:
         return node_type in Concat.get_all_op_aliases()
 
     @staticmethod
-    def get_class_by_type_name(type_name):
+    def get_class_by_type_name(type_name: str) -> DefaultMetaOp:
         """
         Return class of metaop that corresponds to type_name type.
         """

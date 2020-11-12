@@ -12,6 +12,7 @@
 """
 import math
 from collections import deque
+from typing import List
 
 import networkx as nx
 import torch
@@ -212,7 +213,18 @@ def get_previous_conv(target_model: NNCFNetwork, module, module_scope):
     return None
 
 
-def find_next_nodes_not_types(model, nncf_node, types):
+def find_next_nodes_not_of_types(model: NNCFNetwork, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
+    """
+    Traverse nodes in the graph from nncf node to find first nodes that aren't of type from types list.
+    First nodes with some condition mean nodes:
+    - for which this condition is true
+    - reachable from nncf_node such that on the path from nncf_node to this nodes there are no other nodes with
+    fulfilled condition
+    :param model: model to worh with
+    :param nncf_node: NNCFNode to start search
+    :param types: list of types
+    :return: list of next nodes for nncf_node of type not from types list
+    """
     graph = model.get_original_graph()
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
     partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x not in types,

@@ -766,7 +766,7 @@ class NNCFGraph:
                 matching_graph_op_nodes.append(node)
         return matching_graph_op_nodes
 
-    def get_all_nodes_of_type(self, type_list) -> List[NNCFNode]:
+    def get_nodes_by_types(self, type_list: List[str]) -> List[NNCFNode]:
         all_nodes_of_type = []
         for node_key in self.get_all_node_keys():
             nx_node = self._nx_graph.nodes[node_key]

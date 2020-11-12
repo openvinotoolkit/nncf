@@ -327,8 +327,8 @@ class ModelPruner:
     def apply_mask(self):
         """
         Applying propagated masks for all nodes in topological order:
-        if all inputs of node can_prune -> running input_prune method for this node
-        if node[ModelPruner.CAN_PRUNE_ATTR] -> running output_prune method for this node
+        1. running input_prune method for this node
+        2. running output_prune method for this node
         """
         sorted_nodes = [self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)]
         with torch.no_grad():
@@ -342,11 +342,9 @@ class ModelPruner:
 
     def prune_model(self):
         """
-        Model pruner work in three stages:
+        Model pruner work in two stages:
         1. Mask propagation: propagate pruning masks through the graph.
-        2. Propagate can_prune attribute (up and then down) through the graph.This attribute shows can we really
-        prune some node or not.
-        3. Applying masks accordingly with can_prune attribute (only when can prune).
+        2. Applying calculated masks
         :return:
         """
         nncf_logger.info('Start pruning model')
