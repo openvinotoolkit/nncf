@@ -23,22 +23,22 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.models import InceptionOutputs
+import mlflow
 
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
     create_datasets, inception_criterion_fn
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
-from examples.common.model_loader import load_model, \
-    load_resuming_model_state_dict_and_checkpoint_from_path
+from examples.common.execution import ExecutionMode, prepare_model_for_execution
+from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested
+    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
 from nncf.binarization.algo import BinarizationController
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController
-from nncf.utils import manual_seed, is_main_process
+from nncf.utils import is_main_process
+from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
 
 
 class KDLossCalculator:
@@ -105,21 +105,13 @@ class PolyLRDropScheduler:
 # pylint:disable=too-many-branches
 # pylint:disable=too-many-statements
 def staged_quantization_main_worker(current_gpu, config):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
-    config.device = get_device(config)
+    configure_device(current_gpu, config)
 
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
 
-    if config.seed is not None:
-        manual_seed(config.seed)
-        cudnn.deterministic = True
-        cudnn.benchmark = False
+    set_seed(config)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -155,11 +147,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     model.to(config.device)
 
-    resuming_model_sd = None
-    resuming_checkpoint = None
-    if resuming_checkpoint_path is not None:
-        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
-            resuming_checkpoint_path)
+    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_model_sd)
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
@@ -197,6 +185,8 @@ def staged_quantization_main_worker(current_gpu, config):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
+    log_common_mlflow_params(config)
+
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
@@ -214,6 +204,8 @@ def staged_quantization_main_worker(current_gpu, config):
         train_staged(config, compression_ctrl, model, criterion, train_criterion_fn, optimizer_scheduler, model_name,
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
+
+    finish_logging(config)
 
 
 def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optimizer_scheduler, model_name, optimizer,
@@ -274,6 +266,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
+                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 

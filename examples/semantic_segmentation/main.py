@@ -39,7 +39,7 @@ from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested
+    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
@@ -504,6 +504,8 @@ def main_worker(current_gpu, config):
     if config.distributed:
         compression_ctrl.distributed()
 
+    log_common_mlflow_params(config)
+
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
@@ -525,6 +527,7 @@ def main_worker(current_gpu, config):
         raise RuntimeError(
             "\"{0}\" is not a valid choice for execution mode.".format(
                 config.mode))
+    finish_logging(config)
 
 
 def main(argv):
