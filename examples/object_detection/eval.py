@@ -355,16 +355,15 @@ def test_net(net, device, data_loader, distributed=False, loss_inference=False, 
             raise NotImplementedError
         if criterion is None:
             raise ValueError("Missing loss inference function (criterion)")
-        else:
-            return eval_net_loss(data_loader, device, net, criterion)
-    else:
-        logger.info("Testing...")
-        num_images = len(data_loader.dataset)
-        batch_detections = predict_detections(data_loader, device, net)
-        if distributed:
-            batch_detections = gather_detections(batch_detections, data_loader.sampler.samples_per_rank)
-        batch_detections = batch_detections[:num_images]
-        all_boxes = convert_detections(batch_detections)
+        return eval_net_loss(data_loader, device, net, criterion)
 
-        logger.info('Evaluating detections')
-        return evaluate_detections(all_boxes, data_loader.dataset)
+    logger.info("Testing...")
+    num_images = len(data_loader.dataset)
+    batch_detections = predict_detections(data_loader, device, net)
+    if distributed:
+        batch_detections = gather_detections(batch_detections, data_loader.sampler.samples_per_rank)
+    batch_detections = batch_detections[:num_images]
+    all_boxes = convert_detections(batch_detections)
+
+    logger.info('Evaluating detections')
+    return evaluate_detections(all_boxes, data_loader.dataset)
