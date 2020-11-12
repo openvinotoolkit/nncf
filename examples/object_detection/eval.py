@@ -55,6 +55,27 @@ class Timer:
             return self.average_time
         return self.diff
 
+class AverageMeter:
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.val = None
+        self.avg = None
+        self.sum = None
+        self.count = None
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
 
 def evaluate_detections(box_list, dataset, use_07=True):
     cachedir = os.path.join('cache', 'annotations_cache')
@@ -284,16 +305,65 @@ def predict_detections(data_loader, device, net):
         return torch.cat(all_detections)
     return None  # No predictions
 
+def eval_net_loss(data_loader, device, net, criterion):
+    batch_loss_l = AverageMeter()
+    batch_loss_c = AverageMeter()
+    batch_loss = AverageMeter()
+    t_elapsed = AverageMeter()
 
-def test_net(net, device, data_loader, distributed=False):
+    num_batches = len(data_loader)
+
+    # Assume 10 lines of reporting
+    print_freq = num_batches//10
+    print_freq = 1 if print_freq == 0 else print_freq
+
+    # all_detections = []
+    timer = Timer()
+    for batch_ind, (ims, _gts, hs, ws) in enumerate(data_loader):
+        images = ims.to(device)
+        targets = [anno.requires_grad_(False).to(device) for anno in _gts]
+
+        # forward
+        out = net(images)
+        loss_l, loss_c = criterion(out, targets)
+        loss = loss_l + loss_c
+
+        batch_loss_l.update(loss_l.item(), images.size(0))
+        batch_loss_c.update(loss_c.item(), images.size(0))
+        batch_loss.update(loss.item(), images.size(0))
+
+        timer.tic()
+        t_elapsed.update(timer.toc(average=False))
+
+        if batch_ind % print_freq == 0:
+            logger.info('Loss_inference: [{}/{}] || Time: {elapsed.val:.4f}s ({elapsed.avg:.4f}s)'
+            ' || Conf Loss: {conf_loss.val:.3f} ({conf_loss.avg:.3f})'
+            ' || Loc Loss: {loc_loss.val:.3f} ({loc_loss.avg:.3f})'
+            ' || Model Loss: {model_loss.val:.3f} ({model_loss.avg:.3f})'.format(
+                batch_ind, num_batches, elapsed=t_elapsed, conf_loss=batch_loss_c, loc_loss=batch_loss_l, model_loss=batch_loss))
+
+    model_loss = batch_loss_l.avg + batch_loss_c.avg
+    return model_loss
+
+def test_net(net, device, data_loader, distributed=False, loss_inference=False, criterion=None):
     """Test a Fast R-CNN network on an image database."""
-    logger.info("Testing...")
-    num_images = len(data_loader.dataset)
-    batch_detections = predict_detections(data_loader, device, net)
-    if distributed:
-        batch_detections = gather_detections(batch_detections, data_loader.sampler.samples_per_rank)
-    batch_detections = batch_detections[:num_images]
-    all_boxes = convert_detections(batch_detections)
 
-    logger.info('Evaluating detections')
-    return evaluate_detections(all_boxes, data_loader.dataset)
+    if loss_inference is True:
+        logger.info("Testing... loss function will be evaluated instead of detection mAP")
+        if distributed:
+            raise NotImplementedError
+        if criterion is not None:
+            return eval_net_loss(data_loader, device, net, criterion)
+        else:
+            raise ValueError("Missing loss inference function (criterion)")
+    else:
+        logger.info("Testing...")
+        num_images = len(data_loader.dataset)
+        batch_detections = predict_detections(data_loader, device, net)
+        if distributed:
+            batch_detections = gather_detections(batch_detections, data_loader.sampler.samples_per_rank)
+        batch_detections = batch_detections[:num_images]
+        all_boxes = convert_detections(batch_detections)
+
+        logger.info('Evaluating detections')
+        return evaluate_detections(all_boxes, data_loader.dataset)
