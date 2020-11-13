@@ -201,7 +201,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                                                             self.get_types_of_pruned_modules() + ['linear'])
         module_scope_str = str(module_scope)
 
-        if not self._should_consider_scope(module_scope_str):
+        if self.ignore_frozen_layers and not module.weight.requires_grad:
+            msg = "Ignored adding Weight Pruner in scope: {} because"\
+                    " the layer appears to be frozen (requires_grad=False)".format(module_scope_str)
+            prune = False
+        elif not self._should_consider_scope(module_scope_str):
             msg = "Ignored adding Weight Pruner in scope: {}".format(module_scope_str)
             prune = False
         elif not self.prune_first and module in input_non_pruned_modules:

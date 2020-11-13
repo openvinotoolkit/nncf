@@ -55,6 +55,7 @@ class TestModelDiffConvs(nn.Module):
         x = self.conv4(x)
         return x
 
+
 class TestModelBranching(nn.Module):
     def __init__(self):
         super().__init__()
