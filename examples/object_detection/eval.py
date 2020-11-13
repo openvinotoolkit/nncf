@@ -262,7 +262,6 @@ def predict_detections(data_loader, device, net):
     num_batches = len(data_loader)
     all_detections = []
     timer = Timer()
-    torch.set_printoptions(threshold=5000)
     for batch_ind, (ims, _gts, hs, ws) in enumerate(data_loader):
         x = ims.to(device)
         hs = x.new_tensor(hs).view(-1, 1)
