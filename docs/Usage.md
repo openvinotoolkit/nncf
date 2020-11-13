@@ -35,7 +35,9 @@ The framework is designed so that the modifications to your original training co
     nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
     ```
     Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
-    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking criterion and data loader.  
+    method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking 
+    data loader, criterion and criterion function (for sophisticated calculation of loss different from direct call of the 
+    criterion with 2 arguments: model outputs and targets).  
 
     The initialization expects that the model is called with its first argument equal to the dataloader output.
     If your model has more complex input arguments you can create and pass an instance of

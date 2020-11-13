@@ -291,3 +291,20 @@ class TestMmdetection:
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         res = runner.run()
         assert res == 0
+
+    def test_maskrcnn_train(self):
+        subprocess.run(
+            "wget http://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco_bbox_mAP-0.408__segm_mAP-0.37_20200504_163245-42aa3d00.pth",
+            check=True, shell=True, cwd=self.MMDET_PATH)
+        comm_line = "tools/train.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py"
+        runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
+        res = runner.run()
+        assert res == 0
+        assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth"))
+
+    def test_maskrcnn_eval(self):
+        checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth")
+        comm_line = "tools/test.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py {} --eval bbox".format(checkpoint)
+        runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
+        res = runner.run()
+        assert res == 0

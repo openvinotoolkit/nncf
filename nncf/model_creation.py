@@ -12,7 +12,7 @@
 """
 from copy import deepcopy
 from os import path as osp
-from typing import Callable, Any, Tuple, List
+from typing import Callable, Any, Tuple, List, Dict
 
 from nncf.checkpoint_loading import load_state
 from nncf.hw_config import HWConfigType
@@ -69,6 +69,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
+                            wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             dump_graphs=True,) \
     -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
@@ -81,11 +82,21 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     to the model
     :param resuming_state_dict: A PyTorch state dict object to load (strictly) into the compressed model after
     building.
-    :param dummy_forward_fn: will be used instead of a *forward* function call to build
+    :param dummy_forward_fn: if supplied, will be used instead of a *forward* function call to build
     the internal graph representation via tracing. Specifying this is useful when the original training pipeline
     has special formats of data loader output or has additional *forward* arguments other than input tensors.
     Otherwise, the *forward* call of the model during graph tracing will be made with mock tensors according
     to the shape specified in the config object.
+    :param wrap_inputs_fn: if supplied, will be used on the module's input arguments during a regular, non-dummy
+    forward call before passing the inputs to the underlying compressed model. This is required if the model's input
+    tensors that are important for compression are not supplied as arguments to the model's forward call directly, but
+    instead are located in a container (such as list), and the model receives the container as an argument.
+    wrap_inputs_fn should take as input two arguments - the tuple of positional arguments to the underlying
+    model's forward call, and a dict of keyword arguments to the same. The function should wrap each tensor among the
+    supplied model's args and kwargs that is important for compression (e.g. quantization) with an nncf.nncf_model_input
+    function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
+    graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
+    input, but each tensor in the original input.
     :param dump_graphs: Whether or not should also dump the internal graph representation of the
     original and compressed models in the .dot format into the log directory.
     :return: A controller for the compression algorithm (or algorithms, in which case the controller
@@ -115,6 +126,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
+                                   wrap_inputs_fn=wrap_inputs_fn,
                                    ignored_scopes=ignored_scopes,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
@@ -126,18 +138,18 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
 
-    if dump_graphs and is_main_process() and compression_algo_builder_list:
-        if dummy_forward_fn is None:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=
-                                                    create_dummy_forward_fn(input_info_list,
-                                                                            with_input_tracing=False))
-        else:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
+    try:
+        if resuming_state_dict is not None:
+            load_state(compressed_model, resuming_state_dict, is_resume=True)
+    finally:
+        if dump_graphs and is_main_process() and compression_algo_builder_list:
+            if dummy_forward_fn is None:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=
+                                                        create_dummy_forward_fn(input_info_list,
+                                                                                with_input_tracing=False))
+            else:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
-        graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
-        graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
-
-    if resuming_state_dict is not None:
-        load_state(compressed_model, resuming_state_dict, is_resume=True)
-
+            graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
+            graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
     return compression_ctrl, compressed_model

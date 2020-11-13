@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import os.path as osp
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -29,26 +29,29 @@ import torchvision.transforms as transforms
 import warnings
 from functools import partial
 from shutil import copyfile
+from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.models import InceptionOutputs
 
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import ExecutionMode, get_execution_mode, \
     prepare_model_for_execution, start_worker
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested
+    is_pretrained_model_requested, finish_logging, log_common_mlflow_params
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import register_default_init_args
-from nncf.utils import manual_seed, safe_thread_call, is_main_process
+from nncf.initialization import register_default_init_args, default_criterion_fn
+from nncf.utils import safe_thread_call, is_main_process
+from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
+import mlflow
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -100,27 +103,30 @@ def main(argv):
         start_worker(staged_quantization_main_worker, config)
 
 
+def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) -> torch.Tensor:
+    # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+    output, aux_outputs = model_outputs
+    loss1 = criterion(output, target)
+    loss2 = criterion(aux_outputs, target)
+    return loss1 + 0.4 * loss2
+
+
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
-    config.device = get_device(config)
+    configure_device(current_gpu, config)
 
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
 
-    if config.seed is not None:
-        manual_seed(config.seed)
-        cudnn.deterministic = True
-        cudnn.benchmark = False
+    set_seed(config)
 
     # define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(config.device)
+
+    model_name = config['model']
+    train_criterion_fn = inception_criterion_fn if 'inception' in model_name else default_criterion_fn
 
     train_loader = train_sampler = val_loader = None
     resuming_checkpoint_path = config.resuming_checkpoint_path
@@ -133,10 +139,11 @@ def main_worker(current_gpu, config: SampleConfig):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, config.device)
+
+        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
+                                                 config.device)
 
     # create model
-    model_name = config['model']
     model = load_model(model_name,
                        pretrained=pretrained,
                        num_classes=config.get('num_classes', 1000),
@@ -145,11 +152,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
-    resuming_model_sd = None
-    resuming_checkpoint = None
-    if resuming_checkpoint_path is not None:
-        resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-        resuming_model_sd = resuming_checkpoint['state_dict']
+    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
 
@@ -179,6 +182,9 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
+    logger.info(config.nncf_config)
+    log_common_mlflow_params(config)
+
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
@@ -187,12 +193,13 @@ def main_worker(current_gpu, config: SampleConfig):
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
-        is_inception = 'inception' in model_name
-        train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
+        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
 
+    finish_logging(config)
 
-def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler, model_name, optimizer,
+
+def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
@@ -201,7 +208,7 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epoch, config, is_inception)
+        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
@@ -221,11 +228,12 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
         # still can be best if current compression level is bigger then best one. Compression levels in ascending
         # order: NONE, PARTIAL, FULL.
-
         is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         if is_best:
             best_acc1 = acc1
+        if is_main_process():
+            mlflow.log_metric("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
@@ -250,15 +258,8 @@ def train(config, compression_ctrl, model, criterion, is_inception, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
+                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
-
-
-def load_resuming_checkpoint(resuming_checkpoint_path: str):
-    if osp.isfile(resuming_checkpoint_path):
-        logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
-        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
-        return checkpoint
-    raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))
 
 
 def get_dataset(dataset_config, config, transform, is_train):
@@ -347,7 +348,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
     return train_loader, train_sampler, val_loader
 
 
-def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epoch, config, is_inception=False):
+def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -370,20 +371,15 @@ def train_epoch(train_loader, model, criterion, optimizer, compression_ctrl, epo
         target = target.to(config.device)
 
         # compute output
-        if is_inception:
-            # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
-            output, aux_outputs = model(input_)
-            loss1 = criterion(output, target)
-            loss2 = criterion(aux_outputs, target)
-            criterion_loss = loss1 + 0.4 * loss2
-        else:
-            output = model(input_)
-            criterion_loss = criterion(output, target)
+        output = model(input_)
+        criterion_loss = criterion_fn(output, target, criterion)
 
         # compute compression loss
         compression_loss = compression_ctrl.loss()
         loss = criterion_loss + compression_loss
 
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), input_.size(0))
@@ -453,7 +449,7 @@ def validate(val_loader, model, criterion, config):
 
             # compute output
             output = model(input_)
-            loss = criterion(output, target)
+            loss = default_criterion_fn(output, target, criterion)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -482,6 +478,9 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/loss", float(losses.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top1", float(top1.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top5", float(top5.avg), config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 

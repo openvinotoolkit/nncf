@@ -27,6 +27,7 @@ from torch.autograd import Variable
 from torch.backends import cudnn
 from torch.nn.utils.rnn import PackedSequence
 
+from nncf import nncf_model_input
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.transform_graph import replace_modules
 from nncf.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES
@@ -492,7 +493,16 @@ class TestNumberOfNodes:
             input_decoder = gen_packed_sequence()[0]
             model(input_encoder, input_enc_len, input_decoder)
 
-        algo, model = create_compressed_model(model, config, dummy_forward_fn=dummy_forward_fn, dump_graphs=False)
+        def gnmt_wrap_inputs_fn(model_args, model_kwargs):
+            # Assuming 3 args to wrap: input_encoder, input_enc_len, input_decoder, and 0 kwargs to wrap
+            model_args = (nncf_model_input(model_args[0]),
+                          nncf_model_input(model_args[1]),
+                          nncf_model_input(model_args[2]))
+            return model_args, model_kwargs
+
+        algo, model = create_compressed_model(model, config, dummy_forward_fn=dummy_forward_fn,
+                                              wrap_inputs_fn=gnmt_wrap_inputs_fn,
+                                              dump_graphs=False)
         model.to(device)
 
         class Counter:

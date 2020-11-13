@@ -26,8 +26,10 @@ from shutil import copyfile
 from examples.common.sample_config import SampleConfig
 from tensorboardX import SummaryWriter
 from texttable import Texttable
+import mlflow
 
 from examples.common.example_logger import logger as default_logger
+from nncf.utils import is_main_process
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
@@ -97,6 +99,15 @@ def configure_paths(config):
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
 
+    if is_mlflow_logging_enabled(config):
+        root_log_dir = osp.dirname(osp.dirname(config.log_dir))
+        mlflow.set_tracking_uri(osp.join(root_log_dir, 'mlruns'))
+        if mlflow.get_experiment_by_name(config.name) is None:
+            mlflow.create_experiment(config.name)
+        mlflow.set_experiment(config.name)
+        mlflow.start_run()
+        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
+
     training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
     training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
     sample_logger.addHandler(training_pipeline_log_file_handler)
@@ -105,6 +116,22 @@ def configure_logging(sample_logger, config):
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
     from nncf.nncf_logger import logger as nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
+
+
+def log_common_mlflow_params(config):
+    if is_mlflow_logging_enabled(config):
+        mlflow.log_param('epochs', config.get('epochs', 'None'))
+        mlflow.log_param('schedule_type', config.nncf_config.get('optimizer', {}).get('schedule_type', 'None'))
+        mlflow.log_param('lr', config.nncf_config.get('optimizer', {}).get('base_lr', 'None'))
+        mlflow.set_tag('Log Dir Path', config.log_dir)
+
+
+def finish_logging(config):
+    if is_main_process() and is_mlflow_logging_enabled(config):
+        mlflow.end_run()
+
+def is_mlflow_logging_enabled(config):
+    return config.mode.lower() == 'train' and config.to_onnx is None
 
 
 def is_on_first_rank(config):

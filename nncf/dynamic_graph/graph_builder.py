@@ -10,10 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from collections import OrderedDict
 from typing import Callable, Any, List, Optional
 from copy import deepcopy
 
 import torch
+
 
 
 class ModelInputInfo:
@@ -33,13 +35,23 @@ class ModelInputInfo:
             if self.filler not in self.FILLER_TYPES:
                 raise RuntimeError("Unknown input filler type: {}".format(filler))
 
-    def _string_to_torch_type(self, string):
+    @staticmethod
+    def _string_to_torch_type(string):
         if string == "long":
             return torch.long
         return torch.float32
 
+    @staticmethod
+    def torch_type_to_string(dtype: torch.dtype):
+        if dtype is torch.long:
+            return "long"
+        return "float"
+
     def is_integer_input(self):
         return self.type != torch.float32
+
+    def __eq__(self, other):
+        return self.type == other.type and self.keyword == other.keyword
 
 
 def create_input_infos(config) -> List[ModelInputInfo]:
@@ -97,21 +109,29 @@ class PostGraphBuildActing:
         pass
 
 
-def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracing=False):
-    from nncf.dynamic_graph.patch_pytorch import nncf_model_input
+def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracing=False,
+                            wrap_inputs_fn=None):
+    from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_inputs_with_objwalk
 
     def default_dummy_forward_fn(model):
         device = next(model.parameters()).device
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
-        kwargs = {info.keyword: create_mock_tensor(info, device) for info in input_infos if info.keyword is not None}
+        kwargs = OrderedDict()
+        for info in input_infos:
+            if info.keyword is not None:
+                kwargs[info.keyword] = create_mock_tensor(info, device)
+        args = tuple(args_list)
 
         if with_input_tracing:
-            for idx, tensor in enumerate(args_list):
-                args_list[idx] = nncf_model_input(tensor)
-            for key, tensor in kwargs.items():
-                kwargs[key] = nncf_model_input(tensor)
+            if wrap_inputs_fn is None:
+                # We control the input argument structure w.r.t. tensors
+                # - a simple objwalk application should be sufficient in this simple case.
+                # For more control, wrap_inputs_fn is used when this is used in NNCFNetwork
+                # which is guaranteed to be the same as during the actual NNCFNetwork.forward
+                args, kwargs = wrap_nncf_model_inputs_with_objwalk(args, kwargs)
+            else:
+                args, kwargs = wrap_inputs_fn(args, kwargs)
 
-        args = tuple(args_list)
         return model(*args, **kwargs)
 
     return default_dummy_forward_fn

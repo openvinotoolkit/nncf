@@ -153,19 +153,15 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
     y_scale = (input_high - input_low) / (level_high - level_low)
     y_zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
 
-    if level_low < 0:
-        level_low = torch.ones([1]).to(torch.int8) * level_low
-        level_high = torch.ones([1]).to(torch.int8) * level_high
-        level_low = level_low.to(y_zero_point.device)
-        level_high = level_high.to(y_zero_point.device)
-        y_zero_point = min(max(level_low, (y_zero_point.to(torch.int8))), level_high)
-    else:
-        level_low = torch.ones([1]).to(torch.uint8) * level_low
-        level_high = torch.ones([1]).to(torch.uint8) * level_high
-        level_low = level_low.to(y_zero_point.device)
-        level_high = level_high.to(y_zero_point.device)
-        y_zero_point = min(max(level_low, (y_zero_point.to(torch.uint8))), level_high)
+    type_ = torch.int8 if level_low < 0 else torch.uint8
+    level_low *= torch.ones_like(y_zero_point).to(type_)
+    level_high *= torch.ones_like(y_zero_point).to(type_)
+    level_low = level_low.to(y_zero_point.device)
+    level_high = level_high.to(y_zero_point.device)
+    y_zero_point = torch.min(torch.max(level_low, y_zero_point.to(type_)), level_high)
 
+    y_scale = torch.squeeze(y_scale)
+    y_zero_point = torch.squeeze(y_zero_point)
     return y_scale, y_zero_point
 
 
