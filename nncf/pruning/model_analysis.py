@@ -25,7 +25,7 @@ from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_of_types
 class NodesCluster:
     def __init__(self, cluster_id: int, nodes: List, nodes_orders: List[int]):
         self.id = cluster_id
-        self.nodes = nodes
+        self.nodes = list(nodes)
         self.importance = max(nodes_orders)
 
     def clean_cluster(self):
@@ -74,7 +74,7 @@ class Clusterization:
         self.clusters.pop(cluster_id)
 
     def get_all_clusters(self) -> Dict[int, NodesCluster]:
-        return self.clusters.values()
+        return list(self.clusters.values())
 
     def get_all_nodes(self) -> List:
         all_nodes = []

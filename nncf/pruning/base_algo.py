@@ -112,7 +112,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         3. Add remaining single nodes
         4. Unite clusters for Conv + Depthwise conv (should be pruned together too)
         5. Checks for groups (all nodes in group can prune or all group can't be pruned)
-        Return groups of modules that
+        Return groups of modules that should be pruned together.
         :param target_model: model to work with
         :return: clusterisation of pruned nodes
         """

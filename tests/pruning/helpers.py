@@ -32,6 +32,29 @@ class PruningTestModel(nn.Module):
         return x
 
 
+class TestModelDiffConvs(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # Usual conv
+        self.conv1 = create_conv(1, 3, 2, 9, -2)
+        self.relu = nn.ReLU()
+        # Depthwise conv
+        self.conv2 = nn.Conv2d(3, 3, 1, groups=3)
+
+        # Downsample conv
+        self.conv3 = create_conv(3, 8, 3, -10, 0, stride=2)
+
+        # Group conv
+        self.conv4 = nn.Conv2d(8, 4, 1, groups=4)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        return x
+
 class TestModelBranching(nn.Module):
     def __init__(self):
         super().__init__()
@@ -46,6 +69,47 @@ class TestModelBranching(nn.Module):
         x = self.conv1(x) + self.conv2(x) + self.conv3(x)
         x = self.relu(x)
         x = self.conv4(x) + self.conv5(x)
+        return x
+
+
+class TestModelResidualConnection(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
+        self.conv2 = create_conv(8, 8, 3, 2, -2, padding=1)
+        self.conv3 = create_conv(8, 8, 3, 3, -2, padding=1)
+        self.conv4 = create_conv(8, 1, 3, 10, 0, padding=1)
+        self.conv5 = create_conv(8, 1, 3, -10, 0, padding=1)
+        self.linear = nn.Linear(64, 10)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = x + self.conv2(x)
+        x = x + self.conv3(x)
+        x = self.relu(x)
+        x = self.conv4(x) + self.conv5(x)
+        x = self.linear(x.view(-1))
+        return x
+
+
+class TestModelEltwiseСombination(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
+        self.conv2 = create_conv(8, 8, 3, 2, -2, padding=1)
+        self.conv3 = create_conv(8, 8, 3, 3, -2, padding=1)
+        self.conv4 = create_conv(8, 8, 3, 10, 0, padding=1)
+        self.conv5 = create_conv(8, 1, 3, -10, 0, padding=1)
+        self.conv6 = create_conv(8, 1, 3, -10, 0, padding=1)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = x + self.conv2(x)
+        x_1 = x + self.conv3(x)
+        x_2 = x + self.conv4(x)
+        x = self.conv5(x_1) + self.conv6(x_2)
         return x
 
 
