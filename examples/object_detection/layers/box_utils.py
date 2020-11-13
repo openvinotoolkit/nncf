@@ -12,6 +12,7 @@
 """
 
 import torch
+from torchvision.ops import nms as torch_nms
 
 from .extensions import EXTENSIONS
 
@@ -188,7 +189,10 @@ class NMSFunction(torch.autograd.Function):
             return torch.tensor([], dtype=torch.int), torch.tensor(0)
         if scores.dim() == 1:
             scores = scores.unsqueeze(1)
-        keep = EXTENSIONS.nms(torch.cat((boxes, scores), dim=1), threshold, top_k)
+        if boxes.device.type == 'cpu':
+            keep = torch_nms(boxes, scores.flatten(), threshold)
+        else:
+            keep = EXTENSIONS.nms(torch.cat((boxes, scores), dim=1), threshold, top_k)
         return keep, torch.tensor(keep.size(0))
 
     @staticmethod

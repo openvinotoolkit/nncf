@@ -14,12 +14,10 @@
 import torch
 from torch import nn
 
-from nncf.utils import no_jit_trace, is_main_process
+from nncf.utils import no_jit_trace
 from nncf.dynamic_graph.context import no_nncf_trace
 
 from ..box_utils import decode, nms
-
-
 
 
 class DetectionOutput(nn.Module):
@@ -112,13 +110,8 @@ class DetectionOutputFunction(torch.autograd.Function):
                     l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
                     boxes[cl] = decoded_boxes[l_mask].view(-1, 4)
                     # idx of highest scoring and non-overlapping boxes per class
-                    #if cl < 20 and is_main_process():
-                    #    print(f'input {cl}: {boxes[cl]}')
-                    # nms doesn't do anything on cpu
                     all_indices[cl], count = nms(boxes[cl], scores, detection_output_params.nms_threshold,
                                                  detection_output_params.top_k)
-                    #if cl < 20 and is_main_process():
-                    #    print(f'output {cl}: {all_indices[cl]}')
                     all_indices[cl] = all_indices[cl][:count]
                     total_detections_count += count
 
