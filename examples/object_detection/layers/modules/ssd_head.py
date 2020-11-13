@@ -25,7 +25,7 @@ class SSDDetectionOutput(nn.Module):
         self.config = config
         self.num_classes = num_classes
         self.loss_inference = config.get('loss_inference', False)
-       
+
         self.heads = nn.ModuleList()
         for i, num_features in enumerate(num_input_features):
             self.heads.append(SSDHead(
