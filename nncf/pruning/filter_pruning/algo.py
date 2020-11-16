@@ -34,7 +34,7 @@ from nncf.utils import get_filters_num
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(module.target_compression_weight_dim))
+        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return FilterPruningController(target_model,
@@ -105,7 +105,7 @@ class FilterPruningController(BasePruningAlgoController):
                 # 1. Calculate cumulative importance for all filters in group
                 for minfo in group.nodes:
                     filters_importance = self.filter_importance(minfo.module.weight,
-                                                                minfo.module.target_compression_weight_dim)
+                                                                minfo.module.target_weight_dim_for_compression)
                     cumulative_filters_importance += filters_importance
 
                 # 2. Calculate threshold
@@ -133,7 +133,7 @@ class FilterPruningController(BasePruningAlgoController):
             for minfo in group.nodes:
                 normalized_weight = self.weights_normalizer(minfo.module.weight)
                 filters_importance = self.filter_importance(normalized_weight,
-                                                            minfo.module.target_compression_weight_dim)
+                                                            minfo.module.target_weight_dim_for_compression)
                 cumulative_filters_importance += filters_importance
 
             filter_importances.append(cumulative_filters_importance)
@@ -154,7 +154,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_name=""):
             with torch.no_grad():
-                dim = module.target_compression_weight_dim if isinstance(module, _NNCFModuleMixin) else 0
+                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
                 # Applying mask to weights
                 inplace_apply_filter_binary_mask(mask, module.weight, module_name, dim)
                 # Applying mask to bias too (if exists)

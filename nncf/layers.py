@@ -68,7 +68,7 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
 
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
-    target_compression_weight_dim = 1
+    target_weight_dim_for_compression = 1
 
     @staticmethod
     def from_module(module):
@@ -97,7 +97,7 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
 
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
-    target_compression_weight_dim = 1
+    target_weight_dim_for_compression = 1
 
     @staticmethod
     def from_module(module):

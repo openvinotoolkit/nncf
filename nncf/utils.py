@@ -173,7 +173,7 @@ def get_module_by_node_name(model: torch.nn.Module, node_scope_str: str, prefix=
 
 def get_filters_num(module):
     if isinstance(module, _NNCFModuleMixin):
-        return module.weight.size(module.target_compression_weight_dim)
+        return module.weight.size(module.target_weight_dim_for_compression)
     return module.weight.size(0)
 
 

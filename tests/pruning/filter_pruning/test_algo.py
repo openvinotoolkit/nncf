@@ -193,7 +193,7 @@ def test_applying_masks(prune_bn):
     for module in pruned_modules:
         op = list(module.pre_ops.values())[0]
         mask = op.operand.binary_filter_pruning_mask
-        masked_weight = apply_filter_binary_mask(mask, module.weight, dim=module.target_compression_weight_dim)
+        masked_weight = apply_filter_binary_mask(mask, module.weight, dim=module.target_weight_dim_for_compression)
         masked_bias = apply_filter_binary_mask(mask, module.bias)
         assert torch.allclose(module.weight, masked_weight)
         assert torch.allclose(module.bias, masked_bias)
@@ -252,5 +252,5 @@ def test_zeroing_gradients(zero_grad):
                 op = list(module.pre_ops.values())[0]
                 mask = op.operand.binary_filter_pruning_mask
                 grad = module.weight.grad
-                masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_compression_weight_dim)
+                masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_weight_dim_for_compression)
                 assert torch.allclose(masked_grad, grad)
