@@ -184,9 +184,14 @@ def main_worker(current_gpu, config):
         with torch.no_grad():
             print_statistics(compression_ctrl.statistics())
             net.eval()
-            mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
-            if config.metrics_dump is not None:
-                write_metrics(mAp, config.metrics_dump)
+            if config['ssd_params'].get('loss_inference', False):
+                model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
+                                      loss_inference=True, criterion=criterion)
+                logger.info("Final model loss: {:.3f}".format(model_loss))
+            else:
+                mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
+                if config.metrics_dump is not None:
+                    write_metrics(mAp, config.metrics_dump)
             return
 
     train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
