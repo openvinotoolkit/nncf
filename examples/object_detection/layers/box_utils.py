@@ -189,7 +189,7 @@ class NMSFunction(torch.autograd.Function):
             return torch.tensor([], dtype=torch.int), torch.tensor(0)
         if scores.dim() == 1:
             scores = scores.unsqueeze(1)
-        if boxes.device.type == 'cpu':
+        if not boxes.is_cuda:
             keep = torch_nms(boxes, scores.flatten(), threshold)
         else:
             keep = EXTENSIONS.nms(torch.cat((boxes, scores), dim=1), threshold, top_k)
