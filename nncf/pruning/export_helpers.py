@@ -231,7 +231,7 @@ class TransposeConvolution(DefaultMetaOp):
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
         node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
-        old_num_clannels = int(node_module.weight.size(0))
+        old_num_clannels = int(node_module.weight.size(1))
 
         in_channels = node_module.weight.size(0)
         broadcasted_mask = bool_mask.repeat(in_channels).view(in_channels, bool_mask.size(0))

@@ -357,8 +357,9 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         """
         Calculates sparsity rate for weight filter-wise.
         """
-        weight = minfo.module.weight
-        filters_sum = weight.view(weight.size(minfo.module.target_weight_dim_for_compression), -1).sum(axis=1)
+        dim = minfo.module.target_weight_dim_for_compression
+        weight = minfo.module.weight.transpose(0, dim).contiguous()
+        filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
         pruning_rate = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
         return pruning_rate
 
