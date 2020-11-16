@@ -30,7 +30,6 @@ from nncf.pruning.utils import get_bn_for_module_scope, \
     get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
     get_previous_conv, get_sources_of_node
 
-
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
 
