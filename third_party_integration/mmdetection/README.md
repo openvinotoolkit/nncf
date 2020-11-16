@@ -20,14 +20,20 @@ Model fine-tuning can be run using the common mmdetection command lines. For ins
 
 **RetinaNet-ResNet50-FPN**:
 
-_Full-precision FP32 baseline model_ - 35.6 average box mAP on the `coco_2017_val` dataset.
+_Full-precision FP32 baseline model_ - 35.6 average bounding box mAP on the `coco_2017_val` dataset.
 
-_INT8 model (symmetrically quantized)_ - 35.3 average box mAP on the `coco_2017_val` dataset.
+_INT8 model (symmetrically quantized)_ - 35.3 average bounding box mAP on the `coco_2017_val` dataset.
 
 _INT8+sparse model (symmetrically quantized, 50% sparsity rate)_ - 34.7 average box mAP on the `coco_2017_val` dataset.
 
 **RetinaNet-ResNeXt101-64x4d-FPN**:
 
-_Full-precision FP32 baseline model_ - 39.6 average box mAP on the `coco_2017_val` dataset.
+_Full-precision FP32 baseline model_ - 39.6 average bounding box mAP on the `coco_2017_val` dataset.
 
-_INT8 model (symmetrically quantized)_ - 39.1 average box mAP on the `coco_2017_val` dataset.
+_INT8 model (symmetrically quantized)_ - 39.1 average bounding box mAP on the `coco_2017_val` dataset.
+
+**Mask-RCNN-ResNet50-FPN**:
+
+_Full-precision FP32 baseline model_ - 40.8 average bounding box mAP on the `coco_2017_val` dataset, 37.0 average segmentation mAP on the `coco_2017_val` dataset.
+
+_INT8 model (symmetrically quantized)_ - 40.6 average bounding box mAP on the `coco_2017_val` dataset, 36.5 average segmentation mAP on the `coco_2017_val` dataset.

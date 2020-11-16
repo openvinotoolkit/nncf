@@ -93,7 +93,10 @@ QUANTIZER_CONFIG_PROPERTIES = {
     "mode": with_attributes(_STRING,
                             description="Mode of quantization"),
     "bits": with_attributes(_NUMBER,
-                            description="Bitwidth to quantize to."),
+                            description="Bitwidth to quantize to. It is intended for manual bitwidth setting. Can be "
+                                        "overridden by the `bits` parameter from the `precision` initializer section. "
+                                        "An error happens if it doesn't match a corresponding bitwidth constraints "
+                                        "from the hardware configuration."),
     "signed": with_attributes(_BOOLEAN,
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
@@ -235,7 +238,7 @@ BITWIDTH_ASSIGNMENT_MODE_SCHEMA = {
     "enum": ['strict', 'liberal'],
     "default": "liberal",
     "description": "The mode for assignment bitwidth to activation quantizers. A group of quantizers between modules "
-                   "with quantizable inputs has the same bitwidth in the strict mode. Liberal one allows different "
+                   "with quantizable inputs have the same bitwidth in the strict mode. Liberal one allows different "
                    "precisions within the group. Bitwidth is assigned based on hardware constraints. If multiple "
                    "variants are possible the minimal compatible bitwidth is chosen."
 }
@@ -268,8 +271,9 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                     "type": with_attributes(_STRING,
                                             description="Type of precision initialization."),
                     "bits": with_attributes(_ARRAY_OF_NUMBERS,
-                                            description="A list of bitwidth to choose from when "
-                                                        "performing precision initialization.",
+                                            description="A list of bitwidth to choose from when performing precision "
+                                                        "initialization. Overrides bits constraints specified in "
+                                                        "`weight` and `activation` sections",
                                             examples=[[4, 8]]),
                     "num_data_points": with_attributes(_NUMBER,
                                                        description="Number of data points to iteratively estimate "
@@ -377,11 +381,9 @@ QUANTIZATION_SCHEMA = {
         },
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
-                                   description="Constraints to be applied to model weights quantization only. "
-                                               "Overrides higher-level settings."),
+                                   description="Constraints to be applied to model weights quantization only."),
         "activations": with_attributes(ACTIVATIONS_GROUP_SCHEMA,
-                                       description="Constraints to be applied to model activations quantization only. "
-                                                   "Overrides higher-level settings."),
+                                       description="Constraints to be applied to model activations quantization only."),
         "quantize_inputs": with_attributes(_BOOLEAN,
                                            description="Whether the model inputs should be immediately quantized prior "
                                                        "to any other model operations.",
@@ -682,7 +684,14 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
-        "target_device": TARGET_DEVICE_SCHEMA,
+        "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
+                                         description="The target device, the specificity of which will be taken into "
+                                                     "account while compressing in order to obtain the best "
+                                                     "performance for this type of device. The default 'ANY' means "
+                                                     "compatible quantization supported by any HW. The parameter takes "
+                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). Set "
+                                                     "this value to 'NONE' if you are going to use a custom "
+                                                     "quantization schema. Optional."),
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),
         "quantizer_setup_type": with_attributes(_STRING,

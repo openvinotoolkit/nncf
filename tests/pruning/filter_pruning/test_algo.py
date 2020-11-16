@@ -232,7 +232,6 @@ def test_zeroing_gradients(zero_grad):
         output = pruned_model(input_)
 
         loss = torch.sum(target.to(torch.float32) - output)
-
         optimizer.zero_grad()
         loss.backward()
 

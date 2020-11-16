@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 import os.path as osp
 import sys
 import time
@@ -36,22 +35,23 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import ExecutionMode, get_execution_mode, \
     prepare_model_for_execution, start_worker
-from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
+from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested
+    is_pretrained_model_requested, finish_logging, log_common_mlflow_params
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
-from nncf.utils import manual_seed, safe_thread_call, is_main_process
+from nncf.utils import safe_thread_call, is_main_process
+from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
+import mlflow
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -113,21 +113,13 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
 
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
-    config.device = get_device(config)
+    configure_device(current_gpu, config)
 
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
 
-    if config.seed is not None:
-        manual_seed(config.seed)
-        cudnn.deterministic = True
-        cudnn.benchmark = False
+    set_seed(config)
 
     # define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
@@ -160,10 +152,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
-    resuming_model_sd = None
-    if resuming_checkpoint_path is not None:
-        resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
-            resuming_checkpoint_path)
+    resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
 
@@ -193,6 +182,9 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
+    logger.info(config.nncf_config)
+    log_common_mlflow_params(config)
+
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
@@ -203,6 +195,8 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.mode.lower() == 'train':
         train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
+
+    finish_logging(config)
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
@@ -234,11 +228,12 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
         # still can be best if current compression level is bigger then best one. Compression levels in ascending
         # order: NONE, PARTIAL, FULL.
-
         is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         if is_best:
             best_acc1 = acc1
+        if is_main_process():
+            mlflow.log_metric("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
@@ -263,6 +258,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
+                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
@@ -482,6 +478,9 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
+            mlflow.log_metric("val/loss", float(losses.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top1", float(top1.avg), config.get('cur_epoch', 0))
+            mlflow.log_metric("val/top5", float(top5.avg), config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
