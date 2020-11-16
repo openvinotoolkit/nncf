@@ -95,7 +95,7 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
     config['compression']['params']['prune_last_conv'] = prune_last
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
-    pruned_module_info = pruning_algo.pruned_module_info
+    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
     # Check for conv1
@@ -144,7 +144,7 @@ def test_pruning_masks_correctness(all_weights, prune_first, ref_masks):
     config['compression']['params']['prune_first_conv'] = prune_first
 
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
-    pruned_module_info = pruning_algo.pruned_module_info
+    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
     assert pruning_algo.pruning_rate == 0.5
     assert pruning_algo.all_weights is all_weights
@@ -174,7 +174,7 @@ def test_applying_masks(prune_bn):
     config['compression']['params']['prune_last_conv'] = True
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
-    pruned_module_info = pruning_algo.pruned_module_info
+    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
     assert len(pruned_modules) == len(nncf_modules)
@@ -213,7 +213,7 @@ def test_zeroing_gradients(zero_grad):
     pruned_model, pruning_algo, _ = create_pruning_algo_with_config(config)
     assert pruning_algo.zero_grad is zero_grad
 
-    pruned_module_info = pruning_algo.pruned_module_info
+    pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
     device = next(pruned_model.parameters()).device
