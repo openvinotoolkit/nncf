@@ -10,17 +10,7 @@ if torch.cuda.is_available():
         'extensions', [
             os.path.join(ext_dir, 'extensions.cpp'),
             os.path.join(ext_dir, 'nms/nms.cpp'),
-            os.path.join(ext_dir, 'nms/nms_kernel.cpp'),
             os.path.join(ext_dir, 'nms/nms_kernel.cu'),
-        ],
-        verbose=False
-    )
-else:
-    EXTENSIONS = load(
-        'extensions', [
-            os.path.join(ext_dir, 'extensions.cpp'),
-            os.path.join(ext_dir, 'nms/nms_cpu.cpp'),
-            os.path.join(ext_dir, 'nms/nms_kernel.cpp'),
         ],
         verbose=False
     )
