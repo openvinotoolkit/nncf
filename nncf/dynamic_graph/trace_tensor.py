@@ -51,6 +51,9 @@ class TracedTensor(torch.Tensor):
         tensor.__class__ = TracedTensor
         return tensor
 
+    def view(self, size):
+        tensor = super().view(size)
+        return pass_meta_from_tensor(tensor, self)
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
@@ -95,3 +98,9 @@ def make_input_infos(inputs):
         else:
             input_infos.append(None)
     return input_infos
+
+
+def pass_meta_from_tensor(to_tensor, from_tensor):
+    if not isinstance(from_tensor, TracedTensor):
+        return to_tensor
+    return TracedTensor.from_torch_tensor(to_tensor, from_tensor.tensor_meta)
