@@ -1,5 +1,5 @@
 models:
-  - name: unet_mapillary
+  - name: unet_mapillary_int8
 
     launchers:
       - framework: dlsdk
