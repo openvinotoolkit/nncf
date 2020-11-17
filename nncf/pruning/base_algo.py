@@ -30,6 +30,7 @@ from nncf.pruning.utils import get_bn_for_module_scope, \
     get_first_pruned_modules, get_last_pruned_modules, is_conv_with_downsampling, is_grouped_conv, is_depthwise_conv, \
     get_previous_conv, get_sources_of_node
 
+
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
 
@@ -116,9 +117,9 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         :return: clusterisation of pruned nodes
         """
         graph = target_model.get_original_graph()
-        pruned_types = self.get_types_of_pruned_modules()
+        pruned_types = self.get_op_types_of_pruned_modules()
         all_modules_to_prune = target_model.get_nncf_modules()
-        all_nodes_to_prune = graph.get_nodes_by_types(self.get_types_of_pruned_modules())  # NNCFNodes here
+        all_nodes_to_prune = graph.get_nodes_by_types(pruned_types)  # NNCFNodes here
         assert len(all_nodes_to_prune) <= len(all_modules_to_prune)
 
         # 1. Clusters for special ops
@@ -194,10 +195,9 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         prune = True
         msg = None
 
-        input_non_pruned_modules = get_first_pruned_modules(target_model,
-                                                            self.get_types_of_pruned_modules() + ['linear'])
-        output_non_pruned_modules = get_last_pruned_modules(target_model,
-                                                            self.get_types_of_pruned_modules() + ['linear'])
+        pruned_types = self.get_op_types_of_pruned_modules()
+        input_non_pruned_modules = get_first_pruned_modules(target_model, pruned_types + ['linear'])
+        output_non_pruned_modules = get_last_pruned_modules(target_model, pruned_types + ['linear'])
         module_scope_str = str(module_scope)
 
         if self.ignore_frozen_layers and not module.weight.requires_grad:
@@ -279,7 +279,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         """
         raise NotImplementedError
 
-    def get_types_of_pruned_modules(self):
+    def get_op_types_of_pruned_modules(self):
         """
         Returns list of operation types that should be pruned.
         """

@@ -45,9 +45,9 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         # Currently prune only Convolutions
         return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_types_of_pruned_modules(self):
-        types = [str.lower(v.__name__) for v in NNCF_PRUNING_MODULES_DICT.values()]
-        return types + ["conv_transpose2d", "conv_transpose3d"]
+    def get_op_types_of_pruned_modules(self):
+        types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
+        return types
 
     def get_types_of_grouping_ops(self):
         return Elementwise.get_all_op_aliases()

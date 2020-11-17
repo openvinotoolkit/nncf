@@ -14,6 +14,7 @@ class ProxyModule:
 
 
 class _NNCFModuleMixin:
+    op_func_name = ""
     target_weight_dim_for_compression = 0
 
     def __init__(self, *args, **kwargs):

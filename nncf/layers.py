@@ -34,6 +34,8 @@ def dict_update(src, dst, recursive=True):
 
 
 class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
+    op_func_name = "conv1d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv1d.__name__
@@ -46,6 +48,8 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
 
 
 class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
+    op_func_name = "conv2d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv2d.__name__
@@ -58,6 +62,8 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
 
 
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
+    op_func_name = "linear"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Linear.__name__
@@ -68,6 +74,7 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
 
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
+    op_func_name = "conv_transpose2d"
     target_weight_dim_for_compression = 1
 
     @staticmethod
@@ -84,6 +91,8 @@ class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
 
 
 class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
+    op_func_name = "conv3d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv3d.__name__
@@ -97,6 +106,7 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
 
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
+    op_func_name = "conv_transpose3d"
     target_weight_dim_for_compression = 1
 
     @staticmethod
@@ -113,6 +123,8 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
 
 
 class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
+    op_func_name = "embedding"
+
     # Note that this does not require activation quantization because it's basically a lookup.
     @staticmethod
     def from_module(module):
