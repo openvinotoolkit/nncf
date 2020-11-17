@@ -370,21 +370,23 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         # pylint:disable=line-too-long
         self._insertions_into_original_graph = {}  # type: Dict[InsertionPoint, List[Tuple[Callable, OperationPriority]]]
 
+        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
+        self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
-        # all modules should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device)
+        nncf_wrapped_model = self.get_nncf_wrapped_model()
+        eval_only_ops_exec_ctx = self.collect_eval_only_ops_exec_context(nncf_wrapped_model, self._graph_builder)
+
+        # all modules called in eval mode should be replaced prior to graph building
+        self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx)
 
         _orig_context = TracingContext()
-        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
-
-        self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
         _orig_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
 
-        self._original_graph = self._graph_builder.build_graph(self.get_nncf_wrapped_model(), _orig_context)
+        self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context)
 
         self._compressed_context = TracingContext()
 
@@ -500,10 +502,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                            wrap_inputs_fn=self._wrap_inputs_fn)
         return self._dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(self, device):
-        module, self._nncf_module_scopes = replace_modules_by_nncf_modules(self.get_nncf_wrapped_model(),
-                                                                           ignored_scopes=self.ignored_scopes,
-                                                                           target_scopes=self.target_scopes)
+    def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None):
+        module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
+            self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
+            target_scopes=self.target_scopes, eval_ops_exec_ctx_str=eval_only_ops_exec_ctx)
         self._set_nncf_wrapped_model(module.to(device))
 
     def get_nncf_module_scopes(self) -> List['Scope']:
@@ -747,3 +749,18 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def get_input_infos(self) -> List[ModelInputInfo]:
         return deepcopy(self.input_infos)
+
+    @staticmethod
+    def collect_eval_only_ops_exec_context(model: nn.Module, graph_builder) -> List[str]:
+        """
+        Returns scopes of the modules which are executed in evaluation mode only.
+        Model is set to eval mode.
+        """
+        result = []
+        eval_graph = graph_builder.build_graph(model.eval())
+        for node_key in eval_graph.get_all_node_keys():
+            node = eval_graph.get_nx_node_by_key(node_key)
+            op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+            if op_exec_context:
+                result.append(str(op_exec_context.input_agnostic))
+        return result

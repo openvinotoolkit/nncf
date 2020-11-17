@@ -214,7 +214,7 @@ def test_create_rb_algo_with_per_layer_loss():
 def test_rb_sparsity__can_set_sparsity_level_for_module():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     # pylint: disable=protected-access
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == 1
