@@ -94,7 +94,7 @@ class BaseQuantizer(nn.Module):
         self.per_channel = config.per_channel
         self.is_weights = config.is_weights
         self.signedness_to_force = config.signedness_to_force
-        self.scale_log_flag = config.scale_log
+        self._scale_log_flag = config.scale_log
         self._num_bits = nn.Parameter(torch.IntTensor([config.bits]), requires_grad=False)
         self.level_high = None
         self.level_low = None
@@ -240,9 +240,9 @@ class SymmetricQuantizer(BaseQuantizer):
         self.collect_scale_statistics = False
         if self.per_channel:
             self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
-        self.scale_tensor = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
-        if self.scale_log_flag:
-            self.scale_tensor.data.log_()
+        self._scale_tensor = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
+        if self._scale_log_flag:
+            self._scale_tensor.data.log_()
             self.eps = 0
         else:
             self.eps = 1e-16
@@ -253,27 +253,27 @@ class SymmetricQuantizer(BaseQuantizer):
         #register hooks to convert scale from log vertion to original vertion during load and save
         def hook_fn_load_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
             v = state_dict.pop(prefix + 'scale')
-            if self.scale_log_flag:
+            if self._scale_log_flag:
                 v = v.abs().log().detach()
-            state_dict[prefix + 'scale_tensor'] =  v
+            state_dict[prefix + '_scale_tensor'] =  v
         self.load_state_dict_hook = HookAutoRemove(self._register_load_state_dict_pre_hook(hook_fn_load_state_dict))
 
         def hook_fn_state_dict(module, destination, prefix, local_metadata):
-            v = destination.pop(prefix + 'scale_tensor')
-            if module.scale_log_flag:
+            v = destination.pop(prefix + '_scale_tensor')
+            if module._scale_log_flag:
                 v = v.exp().detach()
             destination[prefix + 'scale'] = v
         self.state_dict_hook = HookAutoRemove(self._register_state_dict_hook(hook_fn_state_dict))
 
     @property
     def scale(self):
-        return self.scale_tensor.exp() if self.scale_log_flag else self.scale_tensor
+        return self._scale_tensor.exp() if self._scale_log_flag else self._scale_tensor
 
     def enable_gradients(self):
-        self.scale_tensor.requires_grad = True
+        self._scale_tensor.requires_grad = True
 
     def disable_gradients(self):
-        self.scale_tensor.requires_grad = False
+        self._scale_tensor.requires_grad = False
 
     def set_level_ranges(self):
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits,
@@ -318,11 +318,11 @@ class SymmetricQuantizer(BaseQuantizer):
 
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
-        #self.scale_tensor.fill_(SCALE_LOWER_THRESHOLD)
+        #self._scale_tensor.fill_(SCALE_LOWER_THRESHOLD)
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self.scale_tensor = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self.scale_tensor)))
-        if self.scale_log_flag:
-            self.scale_tensor.data.log_()
+        self._scale_tensor = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_tensor)))
+        if self._scale_log_flag:
+            self._scale_tensor.data.log_()
 
         nncf_logger.info(
             "Set sign: {} and scale: {} for {}".format(self.signed,
@@ -331,7 +331,7 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
-        distributed.broadcast(self.scale_tensor, src=src)
+        distributed.broadcast(self._scale_tensor, src=src)
         distributed.broadcast(self.signed_tensor, src=src)
 
     def run_export_quantization(self, x: torch.Tensor):
@@ -373,9 +373,9 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
 
         self.input_low = nn.Parameter(torch.zeros(self.scale_shape), requires_grad=True)
-        self.input_range_tensor = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
-        if self.scale_log_flag:
-            self.input_range_tensor.data.log_()
+        self._input_range_tensor = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
+        if self._scale_log_flag:
+            self._input_range_tensor.data.log_()
             self.eps = 0
         else:
             self.eps = 1e-16
@@ -384,29 +384,29 @@ class AsymmetricQuantizer(BaseQuantizer):
         #register hooks to convert input_range from log vertion to original vertion during load and save
         def hook_fn_load_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
             v = state_dict.pop(prefix + 'input_range')
-            if self.scale_log_flag:
+            if self._scale_log_flag:
                 v = v.abs().log().detach()
-            state_dict[prefix + 'input_range_tensor'] =  v
+            state_dict[prefix + '_input_range_tensor'] =  v
         self.load_state_dict_hook = HookAutoRemove(self._register_load_state_dict_pre_hook(hook_fn_load_state_dict))
 
         def hook_fn_state_dict(module, destination, prefix, local_metadata):
-            v = destination.pop(prefix + 'input_range_tensor')
-            if module.scale_log_flag:
+            v = destination.pop(prefix + '_input_range_tensor')
+            if module._scale_log_flag:
                 v = v.exp().detach()
             destination[prefix + 'input_range'] = v
         self.state_dict_hook = HookAutoRemove(self._register_state_dict_hook(hook_fn_state_dict))
 
     @property
     def input_range(self):
-        return self.input_range_tensor.exp() if self.scale_log_flag else self.input_range_tensor
+        return self._input_range_tensor.exp() if self._scale_log_flag else self._input_range_tensor
 
     def enable_gradients(self):
         self.input_low.requires_grad = True
-        self.input_range_tensor.requires_grad = True
+        self._input_range_tensor.requires_grad = True
 
     def disable_gradients(self):
         self.input_low.requires_grad = False
-        self.input_range_tensor.requires_grad = False
+        self._input_range_tensor.requires_grad = False
 
     @property
     def signed(self):
@@ -440,9 +440,9 @@ class AsymmetricQuantizer(BaseQuantizer):
         max_range = torch.max(max_values - min_values)
         eps = 1e-2
         correction = (clamp(ranges, low=eps * max_range, high=max_range) - ranges) * 0.5
-        self.input_range_tensor.data = (ranges + 2 * correction).data
-        if self.scale_log_flag:
-            self.input_range_tensor.data.log_()
+        self._input_range_tensor.data = (ranges + 2 * correction).data
+        if self._scale_log_flag:
+            self._input_range_tensor.data.log_()
 
         self.input_low.data = (min_values - correction).data
 
@@ -453,7 +453,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
         distributed.broadcast(self.input_low, src)
-        distributed.broadcast(self.input_range_tensor, src)
+        distributed.broadcast(self._input_range_tensor, src)
 
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
