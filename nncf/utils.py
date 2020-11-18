@@ -104,7 +104,7 @@ def get_all_modules(model, prefix=None):
     return found
 
 
-def get_all_modules_by_type(model, module_types, current_scope=None,
+def get_all_modules_by_type(model, module_types=None, current_scope=None,
                             ignored_scopes=None, target_scopes=None) -> Dict['Scope', Module]:
     if isinstance(module_types, str):
         module_types = [module_types]
@@ -123,7 +123,7 @@ def get_all_modules_by_type(model, module_types, current_scope=None,
             continue
 
         if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
-            if module_types.count(str(type(module).__name__)) != 0:
+            if module_types is None or module_types.count(str(type(module).__name__)) != 0:
                 found[child_scope] = module
             sub_found = get_all_modules_by_type(module, module_types,
                                                 current_scope=child_scope,

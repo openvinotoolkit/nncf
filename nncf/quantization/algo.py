@@ -157,6 +157,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         if is_hw_config_enabled:
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
+        self.eval_ops_exec_ctx = []
 
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value

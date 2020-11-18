@@ -491,10 +491,10 @@ class TestCaseDescriptor:
 TEST_CASE_DESCRIPTORS = [
     TestCaseDescriptor().
         config("inception_v3_cifar10_mixed_int.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(96),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(94),
     TestCaseDescriptor().
         config("inception_v3_cifar10_mixed_int_staged.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(96),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(94),
     TestCaseDescriptor().
         config("resnet18_cifar10_mixed_int.json").
         sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
@@ -509,7 +509,7 @@ TEST_CASE_DESCRIPTORS = [
         sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(23),
     TestCaseDescriptor().
         config("icnet_camvid_mixed_int.json").
-        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(66)
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(64)
 ]
 
 
