@@ -166,6 +166,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             bits=params_dict.get('bits'),
             mode=params_dict.get('mode'),
             signedness_to_force=params_dict.get('signed'),
+            scale_log=params_dict.get('scale_log'),
             per_channel=params_dict.get('per_channel')
         )
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
@@ -228,6 +229,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     qconfig.per_channel = config_overrides["per_channel"]
                 if config_overrides.get("signed") is not None:
                     qconfig.signedness_to_force = config_overrides["signed"]
+                if config_overrides.get("scale_log") is not None:
+                    qconfig.scale_log = config_overrides["scale_log"]
         if qconfig.per_channel:
             if is_weights:
                 module = target_model.get_module_by_scope(Scope.from_str(parent_module_scope_str))
@@ -536,9 +539,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 )
             self._processed_input_agnostic_op_exec_contexts.add(curr_ia_op_exec_context)
 
-            nncf_logger.info("Adding {} Activation Quantize in scope: {}".format(
-                "signed" if quantizer.signed else
-                "unsigned", operator_scope_str
+            nncf_logger.info("Adding {}{} Activation Quantize in scope: {}".format(
+                "signed" if quantizer.signed else "unsigned",
+                " scale_log" if quantizer.scale_log_flag else "",
+                operator_scope_str
             ))
 
             # Hooks will be identical for each affected ia_op_exec_context - will call one and the
@@ -622,8 +626,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                          input_shape=input_shape)
             quantizer = self.__create_quantize_module(qconfig)
 
-            nncf_logger.info("Adding {} NNCF module input quantizer in scope: {}".format(
-                "signed" if quantizer.signed else "unsigned", str(scope)
+            nncf_logger.info("Adding {}{} NNCF module input quantizer in scope: {}".format(
+                "signed" if quantizer.signed else "unsigned",
+                " scale_log" if quantizer.scale_log_flag else "",
+                str(scope)
             ))
 
             # TODO: separate insertion point semantic for weights and activations
