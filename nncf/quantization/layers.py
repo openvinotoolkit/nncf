@@ -408,6 +408,14 @@ class AsymmetricQuantizer(BaseQuantizer):
     def input_range(self):
         return self._input_range_tensor.exp() if self._scale_log_flag else self._input_range_tensor
 
+    @input_range.setter
+    def input_range(self, v):
+        assert len(v) == len(self._scale_tensor)
+        for i, t in enumerate(v):
+            self._input_range_tensor.data[i] = t  
+        if self._scale_log_flag:
+            self._input_range_tensor.data.log_()
+
     def enable_gradients(self):
         self.input_low.requires_grad = True
         self._input_range_tensor.requires_grad = True
