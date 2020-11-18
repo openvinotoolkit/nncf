@@ -269,6 +269,14 @@ class SymmetricQuantizer(BaseQuantizer):
     def scale(self):
         return self._scale_tensor.exp() if self._scale_log_flag else self._scale_tensor
 
+    @scale.setter
+    def scale(self, v):
+        assert len(v) == len(self._scale_tensor)
+        for i, t in enumerate(v):
+            self._scale_tensor.data[i] = t  
+        if self._scale_log_flag:
+            self._scale_tensor.data.log_()
+
     def enable_gradients(self):
         self._scale_tensor.requires_grad = True
 
