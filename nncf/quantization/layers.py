@@ -94,7 +94,7 @@ class BaseQuantizer(nn.Module):
         self.per_channel = config.per_channel
         self.is_weights = config.is_weights
         self.signedness_to_force = config.signedness_to_force
-        self.scale_log_flag = config.scale_log
+        self._scale_log_flag = config.scale_log
         self._num_bits = nn.Parameter(torch.IntTensor([config.bits]), requires_grad=False)
         self.level_high = None
         self.level_low = None
@@ -174,6 +174,10 @@ class BaseQuantizer(nn.Module):
 
     def set_level_ranges(self):
         raise NotImplementedError
+
+    @property
+    def scale_log_flag(self):
+        return self._scale_log_flag
 
     @property
     def signed(self):
