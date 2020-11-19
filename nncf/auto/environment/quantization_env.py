@@ -42,27 +42,20 @@ from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from sklearn.preprocessing import MinMaxScaler
 
-from autox.utils.utils import AverageMeter, topk_accuracy, annotate_model_attr
+from nncf.auto.utils.utils import AverageMeter, topk_accuracy, annotate_model_attr
 
 from collections import OrderedDict, Counter
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
 from nncf.dynamic_graph.context import Scope
 from natsort import natsorted
 
-from autox.environment.nncf.quantizer_tracing import \
+from nncf.auto.environment.quantizer_tracing import \
     get_gemm_with_input_quantizers, get_untagged_quantizer
 
-from autox.environment.nncf.quantizer_tracing import QuantizerTracer, find_qidobj
+from nncf.auto.environment.quantizer_tracing import QuantizerTracer, find_qidobj
 
 from nncf.quantization.layers import BaseQuantizer
     
-def extra_repr(self):
-    return 'bit={}, ch={}, wt={}'.format(
-            self.num_bits, self.per_channel, self.is_weights)
-
-if hasattr(BaseQuantizer, 'extra_repr') is False:
-    setattr(BaseQuantizer, 'extra_repr', extra_repr)
-
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
 def prGreen(prt): logger.info("\033[92m {}\033[00m" .format(prt))

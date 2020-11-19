@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 
-from autox.agent.ddpg.memory import SequentialMemory
-from autox.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
+from nncf.auto.agent.ddpg.memory import SequentialMemory
+from nncf.auto.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
 
 from types import SimpleNamespace
 
