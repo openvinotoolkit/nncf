@@ -58,7 +58,7 @@ def get_config_for_scale_log(scale_log: bool, symmetric: bool) -> NNCFConfig:
         def __len__(self):
             return 4
 
-    data_loader = torch.utils.data.DataLoader(RandDatasetMock(),batch_size=1, shuffle=False)
+    data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False)
 
     class SquadInitializingDataloader(nncf.initialization.InitializingDataLoader):
         def get_inputs(self, batch):
@@ -71,7 +71,7 @@ def get_config_for_scale_log(scale_log: bool, symmetric: bool) -> NNCFConfig:
     return nncf_config
 
 def test_scale_log_parameter():
-    for scale_logs in [[False,True],[True,False]]:
+    for scale_logs in [[False, True], [True, False]]:
         for symmetric in [False, True]:
             model0, _ = create_compressed_model_and_algo_for_test(
                 TwoConvTestModel(),
@@ -85,9 +85,9 @@ def test_scale_log_parameter():
             model1.load_state_dict(sd0)
             sd1 = model1.state_dict()
 
-            for k,v0 in sd0.items():
+            for k, v0 in sd0.items():
                 v1 = sd1[k]
                 diff = (v1-v0).abs().sum().item() / v1.numel()
                 #print("symmetric {} scale_logs {} param {} diff {}".format(symmetric, scale_logs, k, diff))
-                assert diff < 1e-6, "symmetric {} scale_logs {} param {} is corruped {}->{}".format(symmetric, scale_logs, k, v0, v1)
-
+                assert diff < 1e-6, "symmetric {} scale_logs {} param {} is corruped {}->{}".format(
+                    symmetric, scale_logs, k, v0, v1)

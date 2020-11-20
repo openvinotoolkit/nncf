@@ -255,11 +255,24 @@ class SymmetricQuantizer(BaseQuantizer):
         self.set_level_ranges()
 
         #register hooks to convert scale from log vertion to original vertion during load and save
-        def hook_fn_load_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-            v = state_dict.pop(prefix + 'scale')
-            if self.scale_log_flag:
-                v = v.abs().log().detach()
-            state_dict[prefix + '_scale_tensor'] =  v
+        def hook_fn_load_state_dict(state_dict,
+                                    prefix,
+                                    local_metadata,
+                                    strict,
+                                    missing_keys,
+                                    unexpected_keys,
+                                    error_msgs):
+            #check if scale param to init scale_tensot in the provided statedict
+            if self.state_dict_name and prefix + 'scale' not in state_dict:
+                prefix = self.state_dict_name + '.'
+            if prefix + 'scale' in state_dict:
+                #replace .scale record to _scale_tensor record with coresponding conversion
+                v = state_dict.pop(prefix + 'scale')
+                if self.scale_log_flag:
+                    v = v.abs().log().detach()
+                state_dict[prefix + '_scale_tensor'] = v
+            else:
+                missing_keys.append(prefix + 'scale')
         self.load_state_dict_hook = HookAutoRemove(self._register_load_state_dict_pre_hook(hook_fn_load_state_dict))
 
         def hook_fn_state_dict(module, destination, prefix, local_metadata):
@@ -277,7 +290,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def scale(self, v):
         assert len(v) == len(self._scale_tensor)
         for i, t in enumerate(v):
-            self._scale_tensor.data[i] = t  
+            self._scale_tensor.data[i] = t
         if self.scale_log_flag:
             self._scale_tensor.data.log_()
 
@@ -332,7 +345,9 @@ class SymmetricQuantizer(BaseQuantizer):
         SCALE_LOWER_THRESHOLD = 0.1
         #self._scale_tensor.fill_(SCALE_LOWER_THRESHOLD)
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self._scale_tensor = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_tensor)))
+        self._scale_tensor = torch.nn.Parameter(
+            torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_tensor))
+        )
         if self.scale_log_flag:
             self._scale_tensor.data.log_()
 
@@ -394,11 +409,23 @@ class AsymmetricQuantizer(BaseQuantizer):
         self.set_level_ranges()
 
         #register hooks to convert input_range from log vertion to original vertion during load and save
-        def hook_fn_load_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
-            v = state_dict.pop(prefix + 'input_range')
-            if self.scale_log_flag:
-                v = v.abs().log().detach()
-            state_dict[prefix + '_input_range_tensor'] =  v
+        def hook_fn_load_state_dict(state_dict,
+                                    prefix,
+                                    local_metadata,
+                                    strict,
+                                    missing_keys,
+                                    unexpected_keys,
+                                    error_msgs):
+            #check if scale param to init scale_tensot in the provided statedict
+            if self.state_dict_name and prefix + 'scale' not in state_dict:
+                prefix = self.state_dict_name + '.'
+            if prefix + 'input_range' in state_dict:
+                v = state_dict.pop(prefix + 'input_range')
+                if self.scale_log_flag:
+                    v = v.abs().log().detach()
+                state_dict[prefix + '_input_range_tensor'] = v
+            else:
+                missing_keys.append(prefix + 'input_range')
         self.load_state_dict_hook = HookAutoRemove(self._register_load_state_dict_pre_hook(hook_fn_load_state_dict))
 
         def hook_fn_state_dict(module, destination, prefix, local_metadata):
@@ -416,7 +443,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def input_range(self, v):
         assert len(v) == len(self._scale_tensor)
         for i, t in enumerate(v):
-            self._input_range_tensor.data[i] = t  
+            self._input_range_tensor.data[i] = t
         if self.scale_log_flag:
             self._input_range_tensor.data.log_()
 
