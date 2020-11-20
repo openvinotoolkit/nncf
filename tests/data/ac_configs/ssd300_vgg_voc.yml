@@ -6,8 +6,19 @@ models:
         adapter: ssd
     datasets:
       - name: VOC2007
+        annotation_conversion:
+          converter: voc_detection
+          annotations_dir: VOCdevkit/VOC2007/Annotations
+          images_dir: VOCdevkit/VOC2007/JPEGImages
+          imageset_file: VOCdevkit/VOC2007/ImageSets/Main/val.txt
+        data_source: VOCdevkit/VOC2007/JPEGImages
+        postprocessing:
+          - type: resize_prediction_boxes
+        metrics:
+          - type: map
+            integral: 11point
+            ignore_difficult: True
+            presenter: print_scalar
         preprocessing:
           - type: resize
             size: 300
-        postprocessing:
-          - type: resize_prediction_boxes

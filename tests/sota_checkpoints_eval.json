@@ -19,6 +19,26 @@
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1
+            },
+            "ssd512_vgg_voc": {
+                "config": "examples/object_detection/configs/ssd512_vgg_voc.json",
+                "target": 80.26,
+                "metric_type": "Mean AP",
+                "resume": "ssd512_vgg_voc.pth",
+                "batch": 32,
+                "model_description": "SSD512-BN"
+            },
+            "ssd512_vgg_voc_int8": {
+                "config": "examples/object_detection/configs/ssd512_vgg_voc_int8.json",
+                "reference": "ssd512_vgg_voc",
+                "target": 80.11,
+                "metric_type": "Mean AP",
+                "resume": "ssd512_vgg_voc_int8.pth",
+                "batch": 32,
+                "model_description": "SSD512-BN",
+                "compression_description": "INT8",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.1
             }
         }
     }
