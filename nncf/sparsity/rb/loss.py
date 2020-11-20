@@ -66,7 +66,7 @@ class SparseLoss(CompressionLoss):
             raise IndexError("Target is not within range(0,1)")
         return rate
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         return {'mean_sparse_prob': 1 - self.mean_sparse_prob}
 
     def set_target_sparsity_loss(self, sparsity_level):

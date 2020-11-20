@@ -48,9 +48,13 @@ class CompressionLoss(nn.Module):
         """
         return torch.zeros([])
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
+
+        Args:
+            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
+            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
         """
         return {}
 
@@ -165,13 +169,17 @@ class CompressionAlgorithmController:
         """
         raise NotImplementedError()
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
+
+        Args:
+            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
+            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
         """
         stats = self._loss.statistics()
         if hasattr(self._model, 'statistics'):
-            stats.update(self._model.statistics())
+            stats.update(self._model.statistics(quickly_collected_only))
         return stats
 
     def run_batchnorm_adaptation(self, config):

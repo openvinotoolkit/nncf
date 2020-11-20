@@ -50,7 +50,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, params)
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         stats['sparsity_threshold'] =\
              self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
