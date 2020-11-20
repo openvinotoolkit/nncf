@@ -89,5 +89,5 @@ def test_scale_log_parameter():
                 v1 = sd1[k]
                 diff = (v1-v0).abs().sum().item() / v1.numel()
                 #print("symmetric {} scale_logs {} param {} diff {}".format(symmetric, scale_logs, k, diff))
-                assert diff < 1e-6, "symmetric {} scale_logs {} param {} is corruped {}->{}".format(
-                    symmetric, scale_logs, k, v0, v1)
+                assert diff < 1e-6, "symmetric {} scale_logs {} param {} is corrupted mean({}-{})={}".format(
+                    symmetric, scale_logs, k, v0, v1, diff)
