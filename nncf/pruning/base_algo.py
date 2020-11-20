@@ -117,9 +117,9 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         :return: clusterisation of pruned nodes
         """
         graph = target_model.get_original_graph()
-        pruned_types = self.get_types_of_pruned_modules()
+        pruned_types = self.get_op_types_of_pruned_modules()
         all_modules_to_prune = target_model.get_nncf_modules()
-        all_nodes_to_prune = graph.get_nodes_by_types(self.get_types_of_pruned_modules())  # NNCFNodes here
+        all_nodes_to_prune = graph.get_nodes_by_types(pruned_types)  # NNCFNodes here
         assert len(all_nodes_to_prune) <= len(all_modules_to_prune)
 
         # 1. Clusters for special ops
@@ -195,10 +195,9 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         prune = True
         msg = None
 
-        input_non_pruned_modules = get_first_pruned_modules(target_model,
-                                                            self.get_types_of_pruned_modules() + ['linear'])
-        output_non_pruned_modules = get_last_pruned_modules(target_model,
-                                                            self.get_types_of_pruned_modules() + ['linear'])
+        pruned_types = self.get_op_types_of_pruned_modules()
+        input_non_pruned_modules = get_first_pruned_modules(target_model, pruned_types + ['linear'])
+        output_non_pruned_modules = get_last_pruned_modules(target_model, pruned_types + ['linear'])
         module_scope_str = str(module_scope)
 
         if self.ignore_frozen_layers and not module.weight.requires_grad:
@@ -280,7 +279,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         """
         raise NotImplementedError
 
-    def get_types_of_pruned_modules(self):
+    def get_op_types_of_pruned_modules(self):
         """
         Returns list of operation types that should be pruned.
         """
@@ -317,14 +316,15 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         """
         self._clean_hooks()
 
-        def hook(grad, mask):
+        def hook(grad, mask, dim=0):
             mask = mask.to(grad.device)
-            return apply_filter_binary_mask(mask, grad)
+            return apply_filter_binary_mask(mask, grad, dim=dim)
 
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             mask = minfo.operand.binary_filter_pruning_mask
             weight = minfo.module.weight
-            partial_hook = update_wrapper(partial(hook, mask=mask), hook)
+            dim = minfo.module.target_weight_dim_for_compression
+            partial_hook = update_wrapper(partial(hook, mask=mask, dim=dim), hook)
             self._hooks.append(weight.register_hook(partial_hook))
             if minfo.module.bias is not None:
                 bias = minfo.module.bias
@@ -356,7 +356,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         """
         Calculates sparsity rate for weight filter-wise.
         """
-        weight = minfo.module.weight
+        dim = minfo.module.target_weight_dim_for_compression
+        weight = minfo.module.weight.transpose(0, dim).contiguous()
         filters_sum = weight.view(weight.size(0), -1).sum(axis=1)
         pruning_rate = 1 - len(filters_sum.nonzero()) / filters_sum.size(0)
         return pruning_rate

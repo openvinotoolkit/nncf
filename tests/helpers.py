@@ -54,6 +54,13 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, 
     return conv
 
 
+def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
+    conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
+
 class BasicConvTestModel(nn.Module):
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
         super().__init__()

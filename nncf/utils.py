@@ -22,7 +22,7 @@ from torch import distributed as dist
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
-
+from nncf.layer_utils import _NNCFModuleMixin
 
 def scopes_matched(scope_stack_0, scope_stack_1):
     from nncf.layers import NNCF_MODULES_MAP
@@ -169,6 +169,12 @@ def get_module_by_node_name(model: torch.nn.Module, node_scope_str: str, prefix=
         if sub_result is not None:
             return sub_result
     return None
+
+
+def get_filters_num(module):
+    if isinstance(module, _NNCFModuleMixin):
+        return module.weight.size(module.target_weight_dim_for_compression)
+    return module.weight.size(0)
 
 
 def apply_by_node_name(model, node_names, command=lambda x: x, prefix=None):
