@@ -6,7 +6,7 @@ models:
         adapter: ssd
 
     datasets:
-      - name: VOC2012
+      - name: VOC2007
         preprocessing:
           - type: resize
             size: 512
