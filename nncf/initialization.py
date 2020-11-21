@@ -177,18 +177,33 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         self.progressbar_description = 'BatchNorm statistics adaptation'
         self.num_bn_forget_steps = num_bn_forget_steps
         self.momentum_bn_forget = 0.9
-        self.momentum_base = 0.1
+        self.original_momenta_values = {}
+
+    @staticmethod
+    def _apply_to_batchnorms(func):
+        def func_apply_to_bns(module):
+            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
+                func(module)
+        return func_apply_to_bns
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         num_bn_forget_steps = self.num_bn_forget_steps
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
 
-        def set_bn_momentum(module, momentum_value):
-            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
-                module.momentum = momentum_value
+        self.model.train()
 
-        self.model.apply(partial(set_bn_momentum,
-                                 momentum_value=self.momentum_bn_forget))
+        def set_bn_momentum(module, momentum_value):
+            module.momentum = momentum_value
+
+        def save_original_bn_momenta(module):
+            self.original_momenta_values[module] = module.momentum
+
+        def restore_original_bn_momenta(module):
+            module.momentum = self.original_momenta_values[module]
+
+        self.model.apply(self._apply_to_batchnorms(save_original_bn_momenta))
+        self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
+                                                           momentum_value=self.momentum_bn_forget)))
 
         for i, loaded_item in enumerate(data_loader):
             if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
@@ -196,8 +211,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
             args_kwargs_tuple = data_loader.get_inputs(loaded_item)
             self._infer_batch(args_kwargs_tuple, device)
 
-        self.model.apply(partial(set_bn_momentum,
-                                 momentum_value=self.momentum_base))
+        self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
 
         for i, loaded_item in tqdm(
                 enumerate(data_loader),
@@ -209,6 +223,8 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
                 break
             args_kwargs_tuple = data_loader.get_inputs(loaded_item)
             self._infer_batch(args_kwargs_tuple, device)
+
+        self.model.eval()
 
     def _prepare_initialization(self):
         pass
