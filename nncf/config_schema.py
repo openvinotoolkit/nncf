@@ -475,9 +475,6 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
                                                      "level will be approached in concave manner, and in convex "
                                                      "manner otherwise."),
-    #"sparsity_init": with_attributes(_NUMBER,
-    #                                 description="Initial value of the sparsity level applied to the "
-    #                                             "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
     "sparsity_target_epoch": with_attributes(_NUMBER,
@@ -573,6 +570,9 @@ FILTER_PRUNING_SCHEMA = {
             "const": FILTER_PRUNING_ALGO_NAME_IN_CONFIG
         },
         "initializer": GENERIC_INITIALIZER_SCHEMA,
+        "pruning_init": with_attributes(_NUMBER,
+                                        description="Initial value of the pruning level applied to the"
+                                                    " model. 0.0 by default."),
         "params":
             {
                 "type": "object",
@@ -581,9 +581,6 @@ FILTER_PRUNING_SCHEMA = {
                                                 description="The type of scheduling to use for adjusting the target"
                                                             " pruning level. Either `exponential`, `exponential_with"
                                                             "_bias`,  or `baseline`, by default it is `baseline`"),
-                    "pruning_init": with_attributes(_NUMBER,
-                                                    description="Initial value of the pruning level applied to the"
-                                                                " model. 0.0 by default."),
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for the model."
                                                                   " 0.5 by default."),

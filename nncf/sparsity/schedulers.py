@@ -84,7 +84,6 @@ class PolynomialSparseScheduler(SparsityScheduler):
                                "but steps_per_epoch was not set in config. Will only start updating "
                                "sparsity level after measuring the actual steps per epoch as signaled "
                                "by a .epoch_step() call.")
-        #self._set_sparsity_level()
 
     def step(self, last=None):
         super().step(last)
@@ -168,7 +167,6 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.patience = params.get('patience', 1)
         self.current_sparsity_target = self.initial_sparsity
         self.num_bad_epochs = 0
-        #self._set_sparsity_level()
 
     def epoch_step(self, epoch=None):
         super().epoch_step(epoch)
@@ -206,7 +204,6 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.steps = sorted(self.steps)
         self.max_step = self.steps[-1]
         self.prev_ind = 0
-        #self._set_sparsity_level()
 
     def epoch_step(self, last=None):
         super().epoch_step(last)
@@ -218,7 +215,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
-        ind = bisect_right(self.steps, self.last_epoch)
+        ind = bisect_right(self.steps, self._current_epoch)
         if ind > 0:
             self.prev_ind = ind
             self.sparsity_level = self.sparsity_levels[ind]

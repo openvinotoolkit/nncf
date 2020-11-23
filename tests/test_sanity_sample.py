@@ -219,6 +219,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
+        "--dist-url": "tcp://127.0.0.1:8987"
     }
 
     if multiprocessing_distributed:
@@ -278,6 +279,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--weights": ckpt_path,
+        "--dist-url": "tcp://127.0.0.1:8987"
     }
 
     if multiprocessing_distributed:
@@ -313,9 +315,10 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
-        "--epochs": 3,
+        "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--resume": ckpt_path,
+        "--dist-url": "tcp://127.0.0.1:8986"
     }
 
     if multiprocessing_distributed:

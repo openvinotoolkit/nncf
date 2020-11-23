@@ -68,14 +68,13 @@ class CompressionScheduler:
     """
 
     def __init__(self):
-        self.last_epoch = -1
         self.last_step = -1
         self._steps_in_current_epoch = 0
         self._current_epoch = -1
 
     def step(self, last=None):
         """
-        Should be called after each optimizer step during training.
+        Should be called before each optimizer step during training.
         Arguments:
             `last` - specifies the initial "previous" step
         """
@@ -86,23 +85,22 @@ class CompressionScheduler:
 
     def epoch_step(self, last=None):
         """
-        Should be called after each training epoch.
+        Should be called before each training epoch.
         Arguments:
             `last` - specifies the initial "previous" epoch
         """
         if last is None:
-            last = self.last_epoch + 1
             self._current_epoch += 1
+            last = self._current_epoch - 1
         else:
             self._current_epoch = last + 1
-        self.last_epoch = last
         self._steps_in_current_epoch = 0
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
 
     def state_dict(self):
-        default_keys = {'last_step', 'last_epoch'}
+        default_keys = {'last_step', '_current_epoch'}
         return {key: val for key, val in self.__dict__.items() if key in default_keys}
 
     def initialize(self):
@@ -110,7 +108,7 @@ class CompressionScheduler:
 
     @property
     def current_epoch(self):
-        return 0 if self._current_epoch == -1 else self._current_epoch 
+        return 0 if self._current_epoch == -1 else self._current_epoch
 
 @functools.total_ordering
 class CompressionLevel(Enum):

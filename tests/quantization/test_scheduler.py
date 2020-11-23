@@ -122,10 +122,10 @@ def test_staged_scheduler_enables_quantizations_on_load(mocker):
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
     scheduler.load_state_dict(scheduler_state_dict)
-    ctrl_spy.check_call_counts(0, 0, 2, 2, 0)
+    ctrl_spy.check_call_counts(1, 0, 1, 2, 0)
 
     scheduler.epoch_step()
-    ctrl_spy.check_call_counts(0, 0, 2, 2, 0)
+    ctrl_spy.check_call_counts(1, 1, 1, 2, 1)
 
 
 def test_staged_scheduler_with_empty_quantization():

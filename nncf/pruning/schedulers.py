@@ -34,7 +34,7 @@ class PruningScheduler(CompressionScheduler):
         self.pruning_steps = self._params.get('pruning_steps', 100)
 
         # Pruning rates
-        self.initial_pruning = self._params.get('pruning_init', 0)
+        self.initial_pruning = self.algo.pruning_init
         self.pruning_target = self._params.get('pruning_target', 0.5)
 
     def load_state_dict(self, state_dict):

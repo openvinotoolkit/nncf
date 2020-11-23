@@ -126,7 +126,6 @@ LIST_OF_TEST_PARAMS = [
     ),
     CompressionLevelTestStruct(
         config_provider=TestConfigCreator().add_algo('rb_sparsity', {
-            #'sparsity_init': 0,
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),

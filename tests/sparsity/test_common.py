@@ -114,7 +114,7 @@ def magnitude_algo_mock_(mocker):
 
         def set_sparsity_init(self, sparsity_init):
             self.sparsity_init = sparsity_init
-        
+
         def get_sparsity_init(self):
             return self.sparsity_init
 
@@ -237,7 +237,7 @@ def rb_algo_mock_(mocker):
 
         def set_sparsity_init(self, sparsity_init):
             self.sparsity_init = sparsity_init
-        
+
         def get_sparsity_init(self):
             return self.sparsity_init
 
@@ -319,4 +319,3 @@ class TestAdaptiveSparsityScheduler:
         assert mock.call_count == 2
         assert mock.call_args_list[0][0] == (ref_sparsity_levels[7],)
         assert mock.call_args_list[1][0] == (ref_sparsity_levels[8],)
-
