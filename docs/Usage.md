@@ -65,11 +65,11 @@ If you use `DistributedDataParallel`, add the following call afterwards:
         compression_loss = compression_ctrl.loss()
         loss = cross_entropy_loss + compression_loss
         ```
-     - Call the scheduler `step()` after each training iteration:
+     - Call the scheduler `step()` before each training iteration:
         ```python
         compression_ctrl.scheduler.step()
         ```
-     - Call the scheduler `epoch_step()` after each training epoch:
+     - Call the scheduler `epoch_step()` before each training epoch:
         ```python
         compression_ctrl.scheduler.epoch_step()
         ```

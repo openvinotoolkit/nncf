@@ -478,12 +478,11 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
     "sparsity_target_epoch": with_attributes(_NUMBER,
-                                             description="The target sparsity value will be reached after this many"
-                                                         "epoch steps"),
+                                             description="Index of the epoch from which the sparsity level "
+                                                         "of the model will be equal to spatsity_target value"),
     "sparsity_freeze_epoch": with_attributes(_NUMBER,
-                                             description="The number of epoch steps after which the "
-                                                         "sparsity mask will be frozen and no "
-                                                         "longer trained"),
+                                             description="Index of the epoch from which the sparsity mask will "
+                                                         "be frozen and no longer trained"),
     "update_per_optimizer_step": with_attributes(_BOOLEAN,
                                                  description="Whether the function-based sparsity level schedulers "
                                                              "should update the sparsity level after each optimizer "

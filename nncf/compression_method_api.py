@@ -68,7 +68,7 @@ class CompressionScheduler:
     """
 
     def __init__(self):
-        self.last_step = -1
+        self.current_step = -1
         self._steps_in_current_epoch = 0
         self._current_epoch = -1
 
@@ -78,9 +78,7 @@ class CompressionScheduler:
         Arguments:
             `last` - specifies the initial "previous" step
         """
-        if last is None:
-            last = self.last_step + 1
-        self.last_step = last
+        self.current_step = self.current_step + 1 if last is None else last + 1
         self._steps_in_current_epoch += 1
 
     def epoch_step(self, last=None):
@@ -91,7 +89,6 @@ class CompressionScheduler:
         """
         if last is None:
             self._current_epoch += 1
-            last = self._current_epoch - 1
         else:
             self._current_epoch = last + 1
         self._steps_in_current_epoch = 0
@@ -100,7 +97,7 @@ class CompressionScheduler:
         self.__dict__.update(state_dict)
 
     def state_dict(self):
-        default_keys = {'last_step', '_current_epoch'}
+        default_keys = {'current_step', '_current_epoch'}
         return {key: val for key, val in self.__dict__.items() if key in default_keys}
 
     def initialize(self):

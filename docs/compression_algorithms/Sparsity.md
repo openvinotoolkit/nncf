@@ -44,13 +44,13 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 ```
 {
     "algorithm": "rb_sparsity",
+    "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model in 'create_compressed_model' function
     "params": {
             "schedule": "multistep",  // The type of scheduling to use for adjusting the target sparsity level
             "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
-            "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model
             "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_target_epoch": 3, // The target sparsity value will be reached after this many epoch steps
-            "sparsity_freeze_epoch": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
+            "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
+            "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },
@@ -81,13 +81,13 @@ The magnitude sparsity method implements a naive approach that is based on the a
             "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
         }
     }
+    "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model in 'create_compressed_model' function
     "params": {
             "schedule": "multistep",  // The type of scheduling to use for adjusting the target sparsity level
             "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
-            "sparsity_init": 0.05,// "Initial value of the sparsity level applied to the model
             "sparsity_target": 0.7, // Target value of the sparsity level for the model
-            "sparsity_target_epoch": 3, // The target sparsity value will be reached after this many epoch steps
-            "sparsity_freeze_epoch": 50, // The number of steps after which the sparsity mask will be frozen and no longer trained
+            "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
+            "sparsity_freeze_epoch": 50, // // Index of the epoch from which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },
