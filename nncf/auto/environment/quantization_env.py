@@ -129,17 +129,11 @@ class QuantizationEnv:
         # TODO (Design): How to generalize evaluation and train in general? tasks could have different metric and loss function
         self._evaluate_pretrained_model()
 
-        # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
-        qgroups = []
-
+        # Quantizer Master Table Creation
         qid_nodekey_map = get_qid_nodekey_mapping(self.qctrl, self.qmodel)
-
         d = OrderedDict()
-        
         for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
-            group_idx_str = []
-
             for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
                 qid=aq[0]
                 nodekey=qid_nodekey_map[qid]
@@ -153,7 +147,6 @@ class QuantizationEnv:
                 d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
                 d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
                                                     self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
-                group_idx_str.append(idx_str)
 
             for wq_id, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers):
                 qid=wq[0]
@@ -169,15 +162,9 @@ class QuantizationEnv:
                 d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
                                                     self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
 
-                group_idx_str.append(idx_str)
-            qgroups.append(group_idx_str)
-
         # qtable index is QID in string prepended with its quantize node id
         df = pd.DataFrame.from_dict(d,orient='index')
         qtable = df.loc[natsorted(df.index)]
-
-        # qgroups are list of list of associated quantizers
-        self.qgroups = qgroups
 
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
@@ -192,10 +179,6 @@ class QuantizationEnv:
 
         # Log Master Table to run folder        
         self.master_df.drop('state_module', axis=1).to_csv(osp.join(self.config.log_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
-
-        # Log qgroups
-        with open(osp.join(self.config.log_dir, self.model_name + "_quantizer_groups.json"), "w") as qgroups_log:
-            json.dump(self.qgroups, qgroups_log, indent=4)
 
         # Model Size Calculation
         self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
@@ -236,17 +219,16 @@ class QuantizationEnv:
         return sum(self.master_df['param'] * self.master_df.is_wt_quantizer * self.master_df['action'])
     
     def _expand_collected_strategy(self, collected_strategy):
-        def find_group_members(qgroups, nodestr):
-            for qgroup in qgroups:
-                if nodestr in qgroup:
-                    return qgroup
-            return []
-
         grouped_strategy_map = OrderedDict(zip(list(self.master_df.index[self.master_df.is_pred]), collected_strategy))
         for nodestr, action in grouped_strategy_map.items():
             self.master_df.loc[nodestr, 'action']=action # This is needed for dangling quantizer
-            for _nodestr in find_group_members(self.qgroups, nodestr):
-                self.master_df.loc[_nodestr, 'action']=action
+
+            # Extract list of qid of adjacent quantizer in the group, then apply same action to them in the master_df
+            group_id = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(self.master_df.qmodule[nodestr])
+            qid_in_group = list(map(lambda qid_qmod_pair: qid_qmod_pair[0], 
+                                    self._groups_of_adjacent_quantizers.get_adjacent_quantizers_by_group_id(group_id)))
+            for qid in qid_in_group:
+                self.master_df.loc[self.master_df.qid == str(qid), 'action'] = action
 
         return list(self.master_df['action'])
 
@@ -271,11 +253,12 @@ class QuantizationEnv:
                         if new_bit != n_bit:
                             self.master_df.loc[nodestr, "action"] = new_bit
 
-                            for qgroup in self.qgroups:
-                                if nodestr in qgroup:
-                                    for each_nodestr in qgroup:
-                                        self.master_df.loc[each_nodestr, "action"] = new_bit
-                                    break
+                            # Extract list of qid of adjacent quantizer in the group, then apply same action to them in the master_df
+                            group_id = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(self.master_df.qmodule[nodestr])
+                            qid_in_group = list(map(lambda qid_qmod_pair: qid_qmod_pair[0],
+                                                    self._groups_of_adjacent_quantizers.get_adjacent_quantizers_by_group_id(group_id)))
+                            for qid in qid_in_group:
+                                self.master_df.loc[self.master_df.qid == str(qid), 'action'] = new_bit
 
                     #strategy update here
                     self.strategy = self.master_df['action']
