@@ -57,13 +57,11 @@ class DDPG(object):
         # We support two config modes
         # (1) 'autoq' dict in NNCF compression.initializer
         # (2) 'auto_quantization' as standalone dict in NNCF config
-        if 'autoq' == config.nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
-            autoq_cfg = config.nncf_config.get('compression', {}).get('initializer', {}).get('precision')
+        if 'autoq' == config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
+            autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
         else:
-            autoq_cfg = config.nncf_config.get('auto_quantization')
-        # assert 'autoq' == config.nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {})
-        # autoq_cfg = config.nncf_config.get('compression', {}).get('initializer', {}).get('precision')
-        
+            autoq_cfg = config.get('auto_quantization')
+
         args = SimpleNamespace(**autoq_cfg)
 
         self.seed(0) if args.seed is None else self.seed(args.seed)

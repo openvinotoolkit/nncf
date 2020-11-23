@@ -29,12 +29,7 @@ from shutil import copyfile
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 
-from examples.common.sample_config import SampleConfig
-from examples.common.execution import ExecutionMode, get_device, prepare_model_for_execution
-from examples.common.model_loader import load_model
-from examples.common.optimizer import get_parameter_groups, make_optimizer
-from examples.common.utils import is_pretrained_model_requested
-from examples.common.example_logger import logger
+from nncf.nncf_logger import logger
 
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -49,11 +44,6 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
 from nncf.dynamic_graph.context import Scope
 from natsort import natsorted
 
-from nncf.auto.environment.quantizer_tracing import \
-    get_gemm_with_input_quantizers, get_untagged_quantizer
-
-from nncf.auto.environment.quantizer_tracing import QuantizerTracer, find_qidobj
-
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 
 # logging
@@ -66,6 +56,11 @@ def prCyan(prt): logger.info("\033[96m {}\033[00m" .format(prt))
 def prLightGray(prt): logger.info("\033[97m {}\033[00m" .format(prt))
 def prBlack(prt): logger.info("\033[98m {}\033[00m" .format(prt))
 
+def find_qidobj(quantization_controller, qid_str):
+    for _qid, _q in quantization_controller.all_quantizations.items():
+        if qid_str == str(_qid):
+            return _qid
+
 class QuantizationEnv:
     def __init__(self, 
             quantization_controller, 
@@ -74,7 +69,7 @@ class QuantizationEnv:
             val_loader,
             train_epoch_fn,
             validate_fn,
-            config: SampleConfig):
+            config: 'NNCFConfig'):
 
         logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
         self.qctrl            = quantization_controller
@@ -84,35 +79,25 @@ class QuantizationEnv:
         self.val_loader       = val_loader
         self.train_epoch_fn   = train_epoch_fn
         self.validate_fn      = validate_fn
+        self.config           = config
 
-        self.config = config
-        if self.config.get('nncf_config', None) is None:
-            raise KeyError("config must have nncf_config dictionary")
-        
         # TODO: Do we need to a way to specify a different device for automated search?
         # self.config.current_gpu = self.config.gpu_id
         # torch.cuda.set_device(config.gpu_id)         # Set default operating cuda device
         # self.config.device = get_device(self.config) # get_device requires config.current_gpu
-        
-        # pretrained_model is assumed to have checkpoint loaded
-        # if isinstance(pretrained_model, nn.Module):
-        #     pretrained_model.to(self.config.device)
-        #     self.pretrained_model = pretrained_model
-        # else:
-        #     raise ValueError("Pretrained Model is not subclass of torch.nn.Module")
 
         # Model label
-        self.model_name = config.get('model', None)
+        self.model_name = self.config.get('model', None)
         if self.model_name is None:
             self.model_name = self.pretrained_model.__class__.__name__
 
         # We support two config modes
         # (1) 'autoq' dict in NNCF compression.initializer
         # (2) 'auto_quantization' as standalone dict in NNCF config
-        if 'autoq' == self.config.nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
-            self.autoq_cfg = self.config.nncf_config.get('compression', {}).get('initializer', {}).get('precision')
+        if 'autoq' == self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
+            self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
         else:
-            self.autoq_cfg = self.config.nncf_config.get('auto_quantization')
+            self.autoq_cfg = self.config.get('auto_quantization')
         self.finetune = self.autoq_cfg['finetune']
 
         self.tie_quantizers = True # Default to associate same precision of quantizers that feed into the GEMM compute
@@ -131,7 +116,7 @@ class QuantizationEnv:
 
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
         # Quantizer Master Table Creation
-        qid_nodekey_map = get_qid_nodekey_mapping(self.qctrl, self.qmodel)
+        qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
         d = OrderedDict()
         for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
             for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
@@ -178,7 +163,7 @@ class QuantizationEnv:
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Log Master Table to run folder        
-        self.master_df.drop('state_module', axis=1).to_csv(osp.join(self.config.log_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
+        self.master_df.drop('state_module', axis=1).to_csv(osp.join(self.config['log_dir'], self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
         # Model Size Calculation
         self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
@@ -364,7 +349,7 @@ class QuantizationEnv:
         self.master_df['action']=self.strategy
 
         # step_cfg = deepcopy(self.orig_compress_cfg)
-        step_cfg = self.config.nncf_config['compression']
+        step_cfg = self.config['compression']
 
         if 'scope_overrides' not in step_cfg:
             step_cfg['scope_overrides']={}
@@ -388,7 +373,7 @@ class QuantizationEnv:
                 step_cfg['scope_overrides'][IAOpCtxStr]['bits']=int(precision)
 
             self.master_df.loc[layer, "qmodule"].num_bits = precision # Actual actor to change quantizer precision
-        self.config.nncf_config['compression']=step_cfg
+        self.config['compression']=step_cfg
         return True 
         
     # TODO: # Hardcoded to Int2/4/8 for now, should open up the space later to FP32, FP16
@@ -514,19 +499,11 @@ class QuantizationEnv:
            
         return pd.Series(feature)
        
-    # def _create_quantization_pipeline(self, nncf_config):
-    #     _pretrained_model = deepcopy(self.pretrained_model)
-    #     compression_ctrl, compressed_model = create_compressed_model(_pretrained_model, nncf_config)
-    #     return compression_ctrl, compressed_model
-
-
     def _run_quantization_pipeline(self, finetune):
-        self._adaptbn(self.config)
+        self._adaptbn()
         
         if finetune:
-            # TODO: need to fix finetune loop
-            top1, top5 = self._finetune(self.qctrl, self.qmodel)
-            logger.info("[Q.Env] Post-Tuned: Top1@ {:.3f}, Top5@ {:.3f}".format(top1, top5))
+            raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
         else:
             with torch.no_grad():
                 quantized_acc = self.validate_fn(self.val_loader, self.qmodel, self.criterion, self.config)
@@ -534,8 +511,7 @@ class QuantizationEnv:
 
         return quantized_acc
 
-
-    def _adaptbn(self, config):
+    def _adaptbn(self):
         train_mode = self.qmodel.training
         if not train_mode:
             self.qmodel.train()
@@ -545,91 +521,57 @@ class QuantizationEnv:
         if not train_mode:
             self.qmodel.eval()
 
+    @staticmethod
+    def _generate_qid_nodekey_map(quantization_controller: 'QuantizationController', quantized_network: 'NNCFNetwork'):
+        """
+        Create a lookup mapping for each QuantizerId to its corresponding quantize node in network graph
+        :param quantization_controller: 
+        :param quantized_network:
+        :return: dict with key of QuantizerId and value of node key string
+        """    
+        # Map Non Weight Qid to its nodes in nxgraph
+        weight_quantize_nodekeys = []
+        non_weight_quantize_nodekeys = []
+        qid_nodekey_map = dict()
 
-    def _finetune(self, compression_ctrl, compressed_model):
-        best_compression_level = CompressionLevel.NONE
+        g=quantized_network.get_graph()
 
-        params_to_optimize = get_parameter_groups(compressed_model, self.config)
-        optimizer, lr_scheduler = make_optimizer(params_to_optimize, self.config)
+        for nodekey in g.get_all_node_keys():
+            if 'symmetric_quantize' in nodekey and 'UpdateWeight' in nodekey:
+                weight_quantize_nodekeys.append(nodekey)
+            if 'symmetric_quantize' in nodekey and 'UpdateWeight' not in nodekey:
+                non_weight_quantize_nodekeys.append(nodekey)
 
-        for epoch in range(self.config.start_epoch, self.config.epochs):
-            self.config.cur_epoch = epoch
+        # Find nodekey of Weight Quantizer
+        for qid, qmod in quantization_controller.weight_quantizers.items():
+            quantize_nodekeys = []
+            for nodekey in weight_quantize_nodekeys:
+                if str(qid.scope) in nodekey:
+                    quantize_nodekeys.append(nodekey)
 
-            # train for one epoch
-            self.train_epoch_fn(
-                self.train_loader,
-                compressed_model, 
-                self.criterion, 
-                optimizer, 
-                compression_ctrl,
-                epoch,
-                self.config,
-                False)
+            if len(quantize_nodekeys) == 1:
+                qid_nodekey_map[qid]=quantize_nodekeys[0]
+            else:
+                raise ValueError("Quantize Node not found or More Nodes are found for WQid: {}".format(qid))
 
-            # Learning rate scheduling should be applied after optimizer’s update
-            best_acc1 = 0 # what is the usage here?
-            lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
+        # Find nodekey of Non-Weight Quantizer
+        for qid, qmod in quantization_controller.non_weight_quantizers.items():
+            quantize_nodekeys = []
+            for nodekey in non_weight_quantize_nodekeys:
+                if str(qid.ia_op_exec_context.scope_in_model) in nodekey:
+                    quantize_nodekeys.append(nodekey)
 
-            # update compression scheduler state at the end of the epoch
-            compression_ctrl.scheduler.epoch_step()
-
-            # compute compression algo statistics
-            stats = compression_ctrl.statistics()
-
-            acc1 = best_acc1
-            if epoch % self.config.test_every_n_epochs == 0:
-                # evaluate on validation set
-                top1, top5 = self.validate_fn(self.val_loader, compressed_model, self.criterion, self.config)
-        return top1, top5
-
-
-
-def get_qid_nodekey_mapping(quantization_controller, quantized_network):
+            if len(quantize_nodekeys) > 0:
+                qid_nodekey_map[qid]=quantize_nodekeys[qid.ia_op_exec_context.call_order]
+            else:
+                raise ValueError("Quantize Node not found for NWQid: {}".format(qid))
         
-    # Map Non Weight Qid to its nodes in nxgraph
-    weight_quantize_nodekeys = []
-    non_weight_quantize_nodekeys = []
-    qid_nodekey_map = dict()
-
-    g=quantized_network.get_graph()
-
-    for nodekey in g.get_all_node_keys():
-        if 'symmetric_quantize' in nodekey and 'UpdateWeight' in nodekey:
-            weight_quantize_nodekeys.append(nodekey)
-        if 'symmetric_quantize' in nodekey and 'UpdateWeight' not in nodekey:
-            non_weight_quantize_nodekeys.append(nodekey)
-
-    # Find nodekey of Weight Quantizer
-    for qid, qmod in quantization_controller.weight_quantizers.items():
-        quantize_nodekeys = []
-        for nodekey in weight_quantize_nodekeys:
-            if str(qid.scope) in nodekey:
-                quantize_nodekeys.append(nodekey)
-
-        if len(quantize_nodekeys) == 1:
-            qid_nodekey_map[qid]=quantize_nodekeys[0]
-        else:
-            raise ValueError("Quantize Node not found or More Nodes are found for WQid: {}".format(qid))
-
-    # Find nodekey of Non-Weight Quantizer
-    for qid, qmod in quantization_controller.non_weight_quantizers.items():
-        quantize_nodekeys = []
-        for nodekey in non_weight_quantize_nodekeys:
-            if str(qid.ia_op_exec_context.scope_in_model) in nodekey:
-                quantize_nodekeys.append(nodekey)
-
-        if len(quantize_nodekeys) > 0:
-            qid_nodekey_map[qid]=quantize_nodekeys[qid.ia_op_exec_context.call_order]
-        else:
-            raise ValueError("Quantize Node not found for NWQid: {}".format(qid))
+        if logger.level == logging.DEBUG:
+            for qid, nodekey in qid_nodekey_map.items():
+                logger.debug("QuantizerId: {}".format(qid))
+                logger.debug("\tnodekey: {}".format(nodekey))
         
-    # Debug
-    # TODO: use debug logging
-    for qid, nodekey in qid_nodekey_map.items():
-        print(qid)
-        print("\t=>", nodekey)
-    
-    return qid_nodekey_map
+        return qid_nodekey_map
 
 
 

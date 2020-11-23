@@ -156,7 +156,7 @@ def main_worker(current_gpu, config: SampleConfig):
         nncf_config = register_default_init_args(
             nncf_config, train_loader, val_loader, 
             autox_train_epoch, autox_validate, 
-            criterion, train_criterion_fn, config , config.device)
+            criterion, train_criterion_fn, config.device)
 
     # create model
     model = load_model(model_name,
@@ -600,9 +600,6 @@ def validate(val_loader, model, criterion, config):
 
 
 def autox_validate(val_loader, model, criterion, config):
-
-    num_val_steps = config.compression.initializer.precision.num_val_steps
-
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -610,48 +607,42 @@ def autox_validate(val_loader, model, criterion, config):
 
     # switch to evaluate mode
     model.eval()
+    device = next(model.parameters()).device
 
     with torch.no_grad():
         end = time.time()
+        nbatch = len(val_loader)
         for i, (input_, target) in enumerate(val_loader):
-            if i < num_val_steps:
-                input_ = input_.to(config.device)
-                target = target.to(config.device)
+            input_ = input_.to(device)
+            target = target.to(device)
 
-                # compute output
-                output = model(input_)
-                loss = criterion(output, target)
+            # compute output
+            output = model(input_)
+            loss = criterion(output, target)
 
-                # measure accuracy and record loss
-                acc1, acc5 = accuracy(output, target, topk=(1, 5))
-                losses.update(loss, input_.size(0))
-                top1.update(acc1, input_.size(0))
-                top5.update(acc5, input_.size(0))
+            # measure accuracy and record loss
+            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            losses.update(loss, input_.size(0))
+            top1.update(acc1, input_.size(0))
+            top5.update(acc5, input_.size(0))
 
-                # measure elapsed time
-                batch_time.update(time.time() - end)
-                end = time.time()
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
 
-                if i % config.print_freq == 0:
-                    logger.info(
-                        '{rank}'
-                        'Test: [{0}/{1}] '
-                        'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
-                        'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
-                        'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
-                        'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
-                            i, num_val_steps-1, batch_time=batch_time, loss=losses,
-                            top1=top1, top5=top5,
-                            rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
-                        ))
-
+            if i % 10 == 0:
+                logger.info(
+                    '{rank}'
+                    'Test: [{0}/{1}] '
+                    'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                    'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
+                    'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
+                    'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
+                        i, nbatch, batch_time=batch_time, loss=losses,
+                        top1=top1, top5=top5,
+                        rank='{}:'.format(device.index)
+                    ))
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
-
-        acc = top1.avg / 100
-        if config.metrics_dump is not None:
-            write_metrics(acc, config.metrics_dump)
-
-    # return top1.avg, top5.avg
     return top5.avg
     
 class AverageMeter:

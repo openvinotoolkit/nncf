@@ -35,12 +35,8 @@ from io import StringIO
 from collections import OrderedDict
 from copy import deepcopy
 from types import SimpleNamespace
-from examples.common.example_logger import logger
-
-def extra_repr(self):
-    return 'bit={}, ch={}, wt={}'.format(
-            self.num_bits, self.per_channel, self.is_weights)
-setattr(BaseQuantizer, 'extra_repr', extra_repr)
+from nncf.nncf_logger import logger
+from tensorboardX import SummaryWriter
 
 class AutoQPrecisionInitializer:
     def __init__(self, algo: 'QuantizationController', init_precision_config,
@@ -115,9 +111,9 @@ class AutoQPrecisionInitializer:
         #     action = int(2**action)
         #     return action
 
-        assert 'autoq' == config.nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {})
-        autoq_cfg = config.nncf_config.get('compression', {}).get('initializer', {}).get('precision')
-        config['episodic_nncfcfg'] = osp.join(config.log_dir, "episodic_nncfcfg")
+        assert 'autoq' == config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {})
+        autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
+        config['episodic_nncfcfg'] = osp.join(config['log_dir'], "episodic_nncfcfg")
         os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
 
         args = SimpleNamespace(**autoq_cfg)
@@ -131,11 +127,10 @@ class AutoQPrecisionInitializer:
         best_reward = -math.inf
         best_policy = []
 
-        tfwriter = config['tb']
+        tfwriter = SummaryWriter(config['log_dir'])
 
         log_cfg=OrderedDict()
         log_cfg['compression']=config['compression']
-        log_cfg['auto_quantization']=config['auto_quantization']
         tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n","\n\n"), 0)
         tfwriter.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
 
@@ -166,7 +161,7 @@ class AutoQPrecisionInitializer:
 
             # [optional] save intermideate model
             if episode % int(num_episode / 10) == 0:
-                agent.save_model(config['checkpoint_save_dir'])
+                agent.save_model(config['log_dir'])
 
             # update
             step += 1   
@@ -213,14 +208,14 @@ class AutoQPrecisionInitializer:
                 # Save nncf compression cfg
                 episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
                 with open(episode_cfgfile, "w") as outfile: 
-                    json.dump(env.config.nncf_config, outfile, indent=4, sort_keys=False) 
+                    json.dump(env.config, outfile, indent=4, sort_keys=False) 
 
                 bit_stats_tt = env.qctrl.statistics()['Bitwidth distribution:']
                 bit_stats_tt.set_max_width(100)
                 bit_stats_df = pd.read_csv(StringIO(re.sub(r'[-+|=]', '', bit_stats_tt.draw())), sep='\s{2,}', engine='python').reset_index(drop=True)
                 
                 policy_dict[episode]=env.master_df['action'].astype('int')
-                pd.DataFrame(policy_dict.values(), index=policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(osp.join(config.log_dir, "policy_per_episode.csv"), index_label="nodestr")
+                pd.DataFrame(policy_dict.values(), index=policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(osp.join(config['log_dir'], "policy_per_episode.csv"), index_label="nodestr")
                 
                 if final_reward > best_reward:
                     best_reward = final_reward
@@ -228,7 +223,7 @@ class AutoQPrecisionInitializer:
                     
                     # log best policy to tensorboard
                     best_policy_dict[episode]=env.master_df['action'].astype('int')
-                    pd.DataFrame(best_policy_dict.values(), index=best_policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(osp.join(config.log_dir, "best_policy.csv"), index_label="nodestr")
+                    pd.DataFrame(best_policy_dict.values(), index=best_policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(osp.join(config['log_dir'], "best_policy.csv"), index_label="nodestr")
                 
                     best_policy_string = bit_stats_df.to_markdown() + "\n\n\n"
                     best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n".format(episode, final_reward, info['accuracy'], info['model_ratio'])
