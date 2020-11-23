@@ -371,7 +371,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         mask = self._get_mask(minfo)
         return mask.shape
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         table = Texttable()
         header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]

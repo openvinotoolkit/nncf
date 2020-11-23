@@ -357,7 +357,7 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            for stat_name, stat_value in compression_ctrl.statistics().items():
+            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
                 if isinstance(stat_value, (int, float)):
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 

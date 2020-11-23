@@ -72,7 +72,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         stats['pruning_rate'] = self.pruning_rate
         return stats

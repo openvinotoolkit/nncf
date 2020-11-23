@@ -335,7 +335,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             config.tb.add_scalar("train/learning_rate", optimizer.param_groups[0]['lr'], epoch)
             config.tb.add_scalar("train/compression_loss", compression_ctrl.loss(), epoch)
 
-            for key, value in compression_ctrl.statistics().items():
+            for key, value in compression_ctrl.statistics(quickly_collected_only=True).items():
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
 
