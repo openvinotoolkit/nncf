@@ -116,7 +116,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel():
     sym_quantizer = SymmetricQuantizer(q_config)
     # pylint: disable=protected-access
     sym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-    sym_quantizer.scale = torch.nn.Parameter(torch.rand(1, 64, 1, 1))
+    sym_quantizer.scale = torch.rand(1, 64, 1, 1)
 
     x = torch.rand((2, 64, 15, 10))
     try:
@@ -160,7 +160,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel():
     assym_quantizer = AsymmetricQuantizer(q_config)
     # pylint: disable=protected-access
     assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-    sym_quantizer.scale = torch.nn.Parameter(torch.rand(1, 64, 1, 1))
+    sym_quantizer.scale = torch.rand(1, 64, 1, 1)
 
     x = torch.rand((2, 64, 15, 10))
     try:
