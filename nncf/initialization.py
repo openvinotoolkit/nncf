@@ -95,17 +95,19 @@ class DataLoaderBaseRunner:
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
-        with tqdm(
-                data_loader,
-                total=num_init_steps,
-                desc=self.progressbar_description,
-                bar_format=bar_format,
-        ) as tqdm_it:
-            for i, loaded_item in enumerate(tqdm_it):
-                if num_init_steps is not None and i >= num_init_steps:
-                    break
-                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                self._infer_batch(args_kwargs_tuple, device)
+        # with tqdm(
+        #         data_loader,
+        #         total=num_init_steps,
+        #         desc=self.progressbar_description,
+        #         bar_format=bar_format,
+        # ) as tqdm_it:
+        #     for i, loaded_item in enumerate(tqdm_it):
+        for i, loaded_item in enumerate(data_loader):
+            print(i)
+            if num_init_steps is not None and i >= num_init_steps:
+                break
+            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+            self._infer_batch(args_kwargs_tuple, device)
 
     def _infer_batch(self, args_kwargs_tuple, device):
         to_device_fn = partial(torch.Tensor.to, device=device)
@@ -200,17 +202,19 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         self.model.apply(partial(set_bn_momentum,
                                  momentum_value=self.momentum_base))
 
-        with tqdm(
-                data_loader,
-                total=num_init_steps,
-                desc=self.progressbar_description,
-                bar_format=bar_format,
-        ) as tqdm_it:
-            for i, loaded_item in enumerate(tqdm_it):
-                if num_init_steps is not None and i >= num_init_steps:
-                    break
-                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                self._infer_batch(args_kwargs_tuple, device)
+        # with tqdm(
+        #         data_loader,
+        #         total=num_init_steps,
+        #         desc=self.progressbar_description,
+        #         bar_format=bar_format,
+        # ) as tqdm_it:
+        #     for i, loaded_item in enumerate(tqdm_it):
+        for i, loaded_item in enumerate(data_loader):
+            print(i)
+            if num_init_steps is not None and i >= num_init_steps:
+                break
+            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+            self._infer_batch(args_kwargs_tuple, device)
 
     def _prepare_initialization(self):
         pass
@@ -230,14 +234,13 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                val_fn=None,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
-                               app_config=None,
                                device='cuda') -> 'NNCFConfig':
     if 'autoq' == nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
                                                                     device=device),
                                             BNAdaptationInitArgs(data_loader=train_loader, 
                                                                 device=device),
-                                            AutoQPrecisionInitArgs(train_loader, val_loader, train_fn, val_fn, criterion, app_config)])                                                
+                                            AutoQPrecisionInitArgs(train_loader, val_loader, train_fn, val_fn, criterion, nncf_config)])                                                
     else:
         if criterion:
             if not criterion_fn:
