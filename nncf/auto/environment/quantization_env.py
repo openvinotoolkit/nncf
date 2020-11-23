@@ -54,8 +54,8 @@ from nncf.auto.environment.quantizer_tracing import \
 
 from nncf.auto.environment.quantizer_tracing import QuantizerTracer, find_qidobj
 
-from nncf.quantization.layers import BaseQuantizer
-    
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
+
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
 def prGreen(prt): logger.info("\033[92m {}\033[00m" .format(prt))
@@ -130,20 +130,55 @@ class QuantizationEnv:
         self._evaluate_pretrained_model()
 
         # Quantizer Master Table Creation
-        qtracer = QuantizerTracer()
-        # qtable index is QID in string prepended with its quantize node id
-        qtable = qtracer.get_qtable(self.qctrl, self.qmodel)
-        qgroups = qtracer.get_quantizer_groups(qtable)
-        self.qgroups = qgroups
-        if len(qtable) != len(self.qctrl.all_quantizations):
-            logger.warning("[Warning][Q.Env] qtable has {} quantizers while qctrl has {} quantizers".format(
-                len(qtable), len(self.qctrl.all_quantizations)
-            ))
+        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
+        qgroups = []
 
-            diff = set(list(map(str, self.qctrl.all_quantizations.keys()))) ^ set(qtable.qid.values)
-            for i, qidstr in enumerate(diff):
-                logger.warning("[Warning] Extra quantizer {}: {}".format(i, qidstr))
-    
+        qid_nodekey_map = get_qid_nodekey_mapping(self.qctrl, self.qmodel)
+
+        d = OrderedDict()
+        
+        for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
+            group_idx_str = []
+
+            for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
+                qid=aq[0]
+                nodekey=qid_nodekey_map[qid]
+                q_nx_nodeid=nodekey.split()[0]
+                idx_str = '-'.join([q_nx_nodeid, str(qid)])
+
+                d[idx_str] = OrderedDict()
+                d[idx_str]['qid'] = str(qid)
+                d[idx_str]['q_nx_nodeid'] = q_nx_nodeid
+                d[idx_str]['q_nx_nodekey'] = nodekey
+                d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
+                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
+                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
+                group_idx_str.append(idx_str)
+
+            for wq_id, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers):
+                qid=wq[0]
+                nodekey=qid_nodekey_map[qid]
+                q_nx_nodeid=nodekey.split()[0]
+                idx_str = '-'.join([q_nx_nodeid, str(qid)])
+
+                d[idx_str] = OrderedDict()
+                d[idx_str]['qid'] = str(qid)
+                d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
+                d[idx_str]['q_nx_nodekey'] = nodekey
+                d[idx_str]['state_scope'] = qid.scope
+                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
+                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
+
+                group_idx_str.append(idx_str)
+            qgroups.append(group_idx_str)
+
+        # qtable index is QID in string prepended with its quantize node id
+        df = pd.DataFrame.from_dict(d,orient='index')
+        qtable = df.loc[natsorted(df.index)]
+
+        # qgroups are list of list of associated quantizers
+        self.qgroups = qgroups
+
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
         
@@ -566,7 +601,52 @@ class QuantizationEnv:
 
 
 
+def get_qid_nodekey_mapping(quantization_controller, quantized_network):
+        
+    # Map Non Weight Qid to its nodes in nxgraph
+    weight_quantize_nodekeys = []
+    non_weight_quantize_nodekeys = []
+    qid_nodekey_map = dict()
 
+    g=quantized_network.get_graph()
+
+    for nodekey in g.get_all_node_keys():
+        if 'symmetric_quantize' in nodekey and 'UpdateWeight' in nodekey:
+            weight_quantize_nodekeys.append(nodekey)
+        if 'symmetric_quantize' in nodekey and 'UpdateWeight' not in nodekey:
+            non_weight_quantize_nodekeys.append(nodekey)
+
+    # Find nodekey of Weight Quantizer
+    for qid, qmod in quantization_controller.weight_quantizers.items():
+        quantize_nodekeys = []
+        for nodekey in weight_quantize_nodekeys:
+            if str(qid.scope) in nodekey:
+                quantize_nodekeys.append(nodekey)
+
+        if len(quantize_nodekeys) == 1:
+            qid_nodekey_map[qid]=quantize_nodekeys[0]
+        else:
+            raise ValueError("Quantize Node not found or More Nodes are found for WQid: {}".format(qid))
+
+    # Find nodekey of Non-Weight Quantizer
+    for qid, qmod in quantization_controller.non_weight_quantizers.items():
+        quantize_nodekeys = []
+        for nodekey in non_weight_quantize_nodekeys:
+            if str(qid.ia_op_exec_context.scope_in_model) in nodekey:
+                quantize_nodekeys.append(nodekey)
+
+        if len(quantize_nodekeys) > 0:
+            qid_nodekey_map[qid]=quantize_nodekeys[qid.ia_op_exec_context.call_order]
+        else:
+            raise ValueError("Quantize Node not found for NWQid: {}".format(qid))
+        
+    # Debug
+    # TODO: use debug logging
+    for qid, nodekey in qid_nodekey_map.items():
+        print(qid)
+        print("\t=>", nodekey)
+    
+    return qid_nodekey_map
 
 
 
