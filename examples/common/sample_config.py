@@ -72,11 +72,6 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
 
 
 class SampleConfig(Dict):
-    def __getattr__(self, item):
-        if item not in self:
-            raise KeyError("Key {} not found in config".format(item))
-        return super().__getattr__(item)
-
     @classmethod
     def from_json(cls, path) -> 'SampleConfig':
         with open(path) as f:
