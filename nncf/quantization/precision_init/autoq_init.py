@@ -121,7 +121,7 @@ class AutoQPrecisionInitializer:
         policy_dict=OrderedDict() #key: episode
         best_policy_dict=OrderedDict() #key: episode
 
-        num_episode = args.train_episode
+        num_episode = args.iter_number
 
         # best record
         best_reward = -math.inf
@@ -131,7 +131,7 @@ class AutoQPrecisionInitializer:
 
         log_cfg=OrderedDict()
         log_cfg['compression']=config['compression']
-        tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n","\n\n"), 0)
+        tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
         tfwriter.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
 
         agent.is_training = True
@@ -148,7 +148,7 @@ class AutoQPrecisionInitializer:
                 observation = deepcopy(env.get_normalized_obs(0))
                 agent.reset(observation)
                 
-            if episode <= args.warmup:
+            if episode <= agent.warmup:
                 action = agent.random_action()
 
             else:
@@ -188,8 +188,8 @@ class AutoQPrecisionInitializer:
                     # EO ------------------------
 
                     agent.observe(final_reward, s_t, s_t1, a_t, done)
-                    if episode > args.warmup:
-                        for i in range(args.n_update):
+                    if episode > agent.warmup:
+                        for i in range(agent.n_update):
                             agent.update_policy()
 
                 agent.memory.append(

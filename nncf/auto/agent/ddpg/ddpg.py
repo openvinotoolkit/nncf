@@ -10,6 +10,9 @@ from nncf.auto.agent.ddpg.memory import SequentialMemory
 from nncf.auto.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
 
 from types import SimpleNamespace
+from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from collections import OrderedDict
+import json
 
 criterion = nn.MSELoss()
 USE_CUDA = torch.cuda.is_available()
@@ -53,16 +56,14 @@ class Critic(nn.Module):
 
 
 class DDPG(object):
-    def __init__(self, nb_states, nb_actions, config):
-        # We support two config modes
-        # (1) 'autoq' dict in NNCF compression.initializer
-        # (2) 'auto_quantization' as standalone dict in NNCF config
-        if 'autoq' == config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
-            autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
-        else:
-            autoq_cfg = config.get('auto_quantization')
+    def __init__(self, nb_states, nb_actions, hparam_override):
+        # TODO: Implement hparam_override; refactor autoq_cfg with a better name
 
-        args = SimpleNamespace(**autoq_cfg)
+        hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'auto/agent/ddpg/ddpg_config.json'])
+        with open(hparam_config_path) as f:
+            autoq_cfg = json.load(f, object_pairs_hook=OrderedDict)
+            
+        args = SimpleNamespace(**autoq_cfg['hyperparameters'])
 
         self.seed(0) if args.seed is None else self.seed(args.seed)
 

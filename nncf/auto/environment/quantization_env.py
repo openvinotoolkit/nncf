@@ -98,7 +98,10 @@ class QuantizationEnv:
             self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
         else:
             self.autoq_cfg = self.config.get('auto_quantization')
-        self.finetune = self.autoq_cfg['finetune']
+
+        self.finetune = False
+        if 'finetune' in self.autoq_cfg:
+            self.finetune = self.autoq_cfg['finetune']
 
         self.tie_quantizers = True # Default to associate same precision of quantizers that feed into the GEMM compute
         if 'tie_quantizers' in self.autoq_cfg:
@@ -168,7 +171,7 @@ class QuantizationEnv:
         # Model Size Calculation
         self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
         self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bit    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
-        self.target_model_size = self.orig_model_size*self.compress_ratio
+        self.target_model_size = self.orig_model_size*self.compression_ratio
 
         # init reward
         self.best_reward = -math.inf #TODO: move reward to search manager
@@ -386,7 +389,7 @@ class QuantizationEnv:
         else:
             pass
         
-        self.compress_ratio = cfg['compress_ratio'] if 'compress_ratio' in cfg else 0.15
+        self.compression_ratio = cfg['compression_ratio'] if 'compression_ratio' in cfg else 0.15
         self.float_bit = 32.0
         self.min_bit = 2
         self.max_bit = 8

@@ -968,7 +968,7 @@ class QuantizationController(QuantizationControllerBase):
         if init_precision_config:
             precision_init_type = init_precision_config.get('type', 'manual')
             precision_init_args = None
-            if precision_init_type == 'manual':
+            if precision_init_type == 'hawq':
                 try:
                     precision_init_args = self.quantization_config.get_extra_struct(QuantizationPrecisionInitArgs)
                 except KeyError:
