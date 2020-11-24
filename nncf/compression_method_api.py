@@ -20,6 +20,7 @@ import functools
 from copy import copy
 from enum import Enum
 from functools import partial
+from typing import List
 
 import torch
 from torch import nn
@@ -207,7 +208,8 @@ class CompressionAlgorithmController:
     def prepare_for_export(self):
         pass
 
-    def export_model(self, filename, *args, **kwargs):
+    # pylint: disable=keyword-arg-before-vararg
+    def export_model(self, filename, input_names: List[str] = None, output_names: List[str] = None, *args, **kwargs):
         """
         Used to export the compressed model for inference into the ONNX format.
         Makes method-specific preparations of the model graph,
@@ -215,6 +217,8 @@ class CompressionAlgorithmController:
         then exports the model and dumps it into the output file.
         Parameters:
             `filename` - a path to the file for the exported model to be saved into.
+            `input_names` - list of input tensors names (optional).
+            `output_names` - list of output tensors names (optional).
             *args, **kwargs - if the model's `forward` requires additional parameters
             during export, specify these here.
         """
@@ -231,7 +235,10 @@ class CompressionAlgorithmController:
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
             torch.onnx.export(model, tuple(input_tensor_list),
-                              filename, verbose=True, enable_onnx_checker=False, opset_version=10)
+                              filename, input_names=input_names,
+                              output_names=output_names,
+                              enable_onnx_checker=False,
+                              opset_version=10)
         model.forward = original_forward
 
 
