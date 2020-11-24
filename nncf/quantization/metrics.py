@@ -87,8 +87,9 @@ class NetworkQuantizationShareMetric(BaseMetric):
             from nncf.quantization.algo import QuantizerPropagationSolver
             insertion_point_graph = self._compressed_model.get_insertion_point_graph()
             prop_graph_solver = QuantizerPropagationSolver()
-            insertion_data = prop_graph_solver.run_on_ip_graph(insertion_point_graph)
-            retval = len(insertion_data)
+            # return 0
+            quantization_proposal = prop_graph_solver.run_on_ip_graph(insertion_point_graph)
+            retval = len(quantization_proposal.quantizer_insertion_info_vs_possible_configs)
         return retval
 
     def collect(self):

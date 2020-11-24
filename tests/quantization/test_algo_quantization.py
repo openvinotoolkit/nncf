@@ -108,17 +108,20 @@ def test_quantization_configs__custom():
 
 
 def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name):
-    def get_name(name):
-        if name == '/nncf_model_input_0':
-            return name
+    def get_wq_name(name):
         return '/'.join([model_name, name])
+
+    def get_aq_name(name):
+        if name == '/nncf_model_input_0':
+            return name  + '|OUTPUT'
+        return '/'.join([model_name, name]) + '|OUTPUT'
 
     all_quantizations = {str(key): quantizer for key, quantizer in algo.all_quantizations.items()}
     assert len(actual_pairs) == len(ref_pair_names)
     for (wqs, aq), (wqs_names, aq_name) in zip(actual_pairs, ref_pair_names):
         assert not aq.is_weights
-        assert aq == all_quantizations[get_name(aq_name)]
-        ref_weight_quantizers = [all_quantizations[get_name(name)] for name in wqs_names]
+        assert aq == all_quantizations[get_aq_name(aq_name)]
+        ref_weight_quantizers = [all_quantizations[get_wq_name(name)] for name in wqs_names]
         for weight_quantizer in wqs:
             assert weight_quantizer.is_weights
             assert weight_quantizer in ref_weight_quantizers

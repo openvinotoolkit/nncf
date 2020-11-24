@@ -790,8 +790,8 @@ def test_quantization_configs__with_precisions_list():
 
     ref_bits = [('ModelForTest/NNCFConv2d[conv1]module_weight', 2),
                 ('ModelForTest/NNCFConv2d[conv2]module_weight', 4),
-                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0', 6),
-                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0', 6),
+                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0|OUTPUT', 6),
+                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0|OUTPUT', 6),
                 ('ModelForTest/NNCFConv2d[conv1]module_input', 2),
                 ('ModelForTest/NNCFConv2d[conv2]module_input', 4)]
 

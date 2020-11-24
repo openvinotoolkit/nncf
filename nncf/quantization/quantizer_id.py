@@ -57,14 +57,16 @@ class NonWeightQuantizerId(QuantizerId):
     """ Unique identifier of a quantizer, which corresponds to non-weight operations, such as
     ordinary activation, function and input"""
 
-    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext):
+    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                 input_port_id=None):
         self.ia_op_exec_context = ia_op_exec_context
+        self.input_port_id = input_port_id
 
     def get_base(self) -> 'InputAgnosticOperationExecutionContext':
         return self.ia_op_exec_context
 
     def get_suffix(self) -> str:
-        return ''
+        return '|OUTPUT' if self.input_port_id is None else '|INPUT{}'.format(self.input_port_id)
 
     def get_scope(self) -> Scope:
         return self.ia_op_exec_context.scope_in_model

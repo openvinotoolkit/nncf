@@ -118,21 +118,6 @@ class OperatorInput:
         return self._index[n].getter()
 
     def __setitem__(self, n, value):
-        # if n < 0:
-        #     raise AttributeError("OperatorInput only works with non-negative indices")
-        # arglen = len(self.op_args)
-        # if n < arglen:
-        #     self.op_args[n] = value
-        # else:
-        #     kwarg_idx = n - arglen
-        #     if kwarg_idx >= len(self.op_kwargs):
-        #         raise AttributeError("Invalid index {} for OperatorInput - max idx is {}".format(n,
-        #                                                                                          len(self.op_args) +
-        #                                                                                          len(self.op_kwargs)))
-        #     for curr_idx, (key, value) in enumerate(self.op_kwargs.items()):
-        #         if curr_idx == kwarg_idx:
-        #             self.op_kwargs[key] = value
-        #             break
         self._index[n].setter(value)
 
     def __len__(self):

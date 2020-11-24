@@ -786,7 +786,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     prop_graph_solver = QuantizerPropagationSolver(hw_config=hw_config)
     insertion_point_graph = compressed_model.get_insertion_point_graph()
     merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_config)
-    potential_activations_quantizers = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
+    quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
+    potential_activations_quantizers = quantization_proposal.quantizer_insertion_info_vs_possible_configs
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, potential_activations_quantizers,
