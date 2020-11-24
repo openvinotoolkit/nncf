@@ -93,6 +93,7 @@ class DDPG(object):
         #                                                sigma=args.ou_sigma)
 
         # Hyper-parameters
+        self.n_update = args.n_update
         self.batch_size = args.bsize
         self.tau = args.tau
         self.discount = args.discount
