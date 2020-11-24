@@ -49,9 +49,6 @@ def get_config_for_scale_log(scale_log: bool, symmetric: bool) -> NNCFConfig:
     })
 
     class RandDatasetMock:
-        def __init__(self):
-            super().__init__()
-
         def __getitem__(self, index):
             return torch.rand(*SAMPLE_SIZE)
 
