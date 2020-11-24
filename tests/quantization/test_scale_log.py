@@ -60,6 +60,8 @@ def get_config_for_scale_log(scale_log: bool, symmetric: bool) -> NNCFConfig:
     class SquadInitializingDataloader(nncf.initialization.InitializingDataLoader):
         def get_inputs(self, batch):
             return batch, {}
+        def get_target(self, batch):
+            return None
 
     initializing_data_loader = SquadInitializingDataloader(data_loader)
     init_range = nncf.initialization.QuantizationRangeInitArgs(initializing_data_loader)
