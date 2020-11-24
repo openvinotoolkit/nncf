@@ -55,6 +55,7 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         TanhMetatype,
         ELUMetatype,
         PRELUMetatype,
+        LeakyRELUMetatype,
         LayerNormMetatype,
         GELUMetatype,
         SigmoidMetatype,

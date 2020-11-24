@@ -10,13 +10,25 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import abstractmethod
+
 import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import Parameter, Dropout
 
 
-class ManyNonEvalModules(nn.Module):
+class ModelWithDummyParameter(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.dummy_param = Parameter(torch.zeros(1))
+
+    @abstractmethod
+    def forward(self, x):
+        pass
+
+
+class ManyNonEvalModules(ModelWithDummyParameter):
     class AuxBranch(nn.Module):
         def __init__(self):
             super().__init__()
@@ -45,7 +57,6 @@ class ManyNonEvalModules(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.dummy = Parameter(torch.ones([1]))
         self.aux_branch = self.AuxBranch()
         self.mixed_modules = self.ModuleWithMixedModules()
         self.avg_pool = nn.AvgPool2d(1)
@@ -56,3 +67,51 @@ class ManyNonEvalModules(nn.Module):
             aux = self.aux_branch(x)
         x = self.mixed_modules(x)
         return x, aux if self.training else x
+
+
+class PoolUnPool(ModelWithDummyParameter):
+    def __init__(self):
+        super().__init__()
+        self.pool = nn.MaxPool3d(3, stride=2, return_indices=True)
+        self.unpool = nn.MaxUnpool3d(3, stride=2)
+
+    def forward(self, input_):
+        output, indices = self.pool(input_)
+        return self.unpool(output, indices)
+
+
+class ArangeModel(ModelWithDummyParameter):
+    def forward(self, dummy_x):
+        return torch.arange(0, dummy_x.size(0), dtype=torch.int64)
+
+
+class TransposeModel(ModelWithDummyParameter):
+    def forward(self, x):
+        o1 = x.transpose(dim0=0, dim1=0)
+        o2 = x.permute(dims=[0])
+        return o1, o2
+
+
+class GatherModel(ModelWithDummyParameter):
+    def forward(self, x):
+        index = torch.zeros(1, dtype=torch.int64).to(x.device)
+        o1 = torch.where(self.dummy_param > 0, x, self.dummy_param)
+        o2 = torch.index_select(x, dim=0, index=index)
+        o3 = x.index_select(dim=0, index=index)
+        o4 = x[0]
+        return o1, o2, o3, o4
+
+
+class MaskedFillModel(ModelWithDummyParameter):
+    def forward(self, x):
+        o1 = x.masked_fill_(self.dummy_param > 0, 1.0)
+        o2 = x.masked_fill(self.dummy_param > 0, 1.0)
+        return o1, o2
+
+
+class ReshapeModel(ModelWithDummyParameter):
+    def forward(self, x):
+        torch.squeeze(x)
+        torch.unsqueeze(x, dim=0)
+        torch.flatten(x)
+        return x.reshape([1]), x.squeeze(), x.flatten(), x.unsqueeze(dim=0), x.view([1])

@@ -129,7 +129,8 @@ class TwoConvTestModel(nn.Module):
         return 2
 
 
-def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None):
+def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
+                     input_info=None):
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 
@@ -142,7 +143,7 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
     config.update({
         "model": "basic_sparse_conv",
         "model_size": model_size,
-        "input_info": _create_input_info()
+        "input_info": input_info if input_info else _create_input_info()
     })
     return config
 
