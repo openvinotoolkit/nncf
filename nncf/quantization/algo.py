@@ -386,19 +386,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                    QuantizerGroup.ACTIVATIONS])],
                                                            input_infos=target_model.get_input_infos())
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
-            insertion_data = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
-            insertion_commands = []
+            quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
 
             original_nncf_graph = target_model.get_original_graph()
-            for insertion_info, quantizer_config_list in insertion_data.items():
+            final_quantizer_config_setup = {}  # type: Dict[QuantizerInsertionInfo, QuantizerConfig]
+            for insertion_info, quantizer_config_list in \
+                    quantization_proposal.quantizer_insertion_info_vs_possible_configs.items():
                 ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
                 operator_scope_str = str(ia_op_exec_context)
-                if not self.quantize_inputs and ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
-                    continue
-
-                # Tailored for post-hook quantization and first output quantization only
-                quantizer_input_shape = original_nncf_graph.get_output_shapes_for_ia_op_exec_context(
-                    ia_op_exec_context)[0]
                 try:
                     qconfig_overrides = None
                     if in_scope_list(operator_scope_str, self.config.get("scope_overrides", {})):
@@ -416,9 +411,30 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     err_msg += str(ia_op_exec_context)
                     raise RuntimeError(err_msg)
 
+                final_quantizer_config_setup[insertion_info] = quantizer_config
+
+            finalized_proposal = quantization_proposal.finalize(final_quantizer_config_setup)
+            final_quantizer_setup = prop_graph_solver.get_final_quantizer_setup(finalized_proposal)
+
+            insertion_commands = []
+            for insertion_info, quantizer_config in \
+                    final_quantizer_setup.items():
+                ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
+                if not self.quantize_inputs and ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                    continue
+
+                # Tailored for post-hook quantization and first output quantization only
+                quantizer_input_shape = original_nncf_graph.get_output_shapes_for_ia_op_exec_context(
+                    ia_op_exec_context)[0]
+
                 quantizer_config.input_shape = quantizer_input_shape
                 quantizer_id = NonWeightQuantizerId(ia_op_exec_context)
-                self._hw_precision_constraints.add(quantizer_id, quantizer_config_list)
+
+                # TODO: perform HAWQ/precision init at the builder stage so that the final qconfig selection
+                # occurs at one and the same spot
+                original_qconfig_list = quantization_proposal.quantizer_insertion_info_vs_possible_configs[
+                    insertion_info]
+                self._hw_precision_constraints.add(quantizer_id, original_qconfig_list)
                 insertion_commands += self._add_single_activation_quantizer(target_model, insertion_info,
                                                                             quantizer_config)
         else:

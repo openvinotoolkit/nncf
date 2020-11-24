@@ -14,7 +14,6 @@
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
-
 import sys
 from os import path as osp
 
@@ -47,6 +46,9 @@ from examples.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf import create_compressed_model
 from nncf.utils import is_main_process
 
+import logging
+from nncf import set_log_level
+set_log_level(logging.DEBUG)
 
 def get_arguments(args):
     parser = get_common_argument_parser()

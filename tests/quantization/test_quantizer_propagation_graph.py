@@ -408,7 +408,7 @@ class TestQuantizerPropagationStateGraph:
                 node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
 
             for start_node_key, ref_dominated_quantizable_nodes_set in dominated_nodes_test_struct[1].items():
-                dominated_quantizable_nodes_list = mock_qp_graph.get_quantizable_op_nodes_immediately_dominated_by_node(
+                dominated_quantizable_nodes_list = mock_qp_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(
                     start_node_key)
                 assert set(dominated_quantizable_nodes_list) == ref_dominated_quantizable_nodes_set
 

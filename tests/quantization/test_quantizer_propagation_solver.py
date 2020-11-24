@@ -352,7 +352,7 @@ class TestQuantizerPropagationSolver:
         ref_merged_primary_config_list = qconfig_merge_test_struct.primary_config_list_after_merge
         ref_merged_secondary_config_dict_list = qconfig_merge_test_struct.secondary_config_list_dict_after_merge
 
-        merged_primary_config_list, merged_secondary_config_dict_list = quant_prop_solver.get_merged_qconfigs(
+        merged_primary_config_list, merged_secondary_config_dict_list = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(
             qconfig_merge_test_struct.primary_config_list_before_merge,
             qconfig_merge_test_struct.secondary_config_list_dict_before_merge
         )
