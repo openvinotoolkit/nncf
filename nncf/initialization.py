@@ -11,7 +11,7 @@ from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs
-from nncf.utils import objwalk, is_tensor
+from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
 class RangeInitializerFactory:
@@ -190,8 +190,6 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         num_bn_forget_steps = self.num_bn_forget_steps
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
 
-        self.model.train()
-
         def set_bn_momentum(module, momentum_value):
             module.momentum = momentum_value
 
@@ -201,30 +199,29 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         def restore_original_bn_momenta(module):
             module.momentum = self.original_momenta_values[module]
 
-        self.model.apply(self._apply_to_batchnorms(save_original_bn_momenta))
-        self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
-                                                           momentum_value=self.momentum_bn_forget)))
+        with training_mode_switcher(self.model, is_training=True):
+            self.model.apply(self._apply_to_batchnorms(save_original_bn_momenta))
+            self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
+                                                               momentum_value=self.momentum_bn_forget)))
 
-        for i, loaded_item in enumerate(data_loader):
-            if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
+            for i, loaded_item in enumerate(data_loader):
+                if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
 
-        self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
+            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
 
-        for i, loaded_item in tqdm(
-                enumerate(data_loader),
-                total=num_init_steps,
-                desc=self.progressbar_description,
-                bar_format=bar_format,
-        ):
-            if num_init_steps is not None and i >= num_init_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
-
-        self.model.eval()
+            for i, loaded_item in tqdm(
+                    enumerate(data_loader),
+                    total=num_init_steps,
+                    desc=self.progressbar_description,
+                    bar_format=bar_format,
+            ):
+                if num_init_steps is not None and i >= num_init_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
 
     def _prepare_initialization(self):
         pass
