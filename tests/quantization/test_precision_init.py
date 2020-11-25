@@ -562,12 +562,6 @@ def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
 
 ManualConfigTestParams = namedtuple('ManualConfigTestParams', ('config_name', 'bit_stats'))
 MANUAL_CONFIG_TEST_PARAMS = [
-    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual.json",
-                           bit_stats=[['8', '23.077', '33.333', '56.410'],
-                                      ['4', '22.222', '21.368', '43.590']]),
-    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual_staged.json",
-                           bit_stats=[['8', '23.077', '33.333', '56.410'],
-                                      ['4', '22.222', '21.368', '43.590']]),
     ManualConfigTestParams(config_name="mobilenet_v2_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '23.932', '47.009'],
                                       ['4', '22.222', '30.769', '52.991']]),
@@ -587,7 +581,8 @@ MANUAL_CONFIG_TEST_PARAMS = [
                          ids=[pair[0] for pair in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
     config_name, bit_stats = manual_config_params
-    config = NNCFConfig.from_json(str(EXAMPLES_DIR.joinpath('classification', 'configs', 'quantization') / config_name))
+    config_path = EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / config_name
+    config = NNCFConfig.from_json(str(config_path))
     config['quantizer_setup_type'] = 'pattern_based'
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
     model = load_model(config['model'], pretrained=False)

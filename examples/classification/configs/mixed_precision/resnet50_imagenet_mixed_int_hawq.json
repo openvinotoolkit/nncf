@@ -1,5 +1,5 @@
 {
-    "model": "squeezenet1_1_custom",
+    "model": "resnet50",
     "pretrained": true,
     "input_info": {
         "sample_size": [
@@ -10,8 +10,9 @@
         ]
     },
     "num_classes": 1000,
-    "batch_size": 256,
-    "epochs": 150,
+    "batch_size": 150,
+    "workers": 6,
+    "multiprocessing_distributed": true,
     "optimizer": {
         "base_lr": 0.00031,
         "schedule_type": "plateau",
@@ -22,26 +23,14 @@
         },
         "weight_decay": 1e-05
     },
-    "quantizer_setup_type": "pattern_based",
+    "target_device": "VPU",
     "compression": {
         "algorithm": "quantization",
-        "weights": {
-            "mode": "asymmetric",
-            "per_channel": true
-        },
-        "activations": {
-            "mode": "asymmetric"
-        },
         "initializer": {
             "precision": {
                 "type": "hawq",
-                "bits": [
-                    4,
-                    8
-                ]
-            },
-            "range": {
-                "type": "min_max"
+                "bits": [4, 8],
+                "compression_ratio": 1.5
             }
         }
     }
