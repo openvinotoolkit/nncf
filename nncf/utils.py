@@ -348,3 +348,13 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
                and not in_scope_list(scope_str, ignored_scopes)
+
+
+@contextmanager
+def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
+    is_original_mode_training = model.training
+    model.train(is_training)
+    try:
+        yield
+    finally:
+        model.train(is_original_mode_training)
