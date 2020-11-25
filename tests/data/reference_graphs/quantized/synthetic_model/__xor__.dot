@@ -1,0 +1,7 @@
+strict digraph  {
+"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
+"1 /nncf_model_input" [id=1, scope="", type=nncf_model_input];
+"2 TestModel/__xor__" [id=2, scope=TestModel, type=__xor__];
+"0 /nncf_model_input" -> "2 TestModel/__xor__";
+"1 /nncf_model_input" -> "2 TestModel/__xor__";
+}

@@ -1,0 +1,7 @@
+strict digraph  {
+"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
+"1 MaskedFillModel/masked_fill_" [id=1, scope=MaskedFillModel, type=masked_fill_];
+"2 MaskedFillModel/masked_fill" [id=2, scope=MaskedFillModel, type=masked_fill];
+"0 /nncf_model_input" -> "1 MaskedFillModel/masked_fill_";
+"1 MaskedFillModel/masked_fill_" -> "2 MaskedFillModel/masked_fill";
+}
