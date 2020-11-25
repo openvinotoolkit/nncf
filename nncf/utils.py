@@ -22,7 +22,7 @@ from torch import distributed as dist
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
-
+from nncf.layer_utils import _NNCFModuleMixin
 
 def scopes_matched(scope_stack_0, scope_stack_1):
     from nncf.layers import NNCF_MODULES_MAP
@@ -104,7 +104,7 @@ def get_all_modules(model, prefix=None):
     return found
 
 
-def get_all_modules_by_type(model, module_types, current_scope=None,
+def get_all_modules_by_type(model, module_types=None, current_scope=None,
                             ignored_scopes=None, target_scopes=None) -> Dict['Scope', Module]:
     if isinstance(module_types, str):
         module_types = [module_types]
@@ -123,7 +123,7 @@ def get_all_modules_by_type(model, module_types, current_scope=None,
             continue
 
         if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
-            if module_types.count(str(type(module).__name__)) != 0:
+            if module_types is None or module_types.count(str(type(module).__name__)) != 0:
                 found[child_scope] = module
             sub_found = get_all_modules_by_type(module, module_types,
                                                 current_scope=child_scope,
@@ -169,6 +169,12 @@ def get_module_by_node_name(model: torch.nn.Module, node_scope_str: str, prefix=
         if sub_result is not None:
             return sub_result
     return None
+
+
+def get_filters_num(module):
+    if isinstance(module, _NNCFModuleMixin):
+        return module.weight.size(module.target_weight_dim_for_compression)
+    return module.weight.size(0)
 
 
 def apply_by_node_name(model, node_names, command=lambda x: x, prefix=None):
@@ -342,3 +348,13 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
                and not in_scope_list(scope_str, ignored_scopes)
+
+
+@contextmanager
+def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
+    is_original_mode_training = model.training
+    model.train(is_training)
+    try:
+        yield
+    finally:
+        model.train(is_original_mode_training)

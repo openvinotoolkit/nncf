@@ -74,6 +74,7 @@ class TestSotaCheckpoints:
     train_ids_list = []
     row_dict = OrderedDict()
     color_dict = OrderedDict()
+    ref_fp32_dict = OrderedDict()
     test = None
 
     @staticmethod
@@ -263,23 +264,26 @@ class TestSotaCheckpoints:
                 within_thresholds = True
         return color, within_thresholds
 
+    # pylint:disable=unused-variable
     @staticmethod
     def write_common_metrics_file(per_model_metric_file_dump_path: Path):
         metric_value = OrderedDict()
-        for model_name in TestSotaCheckpoints.ids_list:
-            metric_file_path = per_model_metric_file_dump_path / TestSotaCheckpoints.get_metric_file_name(model_name)
-            with open(str(metric_file_path)) as metric_file:
-                metrics = json.load(metric_file)
-            metric_value[model_name] = metrics['Accuracy']
-
-            common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
-            if common_metrics_file_path.is_file():
-                data = json.loads(common_metrics_file_path.read_text(encoding='utf-8'))
-                data.update(metric_value)
-                common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding='utf-8')
-            else:
-                with open(str(common_metrics_file_path), 'w') as outfile:
-                    json.dump(metric_value, outfile)
+        for root, dirs, files in os.walk(per_model_metric_file_dump_path):
+            for file in files:
+                metric_file_path = per_model_metric_file_dump_path / file
+                with open(str(metric_file_path)) as metric_file:
+                    metrics = json.load(metric_file)
+                model_name = str(file).split('.')[0]
+                metric_value[model_name] = metrics['Accuracy']
+                common_metrics_file_path = per_model_metric_file_dump_path / 'metrics.json'
+                if common_metrics_file_path.is_file():
+                    data = json.loads(common_metrics_file_path.read_text(encoding='utf-8'))
+                    data.update(metric_value)
+                    common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding='utf-8')
+                else:
+                    with open(str(common_metrics_file_path), 'w') as outfile:
+                        json.dump(metric_value, outfile)
+                dirs.clear()
 
     @staticmethod
     def read_metric(metric_file_name: str):
@@ -310,6 +314,8 @@ class TestSotaCheckpoints:
                 reference = None
                 if model_dict[model_name].get('reference', {}):
                     reference = model_dict[model_name].get('reference', {})
+                else:
+                    ref_fp32_dict[model_name] = model_dict[model_name].get('target', {})
                 expected = model_dict[model_name].get('target', {})
                 metric_type = model_dict[model_name].get('metric_type', {})
                 if model_dict[model_name].get('resume', {}):
@@ -387,9 +393,12 @@ class TestSotaCheckpoints:
         fp32_metric = None
         if eval_test_struct.reference_ is not None:
             reference_metric_file_path = METRICS_DUMP_PATH / self.get_metric_file_name(eval_test_struct.reference_)
-            with open(str(reference_metric_file_path)) as ref_metric:
-                metrics = json.load(ref_metric)
-            fp32_metric = metrics['Accuracy']
+            if os.path.exists(reference_metric_file_path):
+                with open(str(reference_metric_file_path)) as ref_metric:
+                    metrics = json.load(ref_metric)
+                fp32_metric = metrics['Accuracy']
+            else:
+                fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
 
         if is_ok:
             diff_target = round((metric_value - eval_test_struct.expected_), 2)
@@ -461,7 +470,10 @@ class TestSotaCheckpoints:
         ac_metric = self.read_csv_metric(eval_test_struct.model_name_)
         fp32_ac_metric = None
         if eval_test_struct.reference_ is not None:
-            fp32_ac_metric = self.read_csv_metric(eval_test_struct.reference_)
+            if os.path.exists('{}.csv'.format(eval_test_struct.reference_)):
+                fp32_ac_metric = self.read_csv_metric(eval_test_struct.reference_)
+            else:
+                fp32_ac_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
 
         if ac_metric:
             diff_target = round((ac_metric - eval_test_struct.expected_), 2)

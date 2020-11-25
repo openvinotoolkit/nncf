@@ -54,6 +54,13 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, 
     return conv
 
 
+def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
+    conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
+
 class BasicConvTestModel(nn.Module):
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
         super().__init__()
@@ -122,7 +129,8 @@ class TwoConvTestModel(nn.Module):
         return 2
 
 
-def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None):
+def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
+                     input_info=None):
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 
@@ -135,7 +143,7 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
     config.update({
         "model": "basic_sparse_conv",
         "model_size": model_size,
-        "input_info": _create_input_info()
+        "input_info": input_info if input_info else _create_input_info()
     })
     return config
 

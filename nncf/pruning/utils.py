@@ -20,9 +20,8 @@ from functools import partial
 
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
-from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.layers import NNCF_CONV_MODULES_DICT, NNCF_DECONV_MODULES_DICT
 from nncf.nncf_network import NNCFNetwork
-
 
 # pylint: disable=protected-access
 def get_rounded_pruned_element_number(total, sparsity_rate, multiple_of=8):
@@ -187,7 +186,8 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
 
 
 def is_conv_with_downsampling(conv_module):
-    return not torch.all(torch.tensor(conv_module.stride) == 1)
+    return not torch.all(torch.tensor(conv_module.stride) == 1) and \
+           not isinstance(conv_module, tuple(NNCF_DECONV_MODULES_DICT.keys()))
 
 
 def is_grouped_conv(conv_module):

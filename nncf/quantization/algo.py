@@ -157,6 +157,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         if is_hw_config_enabled:
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
+        self.eval_ops_exec_ctx = []
 
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
@@ -1159,12 +1160,12 @@ class QuantizationController(QuantizationControllerBase):
 
         return module_init_range_config
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
-        if self._collect_compression_metrics:
+        if self._collect_compression_metrics and not quickly_collected_only:
             self.update_metric_store()
             for metric in self.metric_store.values():
                 for add_info, table in metric.items():

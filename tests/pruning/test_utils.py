@@ -53,6 +53,10 @@ def test_get_bn_for_module_scope():
     bn = get_bn_for_module_scope(pruned_model, conv2_scope)
     assert bn == pruned_model.bn
 
+    up_scope = Scope.from_str('BigPruningTestModel/NNCFConvTranspose2d[up]')
+    bn = get_bn_for_module_scope(pruned_model, up_scope)
+    assert bn is None
+
     conv3_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv3]')
     bn = get_bn_for_module_scope(pruned_model, conv3_scope)
     assert bn is None
@@ -69,7 +73,7 @@ def test_get_first_pruned_layers(model, ref_first_module_names):
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
     first_pruned_modules = get_first_pruned_modules(pruned_model,
-                                                    FilterPruningBuilder(config).get_types_of_pruned_modules())
+                                                    FilterPruningBuilder(config).get_op_types_of_pruned_modules())
     ref_first_modules = [getattr(pruned_model, module_name) for module_name in ref_first_module_names]
     assert set(first_pruned_modules) == set(ref_first_modules)
 
@@ -86,6 +90,6 @@ def test_get_last_pruned_layers(model, ref_last_module_names):
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
     first_pruned_modules = get_last_pruned_modules(pruned_model,
-                                                   FilterPruningBuilder(config).get_types_of_pruned_modules())
+                                                   FilterPruningBuilder(config).get_op_types_of_pruned_modules())
     ref_last_modules = [getattr(pruned_model, module_name) for module_name in ref_last_module_names]
     assert set(first_pruned_modules) == set(ref_last_modules)

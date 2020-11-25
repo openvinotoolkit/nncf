@@ -17,7 +17,8 @@ from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
     PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype, SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, \
     DropoutMetatype, Conv1dMetatype, Conv2dMetatype, Conv3dMetatype, BatchNormMetatype, CatMetatype, AddMetatype, \
-    SubMetatype, DivMetatype, MulMetatype, LinearMetatype, MatMulMetatype, MinMetatype, MaxMetatype, MeanMetatype
+    SubMetatype, DivMetatype, MulMetatype, LinearMetatype, MatMulMetatype, MinMetatype, MaxMetatype, MeanMetatype, \
+    ConvTranspose2dMetatype, ConvTranspose3dMetatype
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
@@ -179,6 +180,71 @@ class Convolution(DefaultMetaOp):
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
         nncf_logger.info('Pruned Convolution {} by pruning mask. Old output filters number: {}, new filters number:'
+                         ' {}.'.format(nx_node['key'], old_num_clannels, node_module.out_channels))
+
+
+@PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
+class TransposeConvolution(DefaultMetaOp):
+    subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
+
+    def accept_pruned_input(self, model: NNCFNetwork, graph: NNCFGraph, node_module):
+        return True
+
+    def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        output_mask = None
+        accept_pruned_input = True
+        input_masks = get_input_masks(nx_node, nx_graph)
+
+        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+
+        if node_module.pre_ops:
+            output_mask = node_module.pre_ops['0'].op.binary_filter_pruning_mask
+
+        nx_node['input_masks'] = input_masks
+        nx_node['output_mask'] = output_mask
+        nx_node['accept_pruned_input'] = accept_pruned_input
+
+    def input_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        input_mask = nx_node['input_masks'][0]
+        if input_mask is None:
+            return
+        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+
+        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+        old_num_clannels = int(node_module.weight.size(0))
+
+        node_module.in_channels = int(torch.sum(bool_mask))
+        node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
+
+        nncf_logger.info('Pruned ConvTranspose {} by input mask. Old input filters number: {}, new filters number:'
+                         ' {}.'.format(nx_node['key'], old_num_clannels, node_module.in_channels))
+
+    def output_prune(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        output_mask = nx_node['output_mask']
+        if output_mask is None:
+            return
+
+        bool_mask = torch.tensor(output_mask, dtype=torch.bool)
+        new_num_channels = int(torch.sum(bool_mask))
+
+        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+        old_num_clannels = int(node_module.weight.size(1))
+
+        in_channels = node_module.weight.size(0)
+        broadcasted_mask = bool_mask.repeat(in_channels).view(in_channels, bool_mask.size(0))
+        new_weight_shape = list(node_module.weight.shape)
+        new_weight_shape[1] = new_num_channels
+
+        node_module.out_channels = new_num_channels
+        node_module.weight = torch.nn.Parameter(node_module.weight[broadcasted_mask].view(new_weight_shape))
+
+        if node_module.bias is not None:
+            node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
+
+        nncf_logger.info('Pruned ConvTranspose {} by pruning mask. Old output filters number: {}, new filters number:'
                          ' {}.'.format(nx_node['key'], old_num_clannels, node_module.out_channels))
 
 

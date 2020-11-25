@@ -10,13 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Tuple, Dict, Optional
+from abc import abstractmethod, ABC
+from typing import List, Tuple, Dict, Optional, Callable, Union
 
 import networkx as nx
 import os
 import pytest
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
 from functools import partial
 from copy import deepcopy
@@ -38,10 +40,12 @@ from nncf.quantization.algo import PotentialQuantizedModule
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
 from nncf.quantization.layers import QuantizerConfig
 from nncf.hw_config import HWConfig, HWConfigType
+from tests.test_models.synthetic import ManyNonEvalModules, PoolUnPool, ArangeModel, TransposeModel, \
+    GatherModel, MaskedFillModel, ReshapeModel, ModelWithDummyParameter
 
 
-def get_basic_quantization_config(quantization_type, input_sample_sizes=None):
-    config = get_empty_config(input_sample_sizes=input_sample_sizes)
+def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info=None):
+    config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {"algorithm": "quantization",
                              "activations": {
                                  "mode": quantization_type
@@ -51,12 +55,14 @@ def get_basic_quantization_config(quantization_type, input_sample_sizes=None):
                              }}
     return config
 
+
 # pylint:disable=redefined-outer-name
 def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_sample_size):
     config = get_empty_config(input_sample_sizes=input_sample_size)
     config["target_device"] = hw_config_type
     config["compression"] = {"algorithm": "quantization", }
     return config
+
 
 def get_version_agnostic_graph(nx_graph):
     done = False
@@ -154,6 +160,7 @@ def gnmt_wrap_inputs_fn(model_args, model_kwargs):
                   nncf_model_input(model_args[2]))
     return model_args, model_kwargs
 
+
 def gnmt_forward_fn(seq_len, batch_size, vocab_size):
     def forward_fn(model, seq_len_, batch_size_, vocab_size_, batch_first_):
         device = next(model.parameters()).device
@@ -177,12 +184,12 @@ def gnmt_forward_fn(seq_len, batch_size, vocab_size):
 
     return partial(forward_fn, seq_len_=seq_len, batch_size_=batch_size, vocab_size_=vocab_size, batch_first_=False)
 
+
 class ModelDesc:
-    def __init__(self, dot_filename: str, model_builder, input_sample_sizes, dummy_forward_fn=None,
+    def __init__(self, model_name: str, model_builder, input_sample_sizes, dummy_forward_fn=None,
                  wrap_inputs_fn=None):
-        self.model_name = self._get_model_name(dot_filename)
+        self.model_name = model_name
         self.model_builder = model_builder
-        self.dot_filename = dot_filename
         self.input_sample_sizes = input_sample_sizes
 
         def dummy_forward_wrapper(model_):
@@ -194,17 +201,15 @@ class ModelDesc:
 
         self.wrap_inputs_fn = wrap_inputs_fn
 
-    @staticmethod
-    def _get_model_name(dot_filename):
-        if isinstance(dot_filename, tuple):
-            dot_filename = dot_filename[0]
-        return dot_filename[:dot_filename.find('.dot')]
+    @property
+    def dot_filename(self):
+        return self.model_name + '.dot'
 
 
 def sr_wrap_inputs_fn(model_args, model_kwargs):
     # Assuming 2 tensors in the 0-th arg (tuple) to wrap and 0 kwargs to wrap
     model_args = ((nncf_model_input(model_args[0][0]),
-                   nncf_model_input(model_args[0][1])), )
+                   nncf_model_input(model_args[0][1])),)
     return model_args, model_kwargs
 
 
@@ -213,39 +218,39 @@ def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
     config = {'input_info': [{"sample_size": sizes} for sizes in input_sample_sizes]}
     input_info_list = create_input_infos(config)
     tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
-    args = (tuple(tensor_list), )
+    args = (tuple(tensor_list),)
     args, _ = sr_wrap_inputs_fn(args, {})
     return model_(*args)
 
 
 TEST_MODELS_DESC = [
-    ModelDesc("alexnet.dot", test_models.AlexNet, [1, 3, 32, 32]),
-    ModelDesc("lenet.dot", test_models.LeNet, [1, 3, 32, 32]),
-    ModelDesc("resnet18.dot", test_models.ResNet18, [1, 3, 32, 32]),
-    ModelDesc("resnet50.dot", test_models.ResNet50, [1, 3, 32, 32]),
-    ModelDesc("vgg16.dot", partial(test_models.VGG, 'VGG16'), [1, 3, 32, 32]),
-    ModelDesc("inception.dot", test_models.GoogLeNet, [1, 3, 32, 32]),
-    ModelDesc("densenet121.dot", test_models.DenseNet121, [1, 3, 32, 32]),
-    ModelDesc("inception_v3.dot", partial(test_models.Inception3, aux_logits=True, transform_input=True),
+    ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]),
+    ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]),
+    ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]),
+    ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
+    ModelDesc("vgg16", partial(test_models.VGG, 'VGG16'), [1, 3, 32, 32]),
+    ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]),
+    ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]),
+    ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
               [2, 3, 299, 299]),
-    ModelDesc("squeezenet1_0.dot", test_models.squeezenet1_0, [1, 3, 32, 32]),
-    ModelDesc("squeezenet1_1.dot", test_models.squeezenet1_1, [1, 3, 32, 32]),
-    ModelDesc("shufflenetv2.dot", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
-    ModelDesc("shuflenet_g2.dot", test_models.ShuffleNetG2, [1, 3, 32, 32]),
-    ModelDesc("ssd_vgg.dot", test_models.ssd_vgg300, [2, 3, 300, 300]),
-    ModelDesc("ssd_mobilenet.dot", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2.dot", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
-    ModelDesc("resnext29_32x4d.dot", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
-    ModelDesc("pnasnetb.dot", test_models.PNASNetB, [1, 3, 32, 32]),
-    ModelDesc("senet18.dot", test_models.SENet18, [1, 3, 32, 32]),
-    ModelDesc("preresnet50.dot", test_models.PreActResNet50, [1, 3, 32, 32]),
-    ModelDesc("unet.dot", test_models.UNet, [1, 3, 360, 480]),
-    ModelDesc("lstm_cell.dot", LSTMCellNNCF, [1, 1]),
-    ModelDesc("lstm_uni_seq.dot", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]),
-    ModelDesc("lstm_uni_stacked.dot", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
-    ModelDesc("lstm_bi_seq.dot", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]),
-    ModelDesc("lstm_bi_stacked.dot", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
-    ModelDesc("sr_small_model.dot", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]),
+    ModelDesc("squeezenet1_0", test_models.squeezenet1_0, [1, 3, 32, 32]),
+    ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]),
+    ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
+    ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
+    ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
+    ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
+    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
+    ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
+    ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
+    ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
+    ModelDesc("preresnet50", test_models.PreActResNet50, [1, 3, 32, 32]),
+    ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]),
+    ModelDesc("lstm_cell", LSTMCellNNCF, [1, 1]),
+    ModelDesc("lstm_uni_seq", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]),
+    ModelDesc("lstm_uni_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
+    ModelDesc("lstm_bi_seq", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]),
+    ModelDesc("lstm_bi_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
+    ModelDesc("sr_small_model", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]),
               dummy_forward_fn=sr_dummy_forward_fn,
               wrap_inputs_fn=sr_wrap_inputs_fn)
 ]
@@ -254,6 +259,8 @@ TEST_MODELS_DESC = [
 def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref_dot_file_directory: str):
     compressed_model.to('cuda')
     compressed_model.do_dummy_forward()
+    # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
+    compressed_model.train()
     compressed_model.do_dummy_forward()
     check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 
@@ -287,8 +294,6 @@ class TestModelsGraph:
     def test_sparse_network(self, desc: ModelDesc, algo):
         model = desc.model_builder()
         from nncf.layers import NNCF_MODULES_MAP
-        sparsifiable_modules = list(NNCF_MODULES_MAP.values())
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
 
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = {"algorithm": algo}
@@ -296,6 +301,10 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
+
+        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
+        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
@@ -311,8 +320,6 @@ class TestModelsGraph:
         model = desc.model_builder()
 
         from nncf.layers import NNCF_MODULES_MAP
-        sparsifiable_modules = list(NNCF_MODULES_MAP.values())
-        ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = [
             {"algorithm": "rb_sparsity"},
@@ -322,6 +329,10 @@ class TestModelsGraph:
         compressed_model, compression_ctrl = \
             create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
+
+        # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
+        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
@@ -383,6 +394,304 @@ def test_resnet18__with_ignore(_case_config):
     check_model_graph(compressed_model, 'resnet18_ignore.dot', _case_config.graph_dir)
 
 
+def n_inputs_fn(model_args, model_kwargs, nargs=2):
+    model_args = tuple(nncf_model_input(model_args[i]) for i in range(nargs))
+    return model_args, model_kwargs
+
+
+def cat_two_inputs_fn(model_args, model_kwargs):
+    model_args = tuple(nncf_model_input(model_args[i]) for i in range(2))
+    return (model_args,), model_kwargs
+
+
+class IModelDesc(ABC):
+
+    @abstractmethod
+    def get_input_sample_sizes(self):
+        pass
+
+    @abstractmethod
+    def get_input_info(self):
+        pass
+
+    @abstractmethod
+    def get_model(self):
+        pass
+
+    @abstractmethod
+    def get_dot_filename(self):
+        pass
+
+    @abstractmethod
+    def get_wrap_inputs_fn(self):
+        pass
+
+
+class BaseDesc(IModelDesc):
+    def __init__(self, input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+                 model_name: str = None, wrap_inputs_fn: Callable = None, input_info=None,
+                 dummy_forward_fn=None):
+        self.input_sample_sizes = input_sample_sizes
+        self.input_info = input_info
+        self.model_name = model_name
+        self.wrap_inputs_fn = wrap_inputs_fn
+        self.dummy_forward_fn = dummy_forward_fn
+
+    def get_input_sample_sizes(self):
+        return self.input_sample_sizes
+
+    def get_input_info(self):
+        return self.input_info
+
+    def get_dot_filename(self):
+        return self.model_name + '.dot'
+
+    def get_wrap_inputs_fn(self):
+        return self.wrap_inputs_fn
+
+    def get_dummy_forward_fn(self):
+        return self.dummy_forward_fn
+
+    @abstractmethod
+    def get_model(self):
+        pass
+
+
+class GeneralModelDesc(BaseDesc):
+    def __init__(self,
+                 input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
+                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info=None):
+        super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
+        if not model_name and hasattr(model_builder, '__name__'):
+            self.model_name = model_builder.__name__
+        self.model_builder = model_builder
+
+    def get_model(self):
+        return self.model_builder()
+
+
+class SingleLayerModelDesc(BaseDesc):
+    def __init__(self, layer: nn.Module,
+                 input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None, model_name: str = None,
+                 wrap_inputs_fn: Callable = None, input_info=None):
+        super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
+
+        self.model_name = model_name
+        if model_name is None:
+            self.model_name = layer.__class__.__name__
+
+        self.layer = layer
+        self.input_sample_sizes = input_sample_sizes if input_sample_sizes else [1]
+        self.wrap_inputs_fn = wrap_inputs_fn
+        if wrap_inputs_fn is None:
+            self.wrap_inputs_fn = partial(n_inputs_fn, nargs=1)
+
+    def get_model(self):
+        class TestModel(ModelWithDummyParameter):
+            def __init__(self, layer):
+                super().__init__()
+                self._layer = layer
+
+            def forward(self, *args, **kwargs):
+                return self._layer(*args, **kwargs)
+
+        return TestModel(self.layer)
+
+
+class TorchBinaryMethodDesc(SingleLayerModelDesc):
+    def __init__(self, model_name: str, torch_method: Callable, input_info=None):
+        super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=([1], [1]),
+                         wrap_inputs_fn=n_inputs_fn, input_info=input_info)
+
+
+class TensorBinaryMethodsDesc(BaseDesc):
+    def __init__(self, tensor_method: str, model_name: str = None, input_info=None):
+        super().__init__(input_sample_sizes=([1], [1]), wrap_inputs_fn=n_inputs_fn, model_name=model_name,
+                         input_info=input_info)
+
+        self.model_name = model_name
+        if model_name is None:
+            self.model_name = tensor_method
+        self.tensor_method = tensor_method
+
+    def get_model(self):
+        class TestModel(ModelWithDummyParameter):
+            def __init__(self, tensor_method):
+                super().__init__()
+                self._tensor_method = tensor_method
+
+            def forward(self, t1, t2):
+                return getattr(t1, self._tensor_method)(t2)
+
+        return TestModel(self.tensor_method)
+
+
+class TensorUnaryMethodsDesc(BaseDesc):
+    def __init__(self, tensor_method: str, model_name: str = None, input_info=None, **model_kwargs):
+        super().__init__(input_sample_sizes=([1]), wrap_inputs_fn=partial(n_inputs_fn, nargs=1), model_name=model_name,
+                         input_info=input_info)
+        self.model_name = model_name
+        if model_name is None:
+            self.model_name = tensor_method
+        self.tensor_method = tensor_method
+        self.model_kwargs = model_kwargs
+
+    def get_model(self):
+        class TestModel(ModelWithDummyParameter):
+            def __init__(self, tensor_method, **model_kwargs):
+                super().__init__()
+                self._tensor_method = tensor_method
+                self.model_kwargs = model_kwargs
+
+            def forward(self, x):
+                if self.model_kwargs:
+                    return getattr(x, self._tensor_method)(**self.model_kwargs)
+                return getattr(x, self._tensor_method)()
+
+        return TestModel(self.tensor_method, **self.model_kwargs)
+
+
+TWO_INT_INPUTS_INFO = [{"sample_size": [1], "type": "long"}, {"sample_size": [1], "type": "long"}]
+SYNTHETIC_MODEL_DESC_LIST = [
+    SingleLayerModelDesc(layer=nn.Conv1d(1, 1, 1), input_sample_sizes=[1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.Conv2d(1, 1, 1), input_sample_sizes=[1, 1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.ConvTranspose2d(1, 1, 1), input_sample_sizes=[1, 1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.Conv3d(1, 1, 1), input_sample_sizes=[1, 1, 1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.ConvTranspose3d(1, 1, 1), input_sample_sizes=[1, 1, 1, 1, 1]),
+
+    SingleLayerModelDesc(layer=nn.Linear(1, 1)),
+
+    SingleLayerModelDesc(layer=nn.Hardtanh()),
+    SingleLayerModelDesc(layer=nn.Tanh()),
+    SingleLayerModelDesc(layer=nn.ELU()),
+    SingleLayerModelDesc(layer=nn.PReLU()),
+    SingleLayerModelDesc(layer=nn.LeakyReLU()),
+    SingleLayerModelDesc(layer=nn.LayerNorm(normalized_shape=[1])),
+    SingleLayerModelDesc(layer=nn.GELU()),
+    SingleLayerModelDesc(layer=nn.Sigmoid()),
+
+    TorchBinaryMethodDesc('Add', torch.add),
+    TensorBinaryMethodsDesc('__add__'),
+    TensorBinaryMethodsDesc('__radd__'),
+    TensorBinaryMethodsDesc('__iadd__'),
+
+    TorchBinaryMethodDesc('Sub', torch.sub),
+    TensorBinaryMethodsDesc('__sub__'),
+    TensorBinaryMethodsDesc('__rsub__'),
+    TensorBinaryMethodsDesc('__isub__'),
+
+    TorchBinaryMethodDesc('torch_mul', torch.mul),
+    TensorBinaryMethodsDesc('mul', model_name='tensor_mul'),
+    TensorBinaryMethodsDesc('__mul__'),
+    TensorBinaryMethodsDesc('__rmul__'),
+    TensorBinaryMethodsDesc('__imul__'),
+
+    TorchBinaryMethodDesc('Div', torch.div),
+    TensorBinaryMethodsDesc('__div__'),
+    TensorBinaryMethodsDesc('__idiv__'),
+    TensorBinaryMethodsDesc('__truediv__'),
+
+    SingleLayerModelDesc(model_name='Exp', layer=torch.exp),
+    SingleLayerModelDesc(model_name='Erf', layer=torch.erf),
+
+    TorchBinaryMethodDesc(model_name='MatMul', torch_method=torch.matmul),
+    SingleLayerModelDesc(model_name='BMM', layer=torch.bmm, input_sample_sizes=([1, 1, 1], [1, 1, 1]),
+                         wrap_inputs_fn=n_inputs_fn),
+    TensorBinaryMethodsDesc(model_name='MatMul', tensor_method='matmul'),
+
+    SingleLayerModelDesc(model_name='Mean', layer=torch.mean),
+
+    TensorUnaryMethodsDesc(tensor_method='round'),
+
+    SingleLayerModelDesc(layer=nn.Dropout()),
+    SingleLayerModelDesc(layer=nn.Threshold(0.1, 20)),
+
+    SingleLayerModelDesc(layer=nn.BatchNorm1d(1), input_sample_sizes=([2, 1, 1])),
+    SingleLayerModelDesc(layer=nn.BatchNorm2d(1), input_sample_sizes=([2, 1, 1, 1])),
+    SingleLayerModelDesc(layer=nn.BatchNorm3d(1), input_sample_sizes=([2, 1, 1, 1, 1])),
+
+    SingleLayerModelDesc(layer=nn.AvgPool2d(1), input_sample_sizes=[1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.AdaptiveAvgPool2d(1), input_sample_sizes=[1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.AvgPool3d(1), input_sample_sizes=[1, 1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.AdaptiveAvgPool3d(1), input_sample_sizes=[1, 1, 1, 1]),
+
+    SingleLayerModelDesc(layer=nn.MaxPool1d(1), input_sample_sizes=[1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.MaxPool2d(1), input_sample_sizes=[1, 1, 1]),
+    SingleLayerModelDesc(layer=nn.MaxPool3d(1), input_sample_sizes=[1, 1, 1, 1]),
+
+    GeneralModelDesc(model_name='MaxUnpool3d', model_builder=PoolUnPool,
+                     input_info={"sample_size": [1, 1, 3, 3, 3], "type": "float", "filler": "random"}),
+
+    SingleLayerModelDesc(model_name='pad', layer=partial(F.pad, pad=[1, 1]), input_sample_sizes=([2, 2])),
+    SingleLayerModelDesc(model_name='cat', layer=partial(torch.cat, dim=0), wrap_inputs_fn=cat_two_inputs_fn,
+                         input_sample_sizes=([1], [1])),
+    SingleLayerModelDesc(model_name='stack', layer=partial(torch.stack, dim=0), wrap_inputs_fn=cat_two_inputs_fn,
+                         input_sample_sizes=([1], [1])),
+
+    SingleLayerModelDesc(model_name='relu', layer=torch.relu),
+    SingleLayerModelDesc(model_name='relu_', layer=torch.relu_),
+
+    SingleLayerModelDesc(model_name='max', layer=torch.max),
+    SingleLayerModelDesc(model_name='min', layer=torch.min),
+
+    GeneralModelDesc(model_builder=ArangeModel),
+
+    SingleLayerModelDesc(model_name='transpose', layer=partial(torch.transpose, dim0=0, dim1=0)),
+    GeneralModelDesc(model_builder=TransposeModel, input_sample_sizes=([1])),
+
+    GeneralModelDesc(model_builder=GatherModel),
+
+    GeneralModelDesc(model_builder=MaskedFillModel),
+    GeneralModelDesc(model_builder=ReshapeModel, input_sample_sizes=([1])),
+
+    TensorUnaryMethodsDesc(tensor_method='contiguous'),
+    TensorUnaryMethodsDesc(tensor_method='split', split_size=(1,)),
+    TensorUnaryMethodsDesc(tensor_method='chunk', chunks=1),
+    TensorUnaryMethodsDesc(tensor_method='expand', size=(1,)),
+
+    TorchBinaryMethodDesc(model_name='embedding', torch_method=F.embedding,
+                          input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
+    SingleLayerModelDesc(model_name='softmax', layer=F.softmax),
+
+    TensorBinaryMethodsDesc(tensor_method='__lt__'),
+    TensorBinaryMethodsDesc(tensor_method='__le__'),
+    TensorBinaryMethodsDesc(tensor_method='__gt__'),
+    TensorBinaryMethodsDesc(tensor_method='__mod__'),
+    TensorBinaryMethodsDesc(tensor_method='__eq__'),
+    TensorBinaryMethodsDesc(tensor_method='__ne__'),
+    TensorBinaryMethodsDesc(tensor_method='__or__', input_info=TWO_INT_INPUTS_INFO),
+    TensorBinaryMethodsDesc(tensor_method='__xor__', input_info=TWO_INT_INPUTS_INFO),
+    TensorBinaryMethodsDesc(tensor_method='__and__', input_info=TWO_INT_INPUTS_INFO),
+    TensorUnaryMethodsDesc(tensor_method='logical_not_'),
+    TensorBinaryMethodsDesc(tensor_method='__pow__'),
+    SingleLayerModelDesc(model_name='interpolate', layer=partial(F.interpolate, size=1),
+                         input_sample_sizes=([1, 1, 1])),
+
+    SingleLayerModelDesc(model_name='repeat_interleave', layer=partial(torch.repeat_interleave, repeats=2)),
+    TensorUnaryMethodsDesc(tensor_method='clone'),
+
+    SingleLayerModelDesc(model_name='pixel_shuffle', layer=partial(F.pixel_shuffle, upscale_factor=1),
+                         input_sample_sizes=([1, 1, 1, 1])),
+
+    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1]))
+]
+
+
+@pytest.mark.parametrize(
+    "synthetic_model_desc", SYNTHETIC_MODEL_DESC_LIST, ids=[m.model_name for m in SYNTHETIC_MODEL_DESC_LIST]
+)
+def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
+    config = get_basic_quantization_config(input_sample_sizes=synthetic_model_desc.get_input_sample_sizes(),
+                                           input_info=synthetic_model_desc.get_input_info())
+
+    model = synthetic_model_desc.get_model()
+    compressed_model, _ = create_compressed_model_and_algo_for_test(
+        model, config, wrap_inputs_fn=synthetic_model_desc.get_wrap_inputs_fn())
+
+    check_model_graph(compressed_model, synthetic_model_desc.get_dot_filename(),
+                      os.path.join('quantized', 'synthetic_model'))
+
+
 def test_iterate_module_list():
     class Net(nn.Module):
         def __init__(self):
@@ -428,6 +737,7 @@ def test_custom_quantizable_subgraph_patterns(_case_config):
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     check_model_graph(compressed_model, 'senet_custom_patterns.dot', _case_config.graph_dir)
 
+
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50.dot", test_models.ResNet50, [1, 3, 32, 32]),
     ModelDesc("inception_v3.dot", partial(test_models.Inception3, aux_logits=True, transform_input=True),
@@ -437,16 +747,17 @@ TEST_HW_MODELS_DESC = [
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
 
+
 @pytest.fixture(scope='function', params=TYPE_HW)
 def hw_config_type(request):
     type_hw = request.param
     return type_hw
 
+
 # pylint:disable=too-many-branches
 @pytest.mark.parametrize(
     "desc", TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC]
 )
-
 # pylint:disable=redefined-outer-name
 def test_compressed_graph_models_hw(desc, hw_config_type):
     model = desc.model_builder()
@@ -459,7 +770,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
 
     # pylint:disable=protected-access
     compression_algo_builder = create_compression_algorithm_builders(config)[0]
-    potential_weights_modules =\
+    potential_weights_modules = \
         compression_algo_builder.get_potential_quantized_modules(compressed_model)
     prop_graph_solver = QuantizerPropagationSolver(hw_config=hw_config)
     insertion_point_graph = compressed_model.get_insertion_point_graph()
@@ -471,9 +782,11 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
                                                                   potential_weights_modules)
     check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
 
+
 def _case_dir(type_hw_config):
     graph_dir = os.path.join('quantized', "hw", type_hw_config)
     return graph_dir
+
 
 def prepare_potential_quantizer_graph(graph: NNCFGraph,
                                       potential_activations_quantizers: Dict[InsertionInfo,

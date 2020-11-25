@@ -38,7 +38,7 @@ class CompositeCompressionLoss(CompressionLoss):
             result_loss += loss()
         return result_loss
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = {}
         for loss in self._child_losses:
             stats.update(loss.statistics())
@@ -102,7 +102,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             ctrl.distributed()
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = {}
         for ctrl in self.child_ctrls:
             stats.update(ctrl.statistics())

@@ -16,7 +16,8 @@ from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
-from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
@@ -27,12 +28,13 @@ from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply
 from nncf.pruning.model_analysis import Clusterization
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
+from nncf.utils import get_filters_num
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(0))
+        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return FilterPruningController(target_model,
@@ -41,10 +43,10 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 
     def _is_pruned_module(self, module):
         # Currently prune only Convolutions
-        return isinstance(module, tuple(NNCF_CONV_MODULES_DICT.keys()))
+        return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_types_of_pruned_modules(self):
-        types = [str.lower(v.__name__) for v in NNCF_CONV_MODULES_DICT.values()]
+    def get_op_types_of_pruned_modules(self):
+        types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
         return types
 
     def get_types_of_grouping_ops(self):
@@ -70,7 +72,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         stats['pruning_rate'] = self.pruning_rate
         return stats
@@ -95,14 +97,15 @@ class FilterPruningController(BasePruningAlgoController):
 
         with torch.no_grad():
             for group in self.pruned_module_groups_info.get_all_clusters():
-                filters_num = torch.tensor([minfo.module.weight.size(0) for minfo in group.nodes])
+                filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
                 assert torch.all(filters_num == filters_num[0])
                 device = group.nodes[0].module.weight.device
 
                 cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
                 # 1. Calculate cumulative importance for all filters in group
                 for minfo in group.nodes:
-                    filters_importance = self.filter_importance(minfo.module.weight)
+                    filters_importance = self.filter_importance(minfo.module.weight,
+                                                                minfo.module.target_weight_dim_for_compression)
                     cumulative_filters_importance += filters_importance
 
                 # 2. Calculate threshold
@@ -121,7 +124,7 @@ class FilterPruningController(BasePruningAlgoController):
         filter_importances = []
         # 1. Calculate importances for all groups of  filters
         for group in self.pruned_module_groups_info.get_all_clusters():
-            filters_num = torch.tensor([minfo.module.weight.size(0) for minfo in group.nodes])
+            filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
             assert torch.all(filters_num == filters_num[0])
             device = group.nodes[0].module.weight.device
 
@@ -129,7 +132,8 @@ class FilterPruningController(BasePruningAlgoController):
             # Calculate cumulative importance for all filters in this group
             for minfo in group.nodes:
                 normalized_weight = self.weights_normalizer(minfo.module.weight)
-                filters_importance = self.filter_importance(normalized_weight)
+                filters_importance = self.filter_importance(normalized_weight,
+                                                            minfo.module.target_weight_dim_for_compression)
                 cumulative_filters_importance += filters_importance
 
             filter_importances.append(cumulative_filters_importance)
@@ -150,8 +154,9 @@ class FilterPruningController(BasePruningAlgoController):
 
         def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_name=""):
             with torch.no_grad():
+                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
                 # Applying mask to weights
-                inplace_apply_filter_binary_mask(mask, module.weight, module_name)
+                inplace_apply_filter_binary_mask(mask, module.weight, module_name, dim)
                 # Applying mask to bias too (if exists)
                 if module.bias is not None:
                     inplace_apply_filter_binary_mask(mask, module.bias, module_name)

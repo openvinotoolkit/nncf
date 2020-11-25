@@ -1,4 +1,4 @@
-From 992880d52ec11e2f9bf34b2a2a6514b2cef9a56a Mon Sep 17 00:00:00 2001
+From df5caba3625fa8bad76e07e29f5ed89c51f6c510 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Fri, 6 Nov 2020 14:14:42 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -28,7 +28,7 @@ Subject: [PATCH] Modifications for NNCF usage
 
 diff --git a/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 new file mode 100644
-index 0000000..387dd6d
+index 0000000..81a90ba
 --- /dev/null
 +++ b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 @@ -0,0 +1,62 @@
@@ -79,7 +79,7 @@ index 0000000..387dd6d
 +    warmup_ratio=0.001,
 +    step=[3, 5])
 +total_epochs = 6
-+work_dir = './work_dirs/mask_rcnn_r50_caffe_fpn_1x_nncf_int8'
++work_dir = './work_dirs/mask_rcnn_r50_caffe_fpn_1x_coco_int8'
 +
 +# we start from the pre-trained checkpoint available from the mmdet github repo
 +# download from here: http://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco_bbox_mAP-0.408__segm_mAP-0.37_20200504_163245-42aa3d00.pth
@@ -612,5 +612,5 @@ index c36b2a0..519e915 100644
      if args.seed is not None:
          logger.info(f'Set random seed to {args.seed}, '
 -- 
-2.27.0
+2.17.1
 

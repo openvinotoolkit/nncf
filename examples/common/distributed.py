@@ -29,6 +29,9 @@ def configure_distributed(config):
     if config.current_gpu is not None:
         # Distributed multiprocessing
         config.rank = config.rank * config.ngpus_per_node + config.current_gpu
+        # Must be called before execution of CUDA kernels to prevent failure the ones that allocate memory on the
+        # default device (E.g. NMS kernel - https://github.com/facebookresearch/maskrcnn-benchmark/issues/74)
+        torch.cuda.set_device(config.current_gpu)
 
     logger.info('| distributed init (rank {}): {}'.format(
         config.rank, config.dist_url))

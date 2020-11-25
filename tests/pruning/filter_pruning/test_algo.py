@@ -19,8 +19,7 @@ from nncf.pruning.filter_pruning.algo import FilterPruningController
 from nncf.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_binary_mask
 from nncf.pruning.schedulers import BaselinePruningScheduler
-from tests.pruning.helpers import get_basic_pruning_config, PruningTestModel, \
-    BigPruningTestModel
+from tests.pruning.helpers import gen_ref_masks, get_basic_pruning_config, PruningTestModel, BigPruningTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
     create_mock_dataloader
 
@@ -112,6 +111,12 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
     check_that_module_is_pruned(conv2)
 
     # Check for conv3
+    up = pruned_model.up
+    assert up in pruned_modules
+    assert up in nncf_modules.values()
+    check_that_module_is_pruned(up)
+
+    # Check for conv3W
     conv3 = pruned_model.conv3
     if prune_last:
         assert conv3 in pruned_modules
@@ -120,10 +125,10 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
 
 @pytest.mark.parametrize(('all_weights', 'prune_first', 'ref_masks'),
-                         [(False, True, [torch.tensor([0.0] * 8 + [1.0] * 8), torch.tensor([0.0] * 16 + [1.0] * 16)]),
-                          (True, True, [torch.tensor([0.0] * 7 + [1.0] * 9), torch.tensor([0.0] * 17 + [1.0] * 15)]),
-                          (False, False, [torch.tensor([0.0] * 16 + [1.0] * 16)]),
-                          (True, False, [torch.tensor([0.0] * 16 + [1.0] * 16)]),
+                         [(False, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
+                          (True, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
+                          (False, False, gen_ref_masks([(16, 16), (32, 32)])),
+                          (True, False, gen_ref_masks([(8, 24), (40, 24)])),
                           ]
                          )
 def test_pruning_masks_correctness(all_weights, prune_first, ref_masks):
@@ -161,6 +166,12 @@ def test_pruning_masks_correctness(all_weights, prune_first, ref_masks):
     conv2 = pruned_model.conv2
     assert conv2 in pruned_modules
     check_mask(conv2, i)
+    i += 1
+
+    # Check for conv3
+    up = pruned_model.up
+    assert up in pruned_modules
+    check_mask(up, i)
 
 
 @pytest.mark.parametrize('prune_bn',
@@ -182,7 +193,7 @@ def test_applying_masks(prune_bn):
     for module in pruned_modules:
         op = list(module.pre_ops.values())[0]
         mask = op.operand.binary_filter_pruning_mask
-        masked_weight = apply_filter_binary_mask(mask, module.weight)
+        masked_weight = apply_filter_binary_mask(mask, module.weight, dim=module.target_weight_dim_for_compression)
         masked_bias = apply_filter_binary_mask(mask, module.bias)
         assert torch.allclose(module.weight, masked_weight)
         assert torch.allclose(module.bias, masked_bias)
@@ -241,5 +252,5 @@ def test_zeroing_gradients(zero_grad):
                 op = list(module.pre_ops.values())[0]
                 mask = op.operand.binary_filter_pruning_mask
                 grad = module.weight.grad
-                masked_grad = apply_filter_binary_mask(mask, grad)
+                masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_weight_dim_for_compression)
                 assert torch.allclose(masked_grad, grad)
