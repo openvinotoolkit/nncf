@@ -343,7 +343,6 @@ class SymmetricQuantizer(BaseQuantizer):
 
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
-        #self._scale_tensor.fill_(SCALE_LOWER_THRESHOLD)
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
         self._scale_tensor = torch.nn.Parameter(
             torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_tensor))
