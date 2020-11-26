@@ -59,9 +59,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._criterion = init_args.criterion
         self._data_loader = init_args.data_loader
         self._traces_per_layer_path = config.get('traces_per_layer_path', None)
-        self._num_data_points = config.get('num_data_points', 1000)
-        self._iter_number = config.get('iter_number', 500)
-        self._tolerance = config.get('tolerance', 1e-5)
+        self._num_data_points = config.get('num_data_points', 100)
+        self._iter_number = config.get('iter_number', 200)
+        self._tolerance = config.get('tolerance', 1e-4)
         self._compression_ratio = config.get('compression_ratio', 1.5)
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
             if self._hw_precision_constraints else config.get('bits', [4, 8])

@@ -211,7 +211,7 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+Here's an [example](../../examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
 using the template in the full configuration file.
 
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
@@ -252,9 +252,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
             "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
-            "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
-            "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
-            "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
+            "num_data_points": 100, // Number of data points to iteratively estimate Hessian trace, 100 by default.
+            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
+            "tolerance": 1e-4, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated between mean average trace from previous iteration and current one. 1e-4 by default
             "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [

@@ -1,21 +1,20 @@
 {
-    "model": "resnet50",
+    "model": "mobilenet_v2",
     "pretrained": true,
     "input_info": {
         "sample_size": [
-            1,
+            2,
             3,
             224,
             224
         ]
     },
     "num_classes": 1000,
-    "batch_size": 150,
+    "batch_size": 200,
     "workers": 6,
-    "epochs": 100,
     "multiprocessing_distributed": true,
     "optimizer": {
-        "base_lr": 0.00031,
+        "base_lr": 3.1e-4,
         "schedule_type": "plateau",
         "type": "Adam",
         "scheduler_params": {
@@ -24,25 +23,15 @@
         },
         "weight_decay": 1e-05
     },
-    "quantizer_setup_type": "pattern_based",
+    "target_device": "VPU",
     "compression": {
         "algorithm": "quantization",
-        "weights": {
-            "mode": "asymmetric"
-        },
-        "activations": {
-            "mode": "asymmetric"
-        },
+        "quantize_inputs": true,
         "initializer": {
             "precision": {
                 "type": "hawq",
-                "bits": [
-                    4,
-                    8
-                ],
-                "num_data_points": 100,
-                "iter_number": 200,
-                "tolerance": 1e-4
+                "bits": [4, 8],
+                "compression_ratio": 1.5
             }
         }
     }
