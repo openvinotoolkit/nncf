@@ -127,11 +127,11 @@ def log_common_mlflow_params(config):
 
 
 def finish_logging(config):
-    if is_main_process() and is_mlflow_logging_enabled(config):
+    if is_mlflow_logging_enabled(config):
         mlflow.end_run()
 
 def is_mlflow_logging_enabled(config):
-    return config.mode.lower() == 'train' and config.to_onnx is None
+    return config.mode.lower() == 'train' and config.to_onnx is None and is_main_process()
 
 
 def is_on_first_rank(config):
