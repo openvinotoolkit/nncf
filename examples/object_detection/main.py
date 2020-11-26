@@ -305,12 +305,13 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
         epoch = iteration // epoch_size
 
-        compression_ctrl.scheduler.step(iteration - config.start_iter)
+        compression_ctrl.scheduler.step()
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
+
+        if (iteration + 1) % epoch_size == 0:
             compression_level = compression_ctrl.compression_level()
             is_best = False
-
             if (epoch + 1) % test_freq_in_epochs == 0:
                 if is_on_first_rank(config):
                     print_statistics(compression_ctrl.statistics())
@@ -323,12 +324,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                         best_mAp = mAP
                     best_compression_level = max(compression_level, best_compression_level)
                     net.train()
-
-            # Learning rate scheduling should be applied after optimizer’s update
-            if not isinstance(lr_scheduler, ReduceLROnPlateau):
-                lr_scheduler.step(epoch)
-            else:
-                lr_scheduler.step(mAP)
 
             if is_on_first_rank(config):
                 logger.info('Saving state, iter: {}'.format(iteration))
@@ -346,6 +341,12 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                                             epoch=epoch + 1,
                                             config=config)
 
+
+           # Learning rate scheduling should be applied after optimizer’s update
+            if not isinstance(lr_scheduler, ReduceLROnPlateau):
+                lr_scheduler.step(epoch)
+            else:
+                lr_scheduler.step(mAP)
 
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(

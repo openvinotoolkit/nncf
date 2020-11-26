@@ -87,7 +87,7 @@ The magnitude sparsity method implements a naive approach that is based on the a
             "patience": 3, // A regular patience parameter for the scheduler, as for any other standard scheduler. Specified in units of scheduler steps.
             "sparsity_target": 0.7, // Target value of the sparsity level for the model
             "sparsity_target_epoch": 3, // Index of the epoch from which the sparsity level of the model will be equal to spatsity_target value
-            "sparsity_freeze_epoch": 50, // // Index of the epoch from which the sparsity mask will be frozen and no longer trained
+            "sparsity_freeze_epoch": 50, // Index of the epoch from which the sparsity mask will be frozen and no longer trained
             "multistep_steps": [10, 20], // A list of scheduler steps at which to transition to the next scheduled sparsity level (multistep scheduler only).
             "multistep_sparsity_levels": [0.2, 0.5] //Levels of sparsity to use at each step of the scheduler as specified in the 'multistep_steps' attribute. The firstsparsity level will be applied immediately, so the length of this list should be larger than the length of the 'steps' by one."
     },

@@ -172,7 +172,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
             'power': 1,
             'sparsity_target_epoch': 2,
             'sparsity_target': 0.6,
-            'sparsity_freeze_epoch': 4
+            'sparsity_freeze_epoch': 3
         }
     }
 

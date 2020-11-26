@@ -41,8 +41,8 @@ class PruningScheduler(CompressionScheduler):
         super().load_state_dict(state_dict)
         self._set_pruning_level()
 
-    def epoch_step(self, epoch=None):
-        super().epoch_step(epoch)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         self._set_pruning_level()
 
     def _set_pruning_level(self):

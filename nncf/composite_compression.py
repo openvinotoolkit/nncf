@@ -57,15 +57,15 @@ class CompositeCompressionScheduler(CompressionScheduler):
     def add(self, child_scheduler):
         self._child_schedulers.append(child_scheduler)
 
-    def step(self, last=None):
-        super().step(last)
+    def step(self, next_step=None):
+        super().step(next_step)
         for scheduler in self._child_schedulers:
-            scheduler.step(last)
+            scheduler.step(next_step)
 
-    def epoch_step(self, last=None):
-        super().epoch_step(last)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         for scheduler in self._child_schedulers:
-            scheduler.epoch_step(last)
+            scheduler.epoch_step(next_epoch)
 
     def state_dict(self):
         result = {}

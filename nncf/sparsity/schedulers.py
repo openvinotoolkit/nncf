@@ -38,8 +38,8 @@ class SparsityScheduler(CompressionScheduler):
     def initialize(self):
         self._set_sparsity_level()
 
-    def epoch_step(self, epoch=None):
-        super().epoch_step(epoch)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         self._set_sparsity_level()
 
     def load_state_dict(self, state_dict):
@@ -47,9 +47,9 @@ class SparsityScheduler(CompressionScheduler):
         self._set_sparsity_level()
 
     def _set_sparsity_level(self):
-        self.algo.set_sparsity_level(self.current_sparsity_level)
-        if self.current_epoch + 1 >= self.sparsity_freeze_epoch:
+        if self.current_epoch >= self.sparsity_freeze_epoch:
             self.algo.freeze()
+        self.algo.set_sparsity_level(self.current_sparsity_level)
 
     def _calc_density_level(self):
         return 1 - self.current_sparsity_level
@@ -85,19 +85,18 @@ class PolynomialSparseScheduler(SparsityScheduler):
                                "sparsity level after measuring the actual steps per epoch as signaled "
                                "by a .epoch_step() call.")
 
-    def step(self, last=None):
-        super().step(last)
+    def step(self, next_step=None):
+        super().step(next_step)
         if self._update_per_optimizer_step and self._steps_per_epoch is not None:
             self._set_sparsity_level()
 
-    def epoch_step(self, epoch=None):
+    def epoch_step(self, next_epoch=None):
         if self._update_per_optimizer_step:
             if self.current_epoch == 0 and self._steps_in_current_epoch > 0 and self._steps_per_epoch is None:
                 self._steps_per_epoch = self._steps_in_current_epoch
 
                 # Reset step and epoch step counters
-                self.current_step = 0
-                epoch = -1
+                next_epoch = -1
             if self._steps_in_current_epoch != self._steps_per_epoch and self._steps_in_current_epoch > 0:
                 self._steps_per_epoch = self._steps_in_current_epoch
                 logger.warning("Actual optimizer steps per epoch is different than what is "
@@ -107,21 +106,30 @@ class PolynomialSparseScheduler(SparsityScheduler):
                 self.step(self._steps_per_epoch * (self.current_epoch - 1))
 
         self._steps_in_current_epoch = 0
-        super().epoch_step(epoch)
+        super().epoch_step(next_epoch)
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
         self._set_sparsity_level()
 
+    def state_dict(self):
+        sd = super().state_dict()
+        if self._update_per_optimizer_step:
+            sd['_steps_per_epoch'] = self._steps_per_epoch
+        return sd
+
     @property
     def current_sparsity_level(self):
-        if self.sparsity_target_epoch == 0:
+        if self.sparsity_target_epoch == 0 and not self._update_per_optimizer_step:
             return self.sparsity_target
         if self._update_per_optimizer_step:
             if self._steps_per_epoch is None:
                 return self.initial_sparsity  # Cannot do proper sparsity update until the steps in an epoch are counted
-            fractional_epoch = self.current_epoch + self._steps_in_current_epoch / self._steps_per_epoch
-            progress = (min(self.sparsity_target_epoch, fractional_epoch) / self.sparsity_target_epoch)
+            fractional_epoch = self.current_epoch + self.current_step_in_current_epoch / self._steps_per_epoch
+            if self.sparsity_target_epoch != 0:
+                progress = (min(self.sparsity_target_epoch, fractional_epoch) / self.sparsity_target_epoch)
+            else:
+                progress = fractional_epoch
         else:
             progress = (min(self.sparsity_target_epoch, self.current_epoch) / self.sparsity_target_epoch)
 
@@ -133,6 +141,9 @@ class PolynomialSparseScheduler(SparsityScheduler):
                 (1 - progress) ** self.power)
         return current_sparsity
 
+    @property
+    def current_step_in_current_epoch(self):
+        return self._steps_in_current_epoch - 1 if self._steps_in_current_epoch > 0 else 0
 
 @SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
@@ -172,8 +183,8 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.current_sparsity_target = self.initial_sparsity
         self.num_bad_epochs = 0
 
-    def epoch_step(self, epoch=None):
-        super().epoch_step(epoch)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         if self.sparsity_loss.current_sparsity >= self.current_sparsity_target - self.eps:
             self.num_bad_epochs += 1
 
@@ -209,8 +220,8 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.max_step = self.steps[-1]
         self.prev_ind = 0
 
-    def epoch_step(self, last=None):
-        super().epoch_step(last)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         ind = bisect_right(self.steps, self.current_epoch)
         if ind != self.prev_ind:
             self.sparsity_level = self.sparsity_levels[ind]

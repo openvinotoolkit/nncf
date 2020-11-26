@@ -31,8 +31,8 @@ class StagedQuantizationScheduler(CompressionScheduler):
         self.weights_quant_start_epoch = params.get('weights_quant_start_epoch', 1)
         self._set_quantization_status()
 
-    def epoch_step(self, epoch=None):
-        super().epoch_step(epoch)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         should_call_init = False
         if self.current_epoch == self.activations_quant_start_epoch:
             logger.info('Enabled quantization of activations')

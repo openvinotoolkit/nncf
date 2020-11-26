@@ -133,7 +133,8 @@ class TestPolynomialSparsityScheduler:
     def run_epoch_with_per_step_sparsity_check(steps_per_epoch: int, scheduler: PolynomialSparseScheduler,
                                                set_sparsity_mock,
                                                ref_vals: List[Optional[float]]):
-        assert len(ref_vals) == steps_per_epoch + 1 # + 1 value of currunt_sparsity_level for call epoch_step
+        assert len(ref_vals) == steps_per_epoch + 1
+        set_sparsity_mock.reset_mock()
         scheduler.epoch_step()
         set_sparsity_mock.assert_called_once_with(pytest.approx(ref_vals[0]))
         set_sparsity_mock.reset_mock()
@@ -180,11 +181,16 @@ class TestPolynomialSparsityScheduler:
         mock.assert_called_once_with(ref_sparsity_levels[2])
         assert scheduler.current_sparsity_level == ref_sparsity_levels[2]
 
-        # epoch 3 - sparsity freeze should occur
+        # epoch 3
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[3])
-        magnitude_algo_mock.freeze.assert_called_once()
         assert scheduler.current_sparsity_level == ref_sparsity_levels[3]
+
+        # epoch 4 - sparsity freeze should occur
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+        mock.assert_called_once_with(ref_sparsity_levels[4])
+        magnitude_algo_mock.freeze.assert_called_once()
+        assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
 
         # After freezing
         for _ in range(10):
@@ -211,8 +217,8 @@ class TestPolynomialSparsityScheduler:
         mock = magnitude_algo_mock.set_sparsity_level
         mock.reset_mock()
         no_update_ref_sparsity_level_sequence = [0.1, None, None, None]
-        first_sparsity_level_sequence = [0.1, 85 / 810, 97 / 810, 13 / 90]
-        second_sparsity_level_sequence = [13 / 90, 145 / 810, 181 / 810, 25 / 90]
+        first_sparsity_level_sequence = [0.1, 0.1, 85 / 810, 97 / 810]
+        second_sparsity_level_sequence = [13 / 90, 13 / 90, 145 / 810, 181 / 810]
 
         if specify_steps_per_epoch_in_config:
             per_epoch_ref_level_sequences = [first_sparsity_level_sequence, second_sparsity_level_sequence]
