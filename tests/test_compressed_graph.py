@@ -739,10 +739,10 @@ def test_custom_quantizable_subgraph_patterns(_case_config):
 
 
 TEST_HW_MODELS_DESC = [
-    ModelDesc("resnet50.dot", test_models.ResNet50, [1, 3, 32, 32]),
-    ModelDesc("inception_v3.dot", partial(test_models.Inception3, aux_logits=True, transform_input=True),
+    ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
+    ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
               [2, 3, 299, 299]),
-    ModelDesc("mobilenet_v2.dot", torchvision.models.MobileNetV2, [2, 3, 32, 32])
+    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32])
 ]
 
 TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
