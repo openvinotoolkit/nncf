@@ -86,7 +86,7 @@ class QuantizationEnv:
         # self.config.current_gpu = self.config.gpu_id
         # torch.cuda.set_device(config.gpu_id)         # Set default operating cuda device
         # self.config.device = get_device(self.config) # get_device requires config.current_gpu
-
+        
         # Model label
         self.model_name = self.config.get('model', None)
         if self.model_name is None:
@@ -181,17 +181,10 @@ class QuantizationEnv:
 
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
-        
-        # Workaround to set the min and max of action before fitting the minmaxscaler
-        self.master_df['prev_action'][0]=self.max_bit
-        self.master_df['prev_action'][-1]=self.min_bit
-        
+    
         # MinMaxScaler for State Embedding
         self.state_scaler = MinMaxScaler()
         self.state_scaler.fit(self.master_df[self.state_list])
-
-        # Log Master Table to run folder        
-        self.master_df.drop('state_module', axis=1).to_csv(osp.join(self.config['log_dir'], self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
         # Model Size Calculation
         self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
@@ -201,8 +194,21 @@ class QuantizationEnv:
         # init reward
         self.best_reward = -math.inf #TODO: move reward to search manager
         self.reset()
+        
+        # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
+        self._dump_master_df()         
+        self._dump_groups_of_adjacent_quantizers()
+        self._dump_quantized_graph()
+
         # End of QuantizationEnv.__init__()
-        # ----------------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------------------------------------------
+
+    def reset(self):
+        self.collected_strategy=[]
+        self.strategy=[]
+        self.master_df['action']=0
+        self.master_df['prev_action']=0
+        self.master_df['unconstrained_action']=0
 
     def _evaluate_pretrained_model(self):
         # Registered evaluation function is expected to return a single scalar score
@@ -217,13 +223,6 @@ class QuantizationEnv:
         self.qctrl.enable_weight_quantization()
         self.qctrl.enable_activation_quantization()
         self.qmodel.rebuild_graph()
-
-    def reset(self):
-        self.collected_strategy=[]
-        self.strategy=[]
-        self.master_df['action']=0
-        self.master_df['prev_action']=0
-        self.master_df['unconstrained_action']=0
 
     def _calc_quantized_model_size(self): # in bit
         assert len(self.strategy) == len(self.master_df) # This function is only allowed when all actions are predicted        
@@ -316,7 +315,6 @@ class QuantizationEnv:
             return self.evaluate_strategy(self.collected_strategy, skip_wall=self.skip_wall)
         
     def evaluate_strategy(self, collected_strategy, skip_wall=True):
-        
         # #Expand strategy to full quantization policy
         if self.tie_quantizers:
             self.strategy = self._expand_collected_strategy(collected_strategy)
@@ -354,13 +352,11 @@ class QuantizationEnv:
         done = True
         return obs, reward, done, info_set
 
-
     def set_next_step_prev_action(self, idx, action, only_pred=True):
         if only_pred:
             self.master_df.loc[self.master_df.index[self.master_df.is_pred][idx], 'prev_action'] = action
         else:
             self.master_df.loc[self.master_df.index[idx], 'prev_action'] = action
-
 
     def get_normalized_obs(self, idx, only_pred=True):
         if only_pred:
@@ -369,7 +365,6 @@ class QuantizationEnv:
             _df = self.master_df.loc[self.master_df.index, self.state_list]
         _df.loc[_df.index, self.state_list] =  self.state_scaler.transform(_df[self.state_list])
         return _df.iloc[idx]
-
 
     def apply_actions(self, strategy):
         self.master_df['action']=self.strategy
@@ -451,6 +446,10 @@ class QuantizationEnv:
         # create master dataframe
         master_df = pd.concat([df, layer_attr_df], axis='columns')
         
+        # Workaround to set the min and max of action before fitting the minmaxscaler
+        master_df['prev_action'][0]=self.max_bit
+        master_df['prev_action'][-1]=self.min_bit
+
         return master_df, state_list
     
     
@@ -584,10 +583,27 @@ class QuantizationEnv:
         
         return qid_nodekey_map
 
+    def _dump_master_df(self):
+        self.master_df.drop('state_module', axis=1).to_csv(
+            osp.join(self.config['log_dir'], self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
+    def _dump_quantized_graph(self):
+        self.qmodel.get_graph().visualize_graph(osp.join(self.config.get("log_dir", "."), "qenv_graph.dot"))
 
+    def _dump_groups_of_adjacent_quantizers(self):
+        adj_quantizer_groups = []
 
+        for i, g in enumerate(self._groups_of_adjacent_quantizers):
+            group_members = []
+            for j, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
+                group_members.append(self.master_df.index[self.master_df.qid == str(aq[0])][0])
+            for k, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
+            adj_quantizer_groups.append(natsorted(group_members))
 
+        with open(osp.join(self.config.get("log_dir", "."), 
+                            self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
+            json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
 
 
 
