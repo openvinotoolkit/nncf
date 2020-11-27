@@ -77,7 +77,7 @@ class AverageMeter:
         self.count += n
         self.avg = self.sum / self.count
 
-def evaluate_detections(box_list, dataset, use_07=True):
+def evaluate_detections(box_list, dataset, use_07=False):
     cachedir = os.path.join('cache', 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010
@@ -95,7 +95,7 @@ def evaluate_detections(box_list, dataset, use_07=True):
     return mAp
 
 
-def voc_ap(rec, prec, use_07_metric=True):
+def voc_ap(rec, prec, use_07_metric=False):
     """ ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
@@ -134,7 +134,7 @@ def voc_eval(class_detections,
              classname,
              cachedir,
              ovthresh=0.5,
-             use_07_metric=True):
+             use_07_metric=False):
     # cachedir caches the annotations in a pickle file
     # first load gt
     gt, imagenames = load_detection_annotations(cachedir, dataset)
@@ -226,7 +226,7 @@ def load_detection_annotations(cachedir, dataset):
     return gt, imagenames
 
 
-def compute_detection_metrics(fp, tp, n_positives, use_07_metric=True):
+def compute_detection_metrics(fp, tp, n_positives, use_07_metric=False):
     # compute precision recall
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)

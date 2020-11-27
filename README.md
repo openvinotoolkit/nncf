@@ -159,10 +159,10 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|SSD300-BN|INT8|VOC12+07|78.28|78.08|
-|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|78.28|77.62|
-|SSD512-BN|INT8|VOC12+07|80.26|80.11|
-|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|80.26|79.75|
+|SSD300-BN|INT8|VOC2012|96.53|96.49|
+|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC2012|96.53|95.39|
+|SSD512-BN|INT8|VOC12+07|97.59|97.38|
+|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC2012|97.59|96.66|
 
 #### Semantic segmentation
 

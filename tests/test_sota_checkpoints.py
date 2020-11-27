@@ -551,8 +551,8 @@ def results(openvino):
         Tsc().write_ov_results_table(header)
     else:
         if Tsc.test == "eval":
-            header = ["Model", "Expected", "Measured", "Reference FP32", "Metrics type", "Diff FP32", "Diff Expected",
+            header = ["Model", "Metrics type", "Expected", "Measured", "Reference FP32", "Diff FP32", "Diff Expected",
                       "Error"]
         else:
-            header = ["Model", "Expected", "Measured", "Metrics type", "Diff Expected", "Error"]
+            header = ["Model", "Metrics type", "Expected", "Measured", "Diff Expected", "Error"]
         Tsc().write_results_table(header)
