@@ -45,6 +45,7 @@ from nncf.dynamic_graph.context import Scope
 from natsort import natsorted
 
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
+from nncf.hw_config import HWConfigType
 
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
@@ -91,34 +92,46 @@ class QuantizationEnv:
         if self.model_name is None:
             self.model_name = self.pretrained_model.__class__.__name__
 
-        # We support two config modes
-        # (1) 'autoq' dict in NNCF compression.initializer
-        # (2) 'auto_quantization' as standalone dict in NNCF config
+        self.hw_cfg_type = self.qctrl.quantization_config.get("hw_config_type")
+        if self.hw_cfg_type is not None and self.hw_cfg_type is not HWConfigType.from_str('VPU'):
+            raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for target_device NONE or VPU".format(self.hw_cfg_type.value))
+        
         if 'autoq' == self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
             self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
         else:
-            self.autoq_cfg = self.config.get('auto_quantization')
+            raise ValueError("Missing/Invalid Config of Precision Initializer. "
+                             "Pls review config['compression']['initializer']['precision']")
 
+        # Target Compression Ratio
+        self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
+        
+        # Set Precision Space and Adjacent Quantizer Coupling
+        if self.hw_cfg_type is None:
+            self.precision_space = self.autoq_cfg.get('bits', [4, 8])
+            self.tie_quantizers = False
+        elif self.hw_cfg_type is HWConfigType.from_str('VPU'):
+            self.precision_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.tie_quantizers = True
+        self.precision_space = sorted(self.precision_space)
+        self.float_bit = 32.0
+        self.max_bit = max(self.precision_space)
+        self.min_bit = min(self.precision_space)
+        
+        # Bool to disable hard resource constraint
+        self.skip_wall = False
+        if 'skip_wall' in self.autoq_cfg:
+            self.tie_quantizers = self.autoq_cfg['skip_wall']
+
+        # Bool to enable fine-tuning in each episode. Placeholder for now
         self.finetune = False
         if 'finetune' in self.autoq_cfg:
             self.finetune = self.autoq_cfg['finetune']
 
-        self.tie_quantizers = True # Default to associate same precision of quantizers that feed into the GEMM compute
-        if 'tie_quantizers' in self.autoq_cfg:
-            self.tie_quantizers = self.autoq_cfg['tie_quantizers']
-
-        self.skip_wall = False # Default to enable resource constraints
-        if 'skip_wall' in self.autoq_cfg:
-            self.tie_quantizers = self.autoq_cfg['skip_wall']
-
-        # Action space boundary - need to revise to work with discrete
-        self.action_bound = self._get_action_space(self.autoq_cfg)
-
         # TODO (Design): How to generalize evaluation and train in general? tasks could have different metric and loss function
         self._evaluate_pretrained_model()
 
-        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
         # Quantizer Master Table Creation
+        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
         qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
         d = OrderedDict()
         for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
@@ -154,6 +167,18 @@ class QuantizationEnv:
         df = pd.DataFrame.from_dict(d,orient='index')
         qtable = df.loc[natsorted(df.index)]
 
+        # # Consolidate a flag per quantizer to signify if the precision should be learned
+        # qtable['is_pred'] = True # Assume NONE device, precision of all quantizers will be learned
+        # if self.tie_quantizers is True: # VPU device will enter the loop
+        #     qtable['is_pred'] = False
+
+        #     # TODO
+        #     # We loop through GroupsOfAdjacentQuantizers
+        #     # For each group, if there is fixed bitwidth in any of adjacent quantizer, no precision learning for the group
+        #     # Otherwise, a single precision will need to be learned for the group.
+        #     # Specifically where weight quantizer will be learned, 
+        #     # other adjacent quantizers to follow. If W quantizer does not exist in a group, we choose by node id order.
+
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
         
@@ -180,16 +205,14 @@ class QuantizationEnv:
         # ----------------------------------------------------------------------------------------
 
     def _evaluate_pretrained_model(self):
-        # TODO: How do we generalize evaluation metrics?
-        # Currently Expect only a scalar output
-
+        # Registered evaluation function is expected to return a single scalar score
         logger.info("[Q.Env] Evaluating Pretrained Model")
         self.qctrl.disable_weight_quantization()
         self.qctrl.disable_activation_quantization()
 
         with torch.no_grad():
-            self.orig_acc = self.validate_fn(self.val_loader, self.qmodel, self.criterion, self.config)
-            logger.info("Pretrained accuracy: {:.2f}".format(self.orig_acc))
+            self.pretrained_score = self.validate_fn(self.val_loader, self.qmodel, self.criterion, self.config)
+            logger.info("Pretrained Score: {:.2f}".format(self.pretrained_score))
         
         self.qctrl.enable_weight_quantization()
         self.qctrl.enable_activation_quantization()
@@ -269,7 +292,7 @@ class QuantizationEnv:
         return self.strategy
 
     def reward(self, acc, model_ratio):
-        return (acc - self.orig_acc) * 0.1 
+        return (acc - self.pretrained_score) * 0.1 
 
     def step(self, action):
         def is_final_step():
@@ -379,24 +402,6 @@ class QuantizationEnv:
         self.config['compression']=step_cfg
         return True 
         
-    # TODO: # Hardcoded to Int2/4/8 for now, should open up the space later to FP32, FP16
-    def _get_action_space(self, cfg):
-        precision_set = cfg.get('precision_set', None)
-
-        if precision_set is not None:
-            pass
-            # TODO: define the precision convention and parser here
-        else:
-            pass
-        
-        self.compression_ratio = cfg['compression_ratio'] if 'compression_ratio' in cfg else 0.15
-        self.float_bit = 32.0
-        self.min_bit = 2
-        self.max_bit = 8
-                
-        return (self.min_bit, self.max_bit)
-
-
     def _get_state_space(self, quantization_controller, quantized_model, qtable):
         # TODO: can we use nncf utility to the following? like dummy forward?
         input_size = self.config['input_info']['sample_size']
@@ -430,8 +435,11 @@ class QuantizationEnv:
 
         assert len(final_quantizable_indices) == len(consolidated_weight_quantizer_indices) + len(dangling_quantizer_indices), "length should be tally"
 
-        df['is_pred']=False
-        df.loc[final_quantizable_indices, 'is_pred']=True
+        if self.tie_quantizers is False:
+            df['is_pred']=True
+        else:
+            df['is_pred']=False
+            df.loc[final_quantizable_indices, 'is_pred']=True
         
         # State Embedding
         #----------------
