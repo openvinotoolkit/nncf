@@ -43,7 +43,7 @@ from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested, finish_logging, log_common_mlflow_params
+    is_pretrained_model_requested, finish_logging, log_common_mlflow_params, is_mlflow_logging_enabled
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -232,7 +232,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         if is_best:
             best_acc1 = acc1
-        if is_main_process():
+        if is_mlflow_logging_enabled(config):
             mlflow.log_metric("best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
@@ -258,7 +258,8 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
-                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
+                    if is_mlflow_logging_enabled(config):
+                        mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
@@ -478,6 +479,7 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
+        if is_mlflow_logging_enabled(config):
             mlflow.log_metric("val/loss", float(losses.avg), config.get('cur_epoch', 0))
             mlflow.log_metric("val/top1", float(top1.avg), config.get('cur_epoch', 0))
             mlflow.log_metric("val/top5", float(top5.avg), config.get('cur_epoch', 0))
