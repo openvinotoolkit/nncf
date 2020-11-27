@@ -345,6 +345,23 @@ class Elementwise(DefaultMetaOp):
             assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
         nx_node['output_mask'] = input_masks[0]
 
+    def input_prune(self, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        input_mask = nx_node['input_masks'][0]
+        if input_mask is None:
+            return
+        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+
+        if hasattr(node_module, "weight"):
+            old_num_clannels = int(node_module.weight.size(0))
+            new_num_channels = int(torch.sum(input_mask))
+            node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
+            node_module.n_channels = new_num_channels
+
+            nncf_logger.info('Pruned Elementwise {} by input mask. Old num features: {}, new num features:'
+                             ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
+
 
 @PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class StopMaskForwardOps(DefaultMetaOp):
@@ -397,13 +414,18 @@ class ModelPruner:
         2. running output_prune method for this node
         """
         sorted_nodes = [self.nx_graph.nodes[name] for name in nx.topological_sort(self.nx_graph)]
+        pruned_node_modules = list()
         with torch.no_grad():
             for node in sorted_nodes:
                 node_type = self.graph.node_type_fn(node)
                 node_cls = self.get_class_by_type_name(node_type)()
-
-                node_cls.input_prune(self.model, node, self.graph, self.nx_graph)
-                node_cls.output_prune(self.model, node, self.graph, self.nx_graph)
+                nncf_node = self.graph._nx_node_to_nncf_node(node)
+                node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+                # Some modules can be associated with several nodes
+                if node_module not in pruned_node_modules:
+                    node_cls.input_prune(self.model, node, self.graph, self.nx_graph)
+                    node_cls.output_prune(self.model, node, self.graph, self.nx_graph)
+                    pruned_node_modules.append(node_module)
         nncf_logger.info('Finished mask applying step')
 
     def prune_model(self):
