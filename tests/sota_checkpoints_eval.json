@@ -19,7 +19,7 @@
                 "diff_fp32_max": 0.1
             },
             "resnet50_imagenet_int4_int8": {
-                "config": "examples/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
+                "config": "examples/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json",
                 "reference": "resnet50_imagenet",
                 "target": 76.31,
                 "metric_type": "Acc@1",
@@ -118,7 +118,7 @@
                 "diff_fp32_max": 0.1
             },
             "mobilenet_v2_imagenet_int4_int8": {
-                "config": "examples/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
+                "config": "examples/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json",
                 "reference": "mobilenet_v2_imagenet",
                 "target": 70.89,
                 "metric_type": "Acc@1",
@@ -157,7 +157,7 @@
                 "diff_fp32_max": 0.1
             },
             "squeezenet1_1_imagenet_int4_int8": {
-                "config": "examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json",
+                "config": "examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json",
                 "reference": "squeezenet1_1_imagenet",
                 "target": 58.84,
                 "metric_type": "Acc@1",
