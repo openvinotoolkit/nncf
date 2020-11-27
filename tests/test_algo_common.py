@@ -14,6 +14,7 @@ import itertools
 from typing import Dict, List
 
 import copy
+import onnx
 import os
 import pytest
 from functools import partial
@@ -37,6 +38,14 @@ class BasicLinearTestModel(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
+class BasicTestModelWithTwoInputOutput(nn.Module):
+    def __init__(self, size=4):
+        super().__init__()
+        self.fc0 = nn.Linear(size, size)
+        self.fc1 = nn.Linear(size, size)
+
+    def forward(self, x0, x1):
+        return self.fc0(x0), self.fc1(x1)
 
 def get_const_sparsity_config():
     config = get_empty_config()
@@ -67,7 +76,6 @@ class TestCompressionAlgos:
 
         compression_ctrl.export_model(test_path)
         assert os.path.exists(test_path)
-
 
 class TestConfigCreator:
     def __init__(self):
@@ -320,3 +328,28 @@ def test_ordinary_load(algo, _model_wrapper, is_resume):
     num_loaded = load_state(model_resume, model_save.state_dict(), is_resume)
 
     assert num_loaded == len(model_save.state_dict())
+
+def test_can_export_compressed_model_with_input_output_names(tmp_path):
+    test_path = str(tmp_path.joinpath('test.onnx'))
+    target_input_names = ['input1', 'input2']
+    target_output_names = ['output1', 'output2']
+
+    model = BasicTestModelWithTwoInputOutput()
+    config = get_basic_asym_quantization_config()
+
+    config["input_info"] = [{'sample_size': [1, 1, 4, 4]}, {'sample_size': [1, 1, 4, 4]}]
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    compression_ctrl.export_model(test_path, input_names=target_input_names,
+                                  output_names=target_output_names)
+
+    assert os.path.exists(test_path)
+
+    onnx_model = onnx.load(test_path)
+    # pylint: disable=no-member
+    curr_input_names = [node.name for node in onnx_model.graph.input]
+    curr_output_names = [node.name for node in onnx_model.graph.output]
+
+    assert curr_input_names == target_input_names
+    assert curr_output_names == target_output_names
