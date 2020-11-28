@@ -88,35 +88,25 @@ class QuantizationEnv:
         # torch.cuda.set_device(config.gpu_id)         # Set default operating cuda device
         # self.config.device = get_device(self.config) # get_device requires config.current_gpu
         
-        # Model label
+        # Extract model name for labelling
         self.model_name = self.config.get('model', None)
         if self.model_name is None:
             self.model_name = self.pretrained_model.__class__.__name__
 
+        # Check and only proceed if target device is supported by Q.Env
         self.hw_cfg_type = self.qctrl.quantization_config.get("hw_config_type")
-        if self.hw_cfg_type is not None and self.hw_cfg_type is not HWConfigType.from_str('VPU'):
+        if self.hw_cfg_type is not None and self.hw_cfg_type is not HWConfigType.VPU:
             raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for target_device NONE or VPU".format(self.hw_cfg_type.value))
         
+        # Extract Precision Initialization Config
         if 'autoq' == self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
             self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
         else:
             raise ValueError("Missing/Invalid Config of Precision Initializer. "
                              "Pls review config['compression']['initializer']['precision']")
 
-        # Target Compression Ratio
+        # Set target compression ratio
         self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
-        
-        # Set Precision Space and Adjacent Quantizer Coupling
-        if self.hw_cfg_type is None:
-            self.bitwidth_space = self.autoq_cfg.get('bits', [4, 8])
-            self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
-        elif self.hw_cfg_type is HWConfigType.from_str('VPU'):
-            self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
-            self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
-        self.bitwidth_space = sorted(self.bitwidth_space)
-        self.float_bitwidth = 32.0
-        self.max_bitwidth = max(self.bitwidth_space)
-        self.min_bitwidth = min(self.bitwidth_space)
         
         # Bool to disable hard resource constraint
         self.skip_wall = False
@@ -128,9 +118,18 @@ class QuantizationEnv:
         if 'finetune' in self.autoq_cfg:
             self.finetune = self.autoq_cfg['finetune']
 
-        # TODO (Design): How to generalize evaluation and train in general? tasks could have different metric and loss function
-        self._evaluate_pretrained_model()
-
+        # Configure search space for precision according to target device
+        if self.hw_cfg_type is None:
+            self.bitwidth_space = self.autoq_cfg.get('bits', [4, 8])
+            self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
+        elif self.hw_cfg_type is HWConfigType.VPU:
+            self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
+        self.bitwidth_space = sorted(self.bitwidth_space)
+        self.float_bitwidth = 32.0
+        self.max_bitwidth = max(self.bitwidth_space)
+        self.min_bitwidth = min(self.bitwidth_space)
+        
         # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
         qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
@@ -192,17 +191,72 @@ class QuantizationEnv:
         self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bitwidth    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
         self.target_model_size = self.orig_model_size*self.compression_ratio
 
+        # Evaluate and store metric score of pretrained model
+        self._evaluate_pretrained_model()
+
         # init reward
         self.best_reward = -math.inf #TODO: move reward to search manager
         self.reset()
         
         # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
-        self._dump_master_df()         
+        self._dump_master_df()
         self._dump_quantized_graph()
         self._dump_groups_of_adjacent_quantizers()
 
         # End of QuantizationEnv.__init__()
         # ----------------------------------------------------------------------------------------------------------------------
+
+    def _get_learnable_qids_and_leads(self):
+        # By default, all weight quantizers must be learnable to allow model size compression
+        # Bitwidth assignment mode only applies to activation quantizers of a group. 
+        # When the mode is LIBERAL, all activation quantizers are learnable.
+        # When it is STRICT, none of the activation quantizers is learnable but to follow the leader of the group.
+        # HW config determines the bitwidth space of the quantizers
+
+        learnable_qids = []
+        lead_qid_of_groups = [None]*len(list(self._groups_of_adjacent_quantizers))
+
+        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
+
+            for i, g in enumerate(self._groups_of_adjacent_quantizers):
+                n_wq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers)
+                n_aq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers)
+
+                if n_wq > 0:
+                    # By default, all weight quantizers are learnable when it is unconstrained by HW. 
+                    # If target HW is specified, a weight quantizer is only learnable if mixed-precision support is available for its associated weight layer
+                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                            learnable_qids.append(wqid)
+                        
+                    # We will assume the first weight quantizer as the leader of the group, 
+                    # Leader means its precision decides for the rest of activation quantizers
+                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers[k][0]
+                            break
+                else:
+                    # when there is no weight quantizer in the group, the first activation quantizer
+                    # is the leader of the group and learnable if mixed-precision is supported
+                    for j, (aqid, aqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
+                            learnable_qids.append(aqid)
+                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers[j][0]
+                            break
+                        
+        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
+            if self.hw_cfg_type is None:
+                learnable_qids += list(self.qctrl.all_quantizations.keys())
+            else: # VPU device
+                # quantizers will only be added to learnable list if mixed-precision support available for its associated operator.
+                for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                    if len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                        learnable_qids.append(wqid)
+                for aqid, aqmod in self.qctrl.activation_quantizers.items():
+                    if len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
+                        learnable_qids.append(aqid)
+
+        return learnable_qids, lead_qid_of_groups
 
     def reset(self):
         self.collected_strategy=[]
@@ -534,8 +588,7 @@ class QuantizationEnv:
         if not train_mode:
             self.qmodel.eval()
 
-    @staticmethod
-    def _generate_qid_nodekey_map(quantization_controller: 'QuantizationController', quantized_network: 'NNCFNetwork'):
+    def _generate_qid_nodekey_map(self, quantization_controller: 'QuantizationController', quantized_network: 'NNCFNetwork'):
         """
         Create a lookup mapping for each QuantizerId to its corresponding quantize node in network graph
         :param quantization_controller: 
