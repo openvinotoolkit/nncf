@@ -131,57 +131,17 @@ class QuantizationEnv:
         self.min_bitwidth = min(self.bitwidth_space)
         
         # Quantizer Master Table Creation
+        # TODO: Discuss how to organize the following lines (they are dependent sequentially)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
-        qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
-        d = OrderedDict()
-        for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
-            for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
-                qid=aq[0]
-                nodekey=qid_nodekey_map[qid]
-                q_nx_nodeid=nodekey.split()[0]
-                idx_str = '-'.join([q_nx_nodeid, str(qid)])
-
-                d[idx_str] = OrderedDict()
-                d[idx_str]['qid'] = str(qid)
-                d[idx_str]['q_nx_nodeid'] = q_nx_nodeid
-                d[idx_str]['q_nx_nodekey'] = nodekey
-                d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
-                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
-                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
-
-            for wq_id, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers):
-                qid=wq[0]
-                nodekey=qid_nodekey_map[qid]
-                q_nx_nodeid=nodekey.split()[0]
-                idx_str = '-'.join([q_nx_nodeid, str(qid)])
-
-                d[idx_str] = OrderedDict()
-                d[idx_str]['qid'] = str(qid)
-                d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
-                d[idx_str]['q_nx_nodekey'] = nodekey
-                d[idx_str]['state_scope'] = qid.scope
-                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
-                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
-
-        # qtable index is QID in string prepended with its quantize node id
-        df = pd.DataFrame.from_dict(d,orient='index')
-        qtable = df.loc[natsorted(df.index)]
-
-        # # Consolidate a flag per quantizer to signify if the precision should be learned
-        # qtable['is_pred'] = True # Assume NONE device, precision of all quantizers will be learned
-        # if self.tie_quantizers is True: # VPU device will enter the loop
-        #     qtable['is_pred'] = False
-
-        #     # TODO
-        #     # We loop through GroupsOfAdjacentQuantizers
-        #     # For each group, if there is fixed bitwidth in any of adjacent quantizer, no precision learning for the group
-        #     # Otherwise, a single precision will need to be learned for the group.
-        #     # Specifically where weight quantizer will be learned, 
-        #     # other adjacent quantizers to follow. If W quantizer does not exist in a group, we choose by node id order.
+        self.learnable_qids, self.lead_qid_of_groups = self._get_learnable_qids_and_leads()
+        self.quantizer_table = self._create_quantizer_table()
 
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
-        self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, qtable)
+        self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
     
+        assert len(self.quantizer_table) == len(self.qctrl.all_quantizations), \
+            "Number of Quantizer is not tally between quantizer table and quantization controller"
+        
         # MinMaxScaler for State Embedding
         self.state_scaler = MinMaxScaler()
         self.state_scaler.fit(self.master_df[self.state_list])
@@ -207,11 +167,12 @@ class QuantizationEnv:
         # ----------------------------------------------------------------------------------------------------------------------
 
     def _get_learnable_qids_and_leads(self):
-        # By default, all weight quantizers must be learnable to allow model size compression
+        # By default, all weight quantizers must be learnable to allow optimal model size compression
         # Bitwidth assignment mode only applies to activation quantizers of a group. 
         # When the mode is LIBERAL, all activation quantizers are learnable.
         # When it is STRICT, none of the activation quantizers is learnable but to follow the leader of the group.
-        # HW config determines the bitwidth space of the quantizers
+        # HW config determines the bitwidth space of a quantizer
+        # TODO: discuss on STRICT_SOFT and STRICT_HARD
 
         learnable_qids = []
         lead_qid_of_groups = [None]*len(list(self._groups_of_adjacent_quantizers))
@@ -258,10 +219,51 @@ class QuantizationEnv:
 
         return learnable_qids, lead_qid_of_groups
 
+    def _create_quantizer_table(self):
+        qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
+        d = OrderedDict()
+        for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
+            for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
+                qid=aq[0]
+                nodekey=qid_nodekey_map[qid]
+                q_nx_nodeid=nodekey.split()[0]
+                idx_str = '-'.join([q_nx_nodeid, str(qid)])
+
+                d[idx_str] = OrderedDict()
+                d[idx_str]['qid'] = str(qid)
+                d[idx_str]['q_nx_nodeid'] = q_nx_nodeid
+                d[idx_str]['q_nx_nodekey'] = nodekey
+                d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
+                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
+                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
+                d[idx_str]['gid'] = gid
+                d[idx_str]['is_pred'] = str(qid) in list(map(str, self.learnable_qids))
+
+            for wq_id, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers):
+                qid=wq[0]
+                nodekey=qid_nodekey_map[qid]
+                q_nx_nodeid=nodekey.split()[0]
+                idx_str = '-'.join([q_nx_nodeid, str(qid)])
+
+                d[idx_str] = OrderedDict()
+                d[idx_str]['qid'] = str(qid)
+                d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
+                d[idx_str]['q_nx_nodekey'] = nodekey
+                d[idx_str]['state_scope'] = qid.scope
+                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
+                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
+                d[idx_str]['gid'] = gid
+                d[idx_str]['is_pred'] = str(qid) in list(map(str, self.learnable_qids))
+
+        # quantizer_table index is QuantizerId in string prepended with its quantize node id in NNCFGraph
+        df = pd.DataFrame.from_dict(d, orient='index')
+        quantizer_table = df.loc[natsorted(df.index)]
+        return quantizer_table
+
     def reset(self):
         self.collected_strategy=[]
         self.strategy=[]
-        self.master_df['action']=0
+        self.master_df['action']=max(self.bitwidth_space)
         self.master_df['prev_action']=0
         self.master_df['unconstrained_action']=0
 
@@ -454,44 +456,44 @@ class QuantizationEnv:
         self.config['compression']=step_cfg
         return True 
         
-    def _get_state_space(self, quantization_controller, quantized_model, qtable):
+    def _get_state_space(self, quantization_controller, quantized_model, quantizer_table):
         # TODO: can we use nncf utility to the following? like dummy forward?
         input_size = self.config['input_info']['sample_size']
         annotate_model_attr(quantized_model, tuple(input_size[1:])) # assume axis 0 be batch size
 
-        df = qtable
+        df = quantizer_table
         df['qid_obj']         = df['qid'].apply(lambda x: find_qidobj(quantization_controller, x))
         df['qmodule']         = df['qid_obj'].apply(lambda x: quantization_controller.all_quantizations[x])
         df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
         df['state_module']    = df['state_scope'].apply(lambda x: quantized_model.get_module_by_scope(x))
 
-        # getting the quantizers that we need agent to predict
-        weight_quantizer_indices = df.index[df.is_wt_quantizer] # All weight quantizer precision will be predicted
-        assert len(set(weight_quantizer_indices)) == len(weight_quantizer_indices), "master table cannot have duplicated row for same weight quantizer"
+        # # getting the quantizers that we need agent to predict
+        # weight_quantizer_indices = df.index[df.is_wt_quantizer] # All weight quantizer precision will be predicted
+        # assert len(set(weight_quantizer_indices)) == len(weight_quantizer_indices), "master table cannot have duplicated row for same weight quantizer"
         
-        remove_indices = []
-        for associated_gemm_nx_nodekeys in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) > 1)]:
-            followers = natsorted(associated_gemm_nx_nodekeys)[1:] #
-            for _follower in followers:
-                for idx, matcher in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) == 1)].items():
-                    if _follower in matcher:
-                        remove_indices.append(idx)
-        assert len(set(remove_indices)) == len(remove_indices), "Why are there duplicates in remove_indices?"
+        # remove_indices = []
+        # for associated_gemm_nx_nodekeys in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) > 1)]:
+        #     followers = natsorted(associated_gemm_nx_nodekeys)[1:] #
+        #     for _follower in followers:
+        #         for idx, matcher in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) == 1)].items():
+        #             if _follower in matcher:
+        #                 remove_indices.append(idx)
+        # assert len(set(remove_indices)) == len(remove_indices), "Why are there duplicates in remove_indices?"
                 
-        dangling_quantizer_indices = df.index[df.gemm_nx_nodekey.apply(lambda x: len(x) == 0)]
-        assert len(set(dangling_quantizer_indices)) == len(dangling_quantizer_indices), "master table cannot have duplicated row for same quantizer"
+        # dangling_quantizer_indices = df.index[df.gemm_nx_nodekey.apply(lambda x: len(x) == 0)]
+        # assert len(set(dangling_quantizer_indices)) == len(dangling_quantizer_indices), "master table cannot have duplicated row for same quantizer"
 
-        consolidated_weight_quantizer_indices = list(set(weight_quantizer_indices)-set(remove_indices))
+        # consolidated_weight_quantizer_indices = list(set(weight_quantizer_indices)-set(remove_indices))
 
-        final_quantizable_indices = pd.Index(natsorted(list(set(consolidated_weight_quantizer_indices).union(set(dangling_quantizer_indices)))))
+        # final_quantizable_indices = pd.Index(natsorted(list(set(consolidated_weight_quantizer_indices).union(set(dangling_quantizer_indices)))))
 
-        assert len(final_quantizable_indices) == len(consolidated_weight_quantizer_indices) + len(dangling_quantizer_indices), "length should be tally"
+        # assert len(final_quantizable_indices) == len(consolidated_weight_quantizer_indices) + len(dangling_quantizer_indices), "length should be tally"
 
-        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
-            df['is_pred']=True
-        else:
-            df['is_pred']=False
-            df.loc[final_quantizable_indices, 'is_pred']=True
+        # if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
+        #     df['is_pred']=True
+        # else:
+        #     df['is_pred']=False
+        #     df.loc[final_quantizable_indices, 'is_pred']=True
         
         # State Embedding
         #----------------
