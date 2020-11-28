@@ -46,6 +46,7 @@ from natsort import natsorted
 
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 from nncf.hw_config import HWConfigType
+from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
 
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
@@ -108,10 +109,10 @@ class QuantizationEnv:
         # Set Precision Space and Adjacent Quantizer Coupling
         if self.hw_cfg_type is None:
             self.precision_space = self.autoq_cfg.get('bits', [4, 8])
-            self.tie_quantizers = False
+            self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
         elif self.hw_cfg_type is HWConfigType.from_str('VPU'):
             self.precision_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
-            self.tie_quantizers = True
+            self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
         self.precision_space = sorted(self.precision_space)
         self.float_bit = 32.0
         self.max_bit = max(self.precision_space)
@@ -120,7 +121,7 @@ class QuantizationEnv:
         # Bool to disable hard resource constraint
         self.skip_wall = False
         if 'skip_wall' in self.autoq_cfg:
-            self.tie_quantizers = self.autoq_cfg['skip_wall']
+            self.skip_wall = self.autoq_cfg['skip_wall']
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
         self.finetune = False
@@ -197,8 +198,8 @@ class QuantizationEnv:
         
         # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
         self._dump_master_df()         
-        self._dump_groups_of_adjacent_quantizers()
         self._dump_quantized_graph()
+        self._dump_groups_of_adjacent_quantizers()
 
         # End of QuantizationEnv.__init__()
         # ----------------------------------------------------------------------------------------------------------------------
@@ -295,7 +296,7 @@ class QuantizationEnv:
 
     def step(self, action):
         def is_final_step():
-            if self.tie_quantizers is True:
+            if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
                 return len(self.collected_strategy) == sum(self.master_df.is_pred)
             else:
                 return len(self.collected_strategy) == len(self.master_df)
@@ -305,9 +306,9 @@ class QuantizationEnv:
         if not is_final_step():
             info_set = {}
             reward = 0
-            
-            self.set_next_step_prev_action(len(self.collected_strategy), action, only_pred=self.tie_quantizers)
-            obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=self.tie_quantizers)
+            is_strict = self.bw_assignment_mode is BitwidthAssignmentMode.STRICT
+            self.set_next_step_prev_action(len(self.collected_strategy), action, only_pred=is_strict)
+            obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=is_strict)
             done = False
             return obs, reward, done, info_set
 
@@ -316,7 +317,7 @@ class QuantizationEnv:
         
     def evaluate_strategy(self, collected_strategy, skip_wall=True):
         # #Expand strategy to full quantization policy
-        if self.tie_quantizers:
+        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
             self.strategy = self._expand_collected_strategy(collected_strategy)
         else:
             self.master_df['action'] = collected_strategy
@@ -348,7 +349,9 @@ class QuantizationEnv:
             prGreen('New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'.format(
                 self.strategy, self.best_reward, quantized_acc, cur_model_ratio, cur_model_size/8000000))
 
-        obs = self.get_normalized_obs(len(collected_strategy)-1, only_pred=self.tie_quantizers)            
+        obs = self.get_normalized_obs(len(collected_strategy)-1, 
+                                        only_pred=(self.bw_assignment_mode is BitwidthAssignmentMode.STRICT))
+                                                    
         done = True
         return obs, reward, done, info_set
 
@@ -430,7 +433,7 @@ class QuantizationEnv:
 
         assert len(final_quantizable_indices) == len(consolidated_weight_quantizer_indices) + len(dangling_quantizer_indices), "length should be tally"
 
-        if self.tie_quantizers is False:
+        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
             df['is_pred']=True
         else:
             df['is_pred']=False
