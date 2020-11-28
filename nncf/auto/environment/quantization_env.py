@@ -108,15 +108,15 @@ class QuantizationEnv:
         
         # Set Precision Space and Adjacent Quantizer Coupling
         if self.hw_cfg_type is None:
-            self.precision_space = self.autoq_cfg.get('bits', [4, 8])
+            self.bitwidth_space = self.autoq_cfg.get('bits', [4, 8])
             self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
         elif self.hw_cfg_type is HWConfigType.from_str('VPU'):
-            self.precision_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
             self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
-        self.precision_space = sorted(self.precision_space)
-        self.float_bit = 32.0
-        self.max_bit = max(self.precision_space)
-        self.min_bit = min(self.precision_space)
+        self.bitwidth_space = sorted(self.bitwidth_space)
+        self.float_bitwidth = 32.0
+        self.max_bitwidth = max(self.bitwidth_space)
+        self.min_bitwidth = min(self.bitwidth_space)
         
         # Bool to disable hard resource constraint
         self.skip_wall = False
@@ -188,8 +188,8 @@ class QuantizationEnv:
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Model Size Calculation
-        self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bit  #in bit unit
-        self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bit    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
+        self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bitwidth  #in bit unit
+        self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bitwidth    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
         self.target_model_size = self.orig_model_size*self.compression_ratio
 
         # init reward
@@ -450,8 +450,8 @@ class QuantizationEnv:
         master_df = pd.concat([df, layer_attr_df], axis='columns')
         
         # Workaround to set the min and max of action before fitting the minmaxscaler
-        master_df['prev_action'][0]=self.max_bit
-        master_df['prev_action'][-1]=self.min_bit
+        master_df['prev_action'][0]=self.max_bitwidth
+        master_df['prev_action'][-1]=self.min_bitwidth
 
         return master_df, state_list
     
