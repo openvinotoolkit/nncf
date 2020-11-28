@@ -18,9 +18,8 @@ import torch.nn.functional as F
 import torch.utils.data
 from copy import deepcopy
 
-from torchvision.models import resnet50
+from torchvision.models import resnet50, squeezenet1_1
 
-from examples.common.models.classification import squeezenet1_1_custom
 from nncf.checkpoint_loading import load_state
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler
 from nncf.dynamic_graph.context import ScopeElement, Scope
@@ -358,7 +357,7 @@ def hw_config_type_(request):
 def test_hw_config_quantization_can_quantize_squeezenet(hw_config_type):
     config = get_squeezenet_quantization_config()
     config["hw_config"] = hw_config_type.value
-    model = squeezenet1_1_custom()
+    model = squeezenet1_1()
     create_compressed_model_and_algo_for_test(model, config)
 
 

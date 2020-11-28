@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from examples.common.models import squeezenet1_1_custom, torch
 from nncf import register_default_init_args
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.quantization.algo import QuantizationControllerBase
@@ -21,6 +21,7 @@ from nncf.quantization.schedulers import StagedQuantizationScheduler
 from nncf.structures import QuantizationRangeInitArgs
 from tests.helpers import create_compressed_model_and_algo_for_test, OnesDatasetMock
 from tests.quantization.test_algo_quantization import get_squeezenet_quantization_config
+from tests.test_models import squeezenet1_1
 
 
 def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
@@ -129,7 +130,7 @@ def test_staged_scheduler_with_empty_quantization():
             "weights_quant_start_epoch": 2,
         }
     })
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=10, dropout=0)
 
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
@@ -161,7 +162,7 @@ def test_staged_scheduler_with_range_init():
             }
         }
     })
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=10, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
@@ -222,7 +223,7 @@ def test_staged_scheduler_with_hawq():
         }
     })
     num_classes = 10
-    model = squeezenet1_1_custom(num_classes=num_classes, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=num_classes, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape

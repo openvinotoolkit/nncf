@@ -21,11 +21,12 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
+from torchvision.models import squeezenet1_1
+
 from tests.quantization.test_precision_init import HAWQConfigBuilder
 from torch.utils.data import DataLoader
 
 import nncf
-from examples.common.models.classification import squeezenet1_1_custom
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
@@ -42,7 +43,7 @@ from tests.helpers import TwoConvTestModel, get_empty_config, \
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     data_loader = distributed_init_test_default(gpu, ngpus_per_node, config)
-    model = safe_thread_call(partial(squeezenet1_1_custom, pretrained=True))
+    model = safe_thread_call(partial(squeezenet1_1, pretrained=True))
 
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
