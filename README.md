@@ -149,6 +149,7 @@ Quick jump to sample type:
 |ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.61|
 |ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
 |ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.76|69.33|
+|ResNet-18|Filter pruning, 40%, L2 magnitude criterion|ImageNet|69.76|69.27|
 |ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|73.31|72.73|
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.78|68.85|
 
