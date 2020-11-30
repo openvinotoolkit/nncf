@@ -160,16 +160,21 @@ GENERIC_INITIALIZER_SCHEMA = {
             {
                 "type": "object",
                 "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
+                    "num_bn_adaptation_samples": with_attributes(_NUMBER,
+                                                                 description="Number of samples from the training "
+                                                                             "dataset to use for model inference "
+                                                                             "during the BatchNorm statistics "
+                                                                             "adaptation procedure for the compressed "
+                                                                             "model. The actual number of samples will "
+                                                                             "be a closest multiple of the batch "
+                                                                             "size."),
+                    "num_bn_forget_samples": with_attributes(_NUMBER,
+                                                             description="Number of samples from the training "
+                                                                         "dataset to use for model inference during "
+                                                                         "the BatchNorm statistics adaptation "
+                                                                         "in the initial statistics forgetting step. "
+                                                                         "The actual number of samples will be a "
+                                                                         "closest multiple of the batch size."),
                 },
                 "additionalProperties": False,
             },
@@ -180,11 +185,11 @@ GENERIC_INITIALIZER_SCHEMA = {
 BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
-        "num_init_steps": with_attributes(_NUMBER,
-                                          description="Number of batches from the training dataset to "
-                                                      "consume as sample model inputs for purposes of "
-                                                      "setting initial minimum and maximum quantization "
-                                                      "ranges"),
+        "num_init_samples": with_attributes(_NUMBER,
+                                            description="Number of samples from the training dataset to "
+                                                        "consume as sample model inputs for purposes of "
+                                                        "setting initial minimum and maximum quantization "
+                                                        "ranges"),
         "type": with_attributes(_STRING, description="Type of the initializer - determines which "
                                                      "statistics gathered during initialization will be "
                                                      "used to initialize the quantization ranges"),
@@ -250,16 +255,17 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
             {
                 "type": "object",
                 "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
+                    "num_bn_adaptation_samples": with_attributes(_NUMBER,
+                                                                 description="Number of samples from the training "
+                                                                             "dataset to use for model inference "
+                                                                             "durung the BatchNorm statistics "
+                                                                             "adaptation procedure for the compressed "
+                                                                             "model"),
+                    "num_bn_forget_samples": with_attributes(_NUMBER,
+                                                             description="Number of samples from the training "
+                                                                         "dataset to use for model inference during "
+                                                                         "the BatchNorm statistics adaptation "
+                                                                         "in the initial statistics forgetting step"),
                 },
                 "additionalProperties": False,
             },

@@ -17,6 +17,7 @@ This package defines the API for the NNCF compression methods, so that the user 
 extend the existing algorithms.
 """
 import functools
+import numpy
 from copy import copy
 from enum import Enum
 from functools import partial
@@ -188,12 +189,12 @@ class CompressionAlgorithmController:
     def run_batchnorm_adaptation(self, config):
         initializer_params = config.get("initializer", {})
         init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 0)
-        num_bn_forget_steps = init_bn_adapt_config.get('num_bn_forget_steps', 5)
+        num_bn_adaptation_samples = init_bn_adapt_config.get('num_bn_adaptation_samples', 0)
+        num_bn_forget_samples = init_bn_adapt_config.get('num_bn_forget_samples', 1024)
 
-        if num_bn_adaptation_steps < 0:
-            raise AttributeError('Number of batch adaptation steps must be >= 0')
-        if num_bn_adaptation_steps > 0:
+        if num_bn_adaptation_samples < 0:
+            raise AttributeError('Number of adaptation samples must be >= 0')
+        if num_bn_adaptation_samples > 0:
             try:
                 bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
             except KeyError:
@@ -202,7 +203,9 @@ class CompressionAlgorithmController:
                     'as the adaptation data loader is not provided as an extra struct. '
                     'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
                 return
-
+            batch_size = bn_adaptation_args.data_loader.batch_size
+            num_bn_forget_steps = numpy.ceil(num_bn_forget_samples / batch_size)
+            num_bn_adaptation_steps = numpy.ceil(num_bn_adaptation_samples / batch_size)
             bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device,
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)

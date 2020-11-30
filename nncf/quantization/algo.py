@@ -1000,25 +1000,25 @@ class QuantizationController(QuantizationControllerBase):
 
             if has_range_init_args:
                 nncf_logger.warning("Enabling quantization range initialization with default parameters.")
-                num_init_steps = 1
+                num_init_samples = 256
             else:
                 nncf_logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
                                     "quantization init args not supplied - quantizer range initialization will not be "
                                     "done")
-                num_init_steps = 0
+                num_init_samples = 0
 
-            init_range_config = {'num_init_steps': num_init_steps}
+            init_range_config = {'num_init_samples': num_init_samples}
         if isinstance(init_range_config, dict):
             global_init_range_config = self.update_range_config_by_default(init_range_config)
-            max_num_init_steps = global_init_range_config['num_init_steps']
+            max_num_init_samples = global_init_range_config['num_init_samples']
         else:
-            max_num_init_steps = 0
+            max_num_init_samples = 0
             global_init_range_config = []
             for sub_init_range_config in init_range_config:
                 global_init_range_config.append(self.update_range_config_by_default(sub_init_range_config))
-                max_num_init_steps = max(sub_init_range_config['num_init_steps'], max_num_init_steps)
+                max_num_init_samples = max(sub_init_range_config['num_init_samples'], max_num_init_samples)
 
-        if max_num_init_steps > 0:
+        if max_num_init_samples > 0:
             try:
                 range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
             except KeyError:
@@ -1027,6 +1027,8 @@ class QuantizationController(QuantizationControllerBase):
                     'but the initializing data loader is not provided as an extra struct. '
                     'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
             data_loader = range_init_args.data_loader
+            batch_size = data_loader.batch_size
+            max_num_init_steps = np.ceil(max_num_init_samples / batch_size)
 
             self._do_range_init(data_loader, max_num_init_steps, global_init_range_config,
                                 range_init_args.device)
@@ -1037,12 +1039,12 @@ class QuantizationController(QuantizationControllerBase):
         if global_init_range_config.get("type") is None:
             global_init_range_config["type"] = "mean_min_max"
 
-        if global_init_range_config.get("num_init_steps") is None:
-            global_init_range_config["num_init_steps"] = 1
+        if global_init_range_config.get("num_init_samples") is None:
+            global_init_range_config["num_init_samples"] = 256
 
-        num_init_steps = global_init_range_config.get('num_init_steps', 1)
-        if num_init_steps < 0:
-            raise AttributeError('Number of initialization steps must be >= 0')
+        num_init_samples = global_init_range_config.get('num_init_samples', 256)
+        if num_init_samples < 0:
+            raise AttributeError('Number of initialization samples must be >= 0')
         return global_init_range_config
 
     def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[BaseQuantizer], BaseQuantizer]]:

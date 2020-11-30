@@ -33,7 +33,7 @@ Below is an example of the NNCF configuration file
                 "algorithm": quantization,
                 "initializer": {
                     "range": {
-                        "num_init_steps": 10
+                        "num_init_samples": 256
                     }
                 }
             },

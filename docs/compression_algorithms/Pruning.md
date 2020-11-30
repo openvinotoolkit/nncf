@@ -66,7 +66,7 @@ After the compression-related changes in the model have been committed, the stat
 (per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
 through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
 and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
-sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_steps` in the
+sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
 **Filter pruning configuration file parameters**:    
@@ -75,8 +75,8 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "algorithm": "filter_pruning",
     "initializer": {
         "batchnorm_adaptation": {
-            "num_bn_adaptation_steps": 10, // Number of batches from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model
-            "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
+            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
+            "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
     "pruning_init": 0.1, // Initial value of the pruning level applied to the model in 'create_compressed_model' function. 0.0 by default.

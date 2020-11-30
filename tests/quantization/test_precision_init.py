@@ -208,7 +208,7 @@ class HAWQConfigBuilder:
                     "tolerance": 1e-2
                 },
                 'range': {
-                    'num_init_steps': 1
+                    'num_init_samples': 1
                 }
             }})
         return config
@@ -604,7 +604,9 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
     config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).build()
     config['quantizer_setup_type'] = 'pattern_based'
     model = BasicConvTestModel()
-    config = register_default_init_args(config, mocker.stub(), mocker.stub())
+    mock_train_loader = mocker.stub()
+    mock_train_loader.batch_size = 1
+    config = register_default_init_args(config, mock_train_loader, mocker.stub())
     mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
     mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
 
