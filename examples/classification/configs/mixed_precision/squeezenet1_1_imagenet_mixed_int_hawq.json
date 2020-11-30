@@ -1,5 +1,5 @@
 {
-    "model": "squeezenet1_1_custom",
+    "model": "squeezenet1_1",
     "pretrained": true,
     "input_info": {
         "sample_size": [

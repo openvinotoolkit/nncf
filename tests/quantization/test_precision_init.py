@@ -30,7 +30,6 @@ from torchvision.transforms import transforms
 
 from examples.classification.main import create_cifar
 from examples.common.model_loader import load_model
-from examples.common.models import squeezenet1_1_custom
 from examples.common.sample_config import SampleConfig
 from examples.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args, NNCFConfig
@@ -63,6 +62,7 @@ from tests.test_compressed_graph import check_graph
 
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
+from tests.test_models import squeezenet1_1
 
 
 def create_test_dataloaders(config, dataset_dir):
@@ -289,7 +289,7 @@ TEST_PARAMS = (
     HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
                    config_builder=HAWQConfigBuilder().with_ratio(1.15).for_vpu()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.03).for_vpu()),
-    HAWQTestStruct(model_creator=squeezenet1_1_custom,
+    HAWQTestStruct(model_creator=squeezenet1_1,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
@@ -418,8 +418,8 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     iter_number = params.iter_number
     tolerance = 4e-4
 
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
-    from examples.common.models.classification.squeezenet import model_urls
+    model = squeezenet1_1(num_classes=10, dropout=0)
+    from torchvision.models.squeezenet import model_urls
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
     model = model.cuda()
 
