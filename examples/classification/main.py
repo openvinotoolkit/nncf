@@ -203,6 +203,9 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
+        # update compression scheduler state at the begin of the epoch
+        compression_ctrl.scheduler.epoch_step()
+
         config.cur_epoch = epoch
         if config.distributed:
             train_sampler.set_epoch(epoch)
@@ -212,9 +215,6 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
-
-        # update compression scheduler state at the end of the epoch
-        compression_ctrl.scheduler.epoch_step()
 
         # compute compression algo statistics
         stats = compression_ctrl.statistics()
@@ -368,6 +368,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         # measure data loading time
         data_time.update(time.time() - end)
 
+        compression_scheduler.step()
+
         input_ = input_.to(config.device)
         target = target.to(config.device)
 
@@ -395,7 +397,6 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         loss.backward()
         optimizer.step()
 
-        compression_scheduler.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)

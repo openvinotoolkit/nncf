@@ -315,6 +315,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                    config.model)
 
     for epoch in range(config.start_epoch, config.epochs):
+        compression_ctrl.scheduler.epoch_step()
         logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
 
         if config.distributed:
@@ -324,7 +325,6 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
-        compression_ctrl.scheduler.epoch_step()
 
         logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
                     format(epoch, epoch_loss, miou))
@@ -375,11 +375,11 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             # Save the model if it's the best thus far
             if is_main_process():
                 checkpoint_path = save_checkpoint(model,
-                                                  optimizer, epoch + 1, best_miou,
+                                                  optimizer, epoch, best_miou,
                                                   compression_level,
                                                   compression_ctrl.scheduler, config)
 
-                make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
+                make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
                 print_statistics(compression_ctrl.statistics())
 
     return model

@@ -69,42 +69,44 @@ class CompressionScheduler:
     """
 
     def __init__(self):
-        self.last_epoch = -1
-        self.last_step = -1
+        self.current_step = -1 # Global step - count of all step during training
         self._steps_in_current_epoch = 0
+        self._current_epoch = -1
 
-    def step(self, last=None):
+    def step(self, next_step=None):
         """
-        Should be called after each optimizer step during training.
+        Should be called before each optimizer step during training.
         Arguments:
-            `last` - specifies the initial "previous" step
+            `next_step` - specifies the initial "next" step which should be set now
         """
-        if last is None:
-            last = self.last_step + 1
-        self.last_step = last
+        self.current_step = self.current_step + 1 if next_step is None else next_step
         self._steps_in_current_epoch += 1
 
-    def epoch_step(self, last=None):
+    def epoch_step(self, next_epoch=None):
         """
-        Should be called after each training epoch.
+        Should be called before each training epoch.
         Arguments:
-            `last` - specifies the initial "previous" epoch
+            `next` - specifies the initial "next" epoch which should be set now
         """
-        if last is None:
-            last = self.last_epoch + 1
-        self.last_epoch = last
+        if next_epoch is None:
+            self._current_epoch += 1
+        else:
+            self._current_epoch = next_epoch
         self._steps_in_current_epoch = 0
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
 
     def state_dict(self):
-        default_keys = {'last_step', 'last_epoch'}
+        default_keys = {'current_step', '_current_epoch'}
         return {key: val for key, val in self.__dict__.items() if key in default_keys}
 
     def initialize(self):
         pass
 
+    @property
+    def current_epoch(self):
+        return 0 if self._current_epoch == -1 else self._current_epoch
 
 @functools.total_ordering
 class CompressionLevel(Enum):

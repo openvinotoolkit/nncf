@@ -89,6 +89,9 @@ def test_staged_scheduler_enables_quantizations_on_epoch_step(mocker):
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
     scheduler.epoch_step()
+    ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
+
+    scheduler.epoch_step()
     ctrl_spy.check_call_counts(0, 1, 1, 1, 1)
 
     scheduler.epoch_step()
@@ -101,12 +104,16 @@ def test_staged_scheduler_enables_quantizations_on_epoch_step__at_the_same_time(
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
     scheduler.epoch_step()
+    ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
+
+    scheduler.epoch_step()
     ctrl_spy.check_call_counts(1, 1, 1, 1, 1)
 
 
 def test_staged_scheduler_enables_quantizations_on_load(mocker):
     old_ctrl_spy = QuantizationCtrlBaseSpy(mocker)
     old_scheduler = create_staged_scheduler(old_ctrl_spy)
+    old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     scheduler_state_dict = old_scheduler.state_dict()
@@ -137,6 +144,9 @@ def test_staged_scheduler_with_empty_quantization():
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 
+    scheduler.epoch_step()
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         if module.is_weights:
@@ -175,6 +185,10 @@ def test_staged_scheduler_with_range_init():
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
 
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
+
+    scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 
@@ -237,6 +251,10 @@ def test_staged_scheduler_with_hawq():
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
 
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
+
+    scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 

@@ -749,7 +749,7 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
     }
     model_save, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
     ctrl_save.scheduler.epoch_step()
-
+    ctrl_save.scheduler.epoch_step()
     _, ctrl_load = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
                                                              resuming_state_dict=model_save.state_dict())
     for quantizer_info in ctrl_load.non_weight_quantizers.values():

@@ -475,18 +475,14 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
                                                      "level will be approached in concave manner, and in convex "
                                                      "manner otherwise."),
-    "sparsity_init": with_attributes(_NUMBER,
-                                     description="Initial value of the sparsity level applied to the "
-                                                 "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
     "sparsity_target_epoch": with_attributes(_NUMBER,
-                                             description="The target sparsity value will be reached after this many"
-                                                         "epoch steps"),
+                                             description="Index of the epoch from which the sparsity level "
+                                                         "of the model will be equal to spatsity_target value"),
     "sparsity_freeze_epoch": with_attributes(_NUMBER,
-                                             description="The number of epoch steps after which the "
-                                                         "sparsity mask will be frozen and no "
-                                                         "longer trained"),
+                                             description="Index of the epoch from which the sparsity mask will "
+                                                         "be frozen and no longer trained"),
     "update_per_optimizer_step": with_attributes(_BOOLEAN,
                                                  description="Whether the function-based sparsity level schedulers "
                                                              "should update the sparsity level after each optimizer "
@@ -520,6 +516,9 @@ MAGNITUDE_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
@@ -548,6 +547,9 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "params":
             {
                 "type": "object",
@@ -567,6 +569,9 @@ FILTER_PRUNING_SCHEMA = {
             "const": FILTER_PRUNING_ALGO_NAME_IN_CONFIG
         },
         "initializer": GENERIC_INITIALIZER_SCHEMA,
+        "pruning_init": with_attributes(_NUMBER,
+                                        description="Initial value of the pruning level applied to the"
+                                                    " model. 0.0 by default."),
         "params":
             {
                 "type": "object",
@@ -575,9 +580,6 @@ FILTER_PRUNING_SCHEMA = {
                                                 description="The type of scheduling to use for adjusting the target"
                                                             " pruning level. Either `exponential`, `exponential_with"
                                                             "_bias`,  or `baseline`, by default it is `baseline`"),
-                    "pruning_init": with_attributes(_NUMBER,
-                                                    description="Initial value of the pruning level applied to the"
-                                                                " model. 0.0 by default."),
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for the model."
                                                                   " 0.5 by default."),

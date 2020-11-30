@@ -61,12 +61,15 @@ class FilterPruningController(BasePruningAlgoController):
         params = self.config.get("params", {})
         self.frozen = False
         self.pruning_rate = 0
+        self.pruning_init = config.get("pruning_init", 0)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
         self.all_weights = params.get("all_weights", False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
+
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):

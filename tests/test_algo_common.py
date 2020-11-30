@@ -134,7 +134,6 @@ LIST_OF_TEST_PARAMS = [
     ),
     CompressionLevelTestStruct(
         config_provider=TestConfigCreator().add_algo('rb_sparsity', {
-            'sparsity_init': 0,
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
@@ -180,6 +179,9 @@ def test_can_get_compression_level(test_struct: CompressionLevelTestStruct):
     model = BasicConvTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config_provider.create())
     compression_scheduler = compression_ctrl.scheduler
+    assert compression_ctrl.compression_level() == compression_levels[0]
+
+    compression_scheduler.epoch_step()
     assert compression_ctrl.compression_level() == compression_levels[0]
 
     compression_scheduler.epoch_step()

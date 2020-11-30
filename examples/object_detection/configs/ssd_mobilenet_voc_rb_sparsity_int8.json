@@ -40,9 +40,9 @@
   "compression": [
     {
       "algorithm": "rb_sparsity",
+      "sparsity_init": 0.3,
       "params": {
         "schedule": "adaptive",
-        "sparsity_init": 0.3,
         "sparsity_target": 0.9,
         "sparsity_target_epoch": 300,
         "sparsity_freeze_epoch": 300

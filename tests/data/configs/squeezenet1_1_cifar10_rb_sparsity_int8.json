@@ -16,9 +16,9 @@
     "compression": [
         {
             "algorithm": "rb_sparsity",
+            "sparsity_init": 0.2,
             "params": {
                 "schedule": "polynomial",
-                "sparsity_init": 0.2,
                 "sparsity_target": 0.6,
                 "sparsity_target_epoch": 5
             }
