@@ -657,7 +657,7 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
-    "enum": ["ANY", "CPU", "GPU", "VPU", "NONE"]
+    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
 
 ROOT_NNCF_CONFIG_SCHEMA = {
@@ -691,8 +691,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                      "account while compressing in order to obtain the best "
                                                      "performance for this type of device. The default 'ANY' means "
                                                      "compatible quantization supported by any HW. The parameter takes "
-                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). Set "
-                                                     "this value to 'NONE' if you are going to use a custom "
+                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
+                                                     "this value to 'TRIAL' if you are going to use a custom "
                                                      "quantization schema. Optional."),
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),

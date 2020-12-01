@@ -47,7 +47,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
     quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
     if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
         target_device = config.get("target_device", "ANY")
-        if target_device != 'NONE':
+        if target_device != 'TRIAL':
             hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
     if isinstance(compression_config_json_section, dict):

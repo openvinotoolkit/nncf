@@ -80,7 +80,7 @@ def test_quantization_configs__custom():
             "signed": True,
         },
     })
-    config['target_device'] = 'NONE'
+    config['target_device'] = 'TRIAL'
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)

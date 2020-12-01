@@ -209,7 +209,7 @@ class TestRangeInit:
 
     def test_scope_overrides(self, wrap_dataloader):
         config = create_config()
-        config['target_device'] = 'NONE'
+        config['target_device'] = 'TRIAL'
         config["compression"]["scope_overrides"] = {
             r"{re}NNCFConv2d\[[0-9]*\]$": {
                 "bits": 7,
@@ -457,7 +457,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
             "input_info": {
                 "sample_size": [1, 3, 100, 100]
             },
-            "target_device": "NONE",
+            "target_device": "TRIAL",
             "compression": {
                 "algorithm": "quantization",
                 "activations": {
