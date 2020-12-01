@@ -229,7 +229,7 @@ class QuantizersSwitcher:
 class HookAutoRemove:
     def __init__(self, hook):
         self.hook = hook
-    def close(self):
+    def __del__(self):
         self.hook.remove()
 
 
