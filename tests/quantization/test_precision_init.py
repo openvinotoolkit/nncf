@@ -165,7 +165,7 @@ class HAWQConfigBuilder:
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
 
     def for_none(self):
-        return self._set_target_device('NONE').prop_based()
+        return self._set_target_device('TRIAL').prop_based()
 
     def none_device(self):
         self._config["target_device"] = None
