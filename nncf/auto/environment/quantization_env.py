@@ -138,7 +138,9 @@ class QuantizationEnv:
 
         # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
-    
+        if self.master_df.isnull().values.any():
+            raise ValueError("Q.Env Master Dataframe has null value(s)")
+
         assert len(self.quantizer_table) == len(self.qctrl.all_quantizations), \
             "Number of Quantizer is not tally between quantizer table and quantization controller"
         
@@ -532,7 +534,7 @@ class QuantizationEnv:
         feature = OrderedDict()
 
         if isinstance(qid, WeightQuantizerId):
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
                 feature['conv_dw']          = int(m.weight.shape[1] == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
                 feature['cin']              = m.weight.shape[1]
                 feature['cout']             = m.weight.shape[0]
@@ -552,6 +554,9 @@ class QuantizationEnv:
                 feature['ifm_size']         = np.prod(m._input_shape[-1]) # feature nodes
                 feature['prev_action']      = 0.0 # placeholder  
             
+            else:
+                raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
+
         elif isinstance(qid, NonWeightQuantizerId):
             q_nncfnode = g._nx_node_to_nncf_node(g.get_nx_node_by_key(row.q_nx_nodekey))
             input_edges = [g.get_nx_edge(prev_node,  q_nncfnode) for prev_node in g.get_previous_nodes(q_nncfnode)]
