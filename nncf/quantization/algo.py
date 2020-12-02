@@ -48,6 +48,7 @@ from nncf.quantization.init_precision import PrecisionInitializerFactory
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
     QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     FunctionQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph, \
@@ -133,7 +134,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         self.quantize_inputs = self.config.get('quantize_inputs', True)
         self.quantize_outputs = self.config.get('quantize_outputs', False)
-        self.disable_function_quantization_hooks = self.config.get('disable_function_quantization_hooks', False)
         self._debug_interface = QuantizationDebugInterface() if is_debug() else None
 
         self._quantized_weight_modules_registry = OrderedDict()
@@ -142,6 +142,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._non_weight_quantizers = OrderedDict()  # All the other quantizers
         self._processed_function_quantizers = set()
         self._processed_activation_quantizer_insertion_infos = set()
+        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()
 
         self.global_quantizer_constraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
         self._ignored_scopes_per_group = {}  # type: Dict[QuantizerGroup, List[str]]
@@ -187,6 +188,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._all_quantizations.update(self._quantized_weight_modules_registry)
         self._all_quantizations.update(self._quantized_inputs_modules_registry)
 
+        self._groups_of_adjacent_quantizers.parse_from_quantizer_lists(self._weight_quantizers,
+                                                                       self._non_weight_quantizers)
+
         for command in insertion_commands:
             target_model.register_insertion_command(command)
 
@@ -205,7 +209,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       self._quantized_inputs_modules_registry,
                                       self._weight_quantizers,
                                       self._non_weight_quantizers,
-                                      self._hw_precision_constraints)
+                                      self._hw_precision_constraints,
+                                      self._groups_of_adjacent_quantizers)
 
     def __get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = deepcopy(self.DEFAULT_QUANTIZER_CONFIG)
@@ -449,8 +454,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         else:
             raise RuntimeError("Invalid quantizer setup type!")
 
-        if not self.disable_function_quantization_hooks:
-            insertion_commands += self._quantize_free_function_inputs(target_model)
         return insertion_commands
 
     def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig],
@@ -697,98 +700,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         return True
 
-    class FunctionQuantizationPreHook:
-        """Cannot simply register the quantizer module as a callable hook, since we need to call
-        a thread-local version of the quantizer module during base module execution."""
-
-        def __init__(self, context: TracingContext, func_in_quant_info: FunctionQuantizerId,
-                     debug_interface: 'QuantizationDebugInterface' = None):
-            self.compressed_context = context
-            self.func_in_quant_info = func_in_quant_info
-            self.debug_interface = debug_interface
-
-        def __call__(self, input_: OperatorInput):
-            quantizer_dict_key = str(self.func_in_quant_info)
-            if self.debug_interface is not None:
-                self.debug_interface.register_function_quantizer_call(quantizer_dict_key)
-            replica = self.compressed_context.base_module_thread_local_replica
-            q_input = replica.function_quantizers[quantizer_dict_key](input_)
-            return q_input
-
-    def _quantize_free_function_inputs(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        device = next(target_model.parameters()).device
-
-        if not FUNCTIONS_TO_QUANTIZE:
-            return []
-        pattern = N(FUNCTIONS_TO_QUANTIZE[0].name)
-        for i in range(1, len(FUNCTIONS_TO_QUANTIZE)):
-            pattern |= N(FUNCTIONS_TO_QUANTIZE[i].name)
-
-        target_insertion_infos = target_model.get_post_pattern_insertion_points(pattern,
-                                                                                omit_nodes_in_nncf_modules=True)
-        insertion_commands = []
-
-        target_model.register_compression_module_type(CompressionModuleType.FUNCTION_QUANTIZER)
-        for insertion_info in target_insertion_infos:
-            ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
-            scope_str = str(ia_op_exec_context.scope_in_model)
-
-            if not self._should_consider_scope_for_group(scope_str, QuantizerGroup.ACTIVATIONS):
-                nncf_logger.info("Ignored adding function input quantizer in scope: {}".format(scope_str))
-                continue
-
-            function_arg_positions_to_quantize = get_arg_positions_to_quantize(ia_op_exec_context.operator_name)
-            assert function_arg_positions_to_quantize is not None, "Function with inputs to be quantized has " \
-                                                                   "no info struct registered in " \
-                                                                   "QUANTIZED_INPUT_FUNCTIONS!"
-
-            for input_arg_idx in function_arg_positions_to_quantize:
-                ip_arg_quant_key = FunctionQuantizerId(ia_op_exec_context, input_arg_idx)
-
-                if ip_arg_quant_key in self._processed_function_quantizers:
-                    raise RuntimeError(
-                        "Ambiguous call to {fn} with call order {co} and argname {arg} in current scope. "
-                        "Cannot insert quantization hooks "
-                        "automatically!".format(fn=ia_op_exec_context.operator_name,
-                                                co=ia_op_exec_context.call_order,
-                                                arg=input_arg_idx)
-                    )
-
-                self._processed_function_quantizers.add(ip_arg_quant_key)
-
-                ip_arg_quant_name = str(ip_arg_quant_key)
-                assert ip_arg_quant_name not in target_model.get_compression_modules_by_type(
-                    CompressionModuleType.FUNCTION_QUANTIZER)
-                input_shape = insertion_info.op_exec_context.tensor_metas[0].shape
-
-                qconfig = self.__get_scoped_quantizer_config(target_model, scope_str,
-                                                             is_weights=False,
-                                                             input_shape=input_shape)
-                quantizer_module = self.__create_quantize_module(qconfig).to(device)
-                target_model.add_compression_module(ip_arg_quant_name, quantizer_module,
-                                                    CompressionModuleType.FUNCTION_QUANTIZER)
-
-                nncf_logger.info("Adding {} Function Quantize: {}".format(
-                    "signed" if quantizer_module.signed else
-                    "unsigned", ip_arg_quant_name))
-
-                hook = self.FunctionQuantizationPreHook(target_model.get_tracing_context(),
-                                                        ip_arg_quant_key,
-                                                        self._debug_interface)
-                insertion_commands.append(InsertionCommand(InsertionPoint(ia_op_exec_context,
-                                                                          InsertionType.OPERATOR_PRE_HOOK,
-                                                                          input_port_id=input_arg_idx),
-                                                           hook,
-                                                           OperationPriority.QUANTIZATION_PRIORITY))
-                self._hw_precision_constraints.add(ip_arg_quant_key, [qconfig])
-                self._non_weight_quantizers[ip_arg_quant_key] = NonWeightQuantizerInfo(quantizer_module,
-                                                                                       [ia_op_exec_context])
-        # NOTE: Order of input quantizers must be the same to correctly broadcast parameters (e.g. scales) in
-        # distributed mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more
-        # details) pylint: disable=protected-access
-        target_model.sort_compression_modules(CompressionModuleType.FUNCTION_QUANTIZER)
-        return insertion_commands
-
     @staticmethod
     def _make_default_quantizable_subgraph_pattern():
         import nncf.dynamic_graph.patterns as p
@@ -885,6 +796,7 @@ class QuantizationController(QuantizationControllerBase):
                  weight_quantizers: Dict[WeightQuantizerId, torch.nn.Module],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  hw_precision_constraints: HWPrecisionConstraints,
+                 groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  collect_compression_metrics: bool = True):
         super().__init__(target_model)
         self.debug_interface = debug_interface
@@ -900,6 +812,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations.update(self.weight_quantizers)
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
         self._distributed = False
+        self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -934,6 +847,10 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
+        return self._groups_of_adjacent_quantizers
 
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():

@@ -837,20 +837,20 @@ class QuantizersBetweenQuantizableLayers:
     for activations and scope - for quantized modules """
 
     def __init__(self):
-        self.activation_quantizer_ctxs = set()  # type: Set[InputAgnosticOperationExecutionContext]
+        self.activation_quantizer_insertion_points = set()  # type: Set[InsertionPoint]
         self.quantized_module_scopes = set()  # type: Set['Scope']
 
-    def add_activation_quantizer_ctx(self, iap_ctx: InputAgnosticOperationExecutionContext):
-        self.activation_quantizer_ctxs.add(iap_ctx)
+    def add_activation_quantizer_insertion_point(self, ip: InsertionPoint):
+        self.activation_quantizer_insertion_points.add(ip)
 
     def add_quantized_module_scope(self, scope: 'Scope'):
         self.quantized_module_scopes.add(scope)
 
     def __bool__(self) -> bool:
-        return bool(self.activation_quantizer_ctxs) and bool(self.quantized_module_scopes)
+        return bool(self.activation_quantizer_insertion_points) and bool(self.quantized_module_scopes)
 
     def update(self, other: 'QuantizersBetweenQuantizableLayers'):
-        self.activation_quantizer_ctxs.update(other.activation_quantizer_ctxs)
+        self.activation_quantizer_insertion_points.update(other.activation_quantizer_insertion_points)
         self.quantized_module_scopes.update(other.quantized_module_scopes)
 
 
