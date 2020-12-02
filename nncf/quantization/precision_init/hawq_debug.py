@@ -145,14 +145,18 @@ class HAWQDebugger:
             node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
             activation_quantizer = quantizer_info.quantizer_module_ref
 
-            grouped_mode = bool(groups_of_adjacent_quantizers)
-            if grouped_mode:
-                node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
-                if node_id is None:
-                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
-                    node_id = 'UNDEFINED'
 
             activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+            grouped_mode = bool(groups_of_adjacent_quantizers)
+            if grouped_mode:
+                group_id_str = 'UNDEFINED'
+                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
+                if node_id is None:
+                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
+                else:
+                    group_id_str = str(group_id)
+                activation_fq_node['label'] += "_G" + group_id_str
+
 
 
     @staticmethod
@@ -197,12 +201,15 @@ class HAWQDebugger:
                 if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
                     bits = quantizer.num_bits
                     node_id = node[NNCFGraph.ID_NODE_ATTR]
-                    if grouped_mode:
-                        node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer)
-                        if node_id is None:
-                            nncf_logger.error('No group for weight quantizer: {}'.format(scope))
-                            node_id = 'UNDEFINED'
                     node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
+                    if grouped_mode:
+                        group_id_str = 'UNDEFINED'
+                        group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer)
+                        if group_id is None:
+                            nncf_logger.error('No group for weight quantizer: {}'.format(scope))
+                        else:
+                            group_id_str = str(group_id)
+                        node['label'] += '_G' + group_id_str
                     node['color'] = bits_color_map[bits]
                     node['style'] = 'filled'
         return nncf_graph

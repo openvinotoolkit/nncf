@@ -87,6 +87,16 @@ class QuantizerInsertionInfo(InsertionInfo):
         super().__init__(op_exec_context, in_port_id, is_input, is_output, shape_to_operate_on)
         self.quantizers_between_quantizable_layers = quantizers_between_quantizable_layers
 
+    def link_insertion_infos(self, linked_insertion_infos: List['QuantizerInsertionInfo']):
+        super().link_insertion_infos(linked_insertion_infos)
+        for linked_qii in self.get_linked_insertion_infos():
+            if linked_qii.quantizers_between_quantizable_layers is None:
+                continue
+            if self.quantizers_between_quantizable_layers is None:
+                self.quantizers_between_quantizable_layers = deepcopy(linked_qii.quantizers_between_quantizable_layers)
+            else:
+                self.quantizers_between_quantizable_layers.update(linked_qii.quantizers_between_quantizable_layers)
+
     @staticmethod
     def from_insertion_info(insertion_info: InsertionInfo) -> 'QuantizerInsertionInfo':
         result = QuantizerInsertionInfo(op_exec_context=insertion_info.op_exec_context,
@@ -94,7 +104,7 @@ class QuantizerInsertionInfo(InsertionInfo):
                                         is_input=insertion_info.is_input,
                                         is_output=insertion_info.is_output,
                                         shape_to_operate_on=insertion_info.shape_to_operate_on)
-        result.linked_insertion_infos = insertion_info.linked_insertion_infos
+        result.link_insertion_infos(insertion_info.get_linked_insertion_infos())
         return result
 
 
@@ -839,6 +849,10 @@ class QuantizersBetweenQuantizableLayers:
     def __bool__(self) -> bool:
         return bool(self.activation_quantizer_ctxs) and bool(self.quantized_module_scopes)
 
+    def update(self, other: 'QuantizersBetweenQuantizableLayers'):
+        self.activation_quantizer_ctxs.update(other.activation_quantizer_ctxs)
+        self.quantized_module_scopes.update(other.quantized_module_scopes)
+
 
 class QuantizersWaitingForMergeManager:
     """Tracks the quantizers that await a merge while trying to transition through a downward-branching node
@@ -1020,7 +1034,7 @@ class QuantizerPropagationSolver:
                                          key=lambda x: str(x.op_exec_context.input_agnostic))
             primary_insertion_info = all_insertion_infos[0]
             linked_insertion_infos = all_insertion_infos[1:]
-            primary_insertion_info.linked_insertion_infos = linked_insertion_infos
+            primary_insertion_info.link_insertion_infos(linked_insertion_infos)
             insertions_vs_potential_qconfigs[primary_insertion_info] = same_set_insertion_infos_vs_qconfigs[
                 primary_insertion_info]
 

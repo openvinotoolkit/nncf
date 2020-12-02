@@ -82,12 +82,18 @@ class InsertionInfo:
         self.is_input = is_input
         self.is_output = is_output
         self.shape_to_operate_on = shape_to_operate_on
-        self.linked_insertion_infos = []  # type: List[InsertionInfo]
+        self._linked_insertion_infos = []  # type: List[InsertionInfo]
+
+    def get_linked_insertion_infos(self) -> List['InsertionInfo']:
+        return self._linked_insertion_infos
+
+    def link_insertion_infos(self, linked_insertion_infos: List['InsertionInfo']):
+        self._linked_insertion_infos += linked_insertion_infos
 
     def __eq__(self, other: 'InsertionInfo'):
-        # TODO: ensure no circular refs via self.linked_insertion_infos?
-        return self.op_exec_context == other.op_exec_context and Counter(self.linked_insertion_infos) == Counter(
-            other.linked_insertion_infos) and self.in_port_id == other.in_port_id
+        # TODO: ensure no circular refs via self._linked_insertion_infos?
+        return self.op_exec_context == other.op_exec_context and Counter(self._linked_insertion_infos) == Counter(
+            other.get_linked_insertion_infos()) and self.in_port_id == other.in_port_id
 
     def __str__(self):
         postfix = ''

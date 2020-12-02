@@ -25,6 +25,7 @@ from nncf.nncf_network import InsertionInfo
 from nncf.quantization.algo import QuantizationBuilder
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.quantization.quantizer_propagation import QuantizerInsertionInfo
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
@@ -39,13 +40,13 @@ def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecuti
 
 
 def make_insertion_info_for_coalescing_test(scope_str: str,
-                                            linked_insertion_infos: List[InsertionInfo] = None,
+                                            linked_insertion_infos: List[QuantizerInsertionInfo] = None,
                                             in_port_id: int = None)\
-        -> InsertionInfo:
+        -> QuantizerInsertionInfo:
     op_exec_context = make_op_exec_context_for_coalescing_test(scope_str)
-    retval = InsertionInfo(op_exec_context, in_port_id=in_port_id)
+    retval = QuantizerInsertionInfo(op_exec_context, in_port_id=in_port_id)
     if linked_insertion_infos is not None:
-        retval.linked_insertion_infos = linked_insertion_infos
+        retval.link_insertion_infos(linked_insertion_infos)
     return retval
 
 

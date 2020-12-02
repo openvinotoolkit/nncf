@@ -487,6 +487,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     def _quantize_post_pattern_activations(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         pattern = self._make_quantizable_subgraph_pattern()
         target_insertion_infos = target_model.get_post_pattern_insertion_points(pattern)
+        target_insertion_infos = [QuantizerInsertionInfo.from_insertion_info(ii) for ii in target_insertion_infos]
         insertion_commands = []
 
         act_config = self.config.get('activations', {})
@@ -528,9 +529,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         device = next(target_model.parameters()).device
         quantizer = self.__create_quantize_module(quantizer_config).to(device)
 
-        insertion_infos_to_process = [insertion_info] + insertion_info.linked_insertion_infos
+        insertion_infos_to_process = [insertion_info] + insertion_info.get_linked_insertion_infos()
 
-        # linked_insertion_infos will determine quantization points in graph that have to share
+        # _linked_insertion_infos will determine quantization points in graph that have to share
         # a quantization module, e.g. for scales unification
         serialized_insertions_list = [str(x) for x in insertion_infos_to_process]
         quantizer_storage_key = ";".join(serialized_insertions_list)
@@ -547,7 +548,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             nncf_logger.info(
                 "Processing linked activation quantizer group:\n {}\n".format("\n".join(serialized_insertions_list)))
 
-        self._non_weight_quantizers[quantizer_id] = NonWeightQuantizerInfo(quantizer, insertion_infos_to_process)
+        self._non_weight_quantizers[quantizer_id] = \
+            NonWeightQuantizerInfo(quantizer, insertion_infos_to_process,
+                                   insertion_info.quantizers_between_quantizable_layers)
 
         insertion_commands = []
         for curr_insertion_info in insertion_infos_to_process:
@@ -798,7 +801,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                  linked_scopes_groups_list: List[List[str]]) -> List[QuantizerInsertionInfo]:
         """Accepts a list of InsertionInfos that each correspond only to one InputAgnosticOperationExecutionContext,
         and merges these according to linked_scope_groups_list so that some or all of the resulting InsertionInfo
-        objects have non-empty linked_insertion_infos lists.
+        objects have non-empty _linked_insertion_infos lists.
         Each entry in linked_scope_groups_list must be a valid string representation of a single
         InputAgnosticOperationExecutionContext object."""
         ia_op_exec_context_list = [x.op_exec_context.input_agnostic for x in target_insertion_infos]
@@ -849,7 +852,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                               is_output=main_info.is_output,
                                               shape_to_operate_on=main_info.shape_to_operate_on)
             for linked_info_idx in intra_group_indices[1:]:
-                new_info.linked_insertion_infos.append(target_insertion_infos[linked_info_idx])
+                new_info.link_insertion_infos([target_insertion_infos[linked_info_idx], ])
             retval.append(new_info)
 
         return retval

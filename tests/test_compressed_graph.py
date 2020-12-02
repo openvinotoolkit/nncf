@@ -827,7 +827,7 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
             str_qconfig_list += '[' + str(qconfig) + '] '
 
         quantizers_activations_attr[ia_op_exec_context] = (insertion_info.in_port_id, str_qconfig_list)
-        for linked_insertion_info in insertion_info.linked_insertion_infos:
+        for linked_insertion_info in insertion_info.get_linked_insertion_infos():
             quantizers_activations_attr[linked_insertion_info.op_exec_context.input_agnostic] = \
                 (linked_insertion_info.in_port_id, str_qconfig_list)
 
