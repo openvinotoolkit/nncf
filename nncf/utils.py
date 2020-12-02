@@ -18,11 +18,12 @@ import numpy as np
 import random
 import re
 import torch
-from torch import distributed as dist
+from torch import distributed as dist, nn
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
 from nncf.layer_utils import _NNCFModuleMixin
+
 
 def scopes_matched(scope_stack_0, scope_stack_1):
     from nncf.layers import NNCF_MODULES_MAP
@@ -358,3 +359,23 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         yield
     finally:
         model.train(is_original_mode_training)
+
+
+def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
+    if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d)):
+        ks = module.weight.data.shape
+        mac_count = ks[0] * ks[1] * ks[2] * output.shape[2]
+    elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        ks = module.weight.data.shape
+        mac_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[2] * output.shape[3]
+    elif isinstance(module, (nn.Conv3d, nn.ConvTranspose3d)):
+        ks = module.weight.data.shape
+        mac_count = ks[0] * ks[1] * ks[2] * ks[3] * ks[4] * output.shape[2] * \
+                    output.shape[3] * output.shape[4]
+    elif isinstance(module, nn.Linear):
+        mac_count = input_[0].shape[1] * output.shape[-1]
+    elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
+        mac_count = np.prod(list(input_[0].shape))
+    else:
+        return
+    dict_to_save[name] = 2 * mac_count
