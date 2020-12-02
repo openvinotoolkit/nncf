@@ -134,13 +134,13 @@ def main_worker(current_gpu, config):
     if config.to_onnx is not None:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
-        test_data_loader, train_data_loader = create_dataloaders(config)
+        test_data_loader, train_data_loader, init_data_loader = create_dataloaders(config)
 
         def criterion_fn(model_outputs, target, criterion):
             loss_l, loss_c = criterion(model_outputs, target)
             return loss_l + loss_c
 
-        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, criterion_fn, config.device)
+        nncf_config = register_default_init_args(nncf_config, init_data_loader, criterion, criterion_fn, config.device)
 
     ##################
     # Prepare model
@@ -208,14 +208,22 @@ def create_dataloaders(config):
                                                                         rank=config.rank)
     else:
         train_sampler = None
-    train_data_loader = data.DataLoader(
-        train_dataset, config.batch_size,
-        num_workers=config.workers,
-        shuffle=(train_sampler is None),
-        collate_fn=detection_collate,
-        pin_memory=True,
-        sampler=train_sampler
-    )
+
+    def create_train_data_loader(batch_size):
+        return data.DataLoader(
+            train_dataset, batch_size,
+            num_workers=config.workers,
+            shuffle=(train_sampler is None),
+            collate_fn=detection_collate,
+            pin_memory=True,
+            sampler=train_sampler
+        )
+
+    train_data_loader = create_train_data_loader(config.batch_size)
+    init_data_loader = train_data_loader
+    if config.batch_size_init:
+        init_data_loader = create_train_data_loader(config.batch_size_init)
+
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
     logger.info("Loaded {} testing images".format(len(test_dataset)))
     if config.distributed:
@@ -231,7 +239,7 @@ def create_dataloaders(config):
         drop_last=False,
         sampler=test_sampler
     )
-    return test_data_loader, train_data_loader
+    return test_data_loader, train_data_loader, init_data_loader
 
 
 def create_model(config: SampleConfig, resuming_model_sd: dict = None):
@@ -342,8 +350,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                                             epoch=epoch + 1,
                                             config=config)
 
-
-           # Learning rate scheduling should be applied after optimizer’s update
+            # Learning rate scheduling should be applied after optimizer’s update
             if not isinstance(lr_scheduler, ReduceLROnPlateau):
                 lr_scheduler.step(epoch)
             else:
