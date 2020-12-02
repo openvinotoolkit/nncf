@@ -29,7 +29,7 @@
             "algorithm": "quantization",
             "initializer": {
                 "range": {
-                    "num_init_steps": 1,
+                    "num_init_samples": 256,
                     "type": "min_max"
                 }
             }

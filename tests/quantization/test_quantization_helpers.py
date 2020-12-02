@@ -60,7 +60,7 @@ def get_quantization_config_without_range_init(model_size=4):
                 "algorithm": "quantization",
                 "initializer": {
                     "range": {
-                        "num_init_steps": 0
+                        "num_init_samples": 0
                     }
                 }
             }

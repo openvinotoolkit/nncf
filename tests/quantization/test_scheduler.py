@@ -168,7 +168,7 @@ def test_staged_scheduler_with_range_init():
         },
         'initializer': {
             'range': {
-                'num_init_steps': 1
+                'num_init_samples': 1
             }
         }
     })
@@ -226,7 +226,7 @@ def test_staged_scheduler_with_hawq():
         },
         'initializer': {
             'range': {
-                'num_init_steps': 1
+                'num_init_samples': 1
             },
             'precision': {
                 "type": "hawq",

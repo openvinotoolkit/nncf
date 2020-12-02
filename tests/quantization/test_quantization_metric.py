@@ -22,7 +22,7 @@ def get_basic_quantization_config():
                 "quantize_inputs": True,
                 "initializer": {
                     "range": {
-                        "num_init_steps": 0
+                        "num_init_samples": 0
                     }
                 }
             }

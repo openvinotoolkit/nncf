@@ -236,7 +236,7 @@ After the compression-related changes in the model have been committed, the stat
 (per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
 through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
 and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
-sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_steps` in the
+sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
 
@@ -246,7 +246,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "algorithm": "quantization",
     "initializer": {
         "range": {
-            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
             "type": "minmax" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges
         },
         "precision": {
@@ -268,8 +268,8 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             ]
         }
         "batchnorm_adaptation": {
-            "num_bn_adaptation_steps": 10, // Number of batches from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model
-            "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
+            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
+            "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
     "weights": { // Constraints to be applied to model weights quantization only.
@@ -338,7 +338,7 @@ Per layer ranges initiaization can be enabled by specifying  in `"initializer"` 
         {
             "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
 
-            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
 
             "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
             "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.

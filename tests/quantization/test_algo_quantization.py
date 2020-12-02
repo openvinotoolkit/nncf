@@ -265,7 +265,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
 
 def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path):
     config = get_empty_config(input_sample_sizes=[1, 3, 224, 224])
-    config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_steps": 0}}}
+    config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_samples": 0}}}
     ngpus_per_node = torch.cuda.device_count()
 
     torch.multiprocessing.spawn(activation_quantizers_dumping_worker,

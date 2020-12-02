@@ -18,17 +18,17 @@ class RangeInitializerFactory:
     @staticmethod
     def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
         init_type = init_config["type"]
-        num_init_steps = init_config["num_init_steps"]
+        num_init_samples = init_config["num_init_samples"]
         if init_type == "min_max":
-            return MinMaxInitializer(module, num_init_steps, log_module_name)
+            return MinMaxInitializer(module, num_init_samples, log_module_name)
         if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, num_init_steps, log_module_name)
+            return ThreeSigmaInitializer(module, num_init_samples, log_module_name)
         if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, num_init_steps, log_module_name)
+            return MeanMinMaxInitializer(module, num_init_samples, log_module_name)
         if init_type == "percentile":
             min_percentile = init_config.get("min_percentile", 10)
             max_percentile = init_config.get("max_percentile", 90)
-            return PercentileInitializer(module, num_init_steps, min_percentile, max_percentile, log_module_name)
+            return PercentileInitializer(module, num_init_samples, min_percentile, max_percentile, log_module_name)
         raise NotImplementedError
 
 
@@ -43,6 +43,7 @@ class InitializingDataLoader:
 
     def __init__(self, regular_data_loader):
         self.data_loader = regular_data_loader
+        self.batch_size = regular_data_loader.batch_size
 
     def __iter__(self):
         self.data_loader_iter = iter(self.data_loader)
