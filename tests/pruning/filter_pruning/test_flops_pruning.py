@@ -47,7 +47,7 @@ def test_both_targets_assert():
 
     model = PruningTestModel()
     with pytest.raises(ValueError):
-        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+        create_compressed_model_and_algo_for_test(model, config)
 
 
 @pytest.mark.parametrize(

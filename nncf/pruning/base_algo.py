@@ -32,19 +32,19 @@ from nncf.pruning.utils import get_bn_for_module_scope, \
 
 
 class BatchNormInfo:
-    def __init__(self,  module: nn.Module, nncf_id: int):
+    def __init__(self, module: nn.Module, nncf_id: int):
         self.module = module
         self.nncf_node_id = nncf_id
 
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
 
-    def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict, id: int):
+    def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict, node_id: int):
         self.module_name = module_name
         self.module = module
         self.operand = operand
         self.related_modules = related_modules
-        self.nncf_node_id = id
+        self.nncf_node_id = node_id
 
 
 class NodeInfo:

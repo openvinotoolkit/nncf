@@ -130,7 +130,7 @@ class FilterPruningController(BasePruningAlgoController):
 
                 next_nodes_idxs = [n.node_id for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
-            self.next_nodes[cluster.id] = list(next_nodes_cluster - set([n.nncf_node_id for n in cluster.nodes]))
+            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.nncf_node_id for n in cluster.nodes})
 
             self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].nncf_node_id] \
                                               * self.pruning_quota
@@ -174,8 +174,8 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_flops_in_pruned_model(self, modules_in_channels, modules_out_channels):
         """
         Calculates number of flops in model with number of input/output channels for nodes from modules_in_channels,
-        modules_out_channels. It allows to count the number of flops in pruned model (with changed number of input/output
-        channels for some nodes).
+        modules_out_channels. It allows to count the number of flops in pruned model (with changed number of
+        input/output channels for some nodes).
         Number of flops calculates as follows: for nodes that isn't in in/out channels used full number of flops from
         self.nodes_flops.
         For nodes with keys from in/out channels dicts flops

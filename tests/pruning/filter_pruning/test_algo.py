@@ -126,16 +126,16 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
 
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'prune_first', 'ref_masks'),
                          [
-                          (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-                          (True, None, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
-                          (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
-                          (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
-                          # Flops pruning cases
-                          (False, 0.5, True,  gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-                          (False, 0.5, False,  gen_ref_masks([(16, 16), (40, 24)])),
-                          (True, 0.5, True,  gen_ref_masks([(4, 12), (4, 28), (33, 31)])),
-                          (True, 0.5, False,  gen_ref_masks([(5, 27), (33, 31)])),
-                          ]
+                             (False, None, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
+                             (True, None, True, gen_ref_masks([(5, 11), (9, 23), (42, 22)])),
+                             (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
+                             (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
+                             # Flops pruning cases
+                             (False, 0.5, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
+                             (False, 0.5, False, gen_ref_masks([(16, 16), (40, 24)])),
+                             (True, 0.5, True, gen_ref_masks([(4, 12), (4, 28), (33, 31)])),
+                             (True, 0.5, False, gen_ref_masks([(5, 27), (33, 31)])),
+                         ]
                          )
 def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
@@ -163,7 +163,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     assert pruning_algo.all_weights is all_weights
 
     i = 0
-    #ref_masks Check for conv1
+    # ref_masks Check for conv1
     conv1 = pruned_model.conv1
     if prune_first:
         assert conv1 in pruned_modules
