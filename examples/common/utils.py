@@ -31,6 +31,9 @@ import mlflow
 from examples.common.example_logger import logger as default_logger
 from nncf.utils import is_main_process
 
+# pylint: disable=import-error
+from returns.maybe import Maybe, Nothing
+
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
 
@@ -96,17 +99,45 @@ def configure_paths(config):
     os.makedirs(config.checkpoint_save_dir, exist_ok=True)
 
 
+class SafeMLFLow:
+    """ Wrapper to encapsulate safe access to mlflow methods without checking for None and with automatic closing """
+
+    def __init__(self, config):
+        self.is_suitable_mode = config.mode.lower() == 'train' and config.to_onnx is None
+        root_log_dir = osp.dirname(osp.dirname(config.log_dir))
+        self.safe_call('set_tracking_uri', osp.join(root_log_dir, 'mlruns'))
+
+        self.safe_call('get_experiment_by_name', config.name). \
+            or_else_call(lambda: self.safe_call('create_experiment', config.name))
+
+        self.safe_call('set_experiment', config.name)
+        self.safe_call('start_run')
+
+        def create_symlink_fn(mlflow_active_run: mlflow.ActiveRun):
+            os.symlink(config.log_dir, osp.join(mlflow_active_run.info.artifact_uri, osp.basename(config.log_dir)))
+            return Nothing
+
+        self.safe_call('active_run').bind(create_symlink_fn)
+
+    def __del__(self):
+        self.safe_call('end_run')
+
+    def safe_call(self, func: str, *args, **kwargs) -> Maybe:
+        """ Calls mlflow method, if it's enabled and safely does nothing in the opposite case"""
+        return Maybe.from_value(self._get_mlflow()).bind(
+            lambda obj: Maybe.from_value(getattr(obj, func)(*args, **kwargs)))
+
+    def _is_enabled(self):
+        return self.is_suitable_mode and is_main_process()
+
+    def _get_mlflow(self):
+        if self._is_enabled():
+            return mlflow
+        return None
+
+
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
-
-    if is_mlflow_logging_enabled(config):
-        root_log_dir = osp.dirname(osp.dirname(config.log_dir))
-        mlflow.set_tracking_uri(osp.join(root_log_dir, 'mlruns'))
-        if mlflow.get_experiment_by_name(config.name) is None:
-            mlflow.create_experiment(config.name)
-        mlflow.set_experiment(config.name)
-        mlflow.start_run()
-        os.symlink(config.log_dir, osp.join(mlflow.active_run().info.artifact_uri, osp.basename(config.log_dir)))
 
     training_pipeline_log_file_handler = logging.FileHandler(osp.join(config.log_dir, GENERAL_LOG_FILE_NAME))
     training_pipeline_log_file_handler.setFormatter(logging.Formatter("%(message)s"))
@@ -119,19 +150,11 @@ def configure_logging(sample_logger, config):
 
 
 def log_common_mlflow_params(config):
-    if is_mlflow_logging_enabled(config):
-        mlflow.log_param('epochs', config.get('epochs', 'None'))
-        mlflow.log_param('schedule_type', config.nncf_config.get('optimizer', {}).get('schedule_type', 'None'))
-        mlflow.log_param('lr', config.nncf_config.get('optimizer', {}).get('base_lr', 'None'))
-        mlflow.set_tag('Log Dir Path', config.log_dir)
-
-
-def finish_logging(config):
-    if is_mlflow_logging_enabled(config):
-        mlflow.end_run()
-
-def is_mlflow_logging_enabled(config):
-    return config.mode.lower() == 'train' and config.to_onnx is None and is_main_process()
+    optimizer = config.nncf_config.get('optimizer', {})
+    config.mlflow.safe_call('log_param', 'epochs', config.get('epochs', 'None'))
+    config.mlflow.safe_call('log_param', 'schedule_type', optimizer.get('schedule_type', 'None'))
+    config.mlflow.safe_call('log_param', 'lr', optimizer.get('base_lr', 'None'))
+    config.mlflow.safe_call('set_tag', 'Log Dir Path', config.log_dir)
 
 
 def is_on_first_rank(config):

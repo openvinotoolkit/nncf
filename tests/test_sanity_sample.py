@@ -261,6 +261,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
 
+
 @pytest.mark.parametrize(
     "multiprocessing_distributed", [
         pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
@@ -406,6 +407,9 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--cpu-only": None
     }
 
+    # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
+    # mocked train function
+    mocker.patch("examples.common.utils.SafeMLFLow")
     command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
@@ -534,6 +538,9 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
     }
 
     command_line = " ".join(f'{key} {val}' for key, val in args.items())
+    # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
+    # mocked train function
+    mocker.patch("examples.common.utils.SafeMLFLow")
     if hawq_config.sample_type == SampleType.CLASSIFICATION:
         import examples.classification.main as sample
         mocker.patch("examples.classification.staged_quantization_worker.train_staged")
@@ -544,7 +551,6 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
     elif hawq_config.sample_type == SampleType.OBJECT_DETECTION:
         import examples.object_detection.main as sample
         mocker.patch("examples.object_detection.main.train")
-
     from nncf.quantization.init_precision import HAWQPrecisionInitializer
     set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
 

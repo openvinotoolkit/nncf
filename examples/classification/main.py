@@ -43,7 +43,7 @@ from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested, finish_logging, log_common_mlflow_params, is_mlflow_logging_enabled
+    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -51,7 +51,6 @@ from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process
 from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
-import mlflow
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -114,7 +113,7 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
-
+    config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
@@ -153,7 +152,6 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
 
     if config.to_onnx:
@@ -182,7 +180,6 @@ def main_worker(current_gpu, config: SampleConfig):
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
 
-    logger.info(config.nncf_config)
     log_common_mlflow_params(config)
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
@@ -195,8 +192,6 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.mode.lower() == 'train':
         train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
-
-    finish_logging(config)
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
@@ -232,8 +227,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         is_best = is_best_by_accuracy or compression_level > best_compression_level
         if is_best:
             best_acc1 = acc1
-        if is_mlflow_logging_enabled(config):
-            mlflow.log_metric("best_acc1", best_acc1)
+        config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
         best_compression_level = max(compression_level, best_compression_level)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
@@ -258,8 +252,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
-                    if is_mlflow_logging_enabled(config):
-                        mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
+                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
@@ -397,7 +390,6 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         loss.backward()
         optimizer.step()
 
-
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -480,10 +472,9 @@ def validate(val_loader, model, criterion, config):
             config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
             config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
-        if is_mlflow_logging_enabled(config):
-            mlflow.log_metric("val/loss", float(losses.avg), config.get('cur_epoch', 0))
-            mlflow.log_metric("val/top1", float(top1.avg), config.get('cur_epoch', 0))
-            mlflow.log_metric("val/top5", float(top5.avg), config.get('cur_epoch', 0))
+            config.mlflow.safe_call('log_metric', "val/loss", float(losses.avg), config.get('cur_epoch', 0))
+            config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), config.get('cur_epoch', 0))
+            config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), config.get('cur_epoch', 0))
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 

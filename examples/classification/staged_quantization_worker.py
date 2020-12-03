@@ -23,7 +23,6 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.models import InceptionOutputs
-import mlflow
 
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
     create_datasets, inception_criterion_fn
@@ -31,7 +30,7 @@ from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, finish_logging
+    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
 from nncf.binarization.algo import BinarizationController
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args, default_criterion_fn
@@ -106,6 +105,7 @@ class PolyLRDropScheduler:
 # pylint:disable=too-many-statements
 def staged_quantization_main_worker(current_gpu, config):
     configure_device(current_gpu, config)
+    config.mlflow = SafeMLFLow(config)
 
     if is_main_process():
         configure_logging(logger, config)
@@ -205,8 +205,6 @@ def staged_quantization_main_worker(current_gpu, config):
                      optimizer,
                      train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1)
 
-    finish_logging(config)
-
 
 def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optimizer_scheduler, model_name, optimizer,
                  train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
@@ -266,7 +264,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
 
             for key, value in stats.items():
                 if isinstance(value, (int, float)):
-                    mlflow.log_metric("compression/statistics/{0}".format(key), value, epoch)
+                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 

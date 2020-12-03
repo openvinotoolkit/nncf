@@ -31,8 +31,8 @@ from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
-    create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested,\
-    log_common_mlflow_params, finish_logging
+    create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
+    log_common_mlflow_params, SafeMLFLow
 from examples.common.utils import write_metrics
 from examples.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
 from examples.object_detection.eval import test_net
@@ -90,6 +90,7 @@ def main_worker(current_gpu, config):
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
         configure_distributed(config)
+    config.mlflow = SafeMLFLow(config)
     if is_on_first_rank(config):
         configure_logging(logger, config)
         print_args(config)
@@ -195,7 +196,7 @@ def main_worker(current_gpu, config):
             return
 
     train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
-    finish_logging(config)
+
 
 def create_dataloaders(config):
     logger.info('Loading Dataset...')

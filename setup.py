@@ -64,7 +64,8 @@ INSTALL_REQUIRES = ["ninja",
                     "jsonschema",
                     "wheel",
                     "defusedxml",
-                    "mlflow"]
+                    "mlflow",
+                    "returns==0.14"]
 
 DEPENDENCY_LINKS = []
 
