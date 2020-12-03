@@ -438,7 +438,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
             layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
 
             if PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules and \
-                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                 bn_info = {}
                 bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
                 bn_info['w_shape'] = bn_module.weight.size()

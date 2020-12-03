@@ -46,19 +46,19 @@ def test_get_bn_for_module_scope():
     pruned_model, _ = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
 
     conv1_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv1]')
-    bn = get_bn_for_module_scope(pruned_model, conv1_scope)
+    bn, bn_id = get_bn_for_module_scope(pruned_model, conv1_scope)
     assert bn is None
 
     conv2_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv2]')
-    bn = get_bn_for_module_scope(pruned_model, conv2_scope)
+    bn, bn_id = get_bn_for_module_scope(pruned_model, conv2_scope)
     assert bn == pruned_model.bn
 
     up_scope = Scope.from_str('BigPruningTestModel/NNCFConvTranspose2d[up]')
-    bn = get_bn_for_module_scope(pruned_model, up_scope)
+    bn, bn_id = get_bn_for_module_scope(pruned_model, up_scope)
     assert bn is None
 
     conv3_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv3]')
-    bn = get_bn_for_module_scope(pruned_model, conv3_scope)
+    bn, bn_id = get_bn_for_module_scope(pruned_model, conv3_scope)
     assert bn is None
 
 

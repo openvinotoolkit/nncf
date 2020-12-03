@@ -153,7 +153,7 @@ class FilterPruningController(BasePruningAlgoController):
                     cost = int(np.prod(list(input_[0].shape)) / module.num_features)
                 else:
                     return
-                self.nodes_flops_cost[name] = cost
+                self.nodes_flops_cost[name] = 2 * cost
 
             return compute_cost_hook
 
@@ -194,7 +194,7 @@ class FilterPruningController(BasePruningAlgoController):
                 flops += self.nodes_flops[nncf_node.node_id]
         return flops
 
-    def _prune_model_uniformly_with_pruning_rate(self, pruning_rate):
+    def _calculate_flops_in_uniformly_pruned_model(self, pruning_rate):
         """
         Prune all prunable modules in model with pruning_rate rate and returns flops of pruned model.
         :param pruning_rate: proportion of zero filters in all modules
@@ -212,9 +212,9 @@ class FilterPruningController(BasePruningAlgoController):
             new_out_channels_num = old_out_channels - num_of_sparse_elems
 
             for node in group.nodes:
-                tmp_out_channels[node.module_name] = new_out_channels_num
+                tmp_out_channels[node.nncf_node_id] = new_out_channels_num
                 if PrunedModuleInfo.BN_MODULE_NAME in node.related_modules and \
-                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                     bn_id = node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].nncf_node_id
                     tmp_in_channels[bn_id] = new_out_channels_num
 
@@ -237,12 +237,12 @@ class FilterPruningController(BasePruningAlgoController):
         left, right = 0.0, 1.0
         while abs(right - left) > error:
             middle = (left + right) / 2
-            flops = self._prune_model_uniformly_with_pruning_rate(middle)
+            flops = self._calculate_flops_in_uniformly_pruned_model(middle)
             if flops < target_flops:
                 right = middle
             else:
                 left = middle
-        flops = self._prune_model_uniformly_with_pruning_rate(right)
+        flops = self._calculate_flops_in_uniformly_pruned_model(right)
         if flops < target_flops:
             return right
         # TODO: or raise error here?
@@ -288,7 +288,7 @@ class FilterPruningController(BasePruningAlgoController):
                 # 2. Calculate threshold
                 num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
                                                                         pruning_rate)
-                threshold = sorted(cumulative_filters_importance)[num_of_sparse_elems]
+                threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num[0] - 1)]
                 mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
                 # 3. Set binary masks for filter
@@ -339,7 +339,7 @@ class FilterPruningController(BasePruningAlgoController):
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             with torch.no_grad():
                 pruning_module = minfo.operand
-                pruning_module.binary_filter_pruning_mask = torch.ones(minfo.module.weight.size(0)).to(
+                pruning_module.binary_filter_pruning_mask = torch.ones(get_filters_num(minfo.module)).to(
                     minfo.module.weight.device)
 
         # 2. Calculate filter importances for all prunable groups
@@ -348,7 +348,7 @@ class FilterPruningController(BasePruningAlgoController):
         filter_indexes = []
 
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            filters_num = torch.tensor([minfo.module.weight.size(0) for minfo in cluster.nodes])
+            filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in cluster.nodes])
             assert torch.all(filters_num == filters_num[0])
             device = cluster.nodes[0].module.weight.device
 
@@ -356,10 +356,9 @@ class FilterPruningController(BasePruningAlgoController):
             # Calculate cumulative importance for all filters in this group
             for minfo in cluster.nodes:
                 normalized_weight = self.weights_normalizer(minfo.module.weight)
-                filters_importance = self.filter_importance(normalized_weight)
+                filters_importance = self.filter_importance(normalized_weight,
+                                                            minfo.module.target_weight_dim_for_compression)
                 cumulative_filters_importance += filters_importance
-
-            filter_importances.append(cumulative_filters_importance)
 
             filter_importances.append(cumulative_filters_importance)
             cluster_indexes.append(cluster.id * torch.ones_like(cumulative_filters_importance))
@@ -390,19 +389,19 @@ class FilterPruningController(BasePruningAlgoController):
                 tmp_out_channels[node.nncf_node_id] -= 1
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
                 if PrunedModuleInfo.BN_MODULE_NAME in node.related_modules and \
-                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                     bn_id = node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].nncf_node_id
                     tmp_in_channels[bn_id] -= 1
 
             # Prune in channels in all next nodes
             next_nodes = self.next_nodes[cluster.id]
             for node_id in next_nodes:
-                # TODO: add check for not depthwise here
                 tmp_in_channels[node_id] -= 1
 
             flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
             if flops < target_flops:
                 return
+            cur_num += 1
         raise RuntimeError("Can't prune model to asked flops pruning rate")
 
     def _apply_masks(self):
@@ -424,7 +423,7 @@ class FilterPruningController(BasePruningAlgoController):
             # Applying mask to the BatchNorm node
             related_modules = minfo.related_modules
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 

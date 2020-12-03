@@ -60,7 +60,8 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
     bn_module = None
     if bn_graph_node:
         bn_module = target_model.get_module_by_scope(bn_graph_node['op_exec_context'].scope_in_model)
-    return bn_module, bn_graph_node['id']
+        return bn_module, bn_graph_node['id']
+    return bn_module, bn_graph_node
 
 
 def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True):
