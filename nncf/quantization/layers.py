@@ -289,10 +289,9 @@ class SymmetricQuantizer(BaseQuantizer):
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
         self.scale.data = torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self.scale))
 
-        nncf_logger.info(
-            "Set sign: {} and scale: {} for {}".format(self.signed,
-                                                       get_flat_tensor_contents_string(self.scale),
-                                                       log_module_name))
+        nncf_logger.info("Set sign: {} and scale: {} for {}".format(self.signed,
+                                                                    get_flat_tensor_contents_string(self.scale),
+                                                                    log_module_name))
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
