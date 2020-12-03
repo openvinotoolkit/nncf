@@ -27,7 +27,7 @@ from nncf.hw_config import HWConfigType
 from nncf.layers import NNCFConv2d
 from nncf.model_creation import create_compression_algorithm_builders
 from nncf.module_operations import UpdateWeight, UpdateInputs
-from nncf.nncf_network import CompressionModuleType
+from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.algo import QuantizationController, QuantizationBuilder
 from nncf.quantization.layers import QuantizationMode, QuantizerConfig, SymmetricQuantizer, BaseQuantizer, \
     QUANTIZATION_MODULES
@@ -322,7 +322,7 @@ def test_quantize_has_proper_is_weights_flag():
             for op in module.pre_ops.values():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.is_weights == isinstance(op, UpdateWeight)
-    for _, aq in quant_model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER).items():
+    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER).items():
         assert aq.is_weights is False
 
 
@@ -342,7 +342,7 @@ def test_can_quantize_free_operators(mocker):
     config["compression"].update({"quantize_inputs": False})
     quant_model, _ = create_compressed_model_and_algo_for_test(mod, config)
 
-    quantizer_list = quant_model.get_compression_modules_by_type(CompressionModuleType.FUNCTION_QUANTIZER).values()
+    quantizer_list = quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.FUNCTION_QUANTIZER).values()
     assert len(quantizer_list) == 2
     for quantizer in quantizer_list:
         mocker.spy(quantizer, 'quantize')

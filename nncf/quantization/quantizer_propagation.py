@@ -11,9 +11,10 @@
  limitations under the License.
 """
 # pylint:disable=too-many-lines
+from abc import ABC, abstractmethod
 from collections import deque, OrderedDict, Counter
 from enum import Enum
-from typing import Dict, Tuple, Set, Any, Callable
+from typing import Dict, Tuple, Set, Any, Callable, Hashable
 
 import networkx as nx
 import warnings
@@ -128,6 +129,7 @@ class PropagatingQuantizer:
         self.last_accepting_location_node_key = None
         self.id = id_
         self.unified_scale = unified_scale
+        self.affected_operator_nodes = set()
 
     def __eq__(self, other):
         return self.id == other.id
@@ -161,7 +163,7 @@ class QuantizerPropagationStateGraphNodeType(Enum):
 class UnifiedScalePropagatingQuantizerGroupManager:
     def __init__(self):
         self._next_gid = 0
-        self._group_vs_prop_quants_dict = {}  # type: Dict[int, Set[PropagatingQuantizer]]
+        self._group_vs_prop_quants_dict = {}  # type: Dict[int, IPropagatingQuantizerGroup]
 
     def _get_next_gid(self) -> int:
         retval = self._next_gid
@@ -328,6 +330,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         if surviving_quantizers:
             for pq in surviving_quantizers:
+                pq.affected_operator_nodes.update(prop_quantizer.affected_operator_nodes)
                 pq.affected_edges.update(prop_quantizer.affected_edges)
                 for from_node_key, to_node_key in prop_quantizer.affected_edges:
                     from_node = self.nodes[from_node_key]
@@ -488,7 +491,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         affected_op_node_key = next(self.successors(ip_node_key))
         affected_op_node = self.nodes[affected_op_node_key]
-
         affected_op_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(prop_quantizer)
 
         initial_edge_key = (ip_node_key, affected_op_node_key)
@@ -496,6 +498,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         initial_edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(prop_quantizer)
         prop_quantizer.affected_edges.add(initial_edge_key)
         prop_quantizer.affected_ip_nodes.add(ip_node_key)
+        prop_quantizer.affected_operator_nodes.add(affected_op_node_key)
         return prop_quantizer
 
     def clone_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer) -> PropagatingQuantizer:
@@ -640,6 +643,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                         quant_configs_str_list = ["!!! NONE !!!]"]
                     sub_label = '[' + ',\n'.join(quant_configs_str_list) + ']'
                     quant_node_label = quant_node_key + '\n' + "T: {}\n".format(sub_label)
+                    quant_node_label += 'Affected ops: {}'.format("\n".join(prop_quantizer.affected_operator_nodes))
                     out_graph.add_node(quant_node_key,
                                        color="blue", label=quant_node_label)
                     out_graph.add_edge(quant_node_key, node_key,
@@ -1773,8 +1777,8 @@ class QuantizerPropagationSolver:
                     QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
                     visited[node_key] = True
-                    quantizers_between_quantizable_layers.add_activation_quantizer_ctx(
-                        insertion_point_data.ia_op_exec_context)
+                    quantizers_between_quantizable_layers.add_activation_quantizer_insertion_point(
+                        insertion_point_data)
                 for next_node_key in quant_prop_graph.succ[node_key]:
                     quant_prop_graph.traverse_graph(next_node_key, traverse_function_down,
                                                     quantizers_between_quantizable_layers, traverse_forward=True)

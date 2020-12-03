@@ -19,7 +19,7 @@ import torch
 from torch import Tensor
 
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import CompressionModuleType
+from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.quantizer_propagation import QuantizerInsertionInfo
 from .hawq_init import GroupsOfAdjacentQuantizers
@@ -69,11 +69,11 @@ class HAWQDebugger:
             quantization_type = class_type.__name__
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER),
+                    model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
                     quantization_type))
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(CompressionModuleType.FUNCTION_QUANTIZER),
+                    model.get_compression_modules_by_type(ExtraCompressionModuleType.FUNCTION_QUANTIZER),
                     quantization_type))
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))

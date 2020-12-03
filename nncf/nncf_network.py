@@ -41,9 +41,8 @@ from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_module
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
 
-class CompressionModuleType(Enum):
-    FUNCTION_QUANTIZER = 0
-    ACTIVATION_QUANTIZER = 1
+class ExtraCompressionModuleType(Enum):
+    ACTIVATION_QUANTIZER = 0
 
 
 @functools.total_ordering
@@ -399,7 +398,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._nncf_module_scopes = []  # type: List[Scope]
         self.scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
-        self._extra_module_types = []  # type: List[CompressionModuleType]
+        self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
         # pylint:disable=line-too-long
         self._insertions_into_original_graph = {}  # type: Dict[InsertionPoint, List[Tuple[Callable, OperationPriority]]]
 
@@ -625,7 +624,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 return True
         return False
 
-    def register_compression_module_type(self, compression_module_type: CompressionModuleType):
+    def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
             raise RuntimeError("Module type {} is already registered".format(compression_module_type))
@@ -633,29 +632,27 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._extra_module_types.append(compression_module_type)
 
     def add_compression_module(self, module_key: str, module: nn.Module,
-                               compression_module_type: CompressionModuleType):
+                               compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
         self.__getattr__(attr_name)[module_key] = module
 
-    def get_compression_modules_by_type(self, compression_module_type: CompressionModuleType) -> nn.ModuleDict:
+    def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
         return self.__getattr__(attr_name)
 
     @staticmethod
-    def _compression_module_type_to_attr_name(compression_module_type: CompressionModuleType):
+    def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """Required for backward compatibility with checkpoints that store function and activation
         quantizers directly under corresponding attributes of NNCFNetwork."""
-        if compression_module_type == CompressionModuleType.FUNCTION_QUANTIZER:
-            return "function_quantizers"
-        if compression_module_type == CompressionModuleType.ACTIVATION_QUANTIZER:
+        if compression_module_type == ExtraCompressionModuleType.ACTIVATION_QUANTIZER:
             return "activation_quantizers"
         raise RuntimeError("Unknown extra module type")
 
-    def sort_compression_modules(self, compression_module_type: CompressionModuleType):
+    def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))

@@ -14,7 +14,7 @@
 from collections import OrderedDict
 from typing import List, Dict
 
-from nncf.nncf_network import NNCFNetwork, CompressionModuleType
+from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
 from ..hw_precision_constraints import HWPrecisionConstraints
 from ..quantizer_id import QuantizerId
@@ -39,9 +39,7 @@ class ManualPrecisionInitializer:
             get_weight_quantizers_in_execution_order_per_id()
 
         self._all_quantizers_per_scope = get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER), quantization_types)
-        self._all_quantizers_per_scope.update(get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(CompressionModuleType.FUNCTION_QUANTIZER), quantization_types))
+            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER), quantization_types)
         self._all_quantizers_per_scope.update(
             self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())
 

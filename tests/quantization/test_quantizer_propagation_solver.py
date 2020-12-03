@@ -106,8 +106,6 @@ class TwoFcAfterDropout:
         mark_input_ports_lexicographically_based_on_input_node_key(graph)
         return graph
 
-
-
 class TestQuantizerPropagationSolver:
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]

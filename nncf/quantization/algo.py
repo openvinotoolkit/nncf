@@ -41,7 +41,7 @@ from nncf.hw_config import HWConfig
 from nncf.initialization import DataLoaderRangeInitializeRunner
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, CompressionModuleType, InsertionCommand, OperationPriority, \
+from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -157,6 +157,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         hw_config_type = self.config.get("hw_config_type")
         is_hw_config_enabled = hw_config_type is not None
         self._hw_precision_constraints = HWPrecisionConstraints(is_hw_config_enabled)
+        self._module_scope_vs_weight_qconfig_list_dict = {}  # type: Dict[Scope, List[QuantizerConfig]]
+
         if is_hw_config_enabled:
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
@@ -176,7 +178,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._quantize_weights(target_model) + self._quantize_activations(target_model)
+        insertion_commands = []
+        insertion_commands += self._quantize_weights(target_model)
+        insertion_commands += self._quantize_activations(target_model)
         if self.quantize_inputs and self.quantizer_setup_type is not QuantizerSetupType.PROPAGATION_BASED:
             insertion_commands += self._quantize_inputs(target_model, insertion_commands)
 
@@ -336,6 +340,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                         qconfig_overrides = self.__get_scoped_quantizer_config(target_model,
                                                                                str(module_scope),
                                                                                is_weights=True)
+                    self._module_scope_vs_weight_qconfig_list_dict[module_scope] = qconfig_list
                     qconfig = self._select_final_qconfig(qconfig_list,
                                                          self.global_quantizer_constraints[QuantizerGroup.WEIGHTS],
                                                          qconfig_overrides)
@@ -379,7 +384,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             return replica.activation_quantizers[self.quantizer_storage_key](*args, **kwargs)
 
     def _quantize_activations(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        target_model.register_compression_module_type(CompressionModuleType.ACTIVATION_QUANTIZER)
+        target_model.register_compression_module_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
 
         if self.quantizer_setup_type == QuantizerSetupType.PATTERN_BASED:
             insertion_commands = self._quantize_post_pattern_activations(target_model)
@@ -396,6 +401,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                            input_infos=target_model.get_input_infos())
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
             quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
+
+            # INSERT HAWQ HERE
 
             original_nncf_graph = target_model.get_original_graph()
             final_quantizer_config_setup = {}  # type: Dict[QuantizerInsertionInfo, QuantizerConfig]
@@ -519,7 +526,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
         # pylint: disable=protected-access
-        target_model.sort_compression_modules(CompressionModuleType.ACTIVATION_QUANTIZER)
+        target_model.sort_compression_modules(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
         return insertion_commands
 
     def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
@@ -540,10 +547,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         quantizer_storage_key = ";".join(serialized_insertions_list)
 
         assert quantizer_storage_key not in target_model.get_compression_modules_by_type(
-            CompressionModuleType.ACTIVATION_QUANTIZER)
+            ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
 
         target_model.add_compression_module(quantizer_storage_key, quantizer,
-                                            CompressionModuleType.ACTIVATION_QUANTIZER)
+                                            ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
 
         quantizer_id = NonWeightQuantizerId(ia_op_exec_context, insertion_info.in_port_id)
 
@@ -1150,7 +1157,6 @@ class QuantizationController(QuantizationControllerBase):
 class QuantizationDebugInterface(DebugInterface):
     QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME = 'quantized_modules'
     ACTIVATION_QUANTIZERS_TRACKER_NAME = 'activation_quantizers'
-    FUNCTION_QUANTIZERS_TRACKER_NAME = 'function_quantizers'
 
     def __init__(self):
         self.call_trackers = {
@@ -1158,8 +1164,6 @@ class QuantizationDebugInterface(DebugInterface):
                 QuantizationDebugInterface.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME),
             self.ACTIVATION_QUANTIZERS_TRACKER_NAME: CallCountTracker(
                 QuantizationDebugInterface.ACTIVATION_QUANTIZERS_TRACKER_NAME),
-            self.FUNCTION_QUANTIZERS_TRACKER_NAME: CallCountTracker(
-                self.FUNCTION_QUANTIZERS_TRACKER_NAME)
         }
         self.graph_size = 0
 
@@ -1180,15 +1184,11 @@ class QuantizationDebugInterface(DebugInterface):
                                              quantizers_in_nncf_modules.keys()]  # type: List[str]
 
         activation_quantizer_id_list = owner_model.get_compression_modules_by_type(
-            CompressionModuleType.ACTIVATION_QUANTIZER).keys()  # type: List[str]
-        function_input_quantizer_id_list = owner_model.get_compression_modules_by_type(
-            CompressionModuleType.FUNCTION_QUANTIZER).keys()  # type: List[str]
+            ExtraCompressionModuleType.ACTIVATION_QUANTIZER).keys()  # type: List[str]
         self.call_trackers[self.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME].init_with_key_list(
             nncf_module_quantizations_id_list)
         self.call_trackers[self.ACTIVATION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
             activation_quantizer_id_list)
-        self.call_trackers[self.FUNCTION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
-            function_input_quantizer_id_list)
         if self.scale_dump_dir.exists():
             shutil.rmtree(str(self.scale_dump_dir))
         self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
