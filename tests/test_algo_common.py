@@ -23,7 +23,7 @@ from torch.nn import DataParallel
 
 from nncf import NNCFConfig
 from nncf.checkpoint_loading import load_state
-from nncf.compression_method_api import CompressionLevel
+from nncf.compression_method_api import CompressionLevel, DOMAIN_CUSTOM_OPS_NAME
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
@@ -355,3 +355,28 @@ def test_can_export_compressed_model_with_input_output_names(tmp_path):
 
     assert curr_input_names == target_input_names
     assert curr_output_names == target_output_names
+
+def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_path):
+    test_path = str(tmp_path.joinpath('test.onnx'))
+
+    model = BasicTestModelWithTwoInputOutput()
+    config = get_basic_asym_quantization_config()
+
+    config["input_info"] = [{'sample_size': [1, 1, 4, 4]}, {'sample_size': [1, 1, 4, 4]}]
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    compression_ctrl.export_model(test_path)
+
+    assert os.path.exists(test_path)
+
+    onnx_model = onnx.load(test_path)
+
+    count_custom_ops = 0
+    # pylint: disable=no-member
+    for op_node in onnx_model.graph.node:
+        if op_node.op_type == "FakeQuantize":
+            assert op_node.domain == DOMAIN_CUSTOM_OPS_NAME
+            count_custom_ops += 1
+
+    assert count_custom_ops == 4

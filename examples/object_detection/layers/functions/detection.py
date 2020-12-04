@@ -14,7 +14,7 @@
 import torch
 from torch import nn
 
-from nncf.utils import no_jit_trace
+from nncf.utils import no_jit_trace, add_domain
 from nncf.dynamic_graph.context import no_nncf_trace
 
 from ..box_utils import decode, nms
@@ -52,7 +52,7 @@ class DetectionOutputFunction(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, loc_data, conf_data, prior_data, detection_output_params):
-        return g.op("DetectionOutput", loc_data, conf_data, prior_data,
+        return g.op(add_domain("DetectionOutput"), loc_data, conf_data, prior_data,
                     num_classes_i=detection_output_params.num_classes,
                     background_label_id_i=detection_output_params.background_label_id,
                     top_k_i=detection_output_params.top_k,

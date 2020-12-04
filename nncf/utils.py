@@ -358,3 +358,7 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         yield
     finally:
         model.train(is_original_mode_training)
+
+def add_domain(name_operator: str) -> str:
+    from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
+    return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
