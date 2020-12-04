@@ -137,10 +137,9 @@ def main_worker(current_gpu, config: SampleConfig):
     else:
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
-        train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
+        train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
-                                                 config.device)
+        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, train_criterion_fn, config.device)
 
     # create model
     model = load_model(model_name,
@@ -336,10 +335,18 @@ def create_data_loaders(config, train_dataset, val_dataset):
     if config.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=(train_sampler is None),
-        num_workers=workers, pin_memory=pin_memory, sampler=train_sampler)
-    return train_loader, train_sampler, val_loader
+    def create_train_data_loader(batch_size_):
+        return torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
+            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler)
+
+    train_loader = create_train_data_loader(batch_size)
+
+    init_loader = train_loader
+    if config.batch_size_init:
+        init_loader = create_train_data_loader(config.batch_size_init)
+
+    return train_loader, train_sampler, val_loader, init_loader
 
 
 def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):

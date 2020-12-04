@@ -259,7 +259,16 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         trace_estimator = HessianTraceEstimator(self._model, criterion_fn, criterion, self._init_device,
                                                 self._data_loader, self._num_data_points)
-        avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
+        try:
+            avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
+        except RuntimeError as error:
+            if "cuda out of memory" in error.args[0].lower():
+                raise RuntimeError('Failed to estimate average Hessian traces within precision initialization. Specify '
+                                   'a smaller batch size via --batch-size-init option in the NNCF samples or register '
+                                   'a data loader with a smaller batch size. Refer to '
+                                   '`NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs`'
+                                   ' class') from error
+            raise error
 
         self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.quantized_weight_modules_registry,
                                         params_to_restore)

@@ -175,12 +175,17 @@ def load_dataset(dataset, config):
         batch_size //= config.ngpus_per_node
         num_workers //= config.ngpus_per_node
 
+    def create_train_data_loader(batch_size_):
+        return torch.utils.data.DataLoader(
+            train_set,
+            batch_size=batch_size_,
+            sampler=train_sampler, num_workers=num_workers,
+            collate_fn=data_utils.collate_fn, drop_last=True)
     # Loaders
-    train_loader = torch.utils.data.DataLoader(
-        train_set,
-        batch_size=batch_size,
-        sampler=train_sampler, num_workers=num_workers,
-        collate_fn=data_utils.collate_fn, drop_last=True)
+    train_loader = create_train_data_loader(batch_size)
+    init_loader = train_loader
+    if config.batch_size_init:
+        init_loader = create_train_data_loader(config.batch_size_init)
 
     val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
@@ -232,7 +237,7 @@ def load_dataset(dataset, config):
 
     logger.info("Class weights: {}".format(class_weights))
 
-    return (train_loader, val_loader), class_weights
+    return (train_loader, val_loader, init_loader), class_weights
 
 
 def get_criterion(class_weights, config):
@@ -482,9 +487,9 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         loaders, w_class = load_dataset(dataset, config)
-        train_loader, val_loader = loaders
+        train_loader, val_loader, init_loader = loaders
         criterion = get_criterion(w_class, config)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, criterion_fn, config.device)
+        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, criterion_fn, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
