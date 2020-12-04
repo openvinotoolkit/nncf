@@ -22,6 +22,10 @@ from pathlib import Path
 import os
 import tarfile
 from shutil import copyfile
+from typing import Tuple
+
+from PIL import Image
+import torch.utils.data as data
 
 from examples.common.sample_config import SampleConfig
 from tensorboardX import SummaryWriter
@@ -72,9 +76,9 @@ def write_metrics(acc, filename):
     metrics = {"Accuracy": avg}
     if os.path.isfile(filename):
         path = Path(filename)
-        data = json.loads(path.read_text(encoding='utf-8'))
-        data.update(metrics)
-        path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+        metric_data = json.loads(path.read_text(encoding='utf-8'))
+        metric_data.update(metrics)
+        path.write_text(json.dumps(metric_data, indent=2), encoding='utf-8')
     else:
         with open(filename, 'w') as outfile:
             json.dump(metrics, outfile)
@@ -237,3 +241,22 @@ def print_statistics(stats, logger=default_logger):
 
 def is_pretrained_model_requested(config: SampleConfig) -> bool:
     return config.get('pretrained', True) if config.get('weights') is None else False
+
+
+class MockDataset(data.Dataset):
+    def __init__(self, img_size: Tuple[int, int] = (32, 32), num_images: int = 1000,
+                 transform=None):
+        self._img_size = img_size
+        self._num_images = num_images
+        self._transform = transform
+
+    def __len__(self):
+        return self._num_images
+
+    def __getitem__(self, idx):
+        if 0 <= idx < self._num_images:
+            img = Image.new(mode='RGB', size=self._img_size)
+            if self._transform is not None:
+                img = self._transform(img)
+            return img, 0
+        raise ValueError
