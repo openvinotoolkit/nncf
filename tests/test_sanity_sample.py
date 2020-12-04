@@ -135,7 +135,7 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["cifar10", "cifar100", "cifar10", "cifar10"],
+    "classification": ["mock_32x32", "mock_32x32", "mock_32x32", "mock_32x32"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
