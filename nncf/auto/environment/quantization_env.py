@@ -47,6 +47,7 @@ from natsort import natsorted
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 from nncf.hw_config import HWConfigType
 from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
+from nncf.quantization.layers import BaseQuantizer
 
 # logging
 def prRed(prt): logger.info("\033[91m {}\033[00m" .format(prt))
@@ -463,7 +464,7 @@ class QuantizationEnv:
     def _get_state_space(self, quantization_controller, quantized_model, quantizer_table):
         def annotate_learnable_module_io_shape(model):
             def annotate_io_shape(module, input_, output):
-                if hasattr(module, 'weight'):
+                if hasattr(module, 'weight') or isinstance(module, BaseQuantizer):
                     module._input_shape  = input_[0].shape
                     module._output_shape = output.shape
 
@@ -472,8 +473,6 @@ class QuantizationEnv:
             for h in hook_list:
                 h.remove()
             
-        # input_size = self.config['input_info']['sample_size']
-        # annotate_model_attr(quantized_model, tuple(input_size[1:])) # assume axis 0 be batch size
         annotate_learnable_module_io_shape(quantized_model)
 
         df = quantizer_table
@@ -482,34 +481,6 @@ class QuantizationEnv:
         df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
         df['state_module']    = df['state_scope'].apply(lambda x: quantized_model.get_module_by_scope(x))
 
-        # # getting the quantizers that we need agent to predict
-        # weight_quantizer_indices = df.index[df.is_wt_quantizer] # All weight quantizer precision will be predicted
-        # assert len(set(weight_quantizer_indices)) == len(weight_quantizer_indices), "master table cannot have duplicated row for same weight quantizer"
-        
-        # remove_indices = []
-        # for associated_gemm_nx_nodekeys in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) > 1)]:
-        #     followers = natsorted(associated_gemm_nx_nodekeys)[1:] #
-        #     for _follower in followers:
-        #         for idx, matcher in df.gemm_nx_nodekey[df.gemm_nx_nodekey.apply(lambda x: len(x) == 1)].items():
-        #             if _follower in matcher:
-        #                 remove_indices.append(idx)
-        # assert len(set(remove_indices)) == len(remove_indices), "Why are there duplicates in remove_indices?"
-                
-        # dangling_quantizer_indices = df.index[df.gemm_nx_nodekey.apply(lambda x: len(x) == 0)]
-        # assert len(set(dangling_quantizer_indices)) == len(dangling_quantizer_indices), "master table cannot have duplicated row for same quantizer"
-
-        # consolidated_weight_quantizer_indices = list(set(weight_quantizer_indices)-set(remove_indices))
-
-        # final_quantizable_indices = pd.Index(natsorted(list(set(consolidated_weight_quantizer_indices).union(set(dangling_quantizer_indices)))))
-
-        # assert len(final_quantizable_indices) == len(consolidated_weight_quantizer_indices) + len(dangling_quantizer_indices), "length should be tally"
-
-        # if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
-        #     df['is_pred']=True
-        # else:
-        #     df['is_pred']=False
-        #     df.loc[final_quantizable_indices, 'is_pred']=True
-        
         # State Embedding
         #----------------
         layer_attr_df                     = df.apply(self._get_layer_attr, axis=1)
@@ -558,87 +529,32 @@ class QuantizationEnv:
                 raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
 
         elif isinstance(qid, NonWeightQuantizerId):
-            q_nncfnode = g._nx_node_to_nncf_node(g.get_nx_node_by_key(row.q_nx_nodekey))
-            input_edges = [g.get_nx_edge(prev_node,  q_nncfnode) for prev_node in g.get_previous_nodes(q_nncfnode)]
-            output_edges = [g.get_nx_edge(q_nncfnode, next_node) for next_node in g.get_next_nodes(q_nncfnode)]
-            # Assumption: all edges of non-learnable node are of same shape.
-            in_edge_shape  = input_edges[0]['activation_shape']
-            out_edge_shape = output_edges[0]['activation_shape']
-
-            feature['cin']         = in_edge_shape[1] if len(in_edge_shape) == 4 else in_edge_shape[-1]
-            feature['cout']        = out_edge_shape[1] if len(out_edge_shape) == 4 else out_edge_shape[-1]
-            feature['ifm_size']    = np.prod(in_edge_shape[-2:]) if len(in_edge_shape) == 4 else in_edge_shape[-1]
+            qmod = self.qctrl.all_quantizations[qid]
+            input_shape  = qmod._input_shape
+            output_shape = qmod._output_shape
+            feature['cin']         = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
+            feature['cout']        = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
+            feature['ifm_size']    = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
             feature['conv_dw']     = 0.0 
             feature['stride']      = 0.0
             feature['kernel']      = 0.0
             feature['param']       = 0.0     
             feature['prev_action'] = 0.0 
 
-            if len(in_edge_shape) != 4 and len(in_edge_shape) != 2:
+            if len(input_shape) != 4 and len(input_shape) != 2:
                 raise NotImplementedError("A design is required to cater this scenario. Pls. report to maintainer")
+
         elif isinstance(qid, InputQuantizerId):
             raise NotImplementedError("InputQuantizerId is supported, quantizer of nncf model input is of type NonWeightQuantizerId")
+        
         elif isinstance(qid, FunctionQuantizerId):
             raise NotImplementedError("FunctionQuantizerId is supported, Pls. report to maintainer")
+        
         else:
             raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
+        
         return pd.Series(feature)
     
-    # def _get_layer_attr(self, row):        
-    #     m = row['state_module']
-    #     state_list=[]
-    #     feature=OrderedDict()
-
-    #     if isinstance(m, nn.Conv2d):
-    #         feature['conv_dw']          = int(m.in_channels == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
-    #         feature['cin']              = m.in_channels
-    #         feature['cout']             = m.out_channels
-    #         feature['stride']           = m.stride[0]
-    #         feature['kernel']           = m.kernel_size[0]
-    #         feature['param']            = np.prod(m.weight.size())     
-    #         feature['ifm_size']         = np.prod(m._input_shape[-2:]) # H*W
-    #         feature['prev_action']      = 0.0 # placeholder                
-            
-    #     elif isinstance(m, nn.Linear):
-    #         feature['conv_dw']          = 0.0 
-    #         feature['cin']              = m.in_features
-    #         feature['cout']             = m.out_features
-    #         feature['stride']           = 0.0
-    #         feature['kernel']           = 1.0
-    #         feature['param']            = np.prod(m.weight.size())     
-    #         feature['ifm_size']         = np.prod(m._input_shape[-1]) # feature nodes
-    #         feature['prev_action']      = 0.0 # placeholder      
-
-    #     else:
-    #         assert len(m._input_shape) in [2,4] , "new condition encountered, pls revise design"
-
-    #         if row['qid'] == 'MobileNetV2/adaptive_avg_pool2d_0':
-    #             qm = row['qmodule']
-    #             if len(m._input_shape) == 2:
-    #                 feature['cin']              = qm._input_shape[-1]
-    #                 feature['cout']             = qm._output_shape[-1]
-    #                 feature['ifm_size']         = qm._input_shape[-1]
-    #             elif len(m._input_shape) == 4:
-    #                 feature['cin']              = qm._input_shape[1]
-    #                 feature['cout']             = qm._output_shape[1]
-    #                 feature['ifm_size']         = np.prod(qm._input_shape[-2:]) # H*W
-    #         else:
-    #             if len(m._input_shape) == 2:
-    #                 feature['cin']              = m._input_shape[-1]
-    #                 feature['cout']             = m._output_shape[-1]
-    #                 feature['ifm_size']         = m._input_shape[-1]
-    #             elif len(m._input_shape) == 4:
-    #                 feature['cin']              = m._input_shape[1]
-    #                 feature['cout']             = m._output_shape[1]
-    #                 feature['ifm_size']         = np.prod(m._input_shape[-2:]) # H*W
-
-    #         feature['conv_dw']          = 0.0 
-    #         feature['stride']           = 0.0
-    #         feature['kernel']           = 0.0 # what should we set for non-learnable layer?
-    #         feature['param']            = 0.0     
-    #         feature['prev_action']      = 0.0 # placeholder 
-           
-    #     return pd.Series(feature)
        
     def _run_quantization_pipeline(self, finetune):
         self._adaptbn()
