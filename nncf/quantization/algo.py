@@ -857,6 +857,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations = OrderedDict()
         self.all_quantizations.update(self.weight_quantizers)
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
+        self._distributed = False
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -906,6 +907,10 @@ class QuantizationController(QuantizationControllerBase):
                 self.metric_store[collector.NAME_STR] = collector.get_metric_table()
 
     def distributed(self):
+        self._distributed = True
+        self._broadcast_initialized_params_for_each_quantizer()
+
+    def _broadcast_initialized_params_for_each_quantizer(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
         sorted_quantizers = OrderedDict(sorted(self.all_quantizations.items(), key=lambda x: str(x[0])))
         for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
@@ -1032,6 +1037,9 @@ class QuantizationController(QuantizationControllerBase):
 
             self._do_range_init(data_loader, max_num_init_steps, global_init_range_config,
                                 range_init_args.device)
+
+        if self._distributed:
+            self._broadcast_initialized_params_for_each_quantizer()
 
     def update_range_config_by_default(self, init_range_config: Dict):
         global_init_range_config = dict()
