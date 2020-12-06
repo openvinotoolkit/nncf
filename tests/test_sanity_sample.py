@@ -62,7 +62,7 @@ class Command:
         except OSError as err:
             print(err)
 
-    def run(self, timeout=3600):
+    def run(self, timeout=3600, assert_returncode_zero=True):
 
         def target():
             start_time = time.time()
@@ -98,6 +98,10 @@ class Command:
                 raise
         returncode = self.process.wait()
         print("Process returncode = " + str(returncode))
+        if assert_returncode_zero:
+            assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
+                returncode,
+                "".join(self.output))
         return returncode
 
     def get_execution_time(self):
@@ -226,8 +230,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
 
 
 @pytest.mark.parametrize(
@@ -255,8 +258,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
@@ -287,8 +289,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
 
 
 def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, checkpoint_save_dir):
@@ -326,8 +327,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
@@ -352,8 +352,7 @@ def test_export_with_resume(config, tmp_path, multiprocessing_distributed, case_
     }
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     assert os.path.exists(onnx_path)
 
 
@@ -379,8 +378,7 @@ def test_export_with_pretrained(tmp_path):
     }
 
     runner = Command(create_command_line(args, "classification"))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     assert os.path.exists(onnx_path)
 
 
