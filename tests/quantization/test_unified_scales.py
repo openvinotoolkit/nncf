@@ -561,8 +561,7 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
 
     with torch.no_grad():
         for quant_info in compression_ctrl.non_weight_quantizers.values():
-            scale = quant_info.quantizer_module_ref.scale
-            quant_info.quantizer_module_ref.scale = scale*torch.abs(torch.rand_like(scale))
+            quant_info.quantizer_module_ref.scale *= torch.abs(torch.rand_like(quant_info.quantizer_module_ref.scale))
 
     test_input1 = torch.ones([1, 1, 1, 2])
     compressed_model.forward(test_input1)

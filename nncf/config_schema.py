@@ -101,9 +101,9 @@ QUANTIZER_CONFIG_PROPERTIES = {
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
                                           "differing signs, will reset to performing signed quantization instead."),
-    "scale_log": with_attributes(_BOOLEAN,
-                                 description="Whether to use log of scale as optimized parameter"
-                                             " instead of scale itself."),
+    "logarithm_scale": with_attributes(_BOOLEAN,
+                                       description="Whether to use log of scale as optimized parameter"
+                                                   " instead of scale itself."),
     "per_channel": with_attributes(_BOOLEAN,
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
