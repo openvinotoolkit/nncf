@@ -398,6 +398,32 @@ class TestRangeInit:
         for str_scope, range_init_config in per_layer_range_init_test_struct.expected_modules_to_init.items():
             assert ctrl.modules_to_range_init[str_scope][1] == range_init_config
 
+    @pytest.mark.parametrize('quant_type', ('symmetric', 'asymmetric'))
+    def test_ad_hoc_range_init_does_not_replace_parameter_tensors(self, wrap_dataloader, quant_type):
+        config = create_config()
+        config["compression"].update(
+            {
+                "activations": {
+                    "mode": quant_type
+                },
+                "weights": {
+                    "mode": quant_type
+                }
+            }
+        )
+
+        data_loader = self.create_dataloader(wrap_dataloader, config)
+        config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+
+        model = TwoConvTestModel()
+        quant_model, quant_ctrl = create_compressed_model_and_algo_for_test(model, config)
+        param_name_vs_id = {name: id(tnsr) for name, tnsr in quant_model.named_parameters()}
+
+        quant_ctrl.init_range()
+
+        for name, param in quant_model.named_parameters():
+            assert param_name_vs_id[name] == id(param)
+
 
 class SingleConv2dIdentityModel(torch.nn.Module):
     def __init__(self):
