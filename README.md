@@ -168,8 +168,8 @@ Quick jump to sample type:
 | :---: | :---: | :---: | :---: | :---: |
 |UNet|INT8|CamVid|71.95|71.66|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|INT8|CamVid|67.89|67.85|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.23|
+|ICNet|INT8|CamVid|67.89|67.78|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.10|
 |UNet|INT8|Mapillary|56.23|56.1|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.01|
 

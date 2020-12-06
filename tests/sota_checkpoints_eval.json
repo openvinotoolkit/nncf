@@ -352,7 +352,7 @@
             "icnet_camvid_int8": {
                 "config": "examples/semantic_segmentation/configs/icnet_camvid_int8.json",
                 "reference": "icnet_camvid",
-                "target": 67.87,
+                "target": 67.78,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_int8.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
@@ -365,7 +365,7 @@
             "icnet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json",
                 "reference": "icnet_camvid",
-                "target": 67.24,
+                "target": 67.1,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_magnitude_sparsity_int8.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
