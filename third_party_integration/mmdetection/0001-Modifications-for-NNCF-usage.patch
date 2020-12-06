@@ -91,7 +91,7 @@ index 0000000..81a90ba
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm="quantization",
 +                                     weights=dict(per_channel=True),
-+                                     initializer=dict(range=dict(num_init_steps=5,
++                                     initializer=dict(range=dict(num_init_samples=10,
 +                                                                 type='min_max')))],
 +                   log_dir=work_dir)
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
@@ -191,7 +191,7 @@ index 0000000..4112ea7
 +
 +# nncf config
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10,
++                                     initializer=dict(range=dict(num_init_samples=40,
 +                                                                 type="threesigma")))],
 +                   log_dir=work_dir)
 diff --git a/configs/retinanet/retinanet_r50_fpn_1x_int8.py b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
@@ -238,7 +238,7 @@ index 0000000..7788165
 +# nncf config
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10)))],
++                                     initializer=dict(range=dict(num_init_samples=10)))],
 +                   log_dir=work_dir)
 diff --git a/mmdet/apis/train.py b/mmdet/apis/train.py
 index c314d42..a45ee5f 100644
