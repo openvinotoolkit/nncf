@@ -81,8 +81,8 @@ version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
 INSTALL_REQUIRES.extend(["torch", "torchvision"])
 
-TORCH_VERSION = "1.5.0"
-TORCHVISION_VERSION = "0.6.0"
+TORCH_VERSION = "1.7.0"
+TORCHVISION_VERSION = "0.8.1"
 CUDA_VERSION = "102"
 IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER = True
 

@@ -78,7 +78,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6 or later
 - NVidia CUDA\* Toolkit 10.2
-- PyTorch\* 1.5.0
+- PyTorch\* 1.7 or later.
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).

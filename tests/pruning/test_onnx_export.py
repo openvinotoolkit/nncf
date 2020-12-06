@@ -38,6 +38,8 @@ def test_pruning_export_simple_model(tmp_path):
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     # Check that conv2 + BN were pruned by output filters
+    # WARNING: starting from at least torch 1.7.0, torch.onnx.export will fuses BN into previous
+    # convs if torch.onnx.export is done with `training=False`, so this test might fail.
     check_bias_and_weight_shape('nncf_module.conv2', onnx_model_proto, [16, 16, 3, 3], [16])
     check_bias_and_weight_shape('nncf_module.bn', onnx_model_proto, [16], [16])
 
