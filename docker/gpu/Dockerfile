@@ -25,13 +25,20 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends  python3-dev  && \
+    DEBIAN_FRONTEND=noninteractive &&\
+    apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get install -y --no-install-recommends \
+    python3.8 \
+    python3.8-dev \
+    python3-pip \
+    libpython3.8-dev \
+    virtualenv && \
     cd /usr/bin && \
-    ln -s python3.5 python && \
+    ln -s python3.6 python && \
     curl https://bootstrap.pypa.io/get-pip.py | python \
     && \
-    rm -rf /var/lib/apt/lists/* 
+    rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64

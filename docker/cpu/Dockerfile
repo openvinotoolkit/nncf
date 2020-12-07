@@ -22,11 +22,14 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive \
+    DEBIAN_FRONTEND=noninteractive &&\
+    apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
     apt-get install -y --no-install-recommends \
-    python3.6 \
-    python3.6-dev \
+    python3.8 \
+    python3.8-dev \
     python3-pip \
+    libpython3.8-dev \
     virtualenv && \
     cd /usr/bin && \
     ln -s python3.6 python && \
