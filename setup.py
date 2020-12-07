@@ -73,8 +73,8 @@ python_version = sys.version_info[:2]
 if python_version[0] < 3:
     print("Only Python > 3.5 is supported")
     sys.exit(0)
-elif  python_version[1] < 8:
-    print("Only Python > 3.8 is supported")
+elif python_version[1] < 5:
+    print("Only Python > 3.5 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
