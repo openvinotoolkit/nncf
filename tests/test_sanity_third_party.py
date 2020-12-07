@@ -21,7 +21,7 @@ from tests.conftest import PROJECT_ROOT
 
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
-MMDETECTION_COMMIT = "039ad4dd64edaa5efe69f00574a0c24240adac97"
+MMDETECTION_COMMIT = "3e902c3afc62693a71d672edab9b22e35f7d4776"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "data", "mock_datasets")
 
@@ -61,7 +61,7 @@ class TestTransformers:
         subprocess.call("virtualenv -ppython3.6 {}".format(self.VENV_TRANS_PATH), shell=True)
         subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
                        check=True, shell=True)
-        subprocess.run("{} && pip install torch==1.5.0".format(self.activate_venv),
+        subprocess.run("{} && pip install torch==1.7.0".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run("{} && git clone https://github.com/huggingface/transformers".format(self.activate_venv),
                        check=True, shell=True, cwd=self.VENV_TRANS_PATH)
@@ -228,7 +228,7 @@ class TestMmdetection:
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run(
-            "{}; pip install mmcv-full==1.1.4+torch1.5.0+cu102 "
+            "{}; pip install mmcv-full==1.2.0+torch1.7.0+cu102 "
             "-f https://download.openmmlab.com/mmcv/dist/index.html".format(self.activate_venv), check=True, shell=True,
             cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
