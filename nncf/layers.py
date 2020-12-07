@@ -138,6 +138,22 @@ class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
         return nncf_embedding
 
 
+class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
+    op_func_name = "embedding_bag"
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.EmbeddingBag.__name__
+
+        args = [module.num_embeddings, module.embedding_dim,
+                module.max_norm, module.norm_type, module.scale_grad_by_freq,
+                module.mode, module.sparse, module.weight,
+                module.include_last_offset]
+        nncf_embedding_bag = NNCFEmbeddingBag(*args)
+        dict_update(nncf_embedding_bag.__dict__, module.__dict__)
+        return nncf_embedding_bag
+
+
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
@@ -145,7 +161,8 @@ NNCF_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
-    NNCFEmbedding: nn.Embedding
+    NNCFEmbedding: nn.Embedding,
+    NNCFEmbeddingBag: nn.EmbeddingBag
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}

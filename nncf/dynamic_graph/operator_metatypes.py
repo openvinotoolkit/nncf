@@ -520,6 +520,12 @@ class EmbeddingMetatype(OperatorMetatype):
 
 
 @OPERATOR_METATYPES.register()
+class EmbeddingBagMetatype(OperatorMetatype):
+    name = "embedding_bag"
+    torch_nn_functional_patch_spec = PatchSpec([name])
+
+
+@OPERATOR_METATYPES.register()
 class SoftmaxMetatype(OperatorMetatype):
     name = "softmax"
     torch_nn_functional_patch_spec = PatchSpec([name])
