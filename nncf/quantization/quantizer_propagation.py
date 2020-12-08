@@ -93,6 +93,7 @@ class QuantizerInsertionInfo(InsertionInfo):
         result.linked_op_exec_contexts = insertion_info.linked_op_exec_contexts
         return result
 
+
 class PropagatingQuantizer:
     """Used in conjunction with QuantizerPropagationStateGraph to keep track of
        the allowed quantization configs corresponding to the model operation node
@@ -1175,6 +1176,12 @@ class QuantizerPropagationSolver:
                 insertion_point_data = node[
                     QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
+                    # Reached another FQ for activation by going down & up from a FQ for activation.
+                    # here->|FQ_A|  Conv  start_FQ_A    Conv
+                    #         \   /           |       /
+                    #        POST_HOOK       POST_HOOK
+                    #              \        /
+                    #                Concat
                     output.add_activation_quantizer_ctx(insertion_point_data.ia_op_exec_context)
                     quantizers_between_quantizable_layers_per_node_key[node_key] = output
                     is_finished = True
@@ -1200,11 +1207,20 @@ class QuantizerPropagationSolver:
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             is_finished = False
             if node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
-                insertion_point_data = node[
-                    QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
-                    output.add_activation_quantizer_ctx(insertion_point_data.ia_op_exec_context)
-                    quantizers_between_quantizable_layers_per_node_key[node_key] = output
+                    # Reached another FQ for activation by going down from a FQ for activation.
+                    # Should be processed within another group
+                    # start->FQ_A  Conv
+                    #         \   /
+                    #        POST_HOOK
+                    #          /    \
+                    #   PRE_HOOK    PRE_HOOK
+                    #     |           \
+                    #   div          MaxPool   here->|FQ_A|
+                    #                   \     /
+                    #                 POST_HOOK
+                    visited[node_key] = False
+                    is_finished = True
                 else:
                     for sub_node_key in quant_prop_graph.pred[node_key]:
                         output = quant_prop_graph.traverse_graph(sub_node_key, traverse_function_up, output,
@@ -1224,8 +1240,19 @@ class QuantizerPropagationSolver:
 
         for finished_prop_quantizer in finished_propagating_quantizers:
             node_key = finished_prop_quantizer.current_location_node_key
-            quantizers_between_quantizable_layers = QuantizersBetweenQuantizableLayers()
-            quant_prop_graph.traverse_graph(node_key, traverse_function_down, quantizers_between_quantizable_layers,
-                                            traverse_forward=True)
-
+            # process PropagatingQuantizer separately by adding FQ for activation to the group and by starting downward
+            # traverse for all child nodes. No need to check upward branches as it's final location of the quantizer
+            if not visited[node_key]:
+                quantizers_between_quantizable_layers = QuantizersBetweenQuantizableLayers()
+                node = quant_prop_graph.nodes[node_key]
+                insertion_point_data = node[
+                    QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
+                if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
+                    visited[node_key] = True
+                    quantizers_between_quantizable_layers.add_activation_quantizer_ctx(
+                        insertion_point_data.ia_op_exec_context)
+                for next_node_key in quant_prop_graph.succ[node_key]:
+                    quant_prop_graph.traverse_graph(next_node_key, traverse_function_down,
+                                                    quantizers_between_quantizable_layers, traverse_forward=True)
+                quantizers_between_quantizable_layers_per_node_key[node_key] = quantizers_between_quantizable_layers
         return quantizers_between_quantizable_layers_per_node_key
