@@ -28,7 +28,7 @@ from PIL import Image
 import torch.utils.data as data
 
 from examples.common.sample_config import SampleConfig
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from texttable import Texttable
 import mlflow
 

@@ -159,7 +159,7 @@ def get_common_argument_parser():
         "--log-dir",
         type=str,
         default='runs',
-        help="The directory where models and TensorboardX summaries"
+        help="The directory where models and Tensorboard summaries"
              " are saved. Default: runs")
 
     parser.add_argument('--save-freq', default=5, type=int,
