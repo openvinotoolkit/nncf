@@ -233,7 +233,7 @@ def is_staged_quantization(config):
 def print_statistics(stats, logger=default_logger):
     for key, val in stats.items():
         if isinstance(val, Texttable):
-            logger.info(key)
+            logger.info("{}:".format(key))
             logger.info(val.draw())
         else:
             logger.info("{}: {}".format(key, val))
