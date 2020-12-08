@@ -16,7 +16,7 @@ import torch
 import torch.distributed as dist
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel, StubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
@@ -54,6 +54,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsify_operations)
+            self._scheduler = StubCompressionScheduler()
         else:
             self._loss = SparseLoss(sparsify_operations)  # type: SparseLoss
             schedule_type = params.get("schedule", "exponential")

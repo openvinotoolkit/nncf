@@ -16,7 +16,7 @@ from typing import List
 import torch
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel, StubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
@@ -50,6 +50,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if sparsity_level_mode == 'global':
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, params)
+        else:
+            self._scheduler = StubCompressionScheduler()
+
         self.set_sparsity_level(self.sparsity_init)
 
     def statistics(self, quickly_collected_only=False):
