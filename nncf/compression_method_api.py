@@ -35,6 +35,9 @@ from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 
 
+DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
+
+
 class CompressionLoss(nn.Module):
     """
     Used to calculate additional loss to be added to the base loss during the
