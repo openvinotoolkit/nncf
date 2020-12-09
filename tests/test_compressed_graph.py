@@ -224,35 +224,35 @@ def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
 
 
 TEST_MODELS_DESC = [
-    ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]),
-    ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]),
+    #ModelDesc("alexnet", test_models.AlexNet, [1, 3, 32, 32]),
+    #ModelDesc("lenet", test_models.LeNet, [1, 3, 32, 32]),
     ModelDesc("resnet18", test_models.ResNet18, [1, 3, 32, 32]),
-    ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
-    ModelDesc("vgg16", partial(test_models.VGG, 'VGG16'), [1, 3, 32, 32]),
-    ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]),
-    ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]),
-    ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
-              [2, 3, 299, 299]),
-    ModelDesc("squeezenet1_0", test_models.squeezenet1_0, [1, 3, 32, 32]),
-    ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]),
-    ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
-    ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
-    ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
-    ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
-    ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
-    ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
-    ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
-    ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
-    ModelDesc("preresnet50", test_models.PreActResNet50, [1, 3, 32, 32]),
-    ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]),
-    ModelDesc("lstm_cell", LSTMCellNNCF, [1, 1]),
-    ModelDesc("lstm_uni_seq", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]),
-    ModelDesc("lstm_uni_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
-    ModelDesc("lstm_bi_seq", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]),
-    ModelDesc("lstm_bi_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
-    ModelDesc("sr_small_model", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]),
-              dummy_forward_fn=sr_dummy_forward_fn,
-              wrap_inputs_fn=sr_wrap_inputs_fn)
+    #ModelDesc("resnet50", test_models.ResNet50, [1, 3, 32, 32]),
+    #ModelDesc("vgg16", partial(test_models.VGG, 'VGG16'), [1, 3, 32, 32]),
+    #ModelDesc("inception", test_models.GoogLeNet, [1, 3, 32, 32]),
+    #ModelDesc("densenet121", test_models.DenseNet121, [1, 3, 32, 32]),
+    #ModelDesc("inception_v3", partial(test_models.Inception3, aux_logits=True, transform_input=True),
+    #          [2, 3, 299, 299]),
+    #ModelDesc("squeezenet1_0", test_models.squeezenet1_0, [1, 3, 32, 32]),
+    #ModelDesc("squeezenet1_1", test_models.squeezenet1_1, [1, 3, 32, 32]),
+    #ModelDesc("shufflenetv2", partial(test_models.ShuffleNetV2, net_size=0.5), [1, 3, 32, 32]),
+    #ModelDesc("shuflenet_g2", test_models.ShuffleNetG2, [1, 3, 32, 32]),
+    #ModelDesc("ssd_vgg", test_models.ssd_vgg300, [2, 3, 300, 300]),
+    #ModelDesc("ssd_mobilenet", test_models.ssd_mobilenet, [2, 3, 300, 300]),
+    #ModelDesc("mobilenet_v2", torchvision.models.MobileNetV2, [2, 3, 32, 32]),
+    #ModelDesc("resnext29_32x4d", test_models.ResNeXt29_32x4d, [1, 3, 32, 32]),
+    #ModelDesc("pnasnetb", test_models.PNASNetB, [1, 3, 32, 32]),
+    #ModelDesc("senet18", test_models.SENet18, [1, 3, 32, 32]),
+    #ModelDesc("preresnet50", test_models.PreActResNet50, [1, 3, 32, 32]),
+    #ModelDesc("unet", test_models.UNet, [1, 3, 360, 480]),
+    #ModelDesc("lstm_cell", LSTMCellNNCF, [1, 1]),
+    #ModelDesc("lstm_uni_seq", partial(NNCF_RNN, num_layers=1, bidirectional=False), [3, 1, 1]),
+    #ModelDesc("lstm_uni_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=False), [3, 1, 1]),
+    #ModelDesc("lstm_bi_seq", partial(NNCF_RNN, num_layers=1, bidirectional=True), [3, 1, 1]),
+    #ModelDesc("lstm_bi_stacked", partial(NNCF_RNN, num_layers=2, bidirectional=True), [3, 1, 1]),
+    #ModelDesc("sr_small_model", test_models.SmallModel, ([1, 3, 32, 32], [1, 3, 96, 96]),
+    #          dummy_forward_fn=sr_dummy_forward_fn,
+    #          wrap_inputs_fn=sr_wrap_inputs_fn)
 ]
 
 
@@ -311,8 +311,10 @@ class TestModelsGraph:
     def test_quantize_network(self, desc: ModelDesc, _case_config):
         model = desc.model_builder()
         config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
+        fused_model = fusing(model)
+        #fused_model = torch.quantization.fuse_modules(model, ['conv1', 'bn1' ])
         compressed_model, _ = \
-            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
+            create_compressed_model_and_algo_for_test(fused_model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
         check_model_graph(compressed_model, desc.dot_filename, _case_config.graph_dir)
 
@@ -838,3 +840,30 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
             nx_graph.add_edge(node_scope, node_name)
 
     return graph
+
+def fusing(model):
+    from torch.nn import BatchNorm2d, Conv2d
+    from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
+
+    def get_names_modules_for_fusing(model):
+
+        prev_module_name = None
+        prev_module = None
+        should_be_fused = []
+        for module_name, module in model._modules.items():
+            if prev_module_name is None:
+                prev_module_name = module_name
+                prev_module = module
+            if len(module._modules) == 0:
+                if isinstance(module, BatchNorm2d) and isinstance(prev_module, Conv2d):
+                    should_be_fused.append([prev_module, module])
+            else:
+                should_be_fused += get_names_modules_for_fusing(module)
+        return should_be_fused
+    
+    l = get_names_modules_for_fusing(model)
+    fused_model = fuse_known_modules(model, l)
+
+
+
+

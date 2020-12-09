@@ -358,3 +358,7 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         yield
     finally:
         model.train(is_original_mode_training)
+
+#def fusing_conv_bn(model):
+#    import torch
+#    torch.quantization.fuse_modules 
