@@ -184,8 +184,9 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
+    print_statistics(compression_ctrl.statistics())
+
     if config.mode.lower() == 'test':
-        print_statistics(compression_ctrl.statistics())
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
