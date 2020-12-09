@@ -181,9 +181,10 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
 
+    print_statistics(compression_ctrl.statistics())
+
     if config.mode.lower() == 'test':
         with torch.no_grad():
-            print_statistics(compression_ctrl.statistics())
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
                 model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
@@ -301,7 +302,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     batch_iterator = None
 
     t_start = time.time()
-    print_statistics(compression_ctrl.statistics())
 
     best_mAp = 0
     best_compression_level = CompressionLevel.NONE
