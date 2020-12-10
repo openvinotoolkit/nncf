@@ -24,6 +24,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
     fill_input_masks
 from nncf.pruning.utils import get_sources_of_node, is_depthwise_conv
+from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 
 PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -353,7 +354,7 @@ class Elementwise(DefaultMetaOp):
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
         node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
-        if hasattr(node_module, "weight"):
+        if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
             old_num_clannels = int(node_module.weight.size(0))
             new_num_channels = int(torch.sum(input_mask))
             node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
