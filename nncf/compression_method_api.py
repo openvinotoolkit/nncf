@@ -294,3 +294,9 @@ class CompressionAlgorithmBuilder:
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+
+
+class StubCompressionScheduler(CompressionScheduler):
+
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL
