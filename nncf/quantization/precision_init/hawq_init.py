@@ -19,6 +19,7 @@ import torch
 import warnings
 from bisect import bisect_left
 from operator import itemgetter
+
 from torch import Tensor, nn
 from torch.nn.modules.loss import _Loss
 
@@ -26,16 +27,17 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QuantizersSwitcher
-from .adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
-from .compression_ratio import CompressionRatioCalculator
-from .hawq_debug import HAWQDebugger
-from .manual_init import ManualPrecisionInitializer
-from .perturbations import Perturbations, PerturbationObserver
-from .traces_order import TracesPerLayer, TracesOrder
-from ..hessian_trace import HessianTraceEstimator
-from ..hw_precision_constraints import HWPrecisionConstraints
-from ..quantizer_id import QuantizerId
-from ...structures import QuantizationPrecisionInitArgs
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
+from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
+from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
+from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer
+from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
+from nncf.quantization.precision_init.traces_order import TracesPerLayer, TracesOrder
+from nncf.quantization.hessian_trace import HessianTraceEstimator
+from nncf.quantization.precision_constraints import PrecisionConstraints
+from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
+from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.structures import QuantizationPrecisionInitArgs
 
 
 class BitwidthAssignmentMode(Enum):
@@ -51,26 +53,68 @@ class BitwidthAssignmentMode(Enum):
         raise RuntimeError("Unknown bitwidth assignment mode")
 
 
-class HAWQPrecisionInitializer(ManualPrecisionInitializer):
-    def __init__(self, algo: 'QuantizationController', config: 'NNCFConfig',
-                 init_args: QuantizationPrecisionInitArgs):
-        super().__init__(algo, config, init_args)
+class HAWQPrecisionInitParams(BasePrecisionInitParams):
+    def __init__(self,
+                 user_init_args: QuantizationPrecisionInitArgs,
+                 bits: List[int] = None,
+                 bitwidth_per_scope: List[List] = None,
+                 traces_per_layer_path: str = None,
+                 num_data_points: int = None,
+                 iter_number: int = None,
+                 tolerance: float = None,
+                 compression_ratio: float = None,
+                 dump_hawq_data: bool = None,
+                 bitwidth_assignment_mode: BitwidthAssignmentMode = None):
+        super().__init__(user_init_args)
+        self.bits = bits
+        self.bitwidth_per_scope = bitwidth_per_scope
+        self.traces_per_layer_path = traces_per_layer_path
+        self.num_data_points = num_data_points
+        self.iter_number = iter_number
+        self.tolerance = tolerance
+        self.compression_ratio = compression_ratio
+        self.dump_hawq_data = dump_hawq_data
+        self.bitwidth_assignment_mode = bitwidth_assignment_mode
+
+    @classmethod
+    def from_config(cls, hawq_init_config_dict: Dict,
+                    user_init_args: QuantizationPrecisionInitArgs) -> 'HAWQPrecisionInitParams':
+        return cls(
+            user_init_args=user_init_args,
+            bits=hawq_init_config_dict.get('bits', [4, 8]),
+            traces_per_layer_path=hawq_init_config_dict.get('traces_per_layer_path', None),
+            num_data_points=hawq_init_config_dict.get('num_data_points', 100),
+            iter_number=hawq_init_config_dict.get('iter_number', 200),
+            tolerance=hawq_init_config_dict.get('tolerance', 1e-4),
+            compression_ratio=hawq_init_config_dict.get('compression_ratio', 1.5),
+            dump_hawq_data=hawq_init_config_dict.get('dump_hawq_data', False),
+            bitwidth_assignment_mode=BitwidthAssignmentMode.from_str(
+                hawq_init_config_dict.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
+            )
+        )
+
+
+class HAWQPrecisionInitializer(BasePrecisionInitializer):
+    def __init__(self, algo: 'QuantizationController',
+                 params: HAWQPrecisionInitParams,
+                 hw_precision_constraints: PrecisionConstraints):
+        super().__init__(algo, params, hw_precision_constraints)
+        init_args = params.user_init_args
         self._criterion_fn = init_args.criterion_fn
         self._criterion = init_args.criterion
         self._data_loader = init_args.data_loader
-        self._traces_per_layer_path = config.get('traces_per_layer_path', None)
-        self._num_data_points = config.get('num_data_points', 100)
-        self._iter_number = config.get('iter_number', 200)
-        self._tolerance = config.get('tolerance', 1e-4)
-        self._compression_ratio = config.get('compression_ratio', 1.5)
+        self._traces_per_layer_path = params.traces_per_layer_path
+        self._num_data_points = params.num_data_points
+        self._iter_number = params.iter_number
+        self._tolerance = params.tolerance
+        self._compression_ratio = params.compression_ratio
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
-            if self._hw_precision_constraints else config.get('bits', [4, 8])
+            if self._hw_precision_constraints else params.bits
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._groups_of_adjacent_quantizers = algo.groups_of_adjacent_quantizers
-        self._dump_hawq_data = config.get('dump_init_precision_data', False)
-        bitwidth_assignment_mode_str = config.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
-        self._bitwidth_assignment_mode = BitwidthAssignmentMode.from_str(bitwidth_assignment_mode_str)
+        self._bitwidth_assignment_mode = params.bitwidth_assignment_mode
+        self._dump_hawq_data = params.dump_hawq_data
 
     def apply_init(self):
         if not self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id():
@@ -193,15 +237,14 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     @staticmethod
     def disable_all_gradients_except_weights_of_quantized_modules(
             quantizers_switcher: QuantizersSwitcher,
-            quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+            weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
             model: nn.Module,
-            scopes_of_skipped_weight_quantizers: List[
-                'Scope'] = None) -> ParamsToRestore:  # pylint: disable=undefined-variable
+            scopes_of_skipped_weight_quantizers: List[Scope] = None) -> ParamsToRestore:
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
-        :param quantized_weight_modules_registry: modules with quantized weights per scope
+        :param weight_quantizers: modules with quantized weights per scope
         :param model: model to access all parameters
         :param scopes_of_skipped_weight_quantizers: list of string scopes of layers that have a single precision
         constraint and which weights should be skipped from bitwidth initialization
@@ -216,10 +259,12 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         # remember gradients of quantized modules that were enabled
         gradients_to_enable = []
-        for scope, quantized_module in quantized_weight_modules_registry.items():
+        for wq_id, wq_info in weight_quantizers.items():
+            quantized_module = wq_info.quantized_module
+            scope = wq_id.get_scope()
             is_skipped = False
             for skipped_weight_quantizer_scope in scopes_of_skipped_weight_quantizers:
-                if skipped_weight_quantizer_scope in Scope.from_str(scope):
+                if skipped_weight_quantizer_scope in scope:
                     is_skipped = True
                     break
             for param_name, param in quantized_module.named_parameters():
@@ -239,7 +284,8 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                 param.requires_grad = False
 
         # enable gradients of quantized modules that were disabled
-        for quantized_module in quantized_weight_modules_registry.values():
+        for wq_id in weight_quantizers.values():
+            quantized_module = wq_id.quantized_module
             for param_name, param in quantized_module.named_parameters():
                 if (quantized_module, param_name) in gradients_to_enable and not 'bias' in param_name:
                     param.requires_grad = True
@@ -253,7 +299,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         quantizers_switcher = QuantizersSwitcher(list(self._all_quantizers_per_scope.values()))
         params_to_restore = self.disable_all_gradients_except_weights_of_quantized_modules(
             quantizers_switcher,
-            self._algo.quantized_weight_modules_registry,
+            self._algo.weight_quantizers,
             self._model,
             self._quantizers_handler.get_scope_of_skipped_weight_quantizers())
 
@@ -270,7 +316,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
                                    ' class') from error
             raise error
 
-        self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.quantized_weight_modules_registry,
+        self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.weight_quantizers,
                                         params_to_restore)
 
         return TracesPerLayer(avg_traces)
@@ -278,16 +324,17 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
     @staticmethod
     def restore_disabled_gradients(quantizers_switcher: QuantizersSwitcher,
                                    model: nn.Module,
-                                   quantized_weight_modules_registry: Dict[str, torch.nn.Module],
+                                   weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                                    params_to_restore: ParamsToRestore):
         """
         Restore requires_grad property of all parameters back, except for ones that were originally disabled
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param model: model to access all parameters
-        :param quantized_weight_modules_registry: modules with quantized weights per scope
+        :param weight_quantizers: modules with quantized weights per scope
         :param params_to_restore: storage names of the parameters that should restore reguires_grad property
         """
-        for quantized_module in quantized_weight_modules_registry.values():
+        for wq_info in weight_quantizers.values():
+            quantized_module = wq_info.quantized_module
             for param_name, param in quantized_module.named_parameters():
                 if (quantized_module, param_name) in params_to_restore.skipped_gradients_to_enable:
                     param.requires_grad = True
@@ -318,7 +365,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
     @staticmethod
     def _filter_configs_by_precision_constraints(bits_configurations: List[List[int]],
-                                                 hw_precision_constraints: HWPrecisionConstraints,
+                                                 hw_precision_constraints: PrecisionConstraints,
                                                  ordered_weight_ids: List[QuantizerId],
                                                  traces_order: TracesOrder) -> List[List[int]]:
         if not hw_precision_constraints:
@@ -390,7 +437,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             wq.num_bits = bits
         if self._groups_of_adjacent_quantizers:
             for group in self._groups_of_adjacent_quantizers:
-                weight_bitwidth_set = {wq.num_bits for _, wq in group.weight_quantizers}
+                weight_bitwidth_set = {wq_info.num_bits for _, wq_info in group.weight_quantizers}
                 if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
                     self._set_activations_bitwidth_strictly(group, weight_bitwidth_set)
                 else:

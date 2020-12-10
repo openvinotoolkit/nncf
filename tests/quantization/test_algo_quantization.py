@@ -56,8 +56,8 @@ def test_quantization_configs__with_defaults():
     activation_quantizer_infos = compression_ctrl.non_weight_quantizers
 
     ref_weight_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, True, True, None, True)
-    for wq in weight_quantizers.values():
-        compare_qconfigs(ref_weight_qconfig, wq)
+    for wq_info in weight_quantizers.values():
+        compare_qconfigs(ref_weight_qconfig, wq_info.quantizer_module_ref)
 
     ref_activation_qconfig = QuantizerConfig(8, QuantizationMode.SYMMETRIC, None, False, None, False)
     for aq_info in activation_quantizer_infos.values():
@@ -93,8 +93,8 @@ def test_quantization_configs__custom():
                                          per_channel=True,
                                          input_shape=None,
                                          is_weights=True)
-    for wq in weight_quantizers.values():
-        compare_qconfigs(ref_weight_qconfig, wq)
+    for wq_info in weight_quantizers.values():
+        compare_qconfigs(ref_weight_qconfig, wq_info.quantizer_module_ref)
 
     ref_activation_qconfig = QuantizerConfig(bits=4,
                                              mode=QuantizationMode.ASYMMETRIC,
@@ -324,32 +324,6 @@ def test_quantize_has_proper_is_weights_flag():
                 assert op.operand.is_weights == isinstance(op, UpdateWeight)
     for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER).items():
         assert aq.is_weights is False
-
-
-def test_can_quantize_free_operators(mocker):
-    class Model(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.weight = nn.Parameter(torch.ones([1]))
-            self.bias = nn.Parameter(torch.ones([1]))
-
-        def forward(self, x):
-            return F.linear(x, self.weight, self.bias)
-
-    mod = Model()
-    config = get_quantization_config_without_range_init(model_size=1)
-
-    config["compression"].update({"quantize_inputs": False})
-    quant_model, _ = create_compressed_model_and_algo_for_test(mod, config)
-
-    quantizer_list = quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.FUNCTION_QUANTIZER).values()
-    assert len(quantizer_list) == 2
-    for quantizer in quantizer_list:
-        mocker.spy(quantizer, 'quantize')
-
-    quant_model.do_dummy_forward()
-    for quantizer in quantizer_list:
-        assert quantizer.quantize.call_count == 1
 
 
 @pytest.fixture(name="hw_config_type", params=HWConfigType)

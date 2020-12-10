@@ -103,24 +103,47 @@ class InsertionInfo:
     def __hash__(self):
         return hash(str(self))
 
+    @classmethod
+    def from_insertion_point(cls, ip: 'InsertionPoint') -> 'InsertionInfo':
+        return cls(OperationExecutionContext(
+            operator_name=ip.ia_op_exec_context.operator_name,
+            scope_in_model=ip.ia_op_exec_context.scope_in_model,
+            call_order=ip.ia_op_exec_context.call_order,
+            tensor_metas=[None]), in_port_id=ip.input_port_id)
+
 
 class InsertionPoint:
-    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
-                 insertion_type: InsertionType,
+    def __init__(self, insertion_type: InsertionType, *,
+                 ia_op_exec_context: InputAgnosticOperationExecutionContext = None,
+                 module_scope: 'Scope' = None,
                  input_port_id: int = None):
-        self.ia_op_exec_context = ia_op_exec_context
         self.insertion_type = insertion_type
+        if self.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
+            if module_scope is None:
+                raise ValueError("Should specify module scope for module pre- and post-op insertion points!")
+
+        if self.insertion_type in [InsertionType.OPERATOR_PRE_HOOK, InsertionType.OPERATOR_POST_HOOK]:
+            if ia_op_exec_context is None:
+                raise ValueError("Should specify an operator's InputAgnosticOperationExecutionContext "
+                                 "for operator pre- and post-hook insertion points!")
+        self.module_scope = module_scope
+        self.ia_op_exec_context = ia_op_exec_context
         self.input_port_id = input_port_id
 
     def __eq__(self, other: 'InsertionPoint'):
         return self.insertion_type == other.insertion_type and self.ia_op_exec_context == other.ia_op_exec_context \
-               and self.input_port_id == other.input_port_id
+               and self.input_port_id == other.input_port_id and self.module_scope == other.module_scope
 
     def __str__(self):
         prefix = str(self.insertion_type)
-        if self.input_port_id is not None:
-            prefix += " {}".format(self.input_port_id)
-        return prefix + " " + str(self.ia_op_exec_context)
+        retval = prefix
+        if self.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
+            retval += " {}".format(self.module_scope)
+        elif self.insertion_type in [InsertionType.OPERATOR_PRE_HOOK, InsertionType.OPERATOR_POST_HOOK]:
+            if self.input_port_id is not None:
+                retval += " {}".format(self.input_port_id)
+            retval += " " + str(self.ia_op_exec_context)
+        return retval
 
     def __hash__(self):
         return hash(str(self))
@@ -186,6 +209,7 @@ class InsertionPointGraph(nx.DiGraph):
     def __init__(self, model_nx_graph: nx.DiGraph):
         super().__init__()
         self._base_nx_graph = deepcopy(model_nx_graph)
+        self._input_ips = []  # type: List[InsertionPoint]
 
         for node_key, node in self._base_nx_graph.nodes.items():
             attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: node,
@@ -200,6 +224,7 @@ class InsertionPointGraph(nx.DiGraph):
             from_node, to_node = edge
             attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
             self.add_edge(from_node, to_node, **attrs)
+
 
         # TODO: Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
@@ -223,9 +248,9 @@ class InsertionPointGraph(nx.DiGraph):
                 from_node_key, to_node_key = edge
                 ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
 
-                pre_hook_insertion_point = InsertionPoint(ia_op_exec_context,
-                                                          InsertionType.OPERATOR_PRE_HOOK,
-                                                          port_id)
+                pre_hook_insertion_point = InsertionPoint(InsertionType.OPERATOR_PRE_HOOK,
+                                                          ia_op_exec_context=ia_op_exec_context,
+                                                          input_port_id=port_id)
                 pre_hook_ip_attrs = {
                     InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                     InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
@@ -239,8 +264,8 @@ class InsertionPointGraph(nx.DiGraph):
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             # Post-hook insertion point nodes
-            post_hook_insertion_point = InsertionPoint(ia_op_exec_context,
-                                                       InsertionType.OPERATOR_POST_HOOK)
+            post_hook_insertion_point = InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                                                       ia_op_exec_context=ia_op_exec_context)
             post_hook_ip_attrs = {
                 InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                 InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: post_hook_insertion_point
@@ -260,6 +285,9 @@ class InsertionPointGraph(nx.DiGraph):
             self.add_edge(operator_node_key, ip_node_key)
             operator_node = self.nodes[operator_node_key]
             operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
+
+            if ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                self._input_ips.append(post_hook_insertion_point)
 
     def _base_graph_match_has_breaking_output_edges(self, match):
         for node_key in match[:-1]:
@@ -367,6 +395,10 @@ class InsertionPointGraph(nx.DiGraph):
                     matching_ip_graph_op_nodes_list.append(node)
         return matching_ip_graph_op_nodes_list
 
+    def get_input_insertion_points(self) -> List[InsertionPoint]:
+        return self._input_ips
+
+
 
 # pylint: disable=too-many-public-methods
 
@@ -383,7 +415,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
-        self._dummy_forward_fn = dummy_forward_fn
+        self._user_dummy_forward_fn = dummy_forward_fn
 
         device = next(module.parameters()).device
 
@@ -453,6 +485,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def _set_nncf_wrapped_model(self, value):
         setattr(self, MODEL_WRAPPED_BY_NNCF_ATTR_NAME, value)
 
+    def get_clean_shallow_copy(self) -> 'NNCFNetwork':
+        # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
+        # and load_nncf_module_additions to preserve these, or temporary_clean_view().
+        return NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
+                           self._user_dummy_forward_fn, self._wrap_inputs_fn,
+                           self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes)
+
     def get_modules_in_nncf_modules_by_type(self, types) -> Dict['Scope', nn.Module]:
         nncf_modules = self.get_nncf_modules()
         retval = {}
@@ -501,10 +540,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         elif point.insertion_type == InsertionType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
         else:
-            norm_target_scope = self._normalize_variable_recurrent_scope(point.ia_op_exec_context.scope_in_model)
+            norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
-            nncf_module = self.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            nncf_module = self.get_module_by_scope(point.module_scope)
             if point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
@@ -528,11 +567,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return self._compressed_context
 
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing):
-        if self._dummy_forward_fn is None:
+        if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
                                            wrap_inputs_fn=self._wrap_inputs_fn)
-        return self._dummy_forward_fn
+        return self._user_dummy_forward_fn
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
@@ -564,8 +603,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         for module in all_quantizations.values():
             module.initialized = False
 
-    def get_post_pattern_insertion_points(self, pattern: 'NNCFNodeExpression',
-                                          omit_nodes_in_nncf_modules=False) -> List[InsertionInfo]:
+    def get_post_pattern_insertion_infos(self, pattern: 'NNCFNodeExpression',
+                                         omit_nodes_in_nncf_modules=False) -> List[InsertionInfo]:
         io_infos = self._original_graph.get_matching_nncf_graph_pattern_io_list(pattern)
 
         insertion_infos = []
@@ -742,7 +781,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             count = count + param.numel()
         return count
 
-    def get_flops_per_module(self):
+    def get_flops_per_module(self) -> Dict['Scope', int]:
         """
         Calculates FLOPS count for modules.
         """
@@ -750,7 +789,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         flops_count_dict = {}
 
         def get_hook(name):
-            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, name=name)
+            ctx = self._compressed_context
+            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, ctx=ctx)
 
         hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
 
@@ -770,6 +810,34 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def get_input_infos(self) -> List[ModelInputInfo]:
         return deepcopy(self.input_infos)
+
+    def save_nncf_module_additions(self) -> Dict['Scope', Tuple[torch.nn.ModuleDict, torch.nn.ModuleDict]]:
+        retval = {}
+        for module_scope, nncf_module in self.get_nncf_modules().items():
+            retval[module_scope] = (deepcopy(nncf_module.pre_ops), deepcopy(nncf_module.post_ops))
+        return retval
+
+    def load_nncf_module_additions(self,
+                                   scope_vs_pre_post_ops_dict: Dict['Scope', Tuple[torch.nn.ModuleDict,
+                                                                                   torch.nn.ModuleDict]]):
+        for module_scope, nncf_module in self.get_nncf_modules().items():
+            nncf_module.pre_ops = scope_vs_pre_post_ops_dict[module_scope][0]
+            nncf_module.post_ops = scope_vs_pre_post_ops_dict[module_scope][1]
+
+    def temporary_clean_view(self):
+        class Mgr:
+            def __init__(self, model: NNCFNetwork):
+                self.model = model
+                self.storage_dict = {}
+
+            def __enter__(self):
+                self.storage_dict = self.model.save_nncf_module_additions()
+                clean_model = self.model.get_clean_shallow_copy()
+                return clean_model
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                self.model.load_nncf_module_additions(self.storage_dict)
+        return Mgr(self)
 
     @staticmethod
     def collect_eval_only_ops_exec_context(model: nn.Module, graph_builder) -> List[str]:

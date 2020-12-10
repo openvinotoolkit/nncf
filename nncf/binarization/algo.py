@@ -22,7 +22,6 @@ from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, Wei
     ActivationBinarizationScaleThreshold, BaseBinarizer
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.nncf_logger import logger as nncf_logger
@@ -70,15 +69,11 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
                 nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
                 op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(module.weight.shape)).to(device)
 
-                insertion_commands.append(InsertionCommand(
-                    InsertionPoint(
-                        InputAgnosticOperationExecutionContext("", scope, 0),
-                        InsertionType.NNCF_MODULE_PRE_OP), op_weights, OperationPriority.QUANTIZATION_PRIORITY))
+                ip = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
+                                    module_scope=scope)
+                insertion_commands.append(InsertionCommand(ip, op_weights, OperationPriority.QUANTIZATION_PRIORITY))
 
-                insertion_commands.append(InsertionCommand(
-                    InsertionPoint(
-                        InputAgnosticOperationExecutionContext("", scope, 0),
-                        InsertionType.NNCF_MODULE_PRE_OP), op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
+                insertion_commands.append(InsertionCommand(ip, op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:

@@ -125,15 +125,15 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
     clusters = compression_ctrl.pruned_module_groups_info
     all_pruned_modules_info = clusters.get_all_nodes()
     all_pruned_modules = [info.module for info in all_pruned_modules_info]
-    print([minfo.module_name for minfo in all_pruned_modules_info])
+    print([minfo.module_scope for minfo in all_pruned_modules_info])
     for module_name in not_pruned_modules:
         module = compressed_model.get_module_by_scope(Scope.from_str(module_name))
         assert module not in all_pruned_modules
 
     # 2. Check that all pruned groups are valid
     for group in pruned_groups:
-        first_node_scope_name = group[0]
-        cluster = clusters.get_cluster_by_node_id(first_node_scope_name)
+        first_node_scope = Scope.from_str(group[0])
+        cluster = clusters.get_cluster_by_node_id(first_node_scope)
         cluster_modules = [n.module for n in cluster.nodes]
         group_modules = [compressed_model.get_module_by_scope(Scope.from_str(module_scope)) for module_scope in group]
 

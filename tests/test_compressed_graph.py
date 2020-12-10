@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from abc import abstractmethod, ABC
-from typing import List, Tuple, Dict, Optional, Callable, Union
+from typing import List, Tuple, Dict, Callable, Union
 
 import networkx as nx
 import os
@@ -30,16 +30,14 @@ from nncf.dynamic_graph.graph_builder import create_input_infos, create_mock_ten
 from nncf import nncf_model_input
 from nncf.layers import LSTMCellNNCF, NNCF_RNN
 from nncf.model_creation import create_compression_algorithm_builders
-from nncf.nncf_network import NNCFNetwork, InsertionInfo
+from nncf.nncf_network import NNCFNetwork, InsertionType
 from nncf.utils import get_all_modules_by_type
 from tests import test_models
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
 from tests.helpers import get_empty_config, create_compressed_model_and_algo_for_test
-from nncf.quantization.algo import PotentialQuantizedModule
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
-from nncf.quantization.layers import QuantizerConfig
-from nncf.hw_config import HWConfig, HWConfigType
+from nncf.quantization.structs import SingleConfigQuantizerSetup
+from nncf.hw_config import HWConfigType
 from tests.test_models.synthetic import ManyNonEvalModules, PoolUnPool, ArangeModel, TransposeModel, \
     GatherModel, MaskedFillModel, ReshapeModel, ModelWithDummyParameter
 
@@ -343,7 +341,21 @@ def test_gnmt_quantization(_case_config):
     model = replace_lstm(model)
     forward_fn_ = gnmt_forward_fn(seq_len=10, batch_size=3, vocab_size=32)
 
-    config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=[3, 10])
+    config = get_basic_quantization_config(_case_config.quant_type)
+    config["input_info"] = [
+        {
+            "sample_size": [3, 10],
+            "type": "long"
+        },
+        {
+            "sample_size": [3],
+            "type": "long"
+        },
+        {
+            "sample_size": [3, 10],
+            "type": "long"
+        }
+    ]
     config["quantizer_setup_type"] = 'pattern_based'
     config["compression"].update({
         "quantizable_subgraph_patterns": [["linear", "__add__"],
@@ -775,23 +787,14 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     config = get_basic_quantization_config_with_hw_config_type(hw_config_type.value,
                                                                input_sample_size=desc.input_sample_sizes)
     input_info_list = create_input_infos(config)
-    hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
-    hw_config = HWConfig.from_json(hw_config_path)
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
     # pylint:disable=protected-access
-    compression_algo_builder = create_compression_algorithm_builders(config)[0]
-    potential_weights_modules = \
-        compression_algo_builder.get_potential_quantized_modules(compressed_model)
-    prop_graph_solver = QuantizerPropagationSolver(hw_config=hw_config)
-    insertion_point_graph = compressed_model.get_insertion_point_graph()
-    merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_config)
-    quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
-    potential_activations_quantizers = quantization_proposal.quantizer_insertion_info_vs_possible_configs
+    compression_algo_builder = create_compression_algorithm_builders(config)[0]  # type: QuantizationBuilder
+    single_config_quantizer_setup = compression_algo_builder._get_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 
-    potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, potential_activations_quantizers,
-                                                                  potential_weights_modules)
+    potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
     check_graph(potential_quantizer_graph, desc.dot_filename, _case_dir(hw_config_type.value), sort_dot_graph=False)
 
 
@@ -801,74 +804,76 @@ def _case_dir(type_hw_config):
 
 
 def prepare_potential_quantizer_graph(graph: NNCFGraph,
-                                      potential_activations_quantizers: Dict[InsertionInfo,
-                                                                             Optional[List[QuantizerConfig]]],
-                                      potential_weights_modules: List[PotentialQuantizedModule]) -> NNCFGraph:
+                                      quantizer_setup: SingleConfigQuantizerSetup) -> NNCFGraph:
     quantizers_weights_attr = {}
-    quantizers_activations_attr = {}  # type: Dict[InputAgnosticOperationExecutionContext, Tuple[int, str]]
+    pre_hooked_quantizers_activations_attr = {}  # type: Dict[InputAgnosticOperationExecutionContext, Tuple[int, str]]
+    post_hooked_quantizers_activations_attr = {}  # type: Dict[InputAgnosticOperationExecutionContext, str]
+
     # pylint:disable=protected-access
-    for _, module_scope, qconfig_list in potential_weights_modules:
-        matching_graph_op_nodes = graph.get_op_nodes_in_scope(module_scope)
+    for qp in quantizer_setup.quantization_points.values():
+        if qp.is_weight_quantization_point():
+            module_scope = qp.insertion_point.module_scope
+            qconfig = qp.qconfig
+            matching_graph_op_nodes = graph.get_op_nodes_in_scope(module_scope)
 
-        assert len(matching_graph_op_nodes) == 1  # Isn't correct when NNCF module has more than 1 graph node
+            assert len(matching_graph_op_nodes) == 1  # Isn't correct when NNCF module has more than 1 graph node
 
-        op_name = matching_graph_op_nodes[0][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-        ia_op_exec_context = InputAgnosticOperationExecutionContext(op_name, module_scope, 0)
-        str_qconfig_list = ''
-
-        for qconfig in qconfig_list:
-            str_qconfig_list += '[' + str(qconfig) + '] '
-        quantizers_weights_attr[ia_op_exec_context] = str_qconfig_list
-
-    for insertion_info, qconfig_list in potential_activations_quantizers.items():
-        ia_op_exec_context = insertion_info.op_exec_context.input_agnostic
-        str_qconfig_list = ''
-        for qconfig in qconfig_list:
-            str_qconfig_list += '[' + str(qconfig) + '] '
-
-        quantizers_activations_attr[ia_op_exec_context] = (insertion_info.in_port_id, str_qconfig_list)
-        for linked_insertion_info in insertion_info.get_linked_insertion_infos():
-            quantizers_activations_attr[linked_insertion_info.op_exec_context.input_agnostic] = \
-                (linked_insertion_info.in_port_id, str_qconfig_list)
+            op_name = matching_graph_op_nodes[0][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+            ia_op_exec_context = InputAgnosticOperationExecutionContext(op_name, module_scope, 0)
+            str_qconfig = str(qconfig)
+            quantizers_weights_attr[ia_op_exec_context] = str_qconfig
+        elif qp.is_activation_quantization_point():
+            ia_op_exec_context = qp.insertion_point.ia_op_exec_context
+            qconfig = qp.qconfig
+            str_qconfig = str(qconfig)
+            if qp.insertion_point.insertion_type is InsertionType.OPERATOR_PRE_HOOK:
+                pre_hooked_quantizers_activations_attr[ia_op_exec_context] = \
+                    (qp.insertion_point.input_port_id, str_qconfig)
+            elif qp.insertion_point.insertion_type is InsertionType.OPERATOR_POST_HOOK:
+                post_hooked_quantizers_activations_attr[ia_op_exec_context] = str_qconfig
 
     nx_graph = graph._nx_graph
     nodes = deepcopy(nx_graph.nodes)
     for node_name, node in sorted(nodes.items()):
         ia_op_exec_context_for_node = nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
         node_scope = str(ia_op_exec_context_for_node)
-        if ia_op_exec_context_for_node in quantizers_activations_attr:
-            in_port_id, qconf_str = quantizers_activations_attr[ia_op_exec_context_for_node]
+        if ia_op_exec_context_for_node in pre_hooked_quantizers_activations_attr:
+            in_port_id, qconf_str = pre_hooked_quantizers_activations_attr[ia_op_exec_context_for_node]
             label = "Quantizer: {}".format(qconf_str)
-
             additional_node_attrs = dict(label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
                                          op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
 
-            if in_port_id is None:
-                # Adding a post-hook quantizer for the op
-                nx_graph.add_node(node_scope, **additional_node_attrs)
-                next_nodes = deepcopy(nx_graph._succ[node_name])
-                for next_node_name, next_node_attrs in next_nodes.items():
-                    existing_edge_attrs = deepcopy(next_node_attrs)
-                    nx_graph.add_edge(node_scope, next_node_name, **existing_edge_attrs)
-                    nx_graph.remove_edge(node_name, next_node_name)
-                nx_graph.add_edge(node_name, node_scope)
-            else:
-                node_scope_for_input = node_scope + '|IN' + str(in_port_id)
-                nx_graph.add_node(node_scope_for_input, **additional_node_attrs)
-                # Adding a pre-hook quantizer to a corresponding input port
-                edges_with_matching_in_port_id = []
+            node_scope_for_input = node_scope + '|IN' + str(in_port_id)
+            nx_graph.add_node(node_scope_for_input, **additional_node_attrs)
+            # Adding a pre-hook quantizer to a corresponding input port
+            edges_with_matching_in_port_id = []
 
-                for from_key, to_key, edge_attrs in nx_graph.in_edges(node_name, data=True):
-                    if edge_attrs[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
-                        edges_with_matching_in_port_id.append((from_key, to_key))
+            for from_key, to_key, edge_attrs in nx_graph.in_edges(node_name, data=True):
+                if edge_attrs[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                    edges_with_matching_in_port_id.append((from_key, to_key))
 
-                assert len(edges_with_matching_in_port_id) == 1
-                input_edge_to_break = edges_with_matching_in_port_id[0]
+            assert len(edges_with_matching_in_port_id) == 1
+            input_edge_to_break = edges_with_matching_in_port_id[0]
 
-                existing_edge_attrs = deepcopy(nx_graph.edges[input_edge_to_break])
-                nx_graph.remove_edge(input_edge_to_break[0], input_edge_to_break[1])
-                nx_graph.add_edge(input_edge_to_break[0], node_scope_for_input)
-                nx_graph.add_edge(node_scope_for_input, input_edge_to_break[1], **existing_edge_attrs)
+            existing_edge_attrs = deepcopy(nx_graph.edges[input_edge_to_break])
+            nx_graph.remove_edge(input_edge_to_break[0], input_edge_to_break[1])
+            nx_graph.add_edge(input_edge_to_break[0], node_scope_for_input)
+            nx_graph.add_edge(node_scope_for_input, input_edge_to_break[1], **existing_edge_attrs)
+
+        if ia_op_exec_context_for_node in post_hooked_quantizers_activations_attr:
+            qconf_str = post_hooked_quantizers_activations_attr[ia_op_exec_context_for_node]
+            label = "Quantizer: {}".format(qconf_str)
+            additional_node_attrs = dict(label=label, color="purple", id=node[NNCFGraph.ID_NODE_ATTR],
+                                         op_exec_context=nx_graph.nodes[node_name][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+
+            # Adding a post-hook quantizer for the op
+            nx_graph.add_node(node_scope, **additional_node_attrs)
+            next_nodes = deepcopy(nx_graph._succ[node_name])
+            for next_node_name, next_node_attrs in next_nodes.items():
+                existing_edge_attrs = deepcopy(next_node_attrs)
+                nx_graph.add_edge(node_scope, next_node_name, **existing_edge_attrs)
+                nx_graph.remove_edge(node_name, next_node_name)
+            nx_graph.add_edge(node_name, node_scope)
 
         if ia_op_exec_context_for_node in quantizers_weights_attr:
             label = "Quantizer: {}".format(quantizers_weights_attr[ia_op_exec_context_for_node])

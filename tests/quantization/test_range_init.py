@@ -217,10 +217,6 @@ class TestRangeInit:
                 "bits": 7,
                 "mode": "asymmetric",
             },
-            "/nncf_model_input_0": {
-                "bits": 7,
-                "mode": "asymmetric",
-            },
             r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
                 "bits": 7,
                 "signed": False,
@@ -236,15 +232,16 @@ class TestRangeInit:
         group_1 = [quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
                                       "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"],
-                   quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/AsymmetricQuantizer"
-                                      "[/nncf_model_input_0]"],
                    quantizer_str_dict["NNCFNetwork/TwoConvTestModel[nncf_module]/Sequential[features]/"
                                       "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"]
                    ]
         group_2 = [quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
-                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0]"]]
+                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0]"],
+                   quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                                      "[/nncf_model_input_0]"],
+                   ]
 
         for quantizer in group_1:
             assert isinstance(quantizer, AsymmetricQuantizer)
@@ -540,8 +537,8 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(synth_weight_model,
                                                                     config_with_init)
 
-    weight_quantizer = next(iter(compression_ctrl.weight_quantizers.values()))
-    check_scales(weight_quantizer, per_channel)
+    weight_quantizer_info = next(iter(compression_ctrl.weight_quantizers.values()))
+    check_scales(weight_quantizer_info.quantizer_module_ref, per_channel)
 
 
 @pytest.mark.parametrize(("config_cutter", "range_init_call_count", "precision_init_call_count",

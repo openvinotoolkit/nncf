@@ -170,42 +170,38 @@ class TestInsertionCommands:
                                             [ModelInputInfo([1, 1, 10, 10])])  # type: NNCFNetwork
 
     conv1_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv1]')
-    conv1_module_context = InputAgnosticOperationExecutionContext('', conv1_module_scope, 0)
-    point_for_conv1_weights = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                             insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv1_inputs = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                            insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv1_activations = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                                 insertion_type=InsertionType.NNCF_MODULE_POST_OP)
+    point_for_conv1_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                             module_scope=conv1_module_scope)
+    point_for_conv1_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                            module_scope=conv1_module_scope)
+    point_for_conv1_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
+                                                 module_scope=conv1_module_scope)
 
     conv2_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv2]')
-    conv2_module_context = InputAgnosticOperationExecutionContext('', conv2_module_scope, 0)
-    point_for_conv2_weights = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                             insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv2_inputs = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                            insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv2_activations = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                                 insertion_type=InsertionType.NNCF_MODULE_POST_OP)
+    point_for_conv2_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                             module_scope=conv2_module_scope)
+    point_for_conv2_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                            module_scope=conv2_module_scope)
+    point_for_conv2_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
+                                                 module_scope=conv2_module_scope)
 
     linear_op_scope = Scope.from_str('InsertionPointTestModel/linear_0')
     linear_op_context = InputAgnosticOperationExecutionContext('linear',
                                                                linear_op_scope,
                                                                0)
-    point_for_linear_weight_input = InsertionPoint(ia_op_exec_context=linear_op_context,
-                                                   insertion_type=InsertionType.OPERATOR_PRE_HOOK,
-                                                   input_port_id=0)
-    point_for_linear_activation = InsertionPoint(ia_op_exec_context=linear_op_context,
-                                                 insertion_type=InsertionType.OPERATOR_POST_HOOK)
+    point_for_linear_weight_input = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
+                                                   ia_op_exec_context=linear_op_context, input_port_id=0)
+    point_for_linear_activation = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
+                                                 ia_op_exec_context=linear_op_context)
 
     relu_op_scope = Scope.from_str('InsertionPointTestModel/ReLU[relu]/relu')
     relu_op_context = InputAgnosticOperationExecutionContext('relu',
                                                              relu_op_scope,
                                                              0)
-    point_for_relu_inputs = InsertionPoint(ia_op_exec_context=relu_op_context,
-                                           insertion_type=InsertionType.OPERATOR_PRE_HOOK,
-                                           input_port_id=0)
-    point_for_relu_activations = InsertionPoint(ia_op_exec_context=relu_op_context,
-                                                insertion_type=InsertionType.OPERATOR_POST_HOOK)
+    point_for_relu_inputs = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
+                                           ia_op_exec_context=relu_op_context, input_port_id=0)
+    point_for_relu_activations = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
+                                                ia_op_exec_context=relu_op_context)
 
     available_points = [point_for_conv1_weights,
                         point_for_conv2_weights,
@@ -239,12 +235,12 @@ class TestInsertionCommands:
             assert ctx._post_hooks[command.insertion_point.ia_op_exec_context][0] is hook
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
             module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+                command.insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
 
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
             module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+                command.insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]
@@ -313,12 +309,12 @@ class TestInsertionCommands:
             self.check_order(ctx._post_hooks[point.ia_op_exec_context], hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.pre_ops.values()), hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
 
@@ -645,6 +641,6 @@ def test_can_collect_scopes_of_train_only_modules():
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout_0',
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout_1',
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Linear[called_linear]/linear_0',
-        'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear_0'
+        'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/CustomWeightModule[custom]/linear_0'
     }
     assert set(actual_scopes) == ref_scopes

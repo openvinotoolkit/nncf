@@ -367,7 +367,7 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         model.train(is_original_mode_training)
 
 
-def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
+def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
     if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
                            nn.ConvTranspose3d)):
         ks = module.weight.data.shape
@@ -380,7 +380,7 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
             mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
     else:
         return
-    dict_to_save[name] = 2 * mac_count
+    dict_to_save[ctx.scope] = 2 * mac_count
 
 
 def add_domain(name_operator: str) -> str:

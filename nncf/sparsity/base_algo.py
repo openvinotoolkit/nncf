@@ -17,7 +17,6 @@ from typing import List
 from texttable import Texttable
 
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
@@ -53,9 +52,9 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
             operation = self.create_weight_sparsifying_operation(module)
             hook = UpdateWeight(operation).to(device)
-            insertion_commands.append(InsertionCommand(InsertionPoint(
-                InputAgnosticOperationExecutionContext("", module_scope, 0),
-                InsertionType.NNCF_MODULE_PRE_OP), hook, OperationPriority.SPARSIFICATION_PRIORITY))
+            insertion_commands.append(InsertionCommand(InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
+                                                                      module_scope=module_scope),
+                                                       hook, OperationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
                 SparseModuleInfo(scope_str, module, hook.operand))
 

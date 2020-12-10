@@ -17,18 +17,15 @@ from .layers import QuantizerConfig
 from .quantizer_id import QuantizerId
 
 
-class HWPrecisionConstraints:
-    def __init__(self, is_hw_config_enabled: bool):
+class PrecisionConstraints:
+    def __init__(self):
         self._constraints = {}  # type: Dict[QuantizerId, Set[int]]
-        self._is_hw_config_enabled = is_hw_config_enabled
 
-    def add(self, quantizer_id: QuantizerId, quantizer_configs: List[QuantizerConfig]):
-        if self._is_hw_config_enabled:
-            self._constraints[quantizer_id] = {quantizer_config.bits for quantizer_config in quantizer_configs}
-        return self
+    def add(self, quantizer_id: QuantizerId, bits_set: Set[int]):
+        self._constraints[quantizer_id] = bits_set
 
     def get(self, quantizer_id: QuantizerId) -> Set[int]:
-        if self._is_hw_config_enabled and quantizer_id in self._constraints:
+        if quantizer_id in self._constraints:
             return self._constraints[quantizer_id]
         return set()
 

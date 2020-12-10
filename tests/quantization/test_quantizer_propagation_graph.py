@@ -43,7 +43,11 @@ class TestQuantizerPropagationStateGraph:
     @pytest.fixture()
     def mock_qp_graph():
         ip_graph = InsertionPointGraph(get_two_branch_mock_model_graph())
-        yield QPSG(ip_graph)
+        qpsg = QPSG(ip_graph)
+        qpsg.skip_check = False
+        yield qpsg
+        if not qpsg.skip_check:
+            qpsg.run_consistency_check()
 
     def test_build_quantizer_propagation_state_graph_from_ip_graph(self):
         ip_graph = InsertionPointGraph(get_two_branch_mock_model_graph())
@@ -71,6 +75,8 @@ class TestQuantizerPropagationStateGraph:
             assert not qpg_edge_data[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             for key, value in edge_data.items():
                 assert qpg_edge_data[key] == value
+
+        quant_prop_graph.run_consistency_check()
 
     def test_add_propagating_quantizer(self, mock_qp_graph):
         ref_qconf_list = [QuantizerConfig(), QuantizerConfig(bits=6)]
@@ -192,6 +198,7 @@ class TestQuantizerPropagationStateGraph:
                 from_node = working_graph.nodes[from_node_key]
                 if from_node[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
                     ref_affected_ip_nodes.add(from_node_key)
+            working_graph.run_consistency_check()
 
             final_node_key, _ = path[-1]
             final_node = working_graph.nodes[final_node_key]
@@ -285,6 +292,9 @@ class TestQuantizerPropagationStateGraph:
             edge = mock_qp_graph.edges[from_node_key, to_node_key]
             assert cloned_prop_quant in edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
+        # The cloned quantizer had not been put into any IP (cannot have multiple PQs in one IP right now)
+        mock_qp_graph.skip_check = True
+
     START_TARGET_NODES_FOR_TWO_QUANTIZERS = [
         (InsertionPointGraph.get_pre_hook_node_key("E"),
          InsertionPointGraph.get_post_hook_node_key("C"),
@@ -335,6 +345,7 @@ class TestQuantizerPropagationStateGraph:
         prop_quant_to_keep = mock_qp_graph.propagate_quantizer_via_path(prop_quant_to_keep, rev_path_keep)
 
         affected_ip_nodes = deepcopy(prop_quant_to_remove.affected_ip_nodes)
+        affected_op_nodes = deepcopy(prop_quant_to_remove.affected_operator_nodes)
         affected_edges = deepcopy(prop_quant_to_keep.affected_edges)
         last_location = prop_quant_to_remove.current_location_node_key
         ref_quant_to_keep_state_dict = deepcopy(prop_quant_to_keep.__dict__)
@@ -346,6 +357,10 @@ class TestQuantizerPropagationStateGraph:
 
         for ip_node_key in affected_ip_nodes:
             node = mock_qp_graph.nodes[ip_node_key]
+            assert prop_quant_to_remove not in node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+
+        for op_node_key in affected_op_nodes:
+            node = mock_qp_graph.nodes[op_node_key]
             assert prop_quant_to_remove not in node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
         for from_node_key, to_node_key in affected_edges:
@@ -585,7 +600,6 @@ class TestQuantizerPropagationStateGraph:
         quant_prop_graph = QPSG(ip_graph)
 
         for quantizers_test_struct in merge_quantizer_into_path_test_struct.start_set_quantizers:
-
             init_node_to_trait_and_configs_dict = quantizers_test_struct.init_node_to_trait_and_configs_dict
             starting_quantizer_ip_node = quantizers_test_struct.starting_quantizer_ip_node
             target_node = quantizers_test_struct.target_node_for_quantizer
@@ -614,8 +628,11 @@ class TestQuantizerPropagationStateGraph:
             if is_merged:
                 merged_prop_quant.append((primary_prop_quant, prop_path))
 
+            quant_prop_graph.run_consistency_check()
+
         for prop_quant, prop_path in merged_prop_quant:
             quant_prop_graph.merge_quantizer_into_path(prop_quant, prop_path)
+            quant_prop_graph.run_consistency_check()
 
         expected_quantizers_test_struct = merge_quantizer_into_path_test_struct.expected_set_quantizers
         self.check_final_state_qpsg(quant_prop_graph, expected_quantizers_test_struct)

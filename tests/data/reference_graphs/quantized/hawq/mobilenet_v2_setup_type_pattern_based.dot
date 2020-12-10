@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, label="nncf_model_input_#0", scope="", style=filled, type=nncf_model_input];
-"1 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=orange, id=1, label="6_bit__WFQ_#1", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
-"2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" [color=orange, id=2, label="6_bit__AFQ_#2", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
+"1 SymmetricQuantizer/symmetric_quantize" [color=orange, id=1, label="6_bit__AFQ_#1", scope=SymmetricQuantizer, style=filled, type=symmetric_quantize];
+"2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=orange, id=2, label="6_bit__WFQ_#2", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d" [color=lightblue, id=3, label="conv2d_#3", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]", style=filled, type=conv2d];
 "4 MobileNetV2/Sequential[features]/ConvBNReLU[0]/BatchNorm2d[1]/batch_norm" [id=4, label="batch_norm_#4", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/BatchNorm2d[1]", style=filled, type=batch_norm];
 "5 MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh" [id=5, label="hardtanh_#5", scope="MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]", style=filled, type=hardtanh];
@@ -269,9 +269,9 @@ strict digraph  {
 "267 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=267, label="dropout_#267", scope="MobileNetV2/Sequential[classifier]/Dropout[0]", style=filled, type=dropout];
 "268 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=orange, id=268, label="6_bit__WFQ_#268", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=269, label="linear_#269", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", style=filled, type=linear];
-"0 /nncf_model_input" -> "2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"1 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d";
-"2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateInputs[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d";
+"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
+"1 SymmetricQuantizer/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d";
+"2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d";
 "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d" -> "4 MobileNetV2/Sequential[features]/ConvBNReLU[0]/BatchNorm2d[1]/batch_norm";
 "4 MobileNetV2/Sequential[features]/ConvBNReLU[0]/BatchNorm2d[1]/batch_norm" -> "5 MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh";
 "5 MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh" -> "6 MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize";

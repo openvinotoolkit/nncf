@@ -11,23 +11,24 @@
  limitations under the License.
 """
 from collections import OrderedDict
+from copy import deepcopy
 from pathlib import Path
 from typing import List, Dict
 
 import os
 import torch
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.quantizer_propagation import QuantizerInsertionInfo
-from .hawq_init import GroupsOfAdjacentQuantizers
-from .perturbations import Perturbations, PerturbationObserver
-from .traces_order import TracesPerLayer
-from ...dynamic_graph.graph import NNCFGraph
-from ...layers import NNCFConv2d
-from ...utils import get_all_modules_by_type
+from nncf.quantization.precision_init.hawq_init import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
+from nncf.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.layers import NNCFConv2d
+from nncf.utils import get_all_modules_by_type
 
 
 class HAWQDebugger:
@@ -71,20 +72,18 @@ class HAWQDebugger:
                 get_all_modules_by_type(
                     model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
                     quantization_type))
-            all_quantizations.update(
-                get_all_modules_by_type(
-                    model.get_compression_modules_by_type(ExtraCompressionModuleType.FUNCTION_QUANTIZER),
-                    quantization_type))
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 
     @staticmethod
     def _paint_activation_quantizer_node(nncf_graph: NNCFGraph,
+                                         quantizer_id: NonWeightQuantizerId,
                                          quantizer_info: 'NonWeightQuantizerInfo',
                                          bits_color_map: Dict[int, str],
                                          groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        affected_insertion_infos_list = quantizer_info.affected_insertions  # type: List[QuantizerInsertionInfo]
+        #pylint:disable=too-many-branches
+        affected_insertion_infos_list = quantizer_info.affected_insertions  # type: List[InsertionInfo]
 
         for insertion_info in affected_insertion_infos_list:
             input_agnostic_op_exec_context = insertion_info.op_exec_context.input_agnostic
@@ -143,21 +142,17 @@ class HAWQDebugger:
             activation_fq_node['color'] = bits_color_map[bits]
             activation_fq_node['style'] = 'filled'
             node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
-            activation_quantizer = quantizer_info.quantizer_module_ref
-
 
             activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
             grouped_mode = bool(groups_of_adjacent_quantizers)
             if grouped_mode:
                 group_id_str = 'UNDEFINED'
-                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
+                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
                 if node_id is None:
                     nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
                 else:
                     group_id_str = str(group_id)
                 activation_fq_node['label'] += "_G" + group_id_str
-
-
 
     @staticmethod
     def get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
@@ -165,7 +160,7 @@ class HAWQDebugger:
         # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
         # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
         # of the quantizer's bitwidth.
-
+        #pylint:disable=too-many-branches
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -189,29 +184,42 @@ class HAWQDebugger:
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
         bits_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
-        for quantizer_info in non_weight_quantizers.values():
-            HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_info, bits_color_map,
+        for quantizer_id, quantizer_info in non_weight_quantizers.items():
+            HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_id,
+                                                          quantizer_info, bits_color_map,
                                                           groups_of_adjacent_quantizers)
 
         for scope, quantizer in all_quantizers_per_full_scope.items():
-            if quantizer.is_weights:
-                node = nncf_graph.find_node_in_nx_graph_by_scope(scope)
-                if node is None:
-                    raise AttributeError('Failed to get node by scope={}'.format(str(scope)))
-                if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
-                    bits = quantizer.num_bits
-                    node_id = node[NNCFGraph.ID_NODE_ATTR]
-                    node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
-                    if grouped_mode:
-                        group_id_str = 'UNDEFINED'
-                        group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer)
-                        if group_id is None:
-                            nncf_logger.error('No group for weight quantizer: {}'.format(scope))
-                        else:
-                            group_id_str = str(group_id)
-                        node['label'] += '_G' + group_id_str
-                    node['color'] = bits_color_map[bits]
-                    node['style'] = 'filled'
+            if not quantizer.is_weights:
+                continue
+            node = nncf_graph.find_node_in_nx_graph_by_scope(scope)
+            if node is None:
+                raise AttributeError('Failed to get node by scope={}'.format(str(scope)))
+            if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                bits = quantizer.num_bits
+                node_id = node[NNCFGraph.ID_NODE_ATTR]
+                node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
+                if grouped_mode:
+                    group_id_str = 'UNDEFINED'
+                    normalized_scope = deepcopy(scope)
+                    normalized_scope.pop()  # SymmetricQuantizer
+                    normalized_scope.pop()  # UpdateWeights
+                    normalized_scope.pop()  # ModuleDict[pre_ops]
+                    for wq_id in algo_ctrl.weight_quantizers.keys():
+                        if wq_id.get_scope() == normalized_scope:
+                            quantizer_id = wq_id
+                            break
+                    else:
+                        raise RuntimeError("Could not associate a weight quantizer inside a model with any "
+                                           "weight quantizer registered in the quantization controller!")
+                    group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
+                    if group_id is None:
+                        nncf_logger.error('No group for weight quantizer: {}'.format(scope))
+                    else:
+                        group_id_str = str(group_id)
+                    node['label'] += '_G' + group_id_str
+                node['color'] = bits_color_map[bits]
+                node['style'] = 'filled'
         return nncf_graph
 
     def dump_avg_traces(self):

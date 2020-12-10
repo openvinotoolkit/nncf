@@ -73,6 +73,12 @@ class QuantizerConfig:
                (self.signedness_to_force is None and other.signedness_to_force is not None) or \
                (not self.per_channel and other.per_channel)
 
+    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: 'QuantizerConfig'):
+        return self.bits == linked_qconfig.bits and \
+               self.mode == linked_qconfig.mode and \
+               self.signedness_to_force == linked_qconfig.signedness_to_force and \
+               self.per_channel == linked_qconfig.per_channel
+
 
 class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"
@@ -203,6 +209,10 @@ class BaseQuantizer(nn.Module):
     def extra_repr(self):
         return 'bit={}, ch={}, wt={}'.format(
             self.num_bits, self.per_channel, self.is_weights)
+
+    def get_current_config(self) -> QuantizerConfig:
+        raise NotImplementedError
+
 
 class QuantizersSwitcher:
     """ Enables/disables quantizers with saving and restoring original state """
@@ -406,6 +416,14 @@ class SymmetricQuantizer(BaseQuantizer):
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
         raise RuntimeError
 
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.SYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
@@ -544,3 +562,12 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                       input_low_tuned, input_high_tuned,
                                                       input_low_tuned, input_high_tuned)
         raise RuntimeError
+
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.ASYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)

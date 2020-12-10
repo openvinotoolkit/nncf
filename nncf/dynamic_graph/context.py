@@ -197,7 +197,10 @@ class Scope:
 
     @staticmethod
     def from_str(string: str) -> 'Scope':
-        elts = string.split('/')
+        if string:
+            elts = string.split('/')
+        else:
+            elts = []
         return Scope([ScopeElement.from_str(s) for s in elts])
 
 

@@ -12,12 +12,13 @@
 """
 from typing import List, Dict
 
+from nncf.nncf_network import NNCFNetwork
+
 from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
-from .manual_init import WeightQuantizersHandler
-from ..hw_precision_constraints import HWPrecisionConstraints
-from ..quantizer_id import QuantizerId
-from ...dynamic_graph.transform_graph import is_nncf_module
-from ...utils import get_all_modules_by_type
+from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
+from nncf.quantization.precision_constraints import PrecisionConstraints
+from nncf.quantization.quantizer_id import QuantizerId
+from nncf.utils import get_all_modules_by_type
 
 
 class CompressionRatioCalculator:
@@ -29,21 +30,20 @@ class CompressionRatioCalculator:
     """
     DEFAULT_NUMBER_OF_BITS = 8
 
-    def __init__(self, model, quantizers_handler: WeightQuantizersHandler):
-        flops_count_per_module_name = model.get_flops_per_module()
+    def __init__(self, model: NNCFNetwork, quantizers_handler: WeightQuantizersHandler):
+        flops_count_per_module_scope = model.get_flops_per_module()
 
         self._weight_quantizers_in_exec_order = quantizers_handler.get_weight_quantizers_in_execution_order_per_id()
 
         self.ops_per_quantizer_id = {}
-        for name, module in model.named_modules():
-            curr_ops = flops_count_per_module_name.get(name, 0)
-            if is_nncf_module(module):
-                quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-                all_quantizers_in_module = get_all_modules_by_type(module, quantization_types)
-                for quantizer in all_quantizers_in_module.values():
-                    if quantizer.is_weights:
-                        quantizer_id = quantizers_handler.get_id(quantizer)
-                        self.ops_per_quantizer_id[quantizer_id] = curr_ops
+        quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
+        all_quantizers_in_model = get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_types)
+
+        for scope in all_quantizers_in_model:
+            if quantizers_handler.is_wq_scope(scope):
+                quantizer_id = quantizers_handler.get_quantizer_id_by_scope(scope)
+                affected_module_scope = quantizers_handler.get_owning_module_scope_from_wq_scope(scope)
+                self.ops_per_quantizer_id[quantizer_id] = flops_count_per_module_scope[affected_module_scope]
 
         self.total_ops_count = sum(v for v in self.ops_per_quantizer_id.values()) * self.DEFAULT_NUMBER_OF_BITS
 
@@ -70,7 +70,7 @@ class CompressionRatioCalculator:
 
         return self.total_ops_count / quantizer_ops
 
-    def ratio_limits(self, bits: List[int], constraints: HWPrecisionConstraints = None,
+    def ratio_limits(self, bits: List[int], constraints: PrecisionConstraints = None,
                      skipped: Dict[QuantizerId, BaseQuantizer] = None) -> (float, float):
         """
         Calculates minimum and maximum compression ratio.
