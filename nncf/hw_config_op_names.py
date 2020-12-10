@@ -49,3 +49,4 @@ class HWConfigOpName:
     CROP = "Crop"
     TRANSPOSE = "Transpose"
     TILE = "Tile"
+    EMBEDDING = "Embedding"

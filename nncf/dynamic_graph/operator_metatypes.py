@@ -516,6 +516,7 @@ class ExpandMetatype(OperatorMetatype):
 class EmbeddingMetatype(OperatorMetatype):
     name = "embedding"
     torch_nn_functional_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.EMBEDDING]
 
 
 @OPERATOR_METATYPES.register()

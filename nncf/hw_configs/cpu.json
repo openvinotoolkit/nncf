@@ -227,6 +227,8 @@
         {"type": "Crop"},
         {"type": "Transpose"},
         {"type": "Tile"},
-        {"type": "StridedSlice"}
+        {"type": "StridedSlice"},
+        // NNCF-specific extensions are below:
+        {"type": "Embedding"} // relying on the rule to use default config for weighted ops with unspecified quantization
     ]
 }
