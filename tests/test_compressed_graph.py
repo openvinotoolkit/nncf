@@ -560,13 +560,11 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(layer=nn.ConvTranspose3d(1, 1, 1), input_sample_sizes=[1, 1, 1, 1, 1]),
 
     SingleLayerModelDesc(layer=nn.Linear(1, 1)),
-    SingleLayerModelDesc(layer=nn.Embedding(1, 1),
-                         input_info={"sample_size": [1, 1], "type": "long", "filler": "zeros"}),
 
     SingleLayerModelDesc(layer=nn.Embedding(1, 1),
-                         input_info={"sample_size": [1, 1], "type": "long", "filler":"zeros"}),
+                         input_info={"sample_size": [1, 1], "type": "long", "filler": "zeros"}),
     SingleLayerModelDesc(layer=nn.EmbeddingBag(1, 1),
-                         input_info={"sample_size": [1, 1], "type": "long", "filler":"zeros"}),
+                         input_info={"sample_size": [1, 1], "type": "long", "filler": "zeros"}),
 
     SingleLayerModelDesc(layer=nn.Hardtanh()),
     SingleLayerModelDesc(layer=nn.Tanh()),
