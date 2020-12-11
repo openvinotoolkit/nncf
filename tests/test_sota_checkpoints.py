@@ -8,6 +8,7 @@ import pytest
 import subprocess
 import re
 import shlex
+import sysconfig
 from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
@@ -456,6 +457,10 @@ def openvino_preinstall(openvino):
         subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
         subprocess.run("pip install scikit-image==0.17.2", check=True, shell=True)
         subprocess.run("{} setup.py install".format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
+
+        # Workaround to fix protobuf error
+        subprocess.run("touch __init__.py", cwd=os.path.join(sysconfig.get_paths()["purelib"], 'google'),
+                       check=True, shell=True)
 
 
 @pytest.fixture(autouse=True, scope="class")
