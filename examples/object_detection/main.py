@@ -181,7 +181,8 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
 
-    print_statistics(compression_ctrl.statistics())
+    if is_on_first_rank(config):
+        print_statistics(compression_ctrl.statistics())
 
     if config.mode.lower() == 'test':
         with torch.no_grad():
@@ -305,6 +306,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
     best_mAp = 0
     best_compression_level = CompressionLevel.NONE
+    config.test_interval = min(config.test_interval, config['max_iter'] - config.start_iter)
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
 
     for iteration in range(config.start_iter, config['max_iter']):
@@ -317,13 +319,13 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         compression_ctrl.scheduler.step()
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
+            if is_on_first_rank(config):
+                print_statistics(compression_ctrl.statistics())
 
         if (iteration + 1) % epoch_size == 0:
             compression_level = compression_ctrl.compression_level()
             is_best = False
             if (epoch + 1) % test_freq_in_epochs == 0:
-                if is_on_first_rank(config):
-                    print_statistics(compression_ctrl.statistics())
                 with torch.no_grad():
                     net.eval()
                     mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)
