@@ -499,10 +499,9 @@ class SingleLayerModelDesc(BaseDesc):
 
 
 class TorchBinaryMethodDesc(SingleLayerModelDesc):
-    def __init__(self, model_name: str, torch_method: Callable, wrap_inputs_fn=n_inputs_fn, input_info=None):
+    def __init__(self, model_name: str, torch_method: Callable, input_info=None):
         super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=([1], [1]),
-                         wrap_inputs_fn=wrap_inputs_fn, input_info=input_info)
-
+                         wrap_inputs_fn=n_inputs_fn, input_info=input_info)
 
 class TensorBinaryMethodsDesc(BaseDesc):
     def __init__(self, tensor_method: str, model_name: str = None, input_info=None):
@@ -656,7 +655,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
 
     TorchBinaryMethodDesc(model_name='embedding', torch_method=F.embedding,
                           input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
-    TorchBinaryMethodDesc(model_name='embedding_bag', torch_method=F.embedding_bag,
+    SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                           wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
                           input_info=[{"sample_size": [1, 1]},
                                       {"sample_size": [1], "type": "long", "filler":"zeros"},
