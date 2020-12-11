@@ -523,6 +523,7 @@ class EmbeddingMetatype(OperatorMetatype):
 class EmbeddingBagMetatype(OperatorMetatype):
     name = "embedding_bag"
     torch_nn_functional_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
 
 
 @OPERATOR_METATYPES.register()
