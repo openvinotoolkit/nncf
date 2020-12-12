@@ -656,10 +656,10 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TorchBinaryMethodDesc(model_name='embedding', torch_method=F.embedding,
                           input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
-                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
-                          input_info=[{"sample_size": [1, 1]},
-                                      {"sample_size": [1], "type": "long", "filler":"zeros"},
-                                      {"sample_size": [1], "type": "long", "filler":"zeros"}]),
+                         wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
+                         input_info=[{"sample_size": [1, 1]},
+                                     {"sample_size": [1], "type": "long", "filler":"zeros"},
+                                     {"sample_size": [1], "type": "long", "filler":"zeros"}]),
 
     SingleLayerModelDesc(model_name='softmax', layer=F.softmax),
 
