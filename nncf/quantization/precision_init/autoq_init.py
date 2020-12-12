@@ -55,11 +55,8 @@ class AutoQPrecisionInitializer:
         # Instantiate AutoX/NNCF Quantization Environment
         env = QuantizationEnv(
             self.quantization_controller,
-            self.init_args.criterion,
-            self.init_args.train_loader,
-            self.init_args.val_loader,
-            self.init_args.train_fn,
-            self.init_args.val_fn,
+            self.init_args.data_loader,
+            self.init_args.eval_fn,
             self.init_args.config)
 
         nb_state = len(env.state_list)

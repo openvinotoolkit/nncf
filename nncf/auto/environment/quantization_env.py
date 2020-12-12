@@ -67,21 +67,15 @@ def find_qidobj(quantization_controller, qid_str):
 class QuantizationEnv:
     def __init__(self, 
             quantization_controller, 
-            criterion, 
-            train_loader, 
-            val_loader,
-            train_epoch_fn,
-            validate_fn,
+            eval_loader, 
+            eval_fn,
             config: 'NNCFConfig'):
 
         logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
         self.qctrl            = quantization_controller
         self.qmodel           = quantization_controller._model
-        self.criterion        = criterion
-        self.train_loader     = train_loader
-        self.val_loader       = val_loader
-        self.train_epoch_fn   = train_epoch_fn
-        self.validate_fn      = validate_fn
+        self.eval_loader      = eval_loader
+        self.eval_fn          = eval_fn
         self.config           = config
 
         # TODO: Do we need to a way to specify a different device for automated search?
@@ -277,7 +271,7 @@ class QuantizationEnv:
         self.qctrl.disable_activation_quantization()
 
         with torch.no_grad():
-            self.pretrained_score = self.validate_fn(self.val_loader, self.qmodel, self.criterion, self.config)
+            self.pretrained_score = self.eval_fn(self.qmodel, self.eval_loader)
             logger.info("Pretrained Score: {:.2f}".format(self.pretrained_score))
         
         self.qctrl.enable_weight_quantization()
@@ -563,7 +557,7 @@ class QuantizationEnv:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
         else:
             with torch.no_grad():
-                quantized_acc = self.validate_fn(self.val_loader, self.qmodel, self.criterion, self.config)
+                quantized_acc = self.eval_fn(self.qmodel, self.eval_loader)
                 logger.info("[Q.Env] Post-Init: {:.3f}".format(quantized_acc))
 
         return quantized_acc

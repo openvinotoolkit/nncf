@@ -229,18 +229,16 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
 
 def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader,
-                               val_loader=None,
-                               train_fn=None,
-                               val_fn=None,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
+                               eval_fn=None,
                                device='cuda') -> 'NNCFConfig':
     if 'autoq' == nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
                                                                     device=device),
                                             BNAdaptationInitArgs(data_loader=train_loader, 
                                                                 device=device),
-                                            AutoQPrecisionInitArgs(train_loader, val_loader, train_fn, val_fn, criterion, nncf_config)])                                                
+                                            AutoQPrecisionInitArgs(train_loader, eval_fn, nncf_config)])                                                
     else:
         if criterion:
             if not criterion_fn:
