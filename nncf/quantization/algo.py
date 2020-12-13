@@ -24,7 +24,7 @@ import numpy as np
 import operator
 import shutil
 import torch
-from nncf.layers import NNCFEmbedding
+from nncf.layers import NNCFEmbedding, NNCFEmbeddingBag
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -573,7 +573,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         def traverse_function(node: NNCFNode, output) -> Tuple[bool, List[NNCFNode]]:
             module = target_model.get_module_by_scope(node.op_exec_context.scope_in_model)
             if is_nncf_module(module):
-                if isinstance(module, NNCFEmbedding):
+                if isinstance(module, (NNCFEmbedding, NNCFEmbeddingBag)):
                     # Embeddings have integer input and their quantization is rather controlled
                     # by their weights.
                     return True, output

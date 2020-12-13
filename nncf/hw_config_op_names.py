@@ -50,3 +50,4 @@ class HWConfigOpName:
     TRANSPOSE = "Transpose"
     TILE = "Tile"
     EMBEDDING = "Embedding"
+    EMBEDDINGBAG = "EmbeddingBag"
