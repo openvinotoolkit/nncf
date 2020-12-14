@@ -1,4 +1,5 @@
 import logging
+
 import os.path as osp
 import sys
 import time
@@ -59,7 +60,7 @@ def prCyan(prt): logger.info("\033[96m {}\033[00m" .format(prt))
 def prLightGray(prt): logger.info("\033[97m {}\033[00m" .format(prt))
 def prBlack(prt): logger.info("\033[98m {}\033[00m" .format(prt))
 
-def find_qidobj(quantization_controller, qid_str):
+def find_qid_by_str(quantization_controller, qid_str):
     for _qid, _q in quantization_controller.all_quantizations.items():
         if qid_str == str(_qid):
             return _qid
@@ -115,23 +116,21 @@ class QuantizationEnv:
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
-            self.bitwidth_space = self.autoq_cfg.get('bits', [4, 8])
+            self.bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
             self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
         elif self.hw_cfg_type is HWConfigType.VPU:
             self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
             self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
-        self.bitwidth_space = sorted(self.bitwidth_space)
+        self.bitwidth_space = sorted(list(self.bitwidth_space))
         self.float_bitwidth = 32.0
         self.max_bitwidth = max(self.bitwidth_space)
         self.min_bitwidth = min(self.bitwidth_space)
         
         # Quantizer Master Table Creation
-        # TODO: Discuss how to organize the following lines (they are dependent sequentially)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
-        self.learnable_qids, self.lead_qid_of_groups = self._get_learnable_qids_and_leads()
         self.quantizer_table = self._create_quantizer_table()
 
-        # Create master dataframe to keep track of quantizable layers and thier attributes, a.k.a state embedding
+        # Create master dataframe to keep track of quantizable layers and thier attributes
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
         if self.master_df.isnull().values.any():
             raise ValueError("Q.Env Master Dataframe has null value(s)")
@@ -163,99 +162,6 @@ class QuantizationEnv:
         # End of QuantizationEnv.__init__()
         # ----------------------------------------------------------------------------------------------------------------------
 
-    def _get_learnable_qids_and_leads(self):
-        # By default, all weight quantizers must be learnable to allow optimal model size compression
-        # Bitwidth assignment mode only applies to activation quantizers of a group. 
-        # When the mode is LIBERAL, all activation quantizers are learnable.
-        # When it is STRICT, none of the activation quantizers is learnable but to follow the leader of the group.
-        # HW config determines the bitwidth space of a quantizer
-        # TODO: discuss on STRICT_SOFT and STRICT_HARD
-
-        learnable_qids = []
-        lead_qid_of_groups = [None]*len(list(self._groups_of_adjacent_quantizers))
-
-        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
-
-            for i, g in enumerate(self._groups_of_adjacent_quantizers):
-                n_wq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers)
-                n_aq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers)
-
-                if n_wq > 0:
-                    # By default, all weight quantizers are learnable when it is unconstrained by HW. 
-                    # If target HW is specified, a weight quantizer is only learnable if mixed-precision support is available for its associated weight layer
-                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                            learnable_qids.append(wqid)
-                        
-                    # We will assume the first weight quantizer as the leader of the group, 
-                    # Leader means its precision decides for the rest of activation quantizers
-                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers[k][0]
-                            break
-                else:
-                    # when there is no weight quantizer in the group, the first activation quantizer
-                    # is the leader of the group and learnable if mixed-precision is supported
-                    for j, (aqid, aqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
-                            learnable_qids.append(aqid)
-                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers[j][0]
-                            break
-                        
-        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
-            if self.hw_cfg_type is None:
-                learnable_qids += list(self.qctrl.all_quantizations.keys())
-            else: # VPU device
-                # quantizers will only be added to learnable list if mixed-precision support available for its associated operator.
-                for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                    if len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                        learnable_qids.append(wqid)
-                for aqid, aqmod in self.qctrl.activation_quantizers.items():
-                    if len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
-                        learnable_qids.append(aqid)
-
-        return learnable_qids, lead_qid_of_groups
-
-    def _create_quantizer_table(self):
-        qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
-        d = OrderedDict()
-        for gid, group in enumerate(self._groups_of_adjacent_quantizers):           
-            for aq_id, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].activation_quantizers):
-                qid=aq[0]
-                nodekey=qid_nodekey_map[qid]
-                q_nx_nodeid=nodekey.split()[0]
-                idx_str = '-'.join([q_nx_nodeid, str(qid)])
-
-                d[idx_str] = OrderedDict()
-                d[idx_str]['qid'] = str(qid)
-                d[idx_str]['q_nx_nodeid'] = q_nx_nodeid
-                d[idx_str]['q_nx_nodekey'] = nodekey
-                d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
-                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
-                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
-                d[idx_str]['gid'] = gid
-                d[idx_str]['is_pred'] = str(qid) in list(map(str, self.learnable_qids))
-
-            for wq_id, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers):
-                qid=wq[0]
-                nodekey=qid_nodekey_map[qid]
-                q_nx_nodeid=nodekey.split()[0]
-                idx_str = '-'.join([q_nx_nodeid, str(qid)])
-
-                d[idx_str] = OrderedDict()
-                d[idx_str]['qid'] = str(qid)
-                d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
-                d[idx_str]['q_nx_nodekey'] = nodekey
-                d[idx_str]['state_scope'] = qid.scope
-                d[idx_str]['gemm_nx_nodekey'] = list(map(lambda x: qid_nodekey_map[x[0]], 
-                                                    self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[gid].weight_quantizers))
-                d[idx_str]['gid'] = gid
-                d[idx_str]['is_pred'] = str(qid) in list(map(str, self.learnable_qids))
-
-        # quantizer_table index is QuantizerId in string prepended with its quantize node id in NNCFGraph
-        df = pd.DataFrame.from_dict(d, orient='index')
-        quantizer_table = df.loc[natsorted(df.index)]
-        return quantizer_table
 
     def reset(self):
         self.collected_strategy=[]
@@ -263,6 +169,157 @@ class QuantizationEnv:
         self.master_df['action']=max(self.bitwidth_space)
         self.master_df['prev_action']=0
         self.master_df['unconstrained_action']=0
+
+
+    def _create_quantizer_table(self):
+        # Create a mapping of qid to its adjacent quantizer group id
+        adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
+        for qid, qmod in self.qctrl.all_quantizations.items():
+            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qmod)
+
+        # Create a mapping of qid to its bitwidth space
+        bw_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
+        if self.hw_cfg_type is None:
+            for qid in bw_space_map.keys():
+                bw_space_map[qid] = self.bitwidth_space
+        else:
+            assert hasattr(self.qctrl._hw_precision_constraints, '_constraints'), \
+                "feasible bitwidth per quantizer not found"
+
+            for qid, bw_space in self.qctrl._hw_precision_constraints._constraints.items():
+                bw_space_map[qid] = sorted(list(bw_space))
+
+        assert len(set(bw_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
+            "both bw_space_map and adjq_gid_map must have exact keys."
+        
+        # Create a mapping of qid to its nodekey in NNCFGraph 
+        qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
+
+        assert len(set(qid_nodekey_map.keys()) - set(adjq_gid_map.keys())) == 0, \
+            "both qid_nodekey_map and adjq_gid_map must have exact keys."
+
+        d = OrderedDict()
+        for qid, qmod in self.qctrl.all_quantizations.items():
+            nodekey     = qid_nodekey_map[qid]
+            q_nx_nodeid = nodekey.split()[0]
+            idx_str     = '-'.join([q_nx_nodeid, str(qid)])
+            gid         = adjq_gid_map[qid]
+
+            d[idx_str]                 = OrderedDict()
+            d[idx_str]['qid']          = str(qid)
+            d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
+            d[idx_str]['q_nx_nodekey'] = nodekey
+            d[idx_str]['gid']          = gid
+            d[idx_str]['bw_space']     = bw_space_map[qid]
+            d[idx_str]['is_pred']      = True
+            
+            if isinstance(qid, WeightQuantizerId):
+                d[idx_str]['state_scope'] = qid.scope
+            elif isinstance(qid, NonWeightQuantizerId):
+                d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
+            else:
+                raise NotImplementedError("QuantizerId: {} of {} class is not supported.".format(str(qid, qid.__class__.__name__)))
+
+        # quantizer_table index is QuantizerId in string prepended with its quantize node id in NNCFGraph
+        df                    = pd.DataFrame.from_dict(d, orient='index')
+        df['qid_obj']         = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
+        df['qmodule']         = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
+        df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
+        df['state_module']    = df['state_scope'].apply(lambda x: self.qmodel.get_module_by_scope(x))
+
+        quantizer_table = df.loc[natsorted(df.index)]
+        return quantizer_table
+
+
+    def _get_state_space(self, quantization_controller, quantized_model, quantizer_table):
+        def annotate_learnable_module_io_shape(model):
+            def annotate_io_shape(module, input_, output):
+                if hasattr(module, 'weight') or isinstance(module, BaseQuantizer):
+                    module._input_shape  = input_[0].shape
+                    module._output_shape = output.shape
+
+            hook_list = [m.register_forward_hook(annotate_io_shape) for n, m in model.named_modules()]
+            model.do_dummy_forward(force_eval=True)
+            for h in hook_list:
+                h.remove()
+            
+        annotate_learnable_module_io_shape(quantized_model)
+
+        # State Embedding Extraction
+        #---------------------------
+        df = quantizer_table
+        layer_attr_df                     = df.apply(self._get_layer_attr, axis=1)
+        layer_attr_df['layer_idx']        = np.array(range(len(layer_attr_df)))
+        layer_attr_df['weight_quantizer'] = df['is_wt_quantizer'].astype('float')
+        state_list = layer_attr_df.columns.to_list()
+       
+        # create master dataframe
+        master_df = pd.concat([df, layer_attr_df], axis='columns')
+        
+        # TODO: Revision Needed. Workaround to set the min and max of action before fitting the minmaxscaler
+        master_df['prev_action'][0]=self.max_bitwidth
+        master_df['prev_action'][-1]=self.min_bitwidth
+
+        return master_df, state_list
+    
+    
+    def _get_layer_attr(self, row):        
+        g       = self.qmodel.get_graph()
+        m       = row.state_module
+        qid     = row.qid_obj
+        feature = OrderedDict()
+
+        if isinstance(qid, WeightQuantizerId):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+                feature['conv_dw']          = int(m.weight.shape[1] == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
+                feature['cin']              = m.weight.shape[1]
+                feature['cout']             = m.weight.shape[0]
+                feature['stride']           = m.stride[0]
+                feature['kernel']           = m.kernel_size[0]
+                feature['param']            = np.prod(m.weight.size())     
+                feature['ifm_size']         = np.prod(m._input_shape[-2:]) # H*W
+                feature['prev_action']      = 0.0 # placeholder                
+
+            elif isinstance(m, nn.Linear):
+                feature['conv_dw']          = 0.0 
+                feature['cin']              = m.in_features
+                feature['cout']             = m.out_features
+                feature['stride']           = 0.0
+                feature['kernel']           = 1.0
+                feature['param']            = np.prod(m.weight.size())     
+                feature['ifm_size']         = np.prod(m._input_shape[-1]) # feature nodes
+                feature['prev_action']      = 0.0 # placeholder  
+            
+            else:
+                raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
+
+        elif isinstance(qid, NonWeightQuantizerId):
+            qmod = self.qctrl.all_quantizations[qid]
+            input_shape  = qmod._input_shape
+            output_shape = qmod._output_shape
+            feature['cin']         = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
+            feature['cout']        = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
+            feature['ifm_size']    = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
+            feature['conv_dw']     = 0.0 
+            feature['stride']      = 0.0
+            feature['kernel']      = 0.0
+            feature['param']       = 0.0     
+            feature['prev_action'] = 0.0 
+
+            if len(input_shape) != 4 and len(input_shape) != 2:
+                raise NotImplementedError("A design is required to cater this scenario. Pls. report to maintainer")
+
+        elif isinstance(qid, InputQuantizerId):
+            raise NotImplementedError("InputQuantizerId is supported, quantizer of nncf model input is of type NonWeightQuantizerId")
+        
+        elif isinstance(qid, FunctionQuantizerId):
+            raise NotImplementedError("FunctionQuantizerId is supported, Pls. report to maintainer")
+        
+        else:
+            raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
+        
+        return pd.Series(feature)
+
 
     def _evaluate_pretrained_model(self):
         # Registered evaluation function is expected to return a single scalar score
@@ -278,10 +335,34 @@ class QuantizationEnv:
         self.qctrl.enable_activation_quantization()
         self.qmodel.rebuild_graph()
 
+
+    def _adaptbn(self):
+        train_mode = self.qmodel.training
+        if not train_mode:
+            self.qmodel.train()
+
+        self.qctrl.run_batchnorm_adaptation(self.qctrl.quantization_config)
+        
+        if not train_mode:
+            self.qmodel.eval()
+
+       
+    def _run_quantization_pipeline(self, finetune):
+        self._adaptbn()
+        if finetune:
+            raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
+        else:
+            with torch.no_grad():
+                quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
+                logger.info("[Q.Env] Post-Init: {:.3f}".format(quantized_score))
+        return quantized_score
+
+
     def _calc_quantized_model_size(self): # in bit
         assert len(self.strategy) == len(self.master_df) # This function is only allowed when all actions are predicted        
         return sum(self.master_df['param'] * self.master_df.is_wt_quantizer * self.master_df['action'])
-    
+
+
     def _expand_collected_strategy(self, collected_strategy):
         grouped_strategy_map = OrderedDict(zip(list(self.master_df.index[self.master_df.is_pred]), collected_strategy))
         for nodestr, action in grouped_strategy_map.items():
@@ -295,6 +376,7 @@ class QuantizationEnv:
                 self.master_df.loc[self.master_df.qid == str(qid), 'action'] = action
 
         return list(self.master_df['action'])
+
 
     def _final_action_wall(self, skip=False):
         # This function acts on self.strategy and return self.strategy
@@ -389,18 +471,18 @@ class QuantizationEnv:
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
             logger.info("[Q.Env] {:50} | {}".format(
-                str(self.qctrl.all_quantizations[ find_qidobj(self.qctrl, qid) ]),
+                str(self.qctrl.all_quantizations[ find_qid_by_str(self.qctrl, qid) ]),
                 idx))
 
-        quantized_acc = self._run_quantization_pipeline(finetune=self.finetune)
-        reward = self.reward(quantized_acc, cur_model_ratio)
+        quantized_score = self._run_quantization_pipeline(finetune=self.finetune)
+        reward = self.reward(quantized_score, cur_model_ratio)
         
-        info_set = {'model_ratio': cur_model_ratio, 'accuracy': quantized_acc, 'model_size': cur_model_size}
+        info_set = {'model_ratio': cur_model_ratio, 'accuracy': quantized_score, 'model_size': cur_model_size}
 
         if reward > self.best_reward:
             self.best_reward = reward
             prGreen('New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'.format(
-                self.strategy, self.best_reward, quantized_acc, cur_model_ratio, cur_model_size/8000000))
+                self.strategy, self.best_reward, quantized_score, cur_model_ratio, cur_model_size/8000000))
 
         obs = self.get_normalized_obs(len(collected_strategy)-1, 
                                         only_pred=(self.bw_assignment_mode is BitwidthAssignmentMode.STRICT))
@@ -452,125 +534,7 @@ class QuantizationEnv:
             self.master_df.loc[layer, "qmodule"].num_bits = precision # Actual actor to change quantizer precision
         self.config['compression']=step_cfg
         return True 
-    
 
-
-    def _get_state_space(self, quantization_controller, quantized_model, quantizer_table):
-        def annotate_learnable_module_io_shape(model):
-            def annotate_io_shape(module, input_, output):
-                if hasattr(module, 'weight') or isinstance(module, BaseQuantizer):
-                    module._input_shape  = input_[0].shape
-                    module._output_shape = output.shape
-
-            hook_list = [m.register_forward_hook(annotate_io_shape) for n, m in model.named_modules()]
-            model.do_dummy_forward(force_eval=True)
-            for h in hook_list:
-                h.remove()
-            
-        annotate_learnable_module_io_shape(quantized_model)
-
-        df = quantizer_table
-        df['qid_obj']         = df['qid'].apply(lambda x: find_qidobj(quantization_controller, x))
-        df['qmodule']         = df['qid_obj'].apply(lambda x: quantization_controller.all_quantizations[x])
-        df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
-        df['state_module']    = df['state_scope'].apply(lambda x: quantized_model.get_module_by_scope(x))
-
-        # State Embedding
-        #----------------
-        layer_attr_df                     = df.apply(self._get_layer_attr, axis=1)
-        layer_attr_df['layer_idx']        = np.array(range(len(layer_attr_df)))
-        layer_attr_df['weight_quantizer'] = df['is_wt_quantizer'].astype('float')
-        state_list = layer_attr_df.columns.to_list()
-       
-        # create master dataframe
-        master_df = pd.concat([df, layer_attr_df], axis='columns')
-        
-        # Workaround to set the min and max of action before fitting the minmaxscaler
-        master_df['prev_action'][0]=self.max_bitwidth
-        master_df['prev_action'][-1]=self.min_bitwidth
-
-        return master_df, state_list
-    
-    
-    def _get_layer_attr(self, row):        
-        g       = self.qmodel.get_graph()
-        m       = row.state_module
-        qid     = row.qid_obj
-        feature = OrderedDict()
-
-        if isinstance(qid, WeightQuantizerId):
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-                feature['conv_dw']          = int(m.weight.shape[1] == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
-                feature['cin']              = m.weight.shape[1]
-                feature['cout']             = m.weight.shape[0]
-                feature['stride']           = m.stride[0]
-                feature['kernel']           = m.kernel_size[0]
-                feature['param']            = np.prod(m.weight.size())     
-                feature['ifm_size']         = np.prod(m._input_shape[-2:]) # H*W
-                feature['prev_action']      = 0.0 # placeholder                
-
-            elif isinstance(m, nn.Linear):
-                feature['conv_dw']          = 0.0 
-                feature['cin']              = m.in_features
-                feature['cout']             = m.out_features
-                feature['stride']           = 0.0
-                feature['kernel']           = 1.0
-                feature['param']            = np.prod(m.weight.size())     
-                feature['ifm_size']         = np.prod(m._input_shape[-1]) # feature nodes
-                feature['prev_action']      = 0.0 # placeholder  
-            
-            else:
-                raise NotImplementedError("State embedding extraction of {}".format(m.__class__.__name__))
-
-        elif isinstance(qid, NonWeightQuantizerId):
-            qmod = self.qctrl.all_quantizations[qid]
-            input_shape  = qmod._input_shape
-            output_shape = qmod._output_shape
-            feature['cin']         = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
-            feature['cout']        = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
-            feature['ifm_size']    = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
-            feature['conv_dw']     = 0.0 
-            feature['stride']      = 0.0
-            feature['kernel']      = 0.0
-            feature['param']       = 0.0     
-            feature['prev_action'] = 0.0 
-
-            if len(input_shape) != 4 and len(input_shape) != 2:
-                raise NotImplementedError("A design is required to cater this scenario. Pls. report to maintainer")
-
-        elif isinstance(qid, InputQuantizerId):
-            raise NotImplementedError("InputQuantizerId is supported, quantizer of nncf model input is of type NonWeightQuantizerId")
-        
-        elif isinstance(qid, FunctionQuantizerId):
-            raise NotImplementedError("FunctionQuantizerId is supported, Pls. report to maintainer")
-        
-        else:
-            raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
-        
-        return pd.Series(feature)
-    
-       
-    def _run_quantization_pipeline(self, finetune):
-        self._adaptbn()
-        
-        if finetune:
-            raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
-        else:
-            with torch.no_grad():
-                quantized_acc = self.eval_fn(self.qmodel, self.eval_loader)
-                logger.info("[Q.Env] Post-Init: {:.3f}".format(quantized_acc))
-
-        return quantized_acc
-
-    def _adaptbn(self):
-        train_mode = self.qmodel.training
-        if not train_mode:
-            self.qmodel.train()
-
-        self.qctrl.run_batchnorm_adaptation(self.qctrl.quantization_config)
-        
-        if not train_mode:
-            self.qmodel.eval()
 
     def _generate_qid_nodekey_map(self, quantization_controller: 'QuantizationController', quantized_network: 'NNCFNetwork'):
         """
@@ -582,7 +546,7 @@ class QuantizationEnv:
         # Map Non Weight Qid to its nodes in nxgraph
         weight_quantize_nodekeys = []
         non_weight_quantize_nodekeys = []
-        qid_nodekey_map = dict()
+        qid_nodekey_map = OrderedDict()
 
         g=quantized_network.get_graph()
 
@@ -623,12 +587,15 @@ class QuantizationEnv:
         
         return qid_nodekey_map
 
+
     def _dump_master_df(self):
         self.master_df.drop('state_module', axis=1).to_csv(
             osp.join(self.config['log_dir'], self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
+
     def _dump_quantized_graph(self):
         self.qmodel.get_graph().visualize_graph(osp.join(self.config.get("log_dir", "."), "qenv_graph.dot"))
+
 
     def _dump_groups_of_adjacent_quantizers(self):
         adj_quantizer_groups = []
@@ -645,6 +612,58 @@ class QuantizationEnv:
                             self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
 
+
+    def _get_learnable_qids_and_leads(self):
+        # By default, all weight quantizers must be learnable to allow optimal model size compression
+        # Bitwidth assignment mode only applies to activation quantizers of a group. 
+        # When the mode is LIBERAL, all activation quantizers are learnable.
+        # When it is STRICT, none of the activation quantizers is learnable but to follow the leader of the group.
+        # HW config determines the bitwidth space of a quantizer
+
+        learnable_qids = []
+        lead_qid_of_groups = [None]*len(list(self._groups_of_adjacent_quantizers))
+
+        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
+
+            for i, g in enumerate(self._groups_of_adjacent_quantizers):
+                n_wq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers)
+                n_aq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers)
+
+                if n_wq > 0:
+                    # By default, all weight quantizers are learnable when it is unconstrained by HW. 
+                    # If target HW is specified, a weight quantizer is only learnable if mixed-precision support is available for its associated weight layer
+                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                            learnable_qids.append(wqid)
+                        
+                    # We will assume the first weight quantizer as the leader of the group, 
+                    # Leader means its precision decides for the rest of activation quantizers
+                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers[k][0]
+                            break
+                else:
+                    # when there is no weight quantizer in the group, the first activation quantizer
+                    # is the leader of the group and learnable if mixed-precision is supported
+                    for j, (aqid, aqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
+                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
+                            learnable_qids.append(aqid)
+                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers[j][0]
+                            break
+                        
+        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
+            if self.hw_cfg_type is None:
+                learnable_qids += list(self.qctrl.all_quantizations.keys())
+            else: # VPU device
+                # quantizers will only be added to learnable list if mixed-precision support available for its associated operator.
+                for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+                    if len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
+                        learnable_qids.append(wqid)
+                for aqid, aqmod in self.qctrl.activation_quantizers.items():
+                    if len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
+                        learnable_qids.append(aqid)
+
+        return learnable_qids, lead_qid_of_groups
 
 
 
