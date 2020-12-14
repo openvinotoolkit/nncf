@@ -20,7 +20,7 @@ from nncf.pruning.export_helpers import IdentityMaskForwardOps
 from nncf.pruning.model_analysis import NodesCluster, Clusterization, cluster_special_ops, ModelAnalyzer
 from tests.helpers import create_compressed_model_and_algo_for_test, create_nncf_model_and_algo_builder
 from tests.pruning.helpers import PruningTestModelEltwise, get_basic_pruning_config, TestModelBranching, \
-    TestModelResidualConnection, TestModelEltwiseСombination, TestModelDiffConvs
+    TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs
 
 
 # pylint: disable=protected-access
@@ -87,14 +87,14 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
                                   prune_params=(True, True, False),
 
                                   ),
-    GroupPruningModulesTestStruct(model=TestModelEltwiseСombination,
+    GroupPruningModulesTestStruct(model=TestModelEltwiseCombination,
                                   not_pruned_modules=[],
-                                  pruned_groups=[['TestModelEltwiseСombination/NNCFConv2d[conv1]',
-                                                  'TestModelEltwiseСombination/NNCFConv2d[conv2]',
-                                                  'TestModelEltwiseСombination/NNCFConv2d[conv3]',
-                                                  'TestModelEltwiseСombination/NNCFConv2d[conv4]'],
-                                                 ['TestModelEltwiseСombination/NNCFConv2d[conv5]',
-                                                  'TestModelEltwiseСombination/NNCFConv2d[conv6]']],
+                                  pruned_groups=[['TestModelEltwiseCombination/NNCFConv2d[conv1]',
+                                                  'TestModelEltwiseCombination/NNCFConv2d[conv2]',
+                                                  'TestModelEltwiseCombination/NNCFConv2d[conv3]',
+                                                  'TestModelEltwiseCombination/NNCFConv2d[conv4]'],
+                                                 ['TestModelEltwiseCombination/NNCFConv2d[conv5]',
+                                                  'TestModelEltwiseCombination/NNCFConv2d[conv6]']],
                                   prune_params=(True, True, False),
 
                                   )
@@ -156,7 +156,7 @@ GROUP_SPECIAL_MODULES_TEST_CASES = [
         eltwise_clusters=[[3, 5], [9]],
     ),
     GroupSpecialModulesTestStruct(
-        model=TestModelEltwiseСombination,
+        model=TestModelEltwiseCombination,
         eltwise_clusters=[[3, 5, 7], [10]]
     )
 ]

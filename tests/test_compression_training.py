@@ -234,9 +234,8 @@ def test_compression_train(_params, tmp_path):
     args['seed'] = 1
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
-    res = runner.run(timeout=tc['timeout'])
+    runner.run(timeout=tc['timeout'])
 
-    assert res == 0
     checkpoint_path = os.path.join(args['checkpoint-save-dir'], tc['checkpoint_name'] + '_best.pth')
     assert os.path.exists(checkpoint_path)
     actual_acc = torch.load(checkpoint_path)['best_acc1']
@@ -262,8 +261,7 @@ def test_compression_eval_trained(_params, tmp_path):
         del args['weights']
 
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
-    res = runner.run(timeout=tc['timeout'])
-    assert res == 0
+    runner.run(timeout=tc['timeout'])
 
     acc1 = parse_best_acc1(tmp_path)
     assert torch.load(checkpoint_path)['best_acc1'] == approx(acc1, abs=tc['absolute_tolerance_eval'])

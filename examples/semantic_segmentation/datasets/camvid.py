@@ -71,6 +71,7 @@ class CamVid(data.Dataset):
                  image_set='train',
                  transforms=None,
                  loader=data_utils.pil_loader):
+        super().__init__()
         self.root_dir = root
         self.mode = image_set
         self.transforms = transforms

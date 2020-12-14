@@ -13,6 +13,8 @@
 import torch
 import warnings
 
+from nncf.utils import add_domain
+
 from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA
 from ..dynamic_graph.patch_pytorch import register_operator
 from ..functions import STRound, clamp
@@ -117,7 +119,7 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, levels, input_low, input_high, output_low, output_high):
-        return g.op("FakeQuantize", input_, input_low, input_high, output_low, output_high, levels_i=levels)
+        return g.op(add_domain("FakeQuantize"), input_, input_low, input_high, output_low, output_high, levels_i=levels)
 
     @staticmethod
     def forward(ctx, input_, levels, input_low, input_high, output_low, output_high):

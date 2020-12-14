@@ -43,7 +43,7 @@ from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
-    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
+    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
@@ -137,10 +137,9 @@ def main_worker(current_gpu, config: SampleConfig):
     else:
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
-        train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
+        train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
-                                                 config.device)
+        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, train_criterion_fn, config.device)
 
     # create model
     model = load_model(model_name,
@@ -260,6 +259,9 @@ def get_dataset(dataset_config, config, transform, is_train):
     if dataset_config == 'imagenet':
         prefix = 'train' if is_train else 'val'
         return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
+    if dataset_config == 'mock_32x32':
+        # For testing purposes
+        return MockDataset(img_size=(32, 32), transform=transform)
     return create_cifar(config, dataset_config, is_train, transform)
 
 
@@ -277,7 +279,7 @@ def create_cifar(config, dataset_config, is_train, transform):
 def create_datasets(config):
     dataset_config = config.dataset if config.dataset is not None else 'imagenet'
     dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10'], "Unknown dataset option"
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32'], "Unknown dataset option"
 
     if dataset_config == 'imagenet':
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
@@ -285,7 +287,7 @@ def create_datasets(config):
     elif dataset_config == 'cifar100':
         normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
                                          std=(0.2023, 0.1994, 0.2010))
-    elif dataset_config == 'cifar10':
+    elif dataset_config in ['cifar10', 'mock_32x32']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 
@@ -336,10 +338,18 @@ def create_data_loaders(config, train_dataset, val_dataset):
     if config.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=(train_sampler is None),
-        num_workers=workers, pin_memory=pin_memory, sampler=train_sampler)
-    return train_loader, train_sampler, val_loader
+    def create_train_data_loader(batch_size_):
+        return torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
+            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler)
+
+    train_loader = create_train_data_loader(batch_size)
+
+    init_loader = train_loader
+    if config.batch_size_init:
+        init_loader = create_train_data_loader(config.batch_size_init)
+
+    return train_loader, train_sampler, val_loader, init_loader
 
 
 def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
@@ -520,7 +530,7 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size).item())
         return res
 

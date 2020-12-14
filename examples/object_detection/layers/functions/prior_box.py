@@ -19,6 +19,7 @@ from math import sqrt
 import torch
 from torch import nn
 
+from nncf.utils import add_domain
 
 class PriorBox(nn.Module):
     def __init__(self, min_size, max_size, aspect_ratio, flip, clip, variance, step, offset,
@@ -49,7 +50,7 @@ class PriorBoxFunction(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, input_fm, img_tensor, priorbox_params):
-        return g.op("PriorBox", input_fm, img_tensor, min_size_f=[priorbox_params.min_size],
+        return g.op(add_domain("PriorBox"), input_fm, img_tensor, min_size_f=[priorbox_params.min_size],
                     max_size_f=[priorbox_params.max_size],
                     aspect_ratio_f=priorbox_params.aspect_ratio, flip_i=priorbox_params.flip,
                     clip_i=priorbox_params.clip,

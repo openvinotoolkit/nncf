@@ -35,6 +35,9 @@ from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 
 
+DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
+
+
 class CompressionLoss(nn.Module):
     """
     Used to calculate additional loss to be added to the base loss during the
@@ -243,7 +246,8 @@ class CompressionAlgorithmController:
                               filename, input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
-                              opset_version=10)
+                              opset_version=10,
+                              training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
         model.forward = original_forward
 
 
@@ -290,3 +294,9 @@ class CompressionAlgorithmBuilder:
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+
+
+class StubCompressionScheduler(CompressionScheduler):
+
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL

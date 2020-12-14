@@ -94,7 +94,7 @@ class TestModelResidualConnection(nn.Module):
         return x
 
 
-class TestModelEltwiseСombination(nn.Module):
+class TestModelEltwiseCombination(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 8, 3, 1, -2, padding=1)
