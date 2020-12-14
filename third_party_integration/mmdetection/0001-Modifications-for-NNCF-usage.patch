@@ -1,7 +1,7 @@
-From 87bcfbe8c054447153d37971fc3d9b2a4f8ff127 Mon Sep 17 00:00:00 2001
-From: Aleksei Kashapov <aleksei.kashapov@intel.com>
+From 236c280b5d23a0d259e0fa22e02314716785b4c1 Mon Sep 17 00:00:00 2001
+From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Mon, 14 Dec 2020 20:41:54 +0300
-Subject: [PATCH] NNCF patch for mmdet
+Subject: [PATCH] Modifications for NNCF usage
 
 ---
  .../mask_rcnn_r50_caffe_fpn_1x_coco_int8.py   |  62 +++++++++++
@@ -92,7 +92,7 @@ index 0000000..81a90ba
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm="quantization",
 +                                     weights=dict(per_channel=True),
-+                                     initializer=dict(range=dict(num_init_steps=5,
++                                     initializer=dict(range=dict(num_init_samples=10,
 +                                                                 type='min_max')))],
 +                   log_dir=work_dir)
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
@@ -192,7 +192,7 @@ index 0000000..4112ea7
 +
 +# nncf config
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10,
++                                     initializer=dict(range=dict(num_init_samples=40,
 +                                                                 type="threesigma")))],
 +                   log_dir=work_dir)
 diff --git a/configs/retinanet/retinanet_r50_fpn_1x_int8.py b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
@@ -239,7 +239,7 @@ index 0000000..7788165
 +# nncf config
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10)))],
++                                     initializer=dict(range=dict(num_init_samples=10)))],
 +                   log_dir=work_dir)
 diff --git a/mmdet/apis/train.py b/mmdet/apis/train.py
 index c314d42..a45ee5f 100644
