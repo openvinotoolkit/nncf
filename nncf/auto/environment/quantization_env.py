@@ -380,32 +380,20 @@ class QuantizationEnv:
 
     def _final_action_wall(self, skip=False):
         # This function acts on self.strategy and return self.strategy
-        def lower_precision(precision):
-            d = {8:4, 4:2, 2:2}
-            return d[precision]
+        def lower_bitwidth(bw, bw_space):
+            return bw_space[bw_space.index(bw)-1] if bw_space.index(bw) > 0 else bw
 
         if skip is not True:
             self.master_df['unconstrained_action']=self.master_df['action']
+
             cur_model_size = self._calc_quantized_model_size()
             while self.min_model_size < cur_model_size and self.target_model_size < cur_model_size:
-                
-                # Tricky part TODO need to propagate for any precision that has been pushed lower
                 for i, nodestr in enumerate( reversed(self.master_df.index.tolist()) ):
-                    
-                    # if self.master_df.loc[nodestr, "nparam"] > 0: #input quantizer has nparam > 0
                     if self.master_df.loc[nodestr, "is_wt_quantizer"] & self.master_df.loc[nodestr, "is_pred"]: 
-                        n_bit = self.master_df.loc[nodestr, 'action']
-                        new_bit = lower_precision(n_bit)
-                        if new_bit != n_bit:
-                            self.master_df.loc[nodestr, "action"] = new_bit
-
-                            # Extract list of qid of adjacent quantizer in the group, then apply same action to them in the master_df
-                            group_id = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(self.master_df.qmodule[nodestr])
-                            qid_in_group = list(map(lambda qid_qmod_pair: qid_qmod_pair[0],
-                                                    self._groups_of_adjacent_quantizers.get_adjacent_quantizers_by_group_id(group_id)))
-                            for qid in qid_in_group:
-                                self.master_df.loc[self.master_df.qid == str(qid), 'action'] = new_bit
-
+                        n_bit    = self.master_df.loc[nodestr, 'action']
+                        bw_space = self.master_df.loc[nodestr, 'bw_space']
+                        new_bit = lower_bitwidth(n_bit, bw_space)
+                        self.master_df.loc[nodestr, "action"] = new_bit if new_bit != n_bit else n_bit
                     #strategy update here
                     self.strategy = self.master_df['action']
                     cur_model_size = self._calc_quantized_model_size()
@@ -414,7 +402,7 @@ class QuantizationEnv:
         else:
             print("=> Skip action constraint")
 
-        # TODO This whole section has to be revised
+        # TODO This whole section has to be removed or moved elsewhere
         self.strategy = self.master_df['action']
         logger.info('=> Final action list: {}'.format(self.strategy.astype('int').to_list()))
 
@@ -436,7 +424,13 @@ class QuantizationEnv:
             else:
                 return len(self.collected_strategy) == len(self.master_df)
         
-        self.collected_strategy.append(action)  # save action to strategy
+        # Ensure action is in the quantizer's bitwidth space
+        current_bw_space = self.master_df.bw_space[len(self.collected_strategy)]
+        if action not in current_bw_space:
+            closest_bw_idx = np.argmin(np.abs(action - np.array(current_bw_space)))
+            action = current_bw_space[closest_bw_idx]
+        
+        self.collected_strategy.append(action)
 
         if not is_final_step():
             info_set = {}
