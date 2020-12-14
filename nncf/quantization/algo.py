@@ -24,7 +24,7 @@ import numpy as np
 import operator
 import shutil
 import torch
-from nncf.layers import NNCFEmbedding
+from nncf.layers import NNCFEmbedding, NNCFEmbeddingBag
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -95,6 +95,8 @@ class QuantizationConstraints:
     def is_config_compatible(self, qconfig: QuantizerConfig) -> bool:
         is_compatible = True
         for attr_name, constraint in self.qconf_attr_vs_constraint_dict.items():
+            if attr_name == 'logarithm_scale':
+                continue   # Scale storage type is internal and should not affect HW config matching
             if constraint is not None:
                 qconf_attr_value = getattr(qconfig, attr_name)
                 if qconf_attr_value != constraint:
@@ -141,7 +143,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._processed_function_quantizers = set()
         self._processed_input_agnostic_op_exec_contexts = set()
 
-        self.global_quantizer_contraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
+        self.global_quantizer_constraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
         self._ignored_scopes_per_group = {}  # type: Dict[QuantizerGroup, List[str]]
         self._target_scopes_per_group = {}  # type: Dict[QuantizerGroup, List[str]]
 
@@ -162,11 +164,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     def _parse_group_params(self, quant_config: 'NNCFConfig', quantizer_group: QuantizerGroup):
         group_name = quantizer_group.value
         params_dict = quant_config.get(group_name, {})
-        self.global_quantizer_contraints[quantizer_group] = QuantizationConstraints(
+        self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints(
             bits=params_dict.get('bits'),
             mode=params_dict.get('mode'),
             signedness_to_force=params_dict.get('signed'),
-            per_channel=params_dict.get('per_channel')
+            per_channel=params_dict.get('per_channel'),
+            logarithm_scale=params_dict.get('logarithm_scale'),
         )
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
@@ -214,7 +217,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       parent_module_scope_str: str, is_weights=False,
                                       input_shape=None) -> QuantizerConfig:
         group = QuantizerGroup.WEIGHTS if is_weights else QuantizerGroup.ACTIVATIONS
-        qconfig = self.__get_default_qconfig(constraints=self.global_quantizer_contraints[group])
+        qconfig = self.__get_default_qconfig(constraints=self.global_quantizer_constraints[group])
         qconfig.is_weights = is_weights
         scope_overrides = self.config.get("scope_overrides", {})
         for overridden_scope in scope_overrides.keys():
@@ -228,6 +231,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     qconfig.per_channel = config_overrides["per_channel"]
                 if config_overrides.get("signed") is not None:
                     qconfig.signedness_to_force = config_overrides["signed"]
+                if config_overrides.get("logarithm_scale") is not None:
+                    qconfig.logarithm_scale = config_overrides["logarithm_scale"]
         if qconfig.per_channel:
             if is_weights:
                 module = target_model.get_module_by_scope(Scope.from_str(parent_module_scope_str))
@@ -281,7 +286,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         insertion_point_graph = target_model.get_insertion_point_graph()
         quantized_modules_with_potential_qconfig = []
         default_qconfig_list = [self.__get_default_qconfig(
-            constraints=self.global_quantizer_contraints[QuantizerGroup.WEIGHTS])]
+            constraints=self.global_quantizer_constraints[QuantizerGroup.WEIGHTS])]
         if self.hw_config is not None:
             meta_vs_qconfig_map = self.hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
         for module_scope, module in modules.items():
@@ -328,7 +333,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                                str(module_scope),
                                                                                is_weights=True)
                     qconfig = self._select_final_qconfig(qconfig_list,
-                                                         self.global_quantizer_contraints[QuantizerGroup.WEIGHTS],
+                                                         self.global_quantizer_constraints[QuantizerGroup.WEIGHTS],
                                                          qconfig_overrides)
                 except RuntimeError:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
@@ -382,7 +387,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                            debug_interface=self._debug_interface,
                                                            hw_config=self.hw_config,
                                                            default_qconfig_list=[self.__get_default_qconfig(
-                                                               constraints=self.global_quantizer_contraints[
+                                                               constraints=self.global_quantizer_constraints[
                                                                    QuantizerGroup.ACTIVATIONS])],
                                                            input_infos=target_model.get_input_infos())
             merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
@@ -406,7 +411,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                                operator_scope_str,
                                                                                is_weights=True)
                     quantizer_config = self._select_final_qconfig(quantizer_config_list,
-                                                                  self.global_quantizer_contraints[
+                                                                  self.global_quantizer_constraints[
                                                                       QuantizerGroup.ACTIVATIONS],
                                                                   qconfig_overrides)
                 except RuntimeError:
@@ -445,7 +450,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             quantizer_config_list
         ))
 
-
         if qconfig_overrides is not None:
             constrained_quantizer_config_list =\
                  [qconfig for qconfig in constrained_quantizer_config_list if qconfig_overrides == qconfig]
@@ -458,7 +462,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         # Quantizer config list entries should arrive in the same order as they are listed
         # in the HW config, where they are sorted by descending order of priority
-        return constrained_quantizer_config_list[0]
+        return constraints.apply_constraints_to(constrained_quantizer_config_list[0])
 
     def _quantize_post_pattern_activations(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         pattern = self._make_quantizable_subgraph_pattern()
@@ -536,9 +540,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 )
             self._processed_input_agnostic_op_exec_contexts.add(curr_ia_op_exec_context)
 
-            nncf_logger.info("Adding {} Activation Quantize in scope: {}".format(
-                "signed" if quantizer.signed else
-                "unsigned", operator_scope_str
+            nncf_logger.info("Adding {}{} Activation Quantize in scope: {}".format(
+                "signed" if quantizer.signed else "unsigned",
+                " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
+                operator_scope_str
             ))
 
             # Hooks will be identical for each affected ia_op_exec_context - will call one and the
@@ -568,7 +573,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         def traverse_function(node: NNCFNode, output) -> Tuple[bool, List[NNCFNode]]:
             module = target_model.get_module_by_scope(node.op_exec_context.scope_in_model)
             if is_nncf_module(module):
-                if isinstance(module, NNCFEmbedding):
+                if isinstance(module, (NNCFEmbedding, NNCFEmbeddingBag)):
                     # Embeddings have integer input and their quantization is rather controlled
                     # by their weights.
                     return True, output
@@ -622,8 +627,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                          input_shape=input_shape)
             quantizer = self.__create_quantize_module(qconfig)
 
-            nncf_logger.info("Adding {} NNCF module input quantizer in scope: {}".format(
-                "signed" if quantizer.signed else "unsigned", str(scope)
+            nncf_logger.info("Adding {}{} NNCF module input quantizer in scope: {}".format(
+                "signed" if quantizer.signed else "unsigned",
+                " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
+                str(scope)
             ))
 
             # TODO: separate insertion point semantic for weights and activations
@@ -857,6 +864,7 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations = OrderedDict()
         self.all_quantizations.update(self.weight_quantizers)
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
+        self._distributed = False
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -906,6 +914,10 @@ class QuantizationController(QuantizationControllerBase):
                 self.metric_store[collector.NAME_STR] = collector.get_metric_table()
 
     def distributed(self):
+        self._distributed = True
+        self._broadcast_initialized_params_for_each_quantizer()
+
+    def _broadcast_initialized_params_for_each_quantizer(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
         sorted_quantizers = OrderedDict(sorted(self.all_quantizations.items(), key=lambda x: str(x[0])))
         for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
@@ -1032,6 +1044,9 @@ class QuantizationController(QuantizationControllerBase):
 
             self._do_range_init(data_loader, max_num_init_steps, global_init_range_config,
                                 range_init_args.device)
+
+        if self._distributed:
+            self._broadcast_initialized_params_for_each_quantizer()
 
     def update_range_config_by_default(self, init_range_config: Dict):
         global_init_range_config = dict()

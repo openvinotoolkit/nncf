@@ -3,14 +3,14 @@
         "imagenet": {
             "resnet50_imagenet": {
                 "config": "examples/classification/configs/quantization/resnet50_imagenet.json",
-                "target": 76.13,
+                "target": 76.01,
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-50"
             },
             "resnet50_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/resnet50_imagenet_int8.json",
                 "reference": "resnet50_imagenet",
-                "target": 76.08,
+                "target": 75.95,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int8.pth",
                 "model_description": "ResNet-50",
@@ -27,7 +27,7 @@
                 "model_description": "ResNet-50",
                 "compression_description": "Mixed, 44.8% INT8 / 55.2% INT4",
                 "diff_fp32_min": -0.05,
-                "diff_fp32_max": 0.25,
+                "diff_fp32_max": 0.3,
                 "diff_target_min": -0.12,
                 "diff_target_max": 0.12
             },
@@ -92,7 +92,7 @@
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/classification/configs/quantization/mobilenet_v2_imagenet.json",
-                "target": 71.81,
+                "target": 71.71,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet.pth",
                 "model_description": "MobileNet V2"
@@ -111,7 +111,7 @@
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.89,
+                "target": 71.01,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
                 "model_description": "MobileNet V2",
@@ -139,7 +139,7 @@
             "squeezenet1_1_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.07,
+                "target": 57.96,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -150,17 +150,17 @@
             "squeezenet1_1_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.84,
+                "target": 58.71,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int4_int8.pth",
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "Mixed, 54.7% INT8 / 45.3% INT4",
-                "diff_fp32_min": 0.55,
+                "diff_fp32_min": -0.55,
                 "diff_fp32_max": 0.7
             },
             "resnet18_imagenet": {
                 "config": "examples/classification/configs/binarization/resnet18_imagenet.json",
-                "target": 69.76,
+                "target": 69.64,
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-18"
             },
@@ -352,7 +352,7 @@
             "icnet_camvid_int8": {
                 "config": "examples/semantic_segmentation/configs/icnet_camvid_int8.json",
                 "reference": "icnet_camvid",
-                "target": 67.87,
+                "target": 67.78,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_int8.pth",
                 "mean_value": "[99.603,103.329,105.6567]",
@@ -365,7 +365,7 @@
             "icnet_camvid_magnitude_sparsity_int8": {
                 "config": "examples/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json",
                 "reference": "icnet_camvid",
-                "target": 67.24,
+                "target": 67.1,
                 "metric_type": "Mean IoU",
                 "resume": "icnet_camvid_magnitude_sparsity_int8.pth",
                 "mean_value": "[99.603,103.329,105.6567]",

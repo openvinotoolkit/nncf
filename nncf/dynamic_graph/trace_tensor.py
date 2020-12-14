@@ -51,6 +51,17 @@ class TracedTensor(torch.Tensor):
         tensor.__class__ = TracedTensor
         return tensor
 
+    def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':
+        """Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
+        API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions"""
+
+        return self
+
+    # NOTE: This disables the __torch_function__ API altogether when using NNCF.
+    # TODO: make NNCF utilize the __torch_function__ API instead.
+    #pylint:disable=protected-access
+    __torch_function__ = torch._C._disabled_torch_function_impl
+
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)

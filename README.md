@@ -78,7 +78,7 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.6 or later
 - NVidia CUDA\* Toolkit 10.2
-- PyTorch\* 1.5.0
+- PyTorch\* 1.7 or later.
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -134,22 +134,22 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|76.13|76.08|
-|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.31|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.29|
-|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.13|75.63|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.13|75.57|
+|ResNet-50|INT8|ImageNet|76.01|75.95|
+|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.01|76.31|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.01|75.29|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.01|75.63|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.01|75.57|
 |Inception V3|INT8|ImageNet|77.32|76.90|
 |Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.32|76.98|
-|MobileNet V2|INT8|ImageNet|71.81|71.29|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.81|70.89|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.81|70.91|
-|SqueezeNet V1.1|INT8|ImageNet|58.18|58.07|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.85|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.61|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
-|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.76|69.33|
-|ResNet-18|Filter pruning, 40%, L2 magnitude criterion|ImageNet|69.76|69.27|
+|MobileNet V2|INT8|ImageNet|71.71|71.29|
+|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.71|71.01|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.71|70.91|
+|SqueezeNet V1.1|INT8|ImageNet|58.18|57.96|
+|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.71|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.64|61.61|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.64|61.59|
+|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.64|69.33|
+|ResNet-18|Filter pruning, 40%, L2 magnitude criterion|ImageNet|69.64|69.27|
 |ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|73.31|72.73|
 |GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.78|68.85|
 
@@ -168,8 +168,8 @@ Quick jump to sample type:
 | :---: | :---: | :---: | :---: | :---: |
 |UNet|INT8|CamVid|71.95|71.66|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|INT8|CamVid|67.89|67.85|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.23|
+|ICNet|INT8|CamVid|67.89|67.78|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.10|
 |UNet|INT8|Mapillary|56.23|56.1|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.01|
 

@@ -132,9 +132,8 @@ def staged_quantization_main_worker(current_gpu, config):
     else:
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
-        train_loader, train_sampler, val_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, train_criterion_fn,
-                                                 config.device)
+        train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
+        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, train_criterion_fn, config.device)
 
     # create model
     model_name = config['model']
@@ -210,6 +209,8 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                  train_loader, train_sampler, val_loader, kd_loss_calculator, batch_multiplier, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
+        # update compression scheduler state at the start of the epoch
+        compression_ctrl.scheduler.epoch_step()
         config.cur_epoch = epoch
         if config.distributed:
             train_sampler.set_epoch(epoch)
@@ -241,8 +242,6 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         if is_main_process():
             print_statistics(stats)
 
-        # update compression scheduler state at the end of the epoch
-        compression_ctrl.scheduler.epoch_step()
         optimizer_scheduler.epoch_step()
 
         if is_main_process():
@@ -286,6 +285,7 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
 
     end = time.time()
     for i, (input_, target) in enumerate(train_loader):
+        compression_scheduler.step()
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -320,7 +320,6 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
         else:
             loss.backward()
 
-        compression_scheduler.step()
         optimizer_scheduler.step(float(i) / len(train_loader))
 
         # measure elapsed time

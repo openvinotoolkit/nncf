@@ -790,7 +790,7 @@ index 00000000..7b0b4c6e
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 4,
++                "num_init_samples": 32,
 +                "type": "percentile",
 +                "min_percentile": 0.01,
 +                "max_percentile": 99.99
@@ -876,7 +876,7 @@ index 00000000..d916689b
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 1
++                "num_init_samples": 96
 +            }
 +        },
 +        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
@@ -914,7 +914,7 @@ index 00000000..746b3e1b
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 1
++                "num_init_samples": 32
 +            }
 +        },
 +        "ignored_scopes": [
@@ -950,7 +950,7 @@ index 00000000..344d23cc
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 4,
++                "num_init_samples": 16,
 +                "type": "percentile",
 +                "min_percentile": 0.01,
 +                "max_percentile": 99.99
@@ -1018,7 +1018,7 @@ index 00000000..107360f8
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 8,
++                "num_init_samples": 64,
 +                "type": "percentile",
 +                "min_percentile": 0.01,
 +                "max_percentile": 99.99
@@ -1067,7 +1067,7 @@ index 00000000..f65e9dd0
 +        "algorithm": "quantization",
 +        "initializer": {
 +            "range": {
-+                "num_init_steps": 1
++                "num_init_samples": 24
 +            }
 +        },
 +        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",

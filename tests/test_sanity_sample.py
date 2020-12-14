@@ -62,7 +62,7 @@ class Command:
         except OSError as err:
             print(err)
 
-    def run(self, timeout=3600):
+    def run(self, timeout=3600, assert_returncode_zero=True):
 
         def target():
             start_time = time.time()
@@ -98,6 +98,10 @@ class Command:
                 raise
         returncode = self.process.wait()
         print("Process returncode = " + str(returncode))
+        if assert_returncode_zero:
+            assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
+                returncode,
+                "".join(self.output))
         return returncode
 
     def get_execution_time(self):
@@ -135,7 +139,7 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["cifar10", "cifar100", "cifar10", "cifar10"],
+    "classification": ["mock_32x32", "mock_32x32", "mock_32x32", "mock_32x32"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
@@ -226,8 +230,7 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
 
 
 @pytest.mark.parametrize(
@@ -246,7 +249,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
-        "--epochs": 1,
+        "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--dist-url": "tcp://127.0.0.1:8989"
     }
@@ -255,8 +258,7 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
@@ -287,8 +289,7 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
 
 
 def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, checkpoint_save_dir):
@@ -316,7 +317,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--log-dir": tmp_path,
         "--batch-size": config["batch_size"] * torch.cuda.device_count(),
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
-        "--epochs": 2,
+        "--epochs": 3,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--resume": ckpt_path,
         "--dist-url": "tcp://127.0.0.1:8986"
@@ -326,8 +327,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         args["--multiprocessing-distributed"] = None
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
@@ -352,8 +352,7 @@ def test_export_with_resume(config, tmp_path, multiprocessing_distributed, case_
     }
 
     runner = Command(create_command_line(args, config["sample_type"]))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     assert os.path.exists(onnx_path)
 
 
@@ -379,8 +378,7 @@ def test_export_with_pretrained(tmp_path):
     }
 
     runner = Command(create_command_line(args, "classification"))
-    res = runner.run()
-    assert res == 0
+    runner.run()
     assert os.path.exists(onnx_path)
 
 
@@ -462,10 +460,15 @@ class TestCaseDescriptor:
     dataset_name: str
     is_real_dataset: bool = False
     batch_size: int
+    batch_size_init: int = None
     num_weights_to_init: int
 
     def batch(self, batch_size: int):
         self.batch_size = batch_size
+        return self
+
+    def batch_for_init(self, batch_size_init: int):
+        self.batch_size_init = batch_size_init
         return self
 
     def config(self, config_name: str):
@@ -508,14 +511,26 @@ TEST_CASE_DESCRIPTORS = [
         config("resnet18_cifar10_mixed_int_staged.json").
         sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
     TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(20).batch_for_init(2),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(20).batch_for_init(2),
+    TestCaseDescriptor().
         config("ssd300_vgg_voc_mixed_int.json").
         sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(2).num_weights(35),
+    TestCaseDescriptor().
+        config("ssd300_vgg_voc_mixed_int.json").
+        sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(3).num_weights(35).batch_for_init(2),
     TestCaseDescriptor().
         config("unet_camvid_mixed_int.json").
         sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(23),
     TestCaseDescriptor().
         config("icnet_camvid_mixed_int.json").
-        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(64)
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(64),
+    TestCaseDescriptor().
+        config("unet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(3).num_weights(23).batch_for_init(2),
 ]
 
 
@@ -536,7 +551,9 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
         "--batch-size": hawq_config.batch_size,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
-
+    batch_size_for_init = hawq_config.batch_size_init
+    if batch_size_for_init:
+        args["--batch-size-init"] = batch_size_for_init
     command_line = " ".join(f'{key} {val}' for key, val in args.items())
     # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
     # mocked train function
@@ -553,6 +570,8 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
         mocker.patch("examples.object_detection.main.train")
     from nncf.quantization.init_precision import HAWQPrecisionInitializer
     set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
+    from nncf.quantization.hessian_trace import HessianTraceEstimator
+    hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     sample.main(shlex.split(command_line))
 
@@ -560,3 +579,6 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
     assert len(bitwidth_list) == hawq_config.num_weights_to_init
     assert 4 in bitwidth_list
     assert 8 in bitwidth_list
+    init_data_loader = hessian_trace_estimator_spy.call_args[0][5]
+    expected_batch_size = batch_size_for_init if batch_size_for_init else hawq_config.batch_size
+    assert init_data_loader.batch_size == expected_batch_size

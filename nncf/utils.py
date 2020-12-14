@@ -11,7 +11,6 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from contextlib import contextmanager
 from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
 
 import numpy as np
@@ -23,6 +22,7 @@ from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
 from nncf.layer_utils import _NNCFModuleMixin
+from contextlib import contextmanager
 
 
 def scopes_matched(scope_stack_0, scope_stack_1):
@@ -199,15 +199,15 @@ def is_tracing_state():
     return torch._C._get_tracing_state()
 
 
-@contextmanager
-def no_jit_trace():
-    # pylint: disable=protected-access
-    disable_tracing = torch.jit._disable_tracing()
-    disable_tracing.__enter__()
-    yield disable_tracing
-    disable_tracing.__exit__()
+class no_jit_trace:
+    def __enter__(self):
+        # pylint: disable=protected-access
+        self.state = torch._C._get_tracing_state()
+        torch._C._set_tracing_state(None)
 
-
+    def __exit__(self, *args):
+        torch._C._set_tracing_state(self.state)
+        self.state = None
 
 
 def sum_like(tensor_to_sum, ref_tensor):
@@ -379,3 +379,8 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
     else:
         return
     dict_to_save[name] = 2 * mac_count
+
+
+def add_domain(name_operator: str) -> str:
+    from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
+    return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
