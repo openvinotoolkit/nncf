@@ -117,10 +117,9 @@ class QuantizationEnv:
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
             self.bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
-            self.bw_assignment_mode = BitwidthAssignmentMode.LIBERAL
         elif self.hw_cfg_type is HWConfigType.VPU:
             self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
-            self.bw_assignment_mode = BitwidthAssignmentMode.STRICT
+
         self.bitwidth_space = sorted(list(self.bitwidth_space))
         self.float_bitwidth = 32.0
         self.max_bitwidth = max(self.bitwidth_space)
@@ -363,21 +362,6 @@ class QuantizationEnv:
         return sum(self.master_df['param'] * self.master_df.is_wt_quantizer * self.master_df['action'])
 
 
-    def _expand_collected_strategy(self, collected_strategy):
-        grouped_strategy_map = OrderedDict(zip(list(self.master_df.index[self.master_df.is_pred]), collected_strategy))
-        for nodestr, action in grouped_strategy_map.items():
-            self.master_df.loc[nodestr, 'action']=action # This is needed for dangling quantizer
-
-            # Extract list of qid of adjacent quantizer in the group, then apply same action to them in the master_df
-            group_id = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(self.master_df.qmodule[nodestr])
-            qid_in_group = list(map(lambda qid_qmod_pair: qid_qmod_pair[0], 
-                                    self._groups_of_adjacent_quantizers.get_adjacent_quantizers_by_group_id(group_id)))
-            for qid in qid_in_group:
-                self.master_df.loc[self.master_df.qid == str(qid), 'action'] = action
-
-        return list(self.master_df['action'])
-
-
     def _final_action_wall(self, skip=False):
         # This function acts on self.strategy and return self.strategy
         def lower_bitwidth(bw, bw_space):
@@ -419,10 +403,7 @@ class QuantizationEnv:
 
     def step(self, action):
         def is_final_step():
-            if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
-                return len(self.collected_strategy) == sum(self.master_df.is_pred)
-            else:
-                return len(self.collected_strategy) == len(self.master_df)
+            return len(self.collected_strategy) == len(self.master_df)
         
         # Ensure action is in the quantizer's bitwidth space
         current_bw_space = self.master_df.bw_space[len(self.collected_strategy)]
@@ -435,9 +416,8 @@ class QuantizationEnv:
         if not is_final_step():
             info_set = {}
             reward = 0
-            is_strict = self.bw_assignment_mode is BitwidthAssignmentMode.STRICT
-            self.set_next_step_prev_action(len(self.collected_strategy), action, only_pred=is_strict)
-            obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=is_strict)
+            self.set_next_step_prev_action(len(self.collected_strategy), action, only_pred=True)
+            obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=True)
             done = False
             return obs, reward, done, info_set
 
@@ -445,12 +425,8 @@ class QuantizationEnv:
             return self.evaluate_strategy(self.collected_strategy, skip_wall=self.skip_wall)
         
     def evaluate_strategy(self, collected_strategy, skip_wall=True):
-        # #Expand strategy to full quantization policy
-        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
-            self.strategy = self._expand_collected_strategy(collected_strategy)
-        else:
-            self.master_df['action'] = collected_strategy
-            self.strategy = self.master_df['action']
+        self.master_df['action'] = collected_strategy
+        self.strategy = self.master_df['action']
         
         if skip_wall is not True:
             self.strategy = self._final_action_wall()
@@ -478,8 +454,7 @@ class QuantizationEnv:
             prGreen('New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'.format(
                 self.strategy, self.best_reward, quantized_score, cur_model_ratio, cur_model_size/8000000))
 
-        obs = self.get_normalized_obs(len(collected_strategy)-1, 
-                                        only_pred=(self.bw_assignment_mode is BitwidthAssignmentMode.STRICT))
+        obs = self.get_normalized_obs(len(collected_strategy)-1, only_pred=True)
                                                     
         done = True
         return obs, reward, done, info_set
@@ -519,7 +494,7 @@ class QuantizationEnv:
                 step_cfg['scope_overrides'][ScopeStr] = {}
                 step_cfg['scope_overrides'][ScopeStr]['bits']=int(precision) # int requires to convert numpy.int64 to int
             else:
-                # if we use scope to non-weight quantizer, we would risk masking out the quantizers within the scope
+                # if we use scope for non-weight quantizer, we would risk masking out the quantizers within the scope
                 # e.g. MobileNetV2/adaptive_avg_pool2d_0 masks all quantizers into the same scope
                 IAOpCtxStr = str(self.master_df.loc[layer, 'qid_obj'].ia_op_exec_context)
                 step_cfg['scope_overrides'][IAOpCtxStr] = {}
