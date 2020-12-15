@@ -37,6 +37,7 @@
   "compression": [
     {
       "algorithm": "magnitude_sparsity",
+      "sparsity_init": 0.3,
       "params": {
           "schedule": "multistep",
           "multistep_sparsity_levels": [
@@ -54,7 +55,7 @@
       "algorithm": "quantization",
       "initializer": {
         "range": {
-          "num_init_steps": 10
+          "num_init_samples": 1280
         }
       }
     }

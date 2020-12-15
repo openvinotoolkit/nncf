@@ -36,6 +36,7 @@
          "input_size_hw": [368, 480]
     },
     "compression": {
-        "algorithm": "rb_sparsity"
+        "algorithm": "rb_sparsity",
+        "sparsity_init": 0.2
     }
 }

@@ -1,4 +1,4 @@
-From 992880d52ec11e2f9bf34b2a2a6514b2cef9a56a Mon Sep 17 00:00:00 2001
+From 236c280b5d23a0d259e0fa22e02314716785b4c1 Mon Sep 17 00:00:00 2001
 From: Ivan Lazarevich <ivan.lazarevich@intel.com>
 Date: Fri, 6 Nov 2020 14:14:42 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -28,7 +28,7 @@ Subject: [PATCH] Modifications for NNCF usage
 
 diff --git a/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 new file mode 100644
-index 0000000..387dd6d
+index 0000000..a1704b3
 --- /dev/null
 +++ b/configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py
 @@ -0,0 +1,62 @@
@@ -79,7 +79,7 @@ index 0000000..387dd6d
 +    warmup_ratio=0.001,
 +    step=[3, 5])
 +total_epochs = 6
-+work_dir = './work_dirs/mask_rcnn_r50_caffe_fpn_1x_nncf_int8'
++work_dir = './work_dirs/mask_rcnn_r50_caffe_fpn_1x_coco_int8'
 +
 +# we start from the pre-trained checkpoint available from the mmdet github repo
 +# download from here: http://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco_bbox_mAP-0.408__segm_mAP-0.37_20200504_163245-42aa3d00.pth
@@ -91,12 +91,12 @@ index 0000000..387dd6d
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm="quantization",
 +                                     weights=dict(per_channel=True),
-+                                     initializer=dict(range=dict(num_init_steps=5,
++                                     initializer=dict(range=dict(num_init_samples=10,
 +                                                                 type='min_max')))],
 +                   log_dir=work_dir)
 diff --git a/configs/pascal_voc/ssd300_voc_int8.py b/configs/pascal_voc/ssd300_voc_int8.py
 new file mode 100644
-index 0000000..4112ea7
+index 0000000..c89c0a7
 --- /dev/null
 +++ b/configs/pascal_voc/ssd300_voc_int8.py
 @@ -0,0 +1,94 @@
@@ -191,12 +191,12 @@ index 0000000..4112ea7
 +
 +# nncf config
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10,
++                                     initializer=dict(range=dict(num_init_samples=40,
 +                                                                 type="threesigma")))],
 +                   log_dir=work_dir)
 diff --git a/configs/retinanet/retinanet_r50_fpn_1x_int8.py b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
 new file mode 100644
-index 0000000..7788165
+index 0000000..a13aa8b
 --- /dev/null
 +++ b/configs/retinanet/retinanet_r50_fpn_1x_int8.py
 @@ -0,0 +1,40 @@
@@ -238,23 +238,24 @@ index 0000000..7788165
 +# nncf config
 +input_size = 800
 +nncf_config = dict(compression=[dict(algorithm='quantization',
-+                                     initializer=dict(range=dict(num_init_steps=10)))],
++                                     initializer=dict(range=dict(num_init_samples=10)))],
 +                   log_dir=work_dir)
 diff --git a/mmdet/apis/train.py b/mmdet/apis/train.py
-index c314d42..a45ee5f 100644
+index ad17a53..f58d272 100644
 --- a/mmdet/apis/train.py
 +++ b/mmdet/apis/train.py
-@@ -4,13 +4,16 @@ import numpy as np
+@@ -4,14 +4,17 @@ import numpy as np
  import torch
  from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
  from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner,
--                         OptimizerHook, build_optimizer)
+-                         Fp16OptimizerHook, OptimizerHook, build_optimizer)
 +                         Fp16OptimizerHook, OptimizerHook, build_optimizer, load_checkpoint)
  from mmcv.utils import build_from_cfg
  
--from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook
-+from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook, CompressionHook
- from mmdet.datasets import build_dataloader, build_dataset
+-from mmdet.core import DistEvalHook, EvalHook
++from mmdet.core import DistEvalHook, EvalHook, CompressionHook
+ from mmdet.datasets import (build_dataloader, build_dataset,
+                             replace_ImageToTensor)
  from mmdet.utils import get_root_logger
  
 +from nncf.utils import get_all_modules
@@ -263,7 +264,7 @@ index c314d42..a45ee5f 100644
  
  def set_random_seed(seed, deterministic=False):
      """Set random seed.
-@@ -67,13 +70,25 @@ def train_detector(model,
+@@ -68,13 +71,25 @@ def train_detector(model,
              seed=cfg.seed) for ds in dataset
      ]
  
@@ -290,7 +291,7 @@ index c314d42..a45ee5f 100644
              device_ids=[torch.cuda.current_device()],
              broadcast_buffers=False,
              find_unused_parameters=find_unused_parameters)
-@@ -81,6 +96,9 @@ def train_detector(model,
+@@ -82,6 +97,9 @@ def train_detector(model,
          model = MMDataParallel(
              model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
  
@@ -300,7 +301,7 @@ index c314d42..a45ee5f 100644
      # build runner
      optimizer = build_optimizer(model, cfg.optimizer)
      runner = EpochBasedRunner(
-@@ -108,6 +126,8 @@ def train_detector(model,
+@@ -109,6 +127,8 @@ def train_detector(model,
                                     cfg.get('momentum_config', None))
      if distributed:
          runner.register_hook(DistSamplerSeedHook())
@@ -309,7 +310,7 @@ index c314d42..a45ee5f 100644
  
      # register eval hooks
      if validate:
-@@ -136,8 +156,11 @@ def train_detector(model,
+@@ -143,8 +163,11 @@ def train_detector(model,
              hook = build_from_cfg(hook_cfg, HOOKS)
              runner.register_hook(hook, priority=priority)
  
@@ -325,10 +326,10 @@ index c314d42..a45ee5f 100644
 +    runner.run(data_loaders, cfg.workflow, cfg.total_epochs,
 +               compression_ctrl=compression_ctrl)
 diff --git a/mmdet/core/__init__.py b/mmdet/core/__init__.py
-index f8eb6cb..14f2c89 100644
+index b075369..d8fc903 100644
 --- a/mmdet/core/__init__.py
 +++ b/mmdet/core/__init__.py
-@@ -5,3 +5,4 @@ from .fp16 import *  # noqa: F401, F403
+@@ -6,3 +6,4 @@ from .fp16 import *  # noqa: F401, F403
  from .mask import *  # noqa: F401, F403
  from .post_processing import *  # noqa: F401, F403
  from .utils import *  # noqa: F401, F403
@@ -457,13 +458,13 @@ index 0000000..ae0d6f7
 +
 +    # get_targets TBD
 diff --git a/mmdet/models/dense_heads/anchor_head.py b/mmdet/models/dense_heads/anchor_head.py
-index 2faec70..7d0676b 100644
+index a5bb413..48332a8 100644
 --- a/mmdet/models/dense_heads/anchor_head.py
 +++ b/mmdet/models/dense_heads/anchor_head.py
-@@ -1,6 +1,7 @@
- import torch
+@@ -2,6 +2,7 @@ import torch
  import torch.nn as nn
  from mmcv.cnn import normal_init
+ from mmcv.runner import force_fp32
 +from nncf.dynamic_graph.context import no_nncf_trace
  
  from mmdet.core import (anchor_inside_flags, build_anchor_generator,
@@ -492,10 +493,10 @@ index de11e4a..0fcdc4d 100644
              return losses
          else:
 diff --git a/mmdet/models/detectors/base.py b/mmdet/models/detectors/base.py
-index 914f476..d6672ca 100644
+index 627e391..5858a14 100644
 --- a/mmdet/models/detectors/base.py
 +++ b/mmdet/models/detectors/base.py
-@@ -131,6 +131,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -135,6 +135,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              if not isinstance(var, list):
                  raise TypeError(f'{name} must be a list, but got {type(var)}')
  
@@ -505,7 +506,7 @@ index 914f476..d6672ca 100644
          num_augs = len(imgs)
          if num_augs != len(img_metas):
              raise ValueError(f'num of augmentations ({len(imgs)}) '
-@@ -153,8 +156,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -165,8 +168,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
              assert 'proposals' not in kwargs
              return self.aug_test(imgs, img_metas, **kwargs)
  
@@ -519,7 +520,7 @@ index 914f476..d6672ca 100644
          """Calls either :func:`forward_train` or :func:`forward_test` depending
          on whether ``return_loss`` is ``True``.
  
-@@ -204,7 +211,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -216,7 +223,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
  
          return loss, log_vars
  
@@ -528,7 +529,7 @@ index 914f476..d6672ca 100644
          """The iteration step during training.
  
          This method defines an iteration step during training, except for the
-@@ -234,6 +241,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
+@@ -246,6 +253,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
          losses = self(**data)
          loss, log_vars = self._parse_losses(losses)
  
@@ -540,11 +541,11 @@ index 914f476..d6672ca 100644
              loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
  
 diff --git a/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py b/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py
-index 1885f7c..0f02a9e 100644
+index 0cba3cd..d41b158 100644
 --- a/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py
 +++ b/mmdet/models/roi_heads/mask_heads/fcn_mask_head.py
 @@ -10,6 +10,8 @@ from torch.nn.modules.utils import _pair
- from mmdet.core import auto_fp16, force_fp32, mask_target
+ from mmdet.core import mask_target
  from mmdet.models.builder import HEADS, build_loss
  
 +from nncf.dynamic_graph.context import no_nncf_trace
@@ -554,7 +555,7 @@ index 1885f7c..0f02a9e 100644
  # determine it based on available resources.
 @@ -140,11 +142,12 @@ class FCNMaskHead(nn.Module):
          if mask_pred.size(0) == 0:
-             loss_mask = mask_pred.sum() * 0
+             loss_mask = mask_pred.sum()
          else:
 -            if self.class_agnostic:
 -                loss_mask = self.loss_mask(mask_pred, mask_targets,
@@ -571,7 +572,7 @@ index 1885f7c..0f02a9e 100644
          return loss
  
 diff --git a/mmdet/models/roi_heads/standard_roi_head.py b/mmdet/models/roi_heads/standard_roi_head.py
-index 8822f8f..ace3cbe 100644
+index c530f2a..30d98a4 100644
 --- a/mmdet/models/roi_heads/standard_roi_head.py
 +++ b/mmdet/models/roi_heads/standard_roi_head.py
 @@ -1,4 +1,5 @@
@@ -580,7 +581,7 @@ index 8822f8f..ace3cbe 100644
  
  from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
  from ..builder import HEADS, build_head, build_roi_extractor
-@@ -153,9 +154,10 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
+@@ -151,9 +152,10 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
  
          bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                    gt_labels, self.train_cfg)
@@ -595,10 +596,10 @@ index 8822f8f..ace3cbe 100644
          bbox_results.update(loss_bbox=loss_bbox)
          return bbox_results
 diff --git a/tools/train.py b/tools/train.py
-index c36b2a0..519e915 100644
+index 91a59b8..458ad26 100644
 --- a/tools/train.py
 +++ b/tools/train.py
-@@ -139,6 +139,12 @@ def main():
+@@ -142,6 +142,12 @@ def main():
      logger.info(f'Distributed training: {distributed}')
      logger.info(f'Config:\n{cfg.pretty_text}')
  
@@ -612,5 +613,5 @@ index c36b2a0..519e915 100644
      if args.seed is not None:
          logger.info(f'Set random seed to {args.seed}, '
 -- 
-2.27.0
+2.17.1
 

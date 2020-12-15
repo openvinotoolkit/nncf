@@ -35,8 +35,6 @@ from .traces_order import TracesPerLayer, TracesOrder
 from ..hessian_trace import HessianTraceEstimator
 from ..hw_precision_constraints import HWPrecisionConstraints
 from ..quantizer_id import QuantizerId
-from ...layer_utils import ProxyModule
-from ...module_operations import UpdateParameter
 from ...structures import QuantizationPrecisionInitArgs
 
 
@@ -61,9 +59,9 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._criterion = init_args.criterion
         self._data_loader = init_args.data_loader
         self._traces_per_layer_path = config.get('traces_per_layer_path', None)
-        self._num_data_points = config.get('num_data_points', 1000)
-        self._iter_number = config.get('iter_number', 500)
-        self._tolerance = config.get('tolerance', 1e-5)
+        self._num_data_points = config.get('num_data_points', 100)
+        self._iter_number = config.get('iter_number', 200)
+        self._tolerance = config.get('tolerance', 1e-4)
         self._compression_ratio = config.get('compression_ratio', 1.5)
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
             if self._hw_precision_constraints else config.get('bits', [4, 8])
@@ -261,7 +259,16 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
 
         trace_estimator = HessianTraceEstimator(self._model, criterion_fn, criterion, self._init_device,
                                                 self._data_loader, self._num_data_points)
-        avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
+        try:
+            avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
+        except RuntimeError as error:
+            if "cuda out of memory" in error.args[0].lower():
+                raise RuntimeError('Failed to estimate average Hessian traces within precision initialization. Specify '
+                                   'a smaller batch size via --batch-size-init option in the NNCF samples or register '
+                                   'a data loader with a smaller batch size. Refer to '
+                                   '`NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs`'
+                                   ' class') from error
+            raise error
 
         self.restore_disabled_gradients(quantizers_switcher, self._model, self._algo.quantized_weight_modules_registry,
                                         params_to_restore)
@@ -344,15 +351,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
             for wi in self._weight_quantizations_by_execution_order.values():
                 wi.num_bits = b
 
-            # TODO: replace with do_dummy_forward call on compressing in eval mode only
-            # Call each UpdateWeight op, instead of calling dummy_forward. It's needed because dummy_forward must be
-            # run with force_eval=False, which overrides BatchNorm statistics. This requirement comes from the models
-            # with quantizers on the branches, which are enabled in train mode (AuxLogits for Inception3)
-            for quantized_module in self._algo.quantized_weight_modules_registry.values():
-                ops = [op for op in quantized_module.pre_ops.values() if isinstance(op, UpdateParameter)]
-                ops += [op for op in quantized_module.post_ops.values() if isinstance(op, UpdateParameter)]
-                for op in ops:
-                    op(ProxyModule(quantized_module), None)
+            self._model.do_dummy_forward(force_eval=True)
 
             for i, observer in enumerate(observers):
                 perturbations.add(layer_id=i, bitwidth=b, perturbation=observer.get_observation().to(self._init_device))

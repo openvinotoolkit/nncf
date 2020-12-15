@@ -18,9 +18,8 @@ import torch.nn.functional as F
 import torch.utils.data
 from copy import deepcopy
 
-from torchvision.models import resnet50
+from torchvision.models import resnet50, squeezenet1_1
 
-from examples.common.models.classification import squeezenet1_1_custom
 from nncf.checkpoint_loading import load_state
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler
 from nncf.dynamic_graph.context import ScopeElement, Scope
@@ -81,7 +80,7 @@ def test_quantization_configs__custom():
             "signed": True,
         },
     })
-    config['target_device'] = 'NONE'
+    config['target_device'] = 'TRIAL'
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, QuantizationController)
@@ -266,7 +265,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
 
 def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path):
     config = get_empty_config(input_sample_sizes=[1, 3, 224, 224])
-    config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_steps": 0}}}
+    config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_samples": 0}}}
     ngpus_per_node = torch.cuda.device_count()
 
     torch.multiprocessing.spawn(activation_quantizers_dumping_worker,
@@ -358,7 +357,7 @@ def hw_config_type_(request):
 def test_hw_config_quantization_can_quantize_squeezenet(hw_config_type):
     config = get_squeezenet_quantization_config()
     config["hw_config"] = hw_config_type.value
-    model = squeezenet1_1_custom()
+    model = squeezenet1_1()
     create_compressed_model_and_algo_for_test(model, config)
 
 

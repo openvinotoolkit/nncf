@@ -21,7 +21,7 @@ from tests.conftest import PROJECT_ROOT
 
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"
-MMDETECTION_COMMIT = "039ad4dd64edaa5efe69f00574a0c24240adac97"
+MMDETECTION_COMMIT = "3e902c3afc62693a71d672edab9b22e35f7d4776"
 INSTALL_PATH = PROJECT_ROOT.parent
 DATASET_PATH = os.path.join(PROJECT_ROOT, "tests", "data", "mock_datasets")
 
@@ -61,7 +61,7 @@ class TestTransformers:
         subprocess.call("virtualenv -ppython3.6 {}".format(self.VENV_TRANS_PATH), shell=True)
         subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
                        check=True, shell=True)
-        subprocess.run("{} && pip install torch==1.5.0".format(self.activate_venv),
+        subprocess.run("{} && pip install torch==1.7.0".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run("{} && git clone https://github.com/huggingface/transformers".format(self.activate_venv),
                        check=True, shell=True, cwd=self.VENV_TRANS_PATH)
@@ -90,8 +90,7 @@ class TestTransformers:
             .format(DATASET_PATH, os.path.join(temp_folder["models"], "xnli"))
         runner = Command(create_command_line(com_line, self.VENV_TRANS_PATH, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "xnli", "pytorch_model.bin"))
 
     def test_xnli_eval(self, temp_folder):
@@ -101,8 +100,7 @@ class TestTransformers:
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "xnli"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_squad_train(self, temp_folder):
         com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path " \
@@ -113,8 +111,7 @@ class TestTransformers:
                    " nncf_bert_config_squad.json".format(DATASET_PATH, os.path.join(temp_folder["models"], "squad"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "squad", "pytorch_model.bin"))
 
     def test_squad_eval(self, temp_folder):
@@ -125,8 +122,7 @@ class TestTransformers:
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "squad"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_glue_train(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
@@ -137,8 +133,7 @@ class TestTransformers:
             .format(DATASET_PATH, os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "roberta_mnli", "pytorch_model.bin"))
 
     def test_glue_eval(self, temp_folder):
@@ -149,8 +144,7 @@ class TestTransformers:
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "roberta_mnli"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_glue_distilbert_train(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
@@ -162,8 +156,7 @@ class TestTransformers:
                                                                                          "distilbert_output"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "distilbert_output", "pytorch_model.bin"))
 
     def test_glue_distilbert_eval(self, temp_folder):
@@ -174,8 +167,7 @@ class TestTransformers:
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "distilbert_output"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_lm_train(self, temp_folder):
         com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 --model_name_or_path gpt2" \
@@ -186,8 +178,7 @@ class TestTransformers:
                                                                                                  "lm_output"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "lm_output", "pytorch_model.bin"))
 
     def test_lm_eval(self, temp_folder):
@@ -198,8 +189,7 @@ class TestTransformers:
             .format(DATASET_PATH, output=os.path.join(temp_folder["models"], "lm_output"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_convert_to_onnx(self, temp_folder):
         com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path {output}" \
@@ -207,8 +197,7 @@ class TestTransformers:
                    " --to_onnx {output}/model.onnx".format(output=os.path.join(temp_folder["models"], "squad"))
         runner = Command(create_command_line(com_line, self.activate_venv, self.trans_python,
                                              self.cuda_visible_string), self.TRANS_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "squad", "model.onnx"))
 
 
@@ -239,7 +228,7 @@ class TestMmdetection:
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run(
-            "{}; pip install mmcv-full==1.1.4+torch1.5.0+cu102 "
+            "{}; pip install mmcv-full==1.2.0+torch1.7.0+cu102 "
             "-f https://download.openmmlab.com/mmcv/dist/index.html".format(self.activate_venv), check=True, shell=True,
             cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
@@ -264,16 +253,14 @@ class TestMmdetection:
             check=True, shell=True, cwd=self.MMDET_PATH)
         comm_line = "tools/train.py configs/pascal_voc/ssd300_voc_int8.py"
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "ssd300_voc_int8", "latest.pth"))
 
     def test_ssd300_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "ssd300_voc_int8", "latest.pth")
         comm_line = "tools/test.py configs/pascal_voc/ssd300_voc_int8.py {} --eval mAP".format(checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_retinanet_train(self):
         subprocess.run(
@@ -281,16 +268,14 @@ class TestMmdetection:
             check=True, shell=True, cwd=self.MMDET_PATH)
         comm_line = "tools/train.py configs/retinanet/retinanet_r50_fpn_1x_int8.py"
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "retinanet_r50_fpn_1x_int8", "latest.pth"))
 
     def test_retinanet_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "retinanet_r50_fpn_1x_int8", "latest.pth")
         comm_line = "tools/test.py configs/retinanet/retinanet_r50_fpn_1x_int8.py {} --eval bbox".format(checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
 
     def test_maskrcnn_train(self):
         subprocess.run(
@@ -298,13 +283,11 @@ class TestMmdetection:
             check=True, shell=True, cwd=self.MMDET_PATH)
         comm_line = "tools/train.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py"
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth"))
 
     def test_maskrcnn_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth")
         comm_line = "tools/test.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py {} --eval bbox".format(checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        res = runner.run()
-        assert res == 0
+        runner.run()

@@ -93,11 +93,17 @@ QUANTIZER_CONFIG_PROPERTIES = {
     "mode": with_attributes(_STRING,
                             description="Mode of quantization"),
     "bits": with_attributes(_NUMBER,
-                            description="Bitwidth to quantize to."),
+                            description="Bitwidth to quantize to. It is intended for manual bitwidth setting. Can be "
+                                        "overridden by the `bits` parameter from the `precision` initializer section. "
+                                        "An error happens if it doesn't match a corresponding bitwidth constraints "
+                                        "from the hardware configuration."),
     "signed": with_attributes(_BOOLEAN,
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
                                           "differing signs, will reset to performing signed quantization instead."),
+    "logarithm_scale": with_attributes(_BOOLEAN,
+                                       description="Whether to use log of scale as optimized parameter"
+                                                   " instead of scale itself."),
     "per_channel": with_attributes(_BOOLEAN,
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
@@ -157,16 +163,21 @@ GENERIC_INITIALIZER_SCHEMA = {
             {
                 "type": "object",
                 "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
+                    "num_bn_adaptation_samples": with_attributes(_NUMBER,
+                                                                 description="Number of samples from the training "
+                                                                             "dataset to use for model inference "
+                                                                             "during the BatchNorm statistics "
+                                                                             "adaptation procedure for the compressed "
+                                                                             "model. The actual number of samples will "
+                                                                             "be a closest multiple of the batch "
+                                                                             "size."),
+                    "num_bn_forget_samples": with_attributes(_NUMBER,
+                                                             description="Number of samples from the training "
+                                                                         "dataset to use for model inference during "
+                                                                         "the BatchNorm statistics adaptation "
+                                                                         "in the initial statistics forgetting step. "
+                                                                         "The actual number of samples will be a "
+                                                                         "closest multiple of the batch size."),
                 },
                 "additionalProperties": False,
             },
@@ -177,11 +188,11 @@ GENERIC_INITIALIZER_SCHEMA = {
 BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
     "type": "object",
     "properties": {
-        "num_init_steps": with_attributes(_NUMBER,
-                                          description="Number of batches from the training dataset to "
-                                                      "consume as sample model inputs for purposes of "
-                                                      "setting initial minimum and maximum quantization "
-                                                      "ranges"),
+        "num_init_samples": with_attributes(_NUMBER,
+                                            description="Number of samples from the training dataset to "
+                                                        "consume as sample model inputs for purposes of "
+                                                        "setting initial minimum and maximum quantization "
+                                                        "ranges"),
         "type": with_attributes(_STRING, description="Type of the initializer - determines which "
                                                      "statistics gathered during initialization will be "
                                                      "used to initialize the quantization ranges"),
@@ -247,16 +258,17 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
             {
                 "type": "object",
                 "properties": {
-                    "num_bn_adaptation_steps": with_attributes(_NUMBER,
-                                                               description="Number of batches from the training "
-                                                                           "dataset to use for model inference during "
-                                                                           "the BatchNorm statistics adaptation "
-                                                                           "procedure for the compressed model"),
-                    "num_bn_forget_steps": with_attributes(_NUMBER,
-                                                           description="Number of batches from the training "
-                                                                       "dataset to use for model inference during "
-                                                                       "the BatchNorm statistics adaptation "
-                                                                       "in the initial statistics forgetting step"),
+                    "num_bn_adaptation_samples": with_attributes(_NUMBER,
+                                                                 description="Number of samples from the training "
+                                                                             "dataset to use for model inference "
+                                                                             "durung the BatchNorm statistics "
+                                                                             "adaptation procedure for the compressed "
+                                                                             "model"),
+                    "num_bn_forget_samples": with_attributes(_NUMBER,
+                                                             description="Number of samples from the training "
+                                                                         "dataset to use for model inference during "
+                                                                         "the BatchNorm statistics adaptation "
+                                                                         "in the initial statistics forgetting step"),
                 },
                 "additionalProperties": False,
             },
@@ -268,8 +280,9 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                     "type": with_attributes(_STRING,
                                             description="Type of precision initialization."),
                     "bits": with_attributes(_ARRAY_OF_NUMBERS,
-                                            description="A list of bitwidth to choose from when "
-                                                        "performing precision initialization.",
+                                            description="A list of bitwidth to choose from when performing precision "
+                                                        "initialization. Overrides bits constraints specified in "
+                                                        "`weight` and `activation` sections",
                                             examples=[[4, 8]]),
                     "num_data_points": with_attributes(_NUMBER,
                                                        description="Number of data points to iteratively estimate "
@@ -377,11 +390,9 @@ QUANTIZATION_SCHEMA = {
         },
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
-                                   description="Constraints to be applied to model weights quantization only. "
-                                               "Overrides higher-level settings."),
+                                   description="Constraints to be applied to model weights quantization only."),
         "activations": with_attributes(ACTIVATIONS_GROUP_SCHEMA,
-                                       description="Constraints to be applied to model activations quantization only. "
-                                                   "Overrides higher-level settings."),
+                                       description="Constraints to be applied to model activations quantization only."),
         "quantize_inputs": with_attributes(_BOOLEAN,
                                            description="Whether the model inputs should be immediately quantized prior "
                                                        "to any other model operations.",
@@ -473,18 +484,14 @@ COMMON_SPARSITY_PARAM_PROPERTIES = {
     "concave": with_attributes(_BOOLEAN, description="For polynomial scheduler - if True, then the target sparsity "
                                                      "level will be approached in concave manner, and in convex "
                                                      "manner otherwise."),
-    "sparsity_init": with_attributes(_NUMBER,
-                                     description="Initial value of the sparsity level applied to the "
-                                                 "model"),
     "sparsity_target": with_attributes(_NUMBER,
                                        description="Target value of the sparsity level for the model"),
     "sparsity_target_epoch": with_attributes(_NUMBER,
-                                             description="The target sparsity value will be reached after this many"
-                                                         "epoch steps"),
+                                             description="Index of the epoch from which the sparsity level "
+                                                         "of the model will be equal to spatsity_target value"),
     "sparsity_freeze_epoch": with_attributes(_NUMBER,
-                                             description="The number of epoch steps after which the "
-                                                         "sparsity mask will be frozen and no "
-                                                         "longer trained"),
+                                             description="Index of the epoch from which the sparsity mask will "
+                                                         "be frozen and no longer trained"),
     "update_per_optimizer_step": with_attributes(_BOOLEAN,
                                                  description="Whether the function-based sparsity level schedulers "
                                                              "should update the sparsity level after each optimizer "
@@ -518,6 +525,9 @@ MAGNITUDE_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "initializer": GENERIC_INITIALIZER_SCHEMA,
         "params":
             {
@@ -546,6 +556,9 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "sparsity_init": with_attributes(_NUMBER,
+                                         description="Initial value of the sparsity level applied to the "
+                                                     "model"),
         "params":
             {
                 "type": "object",
@@ -565,6 +578,9 @@ FILTER_PRUNING_SCHEMA = {
             "const": FILTER_PRUNING_ALGO_NAME_IN_CONFIG
         },
         "initializer": GENERIC_INITIALIZER_SCHEMA,
+        "pruning_init": with_attributes(_NUMBER,
+                                        description="Initial value of the pruning level applied to the"
+                                                    " model. 0.0 by default."),
         "params":
             {
                 "type": "object",
@@ -573,9 +589,6 @@ FILTER_PRUNING_SCHEMA = {
                                                 description="The type of scheduling to use for adjusting the target"
                                                             " pruning level. Either `exponential`, `exponential_with"
                                                             "_bias`,  or `baseline`, by default it is `baseline`"),
-                    "pruning_init": with_attributes(_NUMBER,
-                                                    description="Initial value of the pruning level applied to the"
-                                                                " model. 0.0 by default."),
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for the model."
                                                                   " 0.5 by default."),
@@ -653,7 +666,7 @@ REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
-    "enum": ["ANY", "CPU", "GPU", "VPU", "NONE"]
+    "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
 
 ROOT_NNCF_CONFIG_SCHEMA = {
@@ -687,8 +700,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                      "account while compressing in order to obtain the best "
                                                      "performance for this type of device. The default 'ANY' means "
                                                      "compatible quantization supported by any HW. The parameter takes "
-                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). Set "
-                                                     "this value to 'NONE' if you are going to use a custom "
+                                                     "values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set "
+                                                     "this value to 'TRIAL' if you are going to use a custom "
                                                      "quantization schema. Optional."),
         "log_dir": with_attributes(_STRING,
                                    description="Log directory for NNCF-specific logging outputs"),

@@ -12,28 +12,17 @@
 """
 
 import os
-import pytest
 import torch
 
 from examples.common.model_loader import load_model
 from nncf.checkpoint_loading import load_state
-from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_functions import check_equal
 from tests.helpers import BasicConvTestModel
 
 
-@pytest.mark.parametrize(('model_name', 'ceil_mode'),
-                         (('squeezenet1_1', True), ('squeezenet1_1_custom', False)), ids=('orig', 'custom'))
-def test_load_sq_11_ceil_mode_is_ok(model_name, ceil_mode):
-    model = load_model(model_name, pretrained=False)
-    layers = get_all_modules_by_type(model, 'MaxPool2d')
-    for _, pool_layer in layers.items():
-        assert pool_layer.ceil_mode == ceil_mode
-
-
-def test_export_sq_11_custom_is_ok(tmp_path):
+def test_export_sq_11_is_ok(tmp_path):
     test_path = str(tmp_path.joinpath("test.onnx"))
-    model = load_model('squeezenet1_1_custom', pretrained=False)
+    model = load_model('squeezenet1_1', pretrained=False)
     dummy_input = torch.randn(1, 3, 224, 224)
     torch.onnx.export(model, dummy_input, test_path, verbose=False)
     os.remove(test_path)

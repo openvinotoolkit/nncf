@@ -17,6 +17,7 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
+from nncf.compression_method_api import StubCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
@@ -44,10 +45,10 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
         "compression":
             {
                 "algorithm": "rb_sparsity",
+                "sparsity_init": sparsity_init,
                 "params":
                     {
                         "schedule": "polynomial",
-                        "sparsity_init": sparsity_init,
                         "sparsity_target": sparsity_target,
                         "sparsity_target_epoch": sparsity_target_epoch,
                         "sparsity_freeze_epoch": sparsity_freeze_epoch
@@ -110,13 +111,14 @@ def test_can_create_sparse_loss_and_scheduler():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
+    scheduler = compression_ctrl.scheduler
+    scheduler.epoch_step()
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
     assert not loss.disabled
     assert loss.target_sparsity_rate == approx(0.02)
     assert loss.p == approx(0.05)
 
-    scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, PolynomialSparseScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
     assert scheduler.sparsity_target == approx(0.5)
@@ -165,10 +167,13 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     config['input_info'] = [{"sample_size": [1, 1, 32, 32]}]
     config['compression'] = {
         'algorithm': 'rb_sparsity',
+        'sparsity_init': 0.2,
         "params": {
             'schedule': 'polynomial',
-            'power': 1, 'sparsity_target_epoch': 2, 'sparsity_init': 0.2, 'sparsity_target': 0.6,
-            'sparsity_freeze_epoch': 4
+            'power': 1,
+            'sparsity_target_epoch': 2,
+            'sparsity_target': 0.6,
+            'sparsity_freeze_epoch': 3
         }
     }
 
@@ -182,6 +187,11 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     for module_info in compression_ctrl.sparsified_module_info:
         assert not module_info.operand.frozen
     scheduler.epoch_step()
+    assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.2
+    assert pytest.approx(loss().item(), abs=1e-3) == 16
+    assert not loss.disabled
+
+    scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.4
     assert pytest.approx(loss().item(), abs=1e-3) == 64
     assert not loss.disabled
@@ -192,14 +202,10 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert not loss.disabled
 
     scheduler.epoch_step()
-    assert not loss.disabled
-    assert loss.target_sparsity_rate == 0.6
-    assert loss().item() == 144
-
-    scheduler.epoch_step()
     assert loss.disabled
     assert loss.target_sparsity_rate == 0.6
     assert loss() == 0
+
     for module_info in compression_ctrl.sparsified_module_info:
         assert module_info.operand.frozen
 
@@ -214,10 +220,18 @@ def test_create_rb_algo_with_per_layer_loss():
 def test_rb_sparsity__can_set_sparsity_level_for_module():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     # pylint: disable=protected-access
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == 1
 
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.sparsified_module_info[0])
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == pytest.approx(0.3)
+
+def test_create_rb_algo_with_stub_scheduler():
+    config = get_empty_config()
+    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+
+    # pylint: disable=protected-access
+    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)

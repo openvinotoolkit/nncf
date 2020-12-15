@@ -31,7 +31,8 @@ from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
-    create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested
+    create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
+    log_common_mlflow_params, SafeMLFLow
 from examples.common.utils import write_metrics
 from examples.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
 from examples.object_detection.eval import test_net
@@ -89,6 +90,7 @@ def main_worker(current_gpu, config):
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
     if config.distributed:
         configure_distributed(config)
+    config.mlflow = SafeMLFLow(config)
     if is_on_first_rank(config):
         configure_logging(logger, config)
         print_args(config)
@@ -132,13 +134,13 @@ def main_worker(current_gpu, config):
     if config.to_onnx is not None:
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
-        test_data_loader, train_data_loader = create_dataloaders(config)
+        test_data_loader, train_data_loader, init_data_loader = create_dataloaders(config)
 
         def criterion_fn(model_outputs, target, criterion):
             loss_l, loss_c = criterion(model_outputs, target)
             return loss_l + loss_c
 
-        nncf_config = register_default_init_args(nncf_config, train_data_loader, criterion, criterion_fn, config.device)
+        nncf_config = register_default_init_args(nncf_config, init_data_loader, criterion, criterion_fn, config.device)
 
     ##################
     # Prepare model
@@ -172,6 +174,8 @@ def main_worker(current_gpu, config):
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_iter = resuming_checkpoint.get('iter', 0) + 1
 
+    log_common_mlflow_params(config)
+
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
@@ -181,9 +185,14 @@ def main_worker(current_gpu, config):
         with torch.no_grad():
             print_statistics(compression_ctrl.statistics())
             net.eval()
-            mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
-            if config.metrics_dump is not None:
-                write_metrics(mAp, config.metrics_dump)
+            if config['ssd_params'].get('loss_inference', False):
+                model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
+                                      loss_inference=True, criterion=criterion)
+                logger.info("Final model loss: {:.3f}".format(model_loss))
+            else:
+                mAp = test_net(net, config.device, test_data_loader, distributed=config.distributed)
+                if config.metrics_dump is not None:
+                    write_metrics(mAp, config.metrics_dump)
             return
 
     train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler)
@@ -199,14 +208,22 @@ def create_dataloaders(config):
                                                                         rank=config.rank)
     else:
         train_sampler = None
-    train_data_loader = data.DataLoader(
-        train_dataset, config.batch_size,
-        num_workers=config.workers,
-        shuffle=(train_sampler is None),
-        collate_fn=detection_collate,
-        pin_memory=True,
-        sampler=train_sampler
-    )
+
+    def create_train_data_loader(batch_size):
+        return data.DataLoader(
+            train_dataset, batch_size,
+            num_workers=config.workers,
+            shuffle=(train_sampler is None),
+            collate_fn=detection_collate,
+            pin_memory=True,
+            sampler=train_sampler
+        )
+
+    train_data_loader = create_train_data_loader(config.batch_size)
+    init_data_loader = train_data_loader
+    if config.batch_size_init:
+        init_data_loader = create_train_data_loader(config.batch_size_init)
+
     test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
     logger.info("Loaded {} testing images".format(len(test_dataset)))
     if config.distributed:
@@ -222,7 +239,7 @@ def create_dataloaders(config):
         drop_last=False,
         sampler=test_sampler
     )
-    return test_data_loader, train_data_loader
+    return test_data_loader, train_data_loader, init_data_loader
 
 
 def create_model(config: SampleConfig, resuming_model_sd: dict = None):
@@ -297,11 +314,13 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
         epoch = iteration // epoch_size
 
-        if (iteration + 1) % epoch_size == 0:
+        compression_ctrl.scheduler.step()
+        if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
+
+        if (iteration + 1) % epoch_size == 0:
             compression_level = compression_ctrl.compression_level()
             is_best = False
-
             if (epoch + 1) % test_freq_in_epochs == 0:
                 if is_on_first_rank(config):
                     print_statistics(compression_ctrl.statistics())
@@ -314,12 +333,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                         best_mAp = mAP
                     best_compression_level = max(compression_level, best_compression_level)
                     net.train()
-
-            # Learning rate scheduling should be applied after optimizer’s update
-            if not isinstance(lr_scheduler, ReduceLROnPlateau):
-                lr_scheduler.step(epoch)
-            else:
-                lr_scheduler.step(mAP)
 
             if is_on_first_rank(config):
                 logger.info('Saving state, iter: {}'.format(iteration))
@@ -337,7 +350,11 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                                             epoch=epoch + 1,
                                             config=config)
 
-        compression_ctrl.scheduler.step(iteration - config.start_iter)
+            # Learning rate scheduling should be applied after optimizer’s update
+            if not isinstance(lr_scheduler, ReduceLROnPlateau):
+                lr_scheduler.step(epoch)
+            else:
+                lr_scheduler.step(mAP)
 
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(

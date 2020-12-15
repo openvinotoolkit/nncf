@@ -1,0 +1,31 @@
+strict digraph  {
+"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
+"1 SymmetricQuantizer/symmetric_quantize" [id=1, scope=SymmetricQuantizer, type=symmetric_quantize];
+"2 ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d" [id=2, scope="ManyNonEvalModules/AvgPool2d[avg_pool]", type=avg_pool2d];
+"3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize" [id=3, scope="ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer", type=symmetric_quantize];
+"4 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" [id=4, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout", type=dropout];
+"5 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" [id=5, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer", type=symmetric_quantize];
+"6 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" [id=6, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer", type=symmetric_quantize];
+"7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear" [id=7, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]", type=linear];
+"8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" [id=8, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer", type=symmetric_quantize];
+"9 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" [id=9, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout", type=dropout];
+"10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=10, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"11 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear" [id=11, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]", type=linear];
+"12 ManyNonEvalModules/AuxBranch[aux_branch]/linear" [id=12, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=linear];
+"13 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" [id=13, scope="ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]", type=linear];
+"14 ManyNonEvalModules/AuxBranch[aux_branch]/RELU" [id=14, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=RELU];
+"0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
+"1 SymmetricQuantizer/symmetric_quantize" -> "2 ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d";
+"2 ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d" -> "3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize";
+"3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize" -> "4 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout";
+"4 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" -> "5 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize";
+"5 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" -> "7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear";
+"6 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" -> "7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear";
+"7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear" -> "8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize";
+"8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/SymmetricQuantizer/symmetric_quantize" -> "9 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout";
+"3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize" -> "12 ManyNonEvalModules/AuxBranch[aux_branch]/linear";
+"9 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" -> "11 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear";
+"10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "11 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear";
+"12 ManyNonEvalModules/AuxBranch[aux_branch]/linear" -> "13 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear";
+"13 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" -> "14 ManyNonEvalModules/AuxBranch[aux_branch]/RELU";
+}

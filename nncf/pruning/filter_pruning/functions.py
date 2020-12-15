@@ -13,17 +13,19 @@
 import torch
 
 
-def l1_filter_norm(weight_tensor):
+def l1_filter_norm(weight_tensor, dim=0):
     """
-    Calculates L1 for weight_tensor for the first dimension.
+    Calculates L1 for weight_tensor for the selected dimension.
     """
+    weight_tensor = weight_tensor.transpose(0, dim).contiguous()
     return torch.norm(weight_tensor.view(weight_tensor.shape[0], -1), p=1, dim=1)
 
 
-def l2_filter_norm(weight_tensor):
+def l2_filter_norm(weight_tensor, dim=0):
     """
-    Calculates L2 for weight_tensor for the first dimension.
+    Calculates L2 for weight_tensor for the selected dimension.
     """
+    weight_tensor = weight_tensor.transpose(0, dim).contiguous()
     return torch.norm(weight_tensor.view(weight_tensor.shape[0], -1), p=2, dim=1)
 
 
@@ -32,12 +34,14 @@ def tensor_l2_normalizer(weight_tensor):
     return weight_tensor / norm
 
 
-def geometric_median_filter_norm(weight_tensor):
+def geometric_median_filter_norm(weight_tensor, dim=0):
     """
     Compute geometric median norm for filters.
     :param weight_tensor: tensor with weights
+    :param dim: dimension of output channel
     :return: metric value for every weight from weights_tensor
     """
+    weight_tensor = weight_tensor.transpose(0, dim).contiguous()
     filters_count = weight_tensor.size(0)
     weight_vec = weight_tensor.view(filters_count, -1)
     similar_matrix = torch.zeros((filters_count, filters_count))

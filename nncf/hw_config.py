@@ -46,7 +46,7 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     'CPU': HWConfigType.CPU.value,
     'VPU': HWConfigType.VPU.value,
     'GPU': HWConfigType.GPU.value,
-    'NONE': None
+    'TRIAL': None
 }
 
 def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['OperatorMetatype']:

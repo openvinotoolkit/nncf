@@ -20,7 +20,7 @@
         "algorithm": "quantization",
         "initializer": {
             "range": {
-                "num_init_steps": 5
+                "num_init_samples": 160
             }
         },
         "ignored_scopes": [

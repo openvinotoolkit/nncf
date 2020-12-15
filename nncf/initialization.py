@@ -1,5 +1,6 @@
 import logging
 from collections import OrderedDict
+
 from functools import partial
 from typing import Dict, Tuple, Any, Callable
 
@@ -11,24 +12,24 @@ from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs, AutoQPrecisionInitArgs
-from nncf.utils import objwalk, is_tensor
+from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
 class RangeInitializerFactory:
     @staticmethod
     def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
         init_type = init_config["type"]
-        num_init_steps = init_config["num_init_steps"]
+        num_init_samples = init_config["num_init_samples"]
         if init_type == "min_max":
-            return MinMaxInitializer(module, num_init_steps, log_module_name)
+            return MinMaxInitializer(module, num_init_samples, log_module_name)
         if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, num_init_steps, log_module_name)
+            return ThreeSigmaInitializer(module, num_init_samples, log_module_name)
         if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, num_init_steps, log_module_name)
+            return MeanMinMaxInitializer(module, num_init_samples, log_module_name)
         if init_type == "percentile":
             min_percentile = init_config.get("min_percentile", 10)
             max_percentile = init_config.get("max_percentile", 90)
-            return PercentileInitializer(module, num_init_steps, min_percentile, max_percentile, log_module_name)
+            return PercentileInitializer(module, num_init_samples, min_percentile, max_percentile, log_module_name)
         raise NotImplementedError
 
 
@@ -43,6 +44,7 @@ class InitializingDataLoader:
 
     def __init__(self, regular_data_loader):
         self.data_loader = regular_data_loader
+        self.batch_size = regular_data_loader.batch_size
 
     def __iter__(self):
         self.data_loader_iter = iter(self.data_loader)
@@ -180,41 +182,51 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         self.progressbar_description = 'BatchNorm statistics adaptation'
         self.num_bn_forget_steps = num_bn_forget_steps
         self.momentum_bn_forget = 0.9
-        self.momentum_base = 0.1
+        self.original_momenta_values = {}
+
+    @staticmethod
+    def _apply_to_batchnorms(func):
+        def func_apply_to_bns(module):
+            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
+                func(module)
+        return func_apply_to_bns
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         num_bn_forget_steps = self.num_bn_forget_steps
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
 
         def set_bn_momentum(module, momentum_value):
-            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
-                module.momentum = momentum_value
+            module.momentum = momentum_value
 
-        self.model.apply(partial(set_bn_momentum,
-                                 momentum_value=self.momentum_bn_forget))
+        def save_original_bn_momenta(module):
+            self.original_momenta_values[module] = module.momentum
 
-        for i, loaded_item in enumerate(data_loader):
-            if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
+        def restore_original_bn_momenta(module):
+            module.momentum = self.original_momenta_values[module]
 
-        self.model.apply(partial(set_bn_momentum,
-                                 momentum_value=self.momentum_base))
+        with training_mode_switcher(self.model, is_training=True):
+            self.model.apply(self._apply_to_batchnorms(save_original_bn_momenta))
+            self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
+                                                               momentum_value=self.momentum_bn_forget)))
 
-        # with tqdm(
-        #         data_loader,
-        #         total=num_init_steps,
-        #         desc=self.progressbar_description,
-        #         bar_format=bar_format,
-        # ) as tqdm_it:
-        #     for i, loaded_item in enumerate(tqdm_it):
-        for i, loaded_item in enumerate(data_loader):
-            print(i)
-            if num_init_steps is not None and i >= num_init_steps:
-                break
-            args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-            self._infer_batch(args_kwargs_tuple, device)
+            for i, loaded_item in enumerate(data_loader):
+                if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
+
+            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
+
+            for i, loaded_item in tqdm(
+                    enumerate(data_loader),
+                    total=num_init_steps,
+                    desc=self.progressbar_description,
+                    bar_format=bar_format,
+            ):
+                if num_init_steps is not None and i >= num_init_steps:
+                    break
+                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                self._infer_batch(args_kwargs_tuple, device)
 
     def _prepare_initialization(self):
         pass

@@ -53,7 +53,7 @@ For all the cases listed above, the common quantization formula is simplified af
 
 ![output = \left\lfloor clamp(input * \frac{level\_high}{scale}, level\_low, level\_high)\right \rceil * \frac{scale}{level\_high}](https://latex.codecogs.com/png.latex?output%20%3D%20%5Cleft%5Clfloor%20clamp%28input%20*%20%5Cfrac%7Blevel%5C_high%7D%7Bscale%7D%2C%20level%5C_low%2C%20level%5C_high%29%5Cright%20%5Crceil%20*%20%5Cfrac%7Bscale%7D%7Blevel%5C_high%7D)
 
-Use the `num_init_steps` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics during given number of steps.
+Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
 ####  Asymmetric Quantization
 
@@ -81,7 +81,7 @@ For better accuracy, floating-point zero should be within quantization range and
 
 ![{input\_low,input\_high} = \begin{cases} {input\_low}',{input\_high}', & ZP \in $\{0,levels-1\}$ \\ {input\_low}',{input\_high}'', & {input\_high}'' - {input\_low}' > {input\_high}' - {input\_low}'' \\ {input\_low}'',{input\_high}', & {input\_high}'' - {input\_low}' <= {input\_high}' - {input\_low}''\\ \end{cases}](https://latex.codecogs.com/png.latex?%7Binput%5C_low%2Cinput%5C_high%7D%20%3D%20%5Cbegin%7Bcases%7D%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%2C%20%26%20ZP%20%5Cin%20%24%5C%7B0%2Clevels-1%5C%7D%24%20%5C%5C%20%7Binput%5C_low%7D%27%2C%7Binput%5C_high%7D%27%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3E%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%20%5C%5C%20%7Binput%5C_low%7D%27%27%2C%7Binput%5C_high%7D%27%2C%20%26%20%7Binput%5C_high%7D%27%27%20-%20%7Binput%5C_low%7D%27%20%3C%3D%20%7Binput%5C_high%7D%27%20-%20%7Binput%5C_low%7D%27%27%5C%5C%20%5Cend%7Bcases%7D)
 
-You can use the `num_init_steps` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics during given number of steps.
+You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
 #### Quantizer setup and hardware config files
 NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime. 
@@ -103,9 +103,9 @@ However, the possible configurations of weight quantizers themselves are also so
 
 The HW to target for a given quantization algorithm run can be specified in NNCF config using the global `"target_device"` option.
 The default corresponds to CPU-friendly quantization.
-`"NONE"` corresponds to a configuration that uses the general quantizer propagation algorithm, but does not use any HW-specific information about quantizability of given operation types or possible quantizer configs for associated inputs or operation weights.
+`"TRIAL"` corresponds to a configuration that uses the general quantizer propagation algorithm, but does not use any HW-specific information about quantizability of given operation types or possible quantizer configs for associated inputs or operation weights.
 Instead it uses a default, basic 8-bit symmetric per-tensor quantization configuration for each quantizer, and quantizes inputs of a certain default operation set, which at the moment is defined internally in NNCF.
-The quantization configuration in the `"target_device": "NONE"` case may be overridden using the regular `"activations"` and `"weights"` sections in the quantization compression algorithm sub-config, see below.
+The quantization configuration in the `"target_device": "TRIAL"` case may be overridden using the regular `"activations"` and `"weights"` sections in the quantization compression algorithm sub-config, see below.
 
 For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
 
@@ -211,7 +211,7 @@ For automatic mixed-precision selection it's recommended to use the following te
 
 Note, optimizer parameters are model specific, this template contains optimal ones for ResNet-like models.
 
-Here's an [example](../../examples/classification/configs/quantization/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
+Here's an [example](../../examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq.json) of 
 using the template in the full configuration file.
 
 This template uses `plateau` scheduler. Though it usually leads to a lot of epochs of tuning for achieving a good 
@@ -236,7 +236,7 @@ After the compression-related changes in the model have been committed, the stat
 (per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
 through the model before the fine-tuning starts. This allows to correct the compression-induced bias in the model
 and reduce the corresponding accuracy drop even before model training. This option is common for quantization, magnitude
-sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_steps` in the
+sparsity and filter pruning algorithms. It can be enabled by setting a non-zero value of `num_bn_adaptation_samples` in the
 `batchnorm_adaptation` section of the `initializer` configuration (see example below).
 
 
@@ -246,15 +246,15 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
     "algorithm": "quantization",
     "initializer": {
         "range": {
-            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
             "type": "minmax" // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges
         },
         "precision": {
             "type": "hawq", // Type of precision initialization - either "manual" or "hawq". With "manual", precisions are defined explicitly via "bitwidth_per_scope". With "hawq", these are determined automatically using the HAWQ algorithm.
-            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization.",
-            "num_data_points": 1000, // Number of data points to iteratively estimate Hessian trace, 1000 by default.
-            "iter_number": 500, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 500 by default
-            "tolerance": 1e-5, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated  between mean average trace from previous iteration and current one. 1e-5 by default
+            "bits": [4, 8], // A list of bitwidth to choose from when performing precision initialization. Overrides bitwidth constraints specified in `weight` and `activation` sections",
+            "num_data_points": 100, // Number of data points to iteratively estimate Hessian trace, 100 by default.
+            "iter_number": 200, // Maximum number of iterations of Hutchinson algorithm to estimate Hessian trace, 200 by default
+            "tolerance": 1e-4, //  Minimum relative tolerance for stopping the Hutchinson algorithm. It's calculated between mean average trace from previous iteration and current one. 1e-4 by default
             "compression_ratio": 1.5, // The desired ratio between bits complexity of fully INT8 model and mixed-precision lower-bit one.
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
@@ -268,13 +268,13 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             ]
         }
         "batchnorm_adaptation": {
-            "num_bn_adaptation_steps": 10, // Number of batches from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model
-            "num_bn_forget_steps": 5, // Number of batches from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates)
+            "num_bn_adaptation_samples": 2048, // Number of samples from the training dataset to pass through the model at initialization in order to update batchnorm statistics of the original model. The actual number of samples will be a closest multiple of the batch size.
+            "num_bn_forget_samples": 1024, // Number of samples from the training dataset to pass through the model at initialization in order to erase batchnorm statistics of the original model (using large momentum value for rolling mean updates). The actual number of samples will be a closest multiple of the batch size.
         }
     }
-    "weights": { // Constraints to be applied to model weights quantization only.Overrides higher-level settings.
+    "weights": { // Constraints to be applied to model weights quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 8, // Bitwidth to quantize to.
+        "bits": 8, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all weights. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module weight specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
@@ -284,9 +284,9 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
         // "target_scopes": []
     },
-    "activations": { // Constraints to be applied to model activations quantization only. Overrides higher-level settings.
+    "activations": { // Constraints to be applied to model activations quantization only.
         "mode": "symmetric", // Mode of quantization
-        "bits": 4, // Bitwidth to quantize to.
+        "bits": 4, // Bitwidth to quantize to. It is intended to manually specify bitwidth for all activations. Can be overridden by the `bits` parameter from the `precision` initializer section. An error happens if it doesn't match a bitwidth constraints for module inputs specified in the hardware configuration.
         "signed": true, // Whether to use signed or unsigned input/output values for quantization. If specified as unsigned and the input values during initialization have differing signs, will reset to performing signed quantization instead.
         "per_channel": false, // Whether to quantize inputs per channel (i.e. per 0-th dimension for weight quantization,and per 1-st dimension for activation quantization)
 
@@ -338,7 +338,7 @@ Per layer ranges initiaization can be enabled by specifying  in `"initializer"` 
         {
             "type": "min_max", // Type of the initializer - determines which statistics gathered during initialization will be used to initialize the quantization ranges for all modules specified by `"target_scopes"` or `"ignored_scopes"`.
 
-            "num_init_steps": 5, // Number of batches from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
+            "num_init_samples": 256, // Number of samples from the training dataset to consume as sample model inputs for purposes of setting initial minimum and maximum quantization ranges
 
             "target_scopes": [], // A list of model control flow graph node scopes to be considered for this operation - functions as a 'allowlist'. Optional.
             "ignored_scopes": [], // A list of model control flow graph node scopes to be ignored for this operation - functions as a 'denylist'. Optional.

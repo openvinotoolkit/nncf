@@ -187,7 +187,6 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-
         if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
@@ -209,7 +208,6 @@ class DepthwiseConv3dSubtype(OperatorSubtype):
     def matches(cls, containing_module: Optional[torch.nn.Module] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-
         if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
             return True
         return False
@@ -267,6 +265,12 @@ class ELUMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class PRELUMetatype(OperatorMetatype):
     name = "prelu"
+    torch_nn_functional_patch_spec = PatchSpec([name])
+
+
+@OPERATOR_METATYPES.register()
+class LeakyRELUMetatype(OperatorMetatype):
+    name = "leaky_relu"
     torch_nn_functional_patch_spec = PatchSpec([name])
 
 
@@ -349,7 +353,6 @@ class MatMulMetatype(OperatorMetatype):
     torch_module_patch_spec = PatchSpec([name, "bmm"])
     torch_tensor_patch_spec = PatchSpec([name])
     hw_config_names = [HWConfigOpName.MATMUL]
-
 
 
 @OPERATOR_METATYPES.register()
@@ -513,6 +516,14 @@ class ExpandMetatype(OperatorMetatype):
 class EmbeddingMetatype(OperatorMetatype):
     name = "embedding"
     torch_nn_functional_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.EMBEDDING]
+
+
+@OPERATOR_METATYPES.register()
+class EmbeddingBagMetatype(OperatorMetatype):
+    name = "embedding_bag"
+    torch_nn_functional_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
 
 
 @OPERATOR_METATYPES.register()
@@ -623,6 +634,7 @@ class RepeatMetatype(OperatorMetatype):
 class CloneMetatype(OperatorMetatype):
     name = "clone"
     torch_tensor_patch_spec = PatchSpec([name], ForwardTraceOnly())
+
 
 @OPERATOR_METATYPES.register()
 class PixelShuffleMetatype(OperatorMetatype):

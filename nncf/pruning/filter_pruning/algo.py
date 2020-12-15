@@ -10,64 +10,72 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List
 
 import torch
 from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
-from nncf.layers import NNCF_CONV_MODULES_DICT
+from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
-from nncf.pruning.export_helpers import ModelPruner
+from nncf.pruning.export_helpers import ModelPruner, Elementwise
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
+from nncf.pruning.model_analysis import Clusterization
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.pruning.utils import get_rounded_pruned_element_number
+from nncf.utils import get_filters_num
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
-        return FilterPruningBlock(module.weight.size(0))
+        return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return FilterPruningController(target_model,
-                                       self._pruned_module_info,
+                                       self.pruned_module_groups_info,
                                        self.config)
 
     def _is_pruned_module(self, module):
         # Currently prune only Convolutions
-        return isinstance(module, tuple(NNCF_CONV_MODULES_DICT.keys()))
+        return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_types_of_pruned_modules(self):
-        types = [str.lower(v.__name__) for v in NNCF_CONV_MODULES_DICT.values()]
+    def get_op_types_of_pruned_modules(self):
+        types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
         return types
+
+    def get_types_of_grouping_ops(self):
+        return Elementwise.get_all_op_aliases()
 
 
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
-                 pruned_module_info: List[PrunedModuleInfo],
+                 pruned_module_groups: Clusterization,
                  config):
-        super().__init__(target_model, pruned_module_info, config)
+        super().__init__(target_model, pruned_module_groups, config)
         params = self.config.get("params", {})
         self.frozen = False
         self.pruning_rate = 0
+        self.pruning_init = config.get("pruning_init", 0)
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
         self.all_weights = params.get("all_weights", False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
+
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
         stats['pruning_rate'] = self.pruning_rate
         return stats
@@ -91,50 +99,72 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.debug("Setting new binary masks for pruned modules.")
 
         with torch.no_grad():
-            for minfo in self.pruned_module_info:
-                pruning_module = minfo.operand
-                # 1. Calculate importance for all filters in all weights
-                # 2. Calculate thresholds for every weight
-                # 3. Set binary masks for filter
-                filters_importance = self.filter_importance(minfo.module.weight)
-                num_of_sparse_elems = get_rounded_pruned_element_number(filters_importance.size(0),
+            for group in self.pruned_module_groups_info.get_all_clusters():
+                filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
+                assert torch.all(filters_num == filters_num[0])
+                device = group.nodes[0].module.weight.device
+
+                cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
+                # 1. Calculate cumulative importance for all filters in group
+                for minfo in group.nodes:
+                    filters_importance = self.filter_importance(minfo.module.weight,
+                                                                minfo.module.target_weight_dim_for_compression)
+                    cumulative_filters_importance += filters_importance
+
+                # 2. Calculate threshold
+                num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
                                                                         self.pruning_rate)
-                threshold = sorted(filters_importance)[num_of_sparse_elems]
-                pruning_module.binary_filter_pruning_mask = calculate_binary_mask(filters_importance, threshold)
+                threshold = sorted(cumulative_filters_importance)[num_of_sparse_elems]
+                mask = calculate_binary_mask(cumulative_filters_importance, threshold)
+
+                # 3. Set binary masks for filter
+                for minfo in group.nodes:
+                    pruning_module = minfo.operand
+                    pruning_module.binary_filter_pruning_mask = mask
 
     def _set_binary_masks_for_all_pruned_modules(self):
         nncf_logger.debug("Setting new binary masks for all pruned modules together.")
-
-        normalized_weights = []
         filter_importances = []
-        for minfo in self.pruned_module_info:
-            pruning_module = minfo.operand
-            # 1. Calculate importance for all filters in all weights
-            # 2. Calculate thresholds for every weight
-            # 3. Set binary masks for filter
-            normalized_weight = self.weights_normalizer(minfo.module.weight)
-            normalized_weights.append(normalized_weight)
+        # 1. Calculate importances for all groups of  filters
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
+            assert torch.all(filters_num == filters_num[0])
+            device = group.nodes[0].module.weight.device
 
-            filter_importances.append(self.filter_importance(normalized_weight))
+            cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
+            # Calculate cumulative importance for all filters in this group
+            for minfo in group.nodes:
+                normalized_weight = self.weights_normalizer(minfo.module.weight)
+                filters_importance = self.filter_importance(normalized_weight,
+                                                            minfo.module.target_weight_dim_for_compression)
+                cumulative_filters_importance += filters_importance
+
+            filter_importances.append(cumulative_filters_importance)
+
+        # 2. Calculate one threshold for all weights
         importances = torch.cat(filter_importances)
         threshold = sorted(importances)[int(self.pruning_rate * importances.size(0))]
 
-        for i, minfo in enumerate(self.pruned_module_info):
-            pruning_module = minfo.operand
-            pruning_module.binary_filter_pruning_mask = calculate_binary_mask(filter_importances[i], threshold)
+        # 3. Set binary masks for filters in grops
+        for i, group in enumerate(self.pruned_module_groups_info.get_all_clusters()):
+            mask = calculate_binary_mask(filter_importances[i], threshold)
+            for minfo in group.nodes:
+                pruning_module = minfo.operand
+                pruning_module.binary_filter_pruning_mask = mask
 
     def _apply_masks(self):
         nncf_logger.debug("Applying pruning binary masks")
 
         def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_name=""):
             with torch.no_grad():
+                dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
                 # Applying mask to weights
-                inplace_apply_filter_binary_mask(mask, module.weight, module_name)
+                inplace_apply_filter_binary_mask(mask, module.weight, module_name, dim)
                 # Applying mask to bias too (if exists)
                 if module.bias is not None:
                     inplace_apply_filter_binary_mask(mask, module.bias, module_name)
 
-        for minfo in self.pruned_module_info:
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
             _apply_binary_mask_to_module_weight_and_bias(minfo.module, minfo.operand.binary_filter_pruning_mask,
                                                          minfo.module_name)
 
@@ -143,11 +173,6 @@ class FilterPruningController(BasePruningAlgoController):
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
                     and related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME]
-                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
-
-            if minfo.related_modules is not None and PrunedModuleInfo.DEPTHWISE_BN_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME] is not None:
-                bn_module = related_modules[PrunedModuleInfo.DEPTHWISE_BN_NAME]
                 _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
 
     @staticmethod

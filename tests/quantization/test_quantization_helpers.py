@@ -60,7 +60,7 @@ def get_quantization_config_without_range_init(model_size=4):
                 "algorithm": "quantization",
                 "initializer": {
                     "range": {
-                        "num_init_steps": 0
+                        "num_init_samples": 0
                     }
                 }
             }
@@ -70,7 +70,7 @@ def get_quantization_config_without_range_init(model_size=4):
 
 def get_squeezenet_quantization_config(image_size=32, batch_size=3):
     config = get_quantization_config_without_range_init(image_size)
-    config['model'] = 'squeezenet1_1_custom'
+    config['model'] = 'squeezenet1_1'
     config['input_info'] = {
         "sample_size": [batch_size, 3, image_size, image_size],
     }

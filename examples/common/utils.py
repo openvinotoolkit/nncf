@@ -22,12 +22,21 @@ from pathlib import Path
 import os
 import tarfile
 from shutil import copyfile
+from typing import Tuple
+
+from PIL import Image
+import torch.utils.data as data
 
 from examples.common.sample_config import SampleConfig
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from texttable import Texttable
+import mlflow
 
 from examples.common.example_logger import logger as default_logger
+from nncf.utils import is_main_process
+
+# pylint: disable=import-error
+from returns.maybe import Maybe, Nothing
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
@@ -67,9 +76,9 @@ def write_metrics(acc, filename):
     metrics = {"Accuracy": avg}
     if os.path.isfile(filename):
         path = Path(filename)
-        data = json.loads(path.read_text(encoding='utf-8'))
-        data.update(metrics)
-        path.write_text(json.dumps(data, indent=2), encoding='utf-8')
+        metric_data = json.loads(path.read_text(encoding='utf-8'))
+        metric_data.update(metrics)
+        path.write_text(json.dumps(metric_data, indent=2), encoding='utf-8')
     else:
         with open(filename, 'w') as outfile:
             json.dump(metrics, outfile)
@@ -94,6 +103,43 @@ def configure_paths(config):
     os.makedirs(config.checkpoint_save_dir, exist_ok=True)
 
 
+class SafeMLFLow:
+    """ Wrapper to encapsulate safe access to mlflow methods without checking for None and with automatic closing """
+
+    def __init__(self, config):
+        self.is_suitable_mode = config.mode.lower() == 'train' and config.to_onnx is None
+        root_log_dir = osp.dirname(osp.dirname(config.log_dir))
+        self.safe_call('set_tracking_uri', osp.join(root_log_dir, 'mlruns'))
+
+        self.safe_call('get_experiment_by_name', config.name). \
+            or_else_call(lambda: self.safe_call('create_experiment', config.name))
+
+        self.safe_call('set_experiment', config.name)
+        self.safe_call('start_run')
+
+        def create_symlink_fn(mlflow_active_run: mlflow.ActiveRun):
+            os.symlink(config.log_dir, osp.join(mlflow_active_run.info.artifact_uri, osp.basename(config.log_dir)))
+            return Nothing
+
+        self.safe_call('active_run').bind(create_symlink_fn)
+
+    def __del__(self):
+        self.safe_call('end_run')
+
+    def safe_call(self, func: str, *args, **kwargs) -> Maybe:
+        """ Calls mlflow method, if it's enabled and safely does nothing in the opposite case"""
+        return Maybe.from_value(self._get_mlflow()).bind(
+            lambda obj: Maybe.from_value(getattr(obj, func)(*args, **kwargs)))
+
+    def _is_enabled(self):
+        return self.is_suitable_mode and is_main_process()
+
+    def _get_mlflow(self):
+        if self._is_enabled():
+            return mlflow
+        return None
+
+
 def configure_logging(sample_logger, config):
     config.tb = SummaryWriter(config.log_dir)
 
@@ -105,6 +151,14 @@ def configure_logging(sample_logger, config):
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
     from nncf.nncf_logger import logger as nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
+
+
+def log_common_mlflow_params(config):
+    optimizer = config.nncf_config.get('optimizer', {})
+    config.mlflow.safe_call('log_param', 'epochs', config.get('epochs', 'None'))
+    config.mlflow.safe_call('log_param', 'schedule_type', optimizer.get('schedule_type', 'None'))
+    config.mlflow.safe_call('log_param', 'lr', optimizer.get('base_lr', 'None'))
+    config.mlflow.safe_call('set_tag', 'Log Dir Path', config.log_dir)
 
 
 def is_on_first_rank(config):
@@ -179,7 +233,7 @@ def is_staged_quantization(config):
 def print_statistics(stats, logger=default_logger):
     for key, val in stats.items():
         if isinstance(val, Texttable):
-            logger.info(key)
+            logger.info("{}:".format(key))
             logger.info(val.draw())
         else:
             logger.info("{}: {}".format(key, val))
@@ -187,3 +241,23 @@ def print_statistics(stats, logger=default_logger):
 
 def is_pretrained_model_requested(config: SampleConfig) -> bool:
     return config.get('pretrained', True) if config.get('weights') is None else False
+
+
+class MockDataset(data.Dataset):
+    def __init__(self, img_size: Tuple[int, int] = (32, 32), num_images: int = 1000,
+                 transform=None):
+        super().__init__()
+        self._img_size = img_size
+        self._num_images = num_images
+        self._transform = transform
+
+    def __len__(self):
+        return self._num_images
+
+    def __getitem__(self, idx):
+        if 0 <= idx < self._num_images:
+            img = Image.new(mode='RGB', size=self._img_size)
+            if self._transform is not None:
+                img = self._transform(img)
+            return img, 0
+        raise ValueError

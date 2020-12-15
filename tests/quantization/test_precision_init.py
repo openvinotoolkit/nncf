@@ -30,7 +30,6 @@ from torchvision.transforms import transforms
 
 from examples.classification.main import create_cifar
 from examples.common.model_loader import load_model
-from examples.common.models import squeezenet1_1_custom
 from examples.common.sample_config import SampleConfig
 from examples.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args, NNCFConfig
@@ -54,7 +53,7 @@ from nncf.quantization.precision_init.traces_order import TracesOrder, TracesPer
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
-from tests.helpers import create_compressed_model_and_algo_for_test, MockModel, create_conv, \
+from tests.helpers import create_compressed_model_and_algo_for_test, create_conv, \
     create_mock_dataloader, BasicConvTestModel
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
     get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
@@ -63,6 +62,7 @@ from tests.test_compressed_graph import check_graph
 
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
+from tests.test_models import squeezenet1_1
 
 
 def create_test_dataloaders(config, dataset_dir):
@@ -165,13 +165,18 @@ class HAWQConfigBuilder:
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
 
     def for_none(self):
-        return self._set_target_device('NONE').prop_based()
+        return self._set_target_device('TRIAL').prop_based()
 
     def none_device(self):
         self._config["target_device"] = None
 
     def build(self):
         return self._config
+
+    def with_ignored_scope(self, ignored_scopes=List[str]):
+        self._config['ignored_scopes'] = ignored_scopes
+        self._options['with'] = 'ignored_scopes'
+        return self
 
     def __str__(self):
         if self._extra_params:
@@ -203,7 +208,7 @@ class HAWQConfigBuilder:
                     "tolerance": 1e-2
                 },
                 'range': {
-                    'num_init_steps': 1
+                    'num_init_samples': 1
                 }
             }})
         return config
@@ -284,17 +289,21 @@ TEST_PARAMS = (
     HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
                    config_builder=HAWQConfigBuilder().with_ratio(1.15).for_vpu()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.03).for_vpu()),
-    HAWQTestStruct(model_creator=squeezenet1_1_custom,
+    HAWQTestStruct(model_creator=squeezenet1_1,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=get_avg_traces_for_vpu,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1.01)),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=get_avg_traces_for_vpu,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:93],
+                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
+                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]'])),
+    HAWQTestStruct(model_creator=inception_v3,
+                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode()),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09),
@@ -401,16 +410,16 @@ HAWQTestParams = namedtuple('HAWQTestParams', ('iter_number', 'batch_size', 'num
 @pytest.mark.parametrize("params",
                          (HAWQTestParams(200, 13, 100, 0.04771214351058006),
                           HAWQTestParams(2, 13, 100, 0.031417448073625565),
-                          HAWQTestParams(2, 10, 10, 0.04505228251218796),
-                          HAWQTestParams(2, 10, 5, 0.04505228251218796)),
+                          HAWQTestParams(2, 10, 10, 0.04505229741334915),
+                          HAWQTestParams(2, 10, 5, 0.04505229741334915)),
                          ids=('until_threshold', 'until_num_iter', 'batch_eq_num_data', 'batch_larger_num_data'))
 def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, params: HAWQTestParams):
     config = get_squeezenet_quantization_config(batch_size=params.batch_size)
     iter_number = params.iter_number
     tolerance = 4e-4
 
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
-    from examples.common.models.classification.squeezenet import model_urls
+    model = squeezenet1_1(num_classes=10, dropout=0)
+    from torchvision.models.squeezenet import model_urls
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
     model = model.cuda()
 
@@ -497,11 +506,10 @@ def test_enable_quantizer_gradients():
 def disable_quantizer_gradients():
     config = get_quantization_config_without_range_init()
     config['input_info'] = {
-        "sample_size": [1, 3, 10, 10],
+        "sample_size": [2, 3, 10, 10],
     }
     config['quantizer_setup_type'] = 'pattern_based'
     model = MobileNetV2(num_classes=10)
-    model.eval()
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     original_requires_grad_per_param = get_requires_grad_per_param(model)
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
@@ -554,12 +562,6 @@ def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
 
 ManualConfigTestParams = namedtuple('ManualConfigTestParams', ('config_name', 'bit_stats'))
 MANUAL_CONFIG_TEST_PARAMS = [
-    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual.json",
-                           bit_stats=[['8', '23.077', '33.333', '56.410'],
-                                      ['4', '22.222', '21.368', '43.590']]),
-    ManualConfigTestParams(config_name="mobilenet_v2_cifar100_mixed_int_manual_staged.json",
-                           bit_stats=[['8', '23.077', '33.333', '56.410'],
-                                      ['4', '22.222', '21.368', '43.590']]),
     ManualConfigTestParams(config_name="mobilenet_v2_imagenet_mixed_int_manual.json",
                            bit_stats=[['8', '23.077', '23.932', '47.009'],
                                       ['4', '22.222', '30.769', '52.991']]),
@@ -579,7 +581,8 @@ MANUAL_CONFIG_TEST_PARAMS = [
                          ids=[pair[0] for pair in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
     config_name, bit_stats = manual_config_params
-    config = NNCFConfig.from_json(str(EXAMPLES_DIR.joinpath('classification', 'configs', 'quantization') / config_name))
+    config_path = EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / config_name
+    config = NNCFConfig.from_json(str(config_path))
     config['quantizer_setup_type'] = 'pattern_based'
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
     model = load_model(config['model'], pretrained=False)
@@ -598,10 +601,12 @@ def test_hawq_manual_configs(manual_config_params):
                              ('_filter_configs_by_precision_constraints', pytest.warns(RuntimeWarning))]
                          )
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
-    config = HAWQConfigBuilder().build()
+    config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).build()
     config['quantizer_setup_type'] = 'pattern_based'
-    model = MockModel()
-    config = register_default_init_args(config, mocker.stub(), mocker.stub())
+    model = BasicConvTestModel()
+    mock_train_loader = mocker.stub()
+    mock_train_loader.batch_size = 1
+    config = register_default_init_args(config, mock_train_loader, mocker.stub())
     mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
     mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
 
@@ -746,7 +751,7 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
     }
     model_save, ctrl_save = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
     ctrl_save.scheduler.epoch_step()
-
+    ctrl_save.scheduler.epoch_step()
     _, ctrl_load = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config,
                                                              resuming_state_dict=model_save.state_dict())
     for quantizer_info in ctrl_load.non_weight_quantizers.values():

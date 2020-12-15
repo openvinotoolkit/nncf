@@ -1,0 +1,37 @@
+{
+    "model": "resnet50",
+    "pretrained": true,
+    "input_info": {
+        "sample_size": [
+            1,
+            3,
+            224,
+            224
+        ]
+    },
+    "num_classes": 1000,
+    "batch_size": 150,
+    "workers": 6,
+    "multiprocessing_distributed": true,
+    "optimizer": {
+        "base_lr": 0.00031,
+        "schedule_type": "plateau",
+        "type": "Adam",
+        "scheduler_params": {
+            "threshold": 0.1,
+            "cooldown": 3
+        },
+        "weight_decay": 1e-05
+    },
+    "target_device": "VPU",
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "precision": {
+                "type": "hawq",
+                "bits": [4, 8],
+                "compression_ratio": 1.5
+            }
+        }
+    }
+}

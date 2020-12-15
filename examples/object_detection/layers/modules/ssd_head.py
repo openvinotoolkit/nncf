@@ -24,6 +24,7 @@ class SSDDetectionOutput(nn.Module):
         super().__init__()
         self.config = config
         self.num_classes = num_classes
+        self.loss_inference = config.get('loss_inference', False)
 
         self.heads = nn.ModuleList()
         for i, num_features in enumerate(num_input_features):
@@ -59,6 +60,8 @@ class SSDDetectionOutput(nn.Module):
             return loc.view(batch, -1, 4), conf.view(batch, -1, self.num_classes), priors.view(1, 2, -1, 4)
 
         with no_nncf_trace():
+            if self.loss_inference is True:
+                return loc.view(batch, -1, 4), conf.view(batch, -1, self.num_classes), priors.view(1, 2, -1, 4)
             return self.detection_output(loc, conf_softmax.view(batch, -1), priors)
 
 

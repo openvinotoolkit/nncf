@@ -9,7 +9,10 @@ models:
         preprocessing:
           - type: resize
             size: 300
-          - type: normalization
-            mean: 123.675, 116.28, 103.53
         postprocessing:
           - type: resize_prediction_boxes
+        metrics:
+          - type: map
+            integral: max
+            ignore_difficult: True
+            presenter: print_scalar
