@@ -23,6 +23,7 @@ from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOpe
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.nncf_network import InsertionInfo
 from nncf.quantization.algo import QuantizationBuilder
+from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
@@ -466,7 +467,6 @@ def test_quantizer_scale_linking():
         for quantizer in compression_ctrl.all_quantizations.values():
             quantizer.scale.fill_(old_scale)
 
-
     # Expected outputs without compression - 6, 12, 8. Scale deliberately set to preserve the values
     uncompressed_expected_outputs = (6.0 * torch.ones([1]), 12.0 * torch.ones([1]), 18.0 * torch.ones([1]))
     outputs_with_shared_scale_1 = compressed_model(test_input1, test_input2)
@@ -545,7 +545,7 @@ class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
 
 
 def test_unified_scales_are_identical_in_onnx(tmp_path):
-    #pylint:disable=no-member
+    # pylint:disable=no-member
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
@@ -561,7 +561,12 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
 
     with torch.no_grad():
         for quant_info in compression_ctrl.non_weight_quantizers.values():
-            quant_info.quantizer_module_ref.scale *= torch.abs(torch.rand_like(quant_info.quantizer_module_ref.scale))
+            if isinstance(quant_info.quantizer_module_ref, AsymmetricQuantizer):
+                quant_info.quantizer_module_ref.input_range *= torch.abs(
+                    torch.rand_like(quant_info.quantizer_module_ref.input_range))
+            else:
+                quant_info.quantizer_module_ref.scale *= torch.abs(
+                    torch.rand_like(quant_info.quantizer_module_ref.scale))
 
     test_input1 = torch.ones([1, 1, 1, 2])
     compressed_model.forward(test_input1)
@@ -605,7 +610,7 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
         return list(output_nodes.values())
 
     def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.GraphProto) -> \
-            Dict[str, onnx.AttributeProto]:
+        Dict[str, onnx.AttributeProto]:
         retval = {}
         for input_ in node.input:
             constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
