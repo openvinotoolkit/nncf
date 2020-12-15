@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Callable, NamedTuple, List, Dict
 
 import math
-import numpy as np
 import os
 import pytest
 import torch
@@ -164,7 +163,7 @@ class HAWQConfigBuilder:
     def for_cpu(self):
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
 
-    def for_none(self):
+    def for_trial(self):
         return self._set_target_device('TRIAL').prop_based()
 
     def none_device(self):
@@ -228,89 +227,49 @@ def ssd_vgg_512_test():
 
 
 def get_avg_traces(model, init_device: str):
-    return get_avg_traces_with_int4_layers_indexes(model, init_device)[0]
-
-
-def get_avg_traces_with_int4_layers_indexes(model, init_device: str):
-    """ Assigns bigger average traces for DepthWise Conv than for ordinary Conv and Linear"""
-    all_layers = get_all_modules_by_type(model, ['Conv2d', 'Linear'])
-
-    int4_indexes = []
-    for i, layer in enumerate(all_layers.values()):
-        if isinstance(layer, nn.Conv2d) and layer.groups != layer.in_channels:
-            int4_indexes.append(i)
-
-    num_traces = len(all_layers)
-
-    mock_avg_traces = []
-    scale = 1e-1
-    for i in range(num_traces):
-        relative_sensitivity = 2 * num_traces + i if i not in int4_indexes else num_traces - i
-        mock_avg_traces.append(torch.Tensor([scale * relative_sensitivity]).to(init_device))
-    return torch.Tensor(mock_avg_traces).to(init_device), int4_indexes
-
-
-def get_permutted_avg_traces_for_vpu(model, init_device: str):
-    avg_traces = get_avg_traces_for_vpu(model, init_device)
-    return avg_traces[np.random.permutation(len(avg_traces))]
-
-
-def get_avg_traces_for_vpu(model, init_device: str):
-    """
-    Filters average traces for Convolutions only, as they have choice of precision on VPU and
-    won't be skipped on Hessian calculation
-    """
-    avg_traces, int4_indexes = get_avg_traces_with_int4_layers_indexes(model, init_device)
-    return torch.Tensor(
-        [avg_traces[i] for i in range(avg_traces.shape[0]) if i in int4_indexes]).to(init_device)
+    num_traces = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
+    return torch.randperm(num_traces).to(init_device) + 1
 
 
 class HAWQTestStruct(NamedTuple):
     model_creator: Callable[[], nn.Module] = mobilenet_v2
     config_builder: HAWQConfigBuilder = HAWQConfigBuilder().prop_based().for_vpu()
     filename_suffix: str = 'hw_config_vpu'
-    avg_traces_creator: Callable[[nn.Module, str], torch.Tensor] = get_permutted_avg_traces_for_vpu
+    avg_traces_creator: Callable[[nn.Module, str], torch.Tensor] = get_avg_traces
 
     def __str__(self):
         return '_'.join([self.model_creator.__name__, str(self.config_builder)])
 
 
 TEST_PARAMS = (
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based(),
-                   avg_traces_creator=get_avg_traces),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based(),
-                   avg_traces_creator=get_avg_traces),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_none(),
-                   avg_traces_creator=get_avg_traces),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu(),
-                   avg_traces_creator=get_avg_traces),
-    HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
-                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.4)),
-    HAWQTestStruct(avg_traces_creator=get_avg_traces_for_vpu,
-                   config_builder=HAWQConfigBuilder().with_ratio(1.15).for_vpu()),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.03).for_vpu()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5)),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.02).for_vpu()),
     HAWQTestStruct(model_creator=squeezenet1_1,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
-                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode()),
+                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5)),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
-                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1.01)),
+                   avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
+                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1)),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:93],
+                   avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
-                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]'])),
+                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).with_ratio(2.5)),
     HAWQTestStruct(model_creator=inception_v3,
-                   avg_traces_creator=lambda x, y: get_avg_traces_for_vpu(x, y)[:94],
-                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode()),
+                   avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
+                   config_builder=HAWQConfigBuilder().with_sample_size(
+                       [2, 3, 299, 299]).for_vpu().liberal_mode().with_ratio(2.5)),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
-                   config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09),
-                   avg_traces_creator=get_avg_traces_for_vpu),
+                   config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09)),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
-                   config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().liberal_mode(),
-                   avg_traces_creator=get_avg_traces_for_vpu),
+                   config_builder=HAWQConfigBuilder().with_sample_size(
+                       [1, 3, 512, 512]).for_vpu().liberal_mode().with_ratio(2.5)),
 )
 
 
@@ -342,7 +301,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
 
 def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
-    config = HAWQConfigBuilder().for_vpu().with_ratio(1.01).build()
+    config = HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5).build()
     model = MobileNetV2(num_classes=10)
     criterion = nn.CrossEntropyLoss()
     if not dataset_dir:
