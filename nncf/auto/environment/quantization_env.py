@@ -250,7 +250,6 @@ class QuantizationEnv:
             d[idx_str]['q_nx_nodekey'] = nodekey
             d[idx_str]['gid']          = gid
             d[idx_str]['bw_space']     = self.bw_space_map[qid]
-            d[idx_str]['is_pred']      = True
             
             if isinstance(qid, WeightQuantizerId):
                 d[idx_str]['state_scope'] = qid.scope
@@ -414,7 +413,7 @@ class QuantizationEnv:
 
             while self.min_model_size < current_model_size and self.target_model_size < current_model_size:
                 for i, nodestr in enumerate( reversed(self.master_df.index.tolist()) ):
-                    if self.master_df.loc[nodestr, "is_wt_quantizer"] & self.master_df.loc[nodestr, "is_pred"]: 
+                    if self.master_df.loc[nodestr, "is_wt_quantizer"]: 
                         bw_choice, bw_space = self.master_df.loc[nodestr, ['action', 'bw_space']]
                         new_bw = lower_bitwidth(bw_choice, bw_space)
                         self.master_df.loc[nodestr, "action"] = new_bw if new_bw != bw_choice else bw_choice
@@ -446,8 +445,8 @@ class QuantizationEnv:
         if not is_final_step():
             info_set = {}
             reward = 0
-            self.set_next_step_prev_action(len(self.collected_strategy), action, only_pred=True)
-            obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=True)
+            self.set_next_step_prev_action(len(self.collected_strategy), action)
+            obs = self.get_normalized_obs( len(self.collected_strategy) )
             done = False
             return obs, reward, done, info_set
         else:
@@ -483,22 +482,17 @@ class QuantizationEnv:
             prGreen('New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'.format(
                 self.strategy, self.best_reward, quantized_score, current_model_ratio, current_model_size/8000000))
 
-        obs = self.get_normalized_obs(len(collected_strategy)-1, only_pred=True)
+        obs = self.get_normalized_obs( len(collected_strategy)-1 )
                                                     
         done = True
         return obs, reward, done, info_set
 
-    def set_next_step_prev_action(self, idx, action, only_pred=True):
-        if only_pred:
-            self.master_df.loc[self.master_df.index[self.master_df.is_pred][idx], 'prev_action'] = action
-        else:
-            self.master_df.loc[self.master_df.index[idx], 'prev_action'] = action
+    def set_next_step_prev_action(self, idx, action):
+        self.master_df.loc[self.master_df.index[idx], 'prev_action'] = action
 
-    def get_normalized_obs(self, idx, only_pred=True):
-        if only_pred:
-            _df = self.master_df.loc[self.master_df.is_pred, self.state_list]
-        else:
-            _df = self.master_df.loc[self.master_df.index, self.state_list]
+
+    def get_normalized_obs(self, idx):
+        _df = self.master_df.loc[self.master_df.index, self.state_list]
         _df.loc[_df.index, self.state_list] =  self.state_scaler.transform(_df[self.state_list])
         return _df.iloc[idx]
 

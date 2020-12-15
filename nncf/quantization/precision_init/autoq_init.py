@@ -65,11 +65,6 @@ class AutoQPrecisionInitializer:
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self.init_args.config)
         
-        # Log the quantizer to be predicted by agent
-        for i, qid in enumerate(env.master_df.index):
-            pred_marker = '/' if env.master_df.is_pred[qid] else 'X'
-            logger.info("[AutoX] Quantizer {:4} [{}]: {}".format(i, pred_marker, qid))
-
         best_policy, best_reward = self._search(agent, env, self.init_args.config)
 
         logger.info('best_reward: {}'.format(best_reward))
@@ -180,7 +175,7 @@ class AutoQPrecisionInitializer:
                     if i == 0:
                         prev_action = 0.0
                     else:
-                        prev_action = env.master_df['action'][env.master_df.is_pred][i-1] / 8 #ducktape scaling
+                        prev_action = env.master_df['action'][i-1] / 8 #ducktape scaling
                     if prev_action != s_t['prev_action']:
                         # print(i, prev_action, " <= ", s_t['prev_action'])
                         s_t['prev_action'] = prev_action
@@ -228,16 +223,15 @@ class AutoQPrecisionInitializer:
                     best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n".format(episode, final_reward, info['accuracy'], info['model_ratio'])
                     for i, nodestr in enumerate(env.master_df.index.tolist()):
                         best_policy_string += "\t"
-                        pred_marker = '/' if env.master_df.is_pred[nodestr] else 'X'
                         Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
                         
-                        if env.skip_wall is True:
-                            best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"
+                        if env.skip_constraint is True:
+                            best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + nodestr + Qtype + "  \n"
                         else:
                             if env.master_df.loc[nodestr, 'action'] == env.master_df.loc[nodestr, 'unconstrained_action']:
-                                best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"
+                                best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + nodestr + Qtype + "  \n"
                             else:
-                                best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"                
+                                best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + " | " + nodestr + Qtype + "  \n"                
                     tfwriter.add_text('AutoQ/best_policy', best_policy_string, episode)
 
                 # log current policy to tensorboard
@@ -246,14 +240,13 @@ class AutoQPrecisionInitializer:
                 for i, nodestr in enumerate(env.master_df.index.tolist()):
                     current_strategy_string += "\t"
                     Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
-                    pred_marker = '/' if env.master_df.is_pred[nodestr] else 'X'
-                    if env.skip_wall is True:
-                        current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"
+                    if env.skip_constraint is True:
+                        current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + nodestr + Qtype + "  \n"
                     else:
                         if env.master_df.loc[nodestr, 'action'] == env.master_df.loc[nodestr, 'unconstrained_action']:
-                            current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"
+                            current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " | " + nodestr + Qtype + "  \n"
                         else:
-                            current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + " | " + "[{}] ".format(pred_marker) + nodestr + Qtype + "  \n"      
+                            current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + " | " + nodestr + Qtype + "  \n"      
                 tfwriter.add_text('AutoQ/current_policy', current_strategy_string, episode)
 
                 value_loss = agent.get_value_loss()
