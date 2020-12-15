@@ -65,6 +65,49 @@ def find_qid_by_str(quantization_controller, qid_str):
         if qid_str == str(_qid):
             return _qid
 
+class ModelSizeCalculator:
+    FLOAT_BITWIDTH = 32
+    def __init__(self, qmodel, per_quantizer_bw_space):
+        self._bw_space_map = OrderedDict()
+        self._nparam_map = OrderedDict()
+        for qid, bw_space in per_quantizer_bw_space.items():
+            if isinstance(qid, WeightQuantizerId):
+                self._bw_space_map[qid] = bw_space
+                m = qmodel.get_module_by_scope(qid.scope)
+                self._nparam_map[qid] = np.prod(m.weight.size())    
+
+        self.min_model_size, self.max_model_size = \
+            self._calc_min_max_model_size()
+
+        self.fp_model_size = self.get_uniform_bit_model_size(ModelSizeCalculator.FLOAT_BITWIDTH)
+
+    def __call__(self, per_quantizer_bw):
+        return self.get_model_size(per_quantizer_bw)
+
+    def _calc_min_max_model_size(self):
+        nparam_array = np.array(list(self._nparam_map.values()))
+        min_size = np.sum( nparam_array * np.array(list(map(min, self._bw_space_map.values()))) )
+        max_size = np.sum( nparam_array * np.array(list(map(max, self._bw_space_map.values()))) )
+        return min_size, max_size
+
+    def get_uniform_bit_model_size(self, uniform_bitwidth: int):
+        return np.sum( np.array(list(self._nparam_map.values())*uniform_bitwidth) )
+
+    def get_model_size(self, per_quantizer_bw: OrderedDict):
+        model_size = 0
+        for qid, nparam in self._nparam_map.items():
+            if qid in per_quantizer_bw:
+                model_size += nparam * per_quantizer_bw[qid]
+            else:
+                logger.warn("[ModelSizeCalculator] Missing Bitwidth of QID: {}, using {} bits"
+                                .format(str(qid), ModelSizeCalculator.FLOAT_BITWIDTH))
+                model_size += nparam * ModelSizeCalculator.FLOAT_BITWIDTH
+        return model_size
+
+    def get_model_size_ratio(self, per_quantizer_bw: OrderedDict):
+        return self.get_model_size(per_quantizer_bw)/self.fp_model_size
+
+
 class QuantizationEnv:
     def __init__(self, 
             quantization_controller, 
@@ -116,15 +159,22 @@ class QuantizationEnv:
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
-            self.bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
+            self.model_bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+        self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
+  
+        # Create mapping of QuantizerId to its bitwidth space (per quantizer bitwidth space)
+        self.bw_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
+        if self.hw_cfg_type is None:
+            for qid in self.bw_space_map.keys():
+                self.bw_space_map[qid] = self.model_bitwidth_space
+        else:
+            assert hasattr(self.qctrl._hw_precision_constraints, '_constraints'), \
+                "feasible bitwidth per quantizer not found"
+            for qid, bw_space in self.qctrl._hw_precision_constraints._constraints.items():
+                self.bw_space_map[qid] = sorted(list(bw_space))
 
-        self.bitwidth_space = sorted(list(self.bitwidth_space))
-        self.float_bitwidth = 32.0
-        self.max_bitwidth = max(self.bitwidth_space)
-        self.min_bitwidth = min(self.bitwidth_space)
-        
         # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
         self.quantizer_table = self._create_quantizer_table()
@@ -142,9 +192,11 @@ class QuantizationEnv:
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Model Size Calculation
-        self.orig_model_size   = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.float_bitwidth  #in bit unit
-        self.min_model_size    = sum(self.master_df['param']*self.master_df.is_wt_quantizer)*self.min_bitwidth    # This variable has only been used once, just to ensure size constrainer doesnt go below than this
-        self.target_model_size = self.orig_model_size*self.compression_ratio
+        self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.bw_space_map)
+        self.orig_model_size       = self.model_size_calculator.fp_model_size
+        self.min_model_size        = self.model_size_calculator.min_model_size
+        self.max_model_size        = self.model_size_calculator.max_model_size
+        self.target_model_size     = self.orig_model_size*self.compression_ratio
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -165,7 +217,7 @@ class QuantizationEnv:
     def reset(self):
         self.collected_strategy=[]
         self.strategy=[]
-        self.master_df['action']=max(self.bitwidth_space)
+        self.master_df['action']=max(self.model_bitwidth_space)
         self.master_df['prev_action']=0
         self.master_df['unconstrained_action']=0
 
@@ -176,21 +228,9 @@ class QuantizationEnv:
         for qid, qmod in self.qctrl.all_quantizations.items():
             adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qmod)
 
-        # Create a mapping of qid to its bitwidth space
-        bw_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
-        if self.hw_cfg_type is None:
-            for qid in bw_space_map.keys():
-                bw_space_map[qid] = self.bitwidth_space
-        else:
-            assert hasattr(self.qctrl._hw_precision_constraints, '_constraints'), \
-                "feasible bitwidth per quantizer not found"
-
-            for qid, bw_space in self.qctrl._hw_precision_constraints._constraints.items():
-                bw_space_map[qid] = sorted(list(bw_space))
-
-        assert len(set(bw_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
+        assert len(set(self.bw_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
             "both bw_space_map and adjq_gid_map must have exact keys."
-        
+
         # Create a mapping of qid to its nodekey in NNCFGraph 
         qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
 
@@ -209,7 +249,7 @@ class QuantizationEnv:
             d[idx_str]['q_nx_nodeid']  = q_nx_nodeid
             d[idx_str]['q_nx_nodekey'] = nodekey
             d[idx_str]['gid']          = gid
-            d[idx_str]['bw_space']     = bw_space_map[qid]
+            d[idx_str]['bw_space']     = self.bw_space_map[qid]
             d[idx_str]['is_pred']      = True
             
             if isinstance(qid, WeightQuantizerId):
@@ -255,9 +295,9 @@ class QuantizationEnv:
         # create master dataframe
         master_df = pd.concat([df, layer_attr_df], axis='columns')
         
-        # TODO: Revision Needed. Workaround to set the min and max of action before fitting the minmaxscaler
-        master_df['prev_action'][0]=self.max_bitwidth
-        master_df['prev_action'][-1]=self.min_bitwidth
+        # Annotate a min and a max value in prev_action before fitting the minmaxscaler
+        master_df['prev_action'][ 0] = max(self.model_bitwidth_space)
+        master_df['prev_action'][-1] = min(self.model_bitwidth_space)
 
         return master_df, state_list
     
@@ -357,10 +397,10 @@ class QuantizationEnv:
         return quantized_score
 
 
-    def _calc_quantized_model_size(self): # in bit
-        assert len(self.strategy) == len(self.master_df) # This function is only allowed when all actions are predicted        
-        return sum(self.master_df['param'] * self.master_df.is_wt_quantizer * self.master_df['action'])
-
+    def _get_quantizer_bitwidth(self):
+        assert len(set(self.model_bitwidth_space) - set(self.master_df.action.values)) >= 0, \
+            "there is bitwidth choice not within model bitwidth space"
+        return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
 
     def _final_action_wall(self, skip=False):
         # This function acts on self.strategy and return self.strategy
@@ -370,18 +410,17 @@ class QuantizationEnv:
         if skip is not True:
             self.master_df['unconstrained_action']=self.master_df['action']
 
-            cur_model_size = self._calc_quantized_model_size()
-            while self.min_model_size < cur_model_size and self.target_model_size < cur_model_size:
+            current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
+
+            while self.min_model_size < current_model_size and self.target_model_size < current_model_size:
                 for i, nodestr in enumerate( reversed(self.master_df.index.tolist()) ):
                     if self.master_df.loc[nodestr, "is_wt_quantizer"] & self.master_df.loc[nodestr, "is_pred"]: 
-                        n_bit    = self.master_df.loc[nodestr, 'action']
-                        bw_space = self.master_df.loc[nodestr, 'bw_space']
-                        new_bit = lower_bitwidth(n_bit, bw_space)
-                        self.master_df.loc[nodestr, "action"] = new_bit if new_bit != n_bit else n_bit
-                    #strategy update here
-                    self.strategy = self.master_df['action']
-                    cur_model_size = self._calc_quantized_model_size()
-                    if cur_model_size <= self.target_model_size:
+                        bw_choice, bw_space = self.master_df.loc[nodestr, ['action', 'bw_space']]
+                        new_bw = lower_bitwidth(bw_choice, bw_space)
+                        self.master_df.loc[nodestr, "action"] = new_bw if new_bw != bw_choice else bw_choice
+
+                    current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
+                    if current_model_size <= self.target_model_size:
                         break
         else:
             print("=> Skip action constraint")
@@ -420,7 +459,6 @@ class QuantizationEnv:
             obs = self.get_normalized_obs(len(self.collected_strategy), only_pred=True)
             done = False
             return obs, reward, done, info_set
-
         else:
             return self.evaluate_strategy(self.collected_strategy, skip_wall=self.skip_wall)
         
@@ -436,8 +474,8 @@ class QuantizationEnv:
         # Quantization
         self.apply_actions(self.strategy)
         
-        cur_model_size = self._calc_quantized_model_size()
-        cur_model_ratio = cur_model_size / self.orig_model_size
+        current_model_size  = self.model_size_calculator(self._get_quantizer_bitwidth())
+        current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
             logger.info("[Q.Env] {:50} | {}".format(
@@ -445,14 +483,14 @@ class QuantizationEnv:
                 idx))
 
         quantized_score = self._run_quantization_pipeline(finetune=self.finetune)
-        reward = self.reward(quantized_score, cur_model_ratio)
+        reward = self.reward(quantized_score, current_model_ratio)
         
-        info_set = {'model_ratio': cur_model_ratio, 'accuracy': quantized_score, 'model_size': cur_model_size}
+        info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size}
 
         if reward > self.best_reward:
             self.best_reward = reward
             prGreen('New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'.format(
-                self.strategy, self.best_reward, quantized_score, cur_model_ratio, cur_model_size/8000000))
+                self.strategy, self.best_reward, quantized_score, current_model_ratio, current_model_size/8000000))
 
         obs = self.get_normalized_obs(len(collected_strategy)-1, only_pred=True)
                                                     
