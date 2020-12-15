@@ -47,7 +47,6 @@ from natsort import natsorted
 
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 from nncf.hw_config import HWConfigType
-from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
 from nncf.quantization.layers import BaseQuantizer
 
 # logging
@@ -138,6 +137,7 @@ class QuantizationEnv:
             raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for target_device NONE or VPU".format(self.hw_cfg_type.value))
         
         # Extract Precision Initialization Config
+        # TODO: Clean up
         if 'autoq' == self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
             self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
         else:
@@ -148,9 +148,9 @@ class QuantizationEnv:
         self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
         
         # Bool to disable hard resource constraint
-        self.skip_wall = False
-        if 'skip_wall' in self.autoq_cfg:
-            self.skip_wall = self.autoq_cfg['skip_wall']
+        self.skip_constraint = False
+        if 'skip_constraint' in self.autoq_cfg:
+            self.skip_constraint = self.autoq_cfg['skip_constraint']
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
         self.finetune = False
@@ -295,7 +295,7 @@ class QuantizationEnv:
         # create master dataframe
         master_df = pd.concat([df, layer_attr_df], axis='columns')
         
-        # Annotate a min and a max value in prev_action before fitting the minmaxscaler
+        # Annotate a min and a max value in prev_action before minmaxscaler fitting
         master_df['prev_action'][ 0] = max(self.model_bitwidth_space)
         master_df['prev_action'][-1] = min(self.model_bitwidth_space)
 
@@ -353,7 +353,7 @@ class QuantizationEnv:
         
         elif isinstance(qid, FunctionQuantizerId):
             raise NotImplementedError("FunctionQuantizerId is supported, Pls. report to maintainer")
-        
+
         else:
             raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
         
@@ -361,7 +361,6 @@ class QuantizationEnv:
 
 
     def _evaluate_pretrained_model(self):
-        # Registered evaluation function is expected to return a single scalar score
         logger.info("[Q.Env] Evaluating Pretrained Model")
         self.qctrl.disable_weight_quantization()
         self.qctrl.disable_activation_quantization()
@@ -402,7 +401,8 @@ class QuantizationEnv:
             "there is bitwidth choice not within model bitwidth space"
         return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
 
-    def _final_action_wall(self, skip=False):
+
+    def _constrain_model_size(self, skip=False):
         # This function acts on self.strategy and return self.strategy
         def lower_bitwidth(bw, bw_space):
             return bw_space[bw_space.index(bw)-1] if bw_space.index(bw) > 0 else bw
@@ -460,14 +460,14 @@ class QuantizationEnv:
             done = False
             return obs, reward, done, info_set
         else:
-            return self.evaluate_strategy(self.collected_strategy, skip_wall=self.skip_wall)
+            return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
         
-    def evaluate_strategy(self, collected_strategy, skip_wall=True):
+    def evaluate_strategy(self, collected_strategy, skip_constraint=True):
         self.master_df['action'] = collected_strategy
         self.strategy = self.master_df['action']
         
-        if skip_wall is not True:
-            self.strategy = self._final_action_wall()
+        if skip_constraint is not True:
+            self.strategy = self._constrain_model_size()
         
         assert len(self.strategy) == len(self.master_df)
 
