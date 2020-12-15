@@ -104,7 +104,7 @@ class HAWQDebugger:
                     node['color'] = color
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
-        bits_color_map = {4: 'red', 8: 'green', 6: 'orange'}
+        bits_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
         for quantizer_id, quantizer_info in non_weight_quantizers.items():
             affected_iap_ctx_list = quantizer_info.affected_ia_op_exec_contexts
             for activation_iap_ctx in affected_iap_ctx_list:
