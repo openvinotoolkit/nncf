@@ -24,10 +24,11 @@
         },
         "weight_decay": 1e-05
     },
+    "target_device": "TRIAL",
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "mode": "asymmetric",
+            "mode": "symmetric",
             "bits": 8,
             "per_channel": true
         },
@@ -38,7 +39,7 @@
         },
         "initializer": {
             "batchnorm_adaptation": {
-                "num_bn_adaptation_steps": 50
+                "num_bn_adaptation_samples": 3500
             },
             "range":
             {
