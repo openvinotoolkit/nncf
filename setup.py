@@ -66,7 +66,9 @@ INSTALL_REQUIRES = ["ninja==1.10.0.post2",
                     "defusedxml==0.7.0rc1",
                     "mlflow==1.12.1",
                     "returns==0.14",
-                    "pandas==1.1.5"]
+                    "pandas==1.1.5",
+                    "natsort",
+                    "sklearn"]
 
 DEPENDENCY_LINKS = []
 

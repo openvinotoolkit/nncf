@@ -33,16 +33,5 @@
             32,
             32
         ]
-    },
-    "target_device": "VPU",
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "precision": {
-                "type": "hawq",
-                "num_data_points": 3,
-                "iter_number": 1
-            }
-        }
     }
 }

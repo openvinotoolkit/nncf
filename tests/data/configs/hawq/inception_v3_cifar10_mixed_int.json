@@ -10,18 +10,5 @@
         ]
     },
     "num_classes": 10,
-    "pretrained": false,
-    "target_device": "VPU",
-    "compression": [
-        {
-            "algorithm": "quantization",
-            "initializer": {
-                "precision": {
-                    "type": "hawq",
-                    "num_data_points": 2,
-                    "iter_number": 1
-                }
-            }
-        }
-    ]
+    "pretrained": false
 }
