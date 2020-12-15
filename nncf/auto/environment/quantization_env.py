@@ -423,18 +423,9 @@ class QuantizationEnv:
                     if current_model_size <= self.target_model_size:
                         break
         else:
-            print("=> Skip action constraint")
+            logger.info("[Q.Env] Skipping Model Size Constraint")
 
-        # TODO This whole section has to be removed or moved elsewhere
         self.strategy = self.master_df['action']
-        logger.info('=> Final action list: {}'.format(self.strategy.astype('int').to_list()))
-
-        for i, nodestr in enumerate(self.master_df.index.tolist()):
-            if self.master_df.loc[nodestr, 'action'] == self.master_df.loc[nodestr, 'unconstrained_action']:
-                logger.info("Precision[{:>4}]: {} | {}".format(i, self.master_df.loc[nodestr, 'action'], str(nodestr)))
-            else:
-                logger.info("Precision[{:>4}]: {} <= {} | {}".format(i, self.master_df.loc[nodestr, 'action'], self.master_df.loc[nodestr, 'unconstrained_action'], str(nodestr)))
-
         return self.strategy
 
     def reward(self, acc, model_ratio):
@@ -620,57 +611,7 @@ class QuantizationEnv:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
 
 
-    def _get_learnable_qids_and_leads(self):
-        # By default, all weight quantizers must be learnable to allow optimal model size compression
-        # Bitwidth assignment mode only applies to activation quantizers of a group. 
-        # When the mode is LIBERAL, all activation quantizers are learnable.
-        # When it is STRICT, none of the activation quantizers is learnable but to follow the leader of the group.
-        # HW config determines the bitwidth space of a quantizer
 
-        learnable_qids = []
-        lead_qid_of_groups = [None]*len(list(self._groups_of_adjacent_quantizers))
-
-        if self.bw_assignment_mode is BitwidthAssignmentMode.STRICT:
-
-            for i, g in enumerate(self._groups_of_adjacent_quantizers):
-                n_wq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers)
-                n_aq = len(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers)
-
-                if n_wq > 0:
-                    # By default, all weight quantizers are learnable when it is unconstrained by HW. 
-                    # If target HW is specified, a weight quantizer is only learnable if mixed-precision support is available for its associated weight layer
-                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                            learnable_qids.append(wqid)
-                        
-                    # We will assume the first weight quantizer as the leader of the group, 
-                    # Leader means its precision decides for the rest of activation quantizers
-                    for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers[k][0]
-                            break
-                else:
-                    # when there is no weight quantizer in the group, the first activation quantizer
-                    # is the leader of the group and learnable if mixed-precision is supported
-                    for j, (aqid, aqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
-                        if self.hw_cfg_type is None or len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
-                            learnable_qids.append(aqid)
-                            lead_qid_of_groups[i] = self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers[j][0]
-                            break
-                        
-        if self.bw_assignment_mode is BitwidthAssignmentMode.LIBERAL:
-            if self.hw_cfg_type is None:
-                learnable_qids += list(self.qctrl.all_quantizations.keys())
-            else: # VPU device
-                # quantizers will only be added to learnable list if mixed-precision support available for its associated operator.
-                for k, (wqid, wqmod) in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
-                    if len(self.qctrl._hw_precision_constraints._constraints[wqid]) > 1:
-                        learnable_qids.append(wqid)
-                for aqid, aqmod in self.qctrl.activation_quantizers.items():
-                    if len(self.qctrl._hw_precision_constraints._constraints[aqid]) > 1:
-                        learnable_qids.append(aqid)
-
-        return learnable_qids, lead_qid_of_groups
 
 
 
