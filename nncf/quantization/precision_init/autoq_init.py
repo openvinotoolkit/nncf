@@ -43,12 +43,11 @@ class AutoQPrecisionInitializer:
                  init_args: AutoQPrecisionInitArgs):
         self.quantization_controller = algo
         self.init_args= init_args
-        # TODO: can we avoid passing the entire config here? just rely on init_precision_config
-        # config is used extensively in the _search loop
-        
+
+
     def apply_init(self):
-        from nncf.auto.environment.quantization_env import QuantizationEnv
-        from nncf.auto.agent.ddpg.ddpg import DDPG
+        from nncf.automl.environment.quantization_env import QuantizationEnv
+        from nncf.automl.agent.ddpg.ddpg import DDPG
         
         start_ts = datetime.now()
 

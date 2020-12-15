@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 
-from nncf.auto.agent.ddpg.memory import SequentialMemory
-from nncf.auto.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
+from nncf.automl.agent.ddpg.memory import SequentialMemory
+from nncf.automl.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
 
 from types import SimpleNamespace
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
@@ -59,7 +59,7 @@ class DDPG(object):
     def __init__(self, nb_states, nb_actions, hparam_override):
         # TODO: Implement hparam_override; refactor autoq_cfg with a better name
 
-        hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'auto/agent/ddpg/ddpg_config.json'])
+        hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'automl/agent/ddpg/ddpg_config.json'])
         with open(hparam_config_path) as f:
             autoq_cfg = json.load(f, object_pairs_hook=OrderedDict)
             
