@@ -217,12 +217,14 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
 
             self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
 
-            for i, loaded_item in tqdm(
-                    enumerate(data_loader),
-                    total=num_init_steps,
-                    desc=self.progressbar_description,
-                    bar_format=bar_format,
-            ):
+            # for i, loaded_item in tqdm(
+            #         enumerate(data_loader),
+            #         total=num_init_steps,
+            #         desc=self.progressbar_description,
+            #         bar_format=bar_format,
+            # ):
+            for i, loaded_item in enumerate(data_loader):
+                print(i)
                 if num_init_steps is not None and i >= num_init_steps:
                     break
                 args_kwargs_tuple = data_loader.get_inputs(loaded_item)
