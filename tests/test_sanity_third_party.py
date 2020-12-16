@@ -37,7 +37,6 @@ def skip_tests(third_party):
     if not third_party:
         pytest.skip()
 
-
 @pytest.fixture(scope="session")
 def temp_folder(tmp_path_factory):
     return {"models": str(tmp_path_factory.mktemp("models", False)),
@@ -267,6 +266,7 @@ class TestMmdetection:
             checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
+        assert os.path.exists(os.path.join(self.MMDET_PATH, "ssd300_voc_int8.onnx"))
 
     def test_retinanet_train(self):
         subprocess.run(
@@ -289,6 +289,7 @@ class TestMmdetection:
             checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
+        assert os.path.exists(os.path.join(self.MMDET_PATH, "retinanet_r50_fpn_1x_int8.onnx"))
 
     def test_maskrcnn_train(self):
         subprocess.run(
@@ -313,3 +314,4 @@ class TestMmdetection:
             checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
+        assert os.path.exists(os.path.join(self.MMDET_PATH, "mask_rcnn_r50_caffe_fpn_1x_coco_int8.onnx"))
