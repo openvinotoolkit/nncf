@@ -39,8 +39,6 @@ from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args
 from sklearn.preprocessing import MinMaxScaler
 
-from nncf.automl.utils.utils import AverageMeter, topk_accuracy, annotate_model_attr
-
 from collections import OrderedDict, Counter
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
 from nncf.dynamic_graph.context import Scope
