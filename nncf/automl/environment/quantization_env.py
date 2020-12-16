@@ -17,6 +17,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 import warnings
 
+import ctypes
 import json
 import math
 import numpy as np
@@ -65,7 +66,7 @@ def find_qid_by_str(quantization_controller, qid_str):
             return _qid
 
 class ModelSizeCalculator:
-    FLOAT_BITWIDTH = 32
+    FLOAT_BITWIDTH = ctypes.sizeof(ctypes.c_float) * 8
     def __init__(self, qmodel, per_quantizer_bw_space):
         self._bw_space_map = OrderedDict()
         self._nparam_map = OrderedDict()
