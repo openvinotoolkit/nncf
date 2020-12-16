@@ -118,7 +118,7 @@ class QuantizationEnv:
         # Extract model name for labelling
         self.model_name = self.config.get('model', None)
         if self.model_name is None:
-            self.model_name = self.pretrained_model.__class__.__name__
+            self.model_name = self.qmodel.nncf_module.__class__.__name__
 
         # Check and only proceed if target device is supported by Q.Env
         self.hw_cfg_type = self.qctrl.quantization_config.get("hw_config_type")
@@ -187,6 +187,12 @@ class QuantizationEnv:
         self.min_model_size = self.model_size_calculator.min_model_size
         self.max_model_size = self.model_size_calculator.max_model_size
         self.target_model_size = self.orig_model_size*self.compression_ratio
+
+        if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
+            raise ValueError("Model Size Ratio {} is out of bound ({}, {})"
+                             .format(self.compression_ratio, 
+                                     self.min_model_size/self.orig_model_size,
+                                     self.max_model_size/self.orig_model_size))
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
