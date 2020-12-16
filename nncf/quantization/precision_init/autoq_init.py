@@ -153,7 +153,7 @@ class AutoQPrecisionInitializer:
             T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 
             # [optional] save intermideate model
-            if episode % int(num_episode / 10) == 0:
+            if episode % int((num_episode+10)/10) == 0:
                 agent.save_model(config['log_dir'])
 
             # update
