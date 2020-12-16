@@ -362,23 +362,19 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
-    if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d)):
+    if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
+                           nn.ConvTranspose3d)):
         ks = module.weight.data.shape
-        mac_count = ks[0] * ks[1] * ks[2] * output.shape[2]
-    elif isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
-        ks = module.weight.data.shape
-        mac_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[2] * output.shape[3]
-    elif isinstance(module, (nn.Conv3d, nn.ConvTranspose3d)):
-        ks = module.weight.data.shape
-        mac_count = ks[0] * ks[1] * ks[2] * ks[3] * ks[4] * output.shape[2] * \
-                    output.shape[3] * output.shape[4]
+        flops_count = 2 * np.prod(ks) * np.prod(output.shape[2:])
+        if module.bias is not None:
+            flops_count += np.prod(output.shape[1:])
     elif isinstance(module, nn.Linear):
-        mac_count = input_[0].shape[1] * output.shape[-1]
-    elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-        mac_count = np.prod(list(input_[0].shape))
+        flops_count = 2 * input_[0].shape[1] * output.shape[-1]
+        if module.bias is not None:
+            flops_count += np.prod(output.shape[1:])
     else:
         return
-    dict_to_save[name] = 2 * mac_count
+    dict_to_save[name] = flops_count
 
 
 def add_domain(name_operator: str) -> str:

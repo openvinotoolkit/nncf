@@ -12,14 +12,13 @@
 """
 import inspect
 from collections import OrderedDict, Counter
-from enum import Enum
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
 import networkx as nx
-import numpy as np
 import torch
 from copy import deepcopy
+from enum import Enum
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
@@ -29,9 +28,9 @@ from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
     ModelInputInfo
 from nncf.dynamic_graph.graph_matching import NodeExpression
+from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT

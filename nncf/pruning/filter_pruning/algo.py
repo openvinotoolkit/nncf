@@ -105,9 +105,6 @@ class FilterPruningController(BasePruningAlgoController):
                                    nn.ConvTranspose3d)):
                 in_channels = module.in_channels
                 out_channels = module.out_channels
-            elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-                in_channels = module.num_features
-                out_channels = 1
             return in_channels, out_channels
 
         # 1. Init in/out channels for potentially prunable modules
@@ -148,12 +145,12 @@ class FilterPruningController(BasePruningAlgoController):
                 if isinstance(module, (nn.Conv1d, nn.Conv2d, nn.Conv3d, nn.ConvTranspose1d, nn.ConvTranspose2d,
                                        nn.ConvTranspose3d)):
                     ks = module.weight.data.shape
-                    cost = np.prod(ks[2:]) * np.prod(output.shape[2:])
-                elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
-                    cost = int(np.prod(list(input_[0].shape)) / module.num_features)
+                    cost = 2 * np.prod(ks[2:]) * np.prod(output.shape[2:]) / module.groups
+                    if module.bias is not None:
+                        cost += int(np.prod(output.shape[2:]) / module.in_channels)
                 else:
                     return
-                self.nodes_flops_cost[name] = 2 * cost
+                self.nodes_flops_cost[name] = cost
 
             return compute_cost_hook
 
@@ -188,8 +185,8 @@ class FilterPruningController(BasePruningAlgoController):
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
             if nncf_node.node_id in modules_in_channels:
-                flops += modules_in_channels[nncf_node.node_id] * modules_out_channels[nncf_node.node_id] * \
-                         self.nodes_flops_cost[nncf_node.node_id]
+                flops += int(modules_in_channels[nncf_node.node_id] * modules_out_channels[nncf_node.node_id] * \
+                         self.nodes_flops_cost[nncf_node.node_id])
             elif nncf_node.node_id in self.nodes_flops:
                 flops += self.nodes_flops[nncf_node.node_id]
         return flops
@@ -213,10 +210,6 @@ class FilterPruningController(BasePruningAlgoController):
 
             for node in group.nodes:
                 tmp_out_channels[node.nncf_node_id] = new_out_channels_num
-                if PrunedModuleInfo.BN_MODULE_NAME in node.related_modules and \
-                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
-                    bn_id = node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].nncf_node_id
-                    tmp_in_channels[bn_id] = new_out_channels_num
 
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
@@ -245,8 +238,7 @@ class FilterPruningController(BasePruningAlgoController):
         flops = self._calculate_flops_in_uniformly_pruned_model(right)
         if flops < target_flops:
             return right
-        # TODO: or raise error here?
-        return None
+        raise RuntimeError("Can't prune model to asked flops pruning rate = {}".format(target_flops_pruning_rate))
 
     def set_pruning_rate(self, pruning_rate):
         # Pruning rate from scheduler can be flops pruning rate or percentage of params that should be pruned
@@ -388,10 +380,6 @@ class FilterPruningController(BasePruningAlgoController):
             for node in cluster.nodes:
                 tmp_out_channels[node.nncf_node_id] -= 1
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
-                if PrunedModuleInfo.BN_MODULE_NAME in node.related_modules and \
-                        node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
-                    bn_id = node.related_modules[PrunedModuleInfo.BN_MODULE_NAME].nncf_node_id
-                    tmp_in_channels[bn_id] -= 1
 
             # Prune in channels in all next nodes
             next_nodes = self.next_nodes[cluster.id]
