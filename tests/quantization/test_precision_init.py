@@ -711,7 +711,8 @@ def get_quantization_config_with_ignored_scope():
 @pytest.mark.parametrize(('config_creator', 'ref_values'), (
     [
         get_quantization_config_without_range_init,
-        (1.75, pytest.approx(1.07, abs=1e-2), (1, 2), (1, 4), (1, 1.12))
+        (pytest.approx(1.57, abs=1e-2), pytest.approx(1.15, abs=1e-2), (1, 2), (1, 4),
+         (1, pytest.approx(1.25, abs=1e-2)))
     ],
     [
         get_quantization_config_with_ignored_scope,

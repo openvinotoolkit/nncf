@@ -32,6 +32,7 @@ def test_prune_flops_param(pruning_target, pruning_flops_target, prune_flops_ref
         config['compression']['params']['pruning_target'] = pruning_target
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+    config['compression']['params']['prune_first_conv'] = True
 
     model = PruningTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -59,6 +60,8 @@ def test_init_params_for_flops_calculation(model, ref_params):
     config = get_basic_pruning_config()
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['pruning_flops_target'] = 0.3
+    config['compression']['params']['prune_first_conv'] = True
+
     model = model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     for key, value in ref_params.items():
