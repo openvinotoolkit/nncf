@@ -283,7 +283,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
-qdef register_default_init_args(nncf_config: 'NNCFConfig',
+def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
