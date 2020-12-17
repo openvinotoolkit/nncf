@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 from functools import partial
+from random import random
 from torch.utils import model_zoo
 from torchvision.models import MobileNetV2, mobilenet_v2, resnet50, inception_v3
 from torchvision.transforms import transforms
@@ -104,12 +105,10 @@ def compare_with_ref_if_exists(actual_state, path_to_ref):
             json.dump(actual_state, f)
 
 
-class HAWQConfigBuilder:
-    def __init__(self, config_creator_fn: Callable = None, batch_size=10, num_data_points=100, image_size=10):
+class BaseConfigBuilder:
+    def __init__(self, config_creator_fn: Callable = None):
         if config_creator_fn:
             self._config = config_creator_fn()
-        else:
-            self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
         self._options: Dict[str, str] = OrderedDict()
         self._extra_params: str = ''
 
@@ -117,17 +116,6 @@ class HAWQConfigBuilder:
         self._config['compression']['initializer']['precision']['compression_ratio'] = ratio
         self._options['ratio'] = str(ratio)
         return self
-
-    def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
-        self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
-        self._options['mode'] = str(mode.value)
-        return self
-
-    def strict_mode(self):
-        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.STRICT)
-
-    def liberal_mode(self):
-        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.LIBERAL)
 
     def _with_quantizer_setup_type(self, setup_type: QuantizerSetupType):
         self._config['quantizer_setup_type'] = setup_type.value
@@ -158,7 +146,7 @@ class HAWQConfigBuilder:
         return self
 
     def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value).prop_based().strict_mode()
+        return self._set_target_device(HWConfigType.VPU.value).prop_based()
 
     def for_cpu(self):
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
@@ -185,6 +173,32 @@ class HAWQConfigBuilder:
     def filename_suffix(self) -> str:
         ordered_options = OrderedDict(sorted(self._options.items()))
         return '__'.join(['_'.join([k, v]) for k, v in ordered_options.items()])
+
+
+class HAWQConfigBuilder(BaseConfigBuilder):
+    def __init__(self, config_creator_fn: Callable = None, batch_size=10, num_data_points=100, image_size=10):
+        super().__init__(config_creator_fn)
+        if not config_creator_fn:
+            self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
+        self.num_data_points = num_data_points
+
+    def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
+        self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
+        self._options['mode'] = str(mode.value)
+        return self
+
+    def strict_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.STRICT)
+
+    def liberal_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.LIBERAL)
+
+    def build(self):
+        return self._config
+
+    def for_vpu(self):
+        super().for_vpu()
+        return self.strict_mode()
 
     @staticmethod
     def create_hawq_test_config(batch_size=10, num_data_points=100, image_size=10):
@@ -231,6 +245,19 @@ def get_avg_traces(model, init_device: str):
     return torch.randperm(num_traces).to(init_device) + 1
 
 
+def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
+    model = model.cuda()
+    all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
+    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
+    # graph may not contain some quantizers (e.g. in staged scenario)
+    quantizer_switcher.enable_quantizers()
+    model.rebuild_graph()
+    groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo_ctrl)
+    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
+                                            groups_of_adjacent_quantizers)
+    check_graph(graph, path_to_dot, graph_dir, sort_dot_graph=False)
+
+
 class HAWQTestStruct(NamedTuple):
     model_creator: Callable[[], nn.Module] = mobilenet_v2
     config_builder: HAWQConfigBuilder = HAWQConfigBuilder().prop_based().for_vpu()
@@ -241,7 +268,7 @@ class HAWQTestStruct(NamedTuple):
         return '_'.join([self.model_creator.__name__, str(self.config_builder)])
 
 
-TEST_PARAMS = (
+HAWQ_TEST_PARAMS = (
     HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
@@ -273,7 +300,7 @@ TEST_PARAMS = (
 )
 
 
-@pytest.mark.parametrize('params', TEST_PARAMS, ids=[str(p) for p in TEST_PARAMS])
+@pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
     model = params.model_creator()
@@ -287,17 +314,113 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces')
     mocked_trace.return_value = params.avg_traces_creator(model, 'cuda')
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    model = model.cuda()
-    all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
-    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
-    # graph may not contain some quantizers (e.g. in staged scenario)
-    quantizer_switcher.enable_quantizers()
-    model.rebuild_graph()
-    groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo_ctrl)
-    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
-                                            groups_of_adjacent_quantizers)
+
     path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
-    check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)
+    graph_dir = os.path.join('quantized', 'hawq')
+    check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
+
+
+class AutoQConfigBuilder(BaseConfigBuilder):
+    def __init__(self, config_creator_fn: Callable = None, batch_size=10, image_size=10):
+        super().__init__(config_creator_fn)
+        if not config_creator_fn:
+            self._config = self.create_autoq_test_config(batch_size, image_size)
+        self.for_vpu()
+
+    def subset_ratio(self, val_subset_ratio):
+        self._options['subset_ratio'] = str(val_subset_ratio)
+        self._config['val_subset_ratio'] = val_subset_ratio
+        return self
+
+    @staticmethod
+    def create_autoq_test_config(batch_size=10, image_size=10):
+        config = get_quantization_config_without_range_init()
+        config['input_info'] = {
+            "sample_size": [batch_size, 3, image_size, image_size],
+        }
+        config['batch_size'] = batch_size
+        config['compression'].update({
+            'initializer': {
+                'precision': {
+                    "type": "autoq",
+                    "bits": [2, 4, 8],
+                    "iter_number": 2,
+                    "compression_ratio": 0.15,
+                    # TODO: test different number of steps
+                    # "num_steps_per_iter": 2
+                },
+                'range': {
+                    'num_init_samples': 1
+                }
+            }})
+        return config
+
+
+class AutoQTestStruct(NamedTuple):
+    num_warmup_steps: int = 214
+    model_creator: Callable[[], nn.Module] = mobilenet_v2
+    config_builder: AutoQConfigBuilder = AutoQConfigBuilder().for_vpu()
+    filename_suffix: str = 'hw_config_vpu'
+
+    def __str__(self):
+        return '_'.join([self.model_creator.__name__, str(self.config_builder)])
+
+
+RATIO = 0.4
+AUTOQ_TEST_PARAMS = (
+    AutoQTestStruct(config_builder=AutoQConfigBuilder()),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO).subset_ratio(RATIO)),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=squeezenet1_1, num_warmup_steps=106,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 224, 224])),
+    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+                    config_builder=AutoQConfigBuilder()),
+    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+                    config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
+    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+                    config_builder=AutoQConfigBuilder().subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+                    config_builder=AutoQConfigBuilder().with_ratio(RATIO).subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=inception_v3, num_warmup_steps=400,
+                    config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).with_ratio(RATIO)),
+    AutoQTestStruct(model_creator=inception_v3, num_warmup_steps=398,
+                    config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).
+                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test, num_warmup_steps=136,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test, num_warmup_steps=136,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).with_ratio(RATIO)),
+)
+
+
+@pytest.mark.parametrize('params', AUTOQ_TEST_PARAMS, ids=[str(p) for p in AUTOQ_TEST_PARAMS])
+def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
+    config = params.config_builder.build()
+    model = params.model_creator()
+    config['log_dir'] = str(tmp_path)
+
+    if not dataset_dir:
+        dataset_dir = str(tmp_path)
+    train_loader, _ = create_test_dataloaders(config, dataset_dir)
+
+    from nncf.automl.agent.ddpg.ddpg import DDPG
+    random_action_spy = mocker.spy(DDPG, 'random_action')
+    select_action_spy = mocker.spy(DDPG, 'select_action')
+
+    config = register_default_init_args(config, train_loader=train_loader,
+                                        autoq_eval_fn=lambda *x: random(),
+                                        autoq_eval_loader=train_loader)
+    model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    # TODO: why not equal to 20
+    assert random_action_spy.call_count == params.num_warmup_steps
+    # TODO: should it be equal to num_init_steps?
+    assert select_action_spy.call_count == 2
+
+    path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
+    graph_dir = os.path.join('quantized', 'autoq')
+    check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
 
 
 def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
