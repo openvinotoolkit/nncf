@@ -49,7 +49,8 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
 
 class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
     op_func_name = "conv2d"
-
+    scale_factor = None
+    folding_conv_bn = False
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv2d.__name__
@@ -59,6 +60,60 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         )
         dict_update(nncf_conv.__dict__, module.__dict__)
         return nncf_conv
+
+
+    def _conv_forward(self, input, weight):
+        if self.folding_conv_bn:
+
+            weights_shape = [1] * len(self.weight.shape)
+            weights_shape[0] = -1
+            bias_shape = [1] * len(self.weight.shape)
+            bias_shape[1] = -1
+            #scaled_weight = self.weight_fake_quant(self.weight * scale_factor.reshape(weight_shape))
+            # using zero bias here since the bias for original conv
+            # will be added later
+            if self.bias is not None:
+                copy_bias = deepcopy(self.bias)
+                zero_bias = torch.zeros_like(self.bias)
+                self.bias = zero_bias
+                conv = self._nncf_conv_forward(input, self.weight)
+                self.bias = copy_bias
+            else:
+                conv = self._nncf_conv_forward(input, self.weight)
+
+            if self.scale_factor is not None:
+                conv_orig = conv / self.scale_factor.reshape(bias_shape)
+            else:
+                conv_orig = conv
+            if self.bias is not None:
+                conv_orig = conv_orig + self.bias.reshape(bias_shape)
+            #conv = self.bn(conv_orig)
+            return conv_orig
+        else:
+            return self._nncf_conv_forward(input, weight)
+
+    def _nncf_conv_forward(self, input, weight):
+        if self.padding_mode != 'zeros':
+            return F.conv2d(F.pad(input, self._reversed_padding_repeated_twice, mode=self.padding_mode),
+                            weight, self.bias, self.stride,
+                            _pair(0), self.dilation, self.groups)
+        return F.conv2d(input, weight, self.bias, self.stride,
+                        self.padding, self.dilation, self.groups)
+
+
+
+from nncf.utils import Conv2dBN2d
+
+class NNCFConv2dBN2d(_NNCFModuleMixin, Conv2dBN2d):
+    op_func_name = 'Conv2dBN2d'
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == Conv2dBN2d.__name__
+        nncf_conv2dbn2d = NNCFConv2dBN2d(module.in_channels, module.out_channels, module.kernel_size, module.stride,
+            module.padding, module.dilation, module.groups, hasattr(module, 'bias'), module.padding_mode)
+        dict_update(nncf_conv2dbn2d.__dict__, module.__dict__)
+        return nncf_conv2dbn2d
 
 
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
@@ -145,7 +200,8 @@ NNCF_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
-    NNCFEmbedding: nn.Embedding
+    NNCFEmbedding: nn.Embedding,
+    NNCFConv2dBN2d: Conv2dBN2d
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
@@ -155,6 +211,7 @@ NNCF_CONV_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
     NNCFConv3d: nn.Conv3d,
+    NNCFConv2dBN2d: Conv2dBN2d
 }
 NNCF_DECONV_MODULES_DICT = {
     NNCFConvTranspose2d: nn.ConvTranspose2d,

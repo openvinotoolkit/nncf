@@ -17,6 +17,9 @@
     },
     "compression": {
         "algorithm": "quantization",
+        "folding_conv_bn_target_epoch": 0,
+        "freeze_bn_stats_target_epoch" : 3,
+
         "initializer": {
             "range": {
                 "num_init_samples": 2560

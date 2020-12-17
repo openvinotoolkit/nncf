@@ -374,10 +374,14 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
         nncf_wrapped_model = self.get_nncf_wrapped_model()
+        
         eval_only_ops_exec_ctx = self.collect_eval_only_ops_exec_context(nncf_wrapped_model, self._graph_builder)
 
         # all modules called in eval mode should be replaced prior to graph building
         self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx)
+
+        from nncf.utils import get_pair_conv_bn
+        self.pair_conv_bn = get_pair_conv_bn(self.get_nncf_wrapped_model())
 
         _orig_context = TracingContext()
 
@@ -407,6 +411,28 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
+
+    #def train(self: mode: bool = True):
+    #    r"""Sets the module in training mode.
+#
+    #    This has any effect only on certain modules. See documentations of
+    #    particular modules for details of their behaviors in training/evaluation
+    #    mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm`,
+    #    etc.
+#
+    #    Args:
+    #        mode (bool): whether to set training mode (``True``) or evaluation
+    #                     mode (``False``). Default: ``True``.
+#
+    #    Returns:
+    #        Module: self
+    #    """
+    #    self.training = mode
+    #    for module in self.children():
+    #        if module in self.pair_conv_bn.values():
+    #            if 
+    #        module.train(mode)
+    #    return self
 
     def register_algorithm(self, builder: 'CompressionAlgorithmBuilder'):
         """Should be called during *builder*'s *apply_to* method, otherwise there will be no corresponding

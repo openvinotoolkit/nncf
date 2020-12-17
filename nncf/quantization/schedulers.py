@@ -19,6 +19,23 @@ logger = logging.getLogger(__name__)
 
 QUANTIZATION_SCHEDULERS = Registry("quantization_schedulers")
 
+@QUANTIZATION_SCHEDULERS.register("base")
+class BaseQuantizationScheduler(CompressionScheduler):
+    def __init__(self, quantization_ctrl: 'QuantizationController', params=None):
+        super().__init__()
+        if params is None:
+            params = {}
+        self.algo = quantization_ctrl
+        self.folding_conv_bn_target_epoch = params.get('folding_conv_bn_target_epoch', -1) 
+        self.freeze_bn_stats_target_epoch = params.get('freeze_bn_stats_target_epoch', -1)
+
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
+        if self._current_epoch == self.folding_conv_bn_target_epoch:
+            self.algo.do_folding_conv_bn()
+        if self._current_epoch >= self.freeze_bn_stats_target_epoch:
+            self.algo.freeze_bn_stats()
+
 
 @QUANTIZATION_SCHEDULERS.register("staged")
 class StagedQuantizationScheduler(CompressionScheduler):

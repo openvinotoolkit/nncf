@@ -309,12 +309,13 @@ class TestModelsGraph:
         check_model_graph(compressed_model, desc.dot_filename, algo)
 
     def test_quantize_network(self, desc: ModelDesc, _case_config):
+        from copy import deepcopy
         model = desc.model_builder()
         config = get_basic_quantization_config(_case_config.quant_type, input_sample_sizes=desc.input_sample_sizes)
-        fused_model = fusing(model)
+        #fused_model = fusing(deepcopy(model))
         #fused_model = torch.quantization.fuse_modules(model, ['conv1', 'bn1' ])
         compressed_model, _ = \
-            create_compressed_model_and_algo_for_test(fused_model, config, dummy_forward_fn=desc.dummy_forward_fn,
+            create_compressed_model_and_algo_for_test(model, config, dummy_forward_fn=desc.dummy_forward_fn,
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
         check_model_graph(compressed_model, desc.dot_filename, _case_config.graph_dir)
 
@@ -843,9 +844,9 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
 
 def fusing(model):
     from torch.nn import BatchNorm2d, Conv2d
-    from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
 
     def get_names_modules_for_fusing(model):
+        from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
 
         prev_module_name = None
         prev_module = None
@@ -856,13 +857,19 @@ def fusing(model):
                 prev_module = module
             if len(module._modules) == 0:
                 if isinstance(module, BatchNorm2d) and isinstance(prev_module, Conv2d):
-                    should_be_fused.append([prev_module, module])
+                    conv, bn = fuse_known_modules([prev_module, module])
+                    model._modules[prev_module_name] = conv
+                    model._modules[module_name] = bn
             else:
-                should_be_fused += get_names_modules_for_fusing(module)
-        return should_be_fused
-    
-    l = get_names_modules_for_fusing(model)
-    fused_model = fuse_known_modules(model, l)
+                module = get_names_modules_for_fusing(module)
+            prev_module_name = module_name
+            prev_module = module
+        return model
+
+    model_fused = get_names_modules_for_fusing(model)
+
+    a = 0
+    return model_fused
 
 
 

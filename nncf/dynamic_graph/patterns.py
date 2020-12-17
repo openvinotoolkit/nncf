@@ -36,3 +36,5 @@ ARITHMETIC = N('__iadd__') | N('__add__') | N('__mul__') | N('__rmul__')
 ELTWISE_UNIFORM_OPS = BN | RELU | ACTIVATIONS
 
 MATMUL = N('matmul') | N('bmm')
+
+FUSED_CONV_BN = N('Conv2dBN2d')

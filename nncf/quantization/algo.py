@@ -243,6 +243,30 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         quantizer_cls = QUANTIZATION_MODULES.get(qconfig.mode)
         return quantizer_cls(qconfig)
 
+    def __create_scale_module(self, next_bn):
+        class ScaledWeights(nn.Module):
+            def __init__(self, bn):
+                super().__init__()
+                self.bn = bn
+
+            def forward(self, nncf_conv, x):
+                # W * gamma / sigma
+                if nncf_conv.folding_conv_bn:
+
+                    running_std = torch.sqrt(self.bn.running_var + self.bn.eps)
+                    scale_factor = self.bn.weight / running_std
+                    nncf_conv.scale_factor = scale_factor
+                    weights_shape = [1] * len(nncf_conv.weight.shape)
+                    weights_shape[0] = -1
+                    bias_shape = [1] * len(nncf_conv.weight.shape)
+                    bias_shape[1] = -1
+                    scaled_weights = nncf_conv.weight * scale_factor.reshape(weights_shape)
+                    setattr(nncf_conv, 'weight', scaled_weights)
+
+                return x
+
+        return ScaledWeights(next_bn)
+
     def _make_quantizable_subgraph_pattern(self):
         full_pattern = self._make_default_quantizable_subgraph_pattern()
         if self.quantizable_subgraph_patterns is not None:
@@ -345,6 +369,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             self._hw_precision_constraints.add(quantizer_id, qconfig_list)
             qconfig.input_shape = module.weight.shape
             quantizer = self.__create_quantize_module(qconfig)
+            if module in target_model.pair_conv_bn:
+                op_scale = self.__create_scale_module(target_model.pair_conv_bn[module])
+                module.register_pre_forward_operation(op_scale)
+                #op = UpdateWeight(op_scale).to(device)
+
             op = UpdateWeight(quantizer).to(device)
             # TODO: separate insertion point semantic for weights and activations
             insertion_commands.append(InsertionCommand(InsertionPoint(
@@ -843,7 +872,8 @@ class QuantizationController(QuantizationControllerBase):
                  weight_quantizers: Dict[WeightQuantizerId, torch.nn.Module],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  hw_precision_constraints: HWPrecisionConstraints,
-                 collect_compression_metrics: bool = True):
+                 collect_compression_metrics: bool = True,
+                 do_fusing_conv_bn: bool = True):
         super().__init__(target_model)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
@@ -875,8 +905,15 @@ class QuantizationController(QuantizationControllerBase):
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
+        
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+            self._scheduler = scheduler_cls(self, params)
+        else:
+            params = quantization_config.get('params', {})
+            params['folding_conv_bn_target_epoch'] = quantization_config.get('folding_conv_bn_target_epoch', -1) 
+            params['freeze_bn_stats_target_epoch'] = quantization_config.get('freeze_bn_stats_target_epoch', -1)
+            scheduler_cls = QUANTIZATION_SCHEDULERS.get("base")
             self._scheduler = scheduler_cls(self, params)
 
         if self._collect_compression_metrics:
@@ -891,6 +928,14 @@ class QuantizationController(QuantizationControllerBase):
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
             self.update_metric_store(True)
+
+    def do_folding_conv_bn(self):
+        for conv in self._model.pair_conv_bn.keys():
+            conv.folding_conv_bn = True
+
+    def freeze_bn_stats(self):
+        for bn in self._model.pair_conv_bn.values():
+            bn.training = False
 
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():

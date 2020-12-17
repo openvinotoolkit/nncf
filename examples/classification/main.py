@@ -196,8 +196,12 @@ def main_worker(current_gpu, config: SampleConfig):
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
+    if compression_ctrl.scheduler.current_step >= 200000:
+        compression_ctrl.freeze_bn_stats()
+
     for epoch in range(config.start_epoch, config.epochs):
         # update compression scheduler state at the begin of the epoch
+        model.train()
         compression_ctrl.scheduler.epoch_step()
 
         config.cur_epoch = epoch
@@ -364,7 +368,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
     compression_scheduler = compression_ctrl.scheduler
 
     # switch to train mode
-    model.train()
+    #model.train()
 
     end = time.time()
     for i, (input_, target) in enumerate(train_loader):
