@@ -2,7 +2,7 @@
     "hyperparameters": 
     {
         "seed": 528,
-        "train_episode": 600, 
+        "train_episode": 600,
         "delta_decay": 0.995,
         "hidden1": 300,
         "hidden2": 300,
