@@ -33,6 +33,7 @@ from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
 from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
+from nncf.quantization.layers import QuantizerConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
@@ -491,6 +492,7 @@ class TestCaseDescriptor:
         return self
 
     def mock_dataset(self, dataset_name: str):
+        self.dataset_name = dataset_name
         self.dataset_dir = TEST_ROOT.joinpath("data", "mock_datasets", dataset_name)
         return self
 
@@ -502,8 +504,9 @@ class TestCaseDescriptor:
         return '_'.join([self.config_name, 'staged' if self.quantization_algo_params else ''])
 
     def get_config_update(self) -> Dict:
+        sample_params = self.get_sample_params()
         return {
-            **self.get_sample_params(),
+            **sample_params,
             'target_device': 'VPU',
             'compression': {
                 'algorithm': 'quantization',
@@ -520,22 +523,31 @@ class TestCaseDescriptor:
     def get_precision_section(self) -> Dict:
         raise NotImplementedError
 
-    def get_sample_params(self):
-        return {}
+    def get_sample_params(self) -> Dict:
+        return {"dataset": self.dataset_name}
+
+    def setup_spy(self, mocker):
+        raise NotImplementedError
+
+    def validate_spy(self):
+        raise NotImplementedError
 
 
 class HAWQDescriptor(TestCaseDescriptor):
-    batch_size_init: int = None
-
     def __init__(self):
         super().__init__()
+        self.batch_size_init: int = 0
+        self.set_chosen_config_spy = None
+        self.hessian_trace_estimator_spy = None
 
     def batch_for_init(self, batch_size_init: int):
         self.batch_size_init = batch_size_init
         return self
 
     def get_sample_params(self):
-        return {'batch_for_init': self.batch_size_init} if self.batch_size_init else {}
+        result = super().get_sample_params()
+        result.update({'batch_size_init': self.batch_size_init} if self.batch_size_init else {})
+        return result
 
     def get_precision_section(self) -> Dict:
         return {"type": "hawq",
@@ -545,6 +557,22 @@ class HAWQDescriptor(TestCaseDescriptor):
     def __str__(self):
         bs = f'_bs{self.batch_size_init}' if self.batch_size_init else ''
         return super().__str__() + '_hawq' + bs
+
+    def setup_spy(self, mocker):
+        from nncf.quantization.init_precision import HAWQPrecisionInitializer
+        self.set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
+        from nncf.quantization.hessian_trace import HessianTraceEstimator
+        self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
+
+    def validate_spy(self):
+        bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
+        assert len(bitwidth_list) == self.num_weights_to_init
+        # with default compression ratio = 1.5 all precisions should be different from the default one
+        assert set(bitwidth_list) != {QuantizerConfig().bits}
+
+        init_data_loader = self.hessian_trace_estimator_spy.call_args[0][5]
+        expected_batch_size = self.batch_size_init if self.batch_size_init else self.batch_size
+        assert init_data_loader.batch_size == expected_batch_size
 
 
 class AutoQDescriptor(TestCaseDescriptor):
@@ -565,21 +593,31 @@ class AutoQDescriptor(TestCaseDescriptor):
                 "num_steps_per_iter": 2}
 
     def get_sample_params(self):
-        return {'val_subset_ratio': self.subset_ratio_} if self.subset_ratio_ else {}
+        result = super().get_sample_params()
+        result.update({'val_subset_ratio': self.subset_ratio_} if self.subset_ratio_ else {})
+        return result
 
     def __str__(self):
         sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
         return super().__str__() + '_autoq' + sr
 
+    def setup_spy(self, mocker):
+        # TODO: to be implemented
+        pass
+
+    def validate_spy(self):
+        # TODO: to be implemented
+        pass
+
 
 def resnet18_desc(x: TestCaseDescriptor):
     return x.config("resnet18_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
-        real_dataset('cifar10').batch(2).num_weights(21)
+        mock_dataset('mock_32x32').batch(3).num_weights(21)
 
 
 def inception_v3_desc(x: TestCaseDescriptor):
     return x.config("inception_v3_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
-        real_dataset('cifar10').batch(2).num_weights(95)
+        mock_dataset('mock_32x32').batch(3).num_weights(95)
 
 
 def ssd300_vgg_desc(x: TestCaseDescriptor):
@@ -589,12 +627,12 @@ def ssd300_vgg_desc(x: TestCaseDescriptor):
 
 def unet_desc(x: TestCaseDescriptor):
     return x.config("unet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch(2).num_weights(23)
+        mock_dataset('camvid').batch(3).num_weights(23)
 
 
 def icnet_desc(x: TestCaseDescriptor):
     return x.config("icnet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch(2).num_weights(64)
+        mock_dataset('camvid').batch(3).num_weights(64)
 
 
 TEST_CASE_DESCRIPTORS = [
@@ -655,19 +693,8 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     elif desc.sample_type == SampleType.OBJECT_DETECTION:
         import examples.object_detection.main as sample
         mocker.patch("examples.object_detection.main.train")
-    from nncf.quantization.init_precision import HAWQPrecisionInitializer
-    set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
-    from nncf.quantization.hessian_trace import HessianTraceEstimator
-    hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
+    desc.setup_spy(mocker)
 
     sample.main(shlex.split(command_line))
 
-    bitwidth_list = set_chosen_config_spy.call_args[0][1]
-    assert len(bitwidth_list) == desc.num_weights_to_init
-    # with default compression ratio = 1.5 should be always a mixed precision model
-    assert len(set(bitwidth_list)) > 1
-
-    if isinstance(desc, HAWQDescriptor):
-        init_data_loader = hessian_trace_estimator_spy.call_args[0][5]
-        expected_batch_size = desc.batch_size_init if desc.batch_size_init else desc.batch_size
-        assert init_data_loader.batch_size == expected_batch_size
+    desc.validate_spy()
