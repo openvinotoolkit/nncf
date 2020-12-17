@@ -1,3 +1,4 @@
+import math
 import logging
 from collections import OrderedDict
 
@@ -89,6 +90,33 @@ def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
     return data_loader
 
 
+class PartialDataLoader:
+    def __init__(self, regular_data_loader, iter_ratio=1.0):
+        if iter_ratio < 0.0 and iter_ratio > 1.0:
+            raise ValueError("iter_ratio must be within 0 to 1 range")
+        self.data_loader = regular_data_loader
+        self.batch_size = regular_data_loader.batch_size
+        self.batch_len = len(self.data_loader)
+        self.batch_id = 0
+        self.stop_id = math.ceil(self.batch_len*iter_ratio)
+
+    def __iter__(self):
+        self.data_loader_iter = iter(self.data_loader)
+        self.batch_id = 0
+        return self
+
+    def __next__(self) -> Any:
+        if self.batch_id < self.stop_id:
+            loaded_item = next(self.data_loader_iter)
+            self.batch_id += 1
+            return loaded_item
+        else:
+            raise StopIteration
+
+    def __len__(self) -> int:
+        return self.stop_id
+
+
 class DataLoaderBaseRunner:
     def __init__(self, model, init_device: str):
         self.model = model
@@ -103,9 +131,15 @@ class DataLoaderBaseRunner:
         #         desc=self.progressbar_description,
         #         bar_format=bar_format,
         # ) as tqdm_it:
-        #     for i, loaded_item in enumerate(tqdm_it):
-        for i, loaded_item in enumerate(data_loader):
-            print(i)
+        # for i, loaded_item in enumerate(tqdm_it):
+        for i, loaded_item in tqdm(
+                enumerate(data_loader),
+                total=num_init_steps,
+                desc=self.progressbar_description,
+                bar_format=bar_format,
+        ):
+        # for i, loaded_item in enumerate(data_loader):
+        #     print(i)
             if num_init_steps is not None and i >= num_init_steps:
                 break
             args_kwargs_tuple = data_loader.get_inputs(loaded_item)
@@ -223,6 +257,14 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
             #         desc=self.progressbar_description,
             #         bar_format=bar_format,
             # ):
+            # with tqdm(
+            #     data_loader,
+            #     total=num_init_steps,
+            #     desc=self.progressbar_description,
+            #     bar_format=bar_format,
+            # ) as tqdm_it:
+            # for i, loaded_item in enumerate(tqdm_it):
+
             for i, loaded_item in enumerate(data_loader):
                 print(i)
                 if num_init_steps is not None and i >= num_init_steps:
@@ -241,18 +283,21 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
-def register_default_init_args(nncf_config: 'NNCFConfig',
+qdef register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
-                               eval_fn=None,
+                               autoq_eval_fn=None,
+                               autoq_eval_loader=None,
                                device='cuda') -> 'NNCFConfig':
     if 'autoq' == nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
-                                                                    device=device),
-                                            BNAdaptationInitArgs(data_loader=train_loader, 
-                                                                device=device),
-                                            AutoQPrecisionInitArgs(train_loader, eval_fn, nncf_config)])                                                
+                                                                      device=device),
+                                            BNAdaptationInitArgs(data_loader=train_loader,
+                                                                 device=device),
+                                            AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+                                                                   eval_fn=autoq_eval_fn, 
+                                                                   nncf_config=nncf_config)])
     else:
         if criterion:
             if not criterion_fn:
@@ -270,5 +315,4 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                         device=device),
                                                 BNAdaptationInitArgs(data_loader=train_loader,
                                                                     device=device)])
-
     return nncf_config

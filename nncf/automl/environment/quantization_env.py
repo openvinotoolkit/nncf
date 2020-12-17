@@ -46,7 +46,7 @@ from nncf.dynamic_graph.context import Scope
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
 from nncf.hw_config import HWConfigType
 from nncf.quantization.layers import BaseQuantizer
-
+from nncf.initialization import PartialDataLoader
 
 def find_qid_by_str(quantization_controller, qid_str):
     for _qid, _q in quantization_controller.all_quantizations.items():
@@ -87,8 +87,8 @@ class ModelSizeCalculator:
             if qid in per_quantizer_bw:
                 model_size += nparam * per_quantizer_bw[qid]
             else:
-                logger.warn("[ModelSizeCalculator] Missing Bitwidth of QID: {}, using {} bits"
-                            .format(str(qid), ModelSizeCalculator.FLOAT_BITWIDTH))
+                logger.warning("[ModelSizeCalculator] Missing Bitwidth of QID: {}, using {} bits"
+                               .format(str(qid), ModelSizeCalculator.FLOAT_BITWIDTH))
                 model_size += nparam * ModelSizeCalculator.FLOAT_BITWIDTH
         return model_size
 
@@ -136,6 +136,8 @@ class QuantizationEnv:
 
         # Set target compression ratio
         self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
+
+        self.eval_loader = PartialDataLoader(self.eval_loader, iter_ratio=self.autoq_cfg.get('eval_subset_ratio', 1.0))
 
         # Bool to disable hard resource constraint
         self.skip_constraint = False
@@ -292,8 +294,8 @@ class QuantizationEnv:
         master_df = pd.concat([df, layer_attr_df], axis='columns')
 
         # Annotate a min and a max value in prev_action before minmaxscaler fitting
-        master_df['prev_action'][0] = max(self.model_bitwidth_space)
-        master_df['prev_action'][-1] = min(self.model_bitwidth_space)
+        master_df.loc[master_df.index[0], 'prev_action'] = max(self.model_bitwidth_space)
+        master_df.loc[master_df.index[-1], 'prev_action'] = min(self.model_bitwidth_space)
 
         return master_df, state_list
 

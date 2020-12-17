@@ -148,10 +148,9 @@ def main_worker(current_gpu, config: SampleConfig):
             _, top5 = validate(eval_loader, model, criterion, config)
             return top5
 
-        # TODO: Can init_loader work for both HAWQ and AutoQ
         nncf_config = register_default_init_args(
-            nncf_config, val_loader, criterion, train_criterion_fn, 
-            autoq_eval_fn, config.device)
+            nncf_config, init_loader, criterion, train_criterion_fn, 
+            autoq_eval_fn, val_loader, config.device)
 
     # create model
     model = load_model(model_name,
