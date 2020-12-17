@@ -636,6 +636,7 @@ def icnet_desc(x: TestCaseDescriptor):
 
 
 TEST_CASE_DESCRIPTORS = [
+<<<<<<< HEAD
     inception_v3_desc(HAWQDescriptor()),
     inception_v3_desc(HAWQDescriptor()).staged(),
     resnet18_desc(HAWQDescriptor()),
@@ -653,6 +654,41 @@ TEST_CASE_DESCRIPTORS = [
     ssd300_vgg_desc(AutoQDescriptor()),
     unet_desc(AutoQDescriptor()),
     icnet_desc(AutoQDescriptor()),
+=======
+    TestCaseDescriptor().
+        config("inception_v3_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(95),
+    TestCaseDescriptor().
+        config("inception_v3_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(95),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(21),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(21),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(21).batch_for_init(2),
+    TestCaseDescriptor().
+        config("resnet18_cifar10_mixed_int_staged.json").
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(21).batch_for_init(2),
+    TestCaseDescriptor().
+        config("ssd300_vgg_voc_mixed_int.json").
+        sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(2).num_weights(35),
+    TestCaseDescriptor().
+        config("ssd300_vgg_voc_mixed_int.json").
+        sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(3).num_weights(35).batch_for_init(2),
+    TestCaseDescriptor().
+        config("unet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(23),
+    TestCaseDescriptor().
+        config("icnet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(2).num_weights(64),
+    TestCaseDescriptor().
+        config("unet_camvid_mixed_int.json").
+        sample(SampleType.SEMANTIC_SEGMENTATION).mock_dataset('camvid').batch(3).num_weights(23).batch_for_init(2),
+>>>>>>> develop
 ]
 
 

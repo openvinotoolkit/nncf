@@ -560,7 +560,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
 
     SingleLayerModelDesc(layer=nn.Linear(1, 1)),
 
-    SingleLayerModelDesc(layer=nn.Embedding(1, 1),
+    SingleLayerModelDesc(layer=nn.Embedding(1, 1), model_name='Embedding_module',
                          input_info={"sample_size": [1, 1], "type": "long", "filler": "zeros"}),
     SingleLayerModelDesc(layer=nn.EmbeddingBag(1, 1),
                          input_info={"sample_size": [1, 1], "type": "long", "filler": "zeros"}),
@@ -653,7 +653,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
     TensorUnaryMethodsDesc(tensor_method='chunk', chunks=1),
     TensorUnaryMethodsDesc(tensor_method='expand', size=(1,)),
 
-    TorchBinaryMethodDesc(model_name='embedding', torch_method=F.embedding,
+    TorchBinaryMethodDesc(model_name='embedding_function', torch_method=F.embedding,
                           input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
