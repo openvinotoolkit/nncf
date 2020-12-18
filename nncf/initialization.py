@@ -91,30 +91,28 @@ def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
 
 
 class PartialDataLoader:
-    def __init__(self, regular_data_loader, iter_ratio=1.0):
-        if iter_ratio < 0.0 and iter_ratio > 1.0:
+    def __init__(self, regular_data_loader: 'DataLoader', iter_ratio=1.0):
+        if iter_ratio < 0.0 or iter_ratio > 1.0:
             raise ValueError("iter_ratio must be within 0 to 1 range")
         self.data_loader = regular_data_loader
         self.batch_size = regular_data_loader.batch_size
-        self.batch_len = len(self.data_loader)
-        self.batch_id = 0
-        self.stop_id = math.ceil(self.batch_len*iter_ratio)
+        self._stop_id = math.ceil(len(self.data_loader)*iter_ratio)
+        self._batch_id = 0
 
     def __iter__(self):
         self.data_loader_iter = iter(self.data_loader)
-        self.batch_id = 0
+        self._batch_id = 0
         return self
 
     def __next__(self) -> Any:
-        if self.batch_id < self.stop_id:
+        if self._batch_id < self._stop_id:
             loaded_item = next(self.data_loader_iter)
-            self.batch_id += 1
+            self._batch_id += 1
             return loaded_item
-        else:
-            raise StopIteration
+        raise StopIteration
 
     def __len__(self) -> int:
-        return self.stop_id
+        return self._stop_id
 
 
 class DataLoaderBaseRunner:
