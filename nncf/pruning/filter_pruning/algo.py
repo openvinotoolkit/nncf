@@ -146,8 +146,6 @@ class FilterPruningController(BasePruningAlgoController):
                                        nn.ConvTranspose3d)):
                     ks = module.weight.data.shape
                     cost = 2 * np.prod(ks[2:]) * np.prod(output.shape[2:]) / module.groups
-                    if module.bias is not None:
-                        cost += int(np.prod(output.shape[2:]) / module.in_channels)
                 else:
                     return
                 self.nodes_flops_cost[name] = cost
