@@ -144,13 +144,12 @@ def main_worker(current_gpu, config):
 
         def autoq_test_fn(model, eval_loader):
             # RL is maximization, change the loss polarity
-            return -1 * test_net(model, config.device, eval_loader, distributed=config.distributed, loss_inference=True, criterion=criterion)
+            return -1 * test_net(model, config.device, eval_loader, distributed=config.distributed,
+                                 loss_inference=True, criterion=criterion)
 
         nncf_config = register_default_init_args(
-            nncf_config, train_data_loader,
-            criterion=criterion, criterion_fn=None,
-            autoq_eval_fn=autoq_test_fn, autoq_eval_loader=test_data_loader, 
-            device=config.device)
+            nncf_config, init_data_loader, criterion, criterion_fn,
+            autoq_test_fn, test_data_loader, config.device)
 
     ##################
     # Prepare model
