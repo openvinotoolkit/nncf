@@ -463,7 +463,8 @@ class TestCaseDescriptor:
     dataset_name: str
     is_real_dataset: bool = False
     batch_size: int
-    num_weights_to_init: int
+    num_weight_quantizers: int
+    num_activation_quantizers: int
 
     def batch(self, batch_size: int):
         self.batch_size = batch_size
@@ -496,8 +497,12 @@ class TestCaseDescriptor:
         self.dataset_dir = TEST_ROOT.joinpath("data", "mock_datasets", dataset_name)
         return self
 
-    def num_weights(self, n: int):
-        self.num_weights_to_init = n
+    def num_weight_quantizers(self, n: int):
+        self.num_weight_quantizers = n
+        return self
+
+    def num_activation_quantizers(self, n: int):
+        self.num_activation_quantizers = n
         return self
 
     def __str__(self):
@@ -534,11 +539,12 @@ class TestCaseDescriptor:
 
 
 class HAWQDescriptor(TestCaseDescriptor):
+    batch_size_init: int = 0
+    set_chosen_config_spy = None
+    hessian_trace_estimator_spy = None
+
     def __init__(self):
         super().__init__()
-        self.batch_size_init: int = 0
-        self.set_chosen_config_spy = None
-        self.hessian_trace_estimator_spy = None
 
     def batch_for_init(self, batch_size_init: int):
         self.batch_size_init = batch_size_init
@@ -566,7 +572,7 @@ class HAWQDescriptor(TestCaseDescriptor):
 
     def validate_spy(self):
         bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
-        assert len(bitwidth_list) == self.num_weights_to_init
+        assert len(bitwidth_list) == self.num_weight_quantizers
         # with default compression ratio = 1.5 all precisions should be different from the default one
         assert set(bitwidth_list) != {QuantizerConfig().bits}
 
@@ -576,8 +582,8 @@ class HAWQDescriptor(TestCaseDescriptor):
 
 
 class AutoQDescriptor(TestCaseDescriptor):
-    subset_ratio_: float = None
-
+    subset_ratio_: float = 1.0
+    
     def __init__(self):
         super().__init__()
 
@@ -590,49 +596,45 @@ class AutoQDescriptor(TestCaseDescriptor):
                 "bits": [2, 4, 8],
                 "iter_number": 2,
                 "compression_ratio": 0.15,
-                "num_steps_per_iter": 2}
-
-    def get_sample_params(self):
-        result = super().get_sample_params()
-        result.update({'val_subset_ratio': self.subset_ratio_} if self.subset_ratio_ else {})
-        return result
+                "eval_subset_ratio": self.subset_ratio_}
 
     def __str__(self):
         sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
         return super().__str__() + '_autoq' + sr
 
     def setup_spy(self, mocker):
-        # TODO: to be implemented
-        pass
+        from nncf.quantization.init_precision import AutoQPrecisionInitializer
+        self.set_chosen_config_spy = mocker.spy(AutoQPrecisionInitializer, "set_chosen_config")
 
     def validate_spy(self):
-        # TODO: to be implemented
-        pass
+        qid_bitwidth_map = self.set_chosen_config_spy.call_args[0][1]
+        assert len(qid_bitwidth_map) == self.num_weight_quantizers + self.num_activation_quantizers
+        assert set(qid_bitwidth_map.values()) != {QuantizerConfig().bits}
 
 
 def resnet18_desc(x: TestCaseDescriptor):
     return x.config("resnet18_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
-        mock_dataset('mock_32x32').batch(3).num_weights(21)
+        mock_dataset('mock_32x32').batch(3).num_weight_quantizers(21).num_activation_quantizers(27)
 
 
 def inception_v3_desc(x: TestCaseDescriptor):
     return x.config("inception_v3_cifar10_mixed_int.json").sample(SampleType.CLASSIFICATION). \
-        mock_dataset('mock_32x32').batch(3).num_weights(95)
+        mock_dataset('mock_32x32').batch(3).num_weight_quantizers(95).num_activation_quantizers(105)
 
 
 def ssd300_vgg_desc(x: TestCaseDescriptor):
     return x.config("ssd300_vgg_voc_mixed_int.json").sample(SampleType.OBJECT_DETECTION). \
-        mock_dataset('voc').batch(3).num_weights(35)
+        mock_dataset('voc').batch(3).num_weight_quantizers(35).num_activation_quantizers(27)
 
 
 def unet_desc(x: TestCaseDescriptor):
     return x.config("unet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch(3).num_weights(23)
+        mock_dataset('camvid').batch(3).num_weight_quantizers(23).num_activation_quantizers(23)
 
 
 def icnet_desc(x: TestCaseDescriptor):
     return x.config("icnet_camvid_mixed_int.json").sample(SampleType.SEMANTIC_SEGMENTATION). \
-        mock_dataset('camvid').batch(3).num_weights(64)
+        mock_dataset('camvid').batch(3).num_weight_quantizers(64).num_activation_quantizers(81)
 
 
 TEST_CASE_DESCRIPTORS = [
@@ -648,8 +650,11 @@ TEST_CASE_DESCRIPTORS = [
     unet_desc(HAWQDescriptor()).batch_for_init(2),
     icnet_desc(HAWQDescriptor()),
     inception_v3_desc(AutoQDescriptor()).batch(256),
+    inception_v3_desc(AutoQDescriptor()).staged(),
     resnet18_desc(AutoQDescriptor()).batch(256),
+    resnet18_desc(AutoQDescriptor()).batch(256).staged(),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(256),
+    resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
     ssd300_vgg_desc(AutoQDescriptor()),
     unet_desc(AutoQDescriptor()),
     icnet_desc(AutoQDescriptor())

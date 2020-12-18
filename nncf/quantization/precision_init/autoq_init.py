@@ -42,7 +42,7 @@ class AutoQPrecisionInitializer:
     def __init__(self, algo: 'QuantizationController', init_precision_config,
                  init_args: AutoQPrecisionInitArgs):
         self.quantization_controller = algo
-        self.init_args= init_args
+        self.init_args = init_args
 
 
     def apply_init(self):
@@ -51,7 +51,7 @@ class AutoQPrecisionInitializer:
         
         start_ts = datetime.now()
 
-        # Instantiate AutoX/NNCF Quantization Environment
+        # Instantiate Quantization Environment
         env = QuantizationEnv(
             self.quantization_controller,
             self.init_args.data_loader,
@@ -65,14 +65,21 @@ class AutoQPrecisionInitializer:
         agent = DDPG(nb_state, nb_action, self.init_args.config)
         
         best_policy, best_reward = self._search(agent, env, self.init_args.config)
-
-        logger.info('best_reward: {}'.format(best_reward))
-        logger.info('best_policy: {}'.format(best_policy))
-        logger.info("[AutoX] Search Complete")
         
         end_ts = datetime.now()
-        logger.info("Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
 
+        self.set_chosen_config(dict(zip(env.master_df.qid_obj, best_policy)))
+
+        logger.info('[AutoQ] best_reward: {}'.format(best_reward))
+        logger.info('[AutoQ] best_policy: {}'.format(best_policy))
+        logger.info("[AutoQ] Search Complete")
+        logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
+
+
+    def set_chosen_config(self, qid_bw_map: Dict[QuantizerId, int]):
+        for qid, bw in qid_bw_map.items():
+            self.quantization_controller.all_quantizations[qid].num_bits = bw
+        
 
     def _search(self, agent, env, config):
         # def map_precision(action):
