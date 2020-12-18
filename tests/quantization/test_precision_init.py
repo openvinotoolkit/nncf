@@ -566,6 +566,7 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
     mock_train_loader = mocker.stub()
     mock_train_loader.batch_size = 1
     config = register_default_init_args(config, mock_train_loader, mocker.stub())
+    mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
     mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
     mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
 
