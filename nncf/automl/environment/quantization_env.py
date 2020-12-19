@@ -200,6 +200,7 @@ class QuantizationEnv:
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
+        self.qmodel_init_sd = deepcopy(self.qmodel.state_dict())
 
         # init reward
         self.best_reward = -math.inf #TODO: move reward to search manager
@@ -498,7 +499,8 @@ class QuantizationEnv:
         return _df.iloc[idx]
 
 
-    def set_quantizer_bitwidth(self, qid_bw_map: Dict[QuantizerId, int]):    
+    def set_quantizer_bitwidth(self, qid_bw_map: Dict[QuantizerId, int]):
+        self.qmodel.load_state_dict(self.qmodel_init_sd)
         for qid, bw in qid_bw_map.items():
             self.qctrl.all_quantizations[qid].num_bits = int(bw)
 
