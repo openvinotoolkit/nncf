@@ -459,6 +459,7 @@ class QuantizationEnv:
         assert len(collected_strategy) == len(self.master_df)
         if skip_constraint is not True:
             collected_strategy = self._constrain_model_size(collected_strategy)
+        self.master_df['action'] = collected_strategy # This must be after constraint
 
         qid_bw_map = dict(zip(self.master_df.qid_obj, self.master_df.action))
         self.set_quantizer_bitwidth(qid_bw_map)
