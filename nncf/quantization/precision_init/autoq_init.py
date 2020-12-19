@@ -219,7 +219,7 @@ class AutoQPrecisionInitializer:
                 
                 if final_reward > best_reward:
                     best_reward = final_reward
-                    best_policy = env.strategy
+                    best_policy = env.master_df['action']
                     
                     # log best policy to tensorboard
                     best_policy_dict[episode]=env.master_df['action'].astype('int')

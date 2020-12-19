@@ -4,6 +4,7 @@ import os.path as osp
 import sys
 import time
 from pathlib import Path
+from typing import List, Dict, Union
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -47,6 +48,7 @@ from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacen
 from nncf.hw_config import HWConfigType
 from nncf.quantization.layers import BaseQuantizer
 from nncf.initialization import PartialDataLoader
+from nncf.quantization.quantizer_id import QuantizerId
 
 def find_qid_by_str(quantization_controller, qid_str):
     for _qid, _q in quantization_controller.all_quantizations.items():
@@ -214,7 +216,6 @@ class QuantizationEnv:
 
     def reset(self):
         self.collected_strategy = []
-        self.strategy = []
         self.master_df['action'] = max(self.model_bitwidth_space)
         self.master_df['prev_action'] = 0
         self.master_df['unconstrained_action'] = 0
@@ -401,10 +402,12 @@ class QuantizationEnv:
         return OrderedDict(zip(self.master_df.qid_obj, self.master_df.action))
 
 
-    def _constrain_model_size(self, skip=False):
-        # This function acts on self.strategy and return self.strategy
+    def _constrain_model_size(self, collected_strategy: List, skip=False):
         def lower_bitwidth(bw, bw_space):
             return bw_space[bw_space.index(bw)-1] if bw_space.index(bw) > 0 else bw
+
+        # This function acts on self.master_df['action']
+        self.master_df['action'] = collected_strategy
 
         if skip is not True:
             self.master_df['unconstrained_action'] = self.master_df['action']
@@ -424,8 +427,7 @@ class QuantizationEnv:
         else:
             logger.info("[Q.Env] Skipping Model Size Constraint")
 
-        self.strategy = self.master_df['action']
-        return self.strategy
+        return self.master_df['action'].tolist()
 
     def reward(self, acc, model_ratio):
         return (acc - self.pretrained_score) * 0.1
@@ -449,23 +451,16 @@ class QuantizationEnv:
             obs = self.get_normalized_obs(len(self.collected_strategy))
             done = False
             return obs, reward, done, info_set
-        else:
-            return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
+        
+        return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
 
-    def evaluate_strategy(self, collected_strategy, skip_constraint=True):
-        self.master_df['action'] = collected_strategy
-        self.strategy = self.master_df['action']
-
+    def evaluate_strategy(self, collected_strategy: List, skip_constraint=True):
+        assert len(collected_strategy) == len(self.master_df)
         if skip_constraint is not True:
-            self.strategy = self._constrain_model_size()
+            collected_strategy = self._constrain_model_size(collected_strategy)
 
-        assert len(self.strategy) == len(self.master_df)
-
-        # Quantization
-        self.apply_actions(self.strategy)
-
-        current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
-        current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
+        qid_bw_map = dict(zip(self.master_df.qid_obj, self.master_df.action))
+        self.set_quantizer_bitwidth(qid_bw_map)
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
             logger.info("[Q.Env] {:50} | {}".format(
@@ -473,6 +468,10 @@ class QuantizationEnv:
                 idx))
 
         quantized_score = self._run_quantization_pipeline(finetune=self.finetune)
+
+        current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
+        current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
+
         reward = self.reward(quantized_score, current_model_ratio)
 
         info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size}
@@ -480,13 +479,13 @@ class QuantizationEnv:
         if reward > self.best_reward:
             self.best_reward = reward
             log_str = 'New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(mb): {:.3f}'\
-                      .format(self.strategy, self.best_reward, quantized_score,
+                      .format(collected_strategy, self.best_reward, quantized_score,
                               current_model_ratio, current_model_size/8000000)
             logger.info("\033[92m {}\033[00m" .format(log_str))
 
         obs = self.get_normalized_obs(len(collected_strategy)-1)
-
         done = True
+        
         return obs, reward, done, info_set
 
     def set_next_step_prev_action(self, idx, action):
@@ -498,37 +497,10 @@ class QuantizationEnv:
         _df.loc[_df.index, self.state_list] = self.state_scaler.transform(_df[self.state_list])
         return _df.iloc[idx]
 
-    def apply_actions(self, strategy):
-        self.master_df['action'] = self.strategy
 
-        # step_cfg = deepcopy(self.orig_compress_cfg)
-        step_cfg = self.config['compression']
-
-        if 'scope_overrides' not in step_cfg:
-            step_cfg['scope_overrides'] = {}
-
-        if 'ignored_scopes' not in step_cfg:
-            step_cfg['ignored_scopes'] = []
-
-        # TODO: Handling for keeping layer at FP32
-        for layer in self.master_df.index:
-            precision = self.master_df.loc[layer, "action"]
-
-            if self.master_df.loc[layer, "is_wt_quantizer"]:
-                ScopeStr = str(self.master_df.loc[layer, 'state_scope'])
-                step_cfg['scope_overrides'][ScopeStr] = {}
-                # int requires to convert numpy.int64 to int
-                step_cfg['scope_overrides'][ScopeStr]['bits'] = int(precision)
-            else:
-                # if we use scope for non-weight quantizer, we would risk masking out the quantizers within the scope
-                # e.g. MobileNetV2/adaptive_avg_pool2d_0 masks all quantizers into the same scope
-                IAOpCtxStr = str(self.master_df.loc[layer, 'qid_obj'].ia_op_exec_context)
-                step_cfg['scope_overrides'][IAOpCtxStr] = {}
-                step_cfg['scope_overrides'][IAOpCtxStr]['bits'] = int(precision)
-
-            self.master_df.loc[layer, "qmodule"].num_bits = precision # Actual actor to change quantizer precision
-        self.config['compression'] = step_cfg
-        return True
+    def set_quantizer_bitwidth(self, qid_bw_map: Dict[QuantizerId, int]):    
+        for qid, bw in qid_bw_map.items():
+            self.qctrl.all_quantizations[qid].num_bits = int(bw)
 
 
     def _generate_qid_nodekey_map(self,
@@ -608,3 +580,4 @@ class QuantizationEnv:
         with open(osp.join(self.config.get("log_dir", "."),
                            self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
+
