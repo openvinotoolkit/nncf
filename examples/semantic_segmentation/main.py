@@ -516,8 +516,8 @@ def main_worker(current_gpu, config):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
-
-    print_statistics(compression_ctrl.statistics())
+    if is_main_process():
+        print_statistics(compression_ctrl.statistics())
 
     if config.mode.lower() == 'test':
         logger.info(model)

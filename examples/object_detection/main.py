@@ -40,6 +40,7 @@ from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
 from nncf import create_compressed_model, load_state
 from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.utils import is_main_process
 
 
 def str2bool(v):
@@ -181,7 +182,7 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
 
-    if is_on_first_rank(config):
+    if is_main_process():
         print_statistics(compression_ctrl.statistics())
 
     if config.mode.lower() == 'test':
@@ -318,7 +319,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         compression_ctrl.scheduler.step()
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
-            if is_on_first_rank(config):
+            if is_main_process():
                 print_statistics(compression_ctrl.statistics())
 
         if (iteration + 1) % epoch_size == 0:
