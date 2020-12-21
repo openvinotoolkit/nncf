@@ -83,6 +83,7 @@ def main(argv):
     start_worker(main_worker, config)
 
 
+# pylint:disable=too-many-branches
 def main_worker(current_gpu, config):
     #################################
     # Setup experiment environment
