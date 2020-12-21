@@ -321,10 +321,12 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
 
 class AutoQConfigBuilder(BaseConfigBuilder):
-    def __init__(self, config_creator_fn: Callable = None, batch_size=10, image_size=10):
+    def __init__(self, config_creator_fn: Callable = None, batch_size=10, image_size=10, num_channels=3,
+                 num_init_samples=1):
         super().__init__(config_creator_fn)
         if not config_creator_fn:
-            self._config = self.create_autoq_test_config(batch_size, image_size)
+            self._config = self.create_autoq_test_config(batch_size, image_size, num_channels,
+                                                         num_init_samples=num_init_samples)
         self.for_vpu()
 
     def eval_subset_ratio(self, eval_subset_ratio):
@@ -343,10 +345,10 @@ class AutoQConfigBuilder(BaseConfigBuilder):
             return self
 
     @staticmethod
-    def create_autoq_test_config(batch_size=10, image_size=10):
+    def create_autoq_test_config(batch_size=10, image_size=10, num_channels=3, num_init_samples=1):
         config = get_quantization_config_without_range_init()
         config['input_info'] = {
-            "sample_size": [batch_size, 3, image_size, image_size],
+            "sample_size": [batch_size, num_channels, image_size, image_size],
         }
         config['batch_size'] = batch_size
         config['compression'].update({
@@ -360,7 +362,7 @@ class AutoQConfigBuilder(BaseConfigBuilder):
                     "warmup_iter_number": 1
                 },
                 'range': {
-                    'num_init_samples': 1
+                    'num_init_samples': num_init_samples
                 }
             }})
         return config
