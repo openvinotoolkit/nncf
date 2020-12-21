@@ -306,7 +306,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
     best_mAp = 0
     best_compression_level = CompressionLevel.NONE
-    config.test_interval = min(config.test_interval, config['max_iter'] - config.start_iter)
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
 
     for iteration in range(config.start_iter, config['max_iter']):

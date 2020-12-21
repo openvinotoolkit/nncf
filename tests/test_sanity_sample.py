@@ -429,13 +429,16 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         mocker.spy(examples.semantic_segmentation.train.Train, "__init__")
     elif config["sample_type"] == "object_detection":
         import examples.object_detection.main as sample
+        mocker.spy(sample, "train")
         mocked_printing = mocker.patch('examples.object_detection.main.print_statistics')
-        config['max_iter'] = 1
 
 
     sample.main(shlex.split(command_line))
 
-    assert mocked_printing.call_count == 2
+    if not config["sample_type"] == "object_detection":
+        assert mocked_printing.call_count == 2
+    else:
+        assert mocked_printing.call_count == 3
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
