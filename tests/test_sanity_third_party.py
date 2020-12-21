@@ -37,6 +37,7 @@ def skip_tests(third_party):
     if not third_party:
         pytest.skip()
 
+
 @pytest.fixture(scope="session")
 def temp_folder(tmp_path_factory):
     return {"models": str(tmp_path_factory.mktemp("models", False)),
@@ -212,6 +213,8 @@ class TestMmdetection:
 
     def test_install_mmdet(self):
         subprocess.call("virtualenv -ppython3.6 {}".format(self.VENV_MMDET_PATH), shell=True)
+        subprocess.run("{} pip install --upgrade pip".format(self.activate_venv),
+                       check=True, shell=True)
         subprocess.run(
             "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_MMDET_PATH), check=True,
             shell=True, cwd=PROJECT_ROOT)
@@ -226,9 +229,12 @@ class TestMmdetection:
         subprocess.run("{}; git apply 0001-Modifications-for-NNCF-usage.patch".format(self.activate_venv),
                        check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run(
-            "{}; pip install mmcv-full==1.2.0+torch1.7.0+cu102 "
-            "-f https://download.openmmlab.com/mmcv/dist/index.html".format(self.activate_venv), check=True, shell=True,
+            "{}; pip install mmcv-full==1.2.0 "
+            "-f https://download.openmmlab.com/mmcv/dist/cu102/torch1.7.0/index.html".format(self.activate_venv),
+            check=True, shell=True,
             cwd=self.MMDET_PATH)
+        subprocess.run("{}; pip install onnx onnxruntime".format(self.activate_venv), check=True, shell=True,
+                       cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -v -e .".format(self.activate_venv), check=True, shell=True,
@@ -307,11 +313,3 @@ class TestMmdetection:
             checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
-
-    def test_maskrcnn_export2onnx(self):
-        checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth")
-        comm_line = "tools/pytorch2onnx.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py {} --output-file mask_rcnn_r50_caffe_fpn_1x_coco_int8.onnx".format(
-            checkpoint)
-        runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
-        runner.run()
-        assert os.path.exists(os.path.join(self.MMDET_PATH, "mask_rcnn_r50_caffe_fpn_1x_coco_int8.onnx"))
