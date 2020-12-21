@@ -72,6 +72,7 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         EmbeddingMetatype,
+        EmbeddingBagMetatype,
         SoftmaxMetatype
     ],
 }  # type: Dict[QuantizationTrait, List[OperatorMetatype]]

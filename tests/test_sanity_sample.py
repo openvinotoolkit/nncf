@@ -510,22 +510,22 @@ class TestCaseDescriptor:
 TEST_CASE_DESCRIPTORS = [
     TestCaseDescriptor().
         config("inception_v3_cifar10_mixed_int.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(94),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(95),
     TestCaseDescriptor().
         config("inception_v3_cifar10_mixed_int_staged.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(94),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(95),
     TestCaseDescriptor().
         config("resnet18_cifar10_mixed_int.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(21),
     TestCaseDescriptor().
         config("resnet18_cifar10_mixed_int_staged.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(20),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(2).num_weights(21),
     TestCaseDescriptor().
         config("resnet18_cifar10_mixed_int.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(20).batch_for_init(2),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(21).batch_for_init(2),
     TestCaseDescriptor().
         config("resnet18_cifar10_mixed_int_staged.json").
-        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(20).batch_for_init(2),
+        sample(SampleType.CLASSIFICATION).real_dataset('cifar10').batch(3).num_weights(21).batch_for_init(2),
     TestCaseDescriptor().
         config("ssd300_vgg_voc_mixed_int.json").
         sample(SampleType.OBJECT_DETECTION).mock_dataset('voc').batch(2).num_weights(35),
@@ -587,8 +587,9 @@ def test_hawq_init(hawq_config, tmp_path, mocker):
 
     bitwidth_list = set_chosen_config_spy.call_args[0][1]
     assert len(bitwidth_list) == hawq_config.num_weights_to_init
-    assert 4 in bitwidth_list
-    assert 8 in bitwidth_list
+    # with default compression ratio = 1.5 should be always a mixed precision model
+    assert len(set(bitwidth_list)) > 1
+
     init_data_loader = hessian_trace_estimator_spy.call_args[0][5]
     expected_batch_size = batch_size_for_init if batch_size_for_init else hawq_config.batch_size
     assert init_data_loader.batch_size == expected_batch_size

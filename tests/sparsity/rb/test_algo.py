@@ -17,6 +17,7 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
+from nncf.compression_method_api import StubCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
@@ -226,3 +227,11 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
 
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.sparsified_module_info[0])
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == pytest.approx(0.3)
+
+def test_create_rb_algo_with_stub_scheduler():
+    config = get_empty_config()
+    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+
+    # pylint: disable=protected-access
+    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)

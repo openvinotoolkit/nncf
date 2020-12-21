@@ -50,7 +50,7 @@ INSTALL_REQUIRES = ["ninja==1.10.0.post2",
                     "graphviz==0.15",
                     "jsonschema==3.2.0",
                     "pydot==1.4.1",
-                    "tensorboard==2.4.0",
+                    "tensorboard==2.1",
                     "jstyleson==0.0.2",
                     "matplotlib==3.3.3",
                     "numpy==1.19",
@@ -65,7 +65,8 @@ INSTALL_REQUIRES = ["ninja==1.10.0.post2",
                     "wheel==0.36.1",
                     "defusedxml==0.7.0rc1",
                     "mlflow==1.12.1",
-                    "returns==0.14"]
+                    "returns==0.14",
+                    "pandas==1.1.5"]
 
 DEPENDENCY_LINKS = []
 
@@ -73,8 +74,8 @@ python_version = sys.version_info[:2]
 if python_version[0] < 3:
     print("Only Python > 3.5 is supported")
     sys.exit(0)
-elif python_version[1] < 5:
-    print("Only Python > 3.5 is supported")
+elif python_version[1] < 6:
+    print("Only Python > 3.6 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
