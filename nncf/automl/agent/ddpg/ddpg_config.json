@@ -16,7 +16,7 @@
         "discount": 1.0,
         "epsilon": 50000,
         "init_delta": 0.5,
-        "warmup": 20,
+        "warmup_iter_number": 20,
         "n_update": 1
     }
 }

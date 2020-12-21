@@ -56,14 +56,16 @@ class Critic(nn.Module):
 
 
 class DDPG(object):
-    def __init__(self, nb_states, nb_actions, hparam_override):
-        # TODO: Implement hparam_override; refactor autoq_cfg with a better name
-
+    def __init__(self, nb_states, nb_actions, hparam_override: dict = None):
         hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'automl/agent/ddpg/ddpg_config.json'])
         with open(hparam_config_path) as f:
-            autoq_cfg = json.load(f, object_pairs_hook=OrderedDict)
-            
-        args = SimpleNamespace(**autoq_cfg['hyperparameters'])
+            ddpg_cfg = json.load(f, object_pairs_hook=OrderedDict)
+
+        for hparam, hparam_val in hparam_override.items():
+            if hparam in ddpg_cfg['hyperparameters']:
+                ddpg_cfg['hyperparameters'][hparam] = hparam_val
+
+        args = SimpleNamespace(**ddpg_cfg['hyperparameters'])
 
         self.seed(0) if args.seed is None else self.seed(args.seed)
 
@@ -104,7 +106,7 @@ class DDPG(object):
         # noise
         self.init_delta = args.init_delta
         self.delta_decay = args.delta_decay
-        self.warmup = args.warmup
+        self.warmup_iter_number = args.warmup_iter_number
         self.delta = args.init_delta
         # loss
         self.value_loss = 0.0
@@ -202,7 +204,7 @@ class DDPG(object):
         # assert episode >= self.warmup, 'Episode: {} warmup: {}'.format(episode, self.warmup)
         action = to_numpy(self.actor(to_tensor(np.array(s_t).reshape(1, -1)))).squeeze(0)
         # delta = self.init_delta * self.delta_decay**episode
-        delta = self.init_delta * (self.delta_decay ** (episode - self.warmup))
+        delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
         # action += self.is_training * max(self.epsilon, 0) * self.random_process.sample()
         #from IPython import embed; embed() # TODO eable decay_epsilon=True
         action = sample_from_truncated_normal_distribution(lower=self.lbound, upper=self.rbound, mu=action, sigma=delta)

@@ -62,7 +62,8 @@ class AutoQPrecisionInitializer:
         nb_action = 1
 
         # Instantiate Automation Agent
-        agent = DDPG(nb_state, nb_action, self.init_args.config)
+        agent = DDPG(nb_state, nb_action, 
+                     hparam_override=self.init_args.config['compression']['initializer']['precision'])
         
         best_policy, best_reward = self._search(agent, env, self.init_args.config)
         
@@ -148,7 +149,7 @@ class AutoQPrecisionInitializer:
                 observation = deepcopy(env.get_normalized_obs(0))
                 agent.reset(observation)
                 
-            if episode <= agent.warmup:
+            if episode < agent.warmup_iter_number:
                 action = agent.random_action()
 
             else:
@@ -188,7 +189,7 @@ class AutoQPrecisionInitializer:
                     # EO ------------------------
 
                     agent.observe(final_reward, s_t, s_t1, a_t, done)
-                    if episode > agent.warmup:
+                    if episode >= agent.warmup_iter_number:
                         for i in range(agent.n_update):
                             agent.update_policy()
 

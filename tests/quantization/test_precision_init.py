@@ -327,10 +327,20 @@ class AutoQConfigBuilder(BaseConfigBuilder):
             self._config = self.create_autoq_test_config(batch_size, image_size)
         self.for_vpu()
 
-    def subset_ratio(self, val_subset_ratio):
-        self._options['subset_ratio'] = str(val_subset_ratio)
-        self._config['val_subset_ratio'] = val_subset_ratio
+    def eval_subset_ratio(self, eval_subset_ratio):
+        self._options['eval_subset_ratio'] = str(eval_subset_ratio)
+        self._config['compression']['initializer']['precision']['eval_subset_ratio'] = eval_subset_ratio
         return self
+
+    def iter_number(self, iter_number):
+        self._options['iter_number'] = str(iter_number)
+        self._config['compression']['initializer']['precision']['iter_number'] = iter_number
+        return self
+
+    def warmup_iter_number(self, warmup_iter_number):
+            self._options['warmup_iter_number'] = str(warmup_iter_number)
+            self._config['compression']['initializer']['precision']['warmup_iter_number'] = warmup_iter_number
+            return self
 
     @staticmethod
     def create_autoq_test_config(batch_size=10, image_size=10):
@@ -346,8 +356,8 @@ class AutoQConfigBuilder(BaseConfigBuilder):
                     "bits": [2, 4, 8],
                     "iter_number": 2,
                     "compression_ratio": 0.15,
-                    # TODO: test different number of steps
-                    # "num_steps_per_iter": 2
+                    "eval_subset_ratio": 1.0,
+                    "warmup_iter_number": 1
                 },
                 'range': {
                     'num_init_samples': 1
@@ -357,7 +367,6 @@ class AutoQConfigBuilder(BaseConfigBuilder):
 
 
 class AutoQTestStruct(NamedTuple):
-    num_warmup_steps: int = 214
     model_creator: Callable[[], nn.Module] = mobilenet_v2
     config_builder: AutoQConfigBuilder = AutoQConfigBuilder().for_vpu()
     filename_suffix: str = 'hw_config_vpu'
@@ -370,26 +379,28 @@ RATIO = 0.4
 AUTOQ_TEST_PARAMS = (
     AutoQTestStruct(config_builder=AutoQConfigBuilder()),
     AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
-    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO).subset_ratio(RATIO)),
-    AutoQTestStruct(config_builder=AutoQConfigBuilder().subset_ratio(RATIO)),
-    AutoQTestStruct(model_creator=squeezenet1_1, num_warmup_steps=106,
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=squeezenet1_1,
                     config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 224, 224])),
-    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+    AutoQTestStruct(model_creator=resnet50,
                     config_builder=AutoQConfigBuilder()),
-    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().iter_number(4).warmup_iter_number(2)),
+    AutoQTestStruct(model_creator=resnet50,
                     config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
-    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
-                    config_builder=AutoQConfigBuilder().subset_ratio(RATIO)),
-    AutoQTestStruct(model_creator=resnet50, num_warmup_steps=242,
-                    config_builder=AutoQConfigBuilder().with_ratio(RATIO).subset_ratio(RATIO)),
-    AutoQTestStruct(model_creator=inception_v3, num_warmup_steps=400,
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().with_ratio(RATIO).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=inception_v3,
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).with_ratio(RATIO)),
-    AutoQTestStruct(model_creator=inception_v3, num_warmup_steps=398,
+    AutoQTestStruct(model_creator=inception_v3,
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).
-                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).subset_ratio(RATIO)),
-    AutoQTestStruct(model_creator=ssd_vgg_512_test, num_warmup_steps=136,
-                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).subset_ratio(RATIO)),
-    AutoQTestStruct(model_creator=ssd_vgg_512_test, num_warmup_steps=136,
+                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test,
                     config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).with_ratio(RATIO)),
 )
 
@@ -413,10 +424,12 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
                                         autoq_eval_loader=train_loader)
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    # TODO: why not equal to 20
-    assert random_action_spy.call_count == params.num_warmup_steps
-    # TODO: should it be equal to num_init_steps?
-    assert select_action_spy.call_count == 2
+    bw_init_config = config['compression']['initializer']['precision']
+    learning_iter_number = bw_init_config['iter_number'] - bw_init_config['warmup_iter_number']
+    n_quantizer = len(algo_ctrl.all_quantizations)
+    
+    assert random_action_spy.call_count == bw_init_config['warmup_iter_number'] * n_quantizer
+    assert select_action_spy.call_count == learning_iter_number * (n_quantizer+1) + bw_init_config['warmup_iter_number']
 
     path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
     graph_dir = os.path.join('quantized', 'autoq')

@@ -307,6 +307,20 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                      "the layer by number of bits for its "
                                                                      "quantization.",
                                                          default=1.5),
+                    "eval_subset_ratio": with_attributes(_NUMBER,
+                                                         description="The desired ratio of dataloader to be iterated "
+                                                                     "during each search iteration of AutoQ precision "
+                                                                     "initialization. Specifically, this ratio applies "
+                                                                     "to the registered autoq_eval_loader via "
+                                                                     "register_default_init_args.",
+                                                         default=1.0),
+                    "warmup_iter_number": with_attributes(_NUMBER,
+                                                         description="The number of random policy at the beginning of "
+                                                                     "of AutoQ precision initialization to populate "
+                                                                     "replay buffer with experiences. This key is meant "
+                                                                     "internal testing use. Users need not to configure."
+                                                                     "to the registered autoq_eval_loader via ",
+                                                         default=20),
                     "bitwidth_per_scope": {
                         "type": "array",
                         "items": {
