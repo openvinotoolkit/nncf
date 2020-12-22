@@ -17,12 +17,13 @@ import numpy as np
 import random
 import re
 import torch
-from torch import distributed as dist
+from torch import distributed as dist, nn
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
 from nncf.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
+
 
 def scopes_matched(scope_stack_0, scope_stack_1):
     from nncf.layers import NNCF_MODULES_MAP
@@ -358,6 +359,19 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         yield
     finally:
         model.train(is_original_mode_training)
+
+
+def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
+    if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
+                           nn.ConvTranspose3d)):
+        ks = module.weight.data.shape
+        mac_count = np.prod(ks) * np.prod(output.shape[2:])
+    elif isinstance(module, nn.Linear):
+        mac_count = input_[0].shape[1] * output.shape[-1]
+    else:
+        return
+    dict_to_save[name] = 2 * mac_count
+
 
 def add_domain(name_operator: str) -> str:
     from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME

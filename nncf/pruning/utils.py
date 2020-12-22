@@ -60,7 +60,8 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
     bn_module = None
     if bn_graph_node:
         bn_module = target_model.get_module_by_scope(bn_graph_node['op_exec_context'].scope_in_model)
-    return bn_module
+        return bn_module, bn_graph_node['id']
+    return bn_module, bn_graph_node
 
 
 def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True):
@@ -231,6 +232,30 @@ def find_next_nodes_not_of_types(model: NNCFNetwork, nncf_node: NNCFNode, types:
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.op_exec_context.operator_name not in types:
+        nncf_nodes = graph.get_next_nodes(nncf_node)
+
+    next_nodes = []
+    for node in nncf_nodes:
+        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
+    return next_nodes
+
+
+def get_next_nodes_of_types(model, nncf_node, types) -> List[NNCFNode]:
+    """
+    Looking for nodes with type from types list from nncf_node such that there is path from nncf_node to this node and
+    on this path no node has one of types type.
+    :param model: model to work with
+    :param nncf_node: NNCFNode to start search
+    :param types: list of types to find
+    :return: list of next nodes of nncf_node with type from types list
+    """
+    sources_types = types
+    graph = model.get_original_graph()
+    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
+                                        visited=visited)
+    nncf_nodes = [nncf_node]
+    if nncf_node.op_exec_context.operator_name in sources_types:
         nncf_nodes = graph.get_next_nodes(nncf_node)
 
     next_nodes = []

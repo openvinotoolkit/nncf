@@ -12,14 +12,13 @@
 """
 import inspect
 from collections import OrderedDict, Counter
-from enum import Enum
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
 import networkx as nx
-import numpy as np
 import torch
 from copy import deepcopy
+from enum import Enum
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
@@ -29,15 +28,15 @@ from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
     ModelInputInfo
 from nncf.dynamic_graph.graph_matching import NodeExpression
+from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules
+from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
@@ -717,19 +716,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         flops_count_dict = {}
 
         def get_hook(name):
-            def compute_MACs_hook(module, input_, output):
-                if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
-                    ks = module.weight.data.shape
-                    mac_count = ks[0] * ks[1] * ks[2] * ks[3] * output.shape[3] * output.shape[2]
-                elif isinstance(module, nn.Linear):
-                    mac_count = input_[0].shape[1] * output.shape[-1]
-                elif isinstance(module, nn.BatchNorm2d):
-                    mac_count = np.prod(list(input_[0].shape))
-                else:
-                    return
-                flops_count_dict[name] = 2 * mac_count
-
-            return compute_MACs_hook
+            return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, name=name)
 
         hook_list = [m.register_forward_hook(get_hook(n)) for n, m in model.named_modules()]
 
