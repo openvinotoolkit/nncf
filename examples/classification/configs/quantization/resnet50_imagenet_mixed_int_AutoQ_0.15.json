@@ -11,8 +11,6 @@
     },
     "num_classes": 1000,
     "batch_size" : 128,
-    // "train_subset_ratio": 0.02, // should we move as local setting of the AutoQ initializer?
-    "val_subset_ratio": 0.2,    // should we move as local setting of the AutoQ initializer?
     "epochs": 30,
     "optimizer": {
         "base_lr": 0.00031,
@@ -44,14 +42,14 @@
             "range":
             {
                 "type": "mean_min_max",
-                "num_init_steps": 50
+                "num_init_samples": 1000
             },
             "precision": {
                 "type": "autoq",
                 "bits": [2, 4, 8],
                 "iter_number": 600,
                 "compression_ratio": 0.15,
-                "num_steps_per_iter": 80, 
+                "eval_subset_ratio": 0.20
             }
         }
     }
