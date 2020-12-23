@@ -38,14 +38,14 @@ class NNCFConfig(dict):
         self.__nncf_extra_structs = {}  # type: Dict[str, NNCFExtraConfigStruct]
 
     @classmethod
-    def from_dict(cls, dict):
+    def from_dict(cls, nncf_dict):
         """
         Load NNCF config from dict;
         The dict must contain only json supported primitives.
         """
 
-        NNCFConfig.validate(dict)
-        return cls(dict)
+        NNCFConfig.validate(nncf_dict)
+        return cls(nncf_dict)
 
     @classmethod
     def from_json(cls, path) -> 'NNCFConfig':
