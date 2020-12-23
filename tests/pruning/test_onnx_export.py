@@ -34,6 +34,7 @@ def check_bias_and_weight_shape(node_name, onnx_model_proto, weight_shape, bias_
 def test_pruning_export_simple_model(tmp_path):
     model = BigPruningTestModel()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    nncf_config['compression']['pruning_init'] = 0.5
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -68,6 +69,7 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
     nncf_config['compression']['params']['prune_last_conv'] = prune_last
+    nncf_config['compression']['pruning_init'] = 0.5
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -94,7 +96,7 @@ def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_sha
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
     nncf_config['compression']['params']['prune_last_conv'] = prune_last
-
+    nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     for i in range(1, 5):

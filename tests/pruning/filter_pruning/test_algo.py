@@ -154,6 +154,7 @@ def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_firs
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['params']['all_weights'] = all_weights
     config['compression']['params']['prune_first_conv'] = prune_first
+    config['compression']['pruning_init'] = 0.5
     if pruning_flops_target:
         config['compression']['params']['pruning_flops_target'] = pruning_flops_target
 
