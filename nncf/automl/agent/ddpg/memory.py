@@ -28,13 +28,14 @@ def sample_batch_indexes(low, high, size):
         # can occur multiple times. This is not good and should be avoided by picking a
         # large enough warm-up phase.
         warnings.warn(
-            'Not enough entries to sample without replacement. Consider increasing your warm-up phase to avoid oversampling!')
+            'Not enough entries to sample without replacement.'
+            'Consider increasing your warm-up phase to avoid oversampling!')
         batch_idxs = np.random.random_integers(low, high - 1, size=size)
     assert len(batch_idxs) == size
     return batch_idxs
 
 
-class RingBuffer(object):
+class RingBuffer:
     def __init__(self, maxlen):
         self.maxlen = maxlen
         self.start = 0
@@ -65,16 +66,15 @@ class RingBuffer(object):
 def zeroed_observation(observation):
     if hasattr(observation, 'shape'):
         return np.zeros(observation.shape)
-    elif hasattr(observation, '__iter__'):
+    if hasattr(observation, '__iter__'):
         out = []
         for x in observation:
             out.append(zeroed_observation(x))
         return out
-    else:
-        return 0.
+    return 0.
 
 
-class Memory(object):
+class Memory:
     def __init__(self, window_length, ignore_episode_boundaries=False):
         self.window_length = window_length
         self.ignore_episode_boundaries = ignore_episode_boundaries
@@ -117,7 +117,7 @@ class Memory(object):
 
 class SequentialMemory(Memory):
     def __init__(self, limit, **kwargs):
-        super(SequentialMemory, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.limit = limit
 
@@ -206,7 +206,7 @@ class SequentialMemory(Memory):
         return state0_batch, action_batch, reward_batch, state1_batch, terminal1_batch
 
     def append(self, observation, action, reward, terminal, training=True):
-        super(SequentialMemory, self).append(observation, action, reward, terminal, training=training)
+        super().append(observation, action, reward, terminal, training=training)
 
         # This needs to be understood as follows: in `observation`, take `action`, obtain `reward`
         # and weather the next state is `terminal` or not.
@@ -221,14 +221,14 @@ class SequentialMemory(Memory):
         return len(self.observations)
 
     def get_config(self):
-        config = super(SequentialMemory, self).get_config()
+        config = super().get_config()
         config['limit'] = self.limit
         return config
 
 
 class EpisodeParameterMemory(Memory):
     def __init__(self, limit, **kwargs):
-        super(EpisodeParameterMemory, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.limit = limit
 
         self.params = RingBuffer(limit)
@@ -248,7 +248,7 @@ class EpisodeParameterMemory(Memory):
         return batch_params, batch_total_rewards
 
     def append(self, observation, action, reward, terminal, training=True):
-        super(EpisodeParameterMemory, self).append(observation, action, reward, terminal, training=training)
+        super().append(observation, action, reward, terminal, training=training)
         if training:
             self.intermediate_rewards.append(reward)
 
@@ -263,6 +263,6 @@ class EpisodeParameterMemory(Memory):
         return len(self.total_rewards)
 
     def get_config(self):
-        config = super(SequentialMemory, self).get_config()
+        config = super().get_config()
         config['limit'] = self.limit
         return config
