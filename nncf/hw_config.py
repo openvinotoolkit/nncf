@@ -57,7 +57,7 @@ def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['Ope
     return retval
 
 
-class HWConfig(List):
+class HWConfig(list):
     QUANTIZATION_ALGORITHM_NAME = "quantization"
     ATTRIBUTES_NAME = "attributes"
     SCALE_ATTRIBUTE_NAME = "scales"

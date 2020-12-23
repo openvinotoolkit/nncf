@@ -27,7 +27,6 @@ except ImportError:
 
 from addict import Dict
 
-
 from nncf.nncf_logger import logger
 
 
@@ -39,11 +38,20 @@ class NNCFConfig(dict):
         self.__nncf_extra_structs = {}  # type: Dict[str, NNCFExtraConfigStruct]
 
     @classmethod
+    def from_dict(cls, dict):
+        """
+        Load NNCF config from dict;
+        The dict must contain only json supported primitives.
+        """
+
+        NNCFConfig.validate(dict)
+        return cls(dict)
+
+    @classmethod
     def from_json(cls, path) -> 'NNCFConfig':
         with open(path) as f:
             loaded_json = json.load(f)
-        NNCFConfig.validate(loaded_json)
-        return cls(loaded_json)
+        return cls.from_dict(loaded_json)
 
     def register_extra_structs(self, struct_list: List[NNCFExtraConfigStruct]):
         for struct in struct_list:
