@@ -246,8 +246,7 @@ class FilterPruningController(BasePruningAlgoController):
         same_pruning_rate = np.isclose(pruning_rate, self.pruning_rate)
         self.pruning_rate = pruning_rate
         if not self.frozen and not same_pruning_rate:
-            nncf_logger.info("Computing filter importances and masks,"
-                             " this can take a while depending on the model size.")
+            nncf_logger.info("Computing filter importances and masks...")
             if self.all_weights:
                 if self.prune_flops:
                     self._set_binary_masks_for_all_pruned_modules_by_flops_target(pruning_rate)
