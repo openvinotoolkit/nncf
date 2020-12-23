@@ -32,7 +32,7 @@ from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.structures import BNAdaptationInitArgs
-from nncf.utils import should_consider_scope
+from nncf.utils import should_consider_scope, get_nncf_module_names_for_algorithm
 
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
@@ -278,6 +278,8 @@ class CompressionAlgorithmBuilder:
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
+        # pylint:disable=no-member
+        self.compressed_nncf_module_names = get_nncf_module_names_for_algorithm(self.registry_name)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         """

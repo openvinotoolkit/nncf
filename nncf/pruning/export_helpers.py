@@ -355,6 +355,8 @@ class Elementwise(DefaultMetaOp):
         node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
+            assert node_module.target_weight_dim_for_compression == 0,\
+                "Implemented only for target_weight_dim_for_compression == 0"
             old_num_clannels = int(node_module.weight.size(0))
             new_num_channels = int(torch.sum(input_mask))
             node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])

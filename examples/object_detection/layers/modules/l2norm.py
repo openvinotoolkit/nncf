@@ -21,6 +21,9 @@ from nncf import register_module
 
 @register_module
 class L2Norm(nn.Module):
+
+    filter_algorithms = ['filter_pruning']
+
     def __init__(self, n_channels, scale, eps, across_spatial=0, channel_shared=0):
         super().__init__()
         self.n_channels = n_channels

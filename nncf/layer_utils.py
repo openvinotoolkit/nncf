@@ -14,8 +14,18 @@ class ProxyModule:
 
 
 class _NNCFModuleMixin:
+    """Default class for modules that will be optimized by NNCF.
+
+        Attributes:
+            op_func_name    Name of corresponding torch function.
+            target_weight_dim_for_compression   Target dimension of weights that will be compressed in some algorithms.
+            filter_algorithms   List of algorithms that will use the module.
+                                If None - module will use for all algorithms.
+        """
+
     op_func_name = ""
     target_weight_dim_for_compression = 0
+    filter_algorithms = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

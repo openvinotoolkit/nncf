@@ -21,6 +21,7 @@ from torch import distributed as dist, nn
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
+from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
 
@@ -146,6 +147,12 @@ def get_state_dict_names_with_modules(model, str_types=None, prefix=''):
             found.update(sub_found)
     return found
 
+def get_nncf_module_names_for_algorithm(algorithm_name=None):
+    filtered_nncf_module_names_list = list()
+    for module in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
+        if module.filter_algorithms is None or algorithm_name in module.filter_algorithms:
+            filtered_nncf_module_names_list.append(module.__name__)
+    return filtered_nncf_module_names_list
 
 def set_module_by_node_name(model, node_name, module_to_set, prefix=None):
     if prefix is None:

@@ -31,7 +31,7 @@ from nncf import nncf_model_input
 from nncf.layers import LSTMCellNNCF, NNCF_RNN
 from nncf.model_creation import create_compression_algorithm_builders
 from nncf.nncf_network import NNCFNetwork, InsertionInfo
-from nncf.utils import get_all_modules_by_type
+from nncf.utils import get_all_modules_by_type, get_nncf_module_names_for_algorithm
 from tests import test_models
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
@@ -293,8 +293,6 @@ class TestModelsGraph:
     )
     def test_sparse_network(self, desc: ModelDesc, algo):
         model = desc.model_builder()
-        from nncf.layers import NNCF_MODULES_MAP
-
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = {"algorithm": algo}
 
@@ -303,7 +301,7 @@ class TestModelsGraph:
                                                       wrap_inputs_fn=desc.wrap_inputs_fn)
 
         # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
-        sparsifiable_modules = list(NNCF_MODULES_MAP.keys())
+        sparsifiable_modules = get_nncf_module_names_for_algorithm(algo)
         ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
         check_model_graph(compressed_model, desc.dot_filename, algo)
@@ -502,6 +500,7 @@ class TorchBinaryMethodDesc(SingleLayerModelDesc):
     def __init__(self, model_name: str, torch_method: Callable, input_info=None):
         super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=([1], [1]),
                          wrap_inputs_fn=n_inputs_fn, input_info=input_info)
+
 
 class TensorBinaryMethodsDesc(BaseDesc):
     def __init__(self, tensor_method: str, model_name: str = None, input_info=None):

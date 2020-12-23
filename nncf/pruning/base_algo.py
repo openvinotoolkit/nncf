@@ -124,7 +124,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         """
         graph = target_model.get_original_graph()
         pruned_types = self.get_op_types_of_pruned_modules()
-        all_modules_to_prune = target_model.get_nncf_modules()
+        all_modules_to_prune = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
         all_nodes_to_prune = graph.get_nodes_by_types(pruned_types)  # NNCFNodes here
         assert len(all_nodes_to_prune) <= len(all_modules_to_prune)
 

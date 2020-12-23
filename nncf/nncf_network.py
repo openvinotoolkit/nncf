@@ -514,6 +514,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         nncf_module_names_list = NNCF_MODULES + [x.__name__ for x in NNCF_WRAPPED_USER_MODULES_DICT.values()]
         return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
 
+    def get_nncf_modules_by_module_names(self, nncf_module_names_list) -> Dict['Scope', torch.nn.Module]:
+        return get_all_modules_by_type(self.get_nncf_wrapped_model(), nncf_module_names_list)
+
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()
         dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)

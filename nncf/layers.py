@@ -199,7 +199,7 @@ def register_module(cls, *quantizable_field_names: str):
     # customly named attributes if it becomes necessary
     UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
     nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
-    NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
+    NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (cls, _NNCFModuleMixin), {})
 
     return cls
 

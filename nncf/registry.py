@@ -27,6 +27,7 @@ class Registry:
             cls_name = name
             if cls_name is None:
                 cls_name = obj.__name__
+            setattr(obj, "registry_name", name)
             self._register(obj, cls_name)
             return obj
 
