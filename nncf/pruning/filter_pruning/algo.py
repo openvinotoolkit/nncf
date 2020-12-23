@@ -98,6 +98,9 @@ class FilterPruningController(BasePruningAlgoController):
     def freeze(self):
         self.frozen = True
 
+    def step(self, next_step):
+        self._apply_masks()
+
     def _init_pruned_modules_params(self):
         def get_in_out_channels(module):
             in_channels, out_channels = None, None
@@ -240,8 +243,11 @@ class FilterPruningController(BasePruningAlgoController):
 
     def set_pruning_rate(self, pruning_rate):
         # Pruning rate from scheduler can be flops pruning rate or percentage of params that should be pruned
+        same_pruning_rate = np.isclose(pruning_rate, self.pruning_rate)
         self.pruning_rate = pruning_rate
-        if not self.frozen:
+        if not self.frozen and not same_pruning_rate:
+            nncf_logger.info("Computing filter importances and masks,"
+                             " this can take a while depending on the model size.")
             if self.all_weights:
                 if self.prune_flops:
                     self._set_binary_masks_for_all_pruned_modules_by_flops_target(pruning_rate)

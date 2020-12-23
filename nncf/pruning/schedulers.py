@@ -48,6 +48,10 @@ class PruningScheduler(CompressionScheduler):
         super().epoch_step(next_epoch)
         self._set_pruning_level()
 
+    def step(self, next_step=None):
+        super().step(next_step)
+        self.algo.step(next_step)
+
     def _set_pruning_level(self):
         self.algo.set_pruning_rate(self.current_pruning_level)
 
@@ -75,7 +79,6 @@ class BaselinePruningScheduler(PruningScheduler):
     """
     def __init__(self, pruning_algo, config=None):
         super().__init__(pruning_algo, config)
-        self._set_pruning_level()
 
     def _calc_pruning_level(self):
         return self.pruning_target
@@ -99,7 +102,6 @@ class ExponentialPruningScheduler(PruningScheduler):
     def __init__(self, pruning_algo, config=None):
         super().__init__(pruning_algo, config)
         self.a, self.k = self._init_exp(self.initial_pruning, self.pruning_target, pruning_steps=self.pruning_steps)
-        self._set_pruning_level()
 
     def _calc_pruning_level(self):
         curr_pruning = 1 - self.a * np.exp(-self.k * (self.current_epoch - self.num_init_steps))
@@ -128,7 +130,6 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     def __init__(self, pruning_algo, config=None):
         super().__init__(pruning_algo, config)
         self.a, self.b, self.k = self._init_exp(self.pruning_steps, self.initial_pruning, self.pruning_target)
-        self._set_pruning_level()
 
     def _calc_pruning_level(self):
         curr_pruning = self.a * np.exp(-self.k * (self.current_epoch - self.num_init_steps - 1)) + self.b
