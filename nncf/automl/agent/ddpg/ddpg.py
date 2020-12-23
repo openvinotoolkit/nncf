@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 
 import torch
@@ -19,7 +17,7 @@ USE_CUDA = torch.cuda.is_available()
 
 class Actor(nn.Module):
     def __init__(self, nb_states, nb_actions, hidden1=400, hidden2=300, init_w=3e-3):
-        super(Actor, self).__init__()
+        super().__init__()
         self.fc1 = nn.Linear(nb_states, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
         self.fc3 = nn.Linear(hidden2, nb_actions)
@@ -38,7 +36,7 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     def __init__(self, nb_states, nb_actions, hidden1=400, hidden2=300, init_w=3e-3):
-        super(Critic, self).__init__()
+        super().__init__()
         self.fc11 = nn.Linear(nb_states, hidden1)
         self.fc12 = nn.Linear(nb_actions, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
@@ -55,7 +53,7 @@ class Critic(nn.Module):
         return out
 
 
-class DDPG(object):
+class DDPG:
     def __init__(self, nb_states, nb_actions, hparam_override: dict = None):
         hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'automl/agent/ddpg/ddpg_config.json'])
         with open(hparam_config_path) as f:
@@ -67,7 +65,10 @@ class DDPG(object):
 
         args = SimpleNamespace(**ddpg_cfg['hyperparameters'])
 
-        self.seed(0) if args.seed is None else self.seed(args.seed)
+        if args.seed is None:
+            self.seed(0)
+        else:
+            self.seed(args.seed)
 
         self.nb_states = nb_states
         self.nb_actions = nb_actions
@@ -119,7 +120,8 @@ class DDPG(object):
         self.is_training = True
 
         #
-        if USE_CUDA: self.cuda()
+        if USE_CUDA:
+            self.cuda()
 
         # moving average baseline
         self.moving_average = None
@@ -174,7 +176,7 @@ class DDPG(object):
         # Target update
         self.soft_update(self.actor_target, self.actor)
         self.soft_update(self.critic_target, self.critic)
-        
+
         # update for log
         self.value_loss = value_loss
         self.policy_loss = policy_loss
@@ -220,7 +222,8 @@ class DDPG(object):
         # self.random_process.reset_states()
 
     def load_weights(self, output):
-        if output is None: return
+        if output is None:
+            return
 
         self.actor.load_state_dict(
             torch.load('{}/actor.pkl'.format(output))
