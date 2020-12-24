@@ -5,7 +5,6 @@ USE_CUDA = torch.cuda.is_available()
 FLOAT = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 
 def to_numpy(var):
-    # return var.cpu().data.numpy()
     return var.cpu().data.numpy() if USE_CUDA else var.data.numpy()
 
 

@@ -8,9 +8,6 @@ from nncf.automl.agent.ddpg.memory import SequentialMemory
 from nncf.automl.utils.utils import to_numpy, to_tensor, sample_from_truncated_normal_distribution
 
 from types import SimpleNamespace
-from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-from collections import OrderedDict
-import json
 
 criterion = nn.MSELoss()
 USE_CUDA = torch.cuda.is_available()
@@ -54,24 +51,42 @@ class Critic(nn.Module):
 
 
 class DDPG:
-    def __init__(self, nb_states, nb_actions, hparam_override: dict = None):
-        hparam_config_path='/'.join([NNCF_PACKAGE_ROOT_DIR,'automl/agent/ddpg/ddpg_config.json'])
-        with open(hparam_config_path) as f:
-            ddpg_cfg = json.load(f, object_pairs_hook=OrderedDict)
+    LBOUND = 0.0
+    RBOUND = 1.0
+    def __init__(self, nb_states, nb_actions, hparam_override: dict = {}):
+        self.nb_states = nb_states
+        self.nb_actions = nb_actions
+
+        hyperparameters = {
+            "seed": 528,
+            "train_episode": 600,
+            "delta_decay": 0.995,
+            "hidden1": 300,
+            "hidden2": 300,
+            "init_w": 0.003,
+            "lr_c": 0.001,
+            "lr_a": 0.0001,
+            "rmsize": 2048,
+            "window_length": 1,
+            "bsize": 64,
+            "tau": 0.01,
+            "discount": 1.0,
+            "epsilon": 50000,
+            "init_delta": 0.5,
+            "warmup_iter_number": 20,
+            "n_update": 1
+        }
 
         for hparam, hparam_val in hparam_override.items():
-            if hparam in ddpg_cfg['hyperparameters']:
-                ddpg_cfg['hyperparameters'][hparam] = hparam_val
+            if hparam in hyperparameters:
+                hyperparameters[hparam] = hparam_val
 
-        args = SimpleNamespace(**ddpg_cfg['hyperparameters'])
+        args = SimpleNamespace(**hyperparameters)
 
         if args.seed is None:
             self.seed(0)
         else:
             self.seed(args.seed)
-
-        self.nb_states = nb_states
-        self.nb_actions = nb_actions
 
         # Create Actor and Critic Network
         net_cfg = {
@@ -79,6 +94,7 @@ class DDPG:
             'hidden2': args.hidden2,
             'init_w': args.init_w
         }
+
         self.actor = Actor(self.nb_states, self.nb_actions, **net_cfg)
         self.actor_target = Actor(self.nb_states, self.nb_actions, **net_cfg)
         self.actor_optim = Adam(self.actor.parameters(), lr=args.lr_a)
@@ -92,8 +108,6 @@ class DDPG:
 
         # Create replay buffer
         self.memory = SequentialMemory(limit=args.rmsize, window_length=args.window_length)
-        # self.random_process = OrnsteinUhlenbeckProcess(size=nb_actions, theta=args.ou_theta, mu=args.ou_mu,
-        #                                                sigma=args.ou_sigma)
 
         # Hyper-parameters
         self.n_update = args.n_update
@@ -101,25 +115,20 @@ class DDPG:
         self.tau = args.tau
         self.discount = args.discount
         self.depsilon = 1.0 / args.epsilon
-        self.lbound = 0.  # args.lbound
-        self.rbound = 1.  # args.rbound
 
         # noise
         self.init_delta = args.init_delta
         self.delta_decay = args.delta_decay
         self.warmup_iter_number = args.warmup_iter_number
         self.delta = args.init_delta
+
         # loss
         self.value_loss = 0.0
         self.policy_loss = 0.0
 
-        #
         self.epsilon = 1.0
-        # self.s_t = None  # Most recent state
-        # self.a_t = None  # Most recent action
         self.is_training = True
 
-        #
         if USE_CUDA:
             self.cuda()
 
@@ -139,8 +148,6 @@ class DDPG:
         else:
             self.moving_average += self.moving_alpha * (batch_mean_reward - self.moving_average)
         reward_batch -= self.moving_average
-        # if reward_batch.std() > 0:
-        #     reward_batch /= reward_batch.std()
 
         # Prepare for the target q batch
         with torch.no_grad():
@@ -196,30 +203,21 @@ class DDPG:
     def observe(self, r_t, s_t, s_t1, a_t, done):
         if self.is_training:
             self.memory.append(s_t, a_t, r_t, done)  # save to memory
-            # self.s_t = s_t1
 
     def random_action(self):
-        action = np.random.uniform(self.lbound, self.rbound, self.nb_actions)
+        action = np.random.uniform(self.LBOUND, self.RBOUND, self.nb_actions)
         return action
 
     def select_action(self, s_t, episode, decay_epsilon=True):
-        # assert episode >= self.warmup, 'Episode: {} warmup: {}'.format(episode, self.warmup)
         action = to_numpy(self.actor(to_tensor(np.array(s_t).reshape(1, -1)))).squeeze(0)
-        # delta = self.init_delta * self.delta_decay**episode
-        delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
-        # action += self.is_training * max(self.epsilon, 0) * self.random_process.sample()
-        #from IPython import embed; embed() # TODO eable decay_epsilon=True
-        action = sample_from_truncated_normal_distribution(lower=self.lbound, upper=self.rbound, mu=action, sigma=delta)
-        action = np.clip(action, self.lbound, self.rbound)
-        # update for log
-        self.delta = delta
-        # self.a_t = action
-        return action
-
-    def reset(self, obs):
+        if decay_epsilon is True:
+            delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
+            action = sample_from_truncated_normal_distribution(lower=self.LBOUND, upper=self.RBOUND, mu=action, sigma=delta, size=self.nb_actions)
+            self.delta = delta
+        return np.clip(action, self.LBOUND, self.RBOUND)
+        
+    def reset(self, obs):   
         pass
-        # self.s_t = obs
-        # self.random_process.reset_states()
 
     def load_weights(self, output):
         if output is None:
