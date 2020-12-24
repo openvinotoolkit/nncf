@@ -135,11 +135,9 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ## Results
 
-> **NOTE**: If the link to a TensorFlow checkpoint doesn't open, copy the link and place it directly into your browser. Since Tensorflow checkpoints are stored in a shared folder, browsers such as Firefox and Chrome can not open these links by default ([see more information](https://support.google.com/gsa/answer/2664790?hl=en)). 
-
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**Config path**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO2017|33.44|examples/tensorflow/object_detection/configs/retinanet_coco.json |[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\retinanet.tar.gz)|
-|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.3|examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json|[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\retinanet_int8_w_sym_t_a_sym_t.tar.gz)|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|32.97|examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json|[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\retinanet_sparsity_50.tar.gz)|
+|RetinaNet|None|COCO2017|33.44|examples/tensorflow/object_detection/configs/retinanet_coco.json |-|
+|RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.3|examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json|-|
+|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|32.97|examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json|-|
 

@@ -137,10 +137,8 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ## Results
 
-> **NOTE**: If the link to a TensorFlow checkpoint doesn't open, copy the link and place it directly into your browser. Since Tensorflow checkpoints are stored in a shared folder, browsers such as Firefox and Chrome can not open these links by default ([see more information](https://support.google.com/gsa/answer/2664790?hl=en)).
-
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**Config path**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|None|COCO2017|37.33 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\mask_rcnn.tar.gz)|
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|37.25 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json|[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\mask_rcnn_int8_w_sym_t_a_sym_t.tar.gz)|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|36.92 (avg bbox mAP),<br/>33.24 (avg segm mAP)|examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json|[Link](\\icv-cifs.inn.intel.com\icv_projects\NNCF\compressed_models\NNCF_TF\mask_rcnn_sparsity_50.tar.gz)|
+|MaskRCNN|None|COCO2017|37.33 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|-|
+|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|37.25 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json|-|
+|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|36.92 (avg bbox mAP),<br/>33.24 (avg segm mAP)|examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json|-|
