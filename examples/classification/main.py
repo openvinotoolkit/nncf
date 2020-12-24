@@ -149,7 +149,7 @@ def main_worker(current_gpu, config: SampleConfig):
             return top5
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, train_criterion_fn, 
+            nncf_config, init_loader, criterion, train_criterion_fn,
             autoq_eval_fn, val_loader, config.device)
 
     # create model
@@ -270,12 +270,12 @@ def get_dataset(dataset_config, config, transform, is_train):
     if dataset_config == 'mock_32x32':
         # For testing purposes
         return MockDataset(img_size=(32, 32), transform=transform)
-    elif dataset_config == 'imagenet':
+    if dataset_config == 'imagenet':
         prefix = 'train' if is_train else 'val'
         dataset = datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
     else:
         dataset = create_cifar(config, dataset_config, is_train, transform)
-    
+
     if is_train:
         if config.get("train_subset_ratio", None) is not None:
             subset_ratio = config['train_subset_ratio']
