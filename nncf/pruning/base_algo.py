@@ -31,14 +31,20 @@ from nncf.pruning.utils import get_bn_for_module_scope, \
     get_previous_conv, get_sources_of_node
 
 
+class BatchNormInfo:
+    def __init__(self, module: nn.Module, nncf_id: int):
+        self.module = module
+        self.nncf_node_id = nncf_id
+
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
 
-    def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict):
+    def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict, node_id: int):
         self.module_name = module_name
         self.module = module
         self.operand = operand
         self.related_modules = related_modules
+        self.nncf_node_id = node_id
 
 
 class NodeInfo:
@@ -258,10 +264,10 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
                 related_modules = {}
                 if self.prune_batch_norms:
-                    related_modules[PrunedModuleInfo.BN_MODULE_NAME] = get_bn_for_module_scope(target_model,
-                                                                                               module_scope)
+                    bn_module, bn_id = get_bn_for_module_scope(target_model, module_scope)
+                    related_modules[PrunedModuleInfo.BN_MODULE_NAME] = BatchNormInfo(bn_module, bn_id)
 
-                minfo = PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules)
+                minfo = PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules, node.id)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.id for n in group.nodes])
             self.pruned_module_groups_info.add_cluster(cluster)
@@ -301,6 +307,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
         self.zero_grad = params.get('zero_grad', True)
+        self.prune_flops = False
+        self.check_pruning_rate(params)
         self._hooks = []
 
     def freeze(self):
@@ -330,6 +338,17 @@ class BasePruningAlgoController(CompressionAlgorithmController):
                 bias = minfo.module.bias
                 partial_hook = update_wrapper(partial(hook, mask=mask), hook)
                 self._hooks.append(bias.register_hook(partial_hook))
+
+    def check_pruning_rate(self, params):
+        """
+        Check that set only one of pruning target params
+        """
+        pruning_target = params.get('pruning_target', None)
+        pruning_flops_target = params.get('pruning_flops_target', None)
+        if pruning_target and pruning_flops_target:
+            raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
+        if pruning_flops_target:
+            self.prune_flops = True
 
     def _clean_hooks(self):
         for h in self._hooks:
@@ -419,9 +438,9 @@ class BasePruningAlgoController(CompressionAlgorithmController):
             layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
 
             if PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules and \
-                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME] is not None:
+                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                 bn_info = {}
-                bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME]
+                bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
                 bn_info['w_shape'] = bn_module.weight.size()
 
                 bn_info["b_shape"] = bn_module.bias.size() if bn_module.bias is not None else []

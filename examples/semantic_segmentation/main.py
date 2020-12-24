@@ -516,6 +516,8 @@ def main_worker(current_gpu, config):
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
+    if is_main_process():
+        print_statistics(compression_ctrl.statistics())
 
     if config.mode.lower() == 'test':
         logger.info(model)
@@ -524,7 +526,6 @@ def main_worker(current_gpu, config):
         logger.info("Trainable argument count:{params}".format(params=params))
         model = model.to(config.device)
         test(model, val_loader, criterion, color_encoding, config)
-        print_statistics(compression_ctrl.statistics())
     elif config.mode.lower() == 'train':
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
               resuming_checkpoint)

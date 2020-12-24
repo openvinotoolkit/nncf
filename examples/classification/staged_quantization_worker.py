@@ -194,8 +194,10 @@ def staged_quantization_main_worker(current_gpu, config):
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
-    if config.mode.lower() == 'test':
+    if is_main_process():
         print_statistics(compression_ctrl.statistics())
+
+    if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':

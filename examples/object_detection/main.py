@@ -40,6 +40,7 @@ from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
 from nncf import create_compressed_model, load_state
 from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.utils import is_main_process
 
 
 def str2bool(v):
@@ -82,6 +83,7 @@ def main(argv):
     start_worker(main_worker, config)
 
 
+# pylint:disable=too-many-branches
 def main_worker(current_gpu, config):
     #################################
     # Setup experiment environment
@@ -181,9 +183,11 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
 
+    if is_main_process():
+        print_statistics(compression_ctrl.statistics())
+
     if config.mode.lower() == 'test':
         with torch.no_grad():
-            print_statistics(compression_ctrl.statistics())
             net.eval()
             if config['ssd_params'].get('loss_inference', False):
                 model_loss = test_net(net, config.device, test_data_loader, distributed=config.distributed,
@@ -301,7 +305,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     batch_iterator = None
 
     t_start = time.time()
-    print_statistics(compression_ctrl.statistics())
 
     best_mAp = 0
     best_compression_level = CompressionLevel.NONE
@@ -317,13 +320,13 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         compression_ctrl.scheduler.step()
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
+            if is_main_process():
+                print_statistics(compression_ctrl.statistics())
 
         if (iteration + 1) % epoch_size == 0:
             compression_level = compression_ctrl.compression_level()
             is_best = False
             if (epoch + 1) % test_freq_in_epochs == 0:
-                if is_on_first_rank(config):
-                    print_statistics(compression_ctrl.statistics())
                 with torch.no_grad():
                     net.eval()
                     mAP = test_net(net, config.device, test_data_loader, distributed=config.multiprocessing_distributed)

@@ -592,6 +592,9 @@ FILTER_PRUNING_SCHEMA = {
                     "pruning_target": with_attributes(_NUMBER,
                                                       description="Target value of the pruning level for the model."
                                                                   " 0.5 by default."),
+                    "pruning_flops_target": with_attributes(_NUMBER,
+                                                            description="Target value of the pruning level for model"
+                                                                        " FLOPs."),
                     "num_init_steps": with_attributes(_NUMBER,
                                                       description="Number of epochs for model pretraining before"
                                                                   " starting filter pruning. 0 by default."),
