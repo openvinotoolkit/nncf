@@ -997,7 +997,7 @@ class QuantizationController(QuantizationControllerBase):
                         'Specified Automated precision initialization in the NNCF config, '
                         'but the initializing data loader and loss criterion are not provided as an extra struct. '
                         'Refer to `NNCFConfig.register_extra_structs` and the `AutoQPrecisionInitArgs` class')
-            
+
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
             initializer = init_impl(self, init_precision_config, precision_init_args)
             nncf_logger.info("Initialization of quantization precisions")
