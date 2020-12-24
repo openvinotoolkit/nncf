@@ -65,28 +65,8 @@ To run the samples please refer to the corresponding tutorials:
 ## System requirements
 - Ubuntu\* 16.04 or later (64-bit)
 - Python\* 3.6 or later
-- NVidia CUDA\* Toolkit 10.1 or later
-- TensorFlow\* 2.2.0 or later
-
-## Installation
-We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
-
-
-#### As a package built from a checked-out repository:
-1) Install the following system dependencies:
-    ```
-    sudo apt-get install python3-dev
-    ```
-
-2) Install the package and its dependencies by running the following in the repository root directory:
-    ```
-    python setup.py install
-    ```
-
-_NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
-
-## Contributing
-Refer to the [Contribution Guidelines](./CONTRIBUTING.md) for more information on contributions to the NNCF TF repository.
+- NVidia CUDA\* Toolkit 10.1
+- TensorFlow\* 2.3.1
 
 ## NNCF TF compression results
 
