@@ -1,22 +1,14 @@
 import logging
 
 import os.path as osp
-import sys
-import time
-from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Dict
 
 import torch
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.datasets as datasets
-import torchvision.models as models
-import torchvision.transforms as transforms
-import warnings
 
 import ctypes
 import json
@@ -25,26 +17,16 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from natsort import natsorted
-from collections import OrderedDict, Counter
-
-from functools import partial
-from shutil import copyfile
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchvision.datasets import CIFAR10, CIFAR100
+from collections import OrderedDict
 
 from nncf.nncf_logger import logger
 
-from nncf import create_compressed_model
-from nncf.compression_method_api import CompressionLevel
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import register_default_init_args
 from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_id import WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
-from nncf.dynamic_graph.context import Scope
 
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers, AdjacentQuantizers
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.hw_config import HWConfigType
 from nncf.quantization.layers import BaseQuantizer
 from nncf.initialization import PartialDataLoader
@@ -54,6 +36,7 @@ def find_qid_by_str(quantization_controller, qid_str):
     for _qid, _q in quantization_controller.all_quantizations.items():
         if qid_str == str(_qid):
             return _qid
+    return None
 
 class ModelSizeCalculator:
     FLOAT_BITWIDTH = ctypes.sizeof(ctypes.c_float) * 8
@@ -194,7 +177,7 @@ class QuantizationEnv:
 
         if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
             raise ValueError("Model Size Ratio {} is out of bound ({}, {})"
-                             .format(self.compression_ratio, 
+                             .format(self.compression_ratio,
                                      self.min_model_size/self.orig_model_size,
                                      self.max_model_size/self.orig_model_size))
 
@@ -257,14 +240,14 @@ class QuantizationEnv:
                 d[idx_str]['state_scope'] = qid.ia_op_exec_context.scope_in_model
             else:
                 raise NotImplementedError("QuantizerId: {} of {} class is not supported."
-                                          .format(str(qid, qid.__class__.__name__)))
+                                          .format(str(qid), str(qid.__class__.__name__)))
 
         # quantizer_table index is QuantizerId in string prepended with its quantize node id in NNCFGraph
         df = pd.DataFrame.from_dict(d, orient='index')
         df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
         df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
         df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
-        df['state_module'] = df['state_scope'].apply(lambda x: self.qmodel.get_module_by_scope(x))
+        df['state_module'] = df['state_scope'].apply(self.qmodel.get_module_by_scope)
 
         quantizer_table = df.loc[natsorted(df.index)]
         return quantizer_table
@@ -303,13 +286,12 @@ class QuantizationEnv:
 
 
     def _get_layer_attr(self, row):
-        g = self.qmodel.get_graph()
         m = row.state_module
         qid = row.qid_obj
         feature = OrderedDict()
 
         if isinstance(qid, WeightQuantizerId):
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+            if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
                 feature['conv_dw'] = int(m.weight.shape[1] == m.groups) # 1.0 for depthwise, 0.0 for other conv2d
                 feature['cin'] = m.weight.shape[1]
                 feature['cout'] = m.weight.shape[0]
@@ -390,10 +372,9 @@ class QuantizationEnv:
         self._adaptbn()
         if finetune:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
-        else:
-            with torch.no_grad():
-                quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
-                logger.info("[Q.Env] Post-Init: {:.3f}".format(quantized_score))
+        with torch.no_grad():
+            quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
+            logger.info("[Q.Env] Post-Init: {:.3f}".format(quantized_score))
         return quantized_score
 
 
@@ -416,7 +397,7 @@ class QuantizationEnv:
             current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
 
             while self.min_model_size < current_model_size and self.target_model_size < current_model_size:
-                for i, nodestr in enumerate(reversed(self.master_df.index.tolist())):
+                for _, nodestr in enumerate(reversed(self.master_df.index.tolist())):
                     if self.master_df.loc[nodestr, "is_wt_quantizer"]:
                         bw_choice, bw_space = self.master_df.loc[nodestr, ['action', 'bw_space']]
                         new_bw = lower_bitwidth(bw_choice, bw_space)
@@ -452,7 +433,7 @@ class QuantizationEnv:
             obs = self.get_normalized_obs(len(self.collected_strategy))
             done = False
             return obs, reward, done, info_set
-        
+
         return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
 
     def evaluate_strategy(self, collected_strategy: List, skip_constraint=True):
@@ -487,7 +468,7 @@ class QuantizationEnv:
 
         obs = self.get_normalized_obs(len(collected_strategy)-1)
         done = True
-        
+
         return obs, reward, done, info_set
 
     def set_next_step_prev_action(self, idx, action):
@@ -529,7 +510,7 @@ class QuantizationEnv:
                 non_weight_quantize_nodekeys.append(nodekey)
 
         # Find nodekey of Weight Quantizer
-        for qid, qmod in quantization_controller.weight_quantizers.items():
+        for qid, _ in quantization_controller.weight_quantizers.items():
             quantize_nodekeys = []
             for nodekey in weight_quantize_nodekeys:
                 if str(qid.scope) in nodekey:
@@ -541,7 +522,7 @@ class QuantizationEnv:
                 raise ValueError("Quantize Node not found or More Nodes are found for WQid: {}".format(qid))
 
         # Find nodekey of Non-Weight Quantizer
-        for qid, qmod in quantization_controller.non_weight_quantizers.items():
+        for qid, _ in quantization_controller.non_weight_quantizers.items():
             quantize_nodekeys = []
             for nodekey in non_weight_quantize_nodekeys:
                 if str(qid.ia_op_exec_context.scope_in_model) in nodekey:
@@ -572,15 +553,16 @@ class QuantizationEnv:
     def _dump_groups_of_adjacent_quantizers(self):
         adj_quantizer_groups = []
 
-        for i, g in enumerate(self._groups_of_adjacent_quantizers):
+        for i, _ in enumerate(self._groups_of_adjacent_quantizers):
             group_members = []
-            for j, aq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
+            for _, aq in enumerate(
+                self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(aq[0])][0])
-            for k, wq in enumerate(self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+            for _, wq in enumerate(
+                self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
         with open(osp.join(self.config.get("log_dir", "."),
                            self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
-
