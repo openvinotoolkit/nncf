@@ -10,10 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from copy import deepcopy
 from typing import Dict, List, Set
 
-from .layers import QuantizerConfig
 from .quantizer_id import QuantizerId
 
 
@@ -26,7 +25,7 @@ class PrecisionConstraints:
 
     def get(self, quantizer_id: QuantizerId) -> Set[int]:
         if quantizer_id in self._constraints:
-            return self._constraints[quantizer_id]
+            return deepcopy(self._constraints[quantizer_id])
         return set()
 
     def replace(self, quantizer_id: QuantizerId, bits: Set[int]):

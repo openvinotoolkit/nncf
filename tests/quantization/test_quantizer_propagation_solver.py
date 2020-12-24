@@ -1329,7 +1329,8 @@ class TestQuantizerPropagationSolver:
                 [QuantizerConfig()]),
                         2: MultiConfigQuantizationPoint(
                             InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/gelu_0")),
+                                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
+                                               "/gelu_0")),
                             [QuantizerConfig()])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}, {2}],

@@ -1077,12 +1077,26 @@ class QuantizationProposal:
             pq = self._quantization_point_id_vs_prop_quantizer[quantization_point_id]
             pq.potential_quant_configs = constrained_config_list
 
-    def finalize(self, final_quantizer_setup: SingleConfigQuantizerSetup):
+    def finalize(self, final_quantizer_setup: SingleConfigQuantizerSetup, strict=True):
         for pq, qp_id in self._prop_quantizer_vs_quantization_point_id.items():
             if qp_id not in final_quantizer_setup.quantization_points:
                 self._quant_prop_graph.remove_propagating_quantizer(pq)
             else:
                 final_qconfig = final_quantizer_setup.quantization_points[qp_id].qconfig
+                if strict:
+                    def is_final_qconfig_compatible_to_initial(initial_qconfig: QuantizerConfig):
+                        return final_qconfig.per_channel == initial_qconfig.per_channel and \
+                               final_qconfig.mode == initial_qconfig.mode and \
+                               final_qconfig.bits == initial_qconfig.bits and \
+                               (final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force or
+                                initial_qconfig.signedness_to_force is None)
+
+                    compatible_inital_qconfs = list(
+                        filter(is_final_qconfig_compatible_to_initial,
+                               self.quantizer_setup.quantization_points[qp_id].possible_qconfigs))
+                    if not compatible_inital_qconfs:
+                        raise RuntimeError("The final quantizer setup has configurations that were not present in the "
+                                           "initial proposal!")
                 pq.potential_quant_configs = [final_qconfig]
         return FinalizedQuantizationProposal(final_quantizer_setup,
                                              self._quant_prop_graph)

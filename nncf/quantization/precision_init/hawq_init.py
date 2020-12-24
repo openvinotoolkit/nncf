@@ -239,7 +239,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             quantizers_switcher: QuantizersSwitcher,
             weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
             model: nn.Module,
-            scopes_of_skipped_weight_quantizers: List[Scope] = None) -> ParamsToRestore:
+            scopes_of_skipped_weight_quantizers: List[Scope] = None) -> ParamsToRestore: # pylint: disable=undefined-variable
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.

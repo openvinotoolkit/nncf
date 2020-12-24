@@ -529,7 +529,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         single_config_quantizer_setup = disambiguator.select_final_quantizer_setup(
             quantization_proposal.quantizer_setup)
 
-        finalized_proposal = quantization_proposal.finalize(single_config_quantizer_setup)
+        finalized_proposal = quantization_proposal.finalize(single_config_quantizer_setup,
+                                                            strict=self.hw_config is not None)
         finalized_quantizer_setup = prop_graph_solver.get_final_quantizer_setup(finalized_proposal)
         finalized_quantizer_setup.mark_activation_quantizer_configs_with_input_shapes(original_nncf_graph)
         finalized_quantizer_setup = self._handle_quantize_inputs_option(finalized_quantizer_setup)
