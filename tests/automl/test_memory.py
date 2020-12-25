@@ -1,38 +1,22 @@
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
-from nncf.automl.agent.ddpg.memory import Memory, SequentialMemory, Experience, RingBuffer
+from nncf.automl.agent.ddpg.memory import Memory, SequentialMemory
+
 
 WINDOW_LENGTH = 5
 LIMIT = 5
 MAX_LEN = 10
-
-# TODO: temporary value to be replaced with actual one
-STUB = RingBuffer(MAX_LEN)
-
 
 def test_can_create_memory():
     Memory(WINDOW_LENGTH)
     SequentialMemory(LIMIT, window_length=WINDOW_LENGTH)
 
 
-@pytest.mark.parametrize(
-    ("memory", "ref_experiences"),
-    [
-        (SequentialMemory(LIMIT, window_length=WINDOW_LENGTH), Experience(STUB, STUB, STUB, STUB, STUB)),
-    ]
-)
-def test_sequential_sample(memory, ref_experiences):
-    BATCH_SIZE = 10
-    actual_experiences = memory.sample(BATCH_SIZE)
-    assert actual_experiences == ref_experiences
-
 def test_get_recent_state_with_episode_boundaries():
     memory = SequentialMemory(3, window_length=2, ignore_episode_boundaries=False)
     obs_size = (3, 4)
 
     obs0 = np.random.random(obs_size)
-    terminal0 = False
 
     obs1 = np.random.random(obs_size)
     terminal1 = False
@@ -100,7 +84,6 @@ def test_training_flag():
     obs_size = (3, 4)
 
     obs0 = np.random.random(obs_size)
-    terminal0 = False
 
     obs1 = np.random.random(obs_size)
     terminal1 = True
@@ -143,7 +126,6 @@ def test_get_recent_state_without_episode_boundaries():
     obs_size = (3, 4)
 
     obs0 = np.random.random(obs_size)
-    terminal0 = False
 
     obs1 = np.random.random(obs_size)
     terminal1 = False
@@ -213,7 +195,6 @@ def test_sampling():
     actions = range(5)
 
     obs0 = np.random.random(obs_size)
-    terminal0 = False
     action0 = np.random.choice(actions)
     reward0 = np.random.random()
 
@@ -242,10 +223,7 @@ def test_sampling():
     action5 = np.random.choice(actions)
     reward5 = np.random.random()
 
-    obs6 = np.random.random(obs_size)
     terminal6 = False
-    action6 = np.random.choice(actions)
-    reward6 = np.random.random()
 
     # memory.append takes the current observation, the reward after taking an action and if
     # the *new* observation is terminal, thus `obs0` and `terminal1` is correct.
@@ -276,4 +254,3 @@ def test_sampling():
     assert experiences[2].action == action4
     assert experiences[2].reward == reward4
     assert experiences[2].terminal1 is False
-
