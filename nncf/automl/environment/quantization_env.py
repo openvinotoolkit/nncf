@@ -190,9 +190,9 @@ class QuantizationEnv:
         self.reset()
 
         # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
-        self._dump_master_df()
-        self._dump_quantized_graph()
-        self._dump_groups_of_adjacent_quantizers()
+        # self._dump_master_df()
+        # self._dump_quantized_graph()
+        # self._dump_groups_of_adjacent_quantizers()
 
         # End of QuantizationEnv.__init__()
         # --------------------------------------------------------------------------------------------------------------
@@ -501,6 +501,7 @@ class QuantizationEnv:
         non_weight_quantize_nodekeys = []
         qid_nodekey_map = OrderedDict()
 
+        quantized_network.rebuild_graph()
         g = quantized_network.get_graph()
 
         for nodekey in g.get_all_node_keys():
