@@ -288,14 +288,24 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                autoq_eval_fn=None,
                                autoq_eval_loader=None,
                                device='cuda') -> 'NNCFConfig':
-    if 'autoq' == nncf_config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}):
+    quantization_config = None
+    if 'compression' in nncf_config:
+        compression_config = nncf_config['compression']
+        if isinstance(compression_config, list):
+            for d in compression_config:
+                if d['algorithm'] == 'quantization':
+                    quantization_config = d
+        else:
+            quantization_config = compression_config if compression_config['algorithm'] == 'quantization' else None
+
+    if quantization_config and 'autoq' == quantization_config.get('initializer', {}).get('precision', {}).get('type', {}):
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
-                                                                      device=device),
-                                            BNAdaptationInitArgs(data_loader=train_loader,
-                                                                 device=device),
-                                            AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
-                                                                   eval_fn=autoq_eval_fn, 
-                                                                   nncf_config=nncf_config)])
+                                                                        device=device),
+                                                BNAdaptationInitArgs(data_loader=train_loader,
+                                                                    device=device),
+                                                AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+                                                                    eval_fn=autoq_eval_fn, 
+                                                                    nncf_config=nncf_config)])
     else:
         if criterion:
             if not criterion_fn:
