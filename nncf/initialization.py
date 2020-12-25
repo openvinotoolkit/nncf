@@ -12,7 +12,8 @@ from tqdm import tqdm
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs, AutoQPrecisionInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
+    BNAdaptationInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
@@ -298,13 +299,15 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         else:
             quantization_config = compression_config if compression_config['algorithm'] == 'quantization' else None
 
-    if quantization_config and 'autoq' == quantization_config.get('initializer', {}).get('precision', {}).get('type', {}):
-        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader, 
+    if quantization_config and \
+        'autoq' == quantization_config.get('initializer', {}).get('precision', {}).get('type', {}):
+
+        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                         device=device),
                                                 BNAdaptationInitArgs(data_loader=train_loader,
                                                                     device=device),
                                                 AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
-                                                                    eval_fn=autoq_eval_fn, 
+                                                                    eval_fn=autoq_eval_fn,
                                                                     nncf_config=nncf_config)])
     else:
         if criterion:

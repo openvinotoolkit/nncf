@@ -317,9 +317,9 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                     "warmup_iter_number": with_attributes(_NUMBER,
                                                          description="The number of random policy at the beginning of "
                                                                      "of AutoQ precision initialization to populate "
-                                                                     "replay buffer with experiences. This key is meant "
-                                                                     "internal testing use. Users need not to configure."
-                                                                     "to the registered autoq_eval_loader via ",
+                                                                     "replay buffer with experiences. This key is "
+                                                                     "meant for internal testing use. Users need not "
+                                                                     "to configure.",
                                                          default=20),
                     "bitwidth_per_scope": {
                         "type": "array",

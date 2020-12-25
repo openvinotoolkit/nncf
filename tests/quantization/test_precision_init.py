@@ -340,9 +340,9 @@ class AutoQConfigBuilder(BaseConfigBuilder):
         return self
 
     def warmup_iter_number(self, warmup_iter_number):
-            self._options['warmup_iter_number'] = str(warmup_iter_number)
-            self._config['compression']['initializer']['precision']['warmup_iter_number'] = warmup_iter_number
-            return self
+        self._options['warmup_iter_number'] = str(warmup_iter_number)
+        self._config['compression']['initializer']['precision']['warmup_iter_number'] = warmup_iter_number
+        return self
 
     @staticmethod
     def create_autoq_test_config(batch_size=10, image_size=10, num_channels=3, num_init_samples=1):
@@ -429,7 +429,7 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     bw_init_config = config['compression']['initializer']['precision']
     learning_iter_number = bw_init_config['iter_number'] - bw_init_config['warmup_iter_number']
     n_quantizer = len(algo_ctrl.all_quantizations)
-    
+
     assert random_action_spy.call_count == bw_init_config['warmup_iter_number'] * n_quantizer
     assert select_action_spy.call_count == learning_iter_number * (n_quantizer+1) + bw_init_config['warmup_iter_number']
 

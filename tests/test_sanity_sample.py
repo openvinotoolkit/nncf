@@ -456,15 +456,14 @@ class SampleType(Enum):
 
 class TestCaseDescriptor:
     config_name: str
-    config: Dict
     quantization_algo_params: Dict = {}
     sample_type: SampleType
     dataset_dir: Path
     dataset_name: str
     is_real_dataset: bool = False
     batch_size: int
-    num_weight_quantizers: int
-    num_activation_quantizers: int
+    n_weight_quantizers: int
+    n_activation_quantizers: int
 
     def batch(self, batch_size: int):
         self.batch_size = batch_size
@@ -498,11 +497,11 @@ class TestCaseDescriptor:
         return self
 
     def num_weight_quantizers(self, n: int):
-        self.num_weight_quantizers = n
+        self.n_weight_quantizers = n
         return self
 
     def num_activation_quantizers(self, n: int):
-        self.num_activation_quantizers = n
+        self.n_activation_quantizers = n
         return self
 
     def __str__(self):
@@ -572,7 +571,7 @@ class HAWQDescriptor(TestCaseDescriptor):
 
     def validate_spy(self):
         bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
-        assert len(bitwidth_list) == self.num_weight_quantizers
+        assert len(bitwidth_list) == self.n_weight_quantizers
         # with default compression ratio = 1.5 all precisions should be different from the default one
         assert set(bitwidth_list) != {QuantizerConfig().bits}
 
@@ -583,7 +582,7 @@ class HAWQDescriptor(TestCaseDescriptor):
 
 class AutoQDescriptor(TestCaseDescriptor):
     subset_ratio_: float = 1.0
-    
+
     def __init__(self):
         super().__init__()
 
@@ -608,7 +607,7 @@ class AutoQDescriptor(TestCaseDescriptor):
 
     def validate_spy(self):
         qid_bitwidth_map = self.set_chosen_config_spy.call_args[0][1]
-        assert len(qid_bitwidth_map) == self.num_weight_quantizers + self.num_activation_quantizers
+        assert len(qid_bitwidth_map) == self.n_weight_quantizers + self.n_activation_quantizers
         assert set(qid_bitwidth_map.values()) != {QuantizerConfig().bits}
 
 

@@ -96,7 +96,7 @@ class AutoQPrecisionInitializer:
         #     action = int(2**action)
         #     return action
 
-        assert 'autoq' == config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {})
+        assert config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq'
         autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
         config['episodic_nncfcfg'] = osp.join(config['log_dir'], "episodic_nncfcfg")
         os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
@@ -135,7 +135,6 @@ class AutoQPrecisionInitializer:
 
             if episode < agent.warmup_iter_number:
                 action = agent.random_action()
-
             else:
                 action = agent.select_action(observation, episode=episode)
 
@@ -161,7 +160,7 @@ class AutoQPrecisionInitializer:
 
                 final_reward = T[-1][0]
 
-                for i, (_, s_t, s_t1, a_t, done) in enumerate(T):
+                for i, (_, s_t, _, a_t, done) in enumerate(T):
                     # Revision of prev_action as it could be modified by constrainer -------
                     if i == 0:
                         prev_action = 0.0
