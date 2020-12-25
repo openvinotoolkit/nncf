@@ -18,7 +18,7 @@ def create_test_quantization_env() -> QuantizationEnv:
 def test_can_create_quant_env():
     create_test_quantization_env()
 
-# TODO: Review referece setup
+
 QUANTIZER_CFG_TUPLES = [
     ([2, 2], [4, 2]),
     ([2, 4], [4, 4]),
@@ -36,7 +36,6 @@ def test_step(bitwidth_cfg_tuple, mocker):
 
     qenv = create_test_quantization_env()
 
-    # TODO: Review Readibility
     for i, bw in enumerate(bitwidth_cfg):
         observation, reward, is_done, info_set = qenv.step(bw)
 
@@ -57,10 +56,18 @@ def test_step(bitwidth_cfg_tuple, mocker):
             assert list(final_cfg_spy.call_args[0][1].values()) == final_cfg
             assert info_set['model_ratio'] == final_cfg[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
 
-    # Extra stepping where step number is more than
-    # the number of quantizers should throw IndexError
-    with pytest.raises(IndexError):
-        qenv.step(8)
+
+def test_overflow_step():
+    qenv = create_test_quantization_env()
+
+    for i, bw in enumerate([8, 8, 8]):
+        if i < len(qenv.qctrl.all_quantizations):
+            qenv.step(bw)
+        else:
+            # Extra stepping where step number is more than
+            # the number of quantizers should throw IndexError
+            with pytest.raises(IndexError):
+                qenv.step(bw)
 
 
 PRETRAINED_SCORE = [74.3, -0.11, None]
@@ -84,7 +91,6 @@ def test_reward(pretrained_score, compressed_score, model_size_ratio):
     else:
         reward = qenv.reward(compressed_score, model_size_ratio)
         assert reward == (compressed_score - pretrained_score) * 0.1
-        # TODO: Review if we can use this method to set reference result
 
 
 STRATEGY_LIST = [
@@ -101,7 +107,6 @@ SKIP_CONSTRAINT_BOOL = [True, False]
                          ids=['_'.join(['bitwidth_strategy', str(s)]) for s in STRATEGY_LIST])
 def test_evaluate_strategy(strategy, skip_bool, mocker):
     final_cfg_spy = mocker.spy(ModelSizeCalculator, "__call__")
-    # bitwidth_cfg, final_cfg = bitwidth_cfg_tuple
     qenv = create_test_quantization_env()
 
     if len(strategy) != len(qenv.qctrl.all_quantizations):
@@ -120,4 +125,3 @@ def test_evaluate_strategy(strategy, skip_bool, mocker):
             assert info_set['model_ratio'] == strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
         else:
             assert info_set['model_ratio'] == evaluated_strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
-        # TODO: Self-fulling?
