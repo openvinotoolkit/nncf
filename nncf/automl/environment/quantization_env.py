@@ -82,6 +82,7 @@ class ModelSizeCalculator:
 
 
 class QuantizationEnv:
+    # pylint:disable=too-many-branches
     def __init__(self,
                  quantization_controller,
                  eval_loader,
@@ -257,8 +258,8 @@ class QuantizationEnv:
         def annotate_learnable_module_io_shape(model):
             def annotate_io_shape(module, input_, output):
                 if hasattr(module, 'weight') or isinstance(module, BaseQuantizer):
-                    module._input_shape = input_[0].shape
-                    module._output_shape = output.shape
+                    module.input_shape_ = input_[0].shape
+                    module.output_shape_ = output.shape
 
             hook_list = [m.register_forward_hook(annotate_io_shape) for n, m in model.named_modules()]
             model.do_dummy_forward(force_eval=True)
@@ -298,7 +299,7 @@ class QuantizationEnv:
                 feature['stride'] = m.stride[0]
                 feature['kernel'] = m.kernel_size[0]
                 feature['param'] = np.prod(m.weight.size())
-                feature['ifm_size'] = np.prod(m._input_shape[-2:]) # H*W
+                feature['ifm_size'] = np.prod(m.input_shape_[-2:]) # H*W
                 feature['prev_action'] = 0.0 # placeholder
 
             elif isinstance(m, nn.Linear):
@@ -308,7 +309,7 @@ class QuantizationEnv:
                 feature['stride'] = 0.0
                 feature['kernel'] = 1.0
                 feature['param'] = np.prod(m.weight.size())
-                feature['ifm_size'] = np.prod(m._input_shape[-1]) # feature nodes
+                feature['ifm_size'] = np.prod(m.input_shape_[-1]) # feature nodes
                 feature['prev_action'] = 0.0 # placeholder
 
             else:
@@ -316,8 +317,8 @@ class QuantizationEnv:
 
         elif isinstance(qid, NonWeightQuantizerId):
             qmod = self.qctrl.all_quantizations[qid]
-            input_shape = qmod._input_shape
-            output_shape = qmod._output_shape
+            input_shape = qmod.input_shape_
+            output_shape = qmod.output_shape_
             feature['cin'] = input_shape[1] if len(input_shape) == 4 else input_shape[-1]
             feature['cout'] = output_shape[1] if len(output_shape) == 4 else output_shape[-1]
             feature['ifm_size'] = np.prod(input_shape[-2:]) if len(input_shape) == 4 else input_shape[-1]
@@ -556,11 +557,9 @@ class QuantizationEnv:
 
         for i, _ in enumerate(self._groups_of_adjacent_quantizers):
             group_members = []
-            for _, aq in enumerate(
-                self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].activation_quantizers):
+            for _, aq in enumerate(self._groups_of_adjacent_quantizers[i].activation_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(aq[0])][0])
-            for _, wq in enumerate(
-                self._groups_of_adjacent_quantizers._groups_of_adjacent_quantizers[i].weight_quantizers):
+            for _, wq in enumerate(self._groups_of_adjacent_quantizers[i].weight_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 

@@ -71,3 +71,6 @@ class GroupsOfAdjacentQuantizers:
 
     def __bool__(self):
         return bool(self._groups_of_adjacent_quantizers) and bool(self._quantizer_per_group_id)
+
+    def __getitem__(self, group_id):
+        return self._groups_of_adjacent_quantizers[group_id]
