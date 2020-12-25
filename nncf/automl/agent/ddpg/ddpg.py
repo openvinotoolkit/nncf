@@ -53,7 +53,7 @@ class Critic(nn.Module):
 class DDPG:
     LBOUND = 0.0
     RBOUND = 1.0
-    def __init__(self, nb_states, nb_actions, hparam_override: dict = {}):
+    def __init__(self, nb_states, nb_actions, hparam_override: dict = None):
         self.nb_states = nb_states
         self.nb_actions = nb_actions
 
@@ -77,9 +77,10 @@ class DDPG:
             "n_update": 1
         }
 
-        for hparam, hparam_val in hparam_override.items():
-            if hparam in hyperparameters:
-                hyperparameters[hparam] = hparam_val
+        if hparam_override is not None:
+            for hparam, hparam_val in hparam_override.items():
+                if hparam in hyperparameters:
+                    hyperparameters[hparam] = hparam_val
 
         args = SimpleNamespace(**hyperparameters)
 
@@ -210,12 +211,14 @@ class DDPG:
 
     def select_action(self, s_t, episode, decay_epsilon=True):
         action = to_numpy(self.actor(to_tensor(np.array(s_t).reshape(1, -1)))).squeeze(0)
+
         if decay_epsilon is True:
-            delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
-            action = sample_from_truncated_normal_distribution(lower=self.LBOUND, upper=self.RBOUND, mu=action, sigma=delta, size=self.nb_actions)
-            self.delta = delta
+            self.delta = self.init_delta * (self.delta_decay ** (episode - self.warmup_iter_number))
+            action = sample_from_truncated_normal_distribution(
+                lower=self.LBOUND, upper=self.RBOUND, mu=action, sigma=self.delta , size=self.nb_actions)
+
         return np.clip(action, self.LBOUND, self.RBOUND)
-        
+
     def reset(self, obs):
         pass
 

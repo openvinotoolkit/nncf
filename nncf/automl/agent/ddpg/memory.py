@@ -224,4 +224,3 @@ class SequentialMemory(Memory):
         config = super().get_config()
         config['limit'] = self.limit
         return config
-
