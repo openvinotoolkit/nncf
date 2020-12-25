@@ -67,16 +67,15 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_init = config.get("pruning_init", 0)
         self.pruning_quota = 1.0
 
-        if self.prune_flops:
-            self.modules_in_channels = {}
-            self.modules_out_channels = {}
-            self.pruning_quotas = {}
-            self.nodes_flops = {}
-            self.nodes_flops_cost = {}
-            self.next_nodes = {}
-            self._init_pruned_modules_params()
-            self.flops_count_init()
-            self.full_flops = sum(self.nodes_flops.values())
+        self.modules_in_channels = {}
+        self.modules_out_channels = {}
+        self.pruning_quotas = {}
+        self.nodes_flops = {}
+        self.nodes_flops_cost = {}
+        self.next_nodes = {}
+        self._init_pruned_modules_params()
+        self.flops_count_init()
+        self.full_flops = sum(self.nodes_flops.values())
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
@@ -90,9 +89,11 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+    def add_algo_specific_stats(self, stats):
         stats['pruning_rate'] = self.pruning_rate
+        flops = self._calculate_flops_pruned_model_by_masks()
+        stats["FLOPS pruning level"] = 1 - flops / self.full_flops
+        stats["FLOPS current / full"] = f"{flops} / {self.full_flops}"
         return stats
 
     def freeze(self):
@@ -165,6 +166,27 @@ class FilterPruningController(BasePruningAlgoController):
 
         for h in hook_list:
             h.remove()
+
+    def _calculate_flops_pruned_model_by_masks(self):
+        """
+        Calculates number of flops for pruned model by using binary_filter_pruning_mask.
+        """
+        tmp_in_channels = self.modules_in_channels.copy()
+        tmp_out_channels = self.modules_out_channels.copy()
+
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            assert all([tmp_out_channels[group.nodes[0].nncf_node_id] == tmp_out_channels[node.nncf_node_id] for node in
+                        group.nodes])
+            new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
+            for node in group.nodes:
+                tmp_out_channels[node.nncf_node_id] = new_out_channels_num
+            # Prune in_channels in all next nodes of cluster
+            next_nodes = self.next_nodes[group.id]
+            for node_id in next_nodes:
+                tmp_in_channels[node_id] = new_out_channels_num
+
+        flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
+        return flops
 
     def _calculate_flops_in_pruned_model(self, modules_in_channels, modules_out_channels):
         """
