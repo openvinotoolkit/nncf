@@ -20,7 +20,7 @@ import re
 from io import StringIO
 from copy import deepcopy
 from types import SimpleNamespace
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 class AutoQPrecisionInitializer:
     def __init__(self, algo: 'QuantizationController', init_precision_config,
