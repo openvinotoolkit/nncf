@@ -16,7 +16,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
@@ -114,7 +113,7 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
 # pylint:disable=too-many-branches
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
-    # TODO: why do we need this?
+    # TODO: Do we need this?
     if config.execution_mode == ExecutionMode.SINGLE_GPU:
         torch.cuda.set_device(config.current_gpu)
 
@@ -195,8 +194,10 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
-    if config.mode.lower() == 'test':
+    if is_main_process():
         print_statistics(compression_ctrl.statistics())
+
+    if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
 
     if config.mode.lower() == 'train':
@@ -267,26 +268,14 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
 
 
 def get_dataset(dataset_config, config, transform, is_train):
+    if dataset_config == 'imagenet':
+        prefix = 'train' if is_train else 'val'
+        return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
     if dataset_config == 'mock_32x32':
         # For testing purposes
         return MockDataset(img_size=(32, 32), transform=transform)
-    if dataset_config == 'imagenet':
-        prefix = 'train' if is_train else 'val'
-        dataset = datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
-    else:
-        dataset = create_cifar(config, dataset_config, is_train, transform)
+    return create_cifar(config, dataset_config, is_train, transform)
 
-    if is_train:
-        if config.get("train_subset_ratio", None) is not None:
-            subset_ratio = config['train_subset_ratio']
-            indices = list(range(0, np.floor(len(dataset)*subset_ratio).astype('int')))
-            dataset = torch.utils.data.Subset(dataset, indices)
-    else:
-        if config.get("val_subset_ratio", None) is not None:
-            subset_ratio = config['val_subset_ratio']
-            indices = list(range(0, np.floor(len(dataset)*subset_ratio).astype('int')))
-            dataset = torch.utils.data.Subset(dataset, indices)
-    return dataset
 
 def create_cifar(config, dataset_config, is_train, transform):
     create_cifar_fn = None
