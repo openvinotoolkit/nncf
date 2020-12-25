@@ -36,7 +36,10 @@ from nncf.helpers.utils import print_statistics
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser()
+    parser = get_common_argument_parser(precision=False,
+                                        save_checkpoint_freq=False,
+                                        print_freq=False)
+
     parser.add_argument(
         '--mode',
         '-m',
@@ -50,12 +53,6 @@ def get_argument_parser():
         help='Dataset to use.',
         choices=['imagenet', 'cifar100', 'cifar10'],
         default=None
-    )
-    parser.add_argument(
-        '--dataset-type',
-        help='Dataset type.',
-        choices=['tfds', 'tfrecords'],
-        default='tfds'
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')

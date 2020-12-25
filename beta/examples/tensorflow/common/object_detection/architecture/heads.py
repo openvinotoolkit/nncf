@@ -303,8 +303,8 @@ class RpnHead(tf.keras.layers.Layer):
             for level in range(self._min_level, self._max_level + 1):
                 scores_output, box_output = self._shared_rpn_heads(
                     features[level], self._anchors_per_location, level, is_training)
-                scores_outputs[level] = scores_output
-                box_outputs[level] = box_output
+                scores_outputs[str(level)] = scores_output
+                box_outputs[str(level)] = box_output
             return scores_outputs, box_outputs
 
 

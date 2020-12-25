@@ -84,7 +84,7 @@ Quick jump to the samples:
 |Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|77.9|78.41|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.9|77.87|
 |Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 54% (Magnitude)|ImageNet|77.9|77.52|
-|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|71.85|71.81|
+|MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|71.85|71.96|
 |MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.85|72.36|
 |MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 35% (Magnitude)|ImageNet|71.85|72.17|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.04|75.04|
@@ -97,15 +97,14 @@ Quick jump to the samples:
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.3|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|32.97|
+|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|33.13|
 
 #### Instance Segmentation
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow FP32 baseline mAP**|**TensorFlow compressed mAP**|
 | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|37.33 (avg bbox mAP),<br/>33.57 (avg segm mAP)|37.25 (avg bbox mAP),<br/>33.57 (avg segm mAP)|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|37.33 (avg bbox mAP),<br/>33.57 (avg segm mAP)|36.92 (avg bbox mAP),<br/>33.24 (avg segm mAP)|
-
+|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 37.25<br/>segm: 33.59|
+|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 37.33<br/>segm: 33.56|bbox: 36.93<br/>segm: 33.23|
 
 ## Legal Information
 [*] Other names and brands may be claimed as the property of others.

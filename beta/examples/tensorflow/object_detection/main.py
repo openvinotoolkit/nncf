@@ -34,7 +34,9 @@ from examples.tensorflow.common.utils import serialize_config, create_code_snaps
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser()
+    parser = get_common_argument_parser(precision=False,
+                                        save_checkpoint_freq=False,
+                                        print_freq=False)
 
     parser.add_argument(
         '--mode',
@@ -49,13 +51,6 @@ def get_argument_parser():
                         default=None,
                         type=str,
                         help='Path to backbone checkpoint.')
-
-    parser.add_argument(
-        '--dataset-type',
-        help='Dataset type.',
-        choices=['tfds', 'tfrecords'],
-        default='tfds'
-    )
 
     return parser
 

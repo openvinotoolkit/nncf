@@ -30,15 +30,27 @@ from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
 from examples.tensorflow.common.utils import SummaryWriter
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser()
+    parser = get_common_argument_parser(weights=False,
+                                        precision=False,
+                                        save_checkpoint_freq=False,
+                                        export_args=False,
+                                        print_freq=False,
+                                        dataset_type=False)
 
     parser.add_argument('--backbone-checkpoint',
                         default=None,
                         type=str,
                         help='Path to backbone checkpoint.')
+
+    parser.add_argument('--weights',
+                        default=None,
+                        type=str,
+                        help='Path to pretrained weights in ckpt format.')
+
     return parser
 
 
@@ -227,7 +239,8 @@ def run_train(config):
 
             loss_fn = model_builder.build_loss_fn()
 
-            checkpoint = tf.train.Checkpoint(model=compress_model, optimizer=optimizer, step=tf.Variable(0))
+            variables = get_variables(compress_model)
+            checkpoint = tf.train.Checkpoint(variables=variables, optimizer=optimizer, step=tf.Variable(0))
             checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
             initial_epoch = initial_step = 0

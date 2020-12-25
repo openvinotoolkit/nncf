@@ -125,3 +125,10 @@ def make_restore_checkpoint_fn(checkpoint_path, prefix='', skip_regex=None):
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, vars_to_load)
 
     return _restore_checkpoint_fn
+
+
+def get_variables(model):
+    variables = {}
+    for v in model.variables:
+        variables[v.name] = v
+    return variables

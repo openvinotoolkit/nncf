@@ -41,7 +41,7 @@ The [COCO2017](https://cocodataset.org/) dataset should be specified in the conf
 We can run the sample after data preparation. For this follow these steps:
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/segmentation` folder.
-- Download the pre-trained weights in H5 format and provide the path to them using `--weights` flag. The link to the 
+- Download the pre-trained weights in checkpoint format and provide the path to them using `--weights` flag. The link to the
 archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table. 
 Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
 FP32 model, without applying any compression algorithms.
@@ -50,7 +50,7 @@ FP32 model, without applying any compression algorithms.
     ```bash
     python train.py \
     --config=configs/quantization/mask_rcnn_coco_int8.json \
-    --weights=<path_to_H5_file_with_pretrained_weights> \
+    --weights=<path_to_ckpt_file_with_pretrained_weights> \
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/maskrcnn_coco_int8
     ```
@@ -82,7 +82,7 @@ python evaluation.py \
 --resume=<path_to_trained_model_checkpoint>
 ```
 
-To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and path to`.h5` file with model weights is provided in command line argument `--weights`
+To validate an model checkpoint, make sure the compression algorithm settings are empty in the configuration file and path to checkpoint file with model weights is provided in command line argument `--weights`
 
 ### Export Compressed Model
 
@@ -106,16 +106,6 @@ python evaluation.py \
 --to-saved-model=../../results/saved_model
 ```
 
-To export trained model to the **Keras H5**, use the following command:
-```bash
-python evaluation.py \
---mode=export \
---config=configs/quantization/mask_rcnn_coco_int8.json \
---batch-size=1 \
---resume=<path_to_trained_model_checkpoint> \
---to-h5=../../results/mask_rcnn_coco_int8.h5
-```
-
 ### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
@@ -131,7 +121,6 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
     --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder> \
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/maskrcnn_coco_baseline
-- Export trained model to the Keras H5 format.
 
 <a name='results'></a>
 
@@ -139,6 +128,6 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**Config path**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|None|COCO2017|37.33 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|-|
-|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|37.25 (avg bbox mAP),<br/>33.57 (avg segm mAP)|examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json|-|
-|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|36.92 (avg bbox mAP),<br/>33.24 (avg segm mAP)|examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json|-|
+|MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn.tar.gz)|
+|MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|bbox: 37.25<br/>segm: 33.59|examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_int8_w_sym_t_a_sym_t.tar.gz)|
+|MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93<br/>segm: 33.23|examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_sparsity_50.tar.gz)|

@@ -16,10 +16,12 @@ import tensorflow as tf
 
 from nncf import create_compressed_model
 from nncf.configs.config import Config
+from nncf.helpers.utils import print_statistics
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.segmentation.models.model_selector import get_predefined_config, get_model_builder
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from examples.tensorflow.common.distributed import get_distribution_strategy, get_strategy_scope
 from examples.tensorflow.common.utils import configure_paths, get_saving_parameters
 from examples.tensorflow.common.logger import logger
@@ -27,7 +29,13 @@ from examples.tensorflow.common.utils import SummaryWriter
 
 
 def get_argument_parser():
-    parser = get_common_argument_parser()
+    parser = get_common_argument_parser(weights=False,
+                                        epochs=False,
+                                        precision=False,
+                                        save_checkpoint_freq=False,
+                                        to_h5=False,
+                                        print_freq=False,
+                                        dataset_type=False)
 
     parser.add_argument(
         '--mode',
@@ -46,20 +54,32 @@ def get_argument_parser():
              'If left as None, then the process will wait indefinitely.'
     )
 
+    parser.add_argument(
+        '--weights',
+        default=None,
+        type=str,
+        help='Path to pretrained weights in ckpt format.'
+    )
+
     return parser
 
 
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
+    sample_config = Config(
+        {'dataset_type': 'tfrecords'}
+    )
+
     config_from_json = Config.from_json(args.config)
     predefined_config = get_predefined_config(config_from_json.model)
 
-    predefined_config.update(config_from_json)
-    predefined_config.update_from_args(args, parser)
-    configure_paths(predefined_config)
+    sample_config.update(predefined_config)
+    sample_config.update(config_from_json)
+    sample_config.update_from_args(args, parser)
+    configure_paths(sample_config)
 
-    return predefined_config
+    return sample_config
 
 
 def load_checkpoint(checkpoint, ckpt_path):
@@ -117,6 +137,10 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
 
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The evaluation.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
+
     strategy = get_distribution_strategy(config)
     strategy_scope = get_strategy_scope(strategy)
 
@@ -135,7 +159,8 @@ def run_evaluation(config, eval_timeout=None):
                                 is_training=False) as model:
         with strategy_scope:
             compression_ctrl, compress_model = create_compressed_model(model, config)
-            checkpoint = tf.train.Checkpoint(model=compress_model, step=tf.Variable(0))
+            variables = get_variables(compress_model)
+            checkpoint = tf.train.Checkpoint(variables=variables, step=tf.Variable(0))
             eval_metric = model_builder.eval_metrics()
             predict_post_process_fn = model_builder.post_processing
 
@@ -145,6 +170,9 @@ def run_evaluation(config, eval_timeout=None):
         if config.ckpt_path:
             load_checkpoint(checkpoint, config.ckpt_path)
 
+        logger.info('Evaluation...')
+        statistics = compression_ctrl.statistics()
+        print_statistics(statistics)
         metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
         eval_metric.reset_states()
         logger.info('Test metric = {}'.format(metric_result))
@@ -176,11 +204,34 @@ def run_evaluation(config, eval_timeout=None):
         validation_summary_writer.close()
 
 
+def export(config):
+    model_builder = get_model_builder(config)
+
+    with TFOriginalModelManager(model_builder.build_model,
+                                weights=config.get('weights', None),
+                                is_training=False) as model:
+        compression_ctrl, compress_model = create_compressed_model(model, config)
+
+    if config.ckpt_path:
+        variables = get_variables(compress_model)
+        checkpoint = tf.train.Checkpoint(variables=variables)
+        load_checkpoint(checkpoint, config.ckpt_path)
+
+    save_path, save_format = get_saving_parameters(config)
+    compression_ctrl.export_model(save_path, save_format)
+    logger.info("Saved to {}".format(save_path))
+
+
 def main(argv):
     tf.get_logger().setLevel('INFO')
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
-    run_evaluation(config)
+
+    if 'train' in config.mode or 'test' in config.mode:
+        run_evaluation(config)
+
+    if 'export' in config.mode:
+        export(config)
 
 
 if __name__ == '__main__':

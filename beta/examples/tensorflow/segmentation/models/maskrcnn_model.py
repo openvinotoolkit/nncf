@@ -27,6 +27,33 @@ from examples.tensorflow.common.object_detection.evaluation import coco_evaluato
 from examples.tensorflow.common.logger import logger
 
 
+def _restore_baseline_weights(keras_model, checkpoint_path):
+    reader = tf.train.load_checkpoint(checkpoint_path)
+    var_to_shape_map = reader.get_variable_to_shape_map()
+
+    # Skip optimizer variables
+    predicate = lambda x: 'optimizer' not in x and 'OPTIMIZER' not in x and 'variables' in x
+    checkpoint_names = list(filter(predicate, var_to_shape_map.keys()))
+
+    assignment_map = {}
+    for v in keras_model.variables:
+        var_name = v.name[v.name.find('/') + 1:] # Skip parent name
+
+        match_names = []
+        for x in checkpoint_names:
+            name = x.split('/')[1] # variables/*/.ATTRIBUTES/VARIABLE_VALUE
+            key = name.replace('.S', '/')
+            if var_name == key:
+                match_names.append(x)
+
+        if len(match_names) != 1:
+            raise Exception('More than one matches for {}: {}'.format(v, match_names))
+
+        assignment_map[match_names[0]] = v
+
+    tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_map)
+
+
 class MaskrcnnModel(base_model.Model):
     """Mask R-CNN model function."""
 
@@ -301,7 +328,7 @@ class MaskrcnnModel(base_model.Model):
 
             if weights:
                 logger.info('Loaded pretrained weights from {}'.format(weights))
-                self._keras_model.load_weights(weights)
+                _restore_baseline_weights(self._keras_model, weights)
 
         return self._keras_model
 

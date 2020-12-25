@@ -23,4 +23,4 @@ good-names = logger,fn
 
 [DESIGN]
 max-statements=120
-max-branches=13
+max-branches=20

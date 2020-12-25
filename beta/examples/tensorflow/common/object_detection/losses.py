@@ -109,7 +109,7 @@ class RpnScoreLoss:
                 score_losses.append(
                     self._rpn_score_loss(
                         score_outputs[level],
-                        labels[level],
+                        labels[int(level)],
                         normalizer=tf.cast(
                             tf.shape(score_outputs[level])[0] *
                             self._rpn_batch_size_per_im, tf.float32)))
@@ -173,7 +173,7 @@ class RpnBoxLoss:
 
             box_losses = []
             for level in levels:
-                box_losses.append(self._rpn_box_loss(box_outputs[level], labels[level]))
+                box_losses.append(self._rpn_box_loss(box_outputs[level], labels[int(level)]))
 
             # Sum per level losses to total loss.
             return tf.add_n(box_losses)

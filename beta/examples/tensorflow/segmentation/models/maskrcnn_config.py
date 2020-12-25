@@ -51,7 +51,7 @@ MASKRCNN_CONFIG = Config({
         'anchor_size': 8,
     },
     'postprocess': {
-        'use_batched_nms': False,
+        'use_batched_nms': True,
         'max_total_size': 100,
         'nms_iou_threshold': 0.5,
         'score_threshold': 0.05,
@@ -111,7 +111,7 @@ MASKRCNN_CONFIG = Config({
         'test_rpn_nms_threshold': 0.7,
         'test_rpn_score_threshold': 0.0,
         'test_rpn_min_size_threshold': 0.0,
-        'use_batched_nms': False,
+        'use_batched_nms': True,
     },
     'roi_sampling': {
         'num_samples_per_image': 512,
