@@ -172,7 +172,7 @@ class AutoQPrecisionInitializer:
                         s_t['prev_action'] = prev_action
                     # EO ------------------------
 
-                    agent.observe(final_reward, s_t, s_t1, a_t, done)
+                    agent.observe(final_reward, s_t, a_t, done)
                     if episode >= agent.warmup_iter_number:
                         for _ in range(agent.n_update):
                             agent.update_policy()

@@ -200,7 +200,7 @@ class DDPG:
         self.critic.cuda()
         self.critic_target.cuda()
 
-    def observe(self, r_t, s_t, s_t1, a_t, done):
+    def observe(self, r_t, s_t, a_t, done):
         if self.is_training:
             self.memory.append(s_t, a_t, r_t, done)  # save to memory
 
@@ -216,7 +216,7 @@ class DDPG:
             self.delta = delta
         return np.clip(action, self.LBOUND, self.RBOUND)
         
-    def reset(self, obs):   
+    def reset(self, obs):
         pass
 
     def load_weights(self, output):
