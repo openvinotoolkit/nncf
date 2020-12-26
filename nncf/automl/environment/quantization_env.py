@@ -189,7 +189,8 @@ class QuantizationEnv:
         self.best_reward = -math.inf #TODO: move reward to search manager
         self.reset()
 
-        if is_debug():
+        self.is_dump = is_debug()
+        if self.is_dump:
             self.dump_dir = Path(DEBUG_LOG_DIR) / Path("AutoQ_Env_dump")
             self.dump_dir.mkdir(parents=True, exist_ok=True)
             # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.

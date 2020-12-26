@@ -36,7 +36,8 @@ class AutoQPrecisionInitializer:
         from nncf.automl.agent.ddpg.ddpg import DDPG
         from nncf.debug import DEBUG_LOG_DIR
 
-        if is_debug():
+        self.is_dump = is_debug()
+        if self.is_dump:
             self.dump_dir = Path(DEBUG_LOG_DIR) / Path("AutoQ_Agent_dump")
             self.dump_dir.mkdir(parents=True, exist_ok=True)
 
@@ -105,8 +106,10 @@ class AutoQPrecisionInitializer:
 
         assert config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq'
         autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
-        config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
-        os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
+
+        if self.is_dump:
+            config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
+            os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
 
         args = SimpleNamespace(**autoq_cfg)
 
@@ -119,12 +122,13 @@ class AutoQPrecisionInitializer:
         best_reward = -math.inf
         best_policy = []
 
-        tfwriter = SummaryWriter(self.dump_dir)
+        if self.is_dump:
+            tfwriter = SummaryWriter(self.dump_dir)
 
-        log_cfg=OrderedDict()
-        log_cfg['compression']=config['compression']
-        tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
-        tfwriter.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
+            log_cfg=OrderedDict()
+            log_cfg['compression']=config['compression']
+            tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
+            tfwriter.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
 
         agent.is_training = True
         step = episode = episode_steps = 0
@@ -151,7 +155,8 @@ class AutoQPrecisionInitializer:
             T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 
             # [optional] save intermideate model
-            if episode % int((num_episode+10)/10) == 0:
+            
+            if self.is_dump and episode % int((num_episode+10)/10) == 0:
                 agent.save_model(self.dump_dir)
 
             # update
@@ -196,85 +201,89 @@ class AutoQPrecisionInitializer:
                 episode += 1
                 T = []
 
-                # Save nncf compression cfg
-                episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
-                with open(episode_cfgfile, "w") as outfile:
-                    json.dump(env.config, outfile, indent=4, sort_keys=False)
+                if self.is_dump:
+                    # Save nncf compression cfg
+                    episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
+                    with open(episode_cfgfile, "w") as outfile:
+                        json.dump(env.config, outfile, indent=4, sort_keys=False)
 
-                bit_stats_tt = env.qctrl.statistics()['Bitwidth distribution:']
-                bit_stats_tt.set_max_width(100)
-                bit_stats_df = pd.read_csv(
-                    StringIO(re.sub(
-                        r'[-+|=]', '', bit_stats_tt.draw())), sep=r'\s{2,}', engine='python').reset_index(drop=True)
+                    bit_stats_tt = env.qctrl.statistics()['Bitwidth distribution:']
+                    bit_stats_tt.set_max_width(100)
+                    bit_stats_df = pd.read_csv(
+                        StringIO(re.sub(
+                            r'[-+|=]', '', bit_stats_tt.draw())), sep=r'\s{2,}', engine='python').reset_index(drop=True)
 
-                policy_dict[episode]=env.master_df['action'].astype('int')
-                pd.DataFrame(
-                    policy_dict.values(), index=policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(
-                        osp.join(self.dump_dir, "policy_per_episode.csv"), index_label="nodestr")
+                    policy_dict[episode]=env.master_df['action'].astype('int')
+                    pd.DataFrame(
+                        policy_dict.values(), index=policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(
+                            osp.join(self.dump_dir, "policy_per_episode.csv"), index_label="nodestr")
 
                 if final_reward > best_reward:
                     best_reward = final_reward
                     best_policy = env.master_df['action']
 
-                    # log best policy to tensorboard
-                    best_policy_dict[episode]=env.master_df['action'].astype('int')
-                    pd.DataFrame(
-                        best_policy_dict.values(), index=best_policy_dict.keys()).T.sort_index(
-                            axis=1, ascending=False).to_csv(
-                                osp.join(self.dump_dir, "best_policy.csv"), index_label="nodestr")
+                    if self.is_dump:
+                        # log best policy to tensorboard
+                        best_policy_dict[episode]=env.master_df['action'].astype('int')
+                        pd.DataFrame(
+                            best_policy_dict.values(), index=best_policy_dict.keys()).T.sort_index(
+                                axis=1, ascending=False).to_csv(
+                                    osp.join(self.dump_dir, "best_policy.csv"), index_label="nodestr")
 
-                    best_policy_string = bit_stats_df.to_markdown() + "\n\n\n"
-                    best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
-                                          .format(episode, final_reward, info['accuracy'], info['model_ratio'])
-                    for i, nodestr in enumerate(env.master_df.index.tolist()):
-                        best_policy_string += "\t"
-                        Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
+                        best_policy_string = bit_stats_df.to_markdown() + "\n\n\n"
+                        best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
+                                            .format(episode, final_reward, info['accuracy'], info['model_ratio'])
+                        for i, nodestr in enumerate(env.master_df.index.tolist()):
+                            best_policy_string += "\t"
+                            Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
 
-                        if env.skip_constraint is True:
-                            best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
-                                                  " | " + nodestr + Qtype + "  \n"
-                        else:
-                            if env.master_df.loc[nodestr, 'action'] == \
-                               env.master_df.loc[nodestr, 'unconstrained_action']:
+                            if env.skip_constraint is True:
                                 best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
-                                                      " | " + nodestr + Qtype + "  \n"
+                                                    " | " + nodestr + Qtype + "  \n"
                             else:
-                                best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + \
-                                                      str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + \
-                                                      " | " + nodestr + Qtype + "  \n"
-                    tfwriter.add_text('AutoQ/best_policy', best_policy_string, episode)
+                                if env.master_df.loc[nodestr, 'action'] == \
+                                env.master_df.loc[nodestr, 'unconstrained_action']:
+                                    best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
+                                                        " | " + nodestr + Qtype + "  \n"
+                                else:
+                                    best_policy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + \
+                                                        str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + \
+                                                        " | " + nodestr + Qtype + "  \n"
+                        tfwriter.add_text('AutoQ/best_policy', best_policy_string, episode)
 
-                # log current policy to tensorboard
-                current_strategy_string = bit_stats_df.to_markdown() + "\n\n\n"
-                current_strategy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
-                                           .format(episode, final_reward, info['accuracy'], info['model_ratio'])
-                for i, nodestr in enumerate(env.master_df.index.tolist()):
-                    current_strategy_string += "\t"
-                    Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
-                    if env.skip_constraint is True:
-                        current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
-                                                   " | " + nodestr + Qtype + "  \n"
-                    else:
-                        if env.master_df.loc[nodestr, 'action'] == env.master_df.loc[nodestr, 'unconstrained_action']:
+                if self.is_dump:
+                    # log current policy to tensorboard
+                    current_strategy_string = bit_stats_df.to_markdown() + "\n\n\n"
+                    current_strategy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
+                                            .format(episode, final_reward, info['accuracy'], info['model_ratio'])
+                    for i, nodestr in enumerate(env.master_df.index.tolist()):
+                        current_strategy_string += "\t"
+                        Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
+                        if env.skip_constraint is True:
                             current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
-                                                       " | " + nodestr + Qtype + "  \n"
+                                                    " | " + nodestr + Qtype + "  \n"
                         else:
-                            current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + \
-                                                       str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + \
-                                                       " | " + nodestr + Qtype + "  \n"
-                tfwriter.add_text('AutoQ/current_policy', current_strategy_string, episode)
+                            if env.master_df.loc[nodestr, 'action'] == env.master_df.loc[nodestr, 'unconstrained_action']:
+                                current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
+                                                        " | " + nodestr + Qtype + "  \n"
+                            else:
+                                current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + " <= " + \
+                                                        str(int(env.master_df.loc[nodestr, 'unconstrained_action'])) + \
+                                                        " | " + nodestr + Qtype + "  \n"
+                    tfwriter.add_text('AutoQ/current_policy', current_strategy_string, episode)
 
                 value_loss = agent.get_value_loss()
                 policy_loss = agent.get_policy_loss()
                 delta = agent.get_delta()
 
-                tfwriter.add_scalar('AutoQ/reward/last', final_reward, episode)
-                tfwriter.add_scalar('AutoQ/reward/best', best_reward, episode)
-                tfwriter.add_scalar('AutoQ/accuracy', info['accuracy'], episode)
-                tfwriter.add_scalar('AutoQ/model_ratio', info['model_ratio'], episode)
-                tfwriter.add_scalar('AutoQ/agent/value_loss', value_loss, episode)
-                tfwriter.add_scalar('AutoQ/agent/policy_loss', policy_loss, episode)
-                tfwriter.add_scalar('AutoQ/agent/delta', delta, episode)
+                if self.is_dump:
+                    tfwriter.add_scalar('AutoQ/reward/last', final_reward, episode)
+                    tfwriter.add_scalar('AutoQ/reward/best', best_reward, episode)
+                    tfwriter.add_scalar('AutoQ/accuracy', info['accuracy'], episode)
+                    tfwriter.add_scalar('AutoQ/model_ratio', info['model_ratio'], episode)
+                    tfwriter.add_scalar('AutoQ/agent/value_loss', value_loss, episode)
+                    tfwriter.add_scalar('AutoQ/agent/policy_loss', policy_loss, episode)
+                    tfwriter.add_scalar('AutoQ/agent/delta', delta, episode)
 
                 logger.info('best reward: {}\n'.format(best_reward))
                 logger.info('best policy: {}\n'.format(best_policy))
