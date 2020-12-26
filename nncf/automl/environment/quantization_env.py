@@ -2,6 +2,7 @@ import logging
 
 import os.path as osp
 from typing import List, Dict
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -16,21 +17,19 @@ import math
 import numpy as np
 import pandas as pd
 from copy import deepcopy
-from natsort import natsorted
 from collections import OrderedDict
+from natsort import natsorted
 
+from nncf.debug import is_debug, DEBUG_LOG_DIR
 from nncf.nncf_logger import logger
-
-from sklearn.preprocessing import MinMaxScaler
-
-from nncf.quantization.quantizer_id import WeightQuantizerId, \
+from nncf.hw_config import HWConfigType
+from nncf.initialization import PartialDataLoader
+from nncf.quantization.layers import BaseQuantizer
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
 
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-from nncf.hw_config import HWConfigType
-from nncf.quantization.layers import BaseQuantizer
-from nncf.initialization import PartialDataLoader
-from nncf.quantization.quantizer_id import QuantizerId
+from sklearn.preprocessing import MinMaxScaler
 
 def find_qid_by_str(quantization_controller, qid_str):
     for _qid, _q in quantization_controller.all_quantizations.items():
@@ -82,7 +81,7 @@ class ModelSizeCalculator:
 
 
 class QuantizationEnv:
-    # pylint:disable=too-many-branches
+    # pylint:disable=too-many-branches,too-many-statements
     def __init__(self,
                  quantization_controller,
                  eval_loader,
@@ -190,10 +189,13 @@ class QuantizationEnv:
         self.best_reward = -math.inf #TODO: move reward to search manager
         self.reset()
 
-        # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
-        # self._dump_master_df()
-        # self._dump_quantized_graph()
-        # self._dump_groups_of_adjacent_quantizers()
+        if is_debug():
+            self.dump_dir = Path(DEBUG_LOG_DIR) / Path("AutoQ_Env_dump")
+            self.dump_dir.mkdir(parents=True, exist_ok=True)
+            # Serialize Q.Env information. Note that these functions should be at the end of Q.Env Initialization.
+            self._dump_master_df()
+            self._dump_quantized_graph()
+            self._dump_groups_of_adjacent_quantizers()
 
         # End of QuantizationEnv.__init__()
         # --------------------------------------------------------------------------------------------------------------
@@ -545,11 +547,11 @@ class QuantizationEnv:
 
     def _dump_master_df(self):
         self.master_df.drop('state_module', axis=1).to_csv(
-            osp.join(self.config['log_dir'], self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
+            osp.join(self.dump_dir, self.model_name + "_quantizable_state_table.csv"), index_label="nodestr")
 
 
     def _dump_quantized_graph(self):
-        self.qmodel.get_graph().visualize_graph(osp.join(self.config.get("log_dir", "."), "qenv_graph.dot"))
+        self.qmodel.get_graph().visualize_graph(osp.join(self.dump_dir, "qenv_graph.dot"))
 
 
     def _dump_groups_of_adjacent_quantizers(self):
@@ -563,6 +565,6 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with open(osp.join(self.config.get("log_dir", "."),
+        with open(osp.join(self.dump_dir,
                            self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)

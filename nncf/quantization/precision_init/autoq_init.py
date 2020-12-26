@@ -4,11 +4,13 @@ from typing import List, Dict
 import os
 from torch import Tensor, nn
 
+from nncf.debug import is_debug
 from nncf.nncf_logger import logger
 from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.quantizer_id import QuantizerId
 from nncf.structures import AutoQPrecisionInitArgs
 
+from pathlib import Path
 import os.path as osp
 import time
 from datetime import datetime
@@ -32,6 +34,11 @@ class AutoQPrecisionInitializer:
     def apply_init(self):
         from nncf.automl.environment.quantization_env import QuantizationEnv
         from nncf.automl.agent.ddpg.ddpg import DDPG
+        from nncf.debug import DEBUG_LOG_DIR
+
+        if is_debug():
+            self.dump_dir = Path(DEBUG_LOG_DIR) / Path("AutoQ_Agent_dump")
+            self.dump_dir.mkdir(parents=True, exist_ok=True)
 
         start_ts = datetime.now()
 
@@ -98,7 +105,7 @@ class AutoQPrecisionInitializer:
 
         assert config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq'
         autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
-        config['episodic_nncfcfg'] = osp.join(config['log_dir'], "episodic_nncfcfg")
+        config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
         os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
 
         args = SimpleNamespace(**autoq_cfg)
@@ -112,7 +119,7 @@ class AutoQPrecisionInitializer:
         best_reward = -math.inf
         best_policy = []
 
-        tfwriter = SummaryWriter(config['log_dir'])
+        tfwriter = SummaryWriter(self.dump_dir)
 
         log_cfg=OrderedDict()
         log_cfg['compression']=config['compression']
@@ -145,7 +152,7 @@ class AutoQPrecisionInitializer:
 
             # [optional] save intermideate model
             if episode % int((num_episode+10)/10) == 0:
-                agent.save_model(config['log_dir'])
+                agent.save_model(self.dump_dir)
 
             # update
             step += 1
@@ -203,7 +210,7 @@ class AutoQPrecisionInitializer:
                 policy_dict[episode]=env.master_df['action'].astype('int')
                 pd.DataFrame(
                     policy_dict.values(), index=policy_dict.keys()).T.sort_index(axis=1, ascending=False).to_csv(
-                        osp.join(config['log_dir'], "policy_per_episode.csv"), index_label="nodestr")
+                        osp.join(self.dump_dir, "policy_per_episode.csv"), index_label="nodestr")
 
                 if final_reward > best_reward:
                     best_reward = final_reward
@@ -214,7 +221,7 @@ class AutoQPrecisionInitializer:
                     pd.DataFrame(
                         best_policy_dict.values(), index=best_policy_dict.keys()).T.sort_index(
                             axis=1, ascending=False).to_csv(
-                                osp.join(config['log_dir'], "best_policy.csv"), index_label="nodestr")
+                                osp.join(self.dump_dir, "best_policy.csv"), index_label="nodestr")
 
                     best_policy_string = bit_stats_df.to_markdown() + "\n\n\n"
                     best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
