@@ -1,12 +1,10 @@
 from collections import OrderedDict
-from typing import List, Dict
+from typing import Dict
 
 import os
-from torch import Tensor, nn
 
 from nncf.debug import is_debug
 from nncf.nncf_logger import logger
-from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.quantizer_id import QuantizerId
 from nncf.structures import AutoQPrecisionInitArgs
 
@@ -127,7 +125,8 @@ class AutoQPrecisionInitializer:
 
             log_cfg=OrderedDict()
             log_cfg['compression']=config['compression']
-            tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
+            tfwriter.add_text('AutoQ/run_config', json.dumps(log_cfg, indent=4, sort_keys=False).\
+                replace("\n", "\n\n"), 0)
             tfwriter.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
 
         agent.is_training = True
@@ -155,7 +154,6 @@ class AutoQPrecisionInitializer:
             T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 
             # [optional] save intermideate model
-            
             if self.is_dump and episode % int((num_episode+10)/10) == 0:
                 agent.save_model(self.dump_dir)
 
@@ -231,8 +229,9 @@ class AutoQPrecisionInitializer:
                                     osp.join(self.dump_dir, "best_policy.csv"), index_label="nodestr")
 
                         best_policy_string = bit_stats_df.to_markdown() + "\n\n\n"
-                        best_policy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
-                                            .format(episode, final_reward, info['accuracy'], info['model_ratio'])
+                        best_policy_string += "Episode: {}, Reward: {:.3f}, " + \
+                                              "Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
+                                              .format(episode, final_reward, info['accuracy'], info['model_ratio'])
                         for i, nodestr in enumerate(env.master_df.index.tolist()):
                             best_policy_string += "\t"
                             Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
@@ -254,8 +253,9 @@ class AutoQPrecisionInitializer:
                 if self.is_dump:
                     # log current policy to tensorboard
                     current_strategy_string = bit_stats_df.to_markdown() + "\n\n\n"
-                    current_strategy_string += "Episode: {}, Reward: {:.3f}, Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
-                                            .format(episode, final_reward, info['accuracy'], info['model_ratio'])
+                    current_strategy_string += "Episode: {}, Reward: {:.3f}, " + \
+                                               "Accuracy: {:.3f}, Model_Ratio: {:.3f}\n\n\n" \
+                                               .format(episode, final_reward, info['accuracy'], info['model_ratio'])
                     for i, nodestr in enumerate(env.master_df.index.tolist()):
                         current_strategy_string += "\t"
                         Qtype=' (WQ)' if env.master_df.is_wt_quantizer[nodestr] else ' (AQ)'
@@ -263,7 +263,8 @@ class AutoQPrecisionInitializer:
                             current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
                                                     " | " + nodestr + Qtype + "  \n"
                         else:
-                            if env.master_df.loc[nodestr, 'action'] == env.master_df.loc[nodestr, 'unconstrained_action']:
+                            if env.master_df.loc[nodestr, 'action'] == \
+                                env.master_df.loc[nodestr, 'unconstrained_action']:
                                 current_strategy_string += str(int(env.master_df.loc[nodestr, 'action'])) + \
                                                         " | " + nodestr + Qtype + "  \n"
                             else:
