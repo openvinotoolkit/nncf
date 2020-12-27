@@ -35,7 +35,10 @@ class PruningScheduler(CompressionScheduler):
 
         # Pruning rates
         self.initial_pruning = self.algo.pruning_init
-        self.pruning_target = self._params.get('pruning_target', 0.5)
+        if self.algo.prune_flops:
+            self.pruning_target = self._params.get('pruning_flops_target')
+        else:
+            self.pruning_target = self._params.get('pruning_target', 0.5)
 
     def load_state_dict(self, state_dict):
         super().load_state_dict(state_dict)
@@ -62,6 +65,7 @@ class PruningScheduler(CompressionScheduler):
 
     def _calc_density_level(self):
         return 1 - self.current_pruning_level()
+
 
 @PRUNING_SCHEDULERS.register("baseline")
 class BaselinePruningScheduler(PruningScheduler):

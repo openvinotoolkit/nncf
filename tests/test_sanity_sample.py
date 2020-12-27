@@ -413,10 +413,12 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
+        mocked_printing = mocker.patch('examples.classification.main.print_statistics')
         if is_staged_quantization(config['nncf_config']):
             mocker.patch("examples.classification.staged_quantization_worker.train_epoch_staged")
             mocker.patch("examples.classification.staged_quantization_worker.validate")
             import examples.classification.staged_quantization_worker as staged_worker
+            mocked_printing = mocker.patch('examples.classification.staged_quantization_worker.print_statistics')
             staged_worker.validate.return_value = (0, 0)
         else:
             mocker.patch("examples.classification.main.train_epoch")
@@ -424,13 +426,21 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
             sample.validate.return_value = (0, 0)
     elif config["sample_type"] == "semantic_segmentation":
         import examples.semantic_segmentation.main as sample
+        mocked_printing = mocker.patch('examples.semantic_segmentation.main.print_statistics')
         import examples.semantic_segmentation.train
         mocker.spy(examples.semantic_segmentation.train.Train, "__init__")
     elif config["sample_type"] == "object_detection":
         import examples.object_detection.main as sample
-        mocker.patch("examples.object_detection.main.train")
+        mocker.spy(sample, "train")
+        mocked_printing = mocker.patch('examples.object_detection.main.print_statistics')
+
 
     sample.main(shlex.split(command_line))
+
+    if not config["sample_type"] == "object_detection":
+        assert mocked_printing.call_count == 2
+    else:
+        assert mocked_printing.call_count == 3
 
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
