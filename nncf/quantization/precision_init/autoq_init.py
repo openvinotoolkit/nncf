@@ -34,9 +34,13 @@ class AutoQPrecisionInitializer:
         from nncf.automl.agent.ddpg.ddpg import DDPG
         from nncf.debug import DEBUG_LOG_DIR
 
-        self.is_dump = is_debug()
-        if self.is_dump:
-            self.dump_dir = Path(DEBUG_LOG_DIR) / Path("AutoQ_Agent_dump")
+        self.autoq_cfg = self.init_args.config['compression']['initializer']['precision']
+        self._dump_autoq_data = self.autoq_cfg.get('dump_init_precision_data', False)
+        if self._dump_autoq_data or is_debug():
+            dump_dir = self.init_args.config.get('log_dir', None)
+            if dump_dir is None:
+                dump_dir = DEBUG_LOG_DIR
+            self.dump_dir = Path(dump_dir) / Path("AutoQ_Agent_dump")
             self.dump_dir.mkdir(parents=True, exist_ok=True)
 
         start_ts = datetime.now()
@@ -52,8 +56,7 @@ class AutoQPrecisionInitializer:
         nb_action = 1
 
         # Instantiate Automation Agent
-        agent = DDPG(nb_state, nb_action,
-                    hparam_override=self.init_args.config['compression']['initializer']['precision'])
+        agent = DDPG(nb_state, nb_action, hparam_override=self.autoq_cfg)
 
         best_policy, best_reward = self._search(agent, env, self.init_args.config)
 
@@ -105,7 +108,7 @@ class AutoQPrecisionInitializer:
         assert config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq'
         autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
 
-        if self.is_dump:
+        if self._dump_autoq_data:
             config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
             os.makedirs(config['episodic_nncfcfg'], exist_ok=True)
 
@@ -120,7 +123,7 @@ class AutoQPrecisionInitializer:
         best_reward = -math.inf
         best_policy = []
 
-        if self.is_dump:
+        if self._dump_autoq_data:
             tfwriter = SummaryWriter(self.dump_dir)
 
             log_cfg=OrderedDict()
@@ -154,7 +157,7 @@ class AutoQPrecisionInitializer:
             T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 
             # [optional] save intermideate model
-            if self.is_dump and episode % int((num_episode+10)/10) == 0:
+            if self._dump_autoq_data and episode % int((num_episode+10)/10) == 0:
                 agent.save_model(self.dump_dir)
 
             # update
@@ -199,7 +202,7 @@ class AutoQPrecisionInitializer:
                 episode += 1
                 T = []
 
-                if self.is_dump:
+                if self._dump_autoq_data:
                     # Save nncf compression cfg
                     episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
                     with open(episode_cfgfile, "w") as outfile:
@@ -220,7 +223,7 @@ class AutoQPrecisionInitializer:
                     best_reward = final_reward
                     best_policy = env.master_df['action']
 
-                    if self.is_dump:
+                    if self._dump_autoq_data:
                         # log best policy to tensorboard
                         best_policy_dict[episode]=env.master_df['action'].astype('int')
                         pd.DataFrame(
@@ -250,7 +253,7 @@ class AutoQPrecisionInitializer:
                                                         " | " + nodestr + Qtype + "  \n"
                         tfwriter.add_text('AutoQ/best_policy', best_policy_string, episode)
 
-                if self.is_dump:
+                if self._dump_autoq_data:
                     # log current policy to tensorboard
                     current_strategy_string = bit_stats_df.to_markdown() + "\n\n\n"
                     current_strategy_string += "Episode: {}, Reward: {:.3f}, " + \
@@ -277,7 +280,7 @@ class AutoQPrecisionInitializer:
                 policy_loss = agent.get_policy_loss()
                 delta = agent.get_delta()
 
-                if self.is_dump:
+                if self._dump_autoq_data:
                     tfwriter.add_scalar('AutoQ/reward/last', final_reward, episode)
                     tfwriter.add_scalar('AutoQ/reward/best', best_reward, episode)
                     tfwriter.add_scalar('AutoQ/accuracy', info['accuracy'], episode)
