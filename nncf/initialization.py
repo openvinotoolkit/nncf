@@ -289,41 +289,25 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                autoq_eval_fn=None,
                                autoq_eval_loader=None,
                                device='cuda') -> 'NNCFConfig':
-    quantization_config = None
-    if 'compression' in nncf_config:
-        compression_config = nncf_config['compression']
-        if isinstance(compression_config, list):
-            for d in compression_config:
-                if d['algorithm'] == 'quantization':
-                    quantization_config = d
-        else:
-            quantization_config = compression_config if compression_config['algorithm'] == 'quantization' else None
 
-    if quantization_config and \
-        'autoq' == quantization_config.get('initializer', {}).get('precision', {}).get('type', {}):
+    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
+                                                                  device=device),
+                                        BNAdaptationInitArgs(data_loader=train_loader,
+                                                             device=device)])
 
-        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                        device=device),
-                                                BNAdaptationInitArgs(data_loader=train_loader,
-                                                                    device=device),
-                                                AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+    if criterion:
+        if not criterion_fn:
+            criterion_fn = default_criterion_fn
+        nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
+                                                                          criterion=criterion,
+                                                                          data_loader=train_loader,
+                                                                          device=device)])
+
+    if autoq_eval_fn:
+        if not autoq_eval_loader:
+            autoq_eval_loader = train_loader
+        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
                                                                     eval_fn=autoq_eval_fn,
                                                                     nncf_config=nncf_config)])
-    else:
-        if criterion:
-            if not criterion_fn:
-                criterion_fn = default_criterion_fn
-            nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
-                                                                            criterion=criterion,
-                                                                            data_loader=train_loader,
-                                                                            device=device),
-                                                QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                        device=device),
-                                                BNAdaptationInitArgs(data_loader=train_loader,
-                                                                    device=device)])
-        else:
-            nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                        device=device),
-                                                BNAdaptationInitArgs(data_loader=train_loader,
-                                                                    device=device)])
+
     return nncf_config
