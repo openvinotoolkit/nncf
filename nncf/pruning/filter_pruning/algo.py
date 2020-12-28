@@ -76,6 +76,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._init_pruned_modules_params()
         self.flops_count_init()
         self.full_flops = sum(self.nodes_flops.values())
+        self.current_flops = self.full_flops
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
@@ -91,9 +92,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     def add_algo_specific_stats(self, stats):
         stats['pruning_rate'] = self.pruning_rate
-        flops = self._calculate_flops_pruned_model_by_masks()
-        stats["FLOPS pruning level"] = 1 - flops / self.full_flops
-        stats["FLOPS current / full"] = f"{flops} / {self.full_flops}"
+        stats["FLOPS pruning level"] = 1 - self.current_flops / self.full_flops
+        stats["FLOPS current / full"] = f"{self.current_flops} / {self.full_flops}"
         return stats
 
     def freeze(self):
@@ -257,6 +257,7 @@ class FilterPruningController(BasePruningAlgoController):
                 left = middle
         flops = self._calculate_flops_in_uniformly_pruned_model(right)
         if flops < target_flops:
+            self.current_flops = flops
             return right
         raise RuntimeError("Can't prune model to asked flops pruning rate = {}".format(target_flops_pruning_rate))
 
@@ -309,6 +310,9 @@ class FilterPruningController(BasePruningAlgoController):
                     pruning_module = minfo.operand
                     pruning_module.binary_filter_pruning_mask = mask
 
+        # Calculate actual flops with new masks
+        self.current_flops = self._calculate_flops_pruned_model_by_masks()
+
     def _set_binary_masks_for_all_pruned_modules(self, pruning_rate):
         nncf_logger.debug("Setting new binary masks for all pruned modules together.")
         filter_importances = []
@@ -338,6 +342,9 @@ class FilterPruningController(BasePruningAlgoController):
             for minfo in group.nodes:
                 pruning_module = minfo.operand
                 pruning_module.binary_filter_pruning_mask = mask
+
+        # Calculate actual flops with new masks
+        self.current_flops = self._calculate_flops_pruned_model_by_masks()
 
     def _set_binary_masks_for_all_pruned_modules_by_flops_target(self, target_flops_pruning_rate):
         """
@@ -409,6 +416,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
             if flops < target_flops:
+                self.current_flops = flops
                 return
             cur_num += 1
         raise RuntimeError("Can't prune model to asked flops pruning rate")
