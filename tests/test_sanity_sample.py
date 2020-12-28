@@ -698,19 +698,22 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
     command_line = " ".join(f'{key} {val}' for key, val in args.items())
-    # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
-    # mocked train function
-    mocker.patch("examples.common.utils.SafeMLFLow")
+    # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
+    # SafeMLFLow, which happens with a mocked train function
     if desc.sample_type == SampleType.CLASSIFICATION:
         import examples.classification.main as sample
         mocker.patch("examples.classification.staged_quantization_worker.train_staged")
         mocker.patch("examples.classification.main.train")
+        mocker.patch("examples.classification.main.SafeMLFLow")
+        mocker.patch("examples.classification.staged_quantization_worker.SafeMLFLow")
     elif desc.sample_type == SampleType.SEMANTIC_SEGMENTATION:
         import examples.semantic_segmentation.main as sample
         mocker.patch("examples.semantic_segmentation.main.train")
+        mocker.patch("examples.semantic_segmentation.main.SafeMLFLow")
     elif desc.sample_type == SampleType.OBJECT_DETECTION:
         import examples.object_detection.main as sample
         mocker.patch("examples.object_detection.main.train")
+        mocker.patch("examples.object_detection.main.SafeMLFLow")
     desc.setup_spy(mocker)
 
     sample.main(shlex.split(command_line))
