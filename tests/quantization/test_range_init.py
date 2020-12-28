@@ -546,7 +546,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
                           "bn_adaptation_call_count"),
                          [
                              (lambda x: x['initializer'].pop('range'), 1, 1, 1),
-                             (lambda x: x.pop('initializer'), 1, 0, 0),
+                             (lambda x: x.pop('initializer'), 1, 0, 1),
                              (lambda x: x['initializer'].pop('precision'), 1, 0, 1),
                              (lambda x: x['initializer']['range'].update({'num_init_samples': 0}), 0, 1, 1),
                          ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])

@@ -193,14 +193,23 @@ class CompressionAlgorithmController:
         initializer_params = config.get("initializer", {})
         init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
         num_bn_adaptation_samples = init_bn_adapt_config.get('num_bn_adaptation_samples', 0)
-        num_bn_forget_samples = init_bn_adapt_config.get('num_bn_forget_samples', 1024)
+        num_bn_forget_samples = init_bn_adapt_config.get('num_bn_forget_samples', 0)
+        try:
+            bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
+            has_bn_adapt_init_args = True
+        except KeyError:
+            has_bn_adapt_init_args = False
+
+        if not init_bn_adapt_config:
+            if has_bn_adapt_init_args:
+                nncf_logger.warning("Enabling quantization batch norm adaptation with default parameters.")
+                num_bn_adaptation_samples = 2000
+                num_bn_forget_samples = 1000
 
         if num_bn_adaptation_samples < 0:
             raise AttributeError('Number of adaptation samples must be >= 0')
         if num_bn_adaptation_samples > 0:
-            try:
-                bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
-            except KeyError:
+            if not has_bn_adapt_init_args:
                 nncf_logger.info(
                     'Could not run batchnorm adaptation '
                     'as the adaptation data loader is not provided as an extra struct. '
