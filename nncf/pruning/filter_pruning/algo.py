@@ -243,9 +243,8 @@ class FilterPruningController(BasePruningAlgoController):
 
     def set_pruning_rate(self, pruning_rate):
         # Pruning rate from scheduler can be flops pruning rate or percentage of params that should be pruned
-        same_pruning_rate = np.isclose(pruning_rate, self.pruning_rate)
         self.pruning_rate = pruning_rate
-        if not self.frozen and not same_pruning_rate:
+        if not self.frozen:
             nncf_logger.info("Computing filter importances and masks...")
             if self.all_weights:
                 if self.prune_flops:
