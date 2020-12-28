@@ -57,7 +57,7 @@ class UNet(nn.Module):
                            learned upsampling.
                            'upsample' will use bilinear upsampling.
         """
-        super(UNet, self).__init__()
+        super().__init__()
         assert up_mode in ('upconv', 'upsample')
         if (input_size_hw[0] % 2**(depth - 1)) or (input_size_hw[1] % 2**(depth - 1)):
             raise ValueError("UNet may only operate on input resolutions aligned to 2**(depth - 1)")
@@ -102,7 +102,7 @@ class UNet(nn.Module):
 
 class UNetConvBlock(nn.Module):
     def __init__(self, in_size, out_size, padding, batch_norm):
-        super(UNetConvBlock, self).__init__()
+        super().__init__()
         block = []
 
         block.append(nn.Conv2d(in_size, out_size, kernel_size=3, padding=int(padding)))
@@ -144,7 +144,7 @@ def center_crop(layer, target_size):
 
 class UNetUpBlock(nn.Module):
     def __init__(self, in_size, out_size, up_mode, padding, batch_norm):
-        super(UNetUpBlock, self).__init__()
+        super().__init__()
         if up_mode == 'upconv':
             self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2)
         elif up_mode == 'upsample':

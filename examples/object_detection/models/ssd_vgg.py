@@ -42,7 +42,7 @@ EXTRA_OUTPUT_INDICES = {
 
 class SSD_VGG(nn.Module):
     def __init__(self, cfg, size, num_classes, batch_norm=False):
-        super(SSD_VGG, self).__init__()
+        super().__init__()
         self.config = cfg
         self.num_classes = num_classes
         self.size = size

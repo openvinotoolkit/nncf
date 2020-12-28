@@ -26,7 +26,7 @@ class GNMT(Seq2Seq):
             and decoder
         """
 
-        super(GNMT, self).__init__(batch_first=batch_first)
+        super().__init__(batch_first=batch_first)
 
         if share_embedding:
             embedder = nn.Embedding(vocab_size, hidden_size,

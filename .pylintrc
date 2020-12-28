@@ -25,6 +25,7 @@ max-line-length = 120
 ignore-docstrings = yes
 ignored-modules = numpy,torch,cv2,openvino
 extension-pkg-whitelist = torch,cv2
+init-hook='import sys; sys.setrecursionlimit(8 * sys.getrecursionlimit())' # to avoid https://stackoverflow.com/questions/36496192/pylint-infinite-recursion-in-astriod-package
 
 [SIMILARITIES]
 ignore-imports = yes
