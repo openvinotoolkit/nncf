@@ -76,14 +76,6 @@ class AutoQPrecisionInitializer:
 
 
     def _search(self, agent, env, config):
-        # def map_precision(action):
-        #     action = float(action)
-        #     min_bit, max_bit = (1,3)
-        #     action = (max_bit - min_bit) * action + min_bit
-        #     action = int(np.round(action, 0))
-        #     action = 2**action
-        #     return int(action)
-
         def map_precision(action):
             precision_set = [2,4,8]
             precision_set = np.array(sorted(precision_set))
@@ -95,15 +87,6 @@ class AutoQPrecisionInitializer:
                     return int(precision_set[i])
             return int(precision_set[i])
 
-        # def map_precision(action):
-        #     action = float(action)
-        #     min_exp, max_exp = (1,3)
-        #     lbound, rbound = min_exp - 0.5, max_exp + 0.5
-        #     action = (rbound - lbound) * action + lbound
-        #     action = np.round(action, 0)
-        #     action = np.clip(action, min_exp, max_exp)
-        #     action = int(2**action)
-        #     return action
 
         assert config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq'
         autoq_cfg = config.get('compression', {}).get('initializer', {}).get('precision')
