@@ -14,6 +14,7 @@ from collections import OrderedDict
 from yattag import Doc
 from pathlib import Path
 from tests.conftest import TEST_ROOT, PROJECT_ROOT
+from nncf.config import NNCFConfig
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
@@ -85,6 +86,12 @@ class TestSotaCheckpoints:
     CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
+
+    @staticmethod
+    def q_dq_config(config):
+        nncf_config = NNCFConfig.from_json(config)
+        nncf_config["export_to_onnx_standard_ops"] = True
+        return nncf_config
 
     @staticmethod
     def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
@@ -378,25 +385,40 @@ class TestSotaCheckpoints:
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
 
-    @pytest.mark.parametrize("eval_test_struct", param_list,
-                             ids=ids_list)
-    def test_openvino_eval(self, openvino, sota_checkpoints_dir, sota_data_dir, ov_data_dir,
-                           eval_test_struct: EvalRunParamsStruct):
+    # pylint:disable=too-many-branches
+    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
+    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
+    def test_openvino_eval(self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir, ov_data_dir,
+                           eval_test_struct: EvalRunParamsStruct, onnx_type):
         if not openvino:
             pytest.skip()
         os.chdir(PROJECT_ROOT)
         onnx_path = PROJECT_ROOT / 'onnx'
+        q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
         ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
+        q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
+        with open(str(q_dq_config_path), 'w') as outfile:
+            json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
         if not os.path.exists(onnx_path):
             os.mkdir(onnx_path)
         self.CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py --cpu-only --config {conf} \
              --data {dataset}/{data_name} --to-onnx={onnx_path}"
         self.test = "openvino_eval"
-        onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, conf=eval_test_struct.config_name_,
+        if onnx_type == "q_dq":
+            if not os.path.exists(onnx_path / 'q_dq'):
+                os.mkdir(onnx_path / 'q_dq')
+            onnx_name = str("q_dq/" + eval_test_struct.model_name_ + ".onnx")
+            with open(str(q_dq_config_path), 'w') as outfile:
+                json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
+            nncf_config_path = q_dq_config_path
+        else:
+            onnx_name = str(eval_test_struct.model_name_ + ".onnx")
+            nncf_config_path = eval_test_struct.config_name_
+        onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, conf=nncf_config_path,
                                                  dataset=sota_data_dir,
                                                  data_name=eval_test_struct.dataset_name_,
                                                  sample_type=eval_test_struct.sample_type_,
-                                                 onnx_path=(onnx_path / str(eval_test_struct.model_name_ + ".onnx")))
+                                                 onnx_path=(onnx_path / onnx_name))
         if eval_test_struct.resume_file_:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
             onnx_cmd += " --resume {}".format(resume_file_path)
@@ -404,18 +426,30 @@ class TestSotaCheckpoints:
             onnx_cmd += " --pretrained"
         exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
         if exit_code == 0 and err_str is None:
-            onnx_model = self.get_onnx_model_file_path(eval_test_struct.model_name_)
             mean_val = eval_test_struct.mean_val_
             scale_val = eval_test_struct.scale_val_
-            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
+            if onnx_type == "q_dq":
+                onnx_model = self.get_onnx_model_file_path(str("q_dq/" + eval_test_struct.model_name_))
+                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+            else:
+                onnx_model = self.get_onnx_model_file_path(eval_test_struct.model_name_)
+                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                         " --mean_values={} --scale_values={} --output_dir {}" \
+                    .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
             exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
             if exit_code == 0 and err_str is None:
                 config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
-                ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                         "{}/{config}.csv".format(config_folder, ov_data_dir, ir_model_folder,
-                                                  PROJECT_ROOT, config=eval_test_struct.model_name_)
+                if onnx_type == "q_dq":
+                    ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
+                             "{}/q_dq_report.csv".format(config_folder, eval_test_struct.model_name_, ov_data_dir,
+                                                         q_dq_ir_model_folder, PROJECT_ROOT)
+                else:
+                    ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
+                             "{}/{config}.csv".format(config_folder, ov_data_dir,
+                                                      ir_model_folder, PROJECT_ROOT,
+                                                      config=eval_test_struct.model_name_)
                 exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
                 if exit_code != 0 or err_str is not None:
                     pytest.fail(err_str)
