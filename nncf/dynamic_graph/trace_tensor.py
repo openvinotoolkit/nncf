@@ -60,7 +60,8 @@ class TracedTensor(torch.Tensor):
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.
     # TODO: make NNCF utilize the __torch_function__ API instead.
     #pylint:disable=protected-access
-    __torch_function__ = torch._C._disabled_torch_function_impl
+    if hasattr(torch._C, "_disabled_torch_function_impl"):
+        __torch_function__ = torch._C._disabled_torch_function_impl
 
 
 def is_iterable(item):
