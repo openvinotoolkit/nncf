@@ -1,0 +1,31 @@
+{
+    "model": "MaskRCNN",
+
+    "epochs": 12,
+    "batch_size": 64,
+    "weight_decay": 0.0001,
+
+    "dataset": "coco/2017",
+
+    "optimizer": {
+        "type": "momentum",
+        "optimizer_params": {
+            "momentum": 0.9,
+            "nesterov": true
+        },
+        "schedule_type": "step",
+        "schedule_params": {
+            "warmup_learning_rate": 0.0067,
+            "warmup_steps": 500,
+            "init_learning_rate": 0.08,
+            "learning_rate_levels": [
+                0.008,
+                0.0008
+            ],
+            "learning_rate_steps": [
+                15000,
+                20000
+            ]
+        }
+    }
+}

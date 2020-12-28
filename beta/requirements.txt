@@ -1,0 +1,13 @@
+absl-py==0.9
+addict
+networkx
+tensorflow==2.3.1
+tensorflow_datasets==3.2.1
+tensorflow_addons
+tensorflow_hub
+texttable
+pycocotools
+opencv-python
+pytest
+pytest-mock
+pytest-dependency
