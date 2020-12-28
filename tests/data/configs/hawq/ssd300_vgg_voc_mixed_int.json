@@ -83,16 +83,5 @@
         ],
         "flip": true,
         "top_k": 200
-    },
-    "target_device": "VPU",
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "precision": {
-                "type": "hawq",
-                "num_data_points": 2,
-                "iter_number": 1
-            }
-        }
     }
 }

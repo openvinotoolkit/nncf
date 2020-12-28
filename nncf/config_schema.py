@@ -307,6 +307,20 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                      "the layer by number of bits for its "
                                                                      "quantization.",
                                                          default=1.5),
+                    "eval_subset_ratio": with_attributes(_NUMBER,
+                                                         description="The desired ratio of dataloader to be iterated "
+                                                                     "during each search iteration of AutoQ precision "
+                                                                     "initialization. Specifically, this ratio applies "
+                                                                     "to the registered autoq_eval_loader via "
+                                                                     "register_default_init_args.",
+                                                         default=1.0),
+                    "warmup_iter_number": with_attributes(_NUMBER,
+                                                         description="The number of random policy at the beginning of "
+                                                                     "of AutoQ precision initialization to populate "
+                                                                     "replay buffer with experiences. This key is "
+                                                                     "meant for internal testing use. Users need not "
+                                                                     "to configure.",
+                                                         default=20),
                     "bitwidth_per_scope": {
                         "type": "array",
                         "items": {
@@ -328,9 +342,12 @@ QUANTIZATION_INITIALIZER_SCHEMA = {
                                                                          " It can be used to accelerate mixed precision"
                                                                          "initialization by using average Hessian "
                                                                          "traces from previous run of HAWQ algorithm."),
-                    "dump_hawq_data": with_attributes(_BOOLEAN,
-                                                      description="Whether to dump data related to HAWQ algorithm:"
-                                                                  "bitwidth graph, average traces and different plots.",
+                    "dump_init_precision_data": with_attributes(_BOOLEAN,
+                                                      description="Whether to dump data related to Precision Initialization "
+                                                                  "algorithm. HAWQ dump includes bitwidth graph, average "
+                                                                  "traces and different plots. AutoQ dump includes DDPG "
+                                                                  "agent learning trajectory in tensorboard and "
+                                                                  "mixed-precision environment metadata",
                                                       default=True),
                     "bitwidth_assignment_mode": BITWIDTH_ASSIGNMENT_MODE_SCHEMA,
                 },

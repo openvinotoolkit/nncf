@@ -53,7 +53,7 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph, \
     QuantizersBetweenQuantizableLayers, QuantizerInsertionInfo
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
 from nncf.utils import get_state_dict_names_with_modules
 
@@ -335,11 +335,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     qconfig = self._select_final_qconfig(qconfig_list,
                                                          self.global_quantizer_constraints[QuantizerGroup.WEIGHTS],
                                                          qconfig_overrides)
-                except RuntimeError:
+                except RuntimeError as e:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
                     err_msg += "First conflicting quantizer location: {}".format(str(module_scope))
-                    raise RuntimeError(err_msg)
+                    raise RuntimeError(err_msg) from e
             else:
                 assert len(
                     qconfig_list) == 1, "Non-HW config scenarios should produce single quantizer configs for each " \
@@ -414,12 +414,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                   self.global_quantizer_constraints[
                                                                       QuantizerGroup.ACTIVATIONS],
                                                                   qconfig_overrides)
-                except RuntimeError:
+                except RuntimeError as e:
                     err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
                     err_msg += "capabilities as specified in HW config type '{}'. ".format(self.hw_config.target_device)
                     err_msg += "First conflicting quantizer location: "
                     err_msg += str(ia_op_exec_context)
-                    raise RuntimeError(err_msg)
+                    raise RuntimeError(err_msg) from e
 
                 quantizer_config.input_shape = quantizer_input_shape
                 quantizer_id = NonWeightQuantizerId(ia_op_exec_context)
@@ -876,16 +876,6 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
             quantizer.set_export_mode(export_mode)
 
-        if is_main_process() and should_init:
-            self.initialize_quantizer_params()
-
-        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
-        params = quantization_config.get('params', None)
-        self.is_staged_scheduler = bool(params)
-        if self.is_staged_scheduler:
-            scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
-            self._scheduler = scheduler_cls(self, params)
-
         if self._collect_compression_metrics:
             self.metric_store = {}
             quantizer_setup_type = self.quantization_config.get('quantizer_setup_type')
@@ -897,7 +887,18 @@ class QuantizationController(QuantizationControllerBase):
                                                                   self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
-            self.update_metric_store(True)
+
+        params = quantization_config.get('params', None)
+        self.is_staged_scheduler = bool(params)
+
+        if is_main_process() and should_init:
+            self.initialize_quantizer_params()
+        self.update_metric_store(True)
+
+        # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
+        if self.is_staged_scheduler:
+            scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
+            self._scheduler = scheduler_cls(self, params)
 
     def prepare_for_export(self):
         for quantizer_id, quantizer in self.all_quantizations.items():
@@ -980,14 +981,24 @@ class QuantizationController(QuantizationControllerBase):
         if init_precision_config:
             precision_init_type = init_precision_config.get('type', 'manual')
             precision_init_args = None
-            if precision_init_type != 'manual':
+            if precision_init_type == 'hawq':
                 try:
                     precision_init_args = self.quantization_config.get_extra_struct(QuantizationPrecisionInitArgs)
-                except KeyError:
+                except KeyError as e:
                     raise ValueError(
                         'Specified non-manual precision initialization in the NNCF config, '
                         'but the initializing data loader and loss criterion are not provided as an extra struct. '
-                        'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` class')
+                        'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` '
+                        'class') from e
+            elif precision_init_type == 'autoq':
+                try:
+                    precision_init_args = self.quantization_config.get_extra_struct(AutoQPrecisionInitArgs)
+                except KeyError:
+                    raise ValueError(
+                        'Specified Automated precision initialization in the NNCF config, '
+                        'but the initializing data loader and loss criterion are not provided as an extra struct. '
+                        'Refer to `NNCFConfig.register_extra_structs` and the `AutoQPrecisionInitArgs` '
+                        'class') from e
 
             init_impl = PrecisionInitializerFactory.create(precision_init_type)
             initializer = init_impl(self, init_precision_config, precision_init_args)
@@ -1033,11 +1044,11 @@ class QuantizationController(QuantizationControllerBase):
         if max_num_init_samples > 0:
             try:
                 range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
-            except KeyError:
+            except KeyError as e:
                 raise ValueError(
                     'Should run range initialization as specified via config,'
                     'but the initializing data loader is not provided as an extra struct. '
-                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class')
+                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
             data_loader = range_init_args.data_loader
             batch_size = data_loader.batch_size
             max_num_init_steps = np.ceil(max_num_init_samples / batch_size)

@@ -17,7 +17,7 @@ import torch.nn as nn
 
 class Inception(nn.Module):
     def __init__(self, in_planes, n1x1, n3x3red, n3x3, n5x5red, n5x5, pool_planes):
-        super(Inception, self).__init__()
+        super().__init__()
         # 1x1 conv branch
         self.b1 = nn.Sequential(
             nn.Conv2d(in_planes, n1x1, kernel_size=1),
@@ -66,7 +66,7 @@ class Inception(nn.Module):
 
 class GoogLeNet(nn.Module):
     def __init__(self):
-        super(GoogLeNet, self).__init__()
+        super().__init__()
         self.pre_layers = nn.Sequential(
             nn.Conv2d(3, 192, kernel_size=3, padding=1),
             nn.BatchNorm2d(192),

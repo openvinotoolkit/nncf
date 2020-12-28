@@ -200,6 +200,9 @@ class BaseQuantizer(nn.Module):
     def run_export_quantization(self, x: torch.Tensor):
         raise NotImplementedError
 
+    def extra_repr(self):
+        return 'bit={}, ch={}, wt={}'.format(
+            self.num_bits, self.per_channel, self.is_weights)
 
 class QuantizersSwitcher:
     """ Enables/disables quantizers with saving and restoring original state """

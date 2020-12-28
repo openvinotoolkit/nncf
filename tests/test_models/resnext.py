@@ -21,7 +21,7 @@ class Block(nn.Module):
     expansion = 2
 
     def __init__(self, in_planes, cardinality=32, bottleneck_width=4, stride=1):
-        super(Block, self).__init__()
+        super().__init__()
         group_width = cardinality * bottleneck_width
         self.conv1 = nn.Conv2d(in_planes, group_width, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(group_width)
@@ -49,7 +49,7 @@ class Block(nn.Module):
 
 class ResNeXt(nn.Module):
     def __init__(self, num_blocks, cardinality, bottleneck_width, num_classes=10):
-        super(ResNeXt, self).__init__()
+        super().__init__()
         self.cardinality = cardinality
         self.bottleneck_width = bottleneck_width
         self.in_planes = 64

@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class RMBlock(nn.Module):
     def __init__(self, input_planes, squeeze_planes, output_planes, downsample=False, dropout_ratio=0.1,
                  activation=nn.ELU):
-        super(RMBlock, self).__init__()
+        super().__init__()
         self.downsample = downsample
         self.input_planes = input_planes
         self.output_planes = output_planes
@@ -57,7 +57,7 @@ class RMBlock(nn.Module):
 class RMNetBody(nn.Module):
     def __init__(self, block=RMBlock, blocks_per_stage=(None, 4, 8, 10, 11), trunk_width=(32, 32, 64, 128, 256),
                  bottleneck_width=(None, 8, 16, 32, 64)):
-        super(RMNetBody, self).__init__()
+        super().__init__()
         assert len(blocks_per_stage) == len(trunk_width) == len(bottleneck_width)
         self.dim_out = trunk_width[-1]
 
@@ -103,7 +103,7 @@ class RMNetBody(nn.Module):
 
 class RMNetClassifierCifar(nn.Module):
     def __init__(self, num_classes, pretrained=False, body=RMNetBody, dropout_ratio=0.1):
-        super(RMNetClassifierCifar, self).__init__()
+        super().__init__()
         self.dropout_ratio = dropout_ratio
         self.backbone = body()
         self.extra_conv = nn.Conv2d(256, 512, 3, stride=2, padding=1, bias=False)

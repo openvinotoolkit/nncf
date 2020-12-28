@@ -19,7 +19,7 @@ from nncf.utils import add_domain
 
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale, eps, across_spatial=0, channel_shared=0):
-        super(L2Norm, self).__init__()
+        super().__init__()
         self.n_channels = n_channels
         self.scale = scale or None
         self.eps = eps

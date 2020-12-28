@@ -18,7 +18,7 @@ class Seq2Seq(nn.Module):
         :param batch_first: if True the model uses (batch, seq, feature)
             tensors, if false the model uses (seq, batch, feature) tensors
         """
-        super(Seq2Seq, self).__init__()
+        super().__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.batch_first = batch_first

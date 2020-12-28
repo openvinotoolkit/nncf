@@ -1,3 +1,4 @@
+import math
 import logging
 from collections import OrderedDict
 
@@ -11,7 +12,8 @@ from tqdm import tqdm
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, BNAdaptationInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
+    BNAdaptationInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
@@ -89,6 +91,31 @@ def wrap_dataloader_for_init(data_loader) -> InitializingDataLoader:
     return data_loader
 
 
+class PartialDataLoader:
+    def __init__(self, regular_data_loader: 'DataLoader', iter_ratio=1.0):
+        if iter_ratio < 0.0 or iter_ratio > 1.0:
+            raise ValueError("iter_ratio must be within 0 to 1 range")
+        self.data_loader = regular_data_loader
+        self.batch_size = regular_data_loader.batch_size
+        self._stop_id = math.ceil(len(self.data_loader)*iter_ratio)
+        self._batch_id = 0
+
+    def __iter__(self):
+        self.data_loader_iter = iter(self.data_loader)
+        self._batch_id = 0
+        return self
+
+    def __next__(self) -> Any:
+        if self._batch_id < self._stop_id:
+            loaded_item = next(self.data_loader_iter)
+            self._batch_id += 1
+            return loaded_item
+        raise StopIteration
+
+    def __len__(self) -> int:
+        return self._stop_id
+
+
 class DataLoaderBaseRunner:
     def __init__(self, model, init_device: str):
         self.model = model
@@ -97,12 +124,21 @@ class DataLoaderBaseRunner:
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         bar_format = '{l_bar}{bar} |{n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
+        # with tqdm(
+        #         data_loader,
+        #         total=num_init_steps,
+        #         desc=self.progressbar_description,
+        #         bar_format=bar_format,
+        # ) as tqdm_it:
+        # for i, loaded_item in enumerate(tqdm_it):
         for i, loaded_item in tqdm(
                 enumerate(data_loader),
                 total=num_init_steps,
                 desc=self.progressbar_description,
                 bar_format=bar_format,
         ):
+        # for i, loaded_item in enumerate(data_loader):
+        #     print(i)
             if num_init_steps is not None and i >= num_init_steps:
                 break
             args_kwargs_tuple = data_loader.get_inputs(loaded_item)
@@ -214,12 +250,22 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
 
             self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
 
-            for i, loaded_item in tqdm(
-                    enumerate(data_loader),
-                    total=num_init_steps,
-                    desc=self.progressbar_description,
-                    bar_format=bar_format,
-            ):
+            # for i, loaded_item in tqdm(
+            #         enumerate(data_loader),
+            #         total=num_init_steps,
+            #         desc=self.progressbar_description,
+            #         bar_format=bar_format,
+            # ):
+            # with tqdm(
+            #     data_loader,
+            #     total=num_init_steps,
+            #     desc=self.progressbar_description,
+            #     bar_format=bar_format,
+            # ) as tqdm_it:
+            # for i, loaded_item in enumerate(tqdm_it):
+
+            for i, loaded_item in enumerate(data_loader):
+                print(i)
                 if num_init_steps is not None and i >= num_init_steps:
                     break
                 args_kwargs_tuple = data_loader.get_inputs(loaded_item)
@@ -240,21 +286,28 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
+                               autoq_eval_fn=None,
+                               autoq_eval_loader=None,
                                device='cuda') -> 'NNCFConfig':
+
+    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
+                                                                  device=device),
+                                        BNAdaptationInitArgs(data_loader=train_loader,
+                                                             device=device)])
+
     if criterion:
         if not criterion_fn:
             criterion_fn = default_criterion_fn
         nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
                                                                           criterion=criterion,
                                                                           data_loader=train_loader,
-                                                                          device=device),
-                                            QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                      device=device),
-                                            BNAdaptationInitArgs(data_loader=train_loader,
-                                                                 device=device)])
-    else:
-        nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
-                                                                      device=device),
-                                            BNAdaptationInitArgs(data_loader=train_loader,
-                                                                 device=device)])
+                                                                          device=device)])
+
+    if autoq_eval_fn:
+        if not autoq_eval_loader:
+            autoq_eval_loader = train_loader
+        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+                                                                    eval_fn=autoq_eval_fn,
+                                                                    nncf_config=nncf_config)])
+
     return nncf_config

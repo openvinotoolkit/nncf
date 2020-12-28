@@ -20,7 +20,7 @@ class SepConv(nn.Module):
     '''Separable Convolution.'''
 
     def __init__(self, in_planes, out_planes, kernel_size, stride):
-        super(SepConv, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(in_planes, out_planes,
                                kernel_size, stride,
                                padding=(kernel_size - 1) // 2,
@@ -33,7 +33,7 @@ class SepConv(nn.Module):
 
 class CellA(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1):
-        super(CellA, self).__init__()
+        super().__init__()
         self.stride = stride
         self.sep_conv1 = SepConv(in_planes, out_planes, kernel_size=7, stride=stride)
         if stride == 2:
@@ -50,7 +50,7 @@ class CellA(nn.Module):
 
 class CellB(nn.Module):
     def __init__(self, in_planes, out_planes, stride=1):
-        super(CellB, self).__init__()
+        super().__init__()
         self.stride = stride
         # Left branch
         self.sep_conv1 = SepConv(in_planes, out_planes, kernel_size=7, stride=stride)
@@ -82,7 +82,7 @@ class CellB(nn.Module):
 
 class PNASNet(nn.Module):
     def __init__(self, cell_type, num_cells, num_planes):
-        super(PNASNet, self).__init__()
+        super().__init__()
         self.in_planes = num_planes
         self.cell_type = cell_type
 
