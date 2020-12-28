@@ -80,7 +80,7 @@ def extra_layers(start_input_channels):
 
 class MobileNetSSD(nn.Module):
     def __init__(self, num_classes, cfg):
-        super(MobileNetSSD, self).__init__()
+        super().__init__()
         self.cfg = cfg
         self.num_classes = num_classes
 

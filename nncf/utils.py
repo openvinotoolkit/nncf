@@ -306,8 +306,10 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
 
     def maybe_get_iterator(obj):
         it = None
+        # pylint:disable=isinstance-second-argument-not-valid-type
         if isinstance(obj, Mapping):
             it = iteritems
+        # pylint:disable=isinstance-second-argument-not-valid-type
         elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
             it = enumerate
         return it

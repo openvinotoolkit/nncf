@@ -143,7 +143,8 @@ setup(
     url="https://github.com/openvinotoolkit/nncf_pytorch",
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
-                                    "tools", "tools.*"]),
+                                    "tools", "tools.*",
+                                    "beta", "beta.*"]),
     dependency_links=DEPENDENCY_LINKS,
     classifiers=[
         "Programming Language :: Python :: 3",

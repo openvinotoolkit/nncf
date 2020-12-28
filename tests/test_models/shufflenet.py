@@ -18,7 +18,7 @@ import torch.nn.functional as F
 
 class ShuffleBlock(nn.Module):
     def __init__(self, groups):
-        super(ShuffleBlock, self).__init__()
+        super().__init__()
         self.groups = groups
 
     def forward(self, x):
@@ -30,7 +30,7 @@ class ShuffleBlock(nn.Module):
 
 class Bottleneck(nn.Module):
     def __init__(self, in_planes, out_planes, stride, groups):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.stride = stride
 
         mid_planes = out_planes // 4
@@ -60,7 +60,7 @@ class Bottleneck(nn.Module):
 
 class ShuffleNet(nn.Module):
     def __init__(self, cfg):
-        super(ShuffleNet, self).__init__()
+        super().__init__()
         out_planes = cfg['out_planes']
         num_blocks = cfg['num_blocks']
         groups = cfg['groups']
