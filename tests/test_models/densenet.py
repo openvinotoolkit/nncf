@@ -20,7 +20,7 @@ import torch.nn.functional as F
 
 class Bottleneck(nn.Module):
     def __init__(self, in_planes, growth_rate):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.conv1 = nn.Conv2d(in_planes, 4 * growth_rate, kernel_size=1, bias=False)
         self.bn2 = nn.BatchNorm2d(4 * growth_rate)
@@ -35,7 +35,7 @@ class Bottleneck(nn.Module):
 
 class Transition(nn.Module):
     def __init__(self, in_planes, out_planes):
-        super(Transition, self).__init__()
+        super().__init__()
         self.bn = nn.BatchNorm2d(in_planes)
         self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False)
 
@@ -47,7 +47,7 @@ class Transition(nn.Module):
 
 class DenseNet(nn.Module):
     def __init__(self, block, nblocks, growth_rate=12, reduction=0.5, num_classes=10):
-        super(DenseNet, self).__init__()
+        super().__init__()
         self.growth_rate = growth_rate
 
         num_planes = 2 * growth_rate

@@ -62,7 +62,7 @@ def h_swish_fn(x, inplace=True):
 
 class h_sigmoid(nn.Module):
     def __init__(self, inplace=True):
-        super(h_sigmoid, self).__init__()
+        super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
@@ -71,7 +71,7 @@ class h_sigmoid(nn.Module):
 
 class h_swish(nn.Module):
     def __init__(self, inplace=True):
-        super(h_swish, self).__init__()
+        super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
@@ -80,7 +80,7 @@ class h_swish(nn.Module):
 
 class SELayer(nn.Module):
     def __init__(self, channel, reduction=4):
-        super(SELayer, self).__init__()
+        super().__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
             nn.Linear(channel, channel // reduction),
@@ -115,7 +115,7 @@ def conv_1x1_bn(inp, oup):
 class InvertedResidual(nn.Module):
     def __init__(self, inp, hidden_dim, oup,
                  kernel_size, stride, use_se, use_hs):
-        super(InvertedResidual, self).__init__()
+        super().__init__()
         assert stride in [1, 2]
 
         self.identity = stride == 1 and inp == oup
@@ -160,7 +160,7 @@ class InvertedResidual(nn.Module):
 class MobileNetV3(nn.Module):
     def __init__(self, cfgs, mode, pretrained=False,
                  num_classes=1000, width_mult=1.):
-        super(MobileNetV3, self).__init__()
+        super().__init__()
         # setting of inverted residual blocks
         self.cfgs = cfgs
         assert mode in ['large', 'small']

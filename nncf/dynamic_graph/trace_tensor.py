@@ -65,6 +65,7 @@ class TracedTensor(torch.Tensor):
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
+    # pylint:disable=isinstance-second-argument-not-valid-type
     return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
 
 

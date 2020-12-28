@@ -26,7 +26,7 @@ class BahdanauAttention(nn.Module):
         :param init_weight: range for uniform initializer used to initialize
             Linear key and query transform layers and linear_att vector
         """
-        super(BahdanauAttention, self).__init__()
+        super().__init__()
 
         self.normalize = normalize
         self.batch_first = batch_first

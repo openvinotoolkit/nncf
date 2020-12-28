@@ -24,7 +24,7 @@ VGG_CONFIGS = {
 
 class VGG(nn.Module):
     def __init__(self, vgg_name):
-        super(VGG, self).__init__()
+        super().__init__()
         self.features = self._make_layers(VGG_CONFIGS[vgg_name])
         self.classifier = nn.Linear(512, 10)
 

@@ -18,7 +18,7 @@ import torch.nn.functional as F
 
 class Bottleneck(nn.Module):
     def __init__(self, last_planes, in_planes, out_planes, dense_depth, stride, first_layer):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.out_planes = out_planes
         self.dense_depth = dense_depth
 
@@ -49,7 +49,7 @@ class Bottleneck(nn.Module):
 
 class DPN(nn.Module):
     def __init__(self, cfg):
-        super(DPN, self).__init__()
+        super().__init__()
         in_planes, out_planes = cfg['in_planes'], cfg['out_planes']
         num_blocks, dense_depth = cfg['num_blocks'], cfg['dense_depth']
 

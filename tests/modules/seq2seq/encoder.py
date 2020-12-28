@@ -31,7 +31,7 @@ class ResidualRecurrentEncoder(nn.Module):
             create new embedding layer
         :param init_weight: range for the uniform initializer
         """
-        super(ResidualRecurrentEncoder, self).__init__()
+        super().__init__()
         self.batch_first = batch_first
         self.rnn_layers = nn.ModuleList()
         # 1st LSTM layer, bidirectional

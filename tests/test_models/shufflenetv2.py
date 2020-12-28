@@ -18,7 +18,7 @@ import torch.nn.functional as F
 
 class ShuffleBlock(nn.Module):
     def __init__(self, groups=2):
-        super(ShuffleBlock, self).__init__()
+        super().__init__()
         self.groups = groups
 
     def forward(self, x):
@@ -30,7 +30,7 @@ class ShuffleBlock(nn.Module):
 
 class SplitBlock(nn.Module):
     def __init__(self, ratio):
-        super(SplitBlock, self).__init__()
+        super().__init__()
         self.ratio = ratio
 
     def forward(self, x):
@@ -40,7 +40,7 @@ class SplitBlock(nn.Module):
 
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, split_ratio=0.5):
-        super(BasicBlock, self).__init__()
+        super().__init__()
         self.split = SplitBlock(split_ratio)
         in_channels = int(in_channels * split_ratio)
         self.conv1 = nn.Conv2d(in_channels, in_channels,
@@ -66,7 +66,7 @@ class BasicBlock(nn.Module):
 
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(DownBlock, self).__init__()
+        super().__init__()
         mid_channels = out_channels // 2
         # left
         self.conv1 = nn.Conv2d(in_channels, in_channels,
@@ -104,7 +104,7 @@ class DownBlock(nn.Module):
 
 class ShuffleNetV2(nn.Module):
     def __init__(self, net_size):
-        super(ShuffleNetV2, self).__init__()
+        super().__init__()
         out_channels = configs[net_size]['out_channels']
         num_blocks = configs[net_size]['num_blocks']
 
