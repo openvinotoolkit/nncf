@@ -208,6 +208,10 @@ class HAWQConfigBuilder:
                 },
                 'range': {
                     'num_init_samples': 1
+                },
+                'batchnorm_adaptation': {
+                    'num_bn_adaptation_samples': 0,
+                    'num_bn_forget_samples': 0
                 }
             }})
         return config
