@@ -137,7 +137,7 @@ def get_common_argument_parser(**flags):
                 default=None,
                 help='Export the compressed model to the Frozen Graph by given path.')
 
-        if flags.get('to_saved_model'):
+        if flags.get('to_saved_model', True):
             export_format.add_argument(
                 '--to-saved-model',
                 type=str,
