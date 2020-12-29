@@ -27,7 +27,7 @@
                 "model_description": "ResNet-50",
                 "compression_description": "Mixed, 44.8% INT8 / 55.2% INT4",
                 "diff_fp32_min": -0.05,
-                "diff_fp32_max": 0.3,
+                "diff_fp32_max": 0.4,
                 "diff_target_min": -0.12,
                 "diff_target_max": 0.12
             },
