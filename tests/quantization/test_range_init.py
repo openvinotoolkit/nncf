@@ -36,13 +36,15 @@ from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
-    get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init
+    get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init, \
+    create_rank_dataloader
 from tests.helpers import TwoConvTestModel, get_empty_config, \
     create_compressed_model_and_algo_for_test, create_mock_dataloader, BasicConvTestModel
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
-    data_loader = distributed_init_test_default(gpu, ngpus_per_node, config)
+    distributed_init_test_default(gpu, ngpus_per_node, config)
+    data_loader = create_rank_dataloader(config, gpu)
     model = safe_thread_call(partial(squeezenet1_1, pretrained=True))
 
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])

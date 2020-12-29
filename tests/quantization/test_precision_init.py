@@ -57,7 +57,7 @@ from tests.helpers import create_compressed_model_and_algo_for_test, create_conv
     create_mock_dataloader, BasicConvTestModel
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
     get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
-    get_squeezenet_quantization_config
+    get_squeezenet_quantization_config, create_rank_dataloader
 from tests.test_compressed_graph import check_graph
 
 # pylint:disable=unused-import
@@ -153,9 +153,6 @@ class BaseConfigBuilder:
 
     def for_trial(self):
         return self._set_target_device('TRIAL').prop_based()
-
-    def none_device(self):
-        self._config["target_device"] = None
 
     def build(self):
         return self._config
@@ -626,11 +623,13 @@ def get_path_to_bitwidth_dump(tmp_path, rank):
 
 
 def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
-    data_loader = distributed_init_test_default(gpu, ngpus_per_node, config)
+    distributed_init_test_default(gpu, ngpus_per_node, config)
+    data_loader = create_rank_dataloader(config, gpu)
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, data_loader, criterion)
+    config = register_default_init_args(config, data_loader, criterion,
+                                        autoq_eval_fn=lambda *x: 0, autoq_eval_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
@@ -643,10 +642,10 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     torch.save(act_bitwidth_per_scope, str(out_file_path))
 
 
-def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
-    num_data_points = 10
-    batch_size = 2
-    config = HAWQConfigBuilder(batch_size=batch_size, num_data_points=num_data_points, image_size=224).build()
+@pytest.mark.parametrize('config_builder', [HAWQConfigBuilder(batch_size=2, num_data_points=10).for_trial(),
+                                            AutoQConfigBuilder(batch_size=2).for_trial()])
+def test_can_broadcast_initialized_precisions_in_distributed_mode(config_builder, tmp_path):
+    config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
     torch.multiprocessing.spawn(hawq_dumping_worker,

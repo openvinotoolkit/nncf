@@ -85,15 +85,17 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
     config.rank = gpu
     config.distributed = True
 
-    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8899',
+    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8199',
                                          world_size=config.world_size, rank=config.rank)
 
+
+def create_rank_dataloader(config, rank):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], config.rank),
+    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], rank),
                                               batch_size=3,
-                                              num_workers=0, #  workaround
-                                              shuffle=False)
+                                              num_workers=0,  # workaround
+                                              shuffle=False, drop_last=True)
     return data_loader
 
 
