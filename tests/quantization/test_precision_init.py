@@ -82,7 +82,7 @@ def create_test_dataloaders(config, dataset_dir):
 
     # Do not set num_workers > 0 here - random hangs occur during pytest runs of this files
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False,
-                                               pin_memory=True)
+                                               pin_memory=True, drop_last=True)
     return train_loader, train_dataset
 
 

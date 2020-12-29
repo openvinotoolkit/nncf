@@ -59,7 +59,7 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
         def __len__(self):
             return 4
 
-    data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False)
+    data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False, drop_last=True)
 
     class SquadInitializingDataloader(nncf.initialization.InitializingDataLoader):
         def get_inputs(self, batch):
