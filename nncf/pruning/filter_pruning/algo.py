@@ -238,7 +238,7 @@ class FilterPruningController(BasePruningAlgoController):
             return right
         raise RuntimeError("Can't prune model to asked flops pruning rate = {}".format(target_flops_pruning_rate))
 
-    def set_pruning_rate(self, pruning_rate):
+    def set_pruning_rate(self, pruning_rate, run_batchnorm_adaptation=False):
         # Pruning rate from scheduler can be flops pruning rate or percentage of params that should be pruned
         self.pruning_rate = pruning_rate
         if not self.frozen:
@@ -257,7 +257,8 @@ class FilterPruningController(BasePruningAlgoController):
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
         self._apply_masks()
-        self.run_batchnorm_adaptation(self.config)
+        if run_batchnorm_adaptation:
+            self.run_batchnorm_adaptation(self.config)
 
     def _set_binary_masks_for_filters(self, pruning_rate):
         nncf_logger.debug("Setting new binary masks for pruned modules.")

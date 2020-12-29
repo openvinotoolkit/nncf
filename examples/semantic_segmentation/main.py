@@ -16,6 +16,7 @@
 # https://github.com/pytorch/vision/tree/master/references/segmentation
 
 import sys
+from copy import deepcopy
 from os import path as osp
 
 import functools
@@ -183,9 +184,12 @@ def load_dataset(dataset, config):
             collate_fn=data_utils.collate_fn, drop_last=True)
     # Loaders
     train_loader = create_train_data_loader(batch_size)
-    init_loader = train_loader
     if config.batch_size_init:
         init_loader = create_train_data_loader(config.batch_size_init)
+    else:
+        init_loader = deepcopy(train_loader)
+    if config.distributed:
+        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
