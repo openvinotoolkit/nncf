@@ -15,15 +15,18 @@ from addict import Dict
 
 import tensorflow as tf
 from tensorflow.python.keras import layers
+import pytest
 
 from tests.tensorflow.helpers import get_basic_conv_test_model, create_compressed_model_and_algo_for_test
 from nncf.tensorflow.quantization import FakeQuantize
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from nncf.tensorflow.quantization.quantizers import Quantizer
 from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.config import QuantizerConfig, QuantizationMode
 from nncf import Config
+from nncf.tensorflow.layers.operation import InputType
 
 
 def get_basic_quantization_config(model_size=4):
@@ -284,3 +287,281 @@ def test_quantize_outputs_removal():
     actual_fake_quantize_layers = [layer.name for layer in model.layers if isinstance(layer, FakeQuantize)]
     assert actual_fake_quantize_layers == ref_fake_quantize_layers
     assert len(actual_fake_quantize_layers) == len(ref_fake_quantize_layers)
+
+
+class DataFormat:
+    CF = 'channels_first'
+    CL = 'channels_last'
+
+
+LAYERS_PARAMS = {
+    "Conv1D":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (8, 3,),
+            "shape": (10, 32, 64),
+        },
+    "Conv2D":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (32, 3,),
+            "shape": (10, 32, 64, 3),
+        },
+    "Conv3D":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (32, 3,),
+            "shape": (10, 32, 64, 128, 3),
+        },
+    "DepthwiseConv2D":
+        {
+            "param_name": ['kernel_size', 'data_format'],
+            "param_val": (32,),
+            "shape": (10, 32, 64, 3),
+        },
+    "Conv1DTranspose":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (32, 32,),
+            "shape": (10, 32, 64),
+        },
+    "Conv2DTranspose":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (32, 32,),
+            "shape": (10, 32, 64, 3),
+        },
+    "Conv3DTranspose":
+        {
+            "param_name": ['filters', 'kernel_size', 'data_format'],
+            "param_val": (32, 32,),
+            "shape": (10, 8, 32, 64, 3),
+        },
+    "Dense":
+        {
+            "param_name": ['units'],
+            "param_val": (32,),
+            "shape": (10, 32),
+        }
+}
+
+
+def get_layer_and_inputs(layer_name, params, shape, shape_build):
+    layer = getattr(tf.keras.layers, layer_name)(**params)
+    layer.build(shape_build)
+    inputs = tf.reshape(tf.range(tf.reduce_prod(shape)), shape)
+    return layer, inputs
+
+
+class LayerDeck:
+    def __init__(self, layer_name: str, input_type: InputType, data_format: DataFormat = None):
+        self.layer_name = layer_name
+        self.input_type = input_type
+        self.inputs = None
+        params = LAYERS_PARAMS[layer_name]
+        self.layer_inputs_shape = params["shape"]
+        self.params = dict()
+        for k, v in zip(params["param_name"], params["param_val"]):
+            self.params[k] = v
+        if "data_format" in params["param_name"]:
+            self.data_format = data_format
+            self.params["data_format"] = data_format
+
+    @property
+    def shape(self):
+        if self.inputs is not None:
+            return tuple(self.inputs.shape)
+        return None
+
+
+
+class Conv1D(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv1D", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape[1:])
+
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 2, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.reshape(self.inputs, (-1, self.params["filters"]))
+
+
+class Conv2D(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv2D", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape[1:])
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 3, 2, 1])
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.inputs_transformed = self.layer.weights[0]
+
+
+class Conv3D(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv3D", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape[1:])
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = \
+                                tf.transpose(self.inputs_transformed, [0, 4, 2, 3, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.reshape(self.inputs, (-1, self.params["filters"]))
+
+
+class DepthwiseConv2D(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("DepthwiseConv2D", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape)
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 3, 2, 1])
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.reshape(self.inputs,
+                                                 (-1, tf.math.reduce_prod(self.inputs.shape[2:])))
+
+
+class Conv1DTranspose(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv1DTranspose", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape)
+
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 2, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.transpose(self.inputs, [0, 2, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+
+class Conv2DTranspose(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv2DTranspose", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape)
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs = tf.transpose(self.inputs_transformed, [0, 3, 2, 1])
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.transpose(self.inputs, [0, 1, 3, 2])
+
+
+class Conv3DTranspose(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Conv3DTranspose", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape)
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+            if self.data_format == DataFormat.CF:
+                self.inputs_transformed = tf.transpose(self.inputs_transformed, [0, 4, 2, 3, 1])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs = self.layer.weights[0]
+            self.inputs_transformed = tf.transpose(self.inputs, [0, 1, 2, 4, 3])
+            self.inputs_transformed = tf.reshape(self.inputs_transformed,
+                                                 (-1, self.inputs_transformed.shape[-1]))
+
+
+class Dense(LayerDeck):
+    def __init__(self, input_type: InputType, data_format: DataFormat):
+        super().__init__("Dense", input_type, data_format)
+        self.layer, self.inputs = get_layer_and_inputs(self.layer_name,
+                                                       self.params,
+                                                       self.layer_inputs_shape,
+                                                       self.layer_inputs_shape[1:])
+        if self.input_type == InputType.INPUTS:
+            self.inputs_transformed = self.inputs
+
+        if self.input_type == InputType.WEIGHTS:
+            self.inputs_transformed = self.inputs = self.layer.weights[0]
+
+
+LAYERS_MAP = {
+    "Conv1D": Conv1D,
+    "Conv2D": Conv2D,
+    "Conv3D": Conv3D,
+    "DepthwiseConv2D": DepthwiseConv2D,
+    "Conv1DTranspose": Conv1DTranspose,
+    "Conv2DTranspose": Conv2DTranspose,
+    "Conv3DTranspose": Conv3DTranspose,
+    "Dense": Dense,
+}
+
+
+def get_test_layers_desk():
+    models = ["Conv1D", "Conv2D", "Conv3D", "DepthwiseConv2D",
+              "Conv1DTranspose", "Conv2DTranspose", "Conv3DTranspose"]
+    result = list()
+    for model_name in models:
+        for input_type in [InputType.INPUTS, InputType.WEIGHTS]:
+            for data_format in [DataFormat.CF, DataFormat.CL]:
+                result += [(model_name, input_type, data_format)]
+    model_name = "Dense"
+    for input_type in [InputType.INPUTS, InputType.WEIGHTS]:
+        result += [(model_name, input_type, "")]
+    return result
+
+
+@pytest.mark.parametrize(
+    'layer_name,input_type,data_type', get_test_layers_desk(), ids=[
+        " ".join(l) for l in get_test_layers_desk()]
+)
+def test_quantize_pre_post_processing(layer_name, input_type, data_type):
+    layer_desk = LAYERS_MAP[layer_name](input_type, data_type)
+    layer_name = \
+        LAYERS_WITH_WEIGHTS[layer_desk.layer_name]['weight_attr_name']
+    q = Quantizer()
+    q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
+                                 layer_name, layer_desk.layer)
+    # pylint: disable=protected-access
+    preprocess = q._pre_processing_fn(layer_desk.inputs)
+    postprocess = q._post_processing_fn(preprocess)
+    assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)
+    assert tf.math.reduce_all(postprocess == layer_desk.inputs)
