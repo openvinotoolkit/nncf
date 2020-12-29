@@ -13,6 +13,7 @@
     "normalize_coef": 255,
     "rgb": true
   },
+  "batch_size": 128,
   "max_iter": 75000,
   "iter_size": 1,
   "save_freq": 50,

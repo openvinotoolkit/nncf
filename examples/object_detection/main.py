@@ -332,6 +332,8 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                     if is_best:
                         best_mAp = mAP
                     best_compression_level = max(compression_level, best_compression_level)
+                    if isinstance(lr_scheduler, ReduceLROnPlateau):
+                        lr_scheduler.step(mAP)
                     net.train()
 
             if is_on_first_rank(config):
@@ -341,7 +343,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                 torch.save({
                     'state_dict': net.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    'iter': config['max_iter'],
+                    'iter': iteration,
                     'scheduler': compression_ctrl.scheduler.state_dict(),
                     'compression_level': compression_level,
                 }, str(checkpoint_file_path))
@@ -353,8 +355,6 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
             # Learning rate scheduling should be applied after optimizer’s update
             if not isinstance(lr_scheduler, ReduceLROnPlateau):
                 lr_scheduler.step(epoch)
-            else:
-                lr_scheduler.step(mAP)
 
         optimizer.zero_grad()
         batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp = train_step(
