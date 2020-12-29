@@ -183,6 +183,17 @@ for sample_type in SAMPLE_TYPES:
         CONFIG_PARAMS.append((sample_type,) + tpl)
 
 
+def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
+    if algo_dict["algorithm"] == "rb_sparsity":
+        return
+    if 'initializer' not in algo_dict:
+        algo_dict['initializer'] = {'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
+                                                             'num_bn_forget_samples': 5}}
+    else:
+        algo_dict['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
+                                                                  'num_bn_forget_samples': 5}})
+
+
 @pytest.fixture(params=CONFIG_PARAMS,
                 ids=["-".join([p[0], p[1].name, p[2], str(p[3])]) for p in CONFIG_PARAMS])
 def config(request, dataset_dir):
@@ -194,6 +205,16 @@ def config(request, dataset_dir):
 
     if "checkpoint_save_dir" in jconfig.keys():
         del jconfig["checkpoint_save_dir"]
+
+    # Use a reduced number of BN adaptation samples for speed
+    if "compression" in jconfig:
+        if isinstance(jconfig["compression"], list):
+            algos_list = jconfig["compression"]
+            for algo_dict in algos_list:
+                update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict)
+        else:
+            algo_dict = jconfig["compression"]
+            update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict)
 
     jconfig["dataset"] = dataset_name
 

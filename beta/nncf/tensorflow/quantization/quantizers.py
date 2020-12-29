@@ -72,6 +72,7 @@ class Quantizer(NNCFOperation):
         :param min_range: minimum range
         :param eps: smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range)
         """
+        raise NotImplementedError
 
     def setup_input_transformation(self, input_shape, input_type, input_name, layer):
         """
@@ -95,7 +96,7 @@ class Quantizer(NNCFOperation):
 
         fns_registry = []
         if isinstance(channel_axes, (tuple, list)):
-            swith_counter = 0
+            switch_counter = 0
             accumulate = False
             new_shape = []
             new_channel_axes = None
@@ -107,11 +108,11 @@ class Quantizer(NNCFOperation):
                         accumulate = True
                         new_channel_axes = len(new_shape)
                         new_shape.append(val)
-                        swith_counter += 1
+                        switch_counter += 1
                 else:
                     accumulate = False
                     new_shape.append(val)
-            if swith_counter > 1:
+            if switch_counter > 1:
                 raise NotImplementedError(
                     'Quntizer could not transform input to apply per-channel quantization: '
                     'input shape {}, input type {}, input name {}, channel_axes {} '
@@ -124,7 +125,7 @@ class Quantizer(NNCFOperation):
             channel_axes = new_channel_axes
 
         ndims = len(input_shape)
-        if (ndims + channel_axes) % ndims != ndims - 1:
+        if channel_axes % ndims != ndims - 1:
             perm = [i for i, _ in enumerate(input_shape)]
             perm[channel_axes], perm[-1] = perm[-1], perm[channel_axes]
             params = {'perm': perm}

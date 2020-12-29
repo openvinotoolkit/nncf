@@ -193,7 +193,7 @@ def load_dataset(dataset, config):
         batch_size=1, num_workers=num_workers,
         shuffle=False,
         sampler=val_sampler,
-        collate_fn=data_utils.collate_fn)
+        collate_fn=data_utils.collate_fn, drop_last=True)
 
     # Get encoding between pixel values in label images and RGB colors
     class_encoding = train_set.color_encoding

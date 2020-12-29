@@ -478,7 +478,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
         def __len__(self):
             return self._length
 
-    data_loader = torch.utils.data.DataLoader(SyntheticDataset(), batch_size=1)
+    data_loader = torch.utils.data.DataLoader(SyntheticDataset(), batch_size=1, drop_last=True)
 
     config_with_init = NNCFConfig()
     config_with_init.update(

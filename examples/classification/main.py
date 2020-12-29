@@ -344,7 +344,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
         val_dataset,
         batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=pin_memory,
-        sampler=val_sampler)
+        sampler=val_sampler, drop_last=True)
 
     train_sampler = None
     if config.distributed:
@@ -353,12 +353,12 @@ def create_data_loaders(config, train_dataset, val_dataset):
     def create_train_data_loader(batch_size_):
         return torch.utils.data.DataLoader(
             train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
-            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler)
+            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler, drop_last=True)
 
     train_loader = create_train_data_loader(batch_size)
 
     init_loader = train_loader
-    if config.batch_size_init:
+    if config.batch_size_init and config.batch_size_init != config.batch_size:
         init_loader = create_train_data_loader(config.batch_size_init)
 
     return train_loader, train_sampler, val_loader, init_loader
