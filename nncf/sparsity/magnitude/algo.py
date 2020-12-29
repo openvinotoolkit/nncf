@@ -81,7 +81,9 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         for layer in self.sparsified_module_info:
             layer.operand.frozen = True
 
-    def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
+    def set_sparsity_level(self, sparsity_level,
+                           target_sparsified_module_info: SparseModuleInfo = None,
+                           run_batchnorm_adaptation: bool = False):
         if sparsity_level >= 1 or sparsity_level < 0:
             raise AttributeError(
                 'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
@@ -91,7 +93,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             target_sparsified_module_info_list = [target_sparsified_module_info]
         threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
         self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
-        self.run_batchnorm_adaptation(self.config)
+        if run_batchnorm_adaptation:
+            self.run_batchnorm_adaptation(self.config)
 
     def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
         all_weights = self._collect_all_weights(target_sparsified_module_info_list)

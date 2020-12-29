@@ -1,6 +1,7 @@
 {
     "model": "unet",
     "dataset" : "mapillary",
+    "batch_size_init": 2,
     "preprocessing": {
         "resize": {
             "height": 512,
