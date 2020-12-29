@@ -246,5 +246,5 @@ def create_mock_dataloader(config, num_samples=1):
     data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
                                               batch_size=1,
                                               num_workers=0,  # Workaround
-                                              shuffle=False)
+                                              shuffle=False, drop_last=True)
     return data_loader

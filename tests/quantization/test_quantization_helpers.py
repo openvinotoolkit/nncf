@@ -93,7 +93,7 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
     data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], config.rank),
                                               batch_size=3,
                                               num_workers=0, #  workaround
-                                              shuffle=False)
+                                              shuffle=False, drop_last=True)
     return data_loader
 
 
