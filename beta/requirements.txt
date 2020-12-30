@@ -1,8 +1,8 @@
-absl-py==0.9
+absl-py~=0.10
 addict
 networkx
-tensorflow==2.3.1
-tensorflow_datasets==3.2.1
+tensorflow==2.4.0
+tensorflow_datasets==4.1.0
 tensorflow_addons
 tensorflow_hub
 texttable
