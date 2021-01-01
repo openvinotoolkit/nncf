@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
+from typing import Dict, List
 
 from functools import partial, update_wrapper
 from texttable import Texttable
@@ -70,12 +70,8 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
         self.pruned_module_groups_info = []
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._prune_weights(target_model)
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
-        target_model.register_algorithm(self)
-        return target_model
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return self._prune_weights(target_model)
 
     def _check_pruning_groups(self, target_model: NNCFNetwork, pruned_nodes_clusterization: Clusterization,
                               can_prune: dict):

@@ -31,12 +31,8 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self._sparsified_module_info = []
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._sparsify_weights(target_model)
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
-        target_model.register_algorithm(self)
-        return target_model
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return self._sparsify_weights(target_model)
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         device = next(target_model.parameters()).device

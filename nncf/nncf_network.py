@@ -48,6 +48,7 @@ class ExtraCompressionModuleType(Enum):
 @functools.total_ordering
 class OperationPriority(Enum):
     DEFAULT_PRIORITY = 0
+    FP32_TENSOR_STATISTICS_OBSERVATION = 1
     SPARSIFICATION_PRIORITY = 2
     QUANTIZATION_PRIORITY = 11
     PRUNING_PRIORITY = 1

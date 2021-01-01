@@ -1,13 +1,17 @@
 from collections import namedtuple, Counter
+from functools import reduce
 
 import torch
 from copy import deepcopy
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 
 from nncf.nncf_network import InsertionInfo, InsertionPoint, InsertionType
 from nncf.quantization.layers import QuantizerConfig, BaseQuantizer
-
+from nncf.tensor_statistics.collectors import ReductionShape
+from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
+from nncf.utils import get_per_channel_scale_shape
+from nncf.nncf_logger import logger as nncf_logger
 
 class QuantizerSetupType(Enum):
     PATTERN_BASED = "pattern_based"
@@ -145,8 +149,12 @@ class QuantizationPointBase:
     def assign_input_shape(self, input_shape):
         raise NotImplementedError
 
+    def get_all_scale_shapes(self) -> List[Tuple[int]]:
+        raise NotImplementedError
+
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
+
 
 class SingleConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: InsertionPoint, qconfig: QuantizerConfig):
@@ -158,6 +166,11 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
     def __str__(self):
         return str(self.insertion_point) + ' ' + str(self.qconfig)
+
+    def get_all_scale_shapes(self) -> List[Tuple[int]]:
+        return [tuple(get_per_channel_scale_shape(self.qconfig.input_shape,
+                                           is_weights=self.is_weight_quantization_point()))]
+
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: InsertionPoint, possible_qconfigs: List[QuantizerConfig]):
@@ -175,6 +188,14 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 
     def __str__(self):
         return str(self.insertion_point) + ' ' + ';'.join([str(qc) for qc in self.possible_qconfigs])
+
+    def get_all_scale_shapes(self) -> List[Tuple[int]]:
+        scale_shapes_across_configs = set()  # type: Set[Tuple[int]]
+        for qc in self.possible_qconfigs:
+            scale_shapes_across_configs.add(tuple(get_per_channel_scale_shape(qc.input_shape,
+                                                                        is_weights=self.is_weight_quantization_point())))
+        return list(scale_shapes_across_configs)
+
 
 class QuantizerSetupBase:
     def __init__(self):
@@ -241,6 +262,24 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
     def __init__(self):
         super().__init__()
         self.quantization_points = {}  # type: Dict[QuantizationPointId, SingleConfigQuantizationPoint]
+
+    def get_minmax_values(self, tensor_statistics: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]) -> \
+            Dict[QuantizationPointId, MinMaxTensorStatistic]:
+        retval = {}
+        for qp_id, qp in self.quantization_points.items():
+            ip = qp.insertion_point
+            if ip not in tensor_statistics:
+                nncf_logger.debug("IP {} not found in tensor statistics".format(ip))
+                retval[qp_id] = None
+            input_shape = tuple(self.quantization_points[qp_id].qconfig.input_shape)
+            scale_shape = tuple(get_per_channel_scale_shape(input_shape, qp.is_weight_quantization_point()))
+            if scale_shape not in tensor_statistics[ip]:
+                nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(ip, scale_shape))
+                retval[qp_id] = None
+            minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
+            retval[qp_id] = minmax_stat
+        return retval
+
 
 
 class MultiConfigQuantizerSetup(QuantizerSetupBase):

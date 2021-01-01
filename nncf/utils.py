@@ -231,12 +231,6 @@ def get_per_channel_scale_shape(input_shape, is_weights):
     else:
         scale_shape[1] = input_shape[1]  # Per activation channel scales
 
-    elements = 1
-    for i in scale_shape:
-        elements *= i
-    if elements == 1:
-        return 1
-
     return scale_shape
 
 

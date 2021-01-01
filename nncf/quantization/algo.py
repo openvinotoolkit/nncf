@@ -16,7 +16,7 @@ import functools
 from collections import OrderedDict, Counter
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional, Callable
+from typing import List, Dict, Tuple, Optional, Callable, Set
 
 import networkx as nx
 import numpy as np
@@ -24,12 +24,13 @@ import operator
 import shutil
 import torch
 from nncf.config import NNCFConfig
+from nncf.quantization.init_range import RangeInitParams
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.quantization.structs import QuantizerSetupType, QuantizationConstraints, QuantizerGroup, QuantizableModule, \
     NonWeightQuantizerInfo, QuantizationPointId, MultiConfigQuantizerSetup, SingleConfigQuantizerSetup, \
-    SingleConfigQuantizationPoint, WeightQuantizerInfo
+    SingleConfigQuantizationPoint, WeightQuantizerInfo, QuantizerSetupBase
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -41,7 +42,7 @@ from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
-from nncf.initialization import DataLoaderRangeInitializeRunner
+from nncf.initialization import DataLoaderRangeInitializeRunner, SimpleDataLoaderRunner
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
@@ -58,6 +59,9 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
+from nncf.tensor_statistics.algo import TensorStatisticObservationPoint, TensorStatisticsCollectionBuilder
+from nncf.tensor_statistics.collectors import ReductionShape
+from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
 
 
@@ -70,7 +74,8 @@ class QuantizerSetupGeneratorBase:
     def __init__(self, quant_config: NNCFConfig,
                  target_model: NNCFNetwork,
                  precision_init_type: str = None,
-                 precision_init_params: BasePrecisionInitParams = None):
+                 precision_init_params: BasePrecisionInitParams = None,
+                 range_init_params: RangeInitParams = None):
         self._target_model = target_model  # type: NNCFNetwork
         self._quantization_config = quant_config
 
@@ -89,6 +94,7 @@ class QuantizerSetupGeneratorBase:
 
         self._precision_init_type = precision_init_type
         self._precision_init_params = precision_init_params
+        self._range_init_params = range_init_params
         self._num_potential_quantized_weights = len(self._target_model.get_nncf_modules())
 
     def generate_setup(self) -> SingleConfigQuantizerSetup:
@@ -103,7 +109,6 @@ class QuantizerSetupGeneratorBase:
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints.from_config_dict(params_dict)
         self._ignored_scopes_per_group[quantizer_group] = params_dict.get('ignored_scopes')
         self._target_scopes_per_group[quantizer_group] = params_dict.get('target_scopes')
-
 
     @staticmethod
     def get_scoped_quantizer_config(base_config: QuantizerConfig,
@@ -196,8 +201,9 @@ class QuantizerSetupGeneratorBase:
 class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def __init__(self, quant_config: NNCFConfig, target_model: NNCFNetwork,
                  precision_init_type: str = None,
-                 precision_init_params: BasePrecisionInitParams = None):
-        super().__init__(quant_config, target_model, precision_init_type, precision_init_params)
+                 precision_init_params: BasePrecisionInitParams = None,
+                 range_init_params: RangeInitParams = None):
+        super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
         self.quantizable_subgraph_patterns = self._quantization_config.get('quantizable_subgraph_patterns', None)
         self._num_potential_quantized_activations = 0
 
@@ -383,7 +389,10 @@ class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                                          precision_init_params: BasePrecisionInitParams) -> \
         SingleConfigQuantizerSetup:
         with self._target_model.temporary_clean_view() as intermediate_model:
-            intermediate_builder = ExperimentalQuantizationBuilder(quantizer_setup)
+            stats = QuantizationBuilder.get_statistics_for_quantizer_setup(intermediate_model,
+                                                                           quantizer_setup,
+                                                                           self._range_init_params)
+            intermediate_builder = ExperimentalQuantizationBuilder(quantizer_setup, stats)
             intermediate_builder.apply_to(intermediate_model)
             #pylint:disable=line-too-long
             intermediate_ctrl = intermediate_model.commit_compression_changes()  # type: ExperimentalQuantizationController
@@ -406,7 +415,7 @@ class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             input_qps = self._get_input_quantization_points()
             for input_qp in input_qps:
                 setup.add_independent_quantization_point(input_qp)
-
+        setup.mark_activation_quantizer_configs_with_input_shapes(self._target_model.get_original_graph())
         if self._precision_init_type is not None:
             setup = self._apply_overriding_precision_init(setup,
                                                           self._precision_init_type,
@@ -427,9 +436,11 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
     def __init__(self, target_model: NNCFNetwork,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
+                 range_init_params: RangeInitParams = None,
                  override_bit_options_with_hawq: bool = False):
         self._precision_init_type = precision_init_type
         self._precision_init_params = precision_init_params
+        self._range_init_params = range_init_params
         self._target_model = target_model
         self._override_bit_options_with_hawq = override_bit_options_with_hawq
 
@@ -454,11 +465,14 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
     def select_final_quantizer_setup(self, multi_config_setup: MultiConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
         if self._precision_init_type is not None:
             with self._target_model.temporary_clean_view() as intermediate_model:
+                stats = QuantizationBuilder.get_statistics_for_quantizer_setup(intermediate_model,
+                                                                               multi_config_setup,
+                                                                               self._range_init_params)
                 bitwidth_varying_only_multi_setup = \
                     self.select_first_qconfig_with_bitwidth_variants_for_each_point(multi_config_setup)
 
                 init_setup = bitwidth_varying_only_multi_setup.select_first_qconfig_for_each_point()
-                intermediate_builder = ExperimentalQuantizationBuilder(init_setup)
+                intermediate_builder = ExperimentalQuantizationBuilder(init_setup, stats)
                 intermediate_builder.apply_to(intermediate_model)
                 #pylint:disable=line-too-long
                 intermediate_ctrl = intermediate_model.commit_compression_changes()  # type: ExperimentalQuantizationController
@@ -484,8 +498,9 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  hw_config: HWConfig = None,
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
+                 range_init_params: RangeInitParams = None,
                  debug_interface: 'QuantizationDebugInterface' = None):
-        super().__init__(quant_config, target_model, precision_init_type, precision_init_params)
+        super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
 
         self.hw_config = hw_config
 
@@ -524,6 +539,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             self._target_model,
             self._precision_init_type,
             self._precision_init_params,
+            self._range_init_params,
             override_bit_options_with_hawq=self.hw_config is None)
 
         single_config_quantizer_setup = disambiguator.select_final_quantizer_setup(
@@ -623,7 +639,6 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                                                            self._num_potential_quantized_weights)
 
 
-
 @COMPRESSION_ALGORITHMS.register('quantization')
 class QuantizationBuilder(CompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
@@ -644,35 +659,100 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
             self.hw_config = HWConfig.from_json(hw_config_path)
 
-        init_config = self.config.get('initializer', {})
-        init_precision_config = init_config.get('precision', None)
-        precision_init_type = None
-        precision_init_params = None
-        if should_init and init_precision_config:
-            precision_init_type = init_precision_config.get('type', 'manual')
-            if precision_init_type != 'manual':
-                try:
-                    precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
-                except KeyError as e:
-                    raise ValueError(
-                        'Specified non-manual precision initialization in the NNCF config, '
-                        'but the initializing data loader and loss criterion are not provided as an extra struct. '
-                        'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` '
-                        'class') from e
-                precision_init_params = HAWQPrecisionInitParams.from_config(
-                    init_precision_config,
-                    precision_init_args
-                )
-            else:
-                precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
-        self._precision_init_type = precision_init_type
-        self._precision_init_params = precision_init_params
+        self._range_init_params = None
+        self._precision_init_type = None
+        self._precision_init_params = None
+        if should_init:
+            self._parse_init_params()
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+    def _parse_init_params(self):
+        init_config = self.config.get('initializer', {})
+        self._range_init_params = self._parse_range_init_params(init_config)
+        self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(init_config)
+
+    def _parse_range_init_params(self, initializer_config: Dict) -> RangeInitParams:
+        init_range_config = initializer_config.get('range', {})
+        if not init_range_config:
+            try:
+                self.config.get_extra_struct(QuantizationRangeInitArgs)
+                has_range_init_args = True
+            except KeyError:
+                has_range_init_args = False
+
+            if has_range_init_args:
+                nncf_logger.warning("Enabling quantization range initialization with default parameters.")
+                num_init_samples = 256
+            else:
+                nncf_logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
+                                    "quantization init args not supplied - quantizer range initialization will not be "
+                                    "done")
+                return None
+
+            init_range_config = {'num_init_samples': num_init_samples}
+
+        # if isinstance(init_range_config, dict):
+        num_init_samples = init_range_config.get("num_init_samples", 256)
+        init_type = init_range_config.get("type", "mean_min_max")
+        if num_init_samples < 0:
+            raise AttributeError('Number of initialization samples must be >= 0')
+        # else:
+        #     max_num_init_samples = 0
+        #     global_init_range_config = []
+        #     for sub_init_range_config in init_range_config:
+        #         global_init_range_config.append(self.update_range_config_by_default(sub_init_range_config))
+        #         max_num_init_samples = max(sub_init_range_config['num_init_samples'], max_num_init_samples)
+
+        if num_init_samples == 0:
+            return None
+
+        try:
+            range_init_args = self.config.get_extra_struct(QuantizationRangeInitArgs)
+        except KeyError as e:
+            raise ValueError(
+                'Should run range initialization as specified via config,'
+                'but the initializing data loader is not provided as an extra struct. '
+                'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
+        data_loader = range_init_args.data_loader
+        batch_size = data_loader.batch_size
+        max_num_init_steps = int(np.ceil(num_init_samples / batch_size))
+
+        return RangeInitParams(data_loader, init_type, max_num_init_steps, range_init_args.device, None)
+
+    def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
+        init_precision_config = initializer_config.get('precision', None)
+        if not init_precision_config:
+            return None, None
+        precision_init_type = init_precision_config.get('type', 'manual')
+        if precision_init_type != 'manual':
+            try:
+                precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
+            except KeyError as e:
+                raise ValueError(
+                    'Specified non-manual precision initialization in the NNCF config, '
+                    'but the initializing data loader and loss criterion are not provided as an extra struct. '
+                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationPrecisionInitArgs` '
+                    'class') from e
+            precision_init_params = HAWQPrecisionInitParams.from_config(
+                init_precision_config,
+                precision_init_args
+            )
+        else:
+            precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
+        return precision_init_type, precision_init_params
+
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         target_model.register_compression_module_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
+        minmax_values_for_range_init = None
+        if self._range_init_params is not None:
+            stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
+                                                                             single_config_quantizer_setup,
+                                                                             self._range_init_params)
+            minmax_values_for_range_init = single_config_quantizer_setup.get_minmax_values(stats_for_range_init)
         insertion_commands, setup_to_module_id_translation_dict = \
-            self._build_insertion_commands_list_for_quantizer_setup(single_config_quantizer_setup, target_model)
+            self._build_insertion_commands_list_for_quantizer_setup(single_config_quantizer_setup,
+                                                                    target_model,
+                                                                    minmax_values_for_range_init)
 
         self._setup_to_module_id_translation_dict = setup_to_module_id_translation_dict
         all_quantizations = {}
@@ -681,11 +761,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._groups_of_adjacent_quantizers.parse_from_quantizer_setup(all_quantizations, single_config_quantizer_setup,
                                                                        setup_to_module_id_translation_dict)
 
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
-
-        target_model.register_algorithm(self)
-
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
         # pylint: disable=protected-access
@@ -693,7 +768,37 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         if self._debug_interface is not None:
             target_model.debug_interface.add_interface(self._debug_interface)
-        return target_model
+        return insertion_commands
+
+    @staticmethod
+    def get_statistics_for_quantizer_setup(target_model: NNCFNetwork,
+                                           quantizer_setup: QuantizerSetupBase,
+                                           range_init_params: RangeInitParams) \
+        -> Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]:
+        observation_points = set()  # type: Set[TensorStatisticObservationPoint]
+        for qp in quantizer_setup.quantization_points.values():
+            observation_points.add(TensorStatisticObservationPoint(
+                qp.insertion_point,
+                reduction_shapes=set(qp.get_all_scale_shapes())))
+
+        with target_model.temporary_clean_view() as intermediate_model:
+            stat_builder = TensorStatisticsCollectionBuilder(NNCFConfig(),
+                                                             observation_points)
+            stat_builder.apply_to(intermediate_model)
+            stat_ctrl = intermediate_model.commit_compression_changes()
+            runner = SimpleDataLoaderRunner(intermediate_model, range_init_params.device)
+            runner.run(range_init_params.init_range_data_loader, range_init_params.max_num_init_steps)
+
+        retval = {}
+        for ip, collector in stat_ctrl.ip_vs_collector_dict.items():
+            retval[ip] = collector.get_statistics()
+        return retval
+
+    def _get_statistics_for_final_range_init(self, target_model: NNCFNetwork,
+                                           quantizer_setup: QuantizerSetupBase,
+                                           range_init_params: RangeInitParams) \
+        -> Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]:
+        return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
         if self.quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
@@ -702,12 +807,14 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                                       self.hw_config,
                                                                       self._precision_init_type,
                                                                       self._precision_init_params,
+                                                                      self._range_init_params,
                                                                       self._debug_interface)
         else:
             setup_generator = PatternBasedQuantizerSetupGenerator(self.config,
                                                                   target_model,
                                                                   self._precision_init_type,
-                                                                  self._precision_init_params,)
+                                                                  self._precision_init_params,
+                                                                  self._range_init_params)
         single_config_quantizer_setup = setup_generator.generate_setup()
         self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
         return single_config_quantizer_setup
@@ -727,10 +834,15 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return quantizer_cls(qconfig)
 
     def _add_single_weight_quantizer(self, target_model: NNCFNetwork, insertion_point: InsertionPoint,
-                                     quantizer_config: QuantizerConfig) -> Tuple[WeightQuantizerId, InsertionCommand]:
+                                     quantizer_config: QuantizerConfig,
+                                     range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> Tuple[
+        WeightQuantizerId, InsertionCommand]:
         device = next(target_model.parameters()).device
         quantizer_id = WeightQuantizerId(insertion_point.module_scope)
         quantizer = self.__create_quantize_module(quantizer_config)
+        if range_init_minmax_values is not None:
+            quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
+                                        log_module_name=str(insertion_point))
         op = UpdateWeight(quantizer).to(device)
         self._weight_quantizers[quantizer_id] = WeightQuantizerInfo(quantizer,
                                                                     target_model.get_module_by_scope(
@@ -757,7 +869,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
     def _build_insertion_commands_list_for_quantizer_setup(self,
                                                            quantizer_setup: SingleConfigQuantizerSetup,
-                                                           target_model: NNCFNetwork) -> \
+                                                           target_model: NNCFNetwork,
+                                                           minmax_values_for_range_init: Dict[QuantizationPointId,
+                                                                                              MinMaxTensorStatistic] = None) -> \
             Tuple[List[InsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
         insertion_commands = []
         qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
@@ -765,56 +879,105 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
 
         for unified_scales_group in quantizer_setup.unified_scale_groups:
-            qp_ids_list_for_current_group = list(unified_scales_group)
-            for us_qp_id in qp_ids_list_for_current_group:
+            for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
 
-            # The primary insertion point (to be associated with the actual quantizer module, not just hooks to it)
-            # will be determined based on the string representation of said insertion point, to avoid random selection
-            sorted_qp_ids = sorted(qp_ids_list_for_current_group,
-                                   key=lambda x: str(quantizer_setup.quantization_points[x].insertion_point))
-
-            # Currently only the unified scales for activation quantizers are supported.
-            assert all([quantizer_setup.quantization_points[qp_id].is_activation_quantization_point() for qp_id in
-                        sorted_qp_ids])
-
-            primary_qp_id = sorted_qp_ids[0]
-            linked_qp_ids = sorted_qp_ids[1:]
-            primary_insertion_info = InsertionInfo.from_insertion_point(
-                quantizer_setup.quantization_points[primary_qp_id].insertion_point)
-            linked_insertion_infos = [InsertionInfo.from_insertion_point(
-                quantizer_setup.quantization_points[qp_id].insertion_point) for qp_id in linked_qp_ids]
-            primary_insertion_info.link_insertion_infos(linked_insertion_infos)
-            qconfig = quantizer_setup.quantization_points[primary_qp_id].qconfig
-            linked_qconfigs = [quantizer_setup.quantization_points[qp_id].qconfig for qp_id in linked_qp_ids]
-            for linked_qconfig in linked_qconfigs:
-                if not qconfig.compatible_with_a_unified_scale_linked_qconfig(linked_qconfig):
-                    raise RuntimeError("The quantizer configurations for unified scale quantization points should"
-                                       "be identical!")
-            quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
-                                                                                  primary_insertion_info,
-                                                                                  qconfig)
-            for qp_id in sorted_qp_ids:
-                qp_id_vs_quant_module_id_dict[qp_id] = quantizer_module_id
+            quant_module_id, commands = self._build_commands_for_single_unified_scale_group(target_model,
+                                                                                            quantizer_setup,
+                                                                                            unified_scales_group,
+                                                                                            minmax_values_for_range_init)
+            for us_qp_id in unified_scales_group:
+                qp_id_vs_quant_module_id_dict[us_qp_id] = quant_module_id
             insertion_commands += commands
+
         for qp_id in non_unified_scales_quantization_point_ids:
             qp = quantizer_setup.quantization_points[qp_id]
             ip = qp.insertion_point
             qconfig = quantizer_setup.quantization_points[qp_id].qconfig
             quantizer_module_id = None
             commands = []
+
+            range_init_minmax_values = None
+            if minmax_values_for_range_init is not None:
+                minmax_stat = minmax_values_for_range_init[qp_id]
+                if minmax_stat is None:
+                    nncf_logger.warning("Tensor statistics for location {} were not collected! The corresponding "
+                                        "quantizer range will not be initialized!".format(ip))
+                else:
+                    range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
+
             if qp.is_activation_quantization_point():
                 insertion_info = InsertionInfo.from_insertion_point(ip)
                 quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
                                                                                       insertion_info,
-                                                                                      qconfig)
+                                                                                      qconfig,
+                                                                                      range_init_minmax_values)
             elif qp.is_weight_quantization_point():
-                quantizer_module_id, command = self._add_single_weight_quantizer(target_model, ip, qconfig)
+                quantizer_module_id, command = self._add_single_weight_quantizer(target_model, ip, qconfig,
+                                                                                 range_init_minmax_values)
                 commands = [command]
 
             qp_id_vs_quant_module_id_dict[qp_id] = quantizer_module_id
             insertion_commands += commands
         return insertion_commands, qp_id_vs_quant_module_id_dict
+
+    def _build_commands_for_single_unified_scale_group(self,
+                                                       target_model: NNCFNetwork,
+                                                       quantizer_setup: SingleConfigQuantizerSetup,
+                                                       unified_scales_group: Set[QuantizationPointId],
+                                                       minmax_values_for_range_init: Dict[QuantizationPointId, MinMaxTensorStatistic] = None) -> Tuple[QuantizerId, List[InsertionCommand]]:
+        qp_ids_list_for_current_group = list(unified_scales_group)
+
+        # The primary insertion point (to be associated with the actual quantizer module, not just hooks to it)
+        # will be determined based on the string representation of said insertion point, to avoid random selection
+        sorted_qp_ids = sorted(qp_ids_list_for_current_group,
+                               key=lambda x: str(quantizer_setup.quantization_points[x].insertion_point))
+
+        # Currently only the unified scales for activation quantizers are supported.
+        assert all([quantizer_setup.quantization_points[qp_id].is_activation_quantization_point() for qp_id in
+                    sorted_qp_ids])
+
+        primary_qp_id = sorted_qp_ids[0]
+        linked_qp_ids = sorted_qp_ids[1:]
+        primary_insertion_info = InsertionInfo.from_insertion_point(
+            quantizer_setup.quantization_points[primary_qp_id].insertion_point)
+        linked_insertion_infos = [InsertionInfo.from_insertion_point(
+            quantizer_setup.quantization_points[qp_id].insertion_point) for qp_id in linked_qp_ids]
+        primary_insertion_info.link_insertion_infos(linked_insertion_infos)
+        qconfig = quantizer_setup.quantization_points[primary_qp_id].qconfig
+        linked_qconfigs = [quantizer_setup.quantization_points[qp_id].qconfig for qp_id in linked_qp_ids]
+        for linked_qconfig in linked_qconfigs:
+            if not qconfig.compatible_with_a_unified_scale_linked_qconfig(linked_qconfig):
+                raise RuntimeError("The quantizer configurations for unified scale quantization points should"
+                                   "be identical!")
+
+        range_init_minmax_values = None
+        if minmax_values_for_range_init is not None:
+            # Hopefully this will suffice. TODO: gather unified statistic by linking stat collectors instead
+            min_values = None
+            max_values = None
+            for qp_id in sorted_qp_ids:
+                minmax_stat = minmax_values_for_range_init[qp_id]
+                if minmax_stat is None:
+                    nncf_logger.warning("Tensor statistics for location {} were not collected! The corresponding "
+                                        "quantizer range will not be initialized!".format(
+                        quantizer_setup.quantization_points[qp_id].insertion_point))
+                if min_values is None:
+                    min_values = minmax_stat.min_values
+                else:
+                    min_values = torch.min(min_values, minmax_stat.min_values)
+
+                if max_values is None:
+                    max_values = minmax_stat.max_values
+                else:
+                    max_values = torch.max(max_values, minmax_stat.max_values)
+            range_init_minmax_values = min_values, max_values
+
+        quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
+                                                                              primary_insertion_info,
+                                                                              qconfig,
+                                                                              range_init_minmax_values)
+        return quantizer_module_id, commands
 
     def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig]) -> QuantizerConfig:
         # Quantizer config list entries should arrive in the same order as they are listed
@@ -823,7 +986,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
     def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
                                          insertion_info: InsertionInfo,
-                                         quantizer_config: QuantizerConfig) -> \
+                                         quantizer_config: QuantizerConfig,
+                                         range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
             Tuple[NonWeightQuantizerId, List[InsertionCommand]]:
         """Will return one or more insertion commands - depending on whether insertion_info specifies
         a single input agnostic operation execution context or there are linked contexts along with it."""
@@ -831,6 +995,10 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         operator_scope_str = str(ia_op_exec_context)
         device = next(target_model.parameters()).device
         quantizer = self.__create_quantize_module(quantizer_config).to(device)
+        if range_init_minmax_values is not None:
+            quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],
+                                        max_values=range_init_minmax_values[1],
+                                        log_module_name=str(insertion_info))
 
         insertion_infos_to_process = [insertion_info] + insertion_info.get_linked_insertion_infos()
 
@@ -887,7 +1055,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             insertion_commands.append(
                 InsertionCommand(insertion_point, hook, OperationPriority.QUANTIZATION_PRIORITY))
         return quantizer_id, insertion_commands
-
 
 
 class QuantizationControllerBase(CompressionAlgorithmController):
@@ -1379,12 +1546,21 @@ class QuantizationDebugInterface(DebugInterface):
 
 
 class ExperimentalQuantizationBuilder(QuantizationBuilder):
-    def __init__(self, quantizer_setup: SingleConfigQuantizerSetup):
+    def __init__(self, quantizer_setup: SingleConfigQuantizerSetup,
+                 tensor_stats_for_all_setup_variations: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]):
         super().__init__(NNCFConfig(), should_init=False)
         self._quantizer_setup = quantizer_setup
+        self._tensor_stats = tensor_stats_for_all_setup_variations
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
         return self._quantizer_setup
+
+    def _get_statistics_for_final_range_init(self,
+                                             target_model: NNCFNetwork,
+                                             quantizer_setup: QuantizerSetupBase,
+                                             range_init_params: RangeInitParams) -> Dict[
+        InsertionPoint, Dict[ReductionShape, TensorStatistic]]:
+        return self._tensor_stats
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()
@@ -1401,7 +1577,8 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                   self._non_weight_quantizers,
                                                   groups_of_adjacent_quantizers,
                                                   self._quantizer_setup,
-                                                  self._setup_to_module_id_translation_dict)
+                                                  self._setup_to_module_id_translation_dict,
+                                                  self._tensor_stats)
 
 
 class ExperimentalQuantizationController(QuantizationController):
@@ -1410,7 +1587,8 @@ class ExperimentalQuantizationController(QuantizationController):
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  initial_quantizer_setup: SingleConfigQuantizerSetup,
-                 setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId]):
+                 setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
+                 tensor_stats: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]):
         super().__init__(target_model,
                          NNCFConfig(),
                          should_init=False,
@@ -1421,6 +1599,7 @@ class ExperimentalQuantizationController(QuantizationController):
                          collect_compression_metrics=False)
         self._target_model_ref = target_model
         self._initial_quantizer_setup = initial_quantizer_setup
+        self._tensor_stats = tensor_stats
         self.setup_to_module_id_translation_dict = setup_to_module_id_translation_dict
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
@@ -1457,7 +1636,7 @@ class ExperimentalQuantizationController(QuantizationController):
                 quant_module.bits = qp.qconfig.bits
             return self, self._target_model_ref
         new_model = self._target_model_ref.get_clean_shallow_copy()
-        new_builder = ExperimentalQuantizationBuilder(quantizer_setup)
+        new_builder = ExperimentalQuantizationBuilder(quantizer_setup, self._tensor_stats)
         new_builder.apply_to(new_model)
         new_ctrl = new_model.commit_compression_changes()  # type: ExperimentalQuantizationController
         return new_ctrl, new_model

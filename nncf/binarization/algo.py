@@ -37,13 +37,8 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self.mode = self.config.get('mode', BinarizationMode.XNOR)
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._binarize_weights_and_module_inputs(target_model)
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
-
-        target_model.register_algorithm(self)
-        return target_model
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return self._binarize_weights_and_module_inputs(target_model)
 
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()

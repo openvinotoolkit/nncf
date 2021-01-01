@@ -161,6 +161,11 @@ class DataLoaderBaseRunner:
     def _apply_initializers(self):
         raise NotImplementedError
 
+class SimpleDataLoaderRunner(DataLoaderBaseRunner):
+    def _prepare_initialization(self):
+        pass
+    def _apply_initializers(self):
+        pass
 
 class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(

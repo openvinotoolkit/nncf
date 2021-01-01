@@ -176,6 +176,17 @@ class BaseQuantizer(nn.Module):
 
     def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
+        if self.initialized:
+            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
+            return
+        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
+            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+        own_device = next(self.parameters()).device
+        min_values = min_values.to(own_device)
+        max_values = max_values.to(own_device)
+        self._apply_minmax_init(min_values, max_values, log_module_name)
+
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         raise NotImplementedError
 
     def set_level_ranges(self):
@@ -361,10 +372,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
             raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
         sign = torch.any(torch.lt(min_values, 0))
@@ -511,12 +519,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
                 self.INPUT_RANGE_PARAM_NAME: self.input_range.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         ranges = max_values - min_values
         max_range = torch.max(max_values - min_values)
         eps = 1e-2

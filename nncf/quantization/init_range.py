@@ -1,13 +1,26 @@
 import queue
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 import torch
 
 from nncf.dynamic_graph.context import no_nncf_trace
 from nncf.nncf_logger import logger as nncf_logger
-from .layers import BaseQuantizer
-from ..utils import get_flat_tensor_contents_string
+from nncf.quantization.layers import BaseQuantizer
+from nncf.utils import get_flat_tensor_contents_string
+
+
+class RangeInitParams:
+    def __init__(self, init_range_data_loader: 'InitializingDataLoader',
+                 init_type: str,
+                 max_num_init_steps: int,
+                 device: str,
+                 scope_override_range_init_configs: Dict[str, Dict]):
+        self.init_range_data_loader = init_range_data_loader
+        self.init_type = init_type
+        self.max_num_init_steps = max_num_init_steps
+        self.device = device
+        self.scope_override_range_init_configs = scope_override_range_init_configs
 
 
 class QuantizeRangeInitializer:
