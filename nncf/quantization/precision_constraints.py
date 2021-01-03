@@ -13,29 +13,45 @@
 from copy import deepcopy
 from typing import Dict, List, Set
 
+from nncf.quantization.layers import QuantizerConfig
 from .quantizer_id import QuantizerId
 
 
-class PrecisionConstraints:
+class HardwareQuantizationConstraints:
     def __init__(self):
-        self._constraints = {}  # type: Dict[QuantizerId, Set[int]]
+        self._constraints = {}  # type: Dict[QuantizerId, List[QuantizerConfig]]
 
-    def add(self, quantizer_id: QuantizerId, bits_set: Set[int]):
-        self._constraints[quantizer_id] = bits_set
+    def add(self, quantizer_id: QuantizerId, qconfig_set: List[QuantizerConfig]):
+        self._constraints[quantizer_id] = qconfig_set
 
-    def get(self, quantizer_id: QuantizerId) -> Set[int]:
+    def get(self, quantizer_id: QuantizerId) -> List[QuantizerConfig]:
         if quantizer_id in self._constraints:
             return deepcopy(self._constraints[quantizer_id])
-        return set()
+        return list()
 
-    def replace(self, quantizer_id: QuantizerId, bits: Set[int]):
+    def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> Dict[int, List[QuantizerConfig]]:
+        bitwidths_vs_qconfigs = {}  # type: Dict[int, List[QuantizerConfig]]
+        for qc in self.get(quantizer_id):
+            if qc.bits not in bitwidths_vs_qconfigs:
+                bitwidths_vs_qconfigs[qc.bits] = [qc]
+            else:
+                bitwidths_vs_qconfigs[qc.bits].append(qc)
+        return bitwidths_vs_qconfigs
+
+    def replace(self, quantizer_id: QuantizerId, qconfig_set: List[QuantizerConfig]):
         if quantizer_id in self._constraints:
-            self._constraints[quantizer_id] = bits
+            self._constraints[quantizer_id] = qconfig_set
 
-    def get_all_unique_bits(self) -> List[int]:
+    def get_all_unique_bits(self, qid: QuantizerId = None) -> List[int]:
         result = set()
-        for bits_set in self._constraints.values():
-            result.update(bits_set)
+        if qid is None:
+            for qconfig_set in self._constraints.values():
+                for qconfig in qconfig_set:
+                    result.add(qconfig.bits)
+        else:
+            qconfs = self.get(qid)
+            for qconfig in qconfs:
+                result.add(qconfig.bits)
         return list(result)
 
     def __bool__(self):

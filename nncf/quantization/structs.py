@@ -271,13 +271,14 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
             if ip not in tensor_statistics:
                 nncf_logger.debug("IP {} not found in tensor statistics".format(ip))
                 retval[qp_id] = None
-            input_shape = tuple(self.quantization_points[qp_id].qconfig.input_shape)
-            scale_shape = tuple(get_per_channel_scale_shape(input_shape, qp.is_weight_quantization_point()))
-            if scale_shape not in tensor_statistics[ip]:
-                nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(ip, scale_shape))
-                retval[qp_id] = None
-            minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
-            retval[qp_id] = minmax_stat
+            else:
+                input_shape = tuple(self.quantization_points[qp_id].qconfig.input_shape)
+                scale_shape = tuple(get_per_channel_scale_shape(input_shape, qp.is_weight_quantization_point()))
+                if scale_shape not in tensor_statistics[ip]:
+                    nncf_logger.debug("Did not collect tensor statistics at {} for shape {}".format(ip, scale_shape))
+                    retval[qp_id] = None
+                minmax_stat = MinMaxTensorStatistic.from_stat(tensor_statistics[ip][scale_shape])
+                retval[qp_id] = minmax_stat
         return retval
 
 

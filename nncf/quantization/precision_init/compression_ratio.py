@@ -16,7 +16,7 @@ from nncf.nncf_network import NNCFNetwork
 
 from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
 from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
-from nncf.quantization.precision_constraints import PrecisionConstraints
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId
 from nncf.utils import get_all_modules_by_type
 
@@ -70,7 +70,7 @@ class CompressionRatioCalculator:
 
         return self.total_ops_count / quantizer_ops
 
-    def ratio_limits(self, bits: List[int], constraints: PrecisionConstraints = None,
+    def ratio_limits(self, bits: List[int], constraints: HardwareQuantizationConstraints = None,
                      skipped: Dict[QuantizerId, BaseQuantizer] = None) -> (float, float):
         """
         Calculates minimum and maximum compression ratio.

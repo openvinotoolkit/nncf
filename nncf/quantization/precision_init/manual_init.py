@@ -14,8 +14,9 @@
 from typing import List, Dict
 
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer
+from nncf.quantization.structs import SingleConfigQuantizerSetup
 
-from ..precision_constraints import PrecisionConstraints
+from ..precision_constraints import HardwareQuantizationConstraints
 from ...structures import QuantizationPrecisionInitArgs
 from ...utils import in_scope_list
 
@@ -36,14 +37,14 @@ class ManualPrecisionInitParams(BasePrecisionInitParams):
 
 class ManualPrecisionInitializer(BasePrecisionInitializer):
     def __init__(self,
-                 algo: 'QuantizationController',
+                 algo: 'ExperimentalQuantizationController',
                  params: ManualPrecisionInitParams,
                  init_args: QuantizationPrecisionInitArgs = None,
-                 hw_precision_constraints: PrecisionConstraints = None):
+                 hw_precision_constraints: HardwareQuantizationConstraints = None):
         super().__init__(algo, params, init_args)
         self._bitwidth_per_scope = params.bitwidth_per_scope
 
-    def apply_init(self):
+    def apply_init(self) -> SingleConfigQuantizerSetup:
         for pair in self._bitwidth_per_scope:
             if len(pair) != 2:
                 raise ValueError('Invalid format of bitwidth per scope: [int, str] is expected')
@@ -57,3 +58,4 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
             if not is_matched:
                 raise ValueError(
                     'Invalid scope name `{}`, failed to assign bitwidth {} to it'.format(scope_name, bitwidth))
+        return self._algo.get_quantizer_setup_for_current_state()

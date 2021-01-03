@@ -19,9 +19,9 @@ from nncf.module_operations import UpdateWeight
 
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
-from nncf.quantization.precision_constraints import PrecisionConstraints
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
-from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.quantization.structs import WeightQuantizerInfo, SingleConfigQuantizerSetup
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type
 
@@ -33,9 +33,9 @@ class BasePrecisionInitParams:
 
 
 class BasePrecisionInitializer:
-    def __init__(self, algo: 'QuantizationController',
+    def __init__(self, algo: 'ExperimentalQuantizationController',
                  params: BasePrecisionInitParams,
-                 hw_precision_constraints: PrecisionConstraints = None):
+                 hw_precision_constraints: HardwareQuantizationConstraints = None):
         self._algo = algo
         self._model = self._algo._model  # type: NNCFNetwork
         all_quantizers = algo.all_quantizations
@@ -53,7 +53,7 @@ class BasePrecisionInitializer:
         self._all_quantizers_per_scope.update(
             self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())
 
-    def apply_init(self):
+    def apply_init(self) -> SingleConfigQuantizerSetup:
         raise NotImplementedError
 
 
@@ -72,7 +72,7 @@ class WeightQuantizersHandler:
         return retval
 
     def __init__(self, model, weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
-                 constraints: PrecisionConstraints):
+                 constraints: HardwareQuantizationConstraints):
         self._wq_affected_module_scope_vs_qid_dict = {k.get_scope(): k for k in weight_quantizers.keys()}
         self._quantizer_module_scope_vs_qid_dict = {}  # type: Dict[Scope, WeightQuantizerId]
         self._scopes_of_skipped_weight_quantizers = []
@@ -90,7 +90,7 @@ class WeightQuantizersHandler:
                 affected_module_scope = self.get_owning_module_scope_from_wq_scope(scope)
                 if affected_module_scope in self._wq_affected_module_scope_vs_qid_dict:
                     qid = self._wq_affected_module_scope_vs_qid_dict[affected_module_scope]
-                    if len(constraints.get(qid)) != 1:
+                    if len(constraints.get_all_unique_bits(qid)) != 1:
                         self._weight_quantizers_in_execution_order_per_scope[scope] = quantizer
                         self._weight_quantizers_in_execution_order[qid] = quantizer
                     else:
@@ -103,7 +103,7 @@ class WeightQuantizersHandler:
     def get_all_weight_quantizers_in_execution_order_per_scope(self) -> Dict['Scope', BaseQuantizer]:
         return self._weight_quantizers_in_execution_order_per_scope
 
-    def get_weight_quantizers_in_execution_order_per_id(self) -> Dict[QuantizerId, BaseQuantizer]:
+    def get_weight_quantizers_in_execution_order_per_id(self) -> Dict[WeightQuantizerId, BaseQuantizer]:
         return self._weight_quantizers_in_execution_order
 
     def get_quantizer_id_by_scope(self, scope: 'Scope') -> QuantizerId:

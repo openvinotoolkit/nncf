@@ -1089,14 +1089,22 @@ class QuantizationProposal:
                                final_qconfig.mode == initial_qconfig.mode and \
                                final_qconfig.bits == initial_qconfig.bits and \
                                (final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force or
-                                initial_qconfig.signedness_to_force is None)
+                                initial_qconfig.signedness_to_force is None or
+                                final_qconfig.signedness_to_force is None)
 
-                    compatible_inital_qconfs = list(
+                    compatible_initial_qconfs = list(
                         filter(is_final_qconfig_compatible_to_initial,
                                self.quantizer_setup.quantization_points[qp_id].possible_qconfigs))
-                    if not compatible_inital_qconfs:
+                    if not compatible_initial_qconfs:
                         raise RuntimeError("The final quantizer setup has configurations that were not present in the "
                                            "initial proposal!")
+                    if final_qconfig.signedness_to_force is None:
+                        initial_qconfs_signedness_values = {qc.signedness_to_force for qc in compatible_initial_qconfs}
+                        if None not in initial_qconfs_signedness_values and len(initial_qconfs_signedness_values) == 1:
+                            # The initial configs were either all forced-signed or all forced-unsigned - should set
+                            # final qconfig's forced field appropriately
+                            final_qconfig.signedness_to_force = initial_qconfs_signedness_values.pop()
+
                 pq.potential_quant_configs = [final_qconfig]
         return FinalizedQuantizationProposal(final_quantizer_setup,
                                              self._quant_prop_graph)

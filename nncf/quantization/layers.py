@@ -79,6 +79,12 @@ class QuantizerConfig:
                self.signedness_to_force == linked_qconfig.signedness_to_force and \
                self.per_channel == linked_qconfig.per_channel
 
+    def is_a_bitwidth_variant(self, other_qconfig: 'QuantizerConfig') -> bool:
+        return self.per_channel == other_qconfig.per_channel and \
+               self.signedness_to_force == other_qconfig.signedness_to_force and \
+               self.is_weights == other_qconfig.is_weights and \
+               self.mode == other_qconfig.mode
+
 
 class QuantizerExportMode(Enum):
     FAKE_QUANTIZE = "fake_quantize"

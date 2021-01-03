@@ -15,6 +15,7 @@ from typing import Dict
 import torch
 from torch import Tensor
 
+from nncf.quantization.layers import QuantizerConfig
 from ...dynamic_graph.context import no_nncf_trace
 
 
@@ -48,17 +49,17 @@ class PerturbationObserver:
 
 class Perturbations:
     def __init__(self):
-        self._perturbations = {}  # type: Dict[int, Dict[int, Tensor]]
+        self._perturbations = {}  # type: Dict[int, Dict[QuantizerConfig, Tensor]]
 
-    def add(self, layer_id: int, bitwidth: int, perturbation: Tensor):
+    def add(self, layer_id: int, qconfig: QuantizerConfig, perturbation: Tensor):
         if layer_id in self._perturbations:
-            self._perturbations[layer_id].update({bitwidth: perturbation})
+            self._perturbations[layer_id].update({qconfig: perturbation})
         else:
-            self._perturbations[layer_id] = {bitwidth: perturbation}
+            self._perturbations[layer_id] = {qconfig: perturbation}
 
-    def get(self, layer_id: int, bitwidth: int) -> Tensor:
+    def get(self, layer_id: int, qconfig: QuantizerConfig) -> Tensor:
         layer_perturbations = self._perturbations[layer_id]
-        return layer_perturbations[bitwidth]
+        return layer_perturbations[qconfig]
 
-    def get_all(self) -> Dict[int, Dict[int, Tensor]]:
+    def get_all(self) -> Dict[int, Dict[QuantizerConfig, Tensor]]:
         return self._perturbations

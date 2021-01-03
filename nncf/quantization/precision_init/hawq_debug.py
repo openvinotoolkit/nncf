@@ -17,13 +17,14 @@ from typing import List, Dict
 
 import os
 import torch
+
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.precision_init.hawq_init import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
 from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.dynamic_graph.graph import NNCFGraph
@@ -32,13 +33,15 @@ from nncf.utils import get_all_modules_by_type
 
 
 class HAWQDebugger:
-    def __init__(self, bits_configurations: List[List[int]],
+    def __init__(self, weight_qconfigs_in_trace_order: List['ConfigurationForHAWQToEvaluate'],
                  perturbations: Perturbations,
-                 weight_observers: List[PerturbationObserver],
+                 covering_configurations: List['CoveringConfigurationForQuantNoiseCalculation'],
+                 weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
                  traces_per_layer: TracesPerLayer, bits: List[int]):
-        self._bits_configurations = bits_configurations
-        self._num_weights = len(weight_observers)
+        self._weight_qconfigs_in_trace_order = weight_qconfigs_in_trace_order
+        self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
+        self._covering_configurations = covering_configurations
 
         from nncf.debug import DEBUG_LOG_DIR
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
@@ -51,15 +54,15 @@ class HAWQDebugger:
         norm_of_weights = []
         for i in range(self._num_weights):
             trace_index = self._traces_order.get_execution_index_by_traces_index(i)
-            num_of_weights.append(weight_observers[trace_index].get_numels())
-            norm_of_weights.append(weight_observers[trace_index].get_input_norm())
+            num_of_weights.append(weight_observers_for_each_covering_configuration[0][trace_index].get_numels())
+            norm_of_weights.append(weight_observers_for_each_covering_configuration[0][trace_index].get_input_norm())
         self._num_weights_per_layer = torch.Tensor(num_of_weights)
         self._norm_weights_per_layer = torch.Tensor(norm_of_weights)
 
         bits_in_megabyte = 2 ** 23
         self._model_sizes = []
-        for bits_config in self._bits_configurations:
-            size = torch.sum(torch.Tensor(bits_config) * self._num_weights_per_layer).item() / bits_in_megabyte
+        for configuration in self._weight_qconfigs_in_trace_order:
+            size = torch.sum(torch.Tensor([qc.bits for qc in configuration]) * self._num_weights_per_layer).item() / bits_in_megabyte
             self._model_sizes.append(size)
         self._bits = bits
 
@@ -283,12 +286,11 @@ class HAWQDebugger:
 
     def dump_density_of_quantization_noise(self):
         noise_per_config = []  # type: List[Tensor]
-        for bits_config in self._bits_configurations:
+        for bits_config in self._weight_qconfigs_in_trace_order:
             qnoise = 0
             for i in range(self._num_weights):
-                layer_bits = bits_config[i]
                 execution_index = self._traces_order.get_execution_index_by_traces_index(i)
-                qnoise += self._perturbations.get(layer_id=execution_index, bitwidth=layer_bits)
+                qnoise += self._perturbations.get(layer_id=execution_index, qconfig=bits_config[i])
             noise_per_config.append(qnoise)
 
         list_to_plot = [cm.item() for cm in noise_per_config]
@@ -310,12 +312,19 @@ class HAWQDebugger:
         ax = fig.add_subplot(2, 1, 1)
         ax.set_xlabel('Blocks')
         ax.set_yscale('log')
-        b = max(self._bits)
-        perturb = [p[b] for p in self._perturbations.get_all().values()]
+        perturbations_per_layer_id = list(self._perturbations.get_all().values())
+        perturb = []
+        max_bit = []
+        for perturbations_for_all_observed_configs_in_current_layer in perturbations_per_layer_id:
+            configs = perturbations_for_all_observed_configs_in_current_layer.keys()
+            max_bit_config = max(configs, key=lambda x: x.bits)
+            perturb.append(perturbations_for_all_observed_configs_in_current_layer[max_bit_config])
+            max_bit.append(max_bit_config.bits)
         ax.plot(
             [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
-            label='normalized {}-bit noise'.format(b))
-        ax.plot(perturb, label='{}-bit noise'.format(b))
+            label='normalized n-bit noise')
+        ax.plot(perturb, label='n-bit noise')
+        ax.plot(max_bit, label='n')
         ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
         ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label='trace * noise')
         ax.legend()
