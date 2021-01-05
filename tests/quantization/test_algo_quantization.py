@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List, Tuple
 
 import pytest
 import torch
@@ -31,6 +32,7 @@ from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.algo import QuantizationController, QuantizationBuilder
 from nncf.quantization.layers import QuantizationMode, QuantizerConfig, SymmetricQuantizer, BaseQuantizer, \
     QUANTIZATION_MODULES
+from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId
 from nncf.utils import get_all_modules_by_type
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
     get_squeezenet_quantization_config
@@ -107,7 +109,9 @@ def test_quantization_configs__custom():
         compare_qconfigs(ref_activation_qconfig, aq_info.quantizer_module_ref)
 
 
-def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name):
+def compare_weights_activation_quantizers_pairs(actual_pairs: List[Tuple[List[WeightQuantizerId],
+                                                                         NonWeightQuantizerId]],
+                                                algo, ref_pair_names, model_name):
     def get_wq_name(name):
         return '/'.join([model_name, name])
 
@@ -118,7 +122,9 @@ def compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_nam
 
     all_quantizations = {str(key): quantizer for key, quantizer in algo.all_quantizations.items()}
     assert len(actual_pairs) == len(ref_pair_names)
-    for (wqs, aq), (wqs_names, aq_name) in zip(actual_pairs, ref_pair_names):
+    for (wq_ids, aq_id), (wqs_names, aq_name) in zip(actual_pairs, ref_pair_names):
+        wqs = [algo.all_quantizations[wq_id] for wq_id in wq_ids]
+        aq = algo.all_quantizations[aq_id]
         assert not aq.is_weights
         assert aq == all_quantizations[get_aq_name(aq_name)]
         ref_weight_quantizers = [all_quantizations[get_wq_name(name)] for name in wqs_names]
@@ -292,7 +298,7 @@ def test_load_state_sets_initialized_flag():
 
     load_state(quant_model, {
         'module.features.0.0.pre_ops.0.op.signed_tensor': torch.tensor([1.0]),  # quantizer of 1st conv's weights
-        'module.features.1.0.pre_ops.0.op.scale': torch.tensor([1.0])  # quantizer of 2nd conv's weights
+        'module.features.1.0.pre_ops.0.op.scale': torch.ones(1, 1, 1, 1)  # quantizer of 2nd conv's weights
     })
 
     quantizers = get_all_modules_by_type(quant_model, 'SymmetricQuantizer')

@@ -21,7 +21,8 @@ from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
-from nncf.quantization.structs import WeightQuantizerInfo, SingleConfigQuantizerSetup
+from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type
 

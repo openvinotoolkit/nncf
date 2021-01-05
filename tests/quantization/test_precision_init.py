@@ -717,7 +717,8 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
                                                                  data_loader=mock_train_loader,
                                                                  device='cuda')])
     mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
-    mocked_calc_traces = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
+    mocked_calc_traces = mocker.patch(
+        'nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
     stub = mocker.stub()
     stub.traces_order = TracesOrder([0])
     mocked_calc_traces.return_value = stub

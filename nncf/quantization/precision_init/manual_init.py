@@ -14,7 +14,7 @@
 from typing import List, Dict
 
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer
-from nncf.quantization.structs import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 
 from ..precision_constraints import HardwareQuantizationConstraints
 from ...structures import QuantizationPrecisionInitArgs

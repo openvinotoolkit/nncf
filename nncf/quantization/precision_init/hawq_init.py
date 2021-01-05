@@ -38,7 +38,8 @@ from nncf.quantization.precision_init.traces_order import TracesPerLayer, Traces
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
-from nncf.quantization.structs import WeightQuantizerInfo, SingleConfigQuantizerSetup, QuantizationPointId
+from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.quantization.quantizer_setup import QuantizationPointId, SingleConfigQuantizerSetup
 from nncf.structures import QuantizationPrecisionInitArgs
 
 
@@ -95,8 +96,10 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
             )
         )
 
+
 ConfigurationForHAWQToEvaluate = List[QuantizerConfig]
 CoveringConfigurationForQuantNoiseCalculation = List[QuantizerConfig]
+
 
 class TraceOrderBitwidthMatcher:
     def __init__(self, available_bits: List[int], traces_order: TracesOrder):
@@ -131,7 +134,8 @@ class TraceOrderBitwidthMatcher:
         _, min_idx = min((val, idx) for (idx, val) in enumerate(bw_diffs))
         return qconf_list[min_idx]
 
-    def _deduplicate(self, qconf_sequences_to_search: List[ConfigurationForHAWQToEvaluate]) -> List[ConfigurationForHAWQToEvaluate]:
+    def _deduplicate(self, qconf_sequences_to_search: List[ConfigurationForHAWQToEvaluate]) -> \
+            List[ConfigurationForHAWQToEvaluate]:
         tupled_sequence = [tuple(seq) for seq in qconf_sequences_to_search]
         odict = OrderedDict.fromkeys(tupled_sequence)
         deduped_tupled_sequence = list(odict.keys())
@@ -161,17 +165,20 @@ class TraceOrderBitwidthMatcher:
             covering_confs.append(covering_conf)
         return covering_confs
 
-    def get_qconfig_sequences_constrained_by_trace_order(self, configuration_space_in_trace_order: List[List[QuantizerConfig]],
-                                                         indices_for_bitwidth_adjustment_only: Set[int]) -> Tuple[List[ConfigurationForHAWQToEvaluate],
-                                                                                                                  List[CoveringConfigurationForQuantNoiseCalculation]]:
+    def get_qconfig_sequences_constrained_by_trace_order(self,
+                                                         configuration_space_in_trace_order: List[
+                                                             List[QuantizerConfig]],
+                                                         indices_for_bitwidth_adjustment_only: Set[int]) -> \
+            Tuple[List[ConfigurationForHAWQToEvaluate], List[CoveringConfigurationForQuantNoiseCalculation]]:
         """The 'constraint' is so that the each qconfig sequence should have non-decreasing bitwidths. It
-        might be impossible for a given configuration space (consider [[2], [6, 8], [4]]) - for trace order index positions
-        where it was impossible to select a bitwidth so that the entire sequence is non-decreasing, the bitwidth closest
-        to target will be chosen instead."""
+        might be impossible to apply this constraint for a given configuration space (consider [[2], [6, 8], [4]]).
+        In such a case, for trace order index positions where it was impossible to select a bitwidth so that the entire
+        sequence is non-decreasing, the bitwidth closest to this target will be chosen instead."""
         if len(configuration_space_in_trace_order) != len(self._traces_order):
             raise ValueError("The size of the configuration space and the traces do not match!")
         retval = []  # type: List[ConfigurationForHAWQToEvaluate]
-        observed_qconfs_in_retval = [OrderedDict() for _ in range(len(self._traces_order))]  # type: List[OrderedDict[QuantizerConfig, QuantizerConfig]]
+        observed_qconfs_in_retval = [OrderedDict()
+                                     for _ in range(len(self._traces_order))]
         for bit_seq in self._bit_sequences:
             current_config_sequence_in_trace_order = []  # type: ConfigurationForHAWQToEvaluate
             for trace_idx, bitwidth in enumerate(bit_seq):
@@ -238,7 +245,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             raise RuntimeError('Failed to calculate hessian traces!')
 
         traces_order = traces_per_layer.traces_order
-        weight_qconfigs_in_trace_order, covering_configurations = self.get_configs_constrained_by_traces_order(traces_order)
+        weight_qconfigs_in_trace_order, covering_configurations = self.get_configs_constrained_by_traces_order(
+            traces_order)
 
         weight_quantizer_ids_in_execution_order = list(self._weight_quantizations_by_execution_order.keys())
 
@@ -295,15 +303,16 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
         self._model.to(original_device)
 
-        ordered_metric_per_layer = self.get_metric_per_layer(chosen_config_in_execution_order, perturbations,
+        _ = self.get_metric_per_layer(chosen_config_in_execution_order, perturbations,
                                                              traces_per_layer)
         return final_quantizer_setup
 
     @staticmethod
     def _merge_constraints_for_adjacent_quantizers(groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
-                                                   hw_precision_constraints: HardwareQuantizationConstraints) -> HardwareQuantizationConstraints:
+                                                   hw_precision_constraints: HardwareQuantizationConstraints) -> \
+            HardwareQuantizationConstraints:
         if not hw_precision_constraints:
-            return
+            return None
         retval = deepcopy(hw_precision_constraints)
         for group in groups_of_adjacent_quantizers:
             all_bits_sets = []
@@ -462,7 +471,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 param.requires_grad = True
         quantizers_switcher.enable_quantizers()
 
-    def get_configs_constrained_by_traces_order(self, traces_order: TracesOrder) -> Tuple[List[ConfigurationForHAWQToEvaluate], List[CoveringConfigurationForQuantNoiseCalculation]]:
+    def get_configs_constrained_by_traces_order(self, traces_order: TracesOrder) -> \
+            Tuple[List[ConfigurationForHAWQToEvaluate], List[CoveringConfigurationForQuantNoiseCalculation]]:
         configuration_space_in_trace_order = []  # type: List[List[QuantizerConfig]]
         trace_order_indices_of_defaulted_configs = set()  # type: Set[int]
         quantizer_ids_in_exec_order = list(self._weight_quantizations_by_execution_order.keys())
@@ -516,9 +526,11 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             qp_ids_in_trace_order.append(self._algo.module_id_to_qp_id_translation_dict[quant_module_id])
         return qp_ids_in_trace_order
 
-    def _apply_weight_configuration_to_quantizer_setup(self, configuration: CoveringConfigurationForQuantNoiseCalculation,
+    def _apply_weight_configuration_to_quantizer_setup(self,
+                                                       configuration: CoveringConfigurationForQuantNoiseCalculation,
                                                        qp_ids_in_trace_order: List[QuantizationPointId],
-                                                       quantizer_setup: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
+                                                       quantizer_setup: SingleConfigQuantizerSetup) -> \
+            SingleConfigQuantizerSetup:
         retval = deepcopy(quantizer_setup)
         assert len(configuration) == len(qp_ids_in_trace_order)
         for trace_idx, qp_id in enumerate(qp_ids_in_trace_order):
@@ -532,10 +544,12 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         ctrl = self._algo
         observers_for_all_configurations = []  # type: List[List[PerturbationObserver]]
         for configuration in configurations_to_run:
-            quantizer_setup_to_run = self._apply_weight_configuration_to_quantizer_setup(configuration,
-                                                                                         qp_ids_in_trace_order,
-                                                                                         ctrl.get_quantizer_setup_for_current_state())
-            ctrl, model = ctrl.apply_new_quantizer_setup(quantizer_setup_to_run)  # type: Tuple[ExperimentalQuantizationController, NNCFNetwork]
+            quantizer_setup_to_run = self._apply_weight_configuration_to_quantizer_setup(
+                configuration,
+                qp_ids_in_trace_order,
+                ctrl.get_quantizer_setup_for_current_state())
+            ctrl, model = ctrl.apply_new_quantizer_setup(
+                quantizer_setup_to_run)  # type: Tuple[ExperimentalQuantizationController, NNCFNetwork]
 
             hook_handles = []
             observers = []
@@ -546,7 +560,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 hook_handles.append(wq_module.register_forward_hook(observer.calc_perturbation))
                 observers.append(observer)
 
-            self._model.do_dummy_forward(force_eval=True)
+            model.do_dummy_forward(force_eval=True)
 
             for i, observer in enumerate(observers):
                 perturbations.add(layer_id=traces_order.get_execution_index_by_traces_index(i),
@@ -590,9 +604,10 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         qp_ids_in_trace_order = self._get_weight_qp_ids_in_trace_order(traces_order)
         ctrl = self._algo
 
-        quantizer_setup_to_set = self._apply_weight_configuration_to_quantizer_setup(weight_qconfigs_in_traces_order,
-                                                                                     qp_ids_in_trace_order,
-                                                                                     ctrl.get_quantizer_setup_for_current_state())
+        quantizer_setup_to_set = self._apply_weight_configuration_to_quantizer_setup(
+            weight_qconfigs_in_traces_order,
+            qp_ids_in_trace_order,
+            ctrl.get_quantizer_setup_for_current_state())
         if quantizer_setup_to_set.shared_input_operation_set_groups:
             for group in quantizer_setup_to_set.shared_input_operation_set_groups:
                 weight_qp_ids = []
@@ -622,7 +637,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 wq_qp_ids = [ctrl.module_id_to_qp_id_translation_dict[wq_id] for wq_id in wq_ids]
                 aq_qp_id = ctrl.module_id_to_qp_id_translation_dict[aq_id]
                 wq_bits = [quantizer_setup_to_set.quantization_points[wq_qp_id].qconfig.bits for wq_qp_id in wq_qp_ids]
-                quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.bits = max([wq_bit for wq_bit in wq_bits])
+                quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.bits = max(wq_bits)
 
         return quantizer_setup_to_set
 
@@ -631,7 +646,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                                            weight_bitwidth_set: Set[int]) -> SingleConfigQuantizerSetup:
         for act_qp_id in act_qp_ids:
             original_quant_module_id = self._original_qp_id_vs_quantizer_module_id_dict[act_qp_id]
-            activation_bitwidths_vs_qconfigs = self._hw_precision_constraints.get_bitwidth_vs_qconfigs_dict(original_quant_module_id)
+            activation_bitwidths_vs_qconfigs = self._hw_precision_constraints.get_bitwidth_vs_qconfigs_dict(
+                original_quant_module_id)
             activation_bitwidth_set = set(activation_bitwidths_vs_qconfigs.keys())
             intersection = activation_bitwidth_set.intersection(weight_bitwidth_set)
             target_qp = quantizer_setup_to_set.quantization_points[act_qp_id]
@@ -726,5 +742,3 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 filtered_bits_configurations.append(qconf_configuration)
 
         return filtered_bits_configurations
-
-

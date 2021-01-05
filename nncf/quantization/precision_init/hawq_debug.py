@@ -62,7 +62,8 @@ class HAWQDebugger:
         bits_in_megabyte = 2 ** 23
         self._model_sizes = []
         for configuration in self._weight_qconfigs_in_trace_order:
-            size = torch.sum(torch.Tensor([qc.bits for qc in configuration]) * self._num_weights_per_layer).item() / bits_in_megabyte
+            size = torch.sum(torch.Tensor([qc.bits for qc in configuration]) *
+                             self._num_weights_per_layer).item() / bits_in_megabyte
             self._model_sizes.append(size)
         self._bits = bits
 

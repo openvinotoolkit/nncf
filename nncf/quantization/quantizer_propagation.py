@@ -31,8 +31,9 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.nncf_network import InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, \
     InsertionPoint, InsertionInfo
 from nncf.quantization.structs import QuantizationConstraints, QuantizerGroup, QuantizableModule, \
-    QuantizersBetweenQuantizableLayers, MultiConfigQuantizerSetup, SingleConfigQuantizerSetup, QuantizationPointId, \
-    MultiConfigQuantizationPoint
+    QuantizersBetweenQuantizableLayers
+from nncf.quantization.quantizer_setup import QuantizationPointId, MultiConfigQuantizationPoint, \
+    SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode
 from nncf.utils import in_scope_list
 from nncf.nncf_logger import logger as nncf_logger

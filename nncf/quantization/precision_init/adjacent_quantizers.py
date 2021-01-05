@@ -14,7 +14,7 @@ from typing import List, Tuple, NamedTuple, Dict
 
 from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.quantizer_id import QuantizerId
-from nncf.quantization.structs import QuantizationPointId, QuantizerSetupBase
+from nncf.quantization.quantizer_setup import QuantizationPointId, QuantizerSetupBase
 
 
 class AdjacentQuantizers(NamedTuple):

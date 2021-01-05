@@ -196,14 +196,19 @@ BASIC_RANGE_INIT_CONFIG_PROPERTIES = {
         "type": with_attributes(_STRING, description="Type of the initializer - determines which "
                                                      "statistics gathered during initialization will be "
                                                      "used to initialize the quantization ranges"),
-        "min_percentile": with_attributes(_NUMBER,
-                                          description="For 'percentile' type - specify the percentile of "
-                                                      "input value histograms to be set as the initial "
-                                                      "value for minimum quantizer input"),
-        "max_percentile": with_attributes(_NUMBER,
-                                          description="For 'percentile' type - specify the percentile of "
-                                                      "input value histograms to be set as the initial "
-                                                      "value for maximum quantizer input"),
+        "params": {
+            "type": "object",
+            "properties": {
+                "min_percentile": with_attributes(_NUMBER,
+                                                  description="For 'percentile' type - specify the percentile of "
+                                                              "input value histograms to be set as the initial "
+                                                              "value for minimum quantizer input"),
+                "max_percentile": with_attributes(_NUMBER,
+                                                  description="For 'percentile' type - specify the percentile of "
+                                                              "input value histograms to be set as the initial "
+                                                              "value for maximum quantizer input"),
+            }
+        }
     },
     "additionalProperties": False,
 }

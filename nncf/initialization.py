@@ -10,29 +10,9 @@ from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 
 from nncf.progress_bar import ProgressBar
-from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
-from nncf.quantization.init_range import PercentileInitializer
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
     BNAdaptationInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
-
-
-class RangeInitializerFactory:
-    @staticmethod
-    def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
-        init_type = init_config["type"]
-        num_init_samples = init_config["num_init_samples"]
-        if init_type == "min_max":
-            return MinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, num_init_samples, log_module_name)
-        if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "percentile":
-            min_percentile = init_config.get("min_percentile", 10)
-            max_percentile = init_config.get("max_percentile", 90)
-            return PercentileInitializer(module, num_init_samples, min_percentile, max_percentile, log_module_name)
-        raise NotImplementedError
 
 
 class InitializingDataLoader:
@@ -161,11 +141,13 @@ class DataLoaderBaseRunner:
     def _apply_initializers(self):
         raise NotImplementedError
 
+
 class SimpleDataLoaderRunner(DataLoaderBaseRunner):
     def _prepare_initialization(self):
         pass
     def _apply_initializers(self):
         pass
+
 
 class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
     def __init__(
@@ -181,6 +163,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.hook_handles = []
 
     def _prepare_initialization(self):
+        from nncf.quantization.init_range import RangeInitializerFactory
         for name, data in self.modules_to_init.items():
             module, init_config = data
             self.initializers[name] = RangeInitializerFactory.create(

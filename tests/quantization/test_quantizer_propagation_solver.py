@@ -18,7 +18,7 @@ from typing import Dict, List, Tuple
 
 import networkx as nx
 import pytest
-from nncf.quantization.structs import MultiConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext

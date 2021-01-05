@@ -1,6 +1,5 @@
-from abc import ABC, abstractmethod
-from functools import singledispatch
-from typing import Dict, Tuple
+from abc import ABC
+from typing import Dict
 
 import torch
 
@@ -28,16 +27,14 @@ class MinMaxTensorStatistic(TensorStatistic):
             max_pct = max(statistic.percentile_vs_values_dict.keys())
             return cls(statistic.percentile_vs_values_dict[min_pct],
                        statistic.percentile_vs_values_dict[max_pct])
+        raise ValueError("Unknown statistic to generate min-max stat from!")
 
 class MedianMADTensorStatistic(TensorStatistic):
     def __init__(self, median_values: torch.Tensor, mad_values: torch.Tensor):
         self.median_values = median_values
         self.mad_values = mad_values
-        return
 
 
 class PercentileTensorStatistic(TensorStatistic):
     def __init__(self, percentile_vs_values_dict: Dict[float, torch.Tensor]):
         self.percentile_vs_values_dict = percentile_vs_values_dict
-
-

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
 
 import numpy as np
 import random
@@ -44,7 +44,7 @@ def scopes_matched(scope_stack_0, scope_stack_1):
     return True
 
 
-def in_scope_list(scope, scope_list):
+def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
     if scope_list is None:
         return False
 
@@ -234,6 +234,12 @@ def get_per_channel_scale_shape(input_shape, is_weights):
     return scale_shape
 
 
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool) -> List[int]:
+    if not per_channel:
+        return [1]
+    return get_per_channel_scale_shape(input_shape, is_weights)
+
+
 def get_flat_tensor_contents_string(input_tensor):
     retval = "["
     for idx, el in enumerate(input_tensor.view(-1)):
@@ -341,9 +347,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         return tuple(obj)
 
     return obj
-
-
-
 
 
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):

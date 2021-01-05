@@ -24,13 +24,15 @@ import operator
 import shutil
 import torch
 from nncf.config import NNCFConfig
-from nncf.quantization.init_range import RangeInitParams
+from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
+    StatCollectorGenerator
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.quantization.structs import QuantizerSetupType, QuantizationConstraints, QuantizerGroup, QuantizableModule, \
-    NonWeightQuantizerInfo, QuantizationPointId, MultiConfigQuantizerSetup, SingleConfigQuantizerSetup, \
-    SingleConfigQuantizationPoint, WeightQuantizerInfo, QuantizerSetupBase
+    NonWeightQuantizerInfo, WeightQuantizerInfo
+from nncf.quantization.quantizer_setup import QuantizationPointId, SingleConfigQuantizationPoint, QuantizerSetupBase, \
+    SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
@@ -59,7 +61,7 @@ from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizer
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
-from nncf.tensor_statistics.algo import TensorStatisticObservationPoint, TensorStatisticsCollectionBuilder
+from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
@@ -664,8 +666,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._precision_init_type, self._precision_init_params = self._parse_precision_init_params(init_config)
 
     def _parse_range_init_params(self, initializer_config: Dict) -> RangeInitParams:
-        init_range_config = initializer_config.get('range', {})
-        if not init_range_config:
+        init_range_config_dict_or_list = initializer_config.get('range', {})
+        if not init_range_config_dict_or_list:
             try:
                 self.config.get_extra_struct(QuantizationRangeInitArgs)
                 has_range_init_args = True
@@ -681,21 +683,21 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                     "done")
                 return None
 
-            init_range_config = {'num_init_samples': num_init_samples}
+            init_range_config_dict_or_list = {'num_init_samples': num_init_samples}
 
-        # if isinstance(init_range_config, dict):
-        num_init_samples = init_range_config.get("num_init_samples", 256)
-        init_type = init_range_config.get("type", "mean_min_max")
-        if num_init_samples < 0:
-            raise AttributeError('Number of initialization samples must be >= 0')
-        # else:
-        #     max_num_init_samples = 0
-        #     global_init_range_config = []
-        #     for sub_init_range_config in init_range_config:
-        #         global_init_range_config.append(self.update_range_config_by_default(sub_init_range_config))
-        #         max_num_init_samples = max(sub_init_range_config['num_init_samples'], max_num_init_samples)
+        max_num_init_samples = 0
+        global_range_init_config = None
+        scope_overrides = []  # type: List[PerLayerRangeInitConfig]
+        if isinstance(init_range_config_dict_or_list, dict):
+            global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
+            max_num_init_samples = global_range_init_config.num_init_samples
+        else:
+            for sub_init_range_config_dict in init_range_config_dict_or_list:
+                scope_overrides.append(PerLayerRangeInitConfig.from_dict(sub_init_range_config_dict))
+                max_num_init_samples_config = max(scope_overrides, key=lambda x: x.num_init_samples)
+                max_num_init_samples = max_num_init_samples_config.num_init_samples
 
-        if num_init_samples == 0:
+        if max_num_init_samples == 0:
             return None
 
         try:
@@ -705,11 +707,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 'Should run range initialization as specified via config,'
                 'but the initializing data loader is not provided as an extra struct. '
                 'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
-        data_loader = range_init_args.data_loader
-        batch_size = data_loader.batch_size
-        max_num_init_steps = int(np.ceil(num_init_samples / batch_size))
 
-        return RangeInitParams(data_loader, init_type, max_num_init_steps, range_init_args.device, None)
+        return RangeInitParams(range_init_args.data_loader,
+                               range_init_args.device,
+                               global_range_init_config,
+                               scope_overrides)
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
         init_precision_config = initializer_config.get('precision', None)
@@ -736,11 +738,12 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         target_model.register_compression_module_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
-        minmax_values_for_range_init = None
-        stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
-                                                                         single_config_quantizer_setup,
-                                                                         self._range_init_params)
-        minmax_values_for_range_init = single_config_quantizer_setup.get_minmax_values(stats_for_range_init)
+        minmax_values_for_range_init = {}
+        if self.should_init:
+            stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
+                                                                             single_config_quantizer_setup,
+                                                                             self._range_init_params)
+            minmax_values_for_range_init = single_config_quantizer_setup.get_minmax_values(stats_for_range_init)
         insertion_commands, setup_to_module_id_translation_dict = \
             self._build_insertion_commands_list_for_quantizer_setup(single_config_quantizer_setup,
                                                                     target_model,
@@ -769,19 +772,18 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         -> Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]:
         if range_init_params is None:
             return {}
-        observation_points = set()  # type: Set[TensorStatisticObservationPoint]
-        for qp in quantizer_setup.quantization_points.values():
-            observation_points.add(TensorStatisticObservationPoint(
-                qp.insertion_point,
-                reduction_shapes=set(qp.get_all_scale_shapes())))
+        observation_points_vs_collectors_dict = StatCollectorGenerator.\
+            generate_collectors_for_range_init_statistics_collection(quantizer_setup,
+                                                                     range_init_params)
 
         with target_model.temporary_clean_view() as intermediate_model:
             stat_builder = TensorStatisticsCollectionBuilder(NNCFConfig(),
-                                                             observation_points)
+                                                             observation_points_vs_collectors_dict)
             stat_builder.apply_to(intermediate_model)
             stat_ctrl = intermediate_model.commit_compression_changes()
             runner = SimpleDataLoaderRunner(intermediate_model, range_init_params.device)
-            runner.run(range_init_params.init_range_data_loader, range_init_params.max_num_init_steps)
+            runner.run(range_init_params.init_range_data_loader,
+                       range_init_params.get_max_num_init_steps())
 
         retval = {}
         for ip, collector in stat_ctrl.ip_vs_collector_dict.items():
@@ -864,8 +866,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
     def _build_insertion_commands_list_for_quantizer_setup(self,
                                                            quantizer_setup: SingleConfigQuantizerSetup,
                                                            target_model: NNCFNetwork,
-                                                           minmax_values_for_range_init: Dict[QuantizationPointId,
-                                                                                              MinMaxTensorStatistic] = None) -> \
+                                                           minmax_values_for_range_init: Dict[
+                                                               QuantizationPointId, MinMaxTensorStatistic]) -> \
             Tuple[List[InsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
         insertion_commands = []
         qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
@@ -876,10 +878,11 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
 
-            quant_module_id, commands = self._build_commands_for_single_unified_scale_group(target_model,
-                                                                                            quantizer_setup,
-                                                                                            unified_scales_group,
-                                                                                            minmax_values_for_range_init)
+            quant_module_id, commands = self._build_commands_for_single_unified_scale_group(
+                target_model,
+                quantizer_setup,
+                unified_scales_group,
+                minmax_values_for_range_init)
             for us_qp_id in unified_scales_group:
                 qp_id_vs_quant_module_id_dict[us_qp_id] = quant_module_id
             insertion_commands += commands
@@ -892,8 +895,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             commands = []
 
             range_init_minmax_values = None
-            if minmax_values_for_range_init is not None:
-                minmax_stat = minmax_values_for_range_init[qp_id]
+            if minmax_values_for_range_init:
+                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is None:
                     nncf_logger.warning("Tensor statistics for location {} were not collected! The corresponding "
                                         "quantizer range will not be initialized!".format(ip))
@@ -919,7 +922,9 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                                        target_model: NNCFNetwork,
                                                        quantizer_setup: SingleConfigQuantizerSetup,
                                                        unified_scales_group: Set[QuantizationPointId],
-                                                       minmax_values_for_range_init: Dict[QuantizationPointId, MinMaxTensorStatistic] = None) -> Tuple[QuantizerId, List[InsertionCommand]]:
+                                                       minmax_values_for_range_init: Dict[QuantizationPointId,
+                                                                                          MinMaxTensorStatistic]) -> \
+            Tuple[QuantizerId, List[InsertionCommand]]:
         qp_ids_list_for_current_group = list(unified_scales_group)
 
         # The primary insertion point (to be associated with the actual quantizer module, not just hooks to it)
@@ -946,16 +951,18 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                    "be identical!")
 
         range_init_minmax_values = None
-        if minmax_values_for_range_init is not None:
+        if minmax_values_for_range_init:
             # Hopefully this will suffice. TODO: gather unified statistic by linking stat collectors instead
             min_values = None
             max_values = None
             for qp_id in sorted_qp_ids:
-                minmax_stat = minmax_values_for_range_init[qp_id]
+                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
                 if minmax_stat is None:
                     nncf_logger.warning("Tensor statistics for location {} were not collected! The corresponding "
                                         "quantizer range will not be initialized!".format(
                         quantizer_setup.quantization_points[qp_id].insertion_point))
+                    continue
+
                 if min_values is None:
                     min_values = minmax_stat.min_values
                 else:
@@ -965,7 +972,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     max_values = minmax_stat.max_values
                 else:
                     max_values = torch.max(max_values, minmax_stat.max_values)
-            range_init_minmax_values = min_values, max_values
+            if min_values is not None and max_values is not None:
+                range_init_minmax_values = min_values, max_values
 
         quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
                                                                               primary_insertion_info,
@@ -1118,7 +1126,7 @@ class QuantizationController(QuantizationControllerBase):
         self.is_staged_scheduler = bool(params)
 
         if is_main_process() and should_init:
-            self._initialize_quantizer_params_during_controller_creation()
+            self.run_batchnorm_adaptation(self.quantization_config)
         self.update_metric_store(True)
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
@@ -1189,13 +1197,6 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             return self.scheduler.compression_level()
         return CompressionLevel.FULL
-
-    def _initialize_quantizer_params_during_controller_creation(self):
-        """ For the quantization there are 2 types of initializations: range and precision
-            BatchNorm statistics are updated for the quantized model as a final initialization step.
-        """
-        self.init_range()
-        self.run_batchnorm_adaptation(self.quantization_config)
 
     def init_precision(self,
                        precision_init_type: str,

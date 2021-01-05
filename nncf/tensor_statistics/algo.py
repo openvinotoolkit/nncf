@@ -16,11 +16,12 @@ from nncf.config import NNCFConfig
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import InsertionPoint, NNCFNetwork, InsertionCommand, OperationPriority, InsertionType
-from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, MinMaxStatisticCollector, ReductionShape
+from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, insertion_point: InsertionPoint, reduction_shapes: Set[ReductionShape] = None):
+    def __init__(self, insertion_point: InsertionPoint,
+                 reduction_shapes: Set[ReductionShape] = None):
         self.insertion_point = insertion_point
         self.reduction_shapes = reduction_shapes
 
@@ -32,22 +33,22 @@ class TensorStatisticObservationPoint:
 
 
 class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
-    def __init__(self, config: NNCFConfig, observation_points: Set[TensorStatisticObservationPoint]):
+    def __init__(self, config: NNCFConfig,
+                 observation_points_vs_collectors: Dict[TensorStatisticObservationPoint,
+                                                        TensorStatisticCollectorBase]):
         super().__init__(config)
-        self._observation_points = observation_points
-        self._ip_vs_collector_dict = {} # type: Dict[InsertionPoint, TensorStatisticCollectorBase]
+        self._observation_points_vs_collectors = observation_points_vs_collectors
 
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         # Will it really suffice to use a single collector for all threads? After all, each of the threads
         # receives its own data, and should we use a thread-local collector, there would have to be a
         # separate thread reduction step involved. Still, is there a better option here than to rely on GIL?
         retval = []  # type: List[InsertionCommand]
-        for op in self._observation_points:
-            # TODO: factory
-            collector = MinMaxStatisticCollector(reduction_shapes=op.reduction_shapes)
-            self._ip_vs_collector_dict[op.insertion_point] = collector
+        for op, collector in self._observation_points_vs_collectors.items():
             hook_obj = collector.register_input
-            if op.insertion_point.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
+            is_weights = op.insertion_point.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP,
+                                                               InsertionType.NNCF_MODULE_POST_OP]
+            if is_weights:
                 hook_obj = UpdateWeight(hook_obj)
             command = InsertionCommand(op.insertion_point, hook_obj,
                                        OperationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
@@ -55,7 +56,9 @@ class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
         return retval
 
     def build_controller(self, target_model: NNCFNetwork) -> 'TensorStatisticsCollectionController':
-        return TensorStatisticsCollectionController(target_model, self._ip_vs_collector_dict)
+        return TensorStatisticsCollectionController(target_model,
+                                                    {k.insertion_point: v
+                                                     for k, v in self._observation_points_vs_collectors.items()})
 
 
 class TensorStatisticsCollectionController(CompressionAlgorithmController):

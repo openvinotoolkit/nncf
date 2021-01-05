@@ -36,7 +36,7 @@ from tests import test_models
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
 from tests.helpers import get_empty_config, create_compressed_model_and_algo_for_test
-from nncf.quantization.structs import SingleConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.hw_config import HWConfigType
 from tests.test_models.synthetic import ManyNonEvalModules, PoolUnPool, ArangeModel, TransposeModel, \
     GatherModel, MaskedFillModel, ReshapeModel, ModelWithDummyParameter

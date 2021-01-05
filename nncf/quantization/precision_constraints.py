@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from nncf.quantization.layers import QuantizerConfig
 from .quantizer_id import QuantizerId
