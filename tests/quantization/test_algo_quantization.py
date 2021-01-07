@@ -442,3 +442,41 @@ def test_quantize_inputs():
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
     for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
         assert isinstance(model.activation_quantizers[ref_qinput_scope_str], SymmetricQuantizer)
+
+
+
+@pytest.mark.parametrize(
+    ('left_qconf', 'right_qconf', 'is_less'),
+    (
+        (QuantizerConfig(), QuantizerConfig(), False),
+        (QuantizerConfig(bits=8), QuantizerConfig(bits=6), False),
+        (QuantizerConfig(bits=6), QuantizerConfig(bits=8), True),
+        (QuantizerConfig(bits=6, per_channel=True), QuantizerConfig(bits=6, per_channel=False), False),
+        (QuantizerConfig(bits=5, per_channel=True), QuantizerConfig(bits=6, per_channel=False), True),
+        (
+                QuantizerConfig(bits=5, mode=QuantizationMode.SYMMETRIC),
+                QuantizerConfig(bits=5, mode=QuantizationMode.ASYMMETRIC),
+                True
+        ),
+        (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
+        (QuantizerConfig(signedness_to_force=False), QuantizerConfig(), True),
+        (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
+        (
+            QuantizerConfig(bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+            True
+        ),
+        (
+            QuantizerConfig(bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+            True
+        ),
+
+    )
+)
+def test_quantizer_ordering(left_qconf: QuantizerConfig, right_qconf: QuantizerConfig, is_less: bool):
+    test_result = (left_qconf < right_qconf)
+    inverted_test_result = (right_qconf < left_qconf)
+    assert test_result == is_less
+    if not left_qconf == right_qconf:
+        assert inverted_test_result != is_less
