@@ -32,8 +32,10 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
+from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
-from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement
+from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement, \
+    create_compressed_model_and_algo_for_test
 from tests.test_models.synthetic import ManyNonEvalModules
 
 
@@ -644,3 +646,45 @@ def test_can_collect_scopes_of_train_only_modules():
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/CustomWeightModule[custom]/linear_0'
     }
     assert set(actual_scopes) == ref_scopes
+
+
+def test_get_clean_shallow_copy():
+    model = TwoConvTestModelWithUserModule()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    assert sparse_quantized_model.activation_quantizers
+    old_nncf_modules = sparse_quantized_model.get_nncf_modules().values()
+    old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
+    assert any(old_nncf_module_pre_ops)
+    assert sparse_quantized_model.get_graph().get_nodes_count() != \
+           sparse_quantized_model.get_original_graph().get_nodes_count()
+
+    clean_copy = sparse_quantized_model.get_clean_shallow_copy()
+    assert clean_copy is not sparse_quantized_model
+    assert clean_copy.get_nncf_wrapped_model() is sparse_quantized_model.get_nncf_wrapped_model()
+    new_nncf_modules = clean_copy.get_nncf_modules().values()
+    new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
+    assert not any(new_nncf_module_pre_ops)
+    assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
+
+
+def test_temporary_clean_view():
+    model = TwoConvTestModelWithUserModule()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    old_sd = sparse_quantized_model.state_dict()
+    old_graph = deepcopy(sparse_quantized_model.get_graph())
+    with sparse_quantized_model.temporary_clean_view() as intermediate_model:
+        clean_sd = intermediate_model.state_dict()
+        assert len(clean_sd) < len(old_sd)
+        new_nncf_modules = intermediate_model.get_nncf_modules().values()
+        new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
+        assert not any(new_nncf_module_pre_ops)
+        assert intermediate_model.get_graph().get_nodes_count() == intermediate_model.get_original_graph().get_nodes_count()
+    sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
+    for key, tensor_val in old_sd.items():
+        assert key in sd_after_tmp_clean_view
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
+    sparse_quantized_model.rebuild_graph()
+    graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
+    assert graph_after_tmp_clean_view == old_graph

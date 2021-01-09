@@ -408,7 +408,7 @@ class InsertionPointGraph(nx.DiGraph):
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo] = None,
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
-                 ignored_scopes=None, target_scopes=None):
+                 ignored_scopes=None, target_scopes=None, reset: bool = False):
         super().__init__()
         self._set_nncf_wrapped_model(module)
         self._forward_signature = inspect.signature(module.forward)
@@ -442,7 +442,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         eval_only_ops_exec_ctx = self.collect_eval_only_ops_exec_context(nncf_wrapped_model, self._graph_builder)
 
         # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx)
+        self._replace_modules_by_nncf_modules(device, eval_only_ops_exec_ctx, reset)
 
         _orig_context = TracingContext()
 
@@ -491,7 +491,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
         return NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
                            self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                           self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes)
+                           self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
+                           reset=True)
 
     def get_modules_in_nncf_modules_by_type(self, types) -> Dict['Scope', nn.Module]:
         nncf_modules = self.get_nncf_modules()
@@ -559,6 +560,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return super().__getattr__(name)
 
     def get_graph(self) -> NNCFGraph:
+        if self._compressed_context.graph.get_nodes_count() == 0:
+            self.rebuild_graph()
         return self._compressed_context.graph
 
     def get_original_graph(self) -> NNCFGraph:
@@ -574,10 +577,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                            wrap_inputs_fn=self._wrap_inputs_fn)
         return self._user_dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None):
+    def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
+                                         reset: bool = False):
         module, self._nncf_module_scopes = replace_modules_by_nncf_modules(
             self.get_nncf_wrapped_model(), ignored_scopes=self.ignored_scopes,
-            target_scopes=self.target_scopes, eval_ops_exec_ctx_str=eval_only_ops_exec_ctx)
+            target_scopes=self.target_scopes, eval_ops_exec_ctx_str=eval_only_ops_exec_ctx,
+            reset=reset)
         self._set_nncf_wrapped_model(module.to(device))
 
     def get_nncf_module_scopes(self) -> List['Scope']:

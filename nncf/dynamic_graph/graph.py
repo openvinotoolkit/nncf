@@ -15,6 +15,8 @@ from typing import Callable, List, Optional, Tuple, Any, Dict
 import os
 
 import networkx as nx
+import networkx.algorithms.isomorphism as iso
+
 from copy import deepcopy
 from networkx.drawing.nx_agraph import to_agraph
 from torch import Tensor
@@ -478,6 +480,14 @@ class NNCFGraph:
         self._node_id_to_key_dict = dict()
         self.match_manager = NodeManager(self._node_id_to_key_dict, self._nx_graph, self._nx_node_to_nncf_node)
         self._input_nncf_nodes = []
+
+    def __eq__(self, other: 'NNCFGraph'):
+        nm = iso.categorical_node_match([NNCFGraph.ID_NODE_ATTR,
+                                         NNCFGraph.KEY_NODE_ATTR,
+                                         NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR], [None, None, None])
+        em = iso.categorical_edge_match([NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR,
+                                         NNCFGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
+        return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
 
     def find_node(self,
                   ia_op_exec_context: InputAgnosticOperationExecutionContext,
