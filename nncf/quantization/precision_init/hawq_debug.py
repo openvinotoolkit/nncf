@@ -147,7 +147,9 @@ class HAWQDebugger:
             activation_fq_node['style'] = 'filled'
             node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
 
-            activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+            activation_fq_node['label'] = 'AFQ_[{}]_#{}'.format(
+                quantizer_info.quantizer_module_ref.get_current_config(),
+                str(node_id))
             grouped_mode = bool(groups_of_adjacent_quantizers)
             if grouped_mode:
                 group_id_str = 'UNDEFINED'
@@ -179,8 +181,7 @@ class HAWQDebugger:
                     if module.groups == module.in_channels:
                         operator_name = 'DW_Conv2d'
                         color = 'purple'
-                if not grouped_mode:
-                    operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
+                operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'
                 if color:
@@ -202,7 +203,7 @@ class HAWQDebugger:
             if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
                 bits = quantizer.num_bits
                 node_id = node[NNCFGraph.ID_NODE_ATTR]
-                node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
+                node['label'] = 'WFQ_[{}]_#{}'.format(quantizer.get_current_config(), str(node_id))
                 if grouped_mode:
                     group_id_str = 'UNDEFINED'
                     normalized_scope = deepcopy(scope)
