@@ -243,8 +243,8 @@ def ssd_vgg_512_test():
 
 
 def get_avg_traces(model, init_device: str):
-    num_traces = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
-    return torch.randperm(num_traces).to(init_device) + 1
+    num_layers = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
+    return torch.randperm(num_layers).to(init_device) + 1
 
 
 def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
@@ -313,8 +313,16 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
     config = register_default_init_args(config, train_loader, criterion)
 
-    mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces')
-    mocked_trace.return_value = params.avg_traces_creator(model, 'cuda')
+    mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
+                                autospec=True)
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, 'cuda')
+
+    # There may be less traces required to be calculated during HAWQ than there are weightable layers.
+    def side_effect_fn(self, max_iter=500, tolerance=1e-5):
+        #pylint:disable=protected-access
+        return pregen_traces_for_all_layers[:len(self._parameter_handler.parameters)]
+
+    mocked_trace.side_effect = side_effect_fn
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())

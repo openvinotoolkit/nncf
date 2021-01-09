@@ -31,8 +31,7 @@ from nncf.quantization.layers import QuantizersSwitcher, QuantizerConfig
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
-from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer, \
-    WeightQuantizersHandler
+from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer
 from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
 from nncf.quantization.precision_init.traces_order import TracesPerLayer, TracesOrder
 from nncf.quantization.hessian_trace import HessianTraceEstimator
@@ -208,6 +207,12 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def __init__(self, algo: 'ExperimentalQuantizationController',
                  params: HAWQPrecisionInitParams,
                  hw_precision_constraints: HardwareQuantizationConstraints):
+        self._groups_of_adjacent_quantizers = algo.groups_of_adjacent_quantizers
+        self._bitwidth_assignment_mode = params.bitwidth_assignment_mode
+        if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
+            hw_precision_constraints = self._merge_constraints_for_adjacent_quantizers(
+                self._groups_of_adjacent_quantizers,
+                hw_precision_constraints)
         super().__init__(algo, params, hw_precision_constraints)
         init_args = params.user_init_args
         self._criterion_fn = init_args.criterion_fn
@@ -222,19 +227,10 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             if self._hw_precision_constraints else params.bits
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
-        self._groups_of_adjacent_quantizers = algo.groups_of_adjacent_quantizers
-        self._bitwidth_assignment_mode = params.bitwidth_assignment_mode
         self._dump_hawq_data = params.dump_hawq_data
         self._original_qp_id_vs_quantizer_module_id_dict = deepcopy(algo.setup_to_module_id_translation_dict)
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
-        if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
-            self._hw_precision_constraints = self._merge_constraints_for_adjacent_quantizers(
-                self._groups_of_adjacent_quantizers,
-                self._hw_precision_constraints)
-            self._quantizers_handler = WeightQuantizersHandler(self._model, self._algo.weight_quantizers,
-                                                               self._hw_precision_constraints)
-
         if not self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id():
             return self._algo.get_quantizer_setup_for_current_state()
         original_device = next(self._model.parameters()).device
@@ -330,10 +326,11 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                     ' with adjacent activation quantizers!')
             for quantizer_id in quantizer_ids:
                 qconfigs = retval.get(quantizer_id)
+                filtered_qconfigs = []
                 for qconf in qconfigs:
-                    if qconf.bits not in minimal_set_bits:
-                        qconfigs.remove(qconf)
-                retval.replace(quantizer_id, qconfigs)
+                    if qconf.bits in minimal_set_bits:
+                        filtered_qconfigs.append(qconf)
+                retval.replace(quantizer_id, filtered_qconfigs)
         return retval
 
     def get_flops_bits_per_config(self, configurations_in_trace_order: List[List[QuantizerConfig]],
@@ -722,8 +719,9 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             if len(wqs) > 1:
                 indexes_of_grouped_wq = []
                 for quantizer_id, _ in wqs:
-                    index_by_execution_order = weight_quantization_ids_by_execution_order.index(quantizer_id)
-                    indexes_of_grouped_wq.append(index_by_execution_order)
+                    if quantizer_id in weight_quantization_ids_by_execution_order:
+                        index_by_execution_order = weight_quantization_ids_by_execution_order.index(quantizer_id)
+                        indexes_of_grouped_wq.append(index_by_execution_order)
                 all_grouped_indexes.append(indexes_of_grouped_wq)
 
         if not all_grouped_indexes:

@@ -408,6 +408,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             else:
                 pq.potential_quant_configs = branch_qconf_list
 
+            # The quantizer sink node set of the merge PQ should be set to the union of all
+            # downstream quantizers regardless of whether the downstream PQ has been completely merged
+            merge_pq.quantized_input_sink_operator_nodes.update(pq.quantized_input_sink_operator_nodes)
+
         return merge_pq
 
     def backtrack_propagation_until_accepting_location(self, prop_quantizer: PropagatingQuantizer) -> \
