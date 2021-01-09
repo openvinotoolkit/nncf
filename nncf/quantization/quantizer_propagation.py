@@ -1795,7 +1795,7 @@ class QuantizerPropagationSolver:
             if qconf in other_qconf_list:
                 return True
             for other_qconf in other_qconf_list:
-                if qconf < other_qconf:
+                if not other_qconf.is_valid_requantization_for(qconf):
                     return False
             return True
 

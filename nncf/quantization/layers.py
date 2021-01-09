@@ -67,38 +67,23 @@ class QuantizerConfig:
     def __hash__(self):
         return hash(str(self))
 
-    def __lt__(self, other: 'QuantizerConfig'):
+    def is_valid_requantization_for(self, other: 'QuantizerConfig') -> bool:
         #pylint:disable=too-many-return-statements
-        """The A < B relation here will mean that quantizer config A is more strict - specifically,
-        it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
+        """Quantizer config A is a valid requantization for quantizer config B if A is more strict -
+        specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
         the requantization will further constrain the input tensor data w.r.t. values it can take, but
         putting quantizer A after quantizer B would be unreasonable."""
-        if self.bits < other.bits:
-            return True
         if self.bits > other.bits:
             return False
-        if self.per_channel is False and other.per_channel is True:
-            return True
-        if self.per_channel is True and other.per_channel is False:
-            return False
-        if self.mode is QuantizationMode.SYMMETRIC and other.mode is \
-                QuantizationMode.ASYMMETRIC:
-            return True
         if self.mode is QuantizationMode.ASYMMETRIC and other.mode is \
                 QuantizationMode.SYMMETRIC:
             return False
-
-        if self.signedness_to_force is not None and other.signedness_to_force is None:
-            return True
         if self.signedness_to_force is None and other.signedness_to_force is not None:
             return False
-
-        if self.signedness_to_force is False and other.signedness_to_force is True:
-            return True
         if self.signedness_to_force is True and other.signedness_to_force is False:
             return False
 
-        return False
+        return True
 
     def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: 'QuantizerConfig'):
         return self.bits == linked_qconfig.bits and \

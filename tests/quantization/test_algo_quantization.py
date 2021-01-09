@@ -446,37 +446,68 @@ def test_quantize_inputs():
 
 
 @pytest.mark.parametrize(
-    ('left_qconf', 'right_qconf', 'is_less'),
+    ('requanting_qconf', 'base_qconf', 'is_valid_requant'),
     (
-        (QuantizerConfig(), QuantizerConfig(), False),
+        (QuantizerConfig(), QuantizerConfig(), True),
+
         (QuantizerConfig(bits=8), QuantizerConfig(bits=6), False),
         (QuantizerConfig(bits=6), QuantizerConfig(bits=8), True),
-        (QuantizerConfig(bits=6, per_channel=True), QuantizerConfig(bits=6, per_channel=False), False),
+
+        # Technically placing a per-channel quantization after a per-tensor should not break
+        # anything or limit the set of output values w.r.t to a single per-tensor quantizer.
+        (QuantizerConfig(bits=6, per_channel=True), QuantizerConfig(bits=6, per_channel=False), True),
+        (QuantizerConfig(bits=6, per_channel=False), QuantizerConfig(bits=6, per_channel=True), True),
+
         (QuantizerConfig(bits=5, per_channel=True), QuantizerConfig(bits=6, per_channel=False), True),
+        (QuantizerConfig(bits=5, per_channel=False), QuantizerConfig(bits=6, per_channel=True), True),
+
         (
                 QuantizerConfig(bits=5, mode=QuantizationMode.SYMMETRIC),
                 QuantizerConfig(bits=5, mode=QuantizationMode.ASYMMETRIC),
                 True
         ),
+        (
+                QuantizerConfig(bits=5, mode=QuantizationMode.ASYMMETRIC),
+                QuantizerConfig(bits=5, mode=QuantizationMode.SYMMETRIC),
+                False
+        ),
+
+
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
+        (QuantizerConfig(), QuantizerConfig(signedness_to_force=True), False),
+
         (QuantizerConfig(signedness_to_force=False), QuantizerConfig(), True),
+        (QuantizerConfig(), QuantizerConfig(signedness_to_force=False), False),
+
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
+        (QuantizerConfig(signedness_to_force=False), QuantizerConfig(signedness_to_force=True), True),
+
         (
             QuantizerConfig(bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
             QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
             True
         ),
+
         (
             QuantizerConfig(bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
             QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
             True
         ),
 
+        # Neither of the two configs here can requantize the other
+        (
+            QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC),
+            False
+        ),
+        (
+            QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC),
+            False
+        )
     )
 )
-def test_quantizer_ordering(left_qconf: QuantizerConfig, right_qconf: QuantizerConfig, is_less: bool):
-    test_result = (left_qconf < right_qconf)
-    inverted_test_result = (right_qconf < left_qconf)
-    assert test_result == is_less
-    if not left_qconf == right_qconf:
-        assert inverted_test_result != is_less
+def test_quantizer_ordering(requanting_qconf: QuantizerConfig,
+                            base_qconf: QuantizerConfig, is_valid_requant: bool):
+    test_result = requanting_qconf.is_valid_requantization_for(base_qconf)
+    assert test_result == is_valid_requant
