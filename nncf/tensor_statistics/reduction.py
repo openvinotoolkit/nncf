@@ -8,7 +8,10 @@ import numpy as np
 def max_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]) -> torch.Tensor:
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
-        return input_.max()
+        retval = input_.max()
+        for _ in ref_tensor_shape:
+            retval.unsqueeze_(-1)
+        return retval
     tmp_max = input_
     for dim_idx, dim in enumerate(ref_tensor_shape):
         if dim == 1:
@@ -19,7 +22,10 @@ def max_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]) -> torch.
 def min_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]):
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
-        return input_.min()
+        retval = input_.min()
+        for _ in ref_tensor_shape:
+            retval.unsqueeze_(-1)
+        return retval
     tmp_min = input_
     for dim_idx, dim in enumerate(ref_tensor_shape):
         if dim == 1:

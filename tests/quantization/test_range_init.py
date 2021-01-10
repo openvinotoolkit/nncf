@@ -31,6 +31,7 @@ from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector, \
     MedianMADStatisticCollector
+from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from tests.quantization.test_precision_init import HAWQConfigBuilder
 from torch.utils.data import DataLoader
 
@@ -38,7 +39,7 @@ from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
 from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader
-from nncf.quantization.init_range import RangeInitializerFactory, RangeInitParams, PerLayerRangeInitConfig, \
+from nncf.quantization.init_range import RangeInitParams, PerLayerRangeInitConfig, \
     RangeInitConfig
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
     BaseQuantizer, QuantizerConfig, QuantizationMode, QUANTIZATION_MODULES
@@ -751,13 +752,13 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
                                   input_shape=test_struct.input_shape)
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
-        init_config = {"type": initializer_type,
-                       "num_init_samples": 1}
-        initializer = RangeInitializerFactory.create(init_config, quantizer, "")
-        initializer.register_input(torch.ones(test_struct.input_shape))
-
-        with torch.no_grad():
-            initializer.apply_init()
+        range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
+        collector = range_init_config.generate_stat_collector(reduction_shapes={tuple(quantizer.scale_shape)})
+        collector.register_input(torch.ones(test_struct.input_shape))
+        stat = collector.get_statistics()[tuple(quantizer.scale_shape)]
+        minmax_values = MinMaxTensorStatistic.from_stat(stat)
+        quantizer.apply_minmax_init(min_values=minmax_values.min_values,
+                                    max_values=minmax_values.max_values)
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
         if quantization_mode == QuantizationMode.SYMMETRIC:

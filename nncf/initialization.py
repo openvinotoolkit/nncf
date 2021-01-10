@@ -1,6 +1,5 @@
 import math
 
-from collections import OrderedDict
 
 from functools import partial
 from typing import Dict, Tuple, Any, Callable
@@ -147,37 +146,6 @@ class SimpleDataLoaderRunner(DataLoaderBaseRunner):
         pass
     def _apply_initializers(self):
         pass
-
-
-class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
-    def __init__(
-            self,
-            model,
-            modules_to_init_vs_init_configs: Dict[str, Tuple[torch.nn.Module, Dict]],
-            init_device: str,
-    ):
-        super().__init__(model, init_device)
-        self.modules_to_init = modules_to_init_vs_init_configs
-        self.progressbar_description = 'Range parameters initialization'
-        self.initializers = OrderedDict()
-        self.hook_handles = []
-
-    def _prepare_initialization(self):
-        from nncf.quantization.init_range import RangeInitializerFactory
-        for name, data in self.modules_to_init.items():
-            module, init_config = data
-            self.initializers[name] = RangeInitializerFactory.create(
-                init_config, module, log_module_name=name
-            )
-            self.hook_handles.append(
-                module.register_forward_hook(self.initializers[name].forward_hook)
-            )
-
-    def _apply_initializers(self):
-        for handle in self.hook_handles:
-            handle.remove()
-        for initializer in self.initializers.values():
-            initializer.apply_init()
 
 
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):

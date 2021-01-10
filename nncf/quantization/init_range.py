@@ -1,12 +1,13 @@
 import queue
+from collections import OrderedDict
 from copy import deepcopy
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, Tuple, Callable
 
 import numpy as np
 import torch
 
-from nncf.dynamic_graph.context import no_nncf_trace
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.initialization import DataLoaderBaseRunner
+from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId
 from nncf.quantization.quantizer_setup import QuantizationPointBase, QuantizerSetupBase
@@ -14,7 +15,8 @@ from nncf.quantization.structs import QuantizerGroup
 from nncf.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, MinMaxStatisticCollector, ReductionShape, \
     MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector
-from nncf.utils import get_flat_tensor_contents_string, should_consider_scope
+from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.utils import should_consider_scope
 
 
 class RangeInitConfig:
@@ -37,7 +39,7 @@ class RangeInitConfig:
                    num_init_samples,
                    dct.get("params"))
 
-    def generate_stat_collector(self, reduction_shapes: Set[ReductionShape],
+    def generate_stat_collector(self, reduction_shapes: Set[ReductionShape] = None,
                                 num_samples_to_collect_override: int = None) -> TensorStatisticCollectorBase:
         num_samples = self.num_init_samples
         if num_samples_to_collect_override is not None:
@@ -119,6 +121,9 @@ class RangeInitParams:
             scope_str = str(NonWeightQuantizerId(qp.insertion_point.ia_op_exec_context,
                                                  qp.insertion_point.input_port_id))
             group = QuantizerGroup.ACTIVATIONS
+        return self.get_init_config_for_scope_and_group(scope_str, group)
+
+    def get_init_config_for_scope_and_group(self, scope_str: str, group: QuantizerGroup) -> RangeInitConfig:
         matches = []  # type: List[RangeInitConfig]
         for pl_config in self.per_layer_range_init_configs:
             if should_consider_scope(scope_str, pl_config.target_scopes, pl_config.ignored_scopes):
@@ -126,15 +131,15 @@ class RangeInitParams:
                     matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
                                                    pl_config.init_type_specific_params))
         if len(matches) > 1:
-            raise ValueError("Location {} matches more than one per-layer initialization parameter definition in NNCF"
-                             " config file!".format(qp.insertion_point))
+            raise ValueError("Location {} matches more than one per-layer initialization parameter "
+                             "definition!".format(scope_str))
         if len(matches) == 1:
             return matches[0]
         if not matches and self.global_init_config is not None:
             return deepcopy(self.global_init_config)
 
-        raise ValueError("Location {} does not match any per-layer initialization parameter definition in NNCF"
-                         " config file!".format(qp.insertion_point))
+        raise ValueError("Location {} does not match any per-layer initialization parameter "
+                         "definition!".format(scope_str))
 
 
 class StatCollectorGenerator:
@@ -241,60 +246,6 @@ def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.n
     return ret_list
 
 
-class MinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
-        super().__init__(quantize_module, num_init_steps)
-        self.min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
-        self.max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-        self.log_module_name = log_module_name
-
-    def register_input(self, x: torch.Tensor):
-        with no_nncf_trace():
-            self.min_values = torch.min(min_reduce_like(x, self.scale_shape),
-                                        self.min_values)
-            self.max_values = torch.max(max_reduce_like(x, self.scale_shape),
-                                        self.max_values)
-
-    def reset(self):
-        self.min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
-        self.max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-
-    def apply_init(self):
-        nncf_logger.debug("Statistics: min={} max={}".format(get_flat_tensor_contents_string(self.min_values),
-                                                             get_flat_tensor_contents_string(self.max_values)))
-        self.quantize_module.apply_minmax_init(self.min_values, self.max_values, self.log_module_name)
-
-
-class MeanMinMaxInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
-        super().__init__(quantize_module, num_init_steps)
-        self.log_module_name = log_module_name
-        self.all_min_values = []
-        self.all_max_values = []
-
-    def register_input(self, x: torch.Tensor):
-        with no_nncf_trace():
-            self.all_min_values.append(min_reduce_like(x, self.scale_shape))
-            self.all_max_values.append(max_reduce_like(x, self.scale_shape))
-
-    def reset(self):
-        self.all_min_values.clear()
-        self.all_max_values.clear()
-
-    def apply_init(self):
-        min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
-        max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-        if self.all_min_values:
-            stacked_min = torch.stack(self.all_min_values)
-            min_values = stacked_min.mean(dim=0).view(self.scale_shape)
-        if self.all_max_values:
-            stacked_max = torch.stack(self.all_max_values)
-            max_values = stacked_max.mean(dim=0).view(self.scale_shape)
-        nncf_logger.debug("Statistics: min={} max={}".format(get_flat_tensor_contents_string(min_values),
-                                                             get_flat_tensor_contents_string(max_values)))
-        self.quantize_module.apply_minmax_init(min_values, max_values, self.log_module_name)
-
-
 def get_per_channel_history(raw_input_history: queue.Queue, scale_shape: List[int], discard_zeros=False) -> List:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
     per_channel_history = [None for i in range(channel_count)]
@@ -316,104 +267,52 @@ def get_per_channel_history(raw_input_history: queue.Queue, scale_shape: List[in
     return per_channel_history
 
 
-class ThreeSigmaInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer', num_init_steps: int, log_module_name: str = None):
-        super().__init__(quantize_module, num_init_steps)
-        self.input_history = queue.Queue()
-        self.log_module_name = log_module_name
+class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
+    def __init__(
+            self,
+            model: NNCFNetwork,
+            modules_to_init_vs_init_configs: Dict[str, Tuple[torch.nn.Module, RangeInitConfig]],
+            init_device: str,
+            batch_size: int = None
+    ):
+        super().__init__(model, init_device)
+        self.modules_to_init = modules_to_init_vs_init_configs
+        self.progressbar_description = 'Range parameters initialization'
 
-    def register_input(self, x: torch.Tensor):
-        with no_nncf_trace():
-            self.input_history.put(x.detach().cpu().numpy())
+        #pylint:disable=line-too-long
+        self.collectors_and_modules_to_init = OrderedDict()  # type: Dict[str, Tuple[TensorStatisticCollectorBase, BaseQuantizer]]
+        self.hook_handles = []
+        self.batch_size = batch_size
 
-    def reset(self):
-        self.input_history = queue.Queue()
+    def _get_fwd_hook(self, collector: TensorStatisticCollectorBase) -> Callable:
+        def fwd_hook(module, input_, output):
+            collector.register_input(input_[0])
+        return fwd_hook
 
-    def apply_init(self):
-        self.medians = torch.ones(self.scale_shape).to(self.device)
-        self.median_absolute_deviations = torch.ones(self.scale_shape).to(self.device)
+    def _prepare_initialization(self):
+        for name, data in self.modules_to_init.items():
+            quantizer_module, init_config = data  # type: BaseQuantizer, RangeInitConfig
+            num_samples_override = None
+            if self.batch_size is not None:
+                num_batches = np.ceil(init_config.num_init_samples / self.batch_size)
+                num_samples_override = num_batches
 
-        per_channel_history = get_per_channel_history(self.input_history, self.scale_shape,
-                                                      discard_zeros=True)
-        per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
-        per_channel_mad = []
-        for idx, median in enumerate(per_channel_median):
-            # Constant factor depends on the distribution form - assuming normal
-            per_channel_mad.append(1.4826 * np.median(abs(per_channel_history[idx] - median)))
+            collector = init_config.generate_stat_collector({tuple(quantizer_module.scale_shape)},
+                                                            num_samples_override)
 
-        numpy_median = np.asarray(per_channel_median)
-        numpy_mad = np.asarray(per_channel_mad)
-        median_tensor = torch.from_numpy(numpy_median).to(self.device, dtype=torch.float)
-        mad_tensor = torch.from_numpy(numpy_mad).to(self.device, dtype=torch.float)
+            self.collectors_and_modules_to_init[name] = collector, quantizer_module
 
-        median_tensor = expand_like(median_tensor, self.scale_shape)
-        mad_tensor = expand_like(mad_tensor, self.scale_shape)
+            self.hook_handles.append(
+                quantizer_module.register_forward_hook(self._get_fwd_hook(collector))
+            )
 
-        nncf_logger.debug("Statistics: median={} MAD={}".format(get_flat_tensor_contents_string(median_tensor),
-                                                                get_flat_tensor_contents_string(mad_tensor)))
-        self.quantize_module.apply_minmax_init(median_tensor - 3 * mad_tensor, median_tensor + 3 * mad_tensor,
-                                               self.log_module_name)
-
-
-class PercentileInitializer(QuantizeRangeInitializer):
-    def __init__(self, quantize_module: 'BaseQuantizer',
-                 num_init_steps: int,
-                 min_percentile: float,
-                 max_percentile: float,
-                 log_module_name: str = None):
-        super().__init__(quantize_module, num_init_steps)
-        self.input_history = queue.Queue()
-        self.log_module_name = log_module_name
-        self.min_percentile = min_percentile  # NB: Both min_percentile and max_percentile
-        self.max_percentile = max_percentile  # are valued between 0 and 100
-
-    def register_input(self, x: torch.Tensor):
-        with no_nncf_trace():
-            self.input_history.put(x.detach().cpu().numpy())
-
-    def reset(self):
-        self.input_history = queue.Queue()
-
-    def apply_init(self):
-        self.min_values = torch.ones(self.scale_shape).to(self.device) * np.inf
-        self.max_values = torch.ones(self.scale_shape).to(self.device) * (-np.inf)
-
-        per_channel_history = get_per_channel_history(self.input_history, self.scale_shape)
-        per_channel_min_percentiles = [np.percentile(channel_hist, self.min_percentile) for channel_hist in
-                                       per_channel_history]
-        per_channel_max_percentiles = [np.percentile(channel_hist, self.max_percentile) for channel_hist in
-                                       per_channel_history]
-
-        numpy_mins = np.asarray(per_channel_min_percentiles)
-        numpy_maxs = np.asarray(per_channel_max_percentiles)
-        mins_tensor = torch.from_numpy(numpy_mins).to(self.device, dtype=torch.float)
-        maxs_tensor = torch.from_numpy(numpy_maxs).to(self.device, dtype=torch.float)
-
-        mins_tensor = expand_like(mins_tensor, self.scale_shape)
-        maxs_tensor = expand_like(maxs_tensor, self.scale_shape)
-
-        nncf_logger.debug("Statistics: Min ({}%th) percentile = {},"
-                          " Max ({}%th) percentile = {}".format(self.min_percentile,
-                                                                get_flat_tensor_contents_string(mins_tensor),
-                                                                self.max_percentile,
-                                                                get_flat_tensor_contents_string(maxs_tensor)))
-        self.quantize_module.apply_minmax_init(mins_tensor,
-                                               maxs_tensor, self.log_module_name)
-
-
-class RangeInitializerFactory:
-    @staticmethod
-    def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
-        init_type = init_config["type"]
-        num_init_samples = init_config["num_init_samples"]
-        if init_type == "min_max":
-            return MinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, num_init_samples, log_module_name)
-        if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "percentile":
-            min_percentile = init_config.get("min_percentile", 10)
-            max_percentile = init_config.get("max_percentile", 90)
-            return PercentileInitializer(module, num_init_samples, min_percentile, max_percentile, log_module_name)
-        raise NotImplementedError
+    def _apply_initializers(self):
+        for handle in self.hook_handles:
+            handle.remove()
+        for scope_str, collector_and_module in self.collectors_and_modules_to_init.items():
+            collector, quantizer_module = collector_and_module
+            scale_shape = tuple(quantizer_module.scale_shape)
+            target_stat = collector.get_statistics()[scale_shape]
+            minmax_stats = MinMaxTensorStatistic.from_stat(target_stat)
+            quantizer_module.apply_minmax_init(minmax_stats.min_values, minmax_stats.max_values,
+                                               log_module_name=scope_str)

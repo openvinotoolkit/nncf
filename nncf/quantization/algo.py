@@ -25,7 +25,7 @@ import shutil
 import torch
 from nncf.config import NNCFConfig
 from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
-    StatCollectorGenerator
+    StatCollectorGenerator, DataLoaderRangeInitializeRunner
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
@@ -44,7 +44,7 @@ from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
-from nncf.initialization import DataLoaderRangeInitializeRunner, SimpleDataLoaderRunner
+from nncf.initialization import SimpleDataLoaderRunner
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
@@ -64,7 +64,7 @@ from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInit
 from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
-from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
+from nncf.utils import in_scope_list, is_main_process, should_consider_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -823,7 +823,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                       self._weight_quantizers,
                                       self._non_weight_quantizers,
                                       self._groups_of_adjacent_quantizers,
-                                      build_time_metric_info=self._build_time_metric_infos)
+                                      build_time_metric_info=self._build_time_metric_infos,
+                                      build_time_range_init_params=self._range_init_params)
 
     def __create_quantize_module(self, qconfig: QuantizerConfig):
         quantizer_cls = QUANTIZATION_MODULES.get(qconfig.mode)
@@ -952,7 +953,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         range_init_minmax_values = None
         if minmax_values_for_range_init:
-            # Hopefully this will suffice. TODO: gather unified statistic by linking stat collectors instead
+            # Hopefully this will suffice.
+            # TODO: gather unified statistic by linking stat collectors_and_modules_to_init instead
             min_values = None
             max_values = None
             for qp_id in sorted_qp_ids:
@@ -1085,14 +1087,16 @@ class QuantizationController(QuantizationControllerBase):
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  collect_compression_metrics: bool = True,
-                 build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo = None):
+                 build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo = None,
+                 build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
+        self._build_time_range_init_params = build_time_range_init_params
 
-        self.weight_quantizers = weight_quantizers
-        self.non_weight_quantizers = non_weight_quantizers
+        self.weight_quantizers = weight_quantizers  # type: Dict[WeightQuantizerId, WeightQuantizerInfo]
+        self.non_weight_quantizers = non_weight_quantizers  # type: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]
         self.all_quantizations = OrderedDict()  # type: Dict[QuantizerId, BaseQuantizer]
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.weight_quantizers.items()})
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
@@ -1162,33 +1166,32 @@ class QuantizationController(QuantizationControllerBase):
         for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
             quantizer.broadcast_initialized_params()
 
-    def _do_range_init(self, data_loader,
-                       num_init_steps: int,
-                       global_init_range_config: dict,
-                       device: str):
+    def _do_runtime_range_init(self, range_init_params: RangeInitParams):
         modules_to_init = OrderedDict()
-        scope_overrides = self.quantization_config.get("scope_overrides", {})
+        for wq_id, wq_info in self.weight_quantizers.items():
+            scope_str = str(wq_id)
+            group = QuantizerGroup.WEIGHTS
+            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
+            modules_to_init[scope_str] = (wq_info.quantizer_module_ref, init_config)
 
-        for class_type in QUANTIZATION_MODULES.registry_dict.values():
-            quantization_type = class_type.__name__
-            module_dict = get_all_modules_by_type(self._model, quantization_type)
-            for scope, module in module_dict.items():
-                quantizer_group = "weights" if module.is_weights else "activations"
-                module_init_range_config = self._get_local_init_range_config(scope, scope_overrides,
-                                                                             global_init_range_config, quantizer_group)
-                modules_to_init[str(scope)] = (module, module_init_range_config)
+        for aq_id, aq_info in self.non_weight_quantizers.items():
+            scope_str = str(aq_id)
+            group = QuantizerGroup.ACTIVATIONS
+            init_config = range_init_params.get_init_config_for_scope_and_group(scope_str, group)
+            modules_to_init[scope_str] = (aq_info.quantizer_module_ref, init_config)
 
         # NOTE: Order of modules must be the same to correctly broadcast parameters (e.g. input_low
         # and input_range)
         modules_to_init = OrderedDict(sorted(modules_to_init.items()))
         self.modules_to_range_init = modules_to_init
-        runner = DataLoaderRangeInitializeRunner(self._model, modules_to_init, device)
+        runner = DataLoaderRangeInitializeRunner(self._model, modules_to_init, range_init_params.device)
 
         quantizers = [module for module, config in modules_to_init.values()]
         quantizers_switcher = QuantizersSwitcher(quantizers)
         # bypass quantization to collect statistics from floating point model
         quantizers_switcher.disable_quantizers()
-        runner.run(data_loader, num_init_steps)
+        runner.run(range_init_params.init_range_data_loader,
+                   range_init_params.get_max_num_init_steps())
         quantizers_switcher.enable_quantizers()
 
         self._model.rebuild_graph()
@@ -1211,54 +1214,22 @@ class QuantizationController(QuantizationControllerBase):
         nncf_logger.info("Initialization of quantization precisions")
         return initializer.apply_init()
 
-    def init_range(self):
+    def init_range(self, range_init_params: RangeInitParams = None):
         """
-        Calculates per-layer activation statistics on training dataset in order to choose proper output range for
-        quantization.
+        Tracks input statistics for quantizers in the model and sets ranges of the quantizers to correspond to
+        minimum and maximum input tensor levels observed.
+        :param range_init_params: specifies parameters for this range initialization call; if None, the parameters
+        that were used during compressed model creation will be used.
         """
-        init_config = self.quantization_config.get('initializer', {})
-        init_range_config = init_config.get('range', {})
-        if not init_range_config:
-            try:
-                self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
-                has_range_init_args = True
-            except KeyError:
-                has_range_init_args = False
+        if range_init_params is None:
+            if self._build_time_range_init_params is None:
+                nncf_logger.warning("Requested a quantization controller to do range initialization without params, but"
+                                    " the build time range initialization was not supplied with params as well - range "
+                                    "initialization will not be done")
+                return
+            range_init_params = self._build_time_range_init_params
 
-            if has_range_init_args:
-                nncf_logger.warning("Enabling quantization range initialization with default parameters.")
-                num_init_samples = 256
-            else:
-                nncf_logger.warning("Initializer section not specified for quantization algorithm in NNCF config and "
-                                    "quantization init args not supplied - quantizer range initialization will not be "
-                                    "done")
-                num_init_samples = 0
-
-            init_range_config = {'num_init_samples': num_init_samples}
-        if isinstance(init_range_config, dict):
-            global_init_range_config = self.update_range_config_by_default(init_range_config)
-            max_num_init_samples = global_init_range_config['num_init_samples']
-        else:
-            max_num_init_samples = 0
-            global_init_range_config = []
-            for sub_init_range_config in init_range_config:
-                global_init_range_config.append(self.update_range_config_by_default(sub_init_range_config))
-                max_num_init_samples = max(sub_init_range_config['num_init_samples'], max_num_init_samples)
-
-        if max_num_init_samples > 0:
-            try:
-                range_init_args = self.quantization_config.get_extra_struct(QuantizationRangeInitArgs)
-            except KeyError as e:
-                raise ValueError(
-                    'Should run range initialization as specified via config,'
-                    'but the initializing data loader is not provided as an extra struct. '
-                    'Refer to `NNCFConfig.register_extra_structs` and the `QuantizationRangeInitArgs` class') from e
-            data_loader = range_init_args.data_loader
-            batch_size = data_loader.batch_size
-            max_num_init_steps = np.ceil(max_num_init_samples / batch_size)
-
-            self._do_range_init(data_loader, max_num_init_steps, global_init_range_config,
-                                range_init_args.device)
+        self._do_runtime_range_init(range_init_params)
 
         if self._distributed:
             self._broadcast_initialized_params_for_each_quantizer()
