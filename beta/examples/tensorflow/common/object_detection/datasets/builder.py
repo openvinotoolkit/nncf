@@ -49,7 +49,7 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             return self._dataset_loader.num_classes
         return None
 
-    def _tfds_decoder(self, features_dict):
+    def _tfds_decoder(self, features_dict, include_mask=False):
         def _decode_image(features):
             image = tf.io.decode_image(features['image'], channels=3)
             image.set_shape([None, None, 3])
@@ -69,6 +69,8 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             labels = features['objects']['label']
             labels = tf.gather(match, labels, axis=None)
             return labels
+
+        del include_mask # It is unused because the tfds does not contain masks for the coco dataset
 
         image = _decode_image(features_dict)
         labels = _convert_labels_to_91_classes(features_dict)

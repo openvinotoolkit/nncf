@@ -78,7 +78,7 @@ def get_common_argument_parser(**flags):
             default=10,
             metavar='N',
             help='Global batch size. It will be split equally between multiple GPUs in the distributed mode.'
-                'Default: 10')
+                ' Default: 10')
 
     if flags.get('epochs', True):
         parser.add_argument(
