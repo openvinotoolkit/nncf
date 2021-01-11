@@ -23,7 +23,7 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
-from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution
+from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, TransposeConvolution
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
@@ -118,7 +118,7 @@ class FilterPruningController(BasePruningAlgoController):
             if out_channels:
                 self.modules_out_channels[nncf_node.node_id] = out_channels
 
-        prunable_types = Convolution.get_all_op_aliases()
+        prunable_types = Convolution.get_all_op_aliases() + TransposeConvolution.get_all_op_aliases()
         # 2. Init next_nodes for every pruning cluster
         for cluster in self.pruned_module_groups_info.get_all_clusters():
             next_nodes_cluster = set()
@@ -170,6 +170,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _calculate_flops_pruned_model_by_masks(self):
         """
         Calculates number of flops for pruned model by using binary_filter_pruning_mask.
+        :return: number of flops in model
         """
         tmp_in_channels = self.modules_in_channels.copy()
         tmp_out_channels = self.modules_out_channels.copy()
