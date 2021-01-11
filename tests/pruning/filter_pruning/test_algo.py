@@ -131,16 +131,17 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_last):
                              (False, None, False, gen_ref_masks([(16, 16), (32, 32)])),
                              (True, None, False, gen_ref_masks([(8, 24), (40, 24)])),
                              # Flops pruning cases
-                             (False, 0.5, True, gen_ref_masks([(8, 8), (16, 16), (32, 32)])),
-                             (False, 0.5, False, gen_ref_masks([(16, 16), (40, 24)])),
-                             (True, 0.5, True, gen_ref_masks([(4, 12), (4, 28), (33, 31)])),
-                             (True, 0.5, False, gen_ref_masks([(5, 27), (33, 31)])),
+                             (False, 0.5, True, gen_ref_masks([(0, 16), (8, 24), (24, 40)])),
+                             (False, 0.5, False, gen_ref_masks([(8, 24), (24, 40)])),
+                             (True, 0.5, True, gen_ref_masks([(4, 12), (3, 29), (30, 34)])),
+                             (True, 0.5, False, gen_ref_masks([(3, 29), (31, 33)])),
                          ]
                          )
 def test_pruning_masks_correctness(all_weights, pruning_flops_target, prune_first, ref_masks):
     """
     Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
     :param all_weights: whether mask will be calculated for all weights in common or not
+    :param pruning_flops_target: prune model by flops, if None then by number of channels
     :param prune_first: whether to prune first convolution or not
     :param ref_masks: reference masks values
     """
@@ -262,3 +263,33 @@ def test_zeroing_gradients(zero_grad):
                 grad = module.weight.grad
                 masked_grad = apply_filter_binary_mask(mask, grad, dim=module.target_weight_dim_for_compression)
                 assert torch.allclose(masked_grad, grad)
+
+
+
+@pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops'),
+                         [
+                             (False, None, 1315008),
+                             (True, None, 1492400),
+                             (False, 0.5, 2367952),
+                             (True, 0.5, 2380268),
+                         ]
+                         )
+def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
+    """
+    Test for pruning masks check (_set_binary_masks_for_filters, _set_binary_masks_for_all_filters_together).
+    :param all_weights: whether mask will be calculated for all weights in common or not
+    :param pruning_flops_target: prune model by flops, if None then by number of channels
+    :param ref_flops: reference size of model
+    """
+
+
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['params']['all_weights'] = all_weights
+    if pruning_flops_target:
+        config['compression']['params']['pruning_flops_target'] = pruning_flops_target
+
+    _, pruning_algo, _ = create_pruning_algo_with_config(config)
+
+    assert pruning_algo.current_flops == ref_flops
+    # pylint:disable=protected-access
+    assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
