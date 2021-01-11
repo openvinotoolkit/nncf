@@ -26,6 +26,7 @@ import json
 from collections import OrderedDict
 from typing import List, Optional
 
+#pylint:disable=import-error
 from mdutils import MdUtils
 import argparse
 
