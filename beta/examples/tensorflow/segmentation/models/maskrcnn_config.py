@@ -58,8 +58,6 @@ MASKRCNN_CONFIG = Config({
         'pre_nms_num_boxes': 1000,
     },
     'maskrcnn_parser': {
-        'output_size': [1024, 1024],
-        'num_channels': 3,
         'rpn_match_threshold': 0.7,
         'rpn_unmatched_threshold': 0.3,
         'rpn_batch_size_per_im': 256,

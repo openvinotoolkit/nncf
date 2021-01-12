@@ -53,7 +53,7 @@ class RetinanetModel(base_model.Model):
 
         # Input layer.
         self._input_layer = tf.keras.layers.Input(
-            shape=(None, None, params.preprocessing.num_channels),
+            shape=(None, None, params.input_info.sample_size[-1]),
             name='',
             dtype=tf.float32)
 
