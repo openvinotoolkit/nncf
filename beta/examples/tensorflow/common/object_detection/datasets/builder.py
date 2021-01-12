@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from functools import partial
 import tensorflow as tf
 import examples.tensorflow.common.object_detection.datasets.tfrecords as records_dataset
 from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
@@ -49,7 +50,7 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             return self._dataset_loader.num_classes
         return None
 
-    def _tfds_decoder(self, features_dict, include_mask=False):
+    def _tfds_decoder(self, features_dict):
         def _decode_image(features):
             image = tf.io.decode_image(features['image'], channels=3)
             image.set_shape([None, None, 3])
@@ -69,8 +70,6 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             labels = features['objects']['label']
             labels = tf.gather(match, labels, axis=None)
             return labels
-
-        del include_mask # It is unused because the tfds does not contain masks for the coco dataset
 
         image = _decode_image(features_dict)
         labels = _convert_labels_to_91_classes(features_dict)
@@ -95,12 +94,12 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             dataset = dataset.shuffle(self._shuffle_buffer_size)
 
         if self._dataset_type == 'tfrecords':
-            decoder_fn = self._dataset_loader.decoder
+            decoder_fn = partial(self._dataset_loader.decoder, include_mask=self._include_mask)
         else:
             decoder_fn = self._tfds_decoder
 
         preprocess_input_fn = get_preprocess_input_fn(self._config, self._is_train)
-        preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record, self._include_mask))
+        preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
 
         dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers)
         dataset = dataset.batch(self.global_batch_size, drop_remainder=True)
