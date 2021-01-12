@@ -369,7 +369,10 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
         ks = module.weight.data.shape
         mac_count = np.prod(ks) * np.prod(output.shape[2:])
     elif isinstance(module, nn.Linear):
-        mac_count = input_[0].shape[0] * output.shape[-1]
+        if len(input_[0].shape) == 1:
+            mac_count = input_[0].shape[0] * output.shape[-1]
+        else:
+            mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
     else:
         return
     dict_to_save[name] = 2 * mac_count
