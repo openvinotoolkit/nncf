@@ -1,4 +1,3 @@
-import logging
 from collections import OrderedDict
 
 from functools import partial
@@ -7,7 +6,6 @@ from typing import Dict, Tuple, Any, Callable
 import torch
 from torch.nn.modules.loss import _Loss
 
-from nncf.nncf_logger import logger as nncf_logger
 from nncf.progress_bar import ProgressBar
 from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
 from nncf.quantization.init_range import PercentileInitializer

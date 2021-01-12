@@ -10,7 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import logging
 
 from nncf.nncf_logger import logger as nncf_logger
 
@@ -34,7 +33,7 @@ class ProgressBar:
         self._num_lines = num_lines
 
         self._index = 0
-        self._width = 32
+        self._width = 16
         self._is_enabled = False
         self._total = None
         if total is not None:
@@ -66,8 +65,8 @@ class ProgressBar:
             if self._is_enabled:
                 self._print_next()
 
-    def _print_next(self, n=1):
-        self._index = self._index + n
+    def _print_next(self):
+        self._index += 1
         if self._index > self._total:
             return
 
@@ -76,4 +75,5 @@ class ProgressBar:
             num_empty = self._width - num_filled
             filled = '█' * num_filled
             empty = ' ' * num_empty
-            self._logger.info(f'{self._desc} {filled} {empty} | {self._index} / {self._total}')
+            self._logger.info('{desc} {filled} {empty} | {index} / {total}'.format(
+                desc=self._desc, filled=filled, empty=empty, index=self._index, total=self._total))
