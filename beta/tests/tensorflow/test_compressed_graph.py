@@ -51,7 +51,7 @@ def check_graph(graph, ref_graph_dir, ref_graph_file_name):
     with open(graph_path, 'rb') as f:
         expected_graph.ParseFromString(f.read())
 
-    tf.test.assert_equal_graph_def(graph, expected_graph)
+    tf.test.assert_equal_graph_def(expected_graph, graph)
 
 
 class QuantizeTestCaseConfiguration:
@@ -152,8 +152,21 @@ def keras_model_to_graph_def(model):
     return concrete_function.graph.as_graph_def(add_shapes=True)
 
 
+def remove_control_edges(graph_def):
+    for node in graph_def.node:
+        inp_names = []
+        for inp in node.input:
+            if '^' not in inp:
+                inp_names.append(inp)
+
+        del node.input[:]
+        node.input.extend(inp_names)
+
+
 def check_model_graph(compressed_model, ref_graph_file_name, ref_graph_dir):
     compressed_graph = keras_model_to_graph_def(compressed_model)
+    # remove control edges for a human-readable graph visualization
+    # remove_control_edges(compressed_graph)
     check_graph(compressed_graph, ref_graph_dir, ref_graph_file_name)
 
 
