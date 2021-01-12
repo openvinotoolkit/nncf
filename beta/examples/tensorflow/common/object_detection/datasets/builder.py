@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from functools import partial
 import tensorflow as tf
 import examples.tensorflow.common.object_detection.datasets.tfrecords as records_dataset
 from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
@@ -93,12 +94,12 @@ class COCODatasetBuilder(BaseDatasetBuilder):
             dataset = dataset.shuffle(self._shuffle_buffer_size)
 
         if self._dataset_type == 'tfrecords':
-            decoder_fn = self._dataset_loader.decoder
+            decoder_fn = partial(self._dataset_loader.decoder, include_mask=self._include_mask)
         else:
             decoder_fn = self._tfds_decoder
 
         preprocess_input_fn = get_preprocess_input_fn(self._config, self._is_train)
-        preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record, self._include_mask))
+        preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
 
         dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers)
         dataset = dataset.batch(self.global_batch_size, drop_remainder=True)

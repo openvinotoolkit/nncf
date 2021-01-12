@@ -77,7 +77,7 @@ def get_common_argument_parser(**flags):
             type=int,
             default=10,
             metavar='N',
-            help='Global batch size. It will be split equally between multiple GPUs in the distributed mode.'
+            help='Global batch size. It will be split equally between multiple GPUs in the distributed mode. '
                 'Default: 10')
 
     if flags.get('epochs', True):
@@ -116,8 +116,8 @@ def get_common_argument_parser(**flags):
             '--log-dir',
             type=str,
             default='runs',
-            help='The directory where models and TensorboardX summaries'
-                ' are saved. Default: runs')
+            help='The directory where models and TensorboardX summaries '
+                'are saved. Default: runs')
 
     if flags.get('save_checkpoint_freq', True):
         parser.add_argument(
