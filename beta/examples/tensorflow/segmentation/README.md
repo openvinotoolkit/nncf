@@ -128,6 +128,6 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 |**Model**|**Compression algorithm**|**Dataset**|**TensorFlow mAP, %**|**Config path**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn.tar.gz)|
+|MaskRCNN|None|COCO2017|bbox: 37.33<br/>segm: 33.56|examples/tensorflow/segmentation/configs/mask_rcnn_coco.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_baseline.tar.gz)|
 |MaskRCNN|INT8 w:sym,per-tensor a:sym,per-tensor|COCO2017|bbox: 37.25<br/>segm: 33.59|examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_int8_w_sym_t_a_sym_t.tar.gz)|
 |MaskRCNN|Sparsity 50% (Magnitude)|COCO2017|bbox: 36.93<br/>segm: 33.23|examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/mask_rcnn_sparsity_50.tar.gz)|
