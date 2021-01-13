@@ -256,7 +256,7 @@ class MaskrcnnModel(base_model.Model):
         return _total_loss_fn
 
     def build_input_layers(self, params, is_training):
-        input_shape = params.maskrcnn_parser.output_size + [params.maskrcnn_parser.num_channels]
+        input_shape = params.input_info.sample_size[1:]
 
         model_batch_size = params.get('model_batch_size', None)
         if is_training:

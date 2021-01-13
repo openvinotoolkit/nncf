@@ -62,7 +62,7 @@ class MaskRCNNPreprocessor:
         self._is_training = is_train
 
         # Anchor
-        self._output_size = config.maskrcnn_parser.output_size
+        self._output_size = config.input_info.sample_size[1:3]
         self._min_level = config.model_params.architecture.min_level
         self._max_level = config.model_params.architecture.max_level
         self._num_scales = config.anchor.num_scales
