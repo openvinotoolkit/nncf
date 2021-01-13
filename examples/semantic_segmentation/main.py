@@ -24,6 +24,7 @@ import numpy as np
 import os
 import torch
 import torchvision.transforms as T
+
 from examples.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -31,16 +32,16 @@ import examples.semantic_segmentation.utils.data as data_utils
 import examples.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.semantic_segmentation.utils.transforms as JT
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
+    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
+    configure_device
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
@@ -455,11 +456,7 @@ def predict(model, images, class_encoding, config):
 
 
 def main_worker(current_gpu, config):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
+    configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
@@ -467,7 +464,6 @@ def main_worker(current_gpu, config):
 
     logger.info(config)
 
-    config.device = get_device(config)
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
     num_classes = len(color_encoding)
