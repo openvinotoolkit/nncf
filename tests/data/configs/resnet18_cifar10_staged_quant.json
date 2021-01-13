@@ -40,6 +40,9 @@
                     "num_data_points": 100,
                     "iter_number": 200,
                     "tolerance": 5e-1
+                },
+                "range": {
+                    "num_init_samples": 1
                 }
             }
         }

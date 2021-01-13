@@ -36,6 +36,11 @@
          "input_size_hw": [368, 480]
     },
     "compression": {
-        "algorithm": "quantization"
+        "algorithm": "quantization",
+        "initializer": {
+            "range": {
+                "num_init_samples": 1
+            }
+        }
     }
 }
