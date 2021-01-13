@@ -462,9 +462,20 @@ class SingleConv2dSyntheticWeightModel(torch.nn.Module):
         return self.conv2d(input_)
 
 
-@pytest.mark.parametrize("quantization_mode, per_channel",
-                         itertools.product(["symmetric", "asymmetric"], [True, False]))
-def test_percentile_init(quantization_mode: str, per_channel: bool):
+def init_idfn(val):
+    if isinstance(val, tuple):
+        return val[0]
+    return val
+
+@pytest.mark.parametrize("quantization_mode, per_channel, range_init_type_vs_ref_vals",
+                         itertools.product(["symmetric", "asymmetric"],
+                                           [True, False],
+                                           [("min_max", 9999, 0, 9999),
+                                            ("mean_min_max", 9999, 0, 9999),
+                                            ("threesigma", 16119.5, -6119.5, 22239),
+                                            ("percentile", 6789, 3210, 3578)]), ids=init_idfn)
+def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
+                             range_init_type_vs_ref_vals: Tuple[str, float, float, float]):
     class SyntheticDataset(torch.utils.data.Dataset):
         def __init__(self):
             super().__init__()
@@ -486,6 +497,7 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
 
     data_loader = torch.utils.data.DataLoader(SyntheticDataset(), batch_size=1, drop_last=True)
 
+    range_init_type = range_init_type_vs_ref_vals[0]
     config_with_init = NNCFConfig()
     config_with_init.update(
         {
@@ -506,16 +518,18 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
                 "initializer": {
                     "range": {
                         "num_init_samples": 1,
-                        "type": "percentile",
-                        "params": {
-                            "min_percentile": 32.10,
-                            "max_percentile": 67.89
-                        }
+                        "type": range_init_type
                     }
                 }
             }
         }
     )
+
+    if range_init_type == "percentile":
+        config_with_init["compression"]["initializer"]["range"]["params"] = {
+            "min_percentile": 32.10,
+            "max_percentile": 67.89
+        }
 
     # Activations init check
     id_model = SingleConv2dIdentityModel()
@@ -524,17 +538,22 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
 
     act_quantizer_info = next(iter(compression_ctrl.non_weight_quantizers.values()))
 
+    ref_scale = range_init_type_vs_ref_vals[1]
+    ref_input_low = range_init_type_vs_ref_vals[2]
+    ref_input_high = range_init_type_vs_ref_vals[3]
+
     def check_scales(quantizer: BaseQuantizer, per_channel: bool):
         # Absolute tolerance is 1.0 due to percentile value interpolation
         if quantization_mode == 'symmetric':
-            assert torch.allclose(quantizer.scale, torch.ones_like(quantizer.scale) * 6789, atol=1.0)
+            assert torch.allclose(quantizer.scale, torch.ones_like(quantizer.scale) * ref_scale, atol=1.0)
             if per_channel:
                 assert quantizer.scale.numel() == 3
             else:
                 assert quantizer.scale.numel() == 1
         else:
-            assert torch.allclose(quantizer.input_low, torch.ones_like(quantizer.input_low) * 3210, atol=1.0)
-            assert torch.allclose(quantizer.input_range, torch.ones_like(quantizer.input_low) * 3578, atol=1.0)
+            assert torch.allclose(quantizer.input_low, torch.ones_like(quantizer.input_low) * ref_input_low, atol=1.0)
+            assert torch.allclose(quantizer.input_range, torch.ones_like(quantizer.input_low) * ref_input_high,
+                                  atol=1.0)
             if per_channel:
                 assert quantizer.input_low.numel() == 3
                 assert quantizer.input_range.numel() == 3
@@ -558,8 +577,6 @@ def test_percentile_init(quantization_mode: str, per_channel: bool):
                              # 1 stat collection for setting up an experimental quantization setup for precision init,
                              # + 1 stat collection for implicit range initialization with default parameters
                              (lambda x: x['initializer'].pop('range'), 2, 1, 1),
-
-
                              (lambda x: x.pop('initializer'), 1, 0, 1),
                              (lambda x: x['initializer'].pop('precision'), 1, 0, 1),
                              (lambda x: x['initializer']['range'].update({'num_init_samples': 0}), 0, 1, 1),
@@ -658,7 +675,8 @@ def range_init_call_count_test_struct(request):
 
 
 # pylint:disable=redefined-outer-name
-def test_per_layer_range_init_is_called_the_required_number_of_times(range_init_call_count_test_struct, mocker):
+def test_per_layer_range_init_collectors_are_called_the_required_number_of_times(range_init_call_count_test_struct,
+                                                                                 mocker):
     config = create_config()
     config['compression']['initializer']['range'] = range_init_call_count_test_struct.range_init_config
     data_loader = TestRangeInit.create_dataloader(False, config, 10)
@@ -768,3 +786,18 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
             assert list(quantizer.input_range.shape) == test_struct.ref_scale_shape
         else:
             assert False  # options above should be exhaustive
+
+
+class AbsTwosDataset:
+    def __init__(self):
+        super().__init__()
+        self._length = 1
+
+    def __getitem__(self, idx):
+        if idx >= self._length:
+            raise StopIteration
+        test_input_sample = torch.ones([3, 100, 100]) * 2
+        return test_input_sample, test_input_sample
+
+    def __len__(self):
+        return self._length
