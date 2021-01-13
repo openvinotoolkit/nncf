@@ -70,7 +70,7 @@ def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.n
 def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], discard_zeros=False) -> List:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
     per_channel_history = [None for i in range(channel_count)]
-    while raw_input_history:
+    for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
         split = split_into_channels(entry, scale_shape)
         for i in range(channel_count):
@@ -85,4 +85,5 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
                 per_channel_history[i] = flat_channel_split
             else:
                 per_channel_history[i] = np.concatenate([per_channel_history[i], flat_channel_split])
+        raw_input_history.append(entry)
     return per_channel_history

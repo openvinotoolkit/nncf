@@ -21,7 +21,8 @@ class TensorStatisticCollectorBase(ABC):
         self._num_samples = num_samples
 
     def register_input(self, x: torch.Tensor) -> torch.Tensor:
-        if self._num_samples is not None and self._collected_samples >= self._num_samples:
+        if not self._enabled or \
+                self._num_samples is not None and self._collected_samples >= self._num_samples:
             return x
         if self._reduction_shapes is None:
             self._reduction_shapes = {x.shape}
@@ -163,8 +164,7 @@ class MedianMADStatisticCollector(OfflineTensorStatisticCollector):
             per_channel_median = [np.median(channel_hist) for channel_hist in per_channel_history]
             per_channel_mad = []
             for idx, median in enumerate(per_channel_median):
-                # Constant factor depends on the distribution form - assuming normal
-                per_channel_mad.append(1.4826 * np.median(abs(per_channel_history[idx] - median)))
+                per_channel_mad.append(np.median(abs(per_channel_history[idx] - median)))
 
             numpy_median = np.asarray(per_channel_median)
             numpy_mad = np.asarray(per_channel_mad)
