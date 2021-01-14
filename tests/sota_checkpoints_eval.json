@@ -269,6 +269,17 @@
                 "diff_fp32_min": -1.2,
                 "diff_fp32_max": 0.1
             },
+            "ssd300_vgg_voc_pruning_geometric_median": {
+                "config": "examples/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json",
+                "reference": "ssd300_vgg_voc",
+                "target": 91.99,
+                "metric_type": "Mean AP",
+                "resume": "ssd300_vgg_voc_pruning_geometric_median.pth",
+                "model_description": "SSD300-BN",
+                "compression_description": "Filter pruning, 40%, geometric median criterion",
+                "diff_fp32_min": -1.2,
+                "diff_fp32_max": 0.1
+            },
             "ssd512_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc.json",
                 "target": 97.59,
@@ -403,6 +414,17 @@
                 "resume": "unet_mapillary_magnitude_sparsity_int8.pth",
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.1
+            },
+            "unet_mapillary_pruning_geometric_median": {
+                "config": "examples/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",
+                "reference": "unet_mapillary",
+                "target": 55.62,
+                "metric_type": "Mean IoU",
+                "resume": "unet_mapillary_magnitude_sparsity_int8.pth",
+                "model_description": "UNet",
+                "compression_description": "Filter pruning, 25%, geometric median criterion",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1
             }
