@@ -1,6 +1,5 @@
 {
     "model": "inception_v3",
-    "dataset": "CIFAR10",
     "input_info": {
         "sample_size": [
             2,
