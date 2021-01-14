@@ -12,11 +12,11 @@ However, since the ![L_0](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdp
 
 ![\theta_{sparse}^{(i)} = \theta_i \cdot \epsilon_i, \quad \epsilon_i \sim \mathcal{B}(p_i)](https://latex.codecogs.com/png.latex?%5Cdpi%7B130%7D%20%5Ctheta_%7Bsparse%7D%5E%7B%28i%29%7D%20%3D%20%5Ctheta_i%20%5Ccdot%20%5Cepsilon_i%2C%20%5Cquad%20%5Cepsilon_i%20%5Csim%20%5Cmathcal%7BB%7D%28p_i%29)
 
-Here, ![\epsilon_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20%5Cepsilon_i) may be interpreted as a binary mask that selects which weights should be zeroed, hence we add the regularizing term to the objective function that encourages desired level of sparsity to our model:
+Here, ![\mathcal{B}(p_i)](https://latex.codecogs.com/png.latex?%5Cmathcal%7BB%7D%28p_i%29) is Bernoulli distribution, ![\epsilon_i](https://latex.codecogs.com/png.latex?%5Cinline%20%5Cdpi%7B120%7D%20%5Cepsilon_i) may be interpreted as a binary mask that selects which weights should be zeroed, hence we add the regularizing term to the objective function that encourages desired level of sparsity to our model:
 
 ![L_{sparse} = \mathbb{E}_{\epsilon \sim P_{\epsilon}} \lbrack \frac{\sum_{i=0}^{|\theta|} \epsilon_i}{|\theta|} - level \rbrack ^2](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20L_%7Bsparse%7D%20%3D%20%5Cmathbb%7BE%7D_%7B%5Cepsilon%20%5Csim%20P_%7B%5Cepsilon%7D%7D%20%5Clbrack%20%5Cfrac%7B%5Csum_%7Bi%3D0%7D%5E%7B%7C%5Ctheta%7C%7D%20%5Cepsilon_i%7D%7B%7C%5Ctheta%7C%7D%20-%20level%20%5Crbrack%20%5E2)
 
-Since we can not directly optimize distribution parameters `p`, we store and optimize `p` in the logit form:
+Since we can not directly optimize distribution parameters ![p](https://latex.codecogs.com/png.latex?p), ![p = \{p_i\}](https://latex.codecogs.com/png.latex?p%20%3D%20%5C%7Bp_i%5C%7D), we store and optimize ![p](https://latex.codecogs.com/png.latex?p) in the logit form:
 
 ![s = \sigma^{-1}(p) = log (\frac{p}{1 - p})](https://latex.codecogs.com/png.latex?%5Cdpi%7B120%7D%20s%20%3D%20%5Csigma%5E%7B-1%7D%28p%29%20%3D%20log%20%28%5Cfrac%7Bp%7D%7B1%20-%20p%7D%29)
 
