@@ -267,6 +267,8 @@ class CompressionAlgorithmBuilder:
     on an NNCFNetwork object wrapping a target PyTorch model (torch.nn.Module).
     """
 
+    _registered_name = None
+
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
         Arguments:
@@ -278,8 +280,7 @@ class CompressionAlgorithmBuilder:
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
-        # pylint:disable=no-member
-        self.compressed_nncf_module_names = get_nncf_module_names_for_algorithm(self.registry_name)
+        self.compressed_nncf_module_names = get_nncf_module_names_for_algorithm(self._registered_name)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         """
