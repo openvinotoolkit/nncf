@@ -149,11 +149,13 @@ If your model contains a custom, non-PyTorch standard module with trainable weig
 ```python
 import nncf
 
-@nncf.register_module
+@nncf.register_module(ignored_algorithms=[...])
 class MyModule(torch.nn.Module):
     def __init__(self, ...):
         self.weight = torch.nn.Parameter(...)
     # ...
 ```
+
+If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
 
 In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation. 
