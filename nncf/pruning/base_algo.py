@@ -416,8 +416,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         stats["pruning_statistic_by_module"] = table
         return self.add_algo_specific_stats(stats)
 
-    @staticmethod
-    def add_algo_specific_stats(stats):
+
+    def add_algo_specific_stats(self, stats):
         return stats
 
     def get_stats_for_pruned_modules(self):
