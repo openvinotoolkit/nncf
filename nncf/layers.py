@@ -194,7 +194,7 @@ UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
-def register_module(ignored_algorithms: list = None, *quantizable_field_names: str):
+def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
     # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary
     def wrap(cls):
