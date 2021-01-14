@@ -33,6 +33,7 @@ from examples.common.sample_config import SampleConfig
 from torch.utils.tensorboard import SummaryWriter
 from texttable import Texttable
 import mlflow
+import torch
 
 from examples.common.example_logger import logger as default_logger
 from nncf.utils import is_main_process
@@ -149,6 +150,9 @@ def configure_device(current_gpu, config: SampleConfig):
         configure_distributed(config)
 
     config.device = get_device(config)
+
+    if config.execution_mode == ExecutionMode.SINGLE_GPU:
+        torch.cuda.set_device(config.current_gpu)
 
 
 def configure_logging(sample_logger, config):

@@ -68,7 +68,7 @@ class HAWQPrecisionInitializer(ManualPrecisionInitializer):
         self._init_device = init_args.device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo)
-        self._dump_hawq_data = config.get('dump_hawq_data', False)
+        self._dump_hawq_data = config.get('dump_init_precision_data', False)
         bitwidth_assignment_mode_str = config.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
         self._bitwidth_assignment_mode = BitwidthAssignmentMode.from_str(bitwidth_assignment_mode_str)
 

@@ -62,8 +62,15 @@ class GroupsOfAdjacentQuantizers:
         qid = id(quantizer)
         return self._quantizer_per_group_id.get(qid, None)
 
+    def get_adjacent_quantizers_by_group_id(self, group_id):
+        return self._groups_of_adjacent_quantizers[group_id].weight_quantizers + \
+                self._groups_of_adjacent_quantizers[group_id].activation_quantizers
+
     def __iter__(self):
         return iter(self._groups_of_adjacent_quantizers)
 
     def __bool__(self):
         return bool(self._groups_of_adjacent_quantizers) and bool(self._quantizer_per_group_id)
+
+    def __getitem__(self, group_id):
+        return self._groups_of_adjacent_quantizers[group_id]
