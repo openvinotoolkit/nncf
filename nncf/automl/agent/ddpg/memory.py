@@ -11,10 +11,6 @@
  limitations under the License.
 """
 
-# Modification Notes:
-# This implementation is modified from
-# https://github.com/mit-han-lab/haq/blob/master/lib/rl/memory.py
-
 
 from __future__ import absolute_import
 from collections import deque, namedtuple
