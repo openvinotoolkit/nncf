@@ -271,8 +271,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         contexts_correspond_to_single_module = True
         first_op_context = ia_op_exec_contexts_list[0]
         for other_op_context in ia_op_exec_contexts_list:
-            if other_op_context.scope_in_model != first_op_context.scope_in_model or \
-                    other_op_context.operator_name != first_op_context.operator_name:
+            if other_op_context.scope_in_model != first_op_context.scope_in_model:
                 contexts_correspond_to_single_module = False
                 break
 
@@ -282,7 +281,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                "quantization will be correct")
 
     def get_potential_quantized_modules(self, target_model: NNCFNetwork) -> List[PotentialQuantizedModule]:
-        modules = target_model.get_nncf_modules()
+        modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
         insertion_point_graph = target_model.get_insertion_point_graph()
         quantized_modules_with_potential_qconfig = []
         default_qconfig_list = [self.__get_default_qconfig(
@@ -608,7 +607,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     target_model.get_original_graph().traverse_graph(node, traverse_function))
 
         insertion_commands = []
-        nncf_scope_module_dict = target_model.get_nncf_modules()
+        nncf_scope_module_dict = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
         for module_input_node in nncf_module_input_nodes:
             op_scope = module_input_node.op_exec_context.input_agnostic.scope_in_model
             module = None

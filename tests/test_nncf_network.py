@@ -82,7 +82,7 @@ def test_check_correct_modules_replacement():
     assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
 
 
-@register_module
+@register_module()
 class ModuleOfUser(torch.nn.Module):
     def __init__(self):
         super().__init__()

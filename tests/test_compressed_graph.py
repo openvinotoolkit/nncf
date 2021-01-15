@@ -503,6 +503,7 @@ class TorchBinaryMethodDesc(SingleLayerModelDesc):
         super().__init__(layer=torch_method, model_name=model_name, input_sample_sizes=([1], [1]),
                          wrap_inputs_fn=n_inputs_fn, input_info=input_info)
 
+
 class TensorBinaryMethodsDesc(BaseDesc):
     def __init__(self, tensor_method: str, model_name: str = None, input_info=None):
         super().__init__(input_sample_sizes=([1], [1]), wrap_inputs_fn=n_inputs_fn, model_name=model_name,

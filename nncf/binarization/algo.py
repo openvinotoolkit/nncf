@@ -51,7 +51,7 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
 
     def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         device = next(target_model.parameters()).device
-        modules = target_model.get_nncf_modules()
+        modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
 
         insertion_commands = []
         for scope, module in modules.items():
