@@ -422,7 +422,7 @@
                 "reference": "unet_mapillary",
                 "target": 55.62,
                 "metric_type": "Mean IoU",
-                "resume": "unet_mapillary_magnitude_sparsity_int8.pth",
+                "resume": "unet_mapillary_pruning_geometric_median.pth",
                 "model_description": "UNet",
                 "compression_description": "Filter pruning, 25%, geometric median criterion",
                 "diff_fp32_min": -1,
