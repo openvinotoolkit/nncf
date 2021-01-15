@@ -26,6 +26,7 @@ import torch
 from nncf.config import NNCFConfig
 from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
     StatCollectorGenerator, DataLoaderRangeInitializeRunner
+from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
@@ -43,7 +44,7 @@ from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
-from nncf.hw_config import HWConfig
+from nncf.hw_config import HWConfig, HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_logger import logger as nncf_logger
@@ -440,12 +441,12 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
                  precision_init_type: str = None,
                  precision_init_params: BasePrecisionInitParams = None,
                  range_init_params: RangeInitParams = None,
-                 override_bit_options_with_hawq: bool = False):
+                 override_bit_options_with_precision_init: bool = False):
         self._precision_init_type = precision_init_type
         self._precision_init_params = precision_init_params
         self._range_init_params = range_init_params
         self._target_model = target_model
-        self._override_bit_options_with_hawq = override_bit_options_with_hawq
+        self._override_bit_options_with_precision_init = override_bit_options_with_precision_init
 
     @staticmethod
     def select_first_qconfig_with_bitwidth_variants_for_each_point(
@@ -476,7 +477,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
 
                 # intermediate_ctrl.init_range()
                 hw_constraints = HardwareQuantizationConstraints()
-                if not self._override_bit_options_with_hawq:
+                if not self._override_bit_options_with_precision_init:
                     for qp_id, qp in multi_config_setup.quantization_points.items():
                         quantizer_module_id = intermediate_ctrl.setup_to_module_id_translation_dict[qp_id]
                         hw_constraints.add(quantizer_module_id, qp.possible_qconfigs)
@@ -535,7 +536,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             self._precision_init_type,
             self._precision_init_params,
             self._range_init_params,
-            override_bit_options_with_hawq=self.hw_config is None)
+            override_bit_options_with_precision_init=self.hw_config is None)
 
         single_config_quantizer_setup = disambiguator.select_final_quantizer_setup(
             quantization_proposal.quantizer_setup)
@@ -718,7 +719,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         if not init_precision_config:
             return None, None
         precision_init_type = init_precision_config.get('type', 'manual')
-        if precision_init_type != 'manual':
+        if precision_init_type == 'hawq':
             try:
                 precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
             except KeyError as e:
@@ -731,8 +732,23 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                 init_precision_config,
                 precision_init_args
             )
+        elif precision_init_type == "autoq":
+            if self.hw_config is not None and self.hw_config.target_device != HWConfigType.VPU.value:
+                raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for "
+                                 "target_device NONE or VPU".format(self.hw_config.target_device))
+            try:
+                precision_init_args = self.config.get_extra_struct(AutoQPrecisionInitArgs)
+            except KeyError as e:
+                raise ValueError('Specified Automated precision initialization in the NNCF config, '
+                                 'but the initializing data loader and loss criterion are not provided as an extra '
+                                 'struct. Refer to `NNCFConfig.register_extra_structs` and the '
+                                 '`AutoQPrecisionInitArgs` class') from e
+            precision_init_params = AutoQPrecisionInitParams.from_config(init_precision_config,
+                                                                         precision_init_args,
+                                                                         HWConfigType.from_str(self.hw_config.target_device))
         else:
             precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
+
         return precision_init_type, precision_init_params
 
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
@@ -1125,13 +1141,13 @@ class QuantizationController(QuantizationControllerBase):
                                                                   self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
             self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
+            self.update_metric_store(True)
 
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
         if is_main_process() and should_init:
             self.run_batchnorm_adaptation(self.quantization_config)
-        self.update_metric_store(True)
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         if self.is_staged_scheduler:
@@ -1547,13 +1563,17 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                                  self._quantizer_setup,
                                                                  self._setup_to_module_id_translation_dict)
 
+        build_time_metric_infos = NetworkQuantizationShareMetricBuildTimeInfo(len(self._non_weight_quantizers),
+                                                                              len(self._weight_quantizers))
+
         return ExperimentalQuantizationController(target_model,
                                                   self._weight_quantizers,
                                                   self._non_weight_quantizers,
                                                   groups_of_adjacent_quantizers,
                                                   self._quantizer_setup,
                                                   self._setup_to_module_id_translation_dict,
-                                                  self._tensor_stats)
+                                                  self._tensor_stats,
+                                                  build_time_metric_infos)
 
 
 class ExperimentalQuantizationController(QuantizationController):
@@ -1563,7 +1583,8 @@ class ExperimentalQuantizationController(QuantizationController):
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
                  initial_quantizer_setup: SingleConfigQuantizerSetup,
                  setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
-                 tensor_stats: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]):
+                 tensor_stats: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]],
+                 build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo):
         super().__init__(target_model,
                          NNCFConfig(),
                          should_init=False,
@@ -1571,7 +1592,8 @@ class ExperimentalQuantizationController(QuantizationController):
                          weight_quantizers=weight_quantizers,
                          non_weight_quantizers=non_weight_quantizers,
                          groups_of_adjacent_quantizers=groups_of_adjacent_quantizers,
-                         collect_compression_metrics=False)
+                         collect_compression_metrics=True,
+                         build_time_metric_info=build_time_metric_info)
         self._target_model_ref = target_model
         self._initial_quantizer_setup = initial_quantizer_setup
         self._tensor_stats = tensor_stats

@@ -184,15 +184,15 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].nncf_node_id] == tmp_out_channels[node.nncf_node_id] for node in
+            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
                         group.nodes])
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             for node in group.nodes:
-                tmp_out_channels[node.nncf_node_id] = new_out_channels_num
+                tmp_out_channels[node.module_scope] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
-            for node_id in next_nodes:
-                tmp_in_channels[node_id] = new_out_channels_num
+            for node_module_scope in next_nodes:
+                tmp_in_channels[node_module_scope] = new_out_channels_num
 
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops

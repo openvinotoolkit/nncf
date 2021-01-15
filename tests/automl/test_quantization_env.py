@@ -13,6 +13,7 @@
 
 import pytest
 from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from tests.helpers import create_mock_dataloader, BasicConvTestModel, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
@@ -25,7 +26,10 @@ def create_test_quantization_env() -> QuantizationEnv:
 
     config['compression']['initializer']['precision'] = {"type": "autoq"}
     data_loader = create_mock_dataloader(config['input_info'])
-    return QuantizationEnv(compression_ctrl, data_loader, lambda *x: 0, config)
+    return QuantizationEnv(compression_ctrl,
+                           HardwareQuantizationConstraints(),
+                           data_loader,
+                           lambda *x: 0, config)
 
 
 def test_can_create_quant_env():

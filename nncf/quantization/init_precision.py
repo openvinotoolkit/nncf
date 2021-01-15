@@ -1,8 +1,10 @@
 from typing import Type
 
 from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
+from nncf.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitializer
+
 
 class PrecisionInitializerFactory:
     @staticmethod

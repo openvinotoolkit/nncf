@@ -32,7 +32,7 @@ VALID_NUM_STATES = [1, 3]
 @pytest.mark.parametrize('num_state', VALID_NUM_STATES,
                          ids=['_'.join(['num_state', str(s)]) for s in VALID_NUM_STATES])
 def test_create_ddpg_with_valid_input(num_state, num_action):
-    DDPG(num_state, num_action, {})
+    DDPG(num_state, num_action)
 
 
 INVALID_VALUES = [2.5, 0, -1, None, "string"]
@@ -80,7 +80,7 @@ def test_select_action(episode_action_pair, decay_epsilon, _seed):
         "warmup_iter_number": 5
     }
 
-    ddpg = DDPG(N_STATE, N_ACTION, hparams)
+    ddpg = DDPG(N_STATE, N_ACTION, hparam_override=hparams)
     ddpg.actor.load_state_dict(
         {state: torch.ones_like(param) for state, param in ddpg.actor.state_dict().items()}
     )
@@ -124,7 +124,7 @@ def test_update_policy(test_vector, mocker, _seed):
         "window_length": SCALAR_ONE,
     }
 
-    ddpg = DDPG(N_STATE, N_ACTION, hparams)
+    ddpg = DDPG(N_STATE, N_ACTION, hparam_override=hparams)
     ddpg.actor.load_state_dict(
         {state: torch.ones_like(param)/2 for state, param in ddpg.actor.state_dict().items()}
     )
@@ -140,12 +140,14 @@ def test_update_policy(test_vector, mocker, _seed):
 
 TAU = 0.1
 def create_two_ddpg_agents():
-    source_ddpg = DDPG(N_STATE, N_ACTION, {"hidden1": N_HIDDEN_NODE, "hidden2": N_HIDDEN_NODE, "tau": TAU})
+    source_ddpg = DDPG(N_STATE, N_ACTION,
+                       hparam_override={"hidden1": N_HIDDEN_NODE, "hidden2": N_HIDDEN_NODE, "tau": TAU})
     source_ddpg.actor.load_state_dict(
         {state: torch.ones_like(param)/2 for state, param in source_ddpg.actor.state_dict().items()}
     )
 
-    target_ddpg = DDPG(N_STATE, N_ACTION, {"hidden1": N_HIDDEN_NODE, "hidden2": N_HIDDEN_NODE, "tau": TAU})
+    target_ddpg = DDPG(N_STATE, N_ACTION,
+                       hparam_override={"hidden1": N_HIDDEN_NODE, "hidden2": N_HIDDEN_NODE, "tau": TAU})
     target_ddpg.actor.load_state_dict(
         {state: torch.ones_like(param) for state, param in target_ddpg.actor.state_dict().items()}
     )
@@ -177,7 +179,7 @@ def test_observe():
         assert len(ddpg.memory.terminals) == length
         assert len(ddpg.memory.observations) == length
 
-    ddpg = DDPG(N_STATE, N_ACTION, {"rmsize": REPLAY_MEMORY_SIZE})
+    ddpg = DDPG(N_STATE, N_ACTION, hparam_override={"rmsize": REPLAY_MEMORY_SIZE})
     check_replay_buffer_size(SCALAR_ZERO)
 
     reward_t = SCALAR_ZERO

@@ -32,14 +32,13 @@ from copy import deepcopy
 from collections import OrderedDict
 from natsort import natsorted
 
-from nncf import NNCFConfig
 from nncf.debug import is_debug, DEBUG_LOG_DIR
 from nncf.nncf_logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer
-from nncf.quantization.algo import QuantizationController, NNCFNetwork
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.algo import QuantizationController, NNCFNetwork, ExperimentalQuantizationController
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
 
@@ -93,61 +92,64 @@ class ModelSizeCalculator:
     def get_model_size_ratio(self, per_quantizer_bw: Dict[QuantizerId, int]) -> np.float64:
         return self.get_model_size(per_quantizer_bw)/self.fp_model_size
 
+class QuantizationEnvParams:
+    def __init__(self, compression_ratio: float,
+                 eval_subset_ratio: float,
+                 skip_constraint: bool,
+                 finetune: bool,
+                 bits: List[int],
+                 dump_init_precision_data: bool = False,
+                 log_dir: str = None):
+        self.compression_ratio = compression_ratio
+        self.eval_subset_ratio = eval_subset_ratio
+        self.skip_constraint = skip_constraint
+        self.finetune = finetune
+        self.bits = bits
+        self.dump_init_precision_data = dump_init_precision_data
+        self.log_dir = log_dir
+
 
 class QuantizationEnv:
     # pylint:disable=too-many-branches,too-many-statements
     def __init__(self,
-                 quantization_controller: QuantizationController,
+                 model: NNCFNetwork,
+                 quantization_controller: ExperimentalQuantizationController,
+                 hw_precision_constraints: HardwareQuantizationConstraints,
                  eval_loader: torch.utils.data.DataLoader,
                  eval_fn: Callable[[nn.Module, torch.utils.data.DataLoader], float],
-                 config: NNCFConfig):
+                 hw_config_type: HWConfigType,
+                 params: QuantizationEnvParams
+                 ):
 
         logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
         self.qctrl = quantization_controller
-        self.qmodel = quantization_controller._model
+        self.qmodel = model
         self.eval_loader = eval_loader
         self.eval_fn = eval_fn
-        self.config = config
+        self._hw_precision_constraints = hw_precision_constraints
 
-        # Extract model name for labelling
-        self.model_name = self.config.get('model', None)
-        if self.model_name is None:
-            self.model_name = self.qmodel.nncf_module.__class__.__name__
+        self.model_name = self.qmodel.nncf_module.__class__.__name__
 
         # Check and only proceed if target device is supported by Q.Env
-        self.hw_cfg_type = self.qctrl.quantization_config.get("hw_config_type")
-        if self.hw_cfg_type is not None and self.hw_cfg_type is not HWConfigType.VPU:
-            raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for "
-                             "target_device NONE or VPU".format(self.hw_cfg_type.value))
-
-        # Extract Precision Initialization Config
-        # TODO: Clean up
-        if self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq':
-            self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
-        else:
-            raise ValueError("Missing/Invalid Config of Precision Initializer. "
-                             "Pls review config['compression']['initializer']['precision']")
+        self.hw_cfg_type = hw_config_type
+        assert self.hw_cfg_type in [None, HWConfigType.VPU]
 
         # Set target compression ratio
-        self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
+        self.compression_ratio = params.compression_ratio
 
-        self.eval_loader = PartialDataLoader(self.eval_loader, iter_ratio=self.autoq_cfg.get('eval_subset_ratio', 1.0))
+        self.eval_loader = PartialDataLoader(self.eval_loader, iter_ratio=params.eval_subset_ratio)
 
         # Bool to disable hard resource constraint
-        self.skip_constraint = False
-        if 'skip_constraint' in self.autoq_cfg:
-            self.skip_constraint = self.autoq_cfg['skip_constraint']
+        self.skip_constraint = params.skip_constraint
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
-        self.finetune = False
-        if 'finetune' in self.autoq_cfg:
-            self.finetune = self.autoq_cfg['finetune']
+        self.finetune = params.skip_constraint
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
-            self.model_bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
+            self.model_bitwidth_space = params.bits
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.model_bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bits()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to its bitwidth space (per quantizer bitwidth space)
@@ -156,16 +158,14 @@ class QuantizationEnv:
             for qid in self.bw_space_map.keys():
                 self.bw_space_map[qid] = self.model_bitwidth_space
         else:
-            assert hasattr(self.qctrl._hw_precision_constraints, '_constraints'), \
-                "feasible bitwidth per quantizer not found"
-            for qid, bw_space in self.qctrl._hw_precision_constraints._constraints.items():
-                self.bw_space_map[qid] = sorted(list(bw_space))
+            for qid in self.bw_space_map:
+                self.bw_space_map[qid] = sorted(list(self._hw_precision_constraints.get_all_unique_bits(qid)))
 
         # Quantizer Master Table Creation
-        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
+        self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
         self.quantizer_table = self._create_quantizer_table()
 
-        # Create master dataframe to keep track of quantizable layers and thier attributes
+        # Create master dataframe to keep track of quantizable layers and their attributes
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
         if self.master_df.isnull().values.any():
             raise ValueError("Q.Env Master Dataframe has null value(s)")
@@ -182,13 +182,13 @@ class QuantizationEnv:
         self.orig_model_size = self.model_size_calculator.fp_model_size
         self.min_model_size = self.model_size_calculator.min_model_size
         self.max_model_size = self.model_size_calculator.max_model_size
-        self.target_model_size = self.orig_model_size*self.compression_ratio
+        self.target_model_size = self.orig_model_size * self.compression_ratio
 
         if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
             raise ValueError("Model Size Ratio {} is out of bound ({}, {})"
                              .format(self.compression_ratio,
-                                     self.min_model_size/self.orig_model_size,
-                                     self.max_model_size/self.orig_model_size))
+                                     self.min_model_size / self.orig_model_size,
+                                     self.max_model_size / self.orig_model_size))
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -196,9 +196,9 @@ class QuantizationEnv:
 
         self.reset()
 
-        self._dump_autoq_data = self.autoq_cfg.get('dump_init_precision_data', False)
+        self._dump_autoq_data = params.dump_init_precision_data
         if self._dump_autoq_data or is_debug():
-            dump_dir = self.config.get('log_dir', None)
+            dump_dir = params.log_dir
             if dump_dir is None:
                 dump_dir = DEBUG_LOG_DIR
             self.dump_dir = Path(dump_dir) / Path("autoq_env_dump")
@@ -223,7 +223,7 @@ class QuantizationEnv:
         # Create a mapping of qid to its adjacent quantizer group id
         adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
         for qid, qmod in self.qctrl.all_quantizations.items():
-            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qmod)
+            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
         assert len(set(self.bw_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
             "both bw_space_map and adjq_gid_map must have exact keys."
