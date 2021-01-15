@@ -275,6 +275,7 @@
                 "target": 91.99,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_pruning_geometric_median.pth",
+                "batch": 32,
                 "model_description": "SSD300-BN",
                 "compression_description": "Filter pruning, 40%, geometric median criterion",
                 "diff_fp32_min": -1.2,
