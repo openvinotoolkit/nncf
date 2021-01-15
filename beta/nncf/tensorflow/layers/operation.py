@@ -12,7 +12,8 @@
 """
 
 from collections import OrderedDict
-from ..utils.hook_handle import HookHandle
+
+from nncf.tensorflow.utils.hook_handle import HookHandle
 
 
 class InputType:

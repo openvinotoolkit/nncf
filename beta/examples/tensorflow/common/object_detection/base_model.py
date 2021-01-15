@@ -15,6 +15,7 @@ import abc
 import re
 
 import tensorflow as tf
+
 from examples.tensorflow.common.object_detection import checkpoint_utils
 
 

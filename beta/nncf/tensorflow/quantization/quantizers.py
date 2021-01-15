@@ -15,11 +15,15 @@ from functools import partial
 
 import tensorflow as tf
 
-from .functions import symmetric_quantize, asymmetric_quantize
-from .config import QuantizationMode, QuantizerConfig
-from ..layers.operation import NNCFOperation
-from ..layers.custom_objects import NNCF_CUSTOM_OBJECTS, NNCF_QUANTIZATION_OPERATONS
-from ..layers.data_layout import get_channel_axis, get_channel_size
+from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.data_layout import get_channel_axis
+from nncf.tensorflow.layers.data_layout import get_channel_size
+from nncf.tensorflow.layers.operation import NNCFOperation
+from nncf.tensorflow.quantization.config import QuantizationMode
+from nncf.tensorflow.quantization.config import QuantizerConfig
+from nncf.tensorflow.quantization.functions import asymmetric_quantize
+from nncf.tensorflow.quantization.functions import symmetric_quantize
 
 
 class Quantizer(NNCFOperation):

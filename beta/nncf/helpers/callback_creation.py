@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from ..tensorflow.helpers.callback_creation import create_compression_callbacks as create_compression_callbacks_tf
+from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks as create_compression_callbacks_tf
 
 
 def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_text=True, log_dir=None):

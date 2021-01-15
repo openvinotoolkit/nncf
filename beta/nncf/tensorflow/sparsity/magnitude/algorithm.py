@@ -14,21 +14,30 @@
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from .functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
-from .operation import BinaryMask, BinaryMaskWithWeightsBackup
-from ..schedulers import SPARSITY_SCHEDULERS
-from ..utils import convert_raw_to_printable
-from ...algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from ....api.compression import CompressionAlgorithmController, CompressionAlgorithmBuilder
-from ...graph.converter import convert_layer_graph_to_nxmodel, convert_keras_model_to_nxmodel
-from ...graph.transformations.commands import InsertionCommand, RemovalCommand, LayerWeight,\
-    LayerWeightOperation, TransformationPriority
-from ...graph.transformations.layout import TransformationLayout
-from ...graph.model_transformer import ModelTransformer
-from ...graph.utils import collect_wrapped_layers, get_custom_layers, get_weight_node_name, \
-    get_original_name_and_instance_index
-from ...layers.wrapper import NNCFWrapper
-from ....utils.utils import is_ignored
+from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
+from nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
+from nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
+from nncf.tensorflow.graph.model_transformer import ModelTransformer
+from nncf.tensorflow.graph.transformations.commands import InsertionCommand
+from nncf.tensorflow.graph.transformations.commands import LayerWeight
+from nncf.tensorflow.graph.transformations.commands import LayerWeightOperation
+from nncf.tensorflow.graph.transformations.commands import RemovalCommand
+from nncf.tensorflow.graph.transformations.commands import TransformationPriority
+from nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from nncf.tensorflow.graph.utils import collect_wrapped_layers
+from nncf.tensorflow.graph.utils import get_custom_layers
+from nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from nncf.tensorflow.graph.utils import get_weight_node_name
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
+from nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
+from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
+from nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.tensorflow.sparsity.utils import convert_raw_to_printable
+from nncf.utils.utils import is_ignored
 
 
 PRUNING_LAYERS = {

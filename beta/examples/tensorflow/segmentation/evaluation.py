@@ -12,20 +12,25 @@
 """
 
 import sys
+
 import tensorflow as tf
 
 from nncf import create_compressed_model
 from nncf.configs.config import Config
 from nncf.helpers.utils import print_statistics
 from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+
 from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config, get_model_builder
+from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.distributed import get_strategy_scope
+from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
-from examples.tensorflow.common.distributed import get_distribution_strategy, get_strategy_scope
-from examples.tensorflow.common.utils import configure_paths, get_saving_parameters
-from examples.tensorflow.common.logger import logger
+from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.common.utils import SummaryWriter
+from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
+from examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
 
 def get_argument_parser():

@@ -13,12 +13,12 @@
 
 import tensorflow as tf
 
-from ..layers import FakeQuantize
-from ....api.compression import CompressionAlgorithmInitializer
-from ...layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
-from ...layers.wrapper import NNCFWrapper
-from ...layers.data_layout import get_channel_axis
-from ...layers.operation import InputType
+from nncf.api.compression import CompressionAlgorithmInitializer
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.tensorflow.layers.data_layout import get_channel_axis
+from nncf.tensorflow.layers.operation import InputType
+from nncf.tensorflow.quantization.layers import FakeQuantize
 
 
 class MinMaxStatisticsCollector:

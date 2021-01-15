@@ -14,6 +14,7 @@
 import collections
 
 import tensorflow as tf
+
 from examples.tensorflow.common.object_detection.utils import argmax_matcher
 from examples.tensorflow.common.object_detection.utils import box_list
 from examples.tensorflow.common.object_detection.utils import faster_rcnn_box_coder

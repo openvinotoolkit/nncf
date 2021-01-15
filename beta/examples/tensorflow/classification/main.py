@@ -17,22 +17,25 @@ from pathlib import Path
 
 import tensorflow as tf
 
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.distributed import get_distribution_strategy, get_strategy_scope
+from nncf import create_compressed_model
+from nncf import create_compression_callbacks
+from nncf.configs.config import Config
+from nncf.helpers.utils import print_statistics
+from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+
 from examples.tensorflow.common.argparser import get_common_argument_parser
+from examples.tensorflow.common.callbacks import get_callbacks
+from examples.tensorflow.common.distributed import get_distribution_strategy
+from examples.tensorflow.common.distributed import get_strategy_scope
+from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.model_loader import get_model
 from examples.tensorflow.common.optimizer import build_optimizer
 from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.callbacks import get_callbacks
+from examples.tensorflow.common.utils import serialize_config
+from examples.tensorflow.common.utils import create_code_snapshot
+from examples.tensorflow.common.utils import configure_paths
+from examples.tensorflow.common.utils import get_saving_parameters
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
-from examples.tensorflow.common.utils import serialize_config, create_code_snapshot, \
-    configure_paths, get_saving_parameters
-
-from nncf import create_compressed_model
-from nncf.configs.config import Config
-from nncf import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
-from nncf.helpers.utils import print_statistics
 
 
 def get_argument_parser():
