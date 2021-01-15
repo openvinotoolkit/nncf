@@ -13,6 +13,7 @@
 
 import re
 import tensorflow as tf
+
 from examples.tensorflow.common.logger import logger
 
 

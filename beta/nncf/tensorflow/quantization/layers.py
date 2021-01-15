@@ -13,9 +13,10 @@
 
 import tensorflow as tf
 
-from .config import QuantizerConfig
-from ..layers.custom_objects import NNCF_CUSTOM_OBJECTS, NNCF_QUANTIZATION_OPERATONS
-from ..layers.operation import InputType
+from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from nncf.tensorflow.layers.operation import InputType
+from nncf.tensorflow.quantization.config import QuantizerConfig
 
 
 @NNCF_CUSTOM_OBJECTS.register()

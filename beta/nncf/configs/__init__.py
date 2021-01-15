@@ -11,4 +11,4 @@
  limitations under the License.
 """
 
-from .config import Config
+from nncf.configs.config import Config

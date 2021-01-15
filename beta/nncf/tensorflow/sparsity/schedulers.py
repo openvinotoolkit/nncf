@@ -14,8 +14,8 @@
 from bisect import bisect_right
 import numpy as np
 
-from ...api.compression import CompressionScheduler
-from ...utils.registry import Registry
+from nncf.api.compression import CompressionScheduler
+from nncf.utils.registry import Registry
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 

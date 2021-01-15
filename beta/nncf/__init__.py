@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from .version import __version__
+from nncf.version import __version__
 
-from . import tensorflow as nncf_tensorflow
+from nncf import tensorflow as nncf_tensorflow
 
-from .helpers.model_creation import create_compressed_model
-from .helpers.callback_creation import create_compression_callbacks
-from .configs.config import Config
+from nncf.helpers.model_creation import create_compressed_model
+from nncf.helpers.callback_creation import create_compression_callbacks
+from nncf.configs.config import Config
