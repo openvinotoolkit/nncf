@@ -22,9 +22,9 @@ from pathlib import Path
 
 import tensorflow as tf
 
-from nncf.utils.logger import logger as nncf_logger
-from nncf.tensorflow.utils.save import FROZEN_GRAPH_FORMAT, SAVEDMODEL_FORMAT, KERAS_H5_FORMAT
-from examples.tensorflow.common.logger import logger as default_logger
+from beta.nncf.utils.logger import logger as nncf_logger
+from beta.nncf.tensorflow.utils.save import FROZEN_GRAPH_FORMAT, SAVEDMODEL_FORMAT, KERAS_H5_FORMAT
+from beta.examples.tensorflow.common.logger import logger as default_logger
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"

@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from nncf.tensorflow.sparsity.callbacks import SparsityStatistics
-from nncf.tensorflow.sparsity.callbacks import UpdateMask
-from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
+from beta.nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatistics
+from beta.nncf.tensorflow.sparsity.callbacks import UpdateMask
+from beta.nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 
 
 def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_text=True, log_dir=None):

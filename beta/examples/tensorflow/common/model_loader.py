@@ -12,7 +12,7 @@
 """
 
 from tensorflow.keras import applications as keras_models
-from examples.tensorflow.common import models as custom_models
+from beta.examples.tensorflow.common import models as custom_models
 
 AVAILABLE_MODELS = dict(keras_models.__dict__)
 AVAILABLE_MODELS.update(custom_models.__dict__)

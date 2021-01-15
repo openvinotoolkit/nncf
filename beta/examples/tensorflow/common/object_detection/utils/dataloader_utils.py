@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import input_utils
+from beta.examples.tensorflow.common.object_detection.utils import input_utils
 
 
 def process_source_id(source_id):

@@ -16,14 +16,14 @@ from collections import namedtuple
 
 import tensorflow as tf
 
-from nncf.tensorflow.graph.transformations.commands import TargetType
-from nncf.tensorflow.graph.transformations.commands import TransformationType
-from nncf.tensorflow.graph.utils import get_custom_objects
-from nncf.tensorflow.graph.utils import get_weight_name
-from nncf.tensorflow.graph.utils import is_functional_model
-from nncf.tensorflow.graph.utils import is_sequential_or_functional_model
-from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.graph.transformations.commands import TargetType
+from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from beta.nncf.tensorflow.graph.utils import get_custom_objects
+from beta.nncf.tensorflow.graph.utils import get_weight_name
+from beta.nncf.tensorflow.graph.utils import is_functional_model
+from beta.nncf.tensorflow.graph.utils import is_sequential_or_functional_model
+from beta.nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 WeightOperations = namedtuple('WeightOperations',
                               ('weights_attr_name', 'operations'))

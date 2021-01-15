@@ -14,8 +14,8 @@
 import tensorflow as tf
 from addict import Dict
 
-from nncf.configs.config import Config
-from tests.tensorflow.helpers import create_conv, check_equal
+from beta.nncf.configs.config import Config
+from beta.tests.tensorflow.helpers import create_conv, check_equal
 
 
 sub_tensor = tf.constant([[[[1., 0.],

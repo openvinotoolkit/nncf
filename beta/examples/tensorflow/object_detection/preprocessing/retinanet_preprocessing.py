@@ -13,10 +13,10 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import anchor
-from examples.tensorflow.common.object_detection.utils import box_utils
-from examples.tensorflow.common.object_detection.utils import input_utils
-from examples.tensorflow.common.object_detection.utils import dataloader_utils
+from beta.examples.tensorflow.common.object_detection.utils import anchor
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.utils import input_utils
+from beta.examples.tensorflow.common.object_detection.utils import dataloader_utils
 
 
 class RetinaNetPreprocessor:

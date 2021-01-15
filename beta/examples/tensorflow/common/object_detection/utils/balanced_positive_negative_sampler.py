@@ -13,8 +13,8 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import minibatch_sampler
-from examples.tensorflow.common.object_detection.utils import ops
+from beta.examples.tensorflow.common.object_detection.utils import minibatch_sampler
+from beta.examples.tensorflow.common.object_detection.utils import ops
 
 
 class BalancedPositiveNegativeSampler(minibatch_sampler.MinibatchSampler):

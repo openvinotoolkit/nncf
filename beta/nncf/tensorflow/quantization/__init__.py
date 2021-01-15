@@ -11,6 +11,6 @@
  limitations under the License.
 """
 # Required for correct registry functioning
-from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
-from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
+from beta.nncf.tensorflow.quantization.layers import FakeQuantize
+from beta.nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
+from beta.nncf.tensorflow.quantization.quantizers import SymmetricQuantizer

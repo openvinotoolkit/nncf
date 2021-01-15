@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.utils.registry import Registry
+from beta.nncf.utils.registry import Registry
 
 NNCF_CUSTOM_OBJECTS = Registry('NNCF Custom Objects')
 NNCF_QUANTIZATION_OPERATONS = Registry('NNCF Quantization Operations')

@@ -18,8 +18,8 @@ import tensorflow as tf
 import numpy as np
 from pycocotools import cocoeval
 
-from examples.tensorflow.common.object_detection.evaluation import coco_utils
-from examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.object_detection.evaluation import coco_utils
+from beta.examples.tensorflow.common.logger import logger
 
 
 class MetricWrapper:

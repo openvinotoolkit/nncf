@@ -11,4 +11,23 @@
  limitations under the License.
 """
 
-from beta.nncf.configs.config import Config
+# Workaround to handle the common part for Torch and TensorFlow backends.
+import importlib
+import os
+import sys
+
+
+def import_module_from_path(module_name, path):
+    module_path = os.path.abspath(path)
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+backend = import_module_from_path(
+  'nncf.common.utils.backend',
+  'nncf/common/utils/backend.py'
+)
+
+backend.__nncf_backend__ = 'TensorFlow'

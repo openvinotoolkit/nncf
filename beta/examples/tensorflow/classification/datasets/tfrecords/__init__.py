@@ -11,6 +11,6 @@
  limitations under the License.
 """
 
-from examples.tensorflow.classification.datasets.tfrecords.cifar10 import *
-from examples.tensorflow.classification.datasets.tfrecords.cifar100 import *
-from examples.tensorflow.classification.datasets.tfrecords.imagenet2012 import *
+from beta.examples.tensorflow.classification.datasets.tfrecords.cifar10 import *
+from beta.examples.tensorflow.classification.datasets.tfrecords.cifar100 import *
+from beta.examples.tensorflow.classification.datasets.tfrecords.imagenet2012 import *

@@ -12,5 +12,5 @@
 """
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.tensorflow.quantization import algorithm as quantization_algorithm
-from nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm
+from beta.nncf.tensorflow.quantization import algorithm as quantization_algorithm
+from beta.nncf.tensorflow.sparsity.magnitude import algorithm as magnitude_sparsity_algorithm

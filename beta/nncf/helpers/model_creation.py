@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.tensorflow.helpers.model_creation import create_compressed_model as create_compressed_model_tf
+from beta.nncf.tensorflow.helpers.model_creation import create_compressed_model as create_compressed_model_tf
 
 
 def create_compressed_model(model, config):

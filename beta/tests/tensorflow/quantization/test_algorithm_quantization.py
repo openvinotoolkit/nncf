@@ -17,16 +17,16 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 import pytest
 
-from tests.tensorflow.helpers import get_basic_conv_test_model, create_compressed_model_and_algo_for_test
-from nncf.tensorflow.quantization import FakeQuantize
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
-from nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from nncf.tensorflow.quantization.quantizers import Quantizer
-from nncf.tensorflow.quantization.algorithm import QuantizationController
-from nncf.tensorflow.quantization.config import QuantizerConfig, QuantizationMode
-from nncf import Config
-from nncf.tensorflow.layers.operation import InputType
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model, create_compressed_model_and_algo_for_test
+from beta.nncf.tensorflow.quantization import FakeQuantize
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.quantization.quantizers import Quantizer
+from beta.nncf.tensorflow.quantization.algorithm import QuantizationController
+from beta.nncf.tensorflow.quantization.config import QuantizerConfig, QuantizationMode
+from beta.nncf import Config
+from beta.nncf.tensorflow.layers.operation import InputType
 
 
 def get_basic_quantization_config(model_size=4):

@@ -13,8 +13,8 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import matcher
-from examples.tensorflow.common.object_detection.utils import shape_utils
+from beta.examples.tensorflow.common.object_detection.utils import matcher
+from beta.examples.tensorflow.common.object_detection.utils import shape_utils
 
 
 class ArgMaxMatcher(matcher.Matcher):
