@@ -44,7 +44,8 @@ def get_argument_parser():
                                         save_checkpoint_freq=False,
                                         export_args=False,
                                         print_freq=False,
-                                        dataset_type=False)
+                                        dataset_type=False,
+                                        cpu_only=False)
 
     parser.add_argument('--backbone-checkpoint',
                         default=None,
