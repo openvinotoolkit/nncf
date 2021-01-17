@@ -26,7 +26,6 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
-from beta.examples.tensorflow.common.distributed import get_strategy_scope
 from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.optimizer import build_optimizer
@@ -208,7 +207,6 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
 def run_train(config):
     strategy = get_distribution_strategy(config)
-    strategy_scope = get_strategy_scope(strategy)
 
     # Create dataset
     builders = get_dataset_builders(config, strategy)
@@ -230,7 +228,7 @@ def run_train(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
-        with strategy_scope:
+        with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config)
 
             scheduler = build_scheduler(

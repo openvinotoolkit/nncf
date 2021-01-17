@@ -26,7 +26,6 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.callbacks import get_callbacks
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
-from beta.examples.tensorflow.common.distributed import get_strategy_scope
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.model_loader import get_model
 from beta.examples.tensorflow.common.optimizer import build_optimizer
@@ -124,7 +123,6 @@ def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch):
 
 def run(config):
     strategy = get_distribution_strategy(config)
-    strategy_scope = get_strategy_scope(strategy)
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
@@ -143,7 +141,7 @@ def run(config):
     validation_steps = validation_builder.steps_per_epoch
 
     with TFOriginalModelManager(model_fn, **model_params) as model:
-        with strategy_scope:
+        with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)
