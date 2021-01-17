@@ -11,11 +11,6 @@
  limitations under the License.
 """
 
-# Modification Notes:
-# This implementation is modified from
-# 1. https://github.com/mit-han-lab/haq/blob/master/lib/rl/ddpg.py
-# 2. https://github.com/mit-han-lab/haq/blob/master/lib/utils/utils.py
-
 
 import numpy as np
 
