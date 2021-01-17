@@ -42,7 +42,7 @@ class ManyNonEvalModules(ModelWithDummyParameter):
             x = F.relu(x)
             return x
 
-    @nncf.register_module
+    @nncf.register_module()
     class CustomWeightModule(nn.Module):
         def __init__(self):
             super().__init__()

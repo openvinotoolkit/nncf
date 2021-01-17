@@ -197,7 +197,8 @@ class FilterPruningController(BasePruningAlgoController):
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
 
-    def _calculate_flops_in_pruned_model(self, modules_in_channels: Dict[Scope, int], modules_out_channels: Dict[Scope, int]):
+    def _calculate_flops_in_pruned_model(self, modules_in_channels: Dict[Scope, int],
+                                         modules_out_channels: Dict[Scope, int]):
         """
         Calculates number of flops in model with number of input/output channels for nodes from modules_in_channels,
         modules_out_channels. It allows to count the number of flops in pruned model (with changed number of

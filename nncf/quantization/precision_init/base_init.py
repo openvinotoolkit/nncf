@@ -23,7 +23,7 @@ from nncf.quantization.precision_constraints import HardwareQuantizationConstrai
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
 from nncf.quantization.structs import WeightQuantizerInfo
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.structures import QuantizationPrecisionInitArgs, NNCFExtraConfigStruct
+from nncf.structures import NNCFExtraConfigStruct
 from nncf.utils import get_all_modules_by_type
 
 

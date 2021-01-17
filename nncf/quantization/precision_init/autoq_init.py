@@ -12,7 +12,7 @@
 """
 
 from collections import OrderedDict
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 import os
 
@@ -21,7 +21,7 @@ from nncf.hw_config import HWConfigType
 from nncf.nncf_logger import logger
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
-from nncf.quantization.quantizer_id import QuantizerId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.structures import AutoQPrecisionInitArgs
 
 from pathlib import Path
@@ -66,7 +66,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
     @classmethod
     def from_config(cls, autoq_init_config_dict: Dict,
                     user_init_args: AutoQPrecisionInitArgs,
-                    target_hw_config_type: HWConfigType) -> 'AutoQPrecisionInitParams':
+                    target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
         dict_copy = autoq_init_config_dict.copy()
         dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
         iter_number = dict_copy.pop('iter_number', 0)
@@ -103,7 +103,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         self._ddpg_hparams_override = params.ddpg_hparams_dict
         self._hw_cfg_type = params.hw_cfg_type
 
-    def apply_init(self):
+    def apply_init(self) -> SingleConfigQuantizerSetup:
         from nncf.automl.environment.quantization_env import QuantizationEnv
         from nncf.automl.agent.ddpg.ddpg import DDPG
         from nncf.debug import DEBUG_LOG_DIR
@@ -141,7 +141,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             finetune=self._params.finetune,
             bits=self._params.bits,
             dump_init_precision_data=self._dump_autoq_data,
-            log_dir=None)  # FIXME
+            log_dir=Path(DEBUG_LOG_DIR) / Path("autoq"))
 
         # Instantiate Quantization Environment
         env = QuantizationEnv(
@@ -166,17 +166,17 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         end_ts = datetime.now()
 
-        self.set_chosen_config(dict(zip(env.master_df.qid_obj, best_policy)))
+        final_qid_vs_qconfig_map = env.select_config_for_actions(best_policy)
+
+        final_quantizer_setup = self.quantization_controller.get_quantizer_setup_for_current_state()
+        for qp_id, qconf in final_qid_vs_qconfig_map.items():
+            final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
         logger.info('[AutoQ] best_reward: {}'.format(best_reward))
         logger.info('[AutoQ] best_policy: {}'.format(best_policy))
         logger.info("[AutoQ] Search Complete")
         logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
-
-
-    def set_chosen_config(self, qid_bw_map: Dict[QuantizerId, int]):
-        for qid, bw in qid_bw_map.items():
-            self.quantization_controller.all_quantizations[qid].num_bits = bw
+        return final_quantizer_setup
 
 
     def _search(self, agent: 'DDPG', env: 'QuantizationEnv') -> Tuple[pd.Series, float]:
@@ -298,9 +298,10 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             episode, final_reward, _, accuracy, model_ratio, _, _, _ = episodic_info_tuple
 
             # Save nncf compression cfg
-            episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
+            episode_cfgfile = osp.join(self._init_args.config['episodic_nncfcfg'],
+                                       '{0:03d}_nncfcfg.json'.format(episode))
             with open(episode_cfgfile, "w") as outfile:
-                json.dump(env.config, outfile, indent=4, sort_keys=False)
+                json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')
             pd.DataFrame(

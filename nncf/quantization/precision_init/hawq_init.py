@@ -514,7 +514,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 filtered_bits_configurations.append(bits_configuration)
         return filtered_bits_configurations
 
-    def _get_weight_qp_ids_in_trace_order(self, traces_order: TracesOrder) -> List[QuantizationPointId]:
+    def _get_weight_qp_ids_in_trace_order(self, traces_order: TracesOrder) -> List[Set[QuantizationPointId]]:
         quant_module_ids = list(self._weight_quantizations_by_execution_order.keys())
         qp_ids_in_trace_order = []
         for trace_idx in range(len(traces_order)):
@@ -525,13 +525,14 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
     def _apply_weight_configuration_to_quantizer_setup(self,
                                                        configuration: CoveringConfigurationForQuantNoiseCalculation,
-                                                       qp_ids_in_trace_order: List[QuantizationPointId],
+                                                       qp_ids_in_trace_order: List[Set[QuantizationPointId]],
                                                        quantizer_setup: SingleConfigQuantizerSetup) -> \
             SingleConfigQuantizerSetup:
         retval = deepcopy(quantizer_setup)
         assert len(configuration) == len(qp_ids_in_trace_order)
-        for trace_idx, qp_id in enumerate(qp_ids_in_trace_order):
-            retval.quantization_points[qp_id].qconfig = deepcopy(configuration[trace_idx])
+        for trace_idx, qp_id_set in enumerate(qp_ids_in_trace_order):
+            for qp_id in qp_id_set:
+                retval.quantization_points[qp_id].qconfig = deepcopy(configuration[trace_idx])
         return retval
 
     def calc_quantization_noise(self, configurations_to_run: List[CoveringConfigurationForQuantNoiseCalculation],
@@ -550,12 +551,13 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
             hook_handles = []
             observers = []
-            for qp_id in qp_ids_in_trace_order:
-                wq_id = ctrl.setup_to_module_id_translation_dict[qp_id]
-                wq_module = ctrl.weight_quantizers[wq_id].quantizer_module_ref
-                observer = PerturbationObserver(self._init_device)
-                hook_handles.append(wq_module.register_forward_hook(observer.calc_perturbation))
-                observers.append(observer)
+            for qp_id_set in qp_ids_in_trace_order:
+                for qp_id in qp_id_set:
+                    wq_id = ctrl.setup_to_module_id_translation_dict[qp_id]
+                    wq_module = ctrl.weight_quantizers[wq_id].quantizer_module_ref
+                    observer = PerturbationObserver(self._init_device)
+                    hook_handles.append(wq_module.register_forward_hook(observer.calc_perturbation))
+                    observers.append(observer)
 
             model.do_dummy_forward(force_eval=True)
 
@@ -631,10 +633,15 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             pairs = self._algo.get_weights_activation_quantizers_pairs()
             for pair in pairs:
                 wq_ids, aq_id = pair
-                wq_qp_ids = [ctrl.module_id_to_qp_id_translation_dict[wq_id] for wq_id in wq_ids]
-                aq_qp_id = ctrl.module_id_to_qp_id_translation_dict[aq_id]
+                aq_qp_ids = ctrl.module_id_to_qp_id_translation_dict[aq_id]
+                wq_qp_ids = set()
+                for wq_id in wq_ids:
+                    wq_qp_id_set = ctrl.module_id_to_qp_id_translation_dict[wq_id]
+                    wq_qp_ids.update(list(wq_qp_id_set))
+
                 wq_bits = [quantizer_setup_to_set.quantization_points[wq_qp_id].qconfig.bits for wq_qp_id in wq_qp_ids]
-                quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.bits = max(wq_bits)
+                for aq_qp_id in aq_qp_ids:
+                    quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.bits = max(wq_bits)
 
         return quantizer_setup_to_set
 

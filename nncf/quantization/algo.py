@@ -24,6 +24,7 @@ import operator
 import shutil
 import torch
 from nncf.config import NNCFConfig
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
     StatCollectorGenerator, DataLoaderRangeInitializeRunner
 from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
@@ -169,6 +170,14 @@ class QuantizerSetupGeneratorBase:
 
         return True
 
+    def _filter_by_ignored_algo(self, modules: Dict[Scope, _NNCFModuleMixin]):
+        retval = {}  # type: Dict[Scope, torch.nn.Module]
+        for module_scope, module in modules.items():
+            if 'quantization' in module.ignored_algorithms:
+                continue
+            retval[module_scope] = module
+        return retval
+
     def _filter_by_weight_ignored_target_scopes(self, modules: Dict[Scope, torch.nn.Module]):
         retval = {}  # type: Dict[Scope, torch.nn.Module]
         for module_scope, module in modules.items():
@@ -186,6 +195,7 @@ class QuantizerSetupGeneratorBase:
         modules = self._target_model.get_nncf_modules()
         quantized_modules_with_potential_qconfig = []
 
+        modules = self._filter_by_ignored_algo(modules)
         modules = self._filter_by_weight_ignored_target_scopes(modules)
         module_scope_vs_qconfig_list = self._assign_qconfig_lists_to_modules(modules)
 
@@ -743,9 +753,13 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                  'but the initializing data loader and loss criterion are not provided as an extra '
                                  'struct. Refer to `NNCFConfig.register_extra_structs` and the '
                                  '`AutoQPrecisionInitArgs` class') from e
+
+            hw_config_type = None
+            if self.hw_config is not None:
+                hw_config_type = HWConfigType.from_str(self.hw_config.target_device)
             precision_init_params = AutoQPrecisionInitParams.from_config(init_precision_config,
                                                                          precision_init_args,
-                                                                         HWConfigType.from_str(self.hw_config.target_device))
+                                                                         hw_config_type)
         else:
             precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
@@ -1539,7 +1553,8 @@ class QuantizationDebugInterface(DebugInterface):
 class ExperimentalQuantizationBuilder(QuantizationBuilder):
     def __init__(self, quantizer_setup: SingleConfigQuantizerSetup,
                  tensor_stats_for_all_setup_variations: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]]):
-        super().__init__(NNCFConfig(), should_init=False)
+        should_init = bool(tensor_stats_for_all_setup_variations)
+        super().__init__(NNCFConfig(), should_init=should_init)
         self._quantizer_setup = quantizer_setup
         self._tensor_stats = tensor_stats_for_all_setup_variations
 
@@ -1598,7 +1613,12 @@ class ExperimentalQuantizationController(QuantizationController):
         self._initial_quantizer_setup = initial_quantizer_setup
         self._tensor_stats = tensor_stats
         self.setup_to_module_id_translation_dict = setup_to_module_id_translation_dict
-        self.module_id_to_qp_id_translation_dict = {v: k for k, v in self.setup_to_module_id_translation_dict.items()}
+        self.module_id_to_qp_id_translation_dict = {}  # type: Dict[QuantizerId, Set[QuantizationPointId]]
+        for qp_id, qid in self.setup_to_module_id_translation_dict.items():
+            if qid in self.module_id_to_qp_id_translation_dict:
+                self.module_id_to_qp_id_translation_dict[qid].add(qp_id)
+            else:
+                self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()

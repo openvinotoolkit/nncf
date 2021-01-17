@@ -21,8 +21,8 @@ class HardwareQuantizationConstraints:
     def __init__(self):
         self._constraints = {}  # type: Dict[QuantizerId, List[QuantizerConfig]]
 
-    def add(self, quantizer_id: QuantizerId, qconfig_set: List[QuantizerConfig]):
-        self._constraints[quantizer_id] = qconfig_set
+    def add(self, quantizer_id: QuantizerId, qconfigs: List[QuantizerConfig]):
+        self._constraints[quantizer_id] = qconfigs
 
     def get(self, quantizer_id: QuantizerId) -> List[QuantizerConfig]:
         if quantizer_id in self._constraints:

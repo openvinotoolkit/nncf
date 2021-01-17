@@ -406,7 +406,7 @@ class InsertionPointGraph(nx.DiGraph):
 
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
-    def __init__(self, module, input_infos: List[ModelInputInfo] = None,
+    def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
                  ignored_scopes=None, target_scopes=None, reset: bool = False):
         super().__init__()
@@ -451,7 +451,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
 
-        self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context)
+        self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
+                                                               as_eval=True)
 
         self._compressed_context = TracingContext()
 
@@ -849,10 +850,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def collect_eval_only_ops_exec_context(model: nn.Module, graph_builder) -> List[str]:
         """
         Returns scopes of the modules which are executed in evaluation mode only.
-        Model is set to eval mode.
         """
         result = []
-        eval_graph = graph_builder.build_graph(model.eval())
+        eval_graph = graph_builder.build_graph(model, as_eval=True)
         for node_key in eval_graph.get_all_node_keys():
             node = eval_graph.get_nx_node_by_key(node_key)
             op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]

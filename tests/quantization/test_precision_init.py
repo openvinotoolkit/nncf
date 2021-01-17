@@ -254,7 +254,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
     # graph may not contain some quantizers (e.g. in staged scenario)
     quantizer_switcher.enable_quantizers()
     model.rebuild_graph()
-    groups_of_adjacent_quantizers = algo_ctrl._groups_of_adjacent_quantizers
+    groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
                                             groups_of_adjacent_quantizers)
     check_graph(graph, path_to_dot, graph_dir, sort_dot_graph=False)
@@ -435,6 +435,9 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     random_action_spy = mocker.spy(DDPG, 'random_action')
     select_action_spy = mocker.spy(DDPG, 'select_action')
 
+    from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
+    autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
+
     config = register_default_init_args(config, train_loader=train_loader,
                                         autoq_eval_fn=lambda *x: random(),
                                         autoq_eval_loader=train_loader)
@@ -442,10 +445,13 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     bw_init_config = config['compression']['initializer']['precision']
     learning_iter_number = bw_init_config['iter_number'] - bw_init_config['warmup_iter_number']
-    n_quantizer = len(algo_ctrl.all_quantizations)
+
+    experimental_ctrl = autoq_obj_init_spy.call_args[0][1]
+    n_quantizer = len(experimental_ctrl.all_quantizations)
 
     assert random_action_spy.call_count == bw_init_config['warmup_iter_number'] * n_quantizer
-    assert select_action_spy.call_count == learning_iter_number * (n_quantizer + 1) + bw_init_config['warmup_iter_number']
+    assert select_action_spy.call_count == learning_iter_number * (n_quantizer + 1) + bw_init_config[
+        'warmup_iter_number']
 
     path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
     graph_dir = os.path.join('quantized', 'autoq')
