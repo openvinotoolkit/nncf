@@ -239,6 +239,25 @@
     },
     "object_detection": {
         "VOCdevkit": {
+            "ssd300_mobilenet_voc": {
+                "config": "examples/object_detection/configs/ssd_mobilenet_voc.json",
+                "target": 86.02,
+                "metric_type": "Mean AP",
+                "resume": "ssd300_mobilenet_voc.pth",
+                "batch": 120,
+                "model_description": "SSD300-BN"
+            },
+            "ssd300_mobilenet_voc_magnitude_sparsity_int8": {
+                "config": "examples/object_detection/configs/ssd_mobilenet_voc_magnitude_int8.json",
+                "reference": "ssd300_mobilenet_voc",
+                "target": 85.45,
+                "metric_type": "Mean AP",
+                "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
+                "model_description": "SSD300-BN",
+                "compression_description": "INT8 + Sparsity 70% (Magnitude)",
+                "diff_fp32_min": -1.2,
+                "diff_fp32_max": 0.1
+            },
             "ssd300_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc.json",
                 "target": 96.53,
