@@ -218,10 +218,6 @@ class COCOEvaluator:
                 groundtruths['height'] = sizes[:, 0]
                 groundtruths['width'] =  sizes[:, 1]
 
-            if 'num_detections' not in groundtruths:
-                num_detections = np.concatenate(groundtruths['groundtruths']['num_detections'])
-                groundtruths['num_detections'] = np.squeeze(num_detections)
-
             for k in self._required_groundtruth_fields:
                 if k not in groundtruths:
                     raise ValueError('Missing the required key `{}` in groundtruths!'.format(k))

@@ -126,12 +126,6 @@ class RetinanetModel(base_model.Model):
             if field not in outputs:
                 raise ValueError('"{}" is missing in outputs, requried {} found {}'.format(
                                  field, required_output_fields, outputs.keys()))
-        required_label_fields = ['image_info', 'groundtruths']
-
-        for field in required_label_fields:
-            if field not in labels:
-                raise ValueError('"{}" is missing in outputs, requried {} found {}'.format(
-                                 field, required_label_fields, labels.keys()))
 
         boxes, scores, classes, valid_detections = self._generate_detections_fn(
             outputs['box_outputs'], outputs['cls_outputs'], labels['anchor_boxes'],
@@ -139,20 +133,13 @@ class RetinanetModel(base_model.Model):
         # Discards the old output tensors to save memory. The `cls_outputs` and
         # `box_outputs` are pretty big and could potentiall lead to memory issue.
         outputs = {
-            'source_id': labels['groundtruths']['source_id'],
+            'source_id': labels['source_id'],
             'image_info': labels['image_info'],
             'num_detections': valid_detections,
             'detection_boxes': boxes,
             'detection_classes': classes,
             'detection_scores': scores,
         }
-
-        if 'groundtruths' in labels:
-            labels['source_id'] = labels['groundtruths']['source_id']
-            labels['boxes'] = labels['groundtruths']['boxes']
-            labels['classes'] = labels['groundtruths']['classes']
-            labels['areas'] = labels['groundtruths']['areas']
-            labels['is_crowds'] = labels['groundtruths']['is_crowds']
 
         return labels, outputs
 
