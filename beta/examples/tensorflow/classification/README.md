@@ -100,7 +100,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 ### Results
 
-|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**Config path**|**TensorFlow checkpoint**|
+|**Model**|**Compression algorithm**|**Dataset**|**TensorFlow compressed accuracy**|**NNCF config file**|**TensorFlow checkpoint**|
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |Inception V3|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|78.41|[inception_v3_imagenet_int8.json](configs/quantization/inception_v3_imagenet_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/inception_v3_int8_w_sym_t_a_sym_t.tar.gz)|
 |Inception V3|Sparsity 54% (Magnitude)|ImageNet|77.87|[inception_v3_imagenet_magnitude_sparsity.json](configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/inception_v3_sparsity_54.tar.gz)|

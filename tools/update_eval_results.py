@@ -78,7 +78,9 @@ def build_per_model_row(with_links: bool, with_fp32_baseline: bool,
         row.append(fp32_metric)
     row.append(compressed_metric)
     if with_links:
-        row.append(config_path)
+        local_config_path = '/'.join(config_path.split('/')[2:])
+        config_name = local_config_path.split('/')[-1]
+        row.append('[{}]({})'.format(config_name, local_config_path))
         if checkpoint_url is not None:
             row.append('[Link]({})'.format(checkpoint_url))
         else:
