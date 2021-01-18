@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import atexit
-import tempfile
 
 import tensorflow as tf
 import numpy as np
