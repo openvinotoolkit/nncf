@@ -57,6 +57,7 @@ INSTALL_REQUIRES = ["ninja==1.10.0.post2",
                     "jsonschema==3.2.0",
                     "natsort==7.1.0",
                     "scikit-learn==0.24.0",
+                    "pandas==1.1.5",
                     "wheel==0.36.1"]
 
 DEPENDENCY_LINKS = []
