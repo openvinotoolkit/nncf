@@ -40,25 +40,24 @@ def find_version(*file_paths):
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
 
-
-INSTALL_REQUIRES = ["ninja==1.10.0.post2",
-                    "addict==2.4.0",
-                    "texttable==1.6.3",
-                    "scipy==1.3.2",
-                    "networkx==2.5",
-                    "graphviz==0.15",
-                    "jsonschema==3.2.0",
-                    "pydot==1.4.1",
-                    "jstyleson==0.0.2",
-                    "numpy==1.19",
-                    "tqdm==4.54.1",
-                    "onnx==1.8.0",
-                    "pytest-mock==3.3.1",
-                    "jsonschema==3.2.0",
-                    "natsort==7.1.0",
-                    "scikit-learn==0.24.0",
-                    "pandas==1.1.5",
-                    "wheel==0.36.1"]
+INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
+                    "addict>=2.4.0",
+                    "texttable>=1.6.3",
+                    "scipy>=1.3.2",
+                    "networkx>=2.5",
+                    "graphviz>=0.15",
+                    "jsonschema>=3.2.0",
+                    "pydot>=1.4.1",
+                    "jstyleson>=0.0.2",
+                    "numpy>=1.19",
+                    "tqdm>=4.54.1",
+                    "onnx>=1.8.0",
+                    "pytest-mock>=3.3.1",
+                    "jsonschema>=3.2.0",
+                    "natsort>=7.1.0",
+                    "pandas>=1.1.5",
+                    "scikit-learn>=0.24.0",
+                    "wheel>=0.36.1"]
 
 DEPENDENCY_LINKS = []
 
