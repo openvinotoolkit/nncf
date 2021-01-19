@@ -233,7 +233,6 @@ def main(argv):
 
     if 'train' in config.mode or 'test' in config.mode:
         run_evaluation(config)
-
     elif 'export' in config.mode:
         export(config)
 
