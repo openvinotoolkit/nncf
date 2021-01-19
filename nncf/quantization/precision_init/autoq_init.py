@@ -32,7 +32,7 @@ import pandas as pd
 import re
 from io import StringIO
 from copy import deepcopy
-from torch.utils.tensorboard import SummaryWriter
+
 
 
 class AutoQPrecisionInitializer:
@@ -65,12 +65,16 @@ class AutoQPrecisionInitializer:
             self.init_args.config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
             os.makedirs(self.init_args.config['episodic_nncfcfg'], exist_ok=True)
 
-            self.tb_writer = SummaryWriter(self.dump_dir)
-
-            # log compression config to tensorboard
-            self.tb_writer.add_text('AutoQ/run_config',
-                                    json.dumps(self.init_args.config['compression'],
-                                               indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
+            try:
+                from torch.utils.tensorboard import SummaryWriter
+                self.tb_writer = SummaryWriter(self.dump_dir)
+                # log compression config to tensorboard
+                self.tb_writer.add_text('AutoQ/run_config',
+                                         json.dumps(self.init_args.config['compression'],
+                                         indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
+            except ModuleNotFoundError:
+                logger.warning("Tensorboard installation not found! Install tensorboard Python package "
+                               "in order for AutoQ tensorboard statistics data to be dumped")
 
 
         start_ts = datetime.now()
@@ -88,7 +92,7 @@ class AutoQPrecisionInitializer:
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, hparam_override=self.autoq_cfg)
 
-        if self._dump_autoq_data:
+        if self._dump_autoq_data and self.tb_writer is not None:
             self.tb_writer.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
 
         best_policy, best_reward = self._search(agent, env)
@@ -243,13 +247,14 @@ class AutoQPrecisionInitializer:
             self.tb_writer.add_text('AutoQ/current_policy', current_strategy_string, episode)
 
             # visualization over episode
-            self._add_to_tensorboard(self.tb_writer, episodic_info_tuple)
+            if self.tb_writer is not None:
+                self._add_to_tensorboard(self.tb_writer, episodic_info_tuple)
 
             if episode % int((self.autoq_cfg['iter_number']+10)/10) == 0:
                 agent.save_model(self.dump_dir)
 
 
-    def _add_to_tensorboard(self, tb_writer: SummaryWriter, log_tuple: Tuple):
+    def _add_to_tensorboard(self, tb_writer: 'SummaryWriter', log_tuple: Tuple):
         episode, final_reward, best_reward, \
             accuracy, model_ratio, value_loss, \
                 policy_loss, delta = log_tuple
