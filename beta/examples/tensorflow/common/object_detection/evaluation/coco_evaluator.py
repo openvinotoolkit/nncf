@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import atexit
-import tempfile
 
 import tensorflow as tf
 import numpy as np
@@ -71,15 +69,8 @@ class COCOEvaluator:
               to absolute values (`image_info` is needed in this case).
         """
         if annotation_file:
-            if annotation_file.startswith('gs://'):
-                _, local_val_json = tempfile.mkstemp(suffix='.json')
-                tf.io.gfile.remove(local_val_json)
-                tf.io.gfile.copy(annotation_file, local_val_json)
-                atexit.register(tf.io.gfile.remove, local_val_json)
-            else:
-                local_val_json = annotation_file
             self._coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if include_mask else 'box'),
-                                                   annotation_file=local_val_json)
+                                                   annotation_file=annotation_file)
 
         self._annotation_file = annotation_file
         self._include_mask = include_mask
@@ -116,7 +107,7 @@ class COCOEvaluator:
               coco-style evaluation metrics (box and mask).
         """
         if not self._annotation_file:
-            logger.info('Thre is no annotation_file in COCOEvaluator.')
+            logger.info('There is no annotation_file in COCOEvaluator.')
             gt_dataset = coco_utils.convert_groundtruths_to_coco_dataset(self._groundtruths)
             coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if self._include_mask else 'box'),
                                              gt_dataset=gt_dataset)

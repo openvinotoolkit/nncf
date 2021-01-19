@@ -123,8 +123,7 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     def _test_step_fn(inputs):
         inputs, labels = inputs
         model_outputs = model(inputs, training=False)
-        if predict_post_process_fn:
-            labels, prediction_outputs = predict_post_process_fn(labels, model_outputs)
+        labels, prediction_outputs = predict_post_process_fn(labels, model_outputs)
 
         return labels, prediction_outputs
 
@@ -234,8 +233,7 @@ def main(argv):
 
     if 'train' in config.mode or 'test' in config.mode:
         run_evaluation(config)
-
-    if 'export' in config.mode:
+    elif 'export' in config.mode:
         export(config)
 
 
