@@ -22,7 +22,6 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
-from beta.examples.tensorflow.common.distributed import get_strategy_scope
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
@@ -146,7 +145,6 @@ def run_evaluation(config, eval_timeout=None):
                            'Please use TFRecords.')
 
     strategy = get_distribution_strategy(config)
-    strategy_scope = get_strategy_scope(strategy)
 
     num_devices = strategy.num_replicas_in_sync if strategy else 1
     dataset_builder = COCODatasetBuilder(config=config, is_train=False, num_devices=num_devices)
@@ -161,7 +159,7 @@ def run_evaluation(config, eval_timeout=None):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
-        with strategy_scope:
+        with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config)
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables, step=tf.Variable(0))
