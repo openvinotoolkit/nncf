@@ -162,7 +162,7 @@ def get_common_argument_parser():
         help="The directory where models and TensorboardX summaries"
              " are saved. Default: runs")
 
-    parser.add_argument('--save-freq', default=5, type=int,
+    parser.add_argument('--save-freq', default=1, type=int,
                         help='Checkpoint save frequency (epochs). Default: 5')
 
     parser.add_argument('--to-onnx', type=str, metavar='PATH', default=None,

@@ -252,7 +252,6 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             def forward(self, nncf_conv, x):
                 # W * gamma / sigma
                 if nncf_conv.folding_conv_bn:
-
                     running_std = torch.sqrt(self.bn.running_var + self.bn.eps)
                     scale_factor = self.bn.weight / running_std
                     nncf_conv.scale_factor = scale_factor

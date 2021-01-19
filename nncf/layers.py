@@ -13,6 +13,7 @@
 import math
 import numbers
 from typing import Tuple, Optional
+from copy import deepcopy
 
 import torch
 import torch.nn.functional as F
@@ -73,11 +74,11 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
             # using zero bias here since the bias for original conv
             # will be added later
             if self.bias is not None:
-                copy_bias = deepcopy(self.bias)
+                copy_bias = deepcopy(self.bias.data)
                 zero_bias = torch.zeros_like(self.bias)
-                self.bias = zero_bias
+                self.bias.data = zero_bias
                 conv = self._nncf_conv_forward(input, self.weight)
-                self.bias = copy_bias
+                self.bias.data = copy_bias
             else:
                 conv = self._nncf_conv_forward(input, self.weight)
 

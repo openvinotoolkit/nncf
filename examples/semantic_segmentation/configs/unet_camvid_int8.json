@@ -36,6 +36,8 @@
          "input_size_hw": [368, 480]
     },
     "compression": {
-            "algorithm": "quantization"
+            "algorithm": "quantization",
+            "folding_conv_bn_target_epoch": 0,
+            "freeze_bn_stats_target_epoch" : 3
     }
 }
