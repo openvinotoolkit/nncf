@@ -57,7 +57,6 @@ model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
-
 def get_argument_parser():
     parser = get_common_argument_parser()
     parser.add_argument(

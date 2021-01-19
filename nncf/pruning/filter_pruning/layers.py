@@ -47,7 +47,7 @@ def broadcast_filter_mask(filter_mask, shape, dim=0):
     return broadcasted_filter_mask
 
 
-def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_name="", dim=0):
+def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_scope, dim=0):
     """
     Inplace applying binary filter mask to weight (or bias) of the convolution
     (by first dim of the conv weight).
@@ -57,7 +57,7 @@ def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_name="", d
     """
     if filter_mask.size(0) != conv_weight.size(dim):
         raise RuntimeError("Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
-                           " ".format(filter_mask.shape, module_name, conv_weight.shape))
+                           " ".format(filter_mask.shape, str(module_scope), conv_weight.shape))
     broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape, dim)
     return conv_weight.mul_(broadcasted_filter_mask)
 

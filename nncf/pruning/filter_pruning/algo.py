@@ -10,9 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
+
 import numpy as np
 import torch
 from functools import partial
+
+from nncf.dynamic_graph.context import Scope
 from texttable import Texttable
 from torch import nn
 
@@ -67,11 +71,11 @@ class FilterPruningController(BasePruningAlgoController):
         self.pruning_init = config.get("pruning_init", 0)
         self.pruning_quota = 1.0
 
-        self.modules_in_channels = {}
-        self.modules_out_channels = {}
+        self.modules_in_channels = {}  # type: Dict[Scope, int]
+        self.modules_out_channels = {}  # type: Dict[Scope, int]
         self.pruning_quotas = {}
-        self.nodes_flops = {}
-        self.nodes_flops_cost = {}
+        self.nodes_flops = {}  # type: Dict[Scope, int]
+        self.nodes_flops_cost = {}  # type: Dict[Scope, int]
         self.next_nodes = {}
         self._init_pruned_modules_params()
         self.flops_count_init()
@@ -115,11 +119,12 @@ class FilterPruningController(BasePruningAlgoController):
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
             node_module = self._model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+            scope = nncf_node.op_exec_context.scope_in_model
             in_channels, out_channels = get_in_out_channels(node_module)
             if in_channels:
-                self.modules_in_channels[nncf_node.node_id] = in_channels
+                self.modules_in_channels[scope] = in_channels
             if out_channels:
-                self.modules_out_channels[nncf_node.node_id] = out_channels
+                self.modules_out_channels[scope] = out_channels
 
         prunable_types = Convolution.get_all_op_aliases() + TransposeConvolution.get_all_op_aliases()
         # 2. Init next_nodes for every pruning cluster
@@ -129,22 +134,23 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
                 next_nodes = get_next_nodes_of_types(self._model, nncf_cluster_node, prunable_types)
 
-                next_nodes_idxs = [n.node_id for n in next_nodes]
+                next_nodes_idxs = [n.op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
-            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.nncf_node_id for n in cluster.nodes})
+            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 
-            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].nncf_node_id] \
+            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
                                               * self.pruning_quota
 
     def flops_count_init(self):
-        def get_node_flops_hook(name, dict_to_save):
-            return partial(compute_FLOPs_hook, dict_to_save=dict_to_save, name=name)
+        def get_node_flops_hook(dict_to_save):
+            ctx = self._model.get_tracing_context()
+            return partial(compute_FLOPs_hook, dict_to_save=dict_to_save, ctx=ctx)
 
-        def get_node_cost_hook(name):
+        def get_node_cost_hook():
             """
             Cost of node is num of flops for this node divided by numbers of input and output channels for this node.
             """
-
+            ctx = self._model.get_tracing_context()
             def compute_cost_hook(module, input_, output):
                 if isinstance(module, (nn.Conv1d, nn.Conv2d, nn.Conv3d, nn.ConvTranspose1d, nn.ConvTranspose2d,
                                        nn.ConvTranspose3d)):
@@ -152,7 +158,7 @@ class FilterPruningController(BasePruningAlgoController):
                     cost = 2 * np.prod(ks[2:]) * np.prod(output.shape[2:]) / module.groups
                 else:
                     return
-                self.nodes_flops_cost[name] = cost
+                self.nodes_flops_cost[ctx.scope] = cost
 
             return compute_cost_hook
 
@@ -161,9 +167,8 @@ class FilterPruningController(BasePruningAlgoController):
 
         for nncf_node in graph.get_all_nodes():
             node_module = self._model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
-            hook_list.append(node_module.register_forward_hook(get_node_flops_hook(nncf_node.node_id,
-                                                                                   self.nodes_flops)))
-            hook_list.append(node_module.register_forward_hook(get_node_cost_hook(nncf_node.node_id)))
+            hook_list.append(node_module.register_forward_hook(get_node_flops_hook(self.nodes_flops)))
+            hook_list.append(node_module.register_forward_hook(get_node_cost_hook()))
 
         self._model.do_dummy_forward(force_eval=True)
 
@@ -179,20 +184,21 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].nncf_node_id] == tmp_out_channels[node.nncf_node_id] for node in
+            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
                         group.nodes])
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             for node in group.nodes:
-                tmp_out_channels[node.nncf_node_id] = new_out_channels_num
+                tmp_out_channels[node.module_scope] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
-            for node_id in next_nodes:
-                tmp_in_channels[node_id] = new_out_channels_num
+            for node_module_scope in next_nodes:
+                tmp_in_channels[node_module_scope] = new_out_channels_num
 
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
 
-    def _calculate_flops_in_pruned_model(self, modules_in_channels, modules_out_channels):
+    def _calculate_flops_in_pruned_model(self, modules_in_channels: Dict[Scope, int],
+                                         modules_out_channels: Dict[Scope, int]):
         """
         Calculates number of flops in model with number of input/output channels for nodes from modules_in_channels,
         modules_out_channels. It allows to count the number of flops in pruned model (with changed number of
@@ -208,11 +214,12 @@ class FilterPruningController(BasePruningAlgoController):
         flops = 0
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
-            if nncf_node.node_id in modules_in_channels:
-                flops += int(modules_in_channels[nncf_node.node_id] * modules_out_channels[nncf_node.node_id] * \
-                         self.nodes_flops_cost[nncf_node.node_id])
-            elif nncf_node.node_id in self.nodes_flops:
-                flops += self.nodes_flops[nncf_node.node_id]
+            scope = nncf_node.op_exec_context.scope_in_model
+            if scope in modules_in_channels:
+                flops += int(modules_in_channels[scope] * modules_out_channels[scope] * \
+                         self.nodes_flops_cost[scope])
+            elif scope in self.nodes_flops:
+                flops += self.nodes_flops[scope]
         return flops
 
     def _calculate_flops_in_uniformly_pruned_model(self, pruning_rate):
@@ -225,15 +232,15 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].nncf_node_id] == tmp_out_channels[node.nncf_node_id] for node in
+            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
                         group.nodes])
             # prune all nodes in cluster (by output channels)
-            old_out_channels = self.modules_out_channels[group.nodes[0].nncf_node_id]
+            old_out_channels = self.modules_out_channels[group.nodes[0].module_scope]
             num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
             new_out_channels_num = old_out_channels - num_of_sparse_elems
 
             for node in group.nodes:
-                tmp_out_channels[node.nncf_node_id] = new_out_channels_num
+                tmp_out_channels[node.module_scope] = new_out_channels_num
 
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
@@ -411,7 +418,7 @@ class FilterPruningController(BasePruningAlgoController):
 
             cluster = self.pruned_module_groups_info.get_cluster_by_id(cluster_idx)
             for node in cluster.nodes:
-                tmp_out_channels[node.nncf_node_id] -= 1
+                tmp_out_channels[node.module_scope] -= 1
                 node.operand.binary_filter_pruning_mask[filter_idx] = 0
 
             # Prune in channels in all next nodes
@@ -429,25 +436,26 @@ class FilterPruningController(BasePruningAlgoController):
     def _apply_masks(self):
         nncf_logger.debug("Applying pruning binary masks")
 
-        def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_name=""):
+        def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_scope):
             with torch.no_grad():
                 dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
                 # Applying mask to weights
-                inplace_apply_filter_binary_mask(mask, module.weight, module_name, dim)
+                inplace_apply_filter_binary_mask(mask, module.weight, module_scope, dim)
                 # Applying mask to bias too (if exists)
                 if module.bias is not None:
-                    inplace_apply_filter_binary_mask(mask, module.bias, module_name)
+                    inplace_apply_filter_binary_mask(mask, module.bias, module_scope)
 
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             _apply_binary_mask_to_module_weight_and_bias(minfo.module, minfo.operand.binary_filter_pruning_mask,
-                                                         minfo.module_name)
+                                                         minfo.module_scope)
 
             # Applying mask to the BatchNorm node
             related_modules = minfo.related_modules
             if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
                     and related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
                 bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
-                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask)
+                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask,
+                                                             minfo.module_scope)
 
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):

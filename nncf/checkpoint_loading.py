@@ -18,24 +18,24 @@ from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 
 
-def load_state(model: torch.nn.Module, saved_state_dict: dict, is_resume: bool = False) -> int:
+def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool = False) -> int:
     """
     Used to load a checkpoint containing a compressed model into an NNCFNetwork object, but can
-    be used for any PyTorch module as well. Will do matching of saved_state_dict parameters to
+    be used for any PyTorch module as well. Will do matching of state_dict_to_load parameters to
     the model's state_dict parameters while discarding irrelevant prefixes added during wrapping
     in NNCFNetwork or DataParallel/DistributedDataParallel objects, and load the matched parameters
-    from the saved_state_dict into the model's state dict.
-    :param model: The target module for the saved_state_dict to be loaded to.
-    :param saved_state_dict: A state dict containing the parameters to be loaded into the model.
+    from the state_dict_to_load into the model's state dict.
+    :param model: The target module for the state_dict_to_load to be loaded to.
+    :param state_dict_to_load: A state dict containing the parameters to be loaded into the model.
     :param is_resume: Determines the behavior when the function cannot do a successful parameter match
-    when loading. If True, the function will raise an exception if it cannot match the saved_state_dict
+    when loading. If True, the function will raise an exception if it cannot match the state_dict_to_load
     parameters to the model's parameters (i.e. if some parameters required by model are missing in
-    saved_state_dict, or if saved_state_dict has parameters that could not be matched to model parameters,
+    state_dict_to_load, or if state_dict_to_load has parameters that could not be matched to model parameters,
     or if the shape of parameters is not matching). If False, the exception won't be raised.
     Usually is_resume is specified as False when loading uncompressed model's weights into the model with
     compression algorithms already applied, and as True when loading a compressed model's weights into the model
     with compression algorithms applied to evaluate the model.
-    :return: The number of saved_state_dict entries successfully matched and loaded into model.
+    :return: The number of state_dict_to_load entries successfully matched and loaded into model.
     """
 
     def key_normalizer(key):
@@ -43,14 +43,15 @@ def load_state(model: torch.nn.Module, saved_state_dict: dict, is_resume: bool =
         match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
         return new_key if not match else new_key.replace(match.group(), 'operation')
 
-    if 'state_dict' in saved_state_dict:
-        saved_state_dict = saved_state_dict['state_dict']
-    state_dict = model.state_dict()
+    if 'state_dict' in state_dict_to_load:
+        state_dict_to_load = state_dict_to_load['state_dict']
+    model_state_dict = model.state_dict()
 
-    new_dict, num_loaded_layers, problematic_keys = match_keys(is_resume, saved_state_dict, state_dict, key_normalizer)
-    num_saved_layers = len(saved_state_dict.items())
+    new_dict, num_loaded_layers, problematic_keys = match_keys(is_resume, state_dict_to_load, model_state_dict,
+                                                               key_normalizer)
+    num_saved_layers = len(state_dict_to_load.items())
     process_problematic_keys(is_resume, problematic_keys, num_loaded_layers == num_saved_layers)
-    nncf_logger.info("Loaded {}/{} layers".format(num_loaded_layers, len(state_dict.items())))
+    nncf_logger.info("Loaded {}/{} layers".format(num_loaded_layers, len(model_state_dict.items())))
 
     model.load_state_dict(new_dict, strict=False)
     return num_loaded_layers
@@ -75,31 +76,31 @@ def process_problematic_keys(is_resume, issues, is_all_saved_loaded):
         nncf_logger.warning(error_msg)
 
 
-def match_keys(is_resume, saved_state_dict, state_dict, key_normalizer):
+def match_keys(is_resume, state_dict_to_load, model_state_dict, key_normalizer):
     skipped_keys = []
     num_loaded_layers = 0
     new_dict = {}
 
-    def check_parameter_size(key, saved_value, num_loaded_layers):
-        saved_size = saved_value.size()
-        size = state_dict[key].size()
-        if saved_size == size:
-            new_dict[key] = saved_value
+    def check_parameter_size(key, value_to_load, num_loaded_layers):
+        size_of_value_to_load = value_to_load.size()
+        size = model_state_dict[key].size()
+        if size_of_value_to_load == size:
+            new_dict[key] = value_to_load
             return num_loaded_layers + 1
-        nncf_logger.warning("Different size of value of '{}' in dictionary ({}) and in resuming model ({})"
-                            .format(key, saved_size, size, ))
+        nncf_logger.warning("Different size of value of '{}' in resuming dictionary ({}) and in model ({})"
+                            .format(key, size_of_value_to_load, size, ))
         skipped_keys.append(key)
         return num_loaded_layers
 
     clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.',
                      'module.']
 
-    clipped_keys = list(state_dict.keys())
+    clipped_keys = list(model_state_dict.keys())
     for pattern in clip_patterns:
         for i, _ in enumerate(clipped_keys):
             clipped_keys[i] = clipped_keys[i].replace(pattern, '')
 
-    clipped_key_to_model_key_dict = dict(zip(clipped_keys, state_dict.keys()))
+    clipped_key_to_model_key_dict = dict(zip(clipped_keys, model_state_dict.keys()))
 
     norm_clipped_keys = {}
     collisions = []
@@ -111,7 +112,7 @@ def match_keys(is_resume, saved_state_dict, state_dict, key_normalizer):
 
     unexpected_keys = []
 
-    for (saved_key, saved_value) in saved_state_dict.items():
+    for (saved_key, saved_value) in state_dict_to_load.items():
         clipped_saved_key = saved_key
         for pattern in clip_patterns:
             clipped_saved_key = clipped_saved_key.replace(pattern, '')
@@ -126,7 +127,7 @@ def match_keys(is_resume, saved_state_dict, state_dict, key_normalizer):
                 num_loaded_layers = check_parameter_size(key, saved_value, num_loaded_layers)
             else:
                 unexpected_keys.append(saved_key)
-    missing_keys = [k for k in state_dict.keys() if k not in new_dict and k not in skipped_keys]
+    missing_keys = [k for k in model_state_dict.keys() if k not in new_dict and k not in skipped_keys]
     problematic_keys = {'Missing': missing_keys,
                         'Unexpected': unexpected_keys,
                         'Skipped': skipped_keys}

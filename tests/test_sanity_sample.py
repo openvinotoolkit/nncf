@@ -614,6 +614,7 @@ class HAWQDescriptor(TestCaseDescriptor):
 
 class AutoQDescriptor(TestCaseDescriptor):
     subset_ratio_: float = 1.0
+    BITS = [2, 4, 8]
 
     def subset_ratio(self, subset_ratio_: float):
         self.subset_ratio_ = subset_ratio_
@@ -621,7 +622,7 @@ class AutoQDescriptor(TestCaseDescriptor):
 
     def get_precision_section(self) -> Dict:
         return {"type": "autoq",
-                "bits": [2, 4, 8],
+                "bits": AutoQDescriptor.BITS,
                 "iter_number": 2,
                 "compression_ratio": 0.15,
                 "eval_subset_ratio": self.subset_ratio_}
@@ -631,13 +632,14 @@ class AutoQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_autoq' + sr
 
     def setup_spy(self, mocker):
-        from nncf.quantization.init_precision import AutoQPrecisionInitializer
-        self.set_chosen_config_spy = mocker.spy(AutoQPrecisionInitializer, "set_chosen_config")
+        from nncf.nncf_network import NNCFNetwork
+        self.commit_compression_changes_spy = mocker.spy(NNCFNetwork, 'commit_compression_changes')
 
     def validate_spy(self):
-        qid_bitwidth_map = self.set_chosen_config_spy.call_args[0][1]
-        assert len(qid_bitwidth_map) == self.n_weight_quantizers + self.n_activation_quantizers
-        assert set(qid_bitwidth_map.values()) != {QuantizerConfig().bits}
+        ctrl = self.commit_compression_changes_spy.spy_return
+        final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
+        assert set(final_bits) != {QuantizerConfig().bits}
+        assert all([bit in AutoQDescriptor.BITS for bit in final_bits])
 
 
 def resnet18_desc(x: TestCaseDescriptor):

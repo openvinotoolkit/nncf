@@ -32,18 +32,21 @@ from copy import deepcopy
 from collections import OrderedDict
 from natsort import natsorted
 
-from nncf import NNCFConfig
 from nncf.debug import is_debug, DEBUG_LOG_DIR
 from nncf.nncf_logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer
-from nncf.quantization.algo import QuantizationController, NNCFNetwork
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.algo import QuantizationController, NNCFNetwork, ExperimentalQuantizationController
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
+from nncf.quantization.layers import QuantizerConfig
 
 from sklearn.preprocessing import MinMaxScaler
+
+from nncf.quantization.quantizer_setup import QuantizationPointId
+
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
     for _qid, _q in qctrl.all_quantizations.items():
@@ -53,12 +56,12 @@ def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
 
 class ModelSizeCalculator:
     FLOAT_BITWIDTH = ctypes.sizeof(ctypes.c_float) * 8
-    def __init__(self, qmodel: NNCFNetwork, per_quantizer_bw_space: Dict[QuantizerId, List[int]]):
+    def __init__(self, qmodel: NNCFNetwork, per_quantizer_config_space: Dict[QuantizerId, List[QuantizerConfig]]):
         self._bw_space_map = OrderedDict()
         self._nparam_map = OrderedDict()
-        for qid, bw_space in per_quantizer_bw_space.items():
+        for qid, qconfig_space in per_quantizer_config_space.items():
             if isinstance(qid, WeightQuantizerId):
-                self._bw_space_map[qid] = bw_space
+                self._bw_space_map[qid] = [qconf.bits for qconf in qconfig_space]
                 m = qmodel.get_module_by_scope(qid.scope)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
@@ -93,79 +96,87 @@ class ModelSizeCalculator:
     def get_model_size_ratio(self, per_quantizer_bw: Dict[QuantizerId, int]) -> np.float64:
         return self.get_model_size(per_quantizer_bw)/self.fp_model_size
 
+class QuantizationEnvParams:
+    def __init__(self, compression_ratio: float,
+                 eval_subset_ratio: float,
+                 skip_constraint: bool,
+                 finetune: bool,
+                 bits: List[int],
+                 dump_init_precision_data: bool = False,
+                 log_dir: str = None):
+        self.compression_ratio = compression_ratio
+        self.eval_subset_ratio = eval_subset_ratio
+        self.skip_constraint = skip_constraint
+        self.finetune = finetune
+        self.bits = bits
+        self.dump_init_precision_data = dump_init_precision_data
+        self.log_dir = log_dir
+
 
 class QuantizationEnv:
     # pylint:disable=too-many-branches,too-many-statements
     def __init__(self,
-                 quantization_controller: QuantizationController,
+                 model: NNCFNetwork,
+                 quantization_controller: ExperimentalQuantizationController,
+                 hw_precision_constraints: HardwareQuantizationConstraints,
                  eval_loader: torch.utils.data.DataLoader,
                  eval_fn: Callable[[nn.Module, torch.utils.data.DataLoader], float],
-                 config: NNCFConfig):
+                 hw_config_type: HWConfigType,
+                 params: QuantizationEnvParams
+                 ):
 
         logger.info("[Q.Env] Instantiating NNCF Quantization Environment")
         self.qctrl = quantization_controller
-        self.qmodel = quantization_controller._model
+        self.qmodel = model
         self.eval_loader = eval_loader
         self.eval_fn = eval_fn
-        self.config = config
+        self._hw_precision_constraints = hw_precision_constraints
 
-        # Extract model name for labelling
-        self.model_name = self.config.get('model', None)
-        if self.model_name is None:
-            self.model_name = self.qmodel.nncf_module.__class__.__name__
+        self.model_name = self.qmodel.nncf_module.__class__.__name__
 
         # Check and only proceed if target device is supported by Q.Env
-        self.hw_cfg_type = self.qctrl.quantization_config.get("hw_config_type")
-        if self.hw_cfg_type is not None and self.hw_cfg_type is not HWConfigType.VPU:
-            raise ValueError("Unsupported device ({}). Automatic Precision Initialization only supports for "
-                             "target_device NONE or VPU".format(self.hw_cfg_type.value))
-
-        # Extract Precision Initialization Config
-        # TODO: Clean up
-        if self.config.get('compression', {}).get('initializer', {}).get('precision', {}).get('type', {}) == 'autoq':
-            self.autoq_cfg = self.config.get('compression', {}).get('initializer', {}).get('precision')
-        else:
-            raise ValueError("Missing/Invalid Config of Precision Initializer. "
-                             "Pls review config['compression']['initializer']['precision']")
+        self.hw_cfg_type = hw_config_type
+        assert self.hw_cfg_type in [None, HWConfigType.VPU]
 
         # Set target compression ratio
-        self.compression_ratio = self.autoq_cfg.get('compression_ratio', 0.15)
+        self.compression_ratio = params.compression_ratio
 
-        self.eval_loader = PartialDataLoader(self.eval_loader, iter_ratio=self.autoq_cfg.get('eval_subset_ratio', 1.0))
+        self.eval_loader = PartialDataLoader(self.eval_loader, iter_ratio=params.eval_subset_ratio)
 
         # Bool to disable hard resource constraint
-        self.skip_constraint = False
-        if 'skip_constraint' in self.autoq_cfg:
-            self.skip_constraint = self.autoq_cfg['skip_constraint']
+        self.skip_constraint = params.skip_constraint
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
-        self.finetune = False
-        if 'finetune' in self.autoq_cfg:
-            self.finetune = self.autoq_cfg['finetune']
+        self.finetune = params.skip_constraint
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
-            self.model_bitwidth_space = self.autoq_cfg.get('bits', [2, 4, 8])
+            self.model_bitwidth_space = params.bits
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.model_bitwidth_space = self.qctrl._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bits()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
-        # Create mapping of QuantizerId to its bitwidth space (per quantizer bitwidth space)
-        self.bw_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
+        # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
+        #pylint:disable=line-too-long
+        self.qconfig_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())  # type: Dict[QuantizerId, List[QuantizerConfig]]
         if self.hw_cfg_type is None:
-            for qid in self.bw_space_map.keys():
-                self.bw_space_map[qid] = self.model_bitwidth_space
+            for qid in self.qconfig_space_map.keys():
+                conf = self.qctrl.all_quantizations[qid].get_current_config()
+                conf_list_to_set = []
+                for bit in self.model_bitwidth_space:
+                    bit_adjusted_conf = deepcopy(conf)
+                    bit_adjusted_conf.bits = bit
+                    conf_list_to_set.append(bit_adjusted_conf)
+                self.qconfig_space_map[qid] = conf_list_to_set
         else:
-            assert hasattr(self.qctrl._hw_precision_constraints, '_constraints'), \
-                "feasible bitwidth per quantizer not found"
-            for qid, bw_space in self.qctrl._hw_precision_constraints._constraints.items():
-                self.bw_space_map[qid] = sorted(list(bw_space))
+            for qid in self.qconfig_space_map:
+                self.qconfig_space_map[qid] = self._hw_precision_constraints.get(qid)
 
         # Quantizer Master Table Creation
-        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(self.qctrl)
+        self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
         self.quantizer_table = self._create_quantizer_table()
 
-        # Create master dataframe to keep track of quantizable layers and thier attributes
+        # Create master dataframe to keep track of quantizable layers and their attributes
         self.master_df, self.state_list = self._get_state_space(self.qctrl, self.qmodel, self.quantizer_table)
         if self.master_df.isnull().values.any():
             raise ValueError("Q.Env Master Dataframe has null value(s)")
@@ -178,17 +189,17 @@ class QuantizationEnv:
         self.state_scaler.fit(self.master_df[self.state_list])
 
         # Model Size Calculation
-        self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.bw_space_map)
+        self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.qconfig_space_map)
         self.orig_model_size = self.model_size_calculator.fp_model_size
         self.min_model_size = self.model_size_calculator.min_model_size
         self.max_model_size = self.model_size_calculator.max_model_size
-        self.target_model_size = self.orig_model_size*self.compression_ratio
+        self.target_model_size = self.orig_model_size * self.compression_ratio
 
         if self.target_model_size < self.min_model_size and self.target_model_size > self.max_model_size:
             raise ValueError("Model Size Ratio {} is out of bound ({}, {})"
                              .format(self.compression_ratio,
-                                     self.min_model_size/self.orig_model_size,
-                                     self.max_model_size/self.orig_model_size))
+                                     self.min_model_size / self.orig_model_size,
+                                     self.max_model_size / self.orig_model_size))
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -196,9 +207,9 @@ class QuantizationEnv:
 
         self.reset()
 
-        self._dump_autoq_data = self.autoq_cfg.get('dump_init_precision_data', False)
+        self._dump_autoq_data = params.dump_init_precision_data
         if self._dump_autoq_data or is_debug():
-            dump_dir = self.config.get('log_dir', None)
+            dump_dir = params.log_dir
             if dump_dir is None:
                 dump_dir = DEBUG_LOG_DIR
             self.dump_dir = Path(dump_dir) / Path("autoq_env_dump")
@@ -222,11 +233,11 @@ class QuantizationEnv:
     def _create_quantizer_table(self) -> pd.DataFrame:
         # Create a mapping of qid to its adjacent quantizer group id
         adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
-        for qid, qmod in self.qctrl.all_quantizations.items():
-            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qmod)
+        for qid in self.qctrl.all_quantizations:
+            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
-        assert len(set(self.bw_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
-            "both bw_space_map and adjq_gid_map must have exact keys."
+        assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
+            "both qconfig_space_map and adjq_gid_map must have exact keys."
 
         # Create a mapping of qid to its nodekey in NNCFGraph
         qid_nodekey_map = self._generate_qid_nodekey_map(self.qctrl, self.qmodel)
@@ -235,7 +246,7 @@ class QuantizationEnv:
             "both qid_nodekey_map and adjq_gid_map must have exact keys."
 
         d = OrderedDict()
-        for qid, qmod in self.qctrl.all_quantizations.items():
+        for qid in self.qctrl.all_quantizations:
             nodekey = qid_nodekey_map[qid]
             q_nx_nodeid = nodekey.split()[0]
             idx_str = '-'.join([q_nx_nodeid, str(qid)])
@@ -246,7 +257,8 @@ class QuantizationEnv:
             d[idx_str]['q_nx_nodeid'] = q_nx_nodeid
             d[idx_str]['q_nx_nodekey'] = nodekey
             d[idx_str]['gid'] = gid
-            d[idx_str]['bw_space'] = self.bw_space_map[qid]
+            d[idx_str]['qconf_space'] = self.qconfig_space_map[qid]
+            d[idx_str]['qp_id_set'] = self.qctrl.module_id_to_qp_id_translation_dict[qid]
 
             if isinstance(qid, WeightQuantizerId):
                 d[idx_str]['state_scope'] = qid.scope
@@ -392,8 +404,11 @@ class QuantizationEnv:
 
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:
-        def lower_bitwidth(bw: int, bw_space: List[int]) -> int:
-            return bw_space[bw_space.index(bw)-1] if bw_space.index(bw) > 0 else bw
+        def lower_bitwidth(bw: int, qconf_space: List[QuantizerConfig]) -> int:
+            bw_space = [qconf.bits for qconf in qconf_space]
+            assert bw in bw_space
+            sorted_bw_space = sorted(bw_space)
+            return sorted_bw_space[sorted_bw_space.index(bw)-1] if sorted_bw_space.index(bw) > 0 else bw
 
         # This function acts on self.master_df['action']
         self.master_df['action'] = collected_strategy
@@ -406,8 +421,8 @@ class QuantizationEnv:
             while self.min_model_size < current_model_size and self.target_model_size < current_model_size:
                 for _, nodestr in enumerate(reversed(self.master_df.index.tolist())):
                     if self.master_df.loc[nodestr, "is_wt_quantizer"]:
-                        bw_choice, bw_space = self.master_df.loc[nodestr, ['action', 'bw_space']]
-                        new_bw = lower_bitwidth(bw_choice, bw_space)
+                        bw_choice, qconf_space = self.master_df.loc[nodestr, ['action', 'qconf_space']]
+                        new_bw = lower_bitwidth(bw_choice, qconf_space)
                         self.master_df.loc[nodestr, "action"] = new_bw if new_bw != bw_choice else bw_choice
 
                     current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
@@ -422,11 +437,14 @@ class QuantizationEnv:
         return (acc - self.pretrained_score) * 0.1
 
     def step(self, action: Union[int, float]) -> Tuple:
+        currently_processed_qconf_idx = len(self.collected_strategy)
+
         def is_final_step():
             return len(self.collected_strategy) == len(self.master_df)
 
         # Ensure action is in the quantizer's bitwidth space
-        current_bw_space = self.master_df.bw_space[len(self.collected_strategy)]
+        current_qconf_space = self.master_df.qconf_space[currently_processed_qconf_idx]
+        current_bw_space = [qconf.bits for qconf in current_qconf_space]
         if action not in current_bw_space:
             closest_bw_idx = np.argmin(np.abs(action - np.array(current_bw_space)))
             action = current_bw_space[closest_bw_idx]
@@ -443,14 +461,29 @@ class QuantizationEnv:
 
         return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
 
+
+    def select_config_for_actions(self, actions) -> Dict[QuantizationPointId, QuantizerConfig]:
+        retval = OrderedDict()  # type: Dict[QuantizationPointId, QuantizerConfig]
+        for action, qp_id_set, qconf_space in zip(actions,
+                                            self.master_df['qp_id_set'],
+                                            self.master_df['qconf_space']):
+            matches = []
+            for qconf in qconf_space:
+                if qconf.bits == action:
+                    matches.append(qconf)
+            assert len(matches) == 1
+            for qp_id in qp_id_set:
+                retval[qp_id] = matches[0]
+        return retval
+
     def evaluate_strategy(self, collected_strategy: List, skip_constraint=True) -> Tuple:
         assert len(collected_strategy) == len(self.master_df)
         if skip_constraint is not True:
             collected_strategy = self._constrain_model_size(collected_strategy)
         self.master_df['action'] = collected_strategy # This must be after constraint
 
-        qid_bw_map = dict(zip(self.master_df.qid_obj, self.master_df.action))
-        self.set_quantizer_bitwidth(qid_bw_map)
+        configs_to_set = self.select_config_for_actions(self.master_df['action'])
+        self._apply_quantizer_configs_to_model(configs_to_set)
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
             logger.info("[Q.Env] {:50} | {}".format(
@@ -466,7 +499,7 @@ class QuantizationEnv:
 
         info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size}
 
-        obs = self.get_normalized_obs(len(collected_strategy)-1)
+        obs = self.get_normalized_obs(len(collected_strategy) - 1)
         done = True
 
         return obs, reward, done, info_set
@@ -481,12 +514,20 @@ class QuantizationEnv:
         _df.loc[_df.index, self.state_list] = self.state_scaler.transform(_df[self.state_list])
         return _df.iloc[idx]
 
-
-    def set_quantizer_bitwidth(self, qid_bw_map: Dict[QuantizerId, int]):
+    def _apply_quantizer_configs_to_model(self, qid_vs_qconfig_map: Dict[QuantizationPointId, QuantizerConfig]):
+        new_quantizer_setup = self.qctrl.get_quantizer_setup_for_current_state()
+        for qp_id, qconf in qid_vs_qconfig_map.items():
+            new_quantizer_setup.quantization_points[qp_id].qconfig = qconf
         self.qmodel.load_state_dict(self.qmodel_init_sd)
-        for qid, bw in qid_bw_map.items():
-            self.qctrl.all_quantizations[qid].num_bits = int(bw)
+        had_to_regenerate = self.qctrl.is_new_setup_requires_regeneration(new_quantizer_setup)
+        self.qctrl, self.qmodel = self.qctrl.apply_new_quantizer_setup(new_quantizer_setup)
+        if had_to_regenerate:
+            self.qmodel_init_sd = deepcopy(self.qmodel.state_dict())
 
+        # The QuantizerId's may have changed after the new quantizer setup application, but
+        # QuantizationPointId's should not have. Will use this to update the qids in the master table.
+        for qid, qp_id_set in self.qctrl.module_id_to_qp_id_translation_dict.items():
+            self.master_df.loc[self.master_df.qp_id_set == qp_id_set].qid = str(qid)
 
     def _generate_qid_nodekey_map(self,
                                   quantization_controller: QuantizationController,

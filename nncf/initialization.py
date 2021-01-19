@@ -1,6 +1,5 @@
 import math
 
-from collections import OrderedDict
 
 from functools import partial
 from typing import Dict, Tuple, Any, Callable
@@ -10,29 +9,9 @@ from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 
 from nncf.progress_bar import ProgressBar
-from nncf.quantization.init_range import MinMaxInitializer, ThreeSigmaInitializer, MeanMinMaxInitializer
-from nncf.quantization.init_range import PercentileInitializer
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
     BNAdaptationInitArgs, AutoQPrecisionInitArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
-
-
-class RangeInitializerFactory:
-    @staticmethod
-    def create(init_config: Dict, module: torch.nn.Module, log_module_name: str):
-        init_type = init_config["type"]
-        num_init_samples = init_config["num_init_samples"]
-        if init_type == "min_max":
-            return MinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "threesigma":
-            return ThreeSigmaInitializer(module, num_init_samples, log_module_name)
-        if init_type == "mean_min_max":
-            return MeanMinMaxInitializer(module, num_init_samples, log_module_name)
-        if init_type == "percentile":
-            min_percentile = init_config.get("min_percentile", 10)
-            max_percentile = init_config.get("max_percentile", 90)
-            return PercentileInitializer(module, num_init_samples, min_percentile, max_percentile, log_module_name)
-        raise NotImplementedError
 
 
 class InitializingDataLoader:
@@ -162,34 +141,11 @@ class DataLoaderBaseRunner:
         raise NotImplementedError
 
 
-class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
-    def __init__(
-            self,
-            model,
-            modules_to_init_vs_init_configs: Dict[str, Tuple[torch.nn.Module, Dict]],
-            init_device: str,
-    ):
-        super().__init__(model, init_device)
-        self.modules_to_init = modules_to_init_vs_init_configs
-        self.progressbar_description = 'Range parameters initialization'
-        self.initializers = OrderedDict()
-        self.hook_handles = []
-
+class SimpleDataLoaderRunner(DataLoaderBaseRunner):
     def _prepare_initialization(self):
-        for name, data in self.modules_to_init.items():
-            module, init_config = data
-            self.initializers[name] = RangeInitializerFactory.create(
-                init_config, module, log_module_name=name
-            )
-            self.hook_handles.append(
-                module.register_forward_hook(self.initializers[name].forward_hook)
-            )
-
+        pass
     def _apply_initializers(self):
-        for handle in self.hook_handles:
-            handle.remove()
-        for initializer in self.initializers.values():
-            initializer.apply_init()
+        pass
 
 
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):

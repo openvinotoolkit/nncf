@@ -70,7 +70,7 @@
                     [8, "ModuleDict/AsymmetricQuantizer[ResNet/Sequential[layer3]/Bottleneck[1]/ReLU[relu]/RELU_1]"],
                     [8, "ModuleDict/AsymmetricQuantizer[ResNet/Sequential[layer3]/Bottleneck[2]/ReLU[relu]/RELU_1]"],
                     [8, "ModuleDict/AsymmetricQuantizer[ResNet/Sequential[layer3]/Bottleneck[5]/ReLU[relu]/RELU_2]"],
-                    [8, "ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateInputs[1]/AsymmetricQuantizer[op]"],
+                    [8, "ModuleDict/AsymmetricQuantizer[/nncf_model_input_0]"],
                     [8, "ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]"],
                     [8, "ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]"],
                     [8, "ResNet/Sequential[layer1]/Bottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]"],

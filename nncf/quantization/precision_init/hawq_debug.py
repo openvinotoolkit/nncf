@@ -11,32 +11,37 @@
  limitations under the License.
 """
 from collections import OrderedDict
+from copy import deepcopy
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 import os
 import torch
+
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import CompressionModuleType
+from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from .hawq_init import GroupsOfAdjacentQuantizers
-from .perturbations import Perturbations, PerturbationObserver
-from .traces_order import TracesPerLayer
-from ...dynamic_graph.graph import NNCFGraph
-from ...layers import NNCFConv2d
-from ...utils import get_all_modules_by_type
+from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
+from nncf.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.layers import NNCFConv2d
+from nncf.utils import get_all_modules_by_type
 
 
 class HAWQDebugger:
-    def __init__(self, bits_configurations: List[List[int]],
+    def __init__(self, weight_qconfigs_in_trace_order: List['ConfigurationForHAWQToEvaluate'],
                  perturbations: Perturbations,
-                 weight_observers: List[PerturbationObserver],
+                 covering_configurations: List['CoveringConfigurationForQuantNoiseCalculation'],
+                 weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
                  traces_per_layer: TracesPerLayer, bits: List[int]):
-        self._bits_configurations = bits_configurations
-        self._num_weights = len(weight_observers)
+        self._weight_qconfigs_in_trace_order = weight_qconfigs_in_trace_order
+        self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
+        self._covering_configurations = covering_configurations
 
         from nncf.debug import DEBUG_LOG_DIR
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
@@ -49,15 +54,16 @@ class HAWQDebugger:
         norm_of_weights = []
         for i in range(self._num_weights):
             trace_index = self._traces_order.get_execution_index_by_traces_index(i)
-            num_of_weights.append(weight_observers[trace_index].get_numels())
-            norm_of_weights.append(weight_observers[trace_index].get_input_norm())
+            num_of_weights.append(weight_observers_for_each_covering_configuration[0][trace_index].get_numels())
+            norm_of_weights.append(weight_observers_for_each_covering_configuration[0][trace_index].get_input_norm())
         self._num_weights_per_layer = torch.Tensor(num_of_weights)
         self._norm_weights_per_layer = torch.Tensor(norm_of_weights)
 
         bits_in_megabyte = 2 ** 23
         self._model_sizes = []
-        for bits_config in self._bits_configurations:
-            size = torch.sum(torch.Tensor(bits_config) * self._num_weights_per_layer).item() / bits_in_megabyte
+        for configuration in self._weight_qconfigs_in_trace_order:
+            size = torch.sum(torch.Tensor([qc.bits for qc in configuration]) *
+                             self._num_weights_per_layer).item() / bits_in_megabyte
             self._model_sizes.append(size)
         self._bits = bits
 
@@ -68,20 +74,99 @@ class HAWQDebugger:
             quantization_type = class_type.__name__
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(CompressionModuleType.ACTIVATION_QUANTIZER),
-                    quantization_type))
-            all_quantizations.update(
-                get_all_modules_by_type(
-                    model.get_compression_modules_by_type(CompressionModuleType.FUNCTION_QUANTIZER),
+                    model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
                     quantization_type))
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
 
-    # pylint: disable=too-many-branches
+    @staticmethod
+    def _paint_activation_quantizer_node(nncf_graph: NNCFGraph,
+                                         quantizer_id: NonWeightQuantizerId,
+                                         quantizer_info: 'NonWeightQuantizerInfo',
+                                         bits_color_map: Dict[int, str],
+                                         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
+        #pylint:disable=too-many-branches
+        affected_insertion_infos_list = quantizer_info.affected_insertions  # type: List[InsertionInfo]
+
+        for insertion_info in affected_insertion_infos_list:
+            input_agnostic_op_exec_context = insertion_info.op_exec_context.input_agnostic
+            affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
+            affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
+            operator_name = affected_nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+            node_id = affected_nx_node[NNCFGraph.ID_NODE_ATTR]
+
+            affected_nncf_node = nncf_graph.get_node_by_id(node_id)
+            affected_nx_node['label'] = '_#'.join([operator_name, str(node_id)])
+
+            if insertion_info.is_input:
+                # Module UpdateInputs pre-op used for activation quantization
+                previous_nodes = nncf_graph.get_previous_nodes(affected_nncf_node)
+
+                # Relying on the _quantize_inputs behaviour of only being able to quantize 0-th input
+
+                # previous_nodes are either UpdateWeights, or UpdateWeights + UpdateInputs
+                assert len(previous_nodes) == 2 or len(previous_nodes) == 1
+
+                if len(previous_nodes) == 2:
+                    if "UpdateInputs" in str(previous_nodes[0].op_exec_context.input_agnostic):
+                        target_node = previous_nodes[0]
+                    else:
+                        target_node = previous_nodes[1]
+                else:
+                    target_node = previous_nodes[0]
+                target_nncf_node_id = target_node.node_id
+                target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
+            else:
+                in_port_id = insertion_info.in_port_id
+
+                if in_port_id is None:
+                    # Post-hooking used for activation quantization
+                    # Currently only a single post-hook can immediately follow an operation
+                    succs = list(nncf_graph.get_successors(affected_nncf_node_key))
+                    assert len(succs) == 1
+                    target_nncf_node_key = succs[0]
+                else:
+                    # Pre-hooking used for activation quantization
+                    previous_nodes = nncf_graph.get_previous_nodes(affected_nncf_node)
+                    target_node = None
+                    for prev_node in previous_nodes:
+                        prev_edge = nncf_graph.get_nx_edge(prev_node, affected_nncf_node)
+                        if prev_edge[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                            target_node = prev_node
+                            break
+
+                    assert target_node is not None, "Could not find a pre-hook quantizer node for a specific " \
+                                                    "input port!"
+                    target_nncf_node_id = target_node.node_id
+                    target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
+
+            activation_fq_node = nncf_graph.get_nx_node_by_key(target_nncf_node_key)
+            bits = quantizer_info.quantizer_module_ref.num_bits
+            activation_fq_node['color'] = bits_color_map[bits]
+            activation_fq_node['style'] = 'filled'
+            node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+
+            activation_fq_node['label'] = 'AFQ_[{}]_#{}'.format(
+                quantizer_info.quantizer_module_ref.get_current_config(),
+                str(node_id))
+            grouped_mode = bool(groups_of_adjacent_quantizers)
+            if grouped_mode:
+                group_id_str = 'UNDEFINED'
+                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
+                if node_id is None:
+                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
+                else:
+                    group_id_str = str(group_id)
+                activation_fq_node['label'] += "_G" + group_id_str
+
     @staticmethod
     def get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
                            groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers) -> NNCFGraph:
+        # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
+        # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
+        # of the quantizer's bitwidth.
+        #pylint:disable=too-many-branches
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -96,8 +181,7 @@ class HAWQDebugger:
                     if module.groups == module.in_channels:
                         operator_name = 'DW_Conv2d'
                         color = 'purple'
-                if not grouped_mode:
-                    operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
+                operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'
                 if color:
@@ -106,46 +190,41 @@ class HAWQDebugger:
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
         bits_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
         for quantizer_id, quantizer_info in non_weight_quantizers.items():
-            affected_iap_ctx_list = quantizer_info.affected_ia_op_exec_contexts
-            for activation_iap_ctx in affected_iap_ctx_list:
-                post_hooked_nx_node_key = nncf_graph.get_node_id_by_iap_context(activation_iap_ctx)
-                post_hooked_module_node = nncf_graph.get_nx_node_by_key(post_hooked_nx_node_key)
-                operator_name = post_hooked_module_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-                if not grouped_mode:
-                    operator_name += '_#{}'.format(str(post_hooked_module_node[NNCFGraph.ID_NODE_ATTR]))
-                post_hooked_module_node['label'] = operator_name
-
-                for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
-                    activation_fq_node = nncf_graph.get_nx_node_by_key(next_nx_node_key)
-                    activation_quantizer = non_weight_quantizers[quantizer_id].quantizer_module_ref
-                    bits = activation_quantizer.num_bits
-
-                    activation_fq_node['color'] = bits_color_map[bits]
-                    activation_fq_node['style'] = 'filled'
-                    node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
-                    if grouped_mode:
-                        node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(activation_quantizer)
-                        if node_id is None:
-                            nncf_logger.error('No group for activation quantizer: {}'.format(next_nx_node_key))
-                            node_id = 'UNDEFINED'
-                    activation_fq_node['label'] = '{}_bit__AFQ_#{}'.format(bits, str(node_id))
+            HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_id,
+                                                          quantizer_info, bits_color_map,
+                                                          groups_of_adjacent_quantizers)
 
         for scope, quantizer in all_quantizers_per_full_scope.items():
-            if quantizer.is_weights:
-                node = nncf_graph.find_node_in_nx_graph_by_scope(scope)
-                if node is None:
-                    raise AttributeError('Failed to get node by scope={}'.format(str(scope)))
-                if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
-                    bits = quantizer.num_bits
-                    node_id = node[NNCFGraph.ID_NODE_ATTR]
-                    if grouped_mode:
-                        node_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer)
-                        if node_id is None:
-                            nncf_logger.error('No group for weight quantizer: {}'.format(scope))
-                            node_id = 'UNDEFINED'
-                    node['label'] = '{}_bit__WFQ_#{}'.format(bits, str(node_id))
-                    node['color'] = bits_color_map[bits]
-                    node['style'] = 'filled'
+            if not quantizer.is_weights:
+                continue
+            node = nncf_graph.find_node_in_nx_graph_by_scope(scope)
+            if node is None:
+                raise AttributeError('Failed to get node by scope={}'.format(str(scope)))
+            if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                bits = quantizer.num_bits
+                node_id = node[NNCFGraph.ID_NODE_ATTR]
+                node['label'] = 'WFQ_[{}]_#{}'.format(quantizer.get_current_config(), str(node_id))
+                if grouped_mode:
+                    group_id_str = 'UNDEFINED'
+                    normalized_scope = deepcopy(scope)
+                    normalized_scope.pop()  # SymmetricQuantizer
+                    normalized_scope.pop()  # UpdateWeights
+                    normalized_scope.pop()  # ModuleDict[pre_ops]
+                    for wq_id in algo_ctrl.weight_quantizers.keys():
+                        if wq_id.get_scope() == normalized_scope:
+                            quantizer_id = wq_id
+                            break
+                    else:
+                        raise RuntimeError("Could not associate a weight quantizer inside a model with any "
+                                           "weight quantizer registered in the quantization controller!")
+                    group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
+                    if group_id is None:
+                        nncf_logger.error('No group for weight quantizer: {}'.format(scope))
+                    else:
+                        group_id_str = str(group_id)
+                    node['label'] += '_G' + group_id_str
+                node['color'] = bits_color_map[bits]
+                node['style'] = 'filled'
         return nncf_graph
 
     def dump_avg_traces(self):
@@ -209,12 +288,11 @@ class HAWQDebugger:
 
     def dump_density_of_quantization_noise(self):
         noise_per_config = []  # type: List[Tensor]
-        for bits_config in self._bits_configurations:
+        for bits_config in self._weight_qconfigs_in_trace_order:
             qnoise = 0
             for i in range(self._num_weights):
-                layer_bits = bits_config[i]
                 execution_index = self._traces_order.get_execution_index_by_traces_index(i)
-                qnoise += self._perturbations.get(layer_id=execution_index, bitwidth=layer_bits)
+                qnoise += self._perturbations.get(layer_id=execution_index, qconfig=bits_config[i])
             noise_per_config.append(qnoise)
 
         list_to_plot = [cm.item() for cm in noise_per_config]
@@ -236,12 +314,19 @@ class HAWQDebugger:
         ax = fig.add_subplot(2, 1, 1)
         ax.set_xlabel('Blocks')
         ax.set_yscale('log')
-        b = max(self._bits)
-        perturb = [p[b] for p in self._perturbations.get_all().values()]
+        perturbations_per_layer_id = list(self._perturbations.get_all().values())
+        perturb = []
+        max_bit = []
+        for perturbations_for_all_observed_configs_in_current_layer in perturbations_per_layer_id:
+            configs = perturbations_for_all_observed_configs_in_current_layer.keys()
+            max_bit_config = max(configs, key=lambda x: x.bits)
+            perturb.append(perturbations_for_all_observed_configs_in_current_layer[max_bit_config])
+            max_bit.append(max_bit_config.bits)
         ax.plot(
             [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
-            label='normalized {}-bit noise'.format(b))
-        ax.plot(perturb, label='{}-bit noise'.format(b))
+            label='normalized n-bit noise')
+        ax.plot(perturb, label='n-bit noise')
+        ax.plot(max_bit, label='n')
         ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
         ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label='trace * noise')
         ax.legend()

@@ -12,6 +12,7 @@
 """
 from abc import abstractmethod
 
+import nncf
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -41,16 +42,26 @@ class ManyNonEvalModules(ModelWithDummyParameter):
             x = F.relu(x)
             return x
 
-    class ModuleWithMixedModules(nn.Module):
+    @nncf.register_module()
+    class CustomWeightModule(nn.Module):
         def __init__(self):
             super().__init__()
             self.weight = Parameter(torch.ones([1, 1]))
+
+        def forward(self, x):
+            x = F.linear(x, self.weight)
+            return x
+
+    class ModuleWithMixedModules(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.custom = ManyNonEvalModules.CustomWeightModule()
             self.not_called_linear = nn.Linear(1, 1)
             self.called_linear = nn.Linear(1, 1)
 
         def forward(self, x):
             x = Dropout(p=0.2)(x)
-            x = F.linear(x, self.weight)
+            x = self.custom(x)
             x = Dropout(p=0.2)(x)
             x = self.called_linear(x)
             return x

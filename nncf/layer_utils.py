@@ -57,6 +57,10 @@ class _NNCFModuleMixin:
     def remove_post_forward_operation(self, key):
         return self.post_ops.pop(key)
 
+    def reset(self):
+        self.pre_ops.clear()
+        self.post_ops.clear()
+
     def forward(self, *args):
         proxy_module = ProxyModule(self)
         for op in self.pre_ops.values():

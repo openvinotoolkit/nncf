@@ -31,7 +31,7 @@ from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 
@@ -293,7 +293,16 @@ class CompressionAlgorithmBuilder:
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
         self._model = target_model  # type: NNCFNetwork
+        insertion_commands = self._apply_to(target_model)
+
+        for command in insertion_commands:
+            target_model.register_insertion_command(command)
+
+        target_model.register_algorithm(self)
         return target_model
+
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return []
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         """

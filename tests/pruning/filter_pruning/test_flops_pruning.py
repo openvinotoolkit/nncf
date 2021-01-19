@@ -53,8 +53,14 @@ def test_both_targets_assert():
 
 @pytest.mark.parametrize(
     ("model", "ref_params"),
-    ((PruningTestModel, {"modules_in_channels": {1: 1, 3: 3}, "modules_out_channels": {1: 3, 3: 1},
-                         "nodes_flops": {1: 216, 3: 54}, "nodes_flops_cost": {1: 72, 3: 18}}),)
+    ((PruningTestModel, {"modules_in_channels": {PruningTestModel.CONV_SCOPE_1: 1,
+                                                 PruningTestModel.CONV_SCOPE_2: 3},
+                         "modules_out_channels": {PruningTestModel.CONV_SCOPE_1: 3,
+                                                  PruningTestModel.CONV_SCOPE_2: 1},
+                         "nodes_flops": {PruningTestModel.CONV_SCOPE_1: 216,
+                                         PruningTestModel.CONV_SCOPE_2: 54},
+                         "nodes_flops_cost": {PruningTestModel.CONV_SCOPE_1: 72,
+                                              PruningTestModel.CONV_SCOPE_2: 18}}),)
 )
 def test_init_params_for_flops_calculation(model, ref_params):
     config = get_basic_pruning_config()

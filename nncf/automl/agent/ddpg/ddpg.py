@@ -84,7 +84,7 @@ class Critic(nn.Module):
 class DDPG:
     LBOUND = 0.0
     RBOUND = 1.0
-    def __init__(self, nb_states, nb_actions, hparam_override: dict = None):
+    def __init__(self, nb_states, nb_actions, iter_number: int = None, hparam_override: dict = None):
         self.nb_states = nb_states
         self.nb_actions = nb_actions
 
@@ -112,8 +112,8 @@ class DDPG:
             for hparam, hparam_val in hparam_override.items():
                 if hparam in hyperparameters:
                     hyperparameters[hparam] = hparam_val
-            if 'iter_number' in hparam_override:
-                hyperparameters['train_episode'] = hparam_override['iter_number']
+        if iter_number is not None:
+            hyperparameters['train_episode'] = iter_number
 
         args = SimpleNamespace(**hyperparameters)
 

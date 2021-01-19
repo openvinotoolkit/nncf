@@ -14,7 +14,6 @@
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
-
 import sys
 from copy import deepcopy
 from os import path as osp

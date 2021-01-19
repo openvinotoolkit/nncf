@@ -11,10 +11,12 @@
  limitations under the License.
 """
 
-from typing import Callable, List, Optional, Tuple, Any
+from typing import Callable, List, Optional, Tuple, Any, Dict
 import os
 
 import networkx as nx
+import networkx.algorithms.isomorphism as iso
+
 from copy import deepcopy
 from networkx.drawing.nx_agraph import to_agraph
 from torch import Tensor
@@ -234,7 +236,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
-            self._nx_graph.edges[parent, node_key][NNCFGraph.IN_PORT_NAME] = i
+            self._nx_graph.edges[parent, node_key][NNCFGraph.IN_PORT_NAME_EDGE_ATTR] = i
 
         if not has_traced_inputs:
             self._inputless_nx_nodes[node_key] = self._nx_graph.nodes[node_key]
@@ -471,13 +473,21 @@ class NNCFGraph:
     KEY_NODE_ATTR = "key"
     OP_EXEC_CONTEXT_NODE_ATTR = "op_exec_context"
     ACTIVATION_SHAPE_EDGE_ATTR = "activation_shape"
-    IN_PORT_NAME = "in_port"
+    IN_PORT_NAME_EDGE_ATTR = "in_port"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = dict()
         self.match_manager = NodeManager(self._node_id_to_key_dict, self._nx_graph, self._nx_node_to_nncf_node)
         self._input_nncf_nodes = []
+
+    def __eq__(self, other: 'NNCFGraph'):
+        nm = iso.categorical_node_match([NNCFGraph.ID_NODE_ATTR,
+                                         NNCFGraph.KEY_NODE_ATTR,
+                                         NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR], [None, None, None])
+        em = iso.categorical_edge_match([NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR,
+                                         NNCFGraph.IN_PORT_NAME_EDGE_ATTR], [None, None])
+        return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
 
     def find_node(self,
                   ia_op_exec_context: InputAgnosticOperationExecutionContext,
@@ -504,7 +514,7 @@ class NNCFGraph:
         nncf_node = self._nx_node_to_nncf_node(nx_node)
         return nncf_node
 
-    def get_node_id_by_iap_context(self, iap_ctx: InputAgnosticOperationExecutionContext) -> str:
+    def get_node_key_by_iap_context(self, iap_ctx: InputAgnosticOperationExecutionContext) -> str:
         for node_key, node in self._nx_graph.nodes.items():
             if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == iap_ctx:
                 return node_key
@@ -521,6 +531,9 @@ class NNCFGraph:
 
     def get_node_key_by_id(self, node_id):
         return self._node_id_to_key_dict[node_id]
+
+    def get_node_by_id(self, node_id):
+        return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
 
     def get_matching_nncf_graph_pattern_io_list(self, expression: Expression) -> List[NNCFGraphPatternIO]:
         matched_node_key_sequences = search_all(self._nx_graph, expression)
@@ -601,10 +614,23 @@ class NNCFGraph:
     def get_output_shapes_for_ia_op_exec_context(self,
                                                  ia_op_exec_context: InputAgnosticOperationExecutionContext)\
                                                  -> List[Tuple]:
-        node_key = self.get_node_id_by_iap_context(ia_op_exec_context)
+        node_key = self.get_node_key_by_iap_context(ia_op_exec_context)
         succs = list(self._nx_graph.successors(node_key))
         edge_list = [self._nx_graph.edges[node_key, to_node_key] for to_node_key in succs]
         return [edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR] for edge in edge_list]
+
+    def get_input_shapes_for_ia_op_exec_context(self,
+                                                ia_op_exec_context: InputAgnosticOperationExecutionContext) \
+            -> Dict[int, Tuple]:
+        node_key = self.get_node_key_by_iap_context(ia_op_exec_context)
+        in_edges = list(self._nx_graph.in_edges(node_key))
+        retval = {}
+        for in_edge in in_edges:
+            edge_attr_dict = self._nx_graph.edges[in_edge]
+            port_id = edge_attr_dict[NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            assert port_id not in retval
+            retval[port_id] = edge_attr_dict[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+        return retval
 
     def _get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
         """The graph to dump has certain node attributes omitted, compared to the graph stored

@@ -45,17 +45,19 @@ def replace_module_by_nncf_module(module: nn.Module):
     for _, user_module_type in UNWRAPPED_USER_MODULES.registry_dict.items():
         if module.__class__ == user_module_type:
             nncf_module = deepcopy(module)
-            return add_nncf_functionality_to_user_module(nncf_module)
+            nncf_module = add_nncf_functionality_to_user_module(nncf_module)
+            return nncf_module
     return module
 
 
 def replace_modules_by_nncf_modules(model: nn.Module, ignored_scopes=None, target_scopes=None,
-                                    eval_ops_exec_ctx_str: List[str] = None) -> (nn.Module, List[Scope]):
+                                    eval_ops_exec_ctx_str: List[str] = None,
+                                    reset: bool = False) -> (nn.Module, List[Scope]):
     replace_fn = partial(replace_module_by_nncf_module)
     affected_scopes = []  # type: List
     return replace_modules(model, replace_fn, affected_scopes,
                            ignored_scopes=ignored_scopes, target_scopes=target_scopes,
-                           eval_ops_exec_ctx_str=eval_ops_exec_ctx_str)
+                           eval_ops_exec_ctx_str=eval_ops_exec_ctx_str, reset=reset)
 
 
 def set_replaced_module_by_name(model, name, replaced_module):
@@ -68,7 +70,7 @@ def set_replaced_module_by_name(model, name, replaced_module):
 
 # pylint: disable=too-many-branches
 def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scopes=None, target_scopes=None, memo=None,
-                    current_scope=None, eval_ops_exec_ctx_str: List[str] = None):
+                    current_scope=None, eval_ops_exec_ctx_str: List[str] = None, reset: bool = False):
     if memo is None:
         memo = set()
         current_scope = Scope()
@@ -118,6 +120,8 @@ def replace_modules(model: nn.Module, replace_fn, affected_scopes, ignored_scope
             elif is_nncf_module(replaced_module):
                 # Got an NNCF-wrapped module from previous compression stage, track its scope as well
                 affected_scopes.append(replaced_scope)
+                if reset:
+                    replaced_module.reset()
         _, affected_scopes = replace_modules(module, replace_fn, affected_scopes, ignored_scopes, target_scopes,
-                                             memo, child_scope, eval_ops_exec_ctx_str)
+                                             memo, child_scope, eval_ops_exec_ctx_str, reset=reset)
     return model, affected_scopes

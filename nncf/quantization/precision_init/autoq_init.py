@@ -12,13 +12,16 @@
 """
 
 from collections import OrderedDict
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Optional
 
 import os
 
 from nncf.debug import is_debug
+from nncf.hw_config import HWConfigType
 from nncf.nncf_logger import logger
-from nncf.quantization.quantizer_id import QuantizerId
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.structures import AutoQPrecisionInitArgs
 
 from pathlib import Path
@@ -35,25 +38,78 @@ from copy import deepcopy
 
 
 
-class AutoQPrecisionInitializer:
+class AutoQPrecisionInitParams(BasePrecisionInitParams):
+    def __init__(self, user_init_args: AutoQPrecisionInitArgs,
+                 dump_autoq_data: bool = False,
+                 iter_number: int = 0,
+                 compression_ratio: float = None,
+                 eval_subset_ratio: float = None,
+                 ddpg_hparams_dict: Dict = None,
+                 hw_cfg_type: HWConfigType = None,
+                 skip_constraint: bool = False,
+                 finetune: bool = False,
+                 bits: List[int] = None):
+        super().__init__(user_init_args)
+        self.dump_autoq_data = dump_autoq_data
+        self.iter_number = iter_number
+        self.compression_ratio = compression_ratio
+        self.eval_subset_ratio = eval_subset_ratio
+        if ddpg_hparams_dict is None:
+            self.ddpg_hparams_dict = {}
+        else:
+            self.ddpg_hparams_dict = ddpg_hparams_dict
+        self.hw_cfg_type = hw_cfg_type
+        self.skip_constraint = skip_constraint
+        self.finetune = finetune
+        self.bits = bits
+
+    @classmethod
+    def from_config(cls, autoq_init_config_dict: Dict,
+                    user_init_args: AutoQPrecisionInitArgs,
+                    target_hw_config_type: Optional[HWConfigType]) -> 'AutoQPrecisionInitParams':
+        dict_copy = autoq_init_config_dict.copy()
+        dump_autoq_data = dict_copy.pop('dump_init_precision_data', False)
+        iter_number = dict_copy.pop('iter_number', 0)
+        compression_ratio = dict_copy.pop('compression_ratio', 0.15)
+        eval_subset_ratio = dict_copy.pop('eval_subset_ratio', 1.0)
+        skip_constraint = dict_copy.pop('skip_constraint', False)
+        finetune = dict_copy.pop('finetune', False)
+        bits = dict_copy.pop('bits',  [2, 4, 8])
+
+        return cls(
+            user_init_args=user_init_args,
+            dump_autoq_data=dump_autoq_data,
+            iter_number=iter_number,
+            ddpg_hparams_dict=dict_copy,
+            hw_cfg_type=target_hw_config_type,
+            compression_ratio=compression_ratio,
+            eval_subset_ratio=eval_subset_ratio,
+            skip_constraint=skip_constraint,
+            finetune=finetune,
+            bits=bits)
+
+
+class AutoQPrecisionInitializer(BasePrecisionInitializer):
     def __init__(self,
-                 algo: 'QuantizationController',
-                 init_precision_config: 'NNCFConfig',
-                 init_args: AutoQPrecisionInitArgs):
+                 algo: 'ExperimentalQuantizationController',
+                 params: AutoQPrecisionInitParams,
+                 hw_precision_constraints: HardwareQuantizationConstraints):
+        super().__init__(algo, params, hw_precision_constraints)
         self.quantization_controller = algo
-        self.init_args = init_args
+        self._params = params
+        self._init_args = params.user_init_args
+        self._dump_autoq_data = params.dump_autoq_data
+        self._iter_number = params.iter_number
+        self._ddpg_hparams_override = params.ddpg_hparams_dict
+        self._hw_cfg_type = params.hw_cfg_type
 
-
-    def apply_init(self):
+    def apply_init(self) -> SingleConfigQuantizerSetup:
         from nncf.automl.environment.quantization_env import QuantizationEnv
         from nncf.automl.agent.ddpg.ddpg import DDPG
         from nncf.debug import DEBUG_LOG_DIR
 
-        self.autoq_cfg = self.init_args.config['compression']['initializer']['precision']
-        self._dump_autoq_data = self.autoq_cfg.get('dump_init_precision_data', False)
-
         if self._dump_autoq_data or is_debug():
-            dump_dir = self.init_args.config.get('log_dir', None)
+            dump_dir = self._init_args.config.get('log_dir', None)
             if dump_dir is None:
                 dump_dir = DEBUG_LOG_DIR
             self.dump_dir = Path(dump_dir) / Path("autoq_agent_dump")
@@ -62,35 +118,46 @@ class AutoQPrecisionInitializer:
             self.policy_dict = OrderedDict() #key: episode
             self.best_policy_dict = OrderedDict() #key: episode
 
-            self.init_args.config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
-            os.makedirs(self.init_args.config['episodic_nncfcfg'], exist_ok=True)
+            self._init_args.config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
+            os.makedirs(self._init_args.config['episodic_nncfcfg'], exist_ok=True)
 
             try:
                 from torch.utils.tensorboard import SummaryWriter
                 self.tb_writer = SummaryWriter(self.dump_dir)
                 # log compression config to tensorboard
                 self.tb_writer.add_text('AutoQ/run_config',
-                                         json.dumps(self.init_args.config['compression'],
+                                         json.dumps(self._init_args.config['compression'],
                                          indent=4, sort_keys=False).replace("\n", "\n\n"), 0)
             except ModuleNotFoundError:
                 logger.warning("Tensorboard installation not found! Install tensorboard Python package "
                                "in order for AutoQ tensorboard statistics data to be dumped")
 
-
         start_ts = datetime.now()
+
+        from nncf.automl.environment.quantization_env import QuantizationEnvParams
+        env_params = QuantizationEnvParams(compression_ratio=self._params.compression_ratio,
+            eval_subset_ratio=self._params.eval_subset_ratio,
+            skip_constraint=self._params.skip_constraint,
+            finetune=self._params.finetune,
+            bits=self._params.bits,
+            dump_init_precision_data=self._dump_autoq_data,
+            log_dir=Path(DEBUG_LOG_DIR) / Path("autoq"))
 
         # Instantiate Quantization Environment
         env = QuantizationEnv(
+            self._model,
             self.quantization_controller,
-            self.init_args.data_loader,
-            self.init_args.eval_fn,
-            self.init_args.config)
+            self._hw_precision_constraints,
+            self._init_args.data_loader,
+            self._init_args.eval_fn,
+            hw_config_type=self._hw_cfg_type,
+            params=env_params)
 
         nb_state = len(env.state_list)
         nb_action = 1
 
         # Instantiate Automation Agent
-        agent = DDPG(nb_state, nb_action, hparam_override=self.autoq_cfg)
+        agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)
 
         if self._dump_autoq_data and self.tb_writer is not None:
             self.tb_writer.add_text('AutoQ/state_embedding', env.master_df[env.state_list].to_markdown())
@@ -99,17 +166,17 @@ class AutoQPrecisionInitializer:
 
         end_ts = datetime.now()
 
-        self.set_chosen_config(dict(zip(env.master_df.qid_obj, best_policy)))
+        final_qid_vs_qconfig_map = env.select_config_for_actions(best_policy)
+
+        final_quantizer_setup = self.quantization_controller.get_quantizer_setup_for_current_state()
+        for qp_id, qconf in final_qid_vs_qconfig_map.items():
+            final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
         logger.info('[AutoQ] best_reward: {}'.format(best_reward))
         logger.info('[AutoQ] best_policy: {}'.format(best_policy))
         logger.info("[AutoQ] Search Complete")
         logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts-start_ts))
-
-
-    def set_chosen_config(self, qid_bw_map: Dict[QuantizerId, int]):
-        for qid, bw in qid_bw_map.items():
-            self.quantization_controller.all_quantizations[qid].num_bits = bw
+        return final_quantizer_setup
 
 
     def _search(self, agent: 'DDPG', env: 'QuantizationEnv') -> Tuple[pd.Series, float]:
@@ -117,9 +184,9 @@ class AutoQPrecisionInitializer:
         episode = 0
         episode_reward = 0.
         observation = None
-        T = []  # Transition buffer
+        transition_buffer = []  # Transition buffer
 
-        while episode < self.autoq_cfg['iter_number']:  # counting based on episode
+        while episode < self._iter_number:  # counting based on episode
             episode_start_ts = time.time()
             if observation is None:
                 # reset if it is the start of episode
@@ -135,7 +202,7 @@ class AutoQPrecisionInitializer:
             # env response with next_observation, reward, terminate_info
             observation2, reward, done, info = env.step(map_precision(action))
             observation2 = deepcopy(observation2)
-            T.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
+            transition_buffer.append([reward, deepcopy(observation), deepcopy(observation2), action, done])
 
             # update
             episode_reward += reward
@@ -146,9 +213,9 @@ class AutoQPrecisionInitializer:
                     '## Episode[{}], reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(MB): {:.2f}\n' \
                     .format(episode, episode_reward, info['accuracy'], info['model_ratio'], info['model_size']/8e6))
 
-                final_reward = T[-1][0]
+                final_reward = transition_buffer[-1][0]
 
-                for i, (_, s_t, _, a_t, done) in enumerate(T):
+                for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
                     # Revision of prev_action as it could be modified by constrainer -------
                     if i == 0:
                         prev_action = 0.0
@@ -172,7 +239,7 @@ class AutoQPrecisionInitializer:
                 # reset
                 observation = None
                 episode_reward = 0.
-                T = []
+                transition_buffer = []
 
                 value_loss = agent.get_value_loss()
                 policy_loss = agent.get_policy_loss()
@@ -231,9 +298,10 @@ class AutoQPrecisionInitializer:
             episode, final_reward, _, accuracy, model_ratio, _, _, _ = episodic_info_tuple
 
             # Save nncf compression cfg
-            episode_cfgfile = osp.join(env.config['episodic_nncfcfg'], '{0:03d}_nncfcfg.json'.format(episode))
+            episode_cfgfile = osp.join(self._init_args.config['episodic_nncfcfg'],
+                                       '{0:03d}_nncfcfg.json'.format(episode))
             with open(episode_cfgfile, "w") as outfile:
-                json.dump(env.config, outfile, indent=4, sort_keys=False)
+                json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')
             pd.DataFrame(
@@ -250,7 +318,7 @@ class AutoQPrecisionInitializer:
             if self.tb_writer is not None:
                 self._add_to_tensorboard(self.tb_writer, episodic_info_tuple)
 
-            if episode % int((self.autoq_cfg['iter_number']+10)/10) == 0:
+            if episode % int((self._iter_number + 10) / 10) == 0:
                 agent.save_model(self.dump_dir)
 
 
@@ -297,11 +365,11 @@ class AutoQPrecisionInitializer:
 def map_precision(action: float) -> int:
     precision_set = [2, 4, 8]
     precision_set = np.array(sorted(precision_set))
-    tuned_point = precision_set+3
+    tuned_point = precision_set + 3
     max_bit = max(precision_set)
 
     i = None
     for i, point in enumerate(tuned_point):
-        if action <= 2**point/2**max_bit:
+        if action <= 2**point / 2**max_bit:
             return int(precision_set[i])
     return int(precision_set[i])

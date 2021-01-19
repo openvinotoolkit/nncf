@@ -10,23 +10,60 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 
 import pytest
-from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator
-from tests.helpers import create_mock_dataloader, BasicConvTestModel, create_compressed_model_and_algo_for_test
-from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+
+from nncf import NNCFConfig
+from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.hw_config import HWConfigType, HWConfig
+from nncf.nncf_network import NNCFNetwork
+from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
+from tests.helpers import create_mock_dataloader, BasicConvTestModel
 
 
 def create_test_quantization_env() -> QuantizationEnv:
     model = BasicConvTestModel()
-    config = get_quantization_config_without_range_init()
-    config['target_device'] = 'VPU'
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    hw_config_type = HWConfigType.VPU
+    hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
+    hw_config = HWConfig.from_json(hw_config_path)
+    setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
+                                                    nncf_network,
+                                                    hw_config=hw_config).generate_setup()
+    experimental_builder = ExperimentalQuantizationBuilder(setup, {})
+    experimental_builder.apply_to(nncf_network)
+    # pylint:disable=line-too-long
+    experimental_ctrl = nncf_network.commit_compression_changes()  # type: ExperimentalQuantizationController
+    data_loader = create_mock_dataloader(
+            {
+                "sample_size": [1, 1, 4, 4],
+            })
+    constraints = HardwareQuantizationConstraints()
+    for qid in experimental_ctrl.all_quantizations:
+        qconf_constraint_list = []
+        qconf = experimental_ctrl.all_quantizations[qid].get_current_config()
+        bit_set = [8, 4, 2] if 'conv' in str(qid) else [8, 4]
+        for bits in bit_set:
+            adj_qconf = deepcopy(qconf)
+            adj_qconf.bits = bits
+            qconf_constraint_list.append(adj_qconf)
+        constraints.add(qid, qconf_constraint_list)
 
-    config['compression']['initializer']['precision'] = {"type": "autoq"}
-    data_loader = create_mock_dataloader(config['input_info'])
-    return QuantizationEnv(compression_ctrl, data_loader, lambda *x: 0, config)
-
+    return QuantizationEnv(nncf_network,
+                           experimental_ctrl,
+                           constraints,
+                           data_loader,
+                           lambda *x: 0,
+                           hw_config_type=HWConfigType.VPU,
+                           params=QuantizationEnvParams(compression_ratio=0.15,
+                                                        eval_subset_ratio=1.0,
+                                                        skip_constraint=False,
+                                                        finetune=False,
+                                                        bits=[2, 4, 8],
+                                                        dump_init_precision_data=False))
 
 def test_can_create_quant_env():
     create_test_quantization_env()
@@ -62,7 +99,7 @@ def test_step(bitwidth_cfg_tuple, mocker):
         else:
             assert is_done is True
 
-            # Two factors impact final quantization policg
+            # Two factors impact final quantization policy
             # 1. Size constraint is enabled by default and targets 0.15 ratio
             # 2. Bitwidth space per quantizer.
             # Reference final policy is hardened as test truth.
