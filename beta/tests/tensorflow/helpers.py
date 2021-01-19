@@ -16,7 +16,7 @@ from tensorflow.python.ops.init_ops import Constant
 import numpy as np
 
 from beta.nncf import create_compressed_model
-from beta.nncf.configs.config import Config
+from beta.nncf import NNCFConfig
 
 from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 
@@ -38,7 +38,7 @@ def get_empty_config(input_sample_sizes=None):
             return [{"sample_size": sizes} for sizes in input_sample_sizes]
         return [{"sample_size": input_sample_sizes}]
 
-    config = Config({
+    config = NNCFConfig({
         "model": "basic_sparse_conv",
         "input_info": _create_input_info()
     })
@@ -58,7 +58,7 @@ def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size
 
 
 def create_compressed_model_and_algo_for_test(model, config):
-    assert isinstance(config, Config)
+    assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
     algo, model = create_compressed_model(model, config)
     return model, algo

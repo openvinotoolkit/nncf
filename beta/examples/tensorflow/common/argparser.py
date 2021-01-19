@@ -11,9 +11,7 @@
  limitations under the License.
 """
 
-from beta.nncf.configs.config import CustomArgumentParser
-from beta.nncf.configs.config import add_argument
-from beta.nncf.configs.config import argument_parameters
+from beta.examples.tensorflow.common.sample_config import CustomArgumentParser
 
 
 def get_common_argument_parser(**flags):
@@ -198,3 +196,12 @@ def get_common_argument_parser(**flags):
             help='Print frequency (batch iterations). Default: 10)'))
 
     return parser
+
+
+def argument_parameters(*args, **kwargs):
+    return (args, kwargs)
+
+
+def add_argument(parser, condition, parameters):
+    if condition:
+        parser.add_argument(*parameters[0], **parameters[1])

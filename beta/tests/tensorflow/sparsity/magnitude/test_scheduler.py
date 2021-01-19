@@ -34,7 +34,7 @@ def get_multistep_normed_abs_config():
 
 def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     config = get_multistep_normed_abs_config()
-    model = get_magnitude_test_model(config.input_info['sample_size'][1:])
+    model = get_magnitude_test_model(config['input_info']['sample_size'][1:])
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
@@ -65,7 +65,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
 
 def test_magnitude_scheduler_can_do_epoch_step__with_last():
     config = get_multistep_normed_abs_config()
-    model = get_magnitude_test_model(config.input_info['sample_size'][1:])
+    model = get_magnitude_test_model(config['input_info']['sample_size'][1:])
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
 
@@ -84,7 +84,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     config = get_empty_config()
     config["compression"] = Dict({"algorithm": "magnitude_sparsity",
                                   "params": {"schedule": "multistep", 'multistep_steps': [1]}})
-    model = get_magnitude_test_model(config.input_info[0]['sample_size'][1:])
+    model = get_magnitude_test_model(config['input_info'][0]['sample_size'][1:])
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)

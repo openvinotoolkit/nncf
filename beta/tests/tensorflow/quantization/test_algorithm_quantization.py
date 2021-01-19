@@ -17,20 +17,22 @@ import tensorflow as tf
 from tensorflow.python.keras import layers
 import pytest
 
-from beta.tests.tensorflow.helpers import get_basic_conv_test_model, create_compressed_model_and_algo_for_test
-from beta.nncf.tensorflow.quantization import FakeQuantize
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.quantization.quantizers import Quantizer
-from beta.nncf.tensorflow.quantization.algorithm import QuantizationController
-from beta.nncf.tensorflow.quantization.config import QuantizerConfig, QuantizationMode
-from beta.nncf import Config
+from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from beta.nncf.tensorflow.layers.operation import InputType
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.quantization import FakeQuantize
+from beta.nncf.tensorflow.quantization.algorithm import QuantizationController
+from beta.nncf.tensorflow.quantization.config import QuantizationMode
+from beta.nncf.tensorflow.quantization.config import QuantizerConfig
+from beta.nncf.tensorflow.quantization.quantizers import Quantizer
+from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model
 
 
 def get_basic_quantization_config(model_size=4):
-    config = Config()
+    config = NNCFConfig()
     config.update(Dict({
         "model": "basic_quant_conv",
         "input_info":
