@@ -29,8 +29,8 @@ if __nncf_backend__ == 'Torch':
     from .model_creation import create_compressed_model
     from .checkpoint_loading import load_state
     from .config import NNCFConfig
-    from .nncf_logger import disable_logging
-    from .nncf_logger import set_log_level
+    from .common.utils.logger import disable_logging
+    from .common.utils.logger import set_log_level
     from .initialization import register_default_init_args
     from .layers import register_module
     from .dynamic_graph.patch_pytorch import register_operator

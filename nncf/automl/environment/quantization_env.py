@@ -33,7 +33,7 @@ from collections import OrderedDict
 from natsort import natsorted
 
 from nncf.debug import is_debug, DEBUG_LOG_DIR
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer

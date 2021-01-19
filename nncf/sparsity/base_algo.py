@@ -19,7 +19,7 @@ from texttable import Texttable
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
 from nncf.nncf_network import NNCFNetwork
 

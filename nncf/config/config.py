@@ -27,7 +27,7 @@ except ImportError:
 
 from addict import Dict
 
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 
 
 class NNCFConfig(dict):

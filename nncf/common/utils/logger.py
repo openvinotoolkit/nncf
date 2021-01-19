@@ -16,9 +16,8 @@ import sys
 
 NNCF_LOGGER_NAME = "nncf"
 
-root = logging.RootLogger(logging.WARNING)
-manager = logging.Manager(root)
-logger = manager.getLogger(NNCF_LOGGER_NAME)
+logger = logging.getLogger(NNCF_LOGGER_NAME)
+logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 fmt = logging.Formatter("%(levelname)s:%(name)s:%(message)s")

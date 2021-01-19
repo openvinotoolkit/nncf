@@ -15,7 +15,7 @@ import warnings
 from typing import List, Dict
 
 from torch.nn import Module
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 DEBUG_LOG_DIR = "./nncf_debug"
 

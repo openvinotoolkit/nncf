@@ -13,6 +13,7 @@
 
 import networkx as nx
 
+from nncf.common.utils.logger import logger
 from beta.nncf.api.compression import CompressionAlgorithmBuilder
 from beta.nncf.api.compression import CompressionAlgorithmController
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -34,7 +35,6 @@ from beta.nncf.tensorflow.quantization.config import QuantizationMode
 from beta.nncf.tensorflow.quantization.config import QuantizationConstraints
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
-from beta.nncf.utils.logger import logger
 from beta.nncf.utils.utils import is_ignored
 
 ACTIVATIONS = "activations"

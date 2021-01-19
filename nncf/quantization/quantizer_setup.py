@@ -2,7 +2,7 @@ from collections import Counter
 from copy import deepcopy
 from typing import List, Tuple, Dict
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import InsertionPoint, InsertionType
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
