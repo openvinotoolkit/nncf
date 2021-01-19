@@ -18,13 +18,13 @@ from operator import itemgetter
 import pytest
 import tensorflow as tf
 
-from tests.conftest import TEST_ROOT
-from tests.tensorflow.helpers import get_coco_dataset_builders
-from tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
+from beta.tests.conftest import TEST_ROOT
+from beta.tests.tensorflow.helpers import get_coco_dataset_builders
+from beta.tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
 
-from examples.tensorflow.classification import main as cls_main
-from examples.tensorflow.object_detection import main as od_main
-from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
+from beta.examples.tensorflow.classification import main as cls_main
+from beta.examples.tensorflow.object_detection import main as od_main
+from beta.examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 
 od_main.get_dataset_builders = get_coco_dataset_builders
 AVAILABLE_MODELS.update({

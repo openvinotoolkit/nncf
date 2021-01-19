@@ -15,7 +15,7 @@ from typing import Tuple
 
 import tensorflow as tf
 
-from examples.tensorflow.classification.datasets.preprocessing import utils
+from beta.examples.tensorflow.classification.datasets.preprocessing import utils
 
 # Calculated from the CIFAR10 training set
 CIFAR10_MEAN_RGB = (0.4914 * 255, 0.4822 * 255, 0.4465 * 255)

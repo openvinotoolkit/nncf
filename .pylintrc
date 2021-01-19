@@ -23,7 +23,7 @@ disable = arguments-differ,
 
 max-line-length = 120
 ignore-docstrings = yes
-ignored-modules = numpy,torch,cv2,openvino
+ignored-modules = numpy,torch,cv2,openvino,tensorflow
 extension-pkg-whitelist = torch,cv2
 init-hook='import sys; sys.setrecursionlimit(8 * sys.getrecursionlimit())' # to avoid https://stackoverflow.com/questions/36496192/pylint-infinite-recursion-in-astriod-package
 

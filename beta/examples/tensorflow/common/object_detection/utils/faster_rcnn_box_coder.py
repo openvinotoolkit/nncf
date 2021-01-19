@@ -13,8 +13,8 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import box_coder
-from examples.tensorflow.common.object_detection.utils import box_list
+from beta.examples.tensorflow.common.object_detection.utils import box_coder
+from beta.examples.tensorflow.common.object_detection.utils import box_list
 
 EPSILON = 1e-8
 

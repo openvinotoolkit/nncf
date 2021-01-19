@@ -14,9 +14,9 @@
 from functools import partial
 import tensorflow as tf
 
-from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
-from examples.tensorflow.common.object_detection.datasets import tfrecords as records_dataset
-from examples.tensorflow.common.object_detection.datasets.preprocessing_selector import get_preprocess_input_fn
+from beta.examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
+from beta.examples.tensorflow.common.object_detection.datasets import tfrecords as records_dataset
+from beta.examples.tensorflow.common.object_detection.datasets.preprocessing_selector import get_preprocess_input_fn
 
 
 class COCODatasetBuilder(BaseDatasetBuilder):

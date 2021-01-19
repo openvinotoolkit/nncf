@@ -11,9 +11,9 @@
  limitations under the License.
 """
 
-from examples.tensorflow.object_detection.models.model_selector import get_predefined_config, get_model_builder
-from nncf.configs.config import Config
-from tests.conftest import TEST_ROOT
+from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config, get_model_builder
+from beta.nncf.configs.config import Config
+from beta.tests.conftest import TEST_ROOT
 
 
 def RetinaNet(input_shape=None): # pylint: disable=W0613

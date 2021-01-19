@@ -13,8 +13,8 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import box_list
-from examples.tensorflow.common.object_detection.utils import shape_utils
+from beta.examples.tensorflow.common.object_detection.utils import box_list
+from beta.examples.tensorflow.common.object_detection.utils import shape_utils
 
 KEYPOINTS_FIELD_NAME = 'keypoints'
 

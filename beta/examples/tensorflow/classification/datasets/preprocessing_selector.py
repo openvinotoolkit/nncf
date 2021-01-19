@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_preprocess_image
-from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_slim_preprocess_image
-from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_1000_to_1001_classes
-from examples.tensorflow.classification.datasets.preprocessing.cifar import cifar10_preprocess_image
-from examples.tensorflow.classification.datasets.preprocessing.cifar import cifar100_preprocess_image
+from beta.examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_preprocess_image
+from beta.examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_slim_preprocess_image
+from beta.examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_1000_to_1001_classes
+from beta.examples.tensorflow.classification.datasets.preprocessing.cifar import cifar10_preprocess_image
+from beta.examples.tensorflow.classification.datasets.preprocessing.cifar import cifar100_preprocess_image
 
 
 PREPROCESSING_FN_MAP = {

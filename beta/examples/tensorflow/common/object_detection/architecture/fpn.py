@@ -14,8 +14,8 @@
 import functools
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.architecture import keras_utils
-from examples.tensorflow.common.object_detection.architecture import nn_ops
+from beta.examples.tensorflow.common.object_detection.architecture import keras_utils
+from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
 
 
 class Fpn:

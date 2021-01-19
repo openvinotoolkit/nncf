@@ -11,9 +11,9 @@
  limitations under the License.
 """
 
-from nncf.tensorflow.layers.operation import InputType
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.operation import InputType
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 
 
 def get_channel_size(input_shape, input_type, input_name, layer):

@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from nncf.version import __version__
+from beta.nncf.version import __version__
+from beta.nncf.backend import backend
 
-from nncf import tensorflow as nncf_tensorflow
+from beta.nncf import tensorflow as nncf_tensorflow
 
-from nncf.helpers.model_creation import create_compressed_model
-from nncf.helpers.callback_creation import create_compression_callbacks
-from nncf.configs.config import Config
+from beta.nncf.configs.config import Config
+from beta.nncf.helpers.model_creation import create_compressed_model
+from beta.nncf.helpers.callback_creation import create_compression_callbacks

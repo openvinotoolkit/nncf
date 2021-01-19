@@ -11,4 +11,4 @@
  limitations under the License.
 """
 
-from beta.nncf.configs.config import Config
+__nncf_backend__ = 'Torch'

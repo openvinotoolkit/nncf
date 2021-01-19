@@ -13,7 +13,7 @@
 
 from collections import OrderedDict
 
-from nncf.tensorflow.utils.hook_handle import HookHandle
+from beta.nncf.tensorflow.utils.hook_handle import HookHandle
 
 
 class InputType:

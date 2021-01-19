@@ -13,8 +13,8 @@
 
 import copy
 
-from examples.tensorflow.segmentation.models.maskrcnn_model import MaskrcnnModel
-from examples.tensorflow.segmentation.models.maskrcnn_config import MASKRCNN_CONFIG
+from beta.examples.tensorflow.segmentation.models.maskrcnn_model import MaskrcnnModel
+from beta.examples.tensorflow.segmentation.models.maskrcnn_config import MASKRCNN_CONFIG
 
 
 def get_predefined_config(model_name):

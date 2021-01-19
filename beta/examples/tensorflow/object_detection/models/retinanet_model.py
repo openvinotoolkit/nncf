@@ -13,13 +13,13 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection import base_model
-from examples.tensorflow.common.object_detection.architecture import factory
-from examples.tensorflow.common.object_detection.architecture import keras_utils
-from examples.tensorflow.common.object_detection.ops import postprocess_ops
-from examples.tensorflow.common.object_detection.evaluation import coco_evaluator
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.object_detection import losses
+from beta.examples.tensorflow.common.object_detection import base_model
+from beta.examples.tensorflow.common.object_detection.architecture import factory
+from beta.examples.tensorflow.common.object_detection.architecture import keras_utils
+from beta.examples.tensorflow.common.object_detection.ops import postprocess_ops
+from beta.examples.tensorflow.common.object_detection.evaluation import coco_evaluator
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.object_detection import losses
 
 
 class RetinanetModel(base_model.Model):

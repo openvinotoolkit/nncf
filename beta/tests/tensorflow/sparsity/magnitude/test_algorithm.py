@@ -17,13 +17,13 @@ import numpy as np
 import pytest
 from pytest import approx
 
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
-from nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
-from tests.tensorflow.helpers import check_equal, create_compressed_model_and_algo_for_test, \
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from beta.nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
+from beta.nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
+from beta.tests.tensorflow.helpers import check_equal, create_compressed_model_and_algo_for_test, \
     get_mock_model, get_empty_config, get_basic_conv_test_model
-from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model, \
+from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model, \
     get_basic_magnitude_sparsity_config, ref_mask_2, ref_mask_1
 
 

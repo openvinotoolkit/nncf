@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.configs.config import Config
+from beta.nncf.configs.config import Config
 
 
 RETINANET_CONFIG = Config({

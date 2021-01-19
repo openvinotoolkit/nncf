@@ -16,9 +16,9 @@ from inspect import getfullargspec
 
 import tensorflow as tf
 
-from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
-from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
-from nncf.tensorflow.layers.operation import InputType
+from beta.nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
+from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from beta.nncf.tensorflow.layers.operation import InputType
 
 
 @NNCF_CUSTOM_OBJECTS.register()

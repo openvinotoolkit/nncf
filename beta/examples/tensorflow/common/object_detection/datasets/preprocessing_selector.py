@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from examples.tensorflow.object_detection.preprocessing.retinanet_preprocessing import RetinaNetPreprocessor
-from examples.tensorflow.segmentation.preprocessing.maskrcnn_preprocessing import MaskRCNNPreprocessor
+from beta.examples.tensorflow.object_detection.preprocessing.retinanet_preprocessing import RetinaNetPreprocessor
+from beta.examples.tensorflow.segmentation.preprocessing.maskrcnn_preprocessing import MaskRCNNPreprocessor
 
 
 def get_preprocess_input_fn(config, is_train):

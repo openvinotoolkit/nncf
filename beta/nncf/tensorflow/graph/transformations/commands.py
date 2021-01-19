@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.utils.ordered_enum import OrderedEnum
+from beta.nncf.utils.ordered_enum import OrderedEnum
 
 
 class TransformationPriority(OrderedEnum):

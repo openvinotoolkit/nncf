@@ -14,10 +14,10 @@
 import operator
 from functools import reduce
 
-from nncf.tensorflow.graph.pattern_matching import NodeExpression as N
-from nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
-from nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
-from nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.graph.pattern_matching import NodeExpression as N
+from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
+from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 
 
 LIST_LINEAR_OPS = [N(layer) for layer in LAYERS_WITH_WEIGHTS]

@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionAlgorithmController
-from nncf.tensorflow.graph.transformations.layout import TransformationLayout
-from nncf.utils.logger import logger
-from nncf.utils.registry import Registry
+from beta.nncf.api.compression import CompressionAlgorithmBuilder
+from beta.nncf.api.compression import CompressionAlgorithmController
+from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.utils.logger import logger
+from beta.nncf.utils.registry import Registry
 
 
 TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm')

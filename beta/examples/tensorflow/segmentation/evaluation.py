@@ -15,22 +15,22 @@ import sys
 
 import tensorflow as tf
 
-from nncf import create_compressed_model
-from nncf.configs.config import Config
-from nncf.helpers.utils import print_statistics
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from beta.nncf import create_compressed_model
+from beta.nncf.configs.config import Config
+from beta.nncf.helpers.utils import print_statistics
+from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
-from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.distributed import get_distribution_strategy
-from examples.tensorflow.common.distributed import get_strategy_scope
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
-from examples.tensorflow.common.utils import configure_paths
-from examples.tensorflow.common.utils import get_saving_parameters
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config
-from examples.tensorflow.segmentation.models.model_selector import get_model_builder
+from beta.examples.tensorflow.common.argparser import get_common_argument_parser
+from beta.examples.tensorflow.common.distributed import get_distribution_strategy
+from beta.examples.tensorflow.common.distributed import get_strategy_scope
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from beta.examples.tensorflow.common.utils import configure_paths
+from beta.examples.tensorflow.common.utils import get_saving_parameters
+from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
+from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
 
 def get_argument_parser():
