@@ -14,7 +14,6 @@
 import json
 import os
 import tempfile
-from operator import itemgetter
 import pytest
 import tensorflow as tf
 
@@ -56,7 +55,10 @@ def convert_to_argv(args):
     return ' '.join(key if val is None else '{} {}'.format(key, val) for key, val in args.items()).split()
 
 
-SAMPLE_TYPES = ['classification', 'object_detection']
+SAMPLE_TYPES = [
+    'classification',
+    'object_detection',
+]
 
 SAMPLES = {
     'classification': cls_main.main,
@@ -68,22 +70,21 @@ DATASETS = {
     'object_detection': [('coco2017', 'tfrecords')],
 }
 
+TEST_CONFIG_ROOT = TEST_ROOT.joinpath('tensorflow', 'data', 'configs')
 CONFIGS = {
     'classification': [
-        TEST_ROOT.joinpath('tensorflow', 'data', 'configs',
-                           'resnet50_cifar10_magnitude_sparsity_int8.json'),
-        TEST_ROOT.joinpath('tensorflow', 'data', 'configs',
-                           'sequential_model_cifar10_magnitude_sparsity_int8.json'),
-        TEST_ROOT.joinpath('tensorflow', 'data', 'configs',
-                           'sequential_model_no_input_cifar10_magnitude_sparsity_int8.json')
+        TEST_CONFIG_ROOT.joinpath('resnet50_cifar10_magnitude_sparsity_int8.json'),
+        TEST_CONFIG_ROOT.joinpath('sequential_model_cifar10_magnitude_sparsity_int8.json'),
+        TEST_CONFIG_ROOT.joinpath('sequential_model_no_input_cifar10_magnitude_sparsity_int8.json'),
     ],
-    'object_detection': [TEST_ROOT.joinpath('tensorflow', 'data', 'configs',
-                                            'retinanet_coco2017_magnitude_sparsity_int8.json')]
+    'object_detection': [
+        TEST_CONFIG_ROOT.joinpath('retinanet_coco2017_magnitude_sparsity_int8.json'),
+    ],
 }
 
 BATCHSIZE_PER_GPU = {
     'classification': [256, 256, 256],
-    'object_detection': [3, 3],
+    'object_detection': [3],
 }
 
 DATASET_PATHS = {
@@ -98,17 +99,26 @@ DATASET_PATHS = {
     }
 }
 
-CONFIG_PARAMS = list()
-for i, sample in enumerate(SAMPLE_TYPES):
-    for idx, tpl in enumerate(list(zip(CONFIGS[sample],
-                                      map(itemgetter(0), DATASETS[sample]),
-                                      map(itemgetter(1), DATASETS[sample]),
-                                      BATCHSIZE_PER_GPU[sample]))):
-        CONFIG_PARAMS.append((sample,) + tpl + ('{}_{}'.format(i, idx),))
+def generate_config_params():
+    config_params = []
+    for sample_id, sample_type in enumerate(SAMPLE_TYPES):
+        config_paths, batch_sizes = CONFIGS[sample_type], BATCHSIZE_PER_GPU[sample_type]
+        dataset_names, dataset_types = zip(*DATASETS[sample_type])
+
+        for params_id, params in enumerate(zip(config_paths, dataset_names, dataset_types, batch_sizes)):
+            config_params.append((sample_type, *params, '{}_{}'.format(sample_id, params_id)))
+    return config_params
 
 
-@pytest.fixture(params=CONFIG_PARAMS,
-                ids=['-'.join([p[0], p[1].name, p[2], p[3], str(p[4])]) for p in CONFIG_PARAMS])
+def generate_id(value):
+    sample_type, config_path, dataset_name, dataset_type, batch_size, _ = value
+    filename = config_path.name
+    return '-'.join([sample_type, filename, dataset_name, dataset_type, str(batch_size)])
+
+
+CONFIG_PARAMS = generate_config_params()
+
+@pytest.fixture(params=CONFIG_PARAMS, ids=generate_id)
 def _config(request, dataset_dir):
     sample_type, config_path, dataset_name, dataset_type, batch_size, tid = request.param
     dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
