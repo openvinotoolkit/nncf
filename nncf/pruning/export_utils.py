@@ -13,7 +13,7 @@
 import torch
 
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 
 
 def get_input_masks(nx_node, nx_graph):

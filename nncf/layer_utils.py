@@ -1,5 +1,5 @@
 import torch.nn as nn
-from .registry import Registry
+from nncf.common.utils.registry import Registry
 
 
 COMPRESSION_MODULES = Registry('compression modules')

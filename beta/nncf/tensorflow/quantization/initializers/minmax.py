@@ -65,6 +65,7 @@ class MinMaxStatisticsCollector:
 class MinMaxInitializer(CompressionAlgorithmInitializer):
     def __init__(self, num_steps=100):
         self.num_steps = num_steps
+        self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
 
     def call(self, model, dataset=None, loss=None):
         layer_statistics = []
@@ -80,7 +81,7 @@ class MinMaxInitializer(CompressionAlgorithmInitializer):
             elif isinstance(layer, NNCFWrapper):
                 for weight_attr, ops in layer.weights_attr_ops.items():
                     for op_name, op in ops.items():
-                        if op.__class__ in NNCF_QUANTIZATION_OPERATONS:
+                        if op.__class__ in self.nncf_quantization_operation_classes:
                             channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
                             minmax = MinMaxStatisticsCollector(op.per_channel, channel_axes)
                             handles.append(op.register_hook_pre_call(minmax))
