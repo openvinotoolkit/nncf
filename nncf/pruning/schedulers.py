@@ -14,7 +14,7 @@ import numpy as np
 import scipy.optimize
 from nncf.compression_method_api import CompressionScheduler
 from nncf.config import NNCFConfig
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 
 PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 

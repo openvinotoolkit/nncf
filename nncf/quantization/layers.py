@@ -25,7 +25,7 @@ from nncf.nncf_logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
     get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from ..layer_utils import COMPRESSION_MODULES
-from ..registry import Registry
+from nncf.common.utils.registry import Registry
 from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
 
 QUANTIZATION_MODULES = Registry('quantization_modules')

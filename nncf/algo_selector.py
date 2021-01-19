@@ -12,7 +12,7 @@
 """
 # pylint:disable=relative-beyond-top-level
 from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
-from .registry import Registry
+from nncf.common.utils.registry import Registry
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 

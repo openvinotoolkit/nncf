@@ -21,7 +21,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 from .layer_utils import _NNCFModuleMixin
 
 
