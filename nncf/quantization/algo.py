@@ -663,6 +663,29 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
 
         return True
 
+    def are_frozen_layers_allowed(self) -> bool:
+        for quantizer in self._weight_quantizers.values():
+            if not quantizer.num_bits == 8:
+                return False
+        if self.config.get('initializer', {}).get('precision', None) is not None:
+            return False
+        return True
+
+    def algo_name(self) -> str:
+        if self.config.get('initializer', {}).get('precision', None) is not None:
+            return 'mixed precision quantization'
+        if len(self._weight_quantizers) > 0:
+            bits = []
+            for quantizer in self._weight_quantizers.values():
+                if quantizer.num_bits not in bits:
+                    bits.append(quantizer.num_bits)
+            if len(bits) > 1:
+                return 'mixed precision quantization'
+            else:
+                return f'{bits[0]} bits quantization'
+        else:
+            return 'unknown'
+
     class FunctionQuantizationPreHook:
         """Cannot simply register the quantizer module as a callable hook, since we need to call
         a thread-local version of the quantizer module during base module execution."""

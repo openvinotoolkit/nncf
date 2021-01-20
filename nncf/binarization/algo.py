@@ -84,6 +84,9 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return BinarizationController(target_model, self.config)
 
+    def algo_name(self) -> str:
+        return 'binarization'
+
 
 class BinarizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):

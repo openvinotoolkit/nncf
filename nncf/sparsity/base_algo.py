@@ -67,6 +67,9 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
     def create_weight_sparsifying_operation(self, target_module):
         raise NotImplementedError
 
+    def algo_name(self) -> str:
+        return 'sparsity'
+
 
 class BaseSparsityAlgoController(CompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,

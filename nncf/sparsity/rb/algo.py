@@ -40,6 +40,9 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         return RBSparsityController(target_model, self._sparsified_module_info,
                                     params, sparsity_init)
 
+    def algo_name(self) -> str:
+        return 'rb-sparsity'
+
 
 class RBSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork,

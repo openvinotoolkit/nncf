@@ -304,6 +304,12 @@ class CompressionAlgorithmBuilder:
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
 
+    def are_frozen_layers_allowed(self) -> bool:
+        return False
+
+    def algo_name(self) -> str:
+        return 'basic compression algorithm'
+
 
 class StubCompressionScheduler(CompressionScheduler):
 

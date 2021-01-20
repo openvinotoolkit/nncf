@@ -26,6 +26,12 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return ConstSparsityController(target_model, self._sparsified_module_info)
 
+    def are_frozen_layers_allowed(self) -> bool:
+        return True
+
+    def algo_name(self) -> str:
+        return 'const sparsity'
+
 
 class ConstSparsityController(BaseSparsityAlgoController):
     def freeze(self):

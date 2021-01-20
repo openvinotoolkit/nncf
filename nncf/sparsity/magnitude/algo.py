@@ -36,6 +36,9 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
                                            self.config,
                                            params.get('weight_importance', 'normed_abs'))
 
+    def algo_name(self) -> str:
+        return 'magnitude sparsity'
+
 
 class MagnitudeSparsityController(BaseSparsityAlgoController):
     def __init__(self, target_model: NNCFNetwork,

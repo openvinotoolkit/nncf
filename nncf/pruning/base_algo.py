@@ -61,7 +61,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         params = config.get('params', {})
         self._params = params
 
-        self.ignore_frozen_layers = True
         self.prune_first = params.get('prune_first_conv', False)
         self.prune_last = params.get('prune_last_conv', False)
         self.prune_batch_norms = params.get('prune_batch_norms', True)
@@ -206,11 +205,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         output_non_pruned_modules = get_last_pruned_modules(target_model, pruned_types + ['linear'])
         module_scope_str = str(module_scope)
 
-        if self.ignore_frozen_layers and not module.weight.requires_grad:
-            msg = "Ignored adding Weight Pruner in scope: {} because"\
-                    " the layer appears to be frozen (requires_grad=False)".format(module_scope_str)
-            prune = False
-        elif not self._should_consider_scope(module_scope_str):
+        if not self._should_consider_scope(module_scope_str):
             msg = "Ignored adding Weight Pruner in scope: {}".format(module_scope_str)
             prune = False
         elif not self.prune_first and module in input_non_pruned_modules:
@@ -293,6 +288,9 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
     def get_types_of_grouping_ops(self):
         raise NotImplementedError
+
+    def algo_name(self) -> str:
+        return 'pruning'
 
 
 class BasePruningAlgoController(CompressionAlgorithmController):

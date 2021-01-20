@@ -55,6 +55,9 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def get_types_of_grouping_ops(self):
         return Elementwise.get_all_op_aliases()
 
+    def algo_name(self) -> str:
+        return 'filter pruning'
+
 
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
