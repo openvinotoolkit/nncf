@@ -73,9 +73,7 @@ def get_config_from_argv(argv, parser):
     return predefined_config
 
 
-def get_dataset_builders(config, strategy):
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-
+def get_dataset_builders(config, num_devices):
     train_builder = COCODatasetBuilder(config=config,
                                        is_train=True,
                                        num_devices=num_devices)
@@ -235,7 +233,7 @@ def run(config):
     strategy = get_distribution_strategy(config)
 
     # Create dataset
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, test_dataset = datasets

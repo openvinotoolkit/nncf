@@ -78,13 +78,7 @@ def get_config_from_argv(argv, parser):
     return sample_config
 
 
-def get_dataset_builders(config, strategy):
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-
+def get_dataset_builders(config, num_devices):
     train_builder = COCODatasetBuilder(config=config,
                                        is_train=True,
                                        num_devices=num_devices)
@@ -210,7 +204,8 @@ def run_train(config):
     strategy = get_distribution_strategy(config)
 
     # Create dataset
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
+
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, calibration_dataset = datasets
@@ -276,6 +271,10 @@ def main(argv):
 
     nncf_root = Path(__file__).absolute().parents[2]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     run_train(config)
 

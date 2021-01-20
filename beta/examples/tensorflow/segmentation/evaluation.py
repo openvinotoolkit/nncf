@@ -86,6 +86,14 @@ def get_config_from_argv(argv, parser):
     return sample_config
 
 
+def get_dataset_builders(config, num_devices):
+    val_builder = COCODatasetBuilder(config=config,
+                                     is_train=False,
+                                     num_devices=num_devices)
+
+    return val_builder
+
+
 def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled')
     if tf.io.gfile.isdir(ckpt_path):
@@ -139,15 +147,9 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
-
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The evaluation.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
     strategy = get_distribution_strategy(config)
 
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-    dataset_builder = COCODatasetBuilder(config=config, is_train=False, num_devices=num_devices)
+    dataset_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     dataset = dataset_builder.build()
     test_dist_dataset = strategy.experimental_distribute_dataset(dataset)
 
@@ -228,6 +230,10 @@ def main(argv):
     tf.get_logger().setLevel('INFO')
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     if 'train' in config.mode or 'test' in config.mode:
         run_evaluation(config)

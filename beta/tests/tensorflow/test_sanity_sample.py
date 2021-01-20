@@ -14,6 +14,7 @@
 import json
 import os
 import tempfile
+from functools import partial
 import pytest
 import tensorflow as tf
 
@@ -25,7 +26,8 @@ from beta.examples.tensorflow.classification import main as cls_main
 from beta.examples.tensorflow.object_detection import main as od_main
 from beta.examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 
-od_main.get_dataset_builders = get_coco_dataset_builders
+od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
+
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
     'SequentialModelNoInput': SequentialModelNoInput
