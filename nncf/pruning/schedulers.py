@@ -104,7 +104,7 @@ class ExponentialPruningScheduler(PruningScheduler):
     def _calc_pruning_level(self):
         curr_pruning = 1 - self.a * np.exp(-self.k * (self.current_epoch - self.num_init_steps))
         max_pruning = self.pruning_target
-        return max_pruning if curr_pruning >= max_pruning else curr_pruning
+        return min(curr_pruning, max_pruning)
 
     @staticmethod
     def _init_exp(initial_pruning, max_pruning, pruning_steps=20):

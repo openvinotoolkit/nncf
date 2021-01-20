@@ -29,6 +29,7 @@ from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
+from nncf.model_utils import get_module_by_scope
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
@@ -235,13 +236,13 @@ class TestInsertionCommands:
             ctx = self.compressed_model.get_tracing_context()
             assert ctx._post_hooks[command.insertion_point.ia_op_exec_context][0] is hook
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+            module = get_module_by_scope(self.compressed_model,
+                                         command.insertion_point.ia_op_exec_context.scope_in_model)
             assert module.pre_ops["0"] is hook
 
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+            module = get_module_by_scope(self.compressed_model,
+                                         command.insertion_point.ia_op_exec_context.scope_in_model)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]
@@ -309,12 +310,12 @@ class TestInsertionCommands:
             self.check_order(ctx._post_hooks[point.ia_op_exec_context], hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = get_module_by_scope(self.compressed_model, point.ia_op_exec_context.scope_in_model)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.pre_ops.values()), hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = get_module_by_scope(self.compressed_model, point.ia_op_exec_context.scope_in_model)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
 

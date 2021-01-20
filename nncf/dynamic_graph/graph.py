@@ -167,9 +167,10 @@ class OperationExecutionContext:
 
 
 class NNCFNode:
-    def __init__(self, node_id: int, op_exec_context: OperationExecutionContext):
+    def __init__(self, node_id: int, op_exec_context: OperationExecutionContext, module_details: dict = None):
         self.node_id = node_id
         self.op_exec_context = op_exec_context
+        self.module_details = module_details if module_details else {}
 
     def __str__(self):
         return str(self.node_id) + " " + str(self.op_exec_context)
@@ -472,6 +473,7 @@ class NNCFGraph:
     OP_EXEC_CONTEXT_NODE_ATTR = "op_exec_context"
     ACTIVATION_SHAPE_EDGE_ATTR = "activation_shape"
     IN_PORT_NAME = "in_port"
+    MODULE_DETAILS = "module_details"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -748,7 +750,8 @@ class NNCFGraph:
     @staticmethod
     def _nx_node_to_nncf_node(nx_node) -> 'NNCFNode':
         return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR],
-                        nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+                        nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                        nx_node.get(NNCFGraph.MODULE_DETAILS))
 
     def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[dict]:
         """

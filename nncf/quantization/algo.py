@@ -55,6 +55,7 @@ from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, 
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, in_scope_list, is_main_process, should_consider_scope
+from nncf.model_utils import get_module_by_scope
 from nncf.utils import get_state_dict_names_with_modules
 
 
@@ -235,7 +236,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     qconfig.logarithm_scale = config_overrides["logarithm_scale"]
         if qconfig.per_channel:
             if is_weights:
-                module = target_model.get_module_by_scope(Scope.from_str(parent_module_scope_str))
+                module = get_module_by_scope(target_model, Scope.from_str(parent_module_scope_str))
                 qconfig.input_shape = module.weight.shape
             elif input_shape is not None:
                 qconfig.input_shape = input_shape
@@ -571,7 +572,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         # and has no UpdateInputs pre-op
 
         def traverse_function(node: NNCFNode, output) -> Tuple[bool, List[NNCFNode]]:
-            module = target_model.get_module_by_scope(node.op_exec_context.scope_in_model)
+            module = get_module_by_scope(target_model, node.op_exec_context.scope_in_model)
             if is_nncf_module(module):
                 if isinstance(module, (NNCFEmbedding, NNCFEmbeddingBag)):
                     # Embeddings have integer input and their quantization is rather controlled
@@ -1091,7 +1092,7 @@ class QuantizationController(QuantizationControllerBase):
         def traverse_graph(curr_nx_node_key: str, weight_quantizers: List[nn.Module]) -> Optional[List[nn.Module]]:
             nx_node = nncf_graph.get_nx_node_by_key(curr_nx_node_key)
             module_scope = nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
-            module = nncf_network.get_module_by_scope(module_scope)
+            module = get_module_by_scope(nncf_network, module_scope)
             if is_nncf_module(module):
                 if hasattr(module, 'pre_ops'):
                     for ops in module.pre_ops.values():
