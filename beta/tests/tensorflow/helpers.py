@@ -15,10 +15,10 @@ import tensorflow as tf
 from tensorflow.python.ops.init_ops import Constant
 import numpy as np
 
-from nncf import create_compressed_model
-from nncf.configs.config import Config
+from beta.nncf import create_compressed_model
+from beta.nncf.configs.config import Config
 
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 
 
 def get_conv_init_value(shape, value):

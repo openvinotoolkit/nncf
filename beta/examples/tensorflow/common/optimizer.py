@@ -14,7 +14,7 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-from examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.logger import logger
 
 
 def build_optimizer(config, scheduler):

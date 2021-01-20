@@ -18,8 +18,8 @@ from PIL import Image
 from pycocotools import coco
 from pycocotools import mask as mask_api
 
-from examples.tensorflow.common.object_detection.utils import box_utils
-from examples.tensorflow.common.object_detection.utils import mask_utils
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.utils import mask_utils
 
 
 class COCOWrapper(coco.COCO):

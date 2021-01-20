@@ -11,11 +11,11 @@
  limitations under the License.
 """
 
-import tensorflow.keras.applications
-import examples.tensorflow.common.models
+from tensorflow.keras import applications as keras_models
+from beta.examples.tensorflow.common import models as custom_models
 
-AVAILABLE_MODELS = dict(tensorflow.keras.applications.__dict__)
-AVAILABLE_MODELS.update(examples.tensorflow.common.models.__dict__)
+AVAILABLE_MODELS = dict(keras_models.__dict__)
+AVAILABLE_MODELS.update(custom_models.__dict__)
 
 
 def get_model(model_name, input_shape=None, pretrained=True, num_classes=1000, weights=None):

@@ -17,22 +17,24 @@ from pathlib import Path
 
 import tensorflow as tf
 
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.distributed import get_distribution_strategy, get_strategy_scope
-from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.model_loader import get_model
-from examples.tensorflow.common.optimizer import build_optimizer
-from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.callbacks import get_callbacks
-from examples.tensorflow.classification.datasets.builder import DatasetBuilder
-from examples.tensorflow.common.utils import serialize_config, create_code_snapshot, \
-    configure_paths, get_saving_parameters
+from beta.nncf import create_compressed_model
+from beta.nncf import create_compression_callbacks
+from beta.nncf.configs.config import Config
+from beta.nncf.helpers.utils import print_statistics
+from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
-from nncf import create_compressed_model
-from nncf.configs.config import Config
-from nncf import create_compression_callbacks
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
-from nncf.helpers.utils import print_statistics
+from beta.examples.tensorflow.common.argparser import get_common_argument_parser
+from beta.examples.tensorflow.common.callbacks import get_callbacks
+from beta.examples.tensorflow.common.distributed import get_distribution_strategy
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.model_loader import get_model
+from beta.examples.tensorflow.common.optimizer import build_optimizer
+from beta.examples.tensorflow.common.scheduler import build_scheduler
+from beta.examples.tensorflow.common.utils import serialize_config
+from beta.examples.tensorflow.common.utils import create_code_snapshot
+from beta.examples.tensorflow.common.utils import configure_paths
+from beta.examples.tensorflow.common.utils import get_saving_parameters
+from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
 
 
 def get_argument_parser():
@@ -121,7 +123,6 @@ def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch):
 
 def run(config):
     strategy = get_distribution_strategy(config)
-    strategy_scope = get_strategy_scope(strategy)
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
@@ -140,7 +141,7 @@ def run(config):
     validation_steps = validation_builder.steps_per_epoch
 
     with TFOriginalModelManager(model_fn, **model_params) as model:
-        with strategy_scope:
+        with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)

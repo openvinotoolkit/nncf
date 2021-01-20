@@ -14,7 +14,6 @@
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
-
 import sys
 from copy import deepcopy
 from os import path as osp
@@ -24,6 +23,7 @@ import numpy as np
 import os
 import torch
 import torchvision.transforms as T
+
 from examples.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -31,16 +31,16 @@ import examples.semantic_segmentation.utils.data as data_utils
 import examples.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.semantic_segmentation.utils.transforms as JT
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
+    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
+    configure_device
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
@@ -49,7 +49,7 @@ from nncf import create_compressed_model
 from nncf.utils import is_main_process
 
 
-def get_arguments(args):
+def get_arguments_parser():
     parser = get_common_argument_parser()
     parser.add_argument(
         "--dataset",
@@ -57,7 +57,7 @@ def get_arguments(args):
         choices=["camvid", "cityscapes", "mapillary"],
         default=None
     )
-    return parser.parse_args(args=args)
+    return parser
 
 
 def get_preprocessing_transforms(config):
@@ -435,6 +435,7 @@ def test(model, test_loader, criterion, class_encoding, config):
             gt_labels = center_crop(gt_labels, outputs_size_hw).contiguous()
         data_utils.show_ground_truth_vs_prediction(images, gt_labels, color_predictions, class_encoding)
 
+    return miou
 
 def predict(model, images, class_encoding, config):
     images = images.to(config.device)
@@ -455,11 +456,7 @@ def predict(model, images, class_encoding, config):
 
 
 def main_worker(current_gpu, config):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
+    configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
@@ -467,7 +464,6 @@ def main_worker(current_gpu, config):
 
     logger.info(config)
 
-    config.device = get_device(config)
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
     num_classes = len(color_encoding)
@@ -493,7 +489,13 @@ def main_worker(current_gpu, config):
         loaders, w_class = load_dataset(dataset, config)
         train_loader, val_loader, init_loader = loaders
         criterion = get_criterion(w_class, config)
-        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, criterion_fn, config.device)
+
+        def autoq_test_fn(model, eval_loader):
+            return test(model, eval_loader, criterion, color_encoding, config)
+
+        nncf_config = register_default_init_args(
+            nncf_config, init_loader, criterion, criterion_fn,
+            autoq_test_fn, val_loader, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -541,7 +543,7 @@ def main_worker(current_gpu, config):
 
 
 def main(argv):
-    parser = get_common_argument_parser()
+    parser = get_arguments_parser()
     arguments = parser.parse_args(args=argv)
     config = create_sample_config(arguments, parser)
     if arguments.dist_url == "env://":

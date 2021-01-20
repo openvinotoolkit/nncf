@@ -17,7 +17,7 @@ from collections import OrderedDict
 
 import torch
 
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 
 INCEPTION_NAME = 'inception'
 RESNET_NAME = 'resnet'

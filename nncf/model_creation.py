@@ -26,7 +26,7 @@ from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, c
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process, get_frozen_nncf_modules, should_consider_scope, convert_scope_back_from_nncf
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.quantization.algo import QuantizerSetupType
+from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
 from nncf.nncf_logger import logger

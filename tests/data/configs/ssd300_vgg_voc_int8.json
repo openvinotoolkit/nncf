@@ -40,7 +40,7 @@
     "algorithm": "quantization",
     "initializer": {
       "range": {
-        "num_init_samples": 256
+        "num_init_samples": 1
       }
     }
   }

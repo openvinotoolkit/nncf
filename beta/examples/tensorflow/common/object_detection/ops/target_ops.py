@@ -13,9 +13,9 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.ops import spatial_transform_ops
-from examples.tensorflow.common.object_detection.utils import box_utils
-from examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
+from beta.examples.tensorflow.common.object_detection.ops import spatial_transform_ops
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
 
 
 def box_matching(boxes, gt_boxes, gt_classes):

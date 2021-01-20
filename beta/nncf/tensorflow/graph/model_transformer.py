@@ -11,14 +11,19 @@
  limitations under the License.
 """
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
+from collections import namedtuple
+
 import tensorflow as tf
 
-from .utils import get_custom_objects, is_sequential_or_functional_model, \
-    is_functional_model, get_weight_name
-from .transformations.commands import TransformationType, TargetType
-from ..layers.custom_objects import get_nncf_custom_objects
-from ..layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.graph.transformations.commands import TargetType
+from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from beta.nncf.tensorflow.graph.utils import get_custom_objects
+from beta.nncf.tensorflow.graph.utils import get_weight_name
+from beta.nncf.tensorflow.graph.utils import is_functional_model
+from beta.nncf.tensorflow.graph.utils import is_sequential_or_functional_model
+from beta.nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 WeightOperations = namedtuple('WeightOperations',
                               ('weights_attr_name', 'operations'))

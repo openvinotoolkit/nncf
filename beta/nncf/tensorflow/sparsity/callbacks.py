@@ -13,8 +13,9 @@
 
 import tensorflow as tf
 
-from .utils import prepare_for_tensorboard, convert_raw_to_printable
-from ...helpers.utils import print_statistics
+from beta.nncf.helpers.utils import print_statistics
+from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
+from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
 
 
 class UpdateMask(tf.keras.callbacks.Callback):

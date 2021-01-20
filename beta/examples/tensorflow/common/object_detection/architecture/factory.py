@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.object_detection.architecture import fpn
-from examples.tensorflow.common.object_detection.architecture import heads
-from examples.tensorflow.common.object_detection.architecture import nn_ops
-from examples.tensorflow.common.object_detection.architecture import resnet
+from beta.examples.tensorflow.common.object_detection.architecture import fpn
+from beta.examples.tensorflow.common.object_detection.architecture import heads
+from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
+from beta.examples.tensorflow.common.object_detection.architecture import resnet
 
 
 def norm_activation_generator(params):

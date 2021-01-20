@@ -13,10 +13,10 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import anchor
-from examples.tensorflow.common.object_detection.utils import box_utils
-from examples.tensorflow.common.object_detection.utils import input_utils
-from examples.tensorflow.common.object_detection.utils import dataloader_utils
+from beta.examples.tensorflow.common.object_detection.utils import anchor
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.utils import input_utils
+from beta.examples.tensorflow.common.object_detection.utils import dataloader_utils
 
 
 class RetinaNetPreprocessor:
@@ -62,7 +62,7 @@ class RetinaNetPreprocessor:
         self._is_training = is_train
 
         # Anchor
-        self._output_size = config.preprocessing.output_size
+        self._output_size = config.input_info.sample_size[1:3]
         self._min_level = config.model_params.architecture.min_level
         self._max_level = config.model_params.architecture.max_level
         self._num_scales = config.model_params.anchor.num_scales
@@ -227,7 +227,7 @@ class RetinaNetPreprocessor:
         boxes = box_utils.denormalize_boxes(data['groundtruth_boxes'], image_shape)
         groundtruths = {
             'source_id': data['source_id'],
-            'num_detections': tf.shape(data['groundtruth_classes']),
+            'num_detections': tf.squeeze(tf.shape(data['groundtruth_classes'])),
             'boxes': boxes,
             'classes': data['groundtruth_classes'],
             'areas': data['groundtruth_area'],
@@ -235,7 +235,7 @@ class RetinaNetPreprocessor:
         }
         groundtruths['source_id'] = dataloader_utils.process_source_id(groundtruths['source_id'])
         groundtruths = dataloader_utils.pad_groundtruths_to_fixed_size(groundtruths, self._max_num_instances)
-        labels['groundtruths'] = groundtruths
+        labels.update(groundtruths)
 
         # Computes training objective for evaluation loss.
         classes = data['groundtruth_classes']

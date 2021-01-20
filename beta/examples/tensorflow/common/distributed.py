@@ -31,18 +31,10 @@ def get_distribution_strategy(config):
                                'CUDA_VISIBLE_DEVICES environment variable. '
                                'Please do not export the CUDA_VISIBLE_DEVICES environment variable '
                                'or specify GPU with id = {id} in it'.format(id = _gpu_id))
-        return None
 
-    return tf.distribute.MirroredStrategy()
+    num_gpus = len(tf.config.list_physical_devices('GPU'))
 
+    if num_gpus > 1:
+        return tf.distribute.MirroredStrategy()
 
-def get_strategy_scope(strategy):
-    return strategy.scope() if strategy else DummyContextManager()
-
-
-class DummyContextManager:
-    def __enter__(self):
-        pass
-
-    def __exit__(self, *args):
-        pass
+    return tf.distribute.get_strategy()

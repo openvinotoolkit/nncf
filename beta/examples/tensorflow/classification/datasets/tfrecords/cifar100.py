@@ -14,7 +14,7 @@
 import os
 import tensorflow as tf
 
-from examples.tensorflow.common.tfrecords_dataset import TFRecordDataset
+from beta.examples.tensorflow.common.tfrecords_dataset import TFRecordDataset
 
 __all__ = ['cifar100']
 

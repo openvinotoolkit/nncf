@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.logger import logger
 
 
 class StepLearningRateWithLinearWarmup(tf.keras.optimizers.schedules.LearningRateSchedule):

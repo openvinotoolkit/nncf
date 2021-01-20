@@ -25,7 +25,7 @@ from nncf.nncf_logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
     get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from ..layer_utils import COMPRESSION_MODULES
-from ..registry import Registry
+from nncf.common.utils.registry import Registry
 from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
@@ -67,11 +67,35 @@ class QuantizerConfig:
     def __hash__(self):
         return hash(str(self))
 
-    def __lt__(self, other):
-        return self.bits < other.bits or \
-               (self.mode == QuantizationMode.SYMMETRIC and other.mode == QuantizationMode.ASYMMETRIC) or \
-               (self.signedness_to_force is None and other.signedness_to_force is not None) or \
-               (not self.per_channel and other.per_channel)
+    def is_valid_requantization_for(self, other: 'QuantizerConfig') -> bool:
+        #pylint:disable=too-many-return-statements
+        """Quantizer config A is a valid requantization for quantizer config B if A is more strict -
+        specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
+        the requantization will further constrain the input tensor data w.r.t. values it can take, but
+        putting quantizer A after quantizer B would be unreasonable."""
+        if self.bits > other.bits:
+            return False
+        if self.mode is QuantizationMode.ASYMMETRIC and other.mode is \
+                QuantizationMode.SYMMETRIC:
+            return False
+        if self.signedness_to_force is None and other.signedness_to_force is not None:
+            return False
+        if self.signedness_to_force is True and other.signedness_to_force is False:
+            return False
+
+        return True
+
+    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: 'QuantizerConfig'):
+        return self.bits == linked_qconfig.bits and \
+               self.mode == linked_qconfig.mode and \
+               self.signedness_to_force == linked_qconfig.signedness_to_force and \
+               self.per_channel == linked_qconfig.per_channel
+
+    def is_a_bitwidth_variant(self, other_qconfig: 'QuantizerConfig') -> bool:
+        return self.per_channel == other_qconfig.per_channel and \
+               self.signedness_to_force == other_qconfig.signedness_to_force and \
+               self.is_weights == other_qconfig.is_weights and \
+               self.mode == other_qconfig.mode
 
 
 class QuantizerExportMode(Enum):
@@ -170,6 +194,17 @@ class BaseQuantizer(nn.Module):
 
     def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
+        if self.initialized:
+            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
+            return
+        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
+            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+        own_device = next(self.parameters()).device
+        min_values = min_values.to(own_device)
+        max_values = max_values.to(own_device)
+        self._apply_minmax_init(min_values, max_values, log_module_name)
+
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         raise NotImplementedError
 
     def set_level_ranges(self):
@@ -198,6 +233,13 @@ class BaseQuantizer(nn.Module):
         self._export_mode = mode
 
     def run_export_quantization(self, x: torch.Tensor):
+        raise NotImplementedError
+
+    def extra_repr(self):
+        return 'bit={}, ch={}, wt={}'.format(
+            self.num_bits, self.per_channel, self.is_weights)
+
+    def get_current_config(self) -> QuantizerConfig:
         raise NotImplementedError
 
 
@@ -348,10 +390,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
             raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
         sign = torch.any(torch.lt(min_values, 0))
@@ -403,6 +442,14 @@ class SymmetricQuantizer(BaseQuantizer):
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
         raise RuntimeError
 
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.SYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
@@ -490,12 +537,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
                 self.INPUT_RANGE_PARAM_NAME: self.input_range.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         ranges = max_values - min_values
         max_range = torch.max(max_values - min_values)
         eps = 1e-2
@@ -541,3 +583,12 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                       input_low_tuned, input_high_tuned,
                                                       input_low_tuned, input_high_tuned)
         raise RuntimeError
+
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.ASYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)

@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from tests.tensorflow.helpers import get_basic_conv_test_model, check_equal
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model, check_equal
 
 
 def test_basic_model_has_expected_params():

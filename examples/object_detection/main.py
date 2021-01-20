@@ -19,21 +19,22 @@ from pathlib import Path
 
 import torch
 import torch.utils.data as data
+
 from examples.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import DistributedSampler, configure_distributed
+from examples.common.distributed import DistributedSampler
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode
+from examples.common.execution import get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
-    log_common_mlflow_params, SafeMLFLow
+    log_common_mlflow_params, SafeMLFLow, configure_device
 from examples.common.utils import write_metrics
 from examples.object_detection.dataset import detection_collate, get_testing_dataset, get_training_dataset
 from examples.object_detection.eval import test_net
@@ -89,16 +90,12 @@ def main_worker(current_gpu, config):
     #################################
     # Setup experiment environment
     #################################
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
+    configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
     if is_on_first_rank(config):
         configure_logging(logger, config)
         print_args(config)
 
-    config.device = get_device(config)
     config.start_iter = 0
     nncf_config = config.nncf_config
     ##########################
@@ -143,7 +140,14 @@ def main_worker(current_gpu, config):
             loss_l, loss_c = criterion(model_outputs, target)
             return loss_l + loss_c
 
-        nncf_config = register_default_init_args(nncf_config, init_data_loader, criterion, criterion_fn, config.device)
+        def autoq_test_fn(model, eval_loader):
+            # RL is maximization, change the loss polarity
+            return -1 * test_net(model, config.device, eval_loader, distributed=config.distributed,
+                                 loss_inference=True, criterion=criterion)
+
+        nncf_config = register_default_init_args(
+            nncf_config, init_data_loader, criterion, criterion_fn,
+            autoq_test_fn, test_data_loader, config.device)
 
     ##################
     # Prepare model

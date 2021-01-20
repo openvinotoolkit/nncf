@@ -29,8 +29,9 @@ from torch import nn
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.initialization import DataLoaderBNAdaptationRunner
+from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 
@@ -267,6 +268,8 @@ class CompressionAlgorithmBuilder:
     on an NNCFNetwork object wrapping a target PyTorch model (torch.nn.Module).
     """
 
+    _registered_name: str = None  # Attribute will set by COMPRESSION_ALGORITHMS registry
+
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
         Arguments:
@@ -278,6 +281,7 @@ class CompressionAlgorithmBuilder:
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
+        self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         """
@@ -289,7 +293,16 @@ class CompressionAlgorithmBuilder:
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
         self._model = target_model  # type: NNCFNetwork
+        insertion_commands = self._apply_to(target_model)
+
+        for command in insertion_commands:
+            target_model.register_insertion_command(command)
+
+        target_model.register_algorithm(self)
         return target_model
+
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return []
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         """
@@ -303,6 +316,18 @@ class CompressionAlgorithmBuilder:
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+
+    def _nncf_module_types_to_compress(self) -> List[str]:
+        """
+        Return list of NNCF module types which should be compressed by specific algorithm.
+        As name of algorithm used self._registered_name that set by decorator @nncf.registry_module.
+        :return: List of names of modules
+        """
+        filtered_nncf_module_names_list = list()
+        for module in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
+            if self._registered_name not in module.ignored_algorithms:
+                filtered_nncf_module_names_list.append(module.__name__)
+        return filtered_nncf_module_names_list
 
     def are_frozen_layers_allowed(self) -> bool:
         return False

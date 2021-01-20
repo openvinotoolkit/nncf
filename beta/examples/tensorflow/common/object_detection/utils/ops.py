@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import shape_utils
+from beta.examples.tensorflow.common.object_detection.utils import shape_utils
 
 
 def indices_to_dense_vector(indices,

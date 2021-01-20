@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
 
 NMS_TILE_SIZE = 512
 

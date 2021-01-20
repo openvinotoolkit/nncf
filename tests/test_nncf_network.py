@@ -22,7 +22,7 @@ from copy import deepcopy
 from torch import nn
 
 from nncf import register_module
-from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.context import Scope, PreHookId
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, GraphBuilder
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
@@ -32,8 +32,10 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
     InsertionPointGraph, InsertionPointGraphNodeType
+from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
-from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement
+from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement, \
+    create_compressed_model_and_algo_for_test
 from tests.test_models.synthetic import ManyNonEvalModules
 
 
@@ -82,7 +84,7 @@ def test_check_correct_modules_replacement():
     assert set(nncf_modules) == set(nncf_model.get_nncf_modules())
 
 
-@register_module
+@register_module()
 class ModuleOfUser(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -170,40 +172,38 @@ class TestInsertionCommands:
                                             [ModelInputInfo([1, 1, 10, 10])])  # type: NNCFNetwork
 
     conv1_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv1]')
-    conv1_module_context = InputAgnosticOperationExecutionContext('', conv1_module_scope, 0)
-    point_for_conv1_weights = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                             insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv1_inputs = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                            insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv1_activations = InsertionPoint(ia_op_exec_context=conv1_module_context,
-                                                 insertion_type=InsertionType.NNCF_MODULE_POST_OP)
+    point_for_conv1_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                             module_scope=conv1_module_scope)
+    point_for_conv1_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                            module_scope=conv1_module_scope)
+    point_for_conv1_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
+                                                 module_scope=conv1_module_scope)
 
     conv2_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv2]')
-    conv2_module_context = InputAgnosticOperationExecutionContext('', conv2_module_scope, 0)
-    point_for_conv2_weights = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                             insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv2_inputs = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                            insertion_type=InsertionType.NNCF_MODULE_PRE_OP)
-    point_for_conv2_activations = InsertionPoint(ia_op_exec_context=conv2_module_context,
-                                                 insertion_type=InsertionType.NNCF_MODULE_POST_OP)
+    point_for_conv2_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                             module_scope=conv2_module_scope)
+    point_for_conv2_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+                                            module_scope=conv2_module_scope)
+    point_for_conv2_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
+                                                 module_scope=conv2_module_scope)
 
     linear_op_scope = Scope.from_str('InsertionPointTestModel/linear_0')
     linear_op_context = InputAgnosticOperationExecutionContext('linear',
                                                                linear_op_scope,
                                                                0)
-    point_for_linear_weight_input = InsertionPoint(ia_op_exec_context=linear_op_context,
-                                                   insertion_type=InsertionType.OPERATOR_PRE_HOOK)
-    point_for_linear_activation = InsertionPoint(ia_op_exec_context=linear_op_context,
-                                                 insertion_type=InsertionType.OPERATOR_POST_HOOK)
+    point_for_linear_weight_input = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
+                                                   ia_op_exec_context=linear_op_context, input_port_id=0)
+    point_for_linear_activation = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
+                                                 ia_op_exec_context=linear_op_context)
 
     relu_op_scope = Scope.from_str('InsertionPointTestModel/ReLU[relu]/relu')
     relu_op_context = InputAgnosticOperationExecutionContext('relu',
                                                              relu_op_scope,
                                                              0)
-    point_for_relu_inputs = InsertionPoint(ia_op_exec_context=relu_op_context,
-                                           insertion_type=InsertionType.OPERATOR_PRE_HOOK)
-    point_for_relu_activations = InsertionPoint(ia_op_exec_context=relu_op_context,
-                                                insertion_type=InsertionType.OPERATOR_POST_HOOK)
+    point_for_relu_inputs = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
+                                           ia_op_exec_context=relu_op_context, input_port_id=0)
+    point_for_relu_activations = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
+                                                ia_op_exec_context=relu_op_context)
 
     available_points = [point_for_conv1_weights,
                         point_for_conv2_weights,
@@ -230,18 +230,19 @@ class TestInsertionCommands:
         # pylint:disable=protected-access
         if insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            assert ctx._pre_hooks[command.insertion_point.ia_op_exec_context][0] is hook
+            pre_hook_id = PreHookId(insertion_point.ia_op_exec_context, input_port_id=insertion_point.input_port_id)
+            assert ctx._pre_hooks[pre_hook_id][0] is hook
         if insertion_point.insertion_type == InsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             assert ctx._post_hooks[command.insertion_point.ia_op_exec_context][0] is hook
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
             module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+                command.insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
 
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
             module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.ia_op_exec_context.scope_in_model)
+                command.insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]
@@ -303,20 +304,29 @@ class TestInsertionCommands:
         # pylint:disable=protected-access
         if insertion_type == InsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            self.check_order(ctx._pre_hooks[point.ia_op_exec_context], hook_list, order)
+            pre_hook_id = PreHookId(point.ia_op_exec_context, input_port_id=point.input_port_id)
+            self.check_order(ctx._pre_hooks[pre_hook_id], hook_list, order)
         if insertion_type == InsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             self.check_order(ctx._post_hooks[point.ia_op_exec_context], hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.pre_ops.values()), hook_list, order)
 
         if insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(point.ia_op_exec_context.scope_in_model)
+            module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
+
+
+def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph):
+    for node_key in graph.nodes:
+        input_edges = graph.in_edges(node_key)
+        sorted_input_edges = sorted(input_edges, key=lambda x: x[0])
+        for idx, edge in enumerate(sorted_input_edges):
+            graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR] = idx
 
 
 def get_two_branch_mock_model_graph() -> nx.DiGraph:
@@ -343,6 +353,8 @@ def get_two_branch_mock_model_graph() -> nx.DiGraph:
 
     mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('C', 'E'), ('E', 'F'),
                                ('D', 'F'), ('F', 'G'), ('G', 'H')])
+
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
 
@@ -376,9 +388,10 @@ def get_mock_model_graph_with_mergeable_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'batch_norm'),
-                               ('batch_norm', VersionAgnosticNames.RELU),
-                               (VersionAgnosticNames.RELU, 'B')])
+    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('batch_norm', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -403,11 +416,12 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'C'),
-                               ('C', 'batch_norm'),
-                               ('batch_norm', 'D'),
-                               ('D', VersionAgnosticNames.RELU),
-                               (VersionAgnosticNames.RELU, 'B')])
+    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('C', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('batch_norm', 'D', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('D', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -430,11 +444,12 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d'), ('conv2d', 'batch_norm'),
-                               ('conv2d', 'C'),
-                               ('batch_norm', VersionAgnosticNames.RELU),
-                               (VersionAgnosticNames.RELU, 'C'),
-                               ('C', 'B')])
+    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 1}),
+                               ('batch_norm', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('C', 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -464,17 +479,19 @@ class TestInsertionPointGraph:
             assert ip_graph_op_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR
             preds = list(ip_graph.predecessors(node_key))
             succs = list(ip_graph.successors(node_key))
-            assert len(preds) == 1
             assert len(succs) == 1
-            pre_hook_ip_node_key = preds[0]
             post_hook_ip_node_key = succs[0]
-            pre_hook_ip_node = ip_graph.nodes[preds[0]]
             post_hook_ip_node = ip_graph.nodes[succs[0]]
-            pre_hook_ip_node_type = pre_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
             post_hook_ip_node_type = post_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
-            assert pre_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
             assert post_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
-            ref_associated_ip_node_keys_set = {pre_hook_ip_node_key, post_hook_ip_node_key}
+
+            pre_hook_ip_node_keys = preds
+            for pre_hook_ip_node_key in pre_hook_ip_node_keys:
+                pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
+                pre_hook_ip_node_type = pre_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
+                assert pre_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
+
+            ref_associated_ip_node_keys_set = {*pre_hook_ip_node_keys, post_hook_ip_node_key}
             assert ref_associated_ip_node_keys_set == ip_graph_op_node[
                 InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]
             original_neighbours = mock_graph.neighbors(node_key)
@@ -516,16 +533,17 @@ class TestInsertionPointGraph:
         for node_key in mock_graph.nodes.keys():
             preds = list(ip_graph.predecessors(node_key))
             succs = list(ip_graph.successors(node_key))
-            pre_hook_ip_node = ip_graph.nodes[preds[0]]
+
             post_hook_ip_node = ip_graph.nodes[succs[0]]
-
-            pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
-            assert pre_hook_ip.insertion_type == InsertionType.OPERATOR_PRE_HOOK
             assert post_hook_ip.insertion_type == InsertionType.OPERATOR_POST_HOOK
-
-            assert pre_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
             assert post_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
+
+            for pre_hook_ip_node_key in preds:
+                pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
+                pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
+                assert pre_hook_ip.insertion_type == InsertionType.OPERATOR_PRE_HOOK
+                assert pre_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
 
     def test_operator_metatype_marking(self):
         from nncf.dynamic_graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
@@ -625,6 +643,49 @@ def test_can_collect_scopes_of_train_only_modules():
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout_0',
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout_1',
         'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Linear[called_linear]/linear_0',
-        'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/linear_0'
+        'ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/CustomWeightModule[custom]/linear_0'
     }
     assert set(actual_scopes) == ref_scopes
+
+
+def test_get_clean_shallow_copy():
+    model = TwoConvTestModelWithUserModule()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    assert sparse_quantized_model.activation_quantizers
+    old_nncf_modules = sparse_quantized_model.get_nncf_modules().values()
+    old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
+    assert any(old_nncf_module_pre_ops)
+    assert sparse_quantized_model.get_graph().get_nodes_count() != \
+           sparse_quantized_model.get_original_graph().get_nodes_count()
+
+    clean_copy = sparse_quantized_model.get_clean_shallow_copy()
+    assert clean_copy is not sparse_quantized_model
+    assert clean_copy.get_nncf_wrapped_model() is sparse_quantized_model.get_nncf_wrapped_model()
+    new_nncf_modules = clean_copy.get_nncf_modules().values()
+    new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
+    assert not any(new_nncf_module_pre_ops)
+    assert clean_copy.get_graph().get_nodes_count() == clean_copy.get_original_graph().get_nodes_count()
+
+
+def test_temporary_clean_view():
+    model = TwoConvTestModelWithUserModule()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    old_sd = sparse_quantized_model.state_dict()
+    old_graph = deepcopy(sparse_quantized_model.get_graph())
+    with sparse_quantized_model.temporary_clean_view() as intermediate_model:
+        clean_sd = intermediate_model.state_dict()
+        assert len(clean_sd) < len(old_sd)
+        new_nncf_modules = intermediate_model.get_nncf_modules().values()
+        new_nncf_module_pre_ops = [module.pre_ops for module in new_nncf_modules]
+        assert not any(new_nncf_module_pre_ops)
+        assert intermediate_model.get_graph().get_nodes_count() == \
+               intermediate_model.get_original_graph().get_nodes_count()
+    sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
+    for key in old_sd.keys():
+        assert key in sd_after_tmp_clean_view
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
+    sparse_quantized_model.rebuild_graph()
+    graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
+    assert graph_after_tmp_clean_view == old_graph

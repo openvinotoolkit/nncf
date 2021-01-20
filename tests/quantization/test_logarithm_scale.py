@@ -36,8 +36,10 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
                 "range":{
                     "num_init_samples": 4,
                     "type": "percentile",
-                    "min_percentile": 0.001,
-                    "max_percentile": 99.999
+                    "params": {
+                        "min_percentile": 0.001,
+                        "max_percentile": 99.999
+                    }
                 }
             },
             "activations": {

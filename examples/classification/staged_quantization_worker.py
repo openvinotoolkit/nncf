@@ -30,14 +30,14 @@ from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow
+    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from nncf.binarization.algo import BinarizationController
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController
 from nncf.utils import is_main_process
-from examples.classification.common import configure_device, set_seed, load_resuming_checkpoint
+from examples.classification.common import set_seed, load_resuming_checkpoint
 
 
 class KDLossCalculator:
@@ -133,7 +133,14 @@ def staged_quantization_main_worker(current_gpu, config):
         # Data loading code
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
-        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, train_criterion_fn, config.device)
+
+        def autoq_eval_fn(model, eval_loader):
+            _, top5 = validate(eval_loader, model, criterion, config)
+            return top5
+
+        nncf_config = register_default_init_args(
+            nncf_config, init_loader, criterion, train_criterion_fn,
+            autoq_eval_fn, val_loader, config.device)
 
     # create model
     model_name = config['model']

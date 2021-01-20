@@ -19,6 +19,7 @@ from tensorflow.python.keras.engine import training
 NUM_CLASSES = 1000
 
 
+# pylint: disable=R0915
 def InceptionV3(input_shape=None):
     input_shape = imagenet_utils.obtain_input_shape(
         input_shape,

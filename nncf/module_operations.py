@@ -27,7 +27,6 @@ class BaseOp(nn.Module):
         return self.op(*inputs)
 
 
-
 class UpdateInputs(BaseOp):
     def __call__(self, _, inputs):
         return super().__call__(*inputs)

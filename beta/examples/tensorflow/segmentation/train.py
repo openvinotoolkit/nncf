@@ -14,23 +14,28 @@
 import os
 import sys
 from pathlib import Path
+
 import tensorflow as tf
 import numpy as np
 
-from nncf import create_compressed_model
-from nncf.configs.config import Config
-from nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
-from nncf.helpers.utils import print_statistics
-from examples.tensorflow.segmentation.models.model_selector import get_predefined_config, get_model_builder
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.utils import serialize_config, create_code_snapshot, configure_paths
-from examples.tensorflow.common.argparser import get_common_argument_parser
-from examples.tensorflow.common.distributed import get_distribution_strategy, get_strategy_scope
-from examples.tensorflow.common.optimizer import build_optimizer
-from examples.tensorflow.common.scheduler import build_scheduler
-from examples.tensorflow.common.utils import SummaryWriter
-from examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
-from examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from beta.nncf import create_compressed_model
+from beta.nncf.configs.config import Config
+from beta.nncf.helpers.utils import print_statistics
+from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.argparser import get_common_argument_parser
+from beta.examples.tensorflow.common.distributed import get_distribution_strategy
+from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
+from beta.examples.tensorflow.common.optimizer import build_optimizer
+from beta.examples.tensorflow.common.scheduler import build_scheduler
+from beta.examples.tensorflow.common.utils import configure_paths
+from beta.examples.tensorflow.common.utils import create_code_snapshot
+from beta.examples.tensorflow.common.utils import serialize_config
+from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
+from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
 
 def get_argument_parser():
@@ -39,7 +44,8 @@ def get_argument_parser():
                                         save_checkpoint_freq=False,
                                         export_args=False,
                                         print_freq=False,
-                                        dataset_type=False)
+                                        dataset_type=False,
+                                        cpu_only=False)
 
     parser.add_argument('--backbone-checkpoint',
                         default=None,
@@ -202,7 +208,6 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
 def run_train(config):
     strategy = get_distribution_strategy(config)
-    strategy_scope = get_strategy_scope(strategy)
 
     # Create dataset
     builders = get_dataset_builders(config, strategy)
@@ -224,7 +229,7 @@ def run_train(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
-        with strategy_scope:
+        with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config)
 
             scheduler = build_scheduler(

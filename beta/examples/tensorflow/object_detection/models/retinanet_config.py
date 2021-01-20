@@ -11,13 +11,11 @@
  limitations under the License.
 """
 
-from nncf.configs.config import Config
+from beta.nncf.configs.config import Config
 
 
 RETINANET_CONFIG = Config({
     "preprocessing": {
-        "output_size": [640, 640],
-        "num_channels": 3,
         "match_threshold": 0.5,
         "unmatched_threshold": 0.5,
         "aug_rand_hflip": True,

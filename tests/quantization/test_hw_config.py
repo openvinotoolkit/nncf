@@ -17,7 +17,8 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
-from nncf.quantization.algo import QuantizationBuilder, QuantizerSetupType, QuantizationController
+from nncf.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
+from nncf.quantization.structs import QuantizerSetupType
 from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
@@ -39,23 +40,24 @@ class ModelForHWConfigTest(torch.nn.Module):
 
 class TestHWConfigRules:
     @staticmethod
-    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module,
-                                                               hw_config_dict: dict,
+    def get_model_and_ctrl_with_applied_hw_config_quantization(model: torch.nn.Module, hw_config_dict: dict,
                                                                should_be_quantize_inputs: bool = True):
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["compression"].update({"quantize_inputs": should_be_quantize_inputs})
+        nncf_config["hw_config_type"] = "mock"
 
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
+        hw_config = HWConfig.from_dict(hw_config_dict)
         qbuilder = QuantizationBuilder(nncf_config["compression"], should_init=False)
-        qbuilder.hw_config = HWConfig.from_dict(hw_config_dict)
         qbuilder.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
+        qbuilder.hw_config = hw_config
         net = qbuilder.apply_to(net)
         ctrl = net.commit_compression_changes()
         return net, ctrl
 
     @staticmethod
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
-        default_qconfig = QuantizationBuilder.DEFAULT_QUANTIZER_CONFIG
+        default_qconfig = QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG
         is_ok = True
         is_ok &= (quantizer.num_bits == default_qconfig.bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
@@ -189,7 +191,7 @@ class TestHWConfigRules:
         _, ctrl = self.get_model_and_ctrl_with_applied_hw_config_quantization(ModelForHWConfigTest(with_gelu=False),
                                                                               hw_config_dict, False)
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
-        conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0]
+        conv2d_weight_quantizer_ref = list(ctrl.weight_quantizers.values())[0].quantizer_module_ref
         assert not self.quantizer_has_default_config(conv2d_weight_quantizer_ref)
 
         assert len(ctrl.non_weight_quantizers) == 1  # Matmul input

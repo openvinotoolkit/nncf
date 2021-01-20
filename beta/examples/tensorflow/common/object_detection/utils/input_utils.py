@@ -13,7 +13,8 @@
 
 import math
 import tensorflow as tf
-from examples.tensorflow.common.object_detection.utils import box_utils
+
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
 
 
 def pad_to_fixed_size(input_tensor, size, constant_values=0):

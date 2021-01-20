@@ -11,4 +11,4 @@
  limitations under the License.
 """
 
-from examples.tensorflow.common.object_detection.datasets.tfrecords.coco2017 import *
+from beta.examples.tensorflow.common.object_detection.datasets.tfrecords.coco2017 import *

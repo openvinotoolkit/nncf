@@ -27,10 +27,13 @@ from typing import Tuple
 from PIL import Image
 import torch.utils.data as data
 
+from examples.common.distributed import configure_distributed
+from examples.common.execution import ExecutionMode, get_device
 from examples.common.sample_config import SampleConfig
 from torch.utils.tensorboard import SummaryWriter
 from texttable import Texttable
 import mlflow
+import torch
 
 from examples.common.example_logger import logger as default_logger
 from nncf.utils import is_main_process
@@ -138,6 +141,18 @@ class SafeMLFLow:
         if self._is_enabled():
             return mlflow
         return None
+
+
+def configure_device(current_gpu, config: SampleConfig):
+    config.current_gpu = current_gpu
+    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
+    if config.distributed:
+        configure_distributed(config)
+
+    config.device = get_device(config)
+
+    if config.execution_mode == ExecutionMode.SINGLE_GPU:
+        torch.cuda.set_device(config.current_gpu)
 
 
 def configure_logging(sample_logger, config):

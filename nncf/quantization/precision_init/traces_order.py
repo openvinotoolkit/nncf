@@ -22,16 +22,20 @@ class TracesOrder:
         self._index_by_execution_to_index_by_traces = \
             [execution_indexes_of_weights_ordered_by_traces.index(i) for i in range(self._num_weights)]
 
-    def get_execution_order_config(self, bitwidth_by_traces: List[int]) -> List[int]:
-        execution_order_config = [0] * len(bitwidth_by_traces)
-        for i, bitwidth in enumerate(bitwidth_by_traces):
-            execution_order_config[self._index_by_traces_to_execution_index[i]] = bitwidth
+    def get_execution_order_config(self, trace_ordered_configuration: List) -> List:
+        if len(trace_ordered_configuration) != self._num_weights:
+            raise ValueError("Incompatible configuration size!")
+        execution_order_config = [None] * self._num_weights
+        for i, config in enumerate(trace_ordered_configuration):
+            execution_order_config[self._index_by_traces_to_execution_index[i]] = config
         return execution_order_config
 
-    def get_traces_order_config(self, bitwidth_by_execution: List[int]) -> List[int]:
-        traces_order_config = [0] * len(bitwidth_by_execution)
-        for i, bitwidth in enumerate(bitwidth_by_execution):
-            traces_order_config[self._index_by_execution_to_index_by_traces[i]] = bitwidth
+    def get_traces_order_config(self, execution_ordered_configuration: List) -> List:
+        if len(execution_ordered_configuration) != self._num_weights:
+            raise ValueError("Incompatible configuration size!")
+        traces_order_config = [None] * self._num_weights
+        for i, config in enumerate(execution_ordered_configuration):
+            traces_order_config[self._index_by_execution_to_index_by_traces[i]] = config
         return traces_order_config
 
     def get_execution_index_by_traces_index(self, traces_index: int):
@@ -40,6 +44,8 @@ class TracesOrder:
     def __bool__(self):
         return bool(self._index_by_traces_to_execution_index)
 
+    def __len__(self):
+        return len(self._index_by_execution_to_index_by_traces)
 
 class TracesPerLayer:
     def __init__(self, traces_per_layer_by_execution: Tensor):

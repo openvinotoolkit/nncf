@@ -12,7 +12,8 @@
 """
 
 import tensorflow as tf
-from examples.tensorflow.common.logger import logger
+
+from beta.examples.tensorflow.common.logger import logger
 
 
 def focal_loss(logits, targets, alpha, gamma, normalizer):

@@ -13,10 +13,10 @@
 
 import tensorflow as tf
 
-import examples.tensorflow.classification.datasets.tfrecords as records_dataset
-from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
-from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing, \
-    get_label_preprocessing_fn
+from beta.examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
+from beta.examples.tensorflow.classification.datasets import tfrecords as records_dataset
+from beta.examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
+from beta.examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
 
 DATASET_SPLITS = {
     'imagenet2012': ('train', 'validation'),

@@ -1,5 +1,8 @@
 {
     "model": "RetinaNet",
+    "input_info": {
+        "sample_size": [1, 640, 640, 3]
+    },
 
     "epochs": 12,
     "batch_size": 64,

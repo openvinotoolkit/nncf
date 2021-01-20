@@ -1,4 +1,7 @@
 {
+  "activation_quantizers./nncf_model_input_0._num_bits": false,
+  "activation_quantizers./nncf_model_input_0._scale_param_storage": false,
+  "activation_quantizers./nncf_model_input_0.signed_tensor": false,
   "activation_quantizers.MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0._num_bits": false,
   "activation_quantizers.MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0._scale_param_storage": false,
   "activation_quantizers.MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0.signed_tensor": false,
@@ -196,9 +199,6 @@
   "nncf_module.features.0.0.pre_ops.0.op._num_bits": false,
   "nncf_module.features.0.0.pre_ops.0.op._scale_param_storage": false,
   "nncf_module.features.0.0.pre_ops.0.op.signed_tensor": false,
-  "nncf_module.features.0.0.pre_ops.1.op._num_bits": false,
-  "nncf_module.features.0.0.pre_ops.1.op._scale_param_storage": false,
-  "nncf_module.features.0.0.pre_ops.1.op.signed_tensor": false,
   "nncf_module.features.0.0.weight": true,
   "nncf_module.features.0.1.bias": false,
   "nncf_module.features.0.1.weight": false,

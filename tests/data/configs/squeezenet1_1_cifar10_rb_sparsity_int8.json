@@ -27,6 +27,11 @@
             "algorithm": "quantization",
             "weights": {
                 "per_channel": true
+            },
+            "initializer": {
+                "range": {
+                    "num_init_samples": 1
+                }
             }
         }
     ]

@@ -14,12 +14,13 @@
 import collections
 
 import tensorflow as tf
-from examples.tensorflow.common.object_detection.utils import argmax_matcher
-from examples.tensorflow.common.object_detection.utils import box_list
-from examples.tensorflow.common.object_detection.utils import faster_rcnn_box_coder
-from examples.tensorflow.common.object_detection.utils import region_similarity_calculator
-from examples.tensorflow.common.object_detection.utils import target_assigner
-from examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
+
+from beta.examples.tensorflow.common.object_detection.utils import argmax_matcher
+from beta.examples.tensorflow.common.object_detection.utils import box_list
+from beta.examples.tensorflow.common.object_detection.utils import faster_rcnn_box_coder
+from beta.examples.tensorflow.common.object_detection.utils import region_similarity_calculator
+from beta.examples.tensorflow.common.object_detection.utils import target_assigner
+from beta.examples.tensorflow.common.object_detection.utils import balanced_positive_negative_sampler
 
 
 class Anchor:

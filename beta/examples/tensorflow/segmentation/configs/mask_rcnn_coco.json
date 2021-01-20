@@ -1,5 +1,8 @@
 {
     "model": "MaskRCNN",
+    "input_info": {
+        "sample_size": [1, 1024, 1024, 3]
+    },
 
     "epochs": 12,
     "batch_size": 64,

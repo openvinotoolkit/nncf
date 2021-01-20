@@ -1,5 +1,8 @@
 {
     "model": "RetinaNet",
+    "input_info": {
+        "sample_size": [1, 640, 640, 3]
+    },
 
     "epochs": 1,
     "weight_decay": 0.0001,
@@ -38,11 +41,6 @@
     ],
 
     "preprocessing": {
-        "output_size": [
-            640,
-            640
-        ],
-        "num_channels": 3,
         "match_threshold": 0.5,
         "unmatched_threshold": 0.5,
         "aug_rand_hflip": true,

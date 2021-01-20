@@ -12,6 +12,7 @@
 """
 
 import torch
+from nncf.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig
@@ -19,6 +20,8 @@ from tests.helpers import create_conv, create_transpose_conv
 
 
 class PruningTestModel(nn.Module):
+    CONV_SCOPE_1 = Scope.from_str("PruningTestModel/NNCFConv2d[conv1]")
+    CONV_SCOPE_2 = Scope.from_str("PruningTestModel/NNCFConv2d[conv2]")
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 9, -2)

@@ -12,6 +12,7 @@
 """
 import pytest
 import torch
+from nncf.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.layers import NNCFConv2d
@@ -75,7 +76,7 @@ def test_assert_broadcastable_mask_and_weight_shape():
     mask = torch.zeros(10)
 
     with pytest.raises(RuntimeError):
-        inplace_apply_filter_binary_mask(mask, nncf_module.weight.data)
+        inplace_apply_filter_binary_mask(mask, nncf_module.weight.data, Scope())
 
     with pytest.raises(RuntimeError):
         apply_filter_binary_mask(mask, nncf_module.weight.data)
@@ -98,11 +99,11 @@ class TestApplyMasks:
         fill_conv_weight(nncf_module, 1)
         fill_bias(nncf_module, 1)
 
-        result_weight = inplace_apply_filter_binary_mask(mask, nncf_module.weight.data)
+        result_weight = inplace_apply_filter_binary_mask(mask, nncf_module.weight.data, Scope())
         assert torch.allclose(result_weight, reference_weight)
         assert torch.allclose(nncf_module.weight, reference_weight)
 
-        result_bias = inplace_apply_filter_binary_mask(mask, nncf_module.bias.data)
+        result_bias = inplace_apply_filter_binary_mask(mask, nncf_module.bias.data, Scope())
         assert torch.allclose(result_bias, reference_bias)
         assert torch.allclose(nncf_module.bias, reference_bias)
 

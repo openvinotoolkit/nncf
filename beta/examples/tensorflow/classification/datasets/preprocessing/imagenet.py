@@ -17,7 +17,7 @@ from typing import Tuple
 
 import tensorflow as tf
 
-from examples.tensorflow.classification.datasets.preprocessing import utils
+from beta.examples.tensorflow.classification.datasets.preprocessing import utils
 
 # Calculated from the ImageNet training set
 MEAN_RGB = (0.485 * 255, 0.456 * 255, 0.406 * 255)

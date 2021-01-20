@@ -11,15 +11,13 @@
  limitations under the License.
 """
 
-import atexit
-import tempfile
 
 import tensorflow as tf
 import numpy as np
 from pycocotools import cocoeval
 
-from examples.tensorflow.common.object_detection.evaluation import coco_utils
-from examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.object_detection.evaluation import coco_utils
+from beta.examples.tensorflow.common.logger import logger
 
 
 class MetricWrapper:
@@ -71,15 +69,8 @@ class COCOEvaluator:
               to absolute values (`image_info` is needed in this case).
         """
         if annotation_file:
-            if annotation_file.startswith('gs://'):
-                _, local_val_json = tempfile.mkstemp(suffix='.json')
-                tf.io.gfile.remove(local_val_json)
-                tf.io.gfile.copy(annotation_file, local_val_json)
-                atexit.register(tf.io.gfile.remove, local_val_json)
-            else:
-                local_val_json = annotation_file
             self._coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if include_mask else 'box'),
-                                                   annotation_file=local_val_json)
+                                                   annotation_file=annotation_file)
 
         self._annotation_file = annotation_file
         self._include_mask = include_mask
@@ -116,7 +107,7 @@ class COCOEvaluator:
               coco-style evaluation metrics (box and mask).
         """
         if not self._annotation_file:
-            logger.info('Thre is no annotation_file in COCOEvaluator.')
+            logger.info('There is no annotation_file in COCOEvaluator.')
             gt_dataset = coco_utils.convert_groundtruths_to_coco_dataset(self._groundtruths)
             coco_gt = coco_utils.COCOWrapper(eval_type=('mask' if self._include_mask else 'box'),
                                              gt_dataset=gt_dataset)
@@ -226,10 +217,6 @@ class COCOEvaluator:
                 sizes = np.squeeze(sizes)
                 groundtruths['height'] = sizes[:, 0]
                 groundtruths['width'] =  sizes[:, 1]
-
-            if 'num_detections' not in groundtruths:
-                num_detections = np.concatenate(groundtruths['groundtruths']['num_detections'])
-                groundtruths['num_detections'] = np.squeeze(num_detections)
 
             for k in self._required_groundtruth_fields:
                 if k not in groundtruths:
