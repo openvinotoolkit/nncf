@@ -3,7 +3,7 @@ from typing import Callable
 import pytest
 from torch import nn
 
-from nncf import NNCFConfig
+# from nncf import NNCFConfig
 from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.pruning.helpers import get_basic_pruning_config
@@ -34,7 +34,7 @@ def update_config(config, update_dict):
 
 
 class FrozenLayersTestStruct(NamedTuple):
-    config: NNCFConfig = get_quantization_config_without_range_init
+    config: 'NNCFConfig' = get_quantization_config_without_range_init
     model_creator: Callable[[], nn.Module] = TwoConvTestModel
     is_error: bool = True
 
