@@ -22,7 +22,7 @@ from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
 from nncf.layer_utils import _NNCFModuleMixin
-# from nncf.layers import NNCF_MODULES_MAP
+from nncf.layers import NNCF_MODULES_MAP
 from contextlib import contextmanager
 
 
@@ -356,20 +356,19 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
 
 
 def get_frozen_nncf_modules(model, convert_scopes_back_from_nncf_modules=False):
-    #frozen_layers = []
-    #for scope, module in model.get_nncf_modules().items():
-    #    if not module.weight.requires_grad:
-    #        frozen_layers.append((scope, module))
-    #return frozen_layers
+    frozen_layers = []
+    for scope, module in model.get_nncf_modules().items():
+        if not module.weight.requires_grad:
+            frozen_layers.append((scope, module))
+    return frozen_layers
     pass
 
 
 def convert_scope_back_from_nncf(scope):
-    # for module_name in NNCF_MODULES_MAP.keys():
-    #     if module_name in str(scope):
-    #         from nncf.dynamic_graph.context import Scope
-    #         return Scope.from_str(str(scope).replace(module_name, NNCF_MODULES_MAP[module_name]))
-    pass
+     for module_name in NNCF_MODULES_MAP.keys():
+         if module_name in str(scope):
+             from nncf.dynamic_graph.context import Scope
+             return Scope.from_str(str(scope).replace(module_name, NNCF_MODULES_MAP[module_name]))
 
 
 @contextmanager

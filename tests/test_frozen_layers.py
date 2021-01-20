@@ -3,7 +3,7 @@ from typing import Callable
 import pytest
 from torch import nn
 
-# from nncf import NNCFConfig
+from nncf import NNCFConfig
 from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.pruning.helpers import get_basic_pruning_config
@@ -48,6 +48,7 @@ TEST_PARAMS = [
     })
     , model_creator=TwoConvTestModel, is_error=False),
     FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+        "target_device": "VPU",
         "compression": {
             "algorithm": "quantization",
             "initializer": {
@@ -61,13 +62,14 @@ TEST_PARAMS = [
     )
     , model_creator=TwoConvTestModel, is_error=False),
     FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+        "target_device": "VPU",
         "compression": {
             "algorithm": "quantization",
             "initializer": {
                 "precision": {
                     "type": "manual"
-                    }
                 }
+            }
         },
         "target_scopes": ['TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]']
     })
@@ -79,9 +81,7 @@ TEST_PARAMS = [
         "algorithm": "quantization",
         "initializer": {
             "precision": {
-                "type": "hawq",
-                "bits": [4, 8],
-                "compression_ratio": 1.5
+                    "type": "manual"
                 }
             }
         }
@@ -171,15 +171,18 @@ TEST_PARAMS = [
 
 
 @pytest.mark.parametrize('params', TEST_PARAMS, ids=[str(p.config['model']) for p in TEST_PARAMS])
-def test_frozen_layers(capsys, params):
+def test_frozen_layers(mocker, params):
     model = params.model_creator()
     config = params.config
-
+    mocker.patch('nncf.quantization.algo.QuantizationBuilder._parse_init_params')
     ignored_scopes = config.get('ignored_scopes', [None])
 
     for scope in ignored_scopes:
         freeze_module(model, scope)
 
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     if params.is_error:
         with pytest.raises(RuntimeError):
             compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    else:
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
