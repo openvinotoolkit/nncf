@@ -48,6 +48,13 @@ def get_callbacks(model_checkpoint: bool = True,
     return callbacks
 
 
+def get_progress_bar(stateful_metrics: list = None):
+    # TODO: This is a workaround for tf2.4.0. Remove when fixed
+    stateful_metrics = stateful_metrics or []
+    return tf.keras.callbacks.ProgbarLogger(count_mode='steps',
+                                            stateful_metrics=stateful_metrics)
+
+
 def get_scalar_from_tensor(t: tf.Tensor) -> int:
     """Utility function to convert a Tensor to a scalar."""
     t = tf.keras.backend.get_value(t)

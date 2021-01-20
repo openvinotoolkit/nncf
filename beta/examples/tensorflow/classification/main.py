@@ -24,7 +24,7 @@ from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
-from beta.examples.tensorflow.common.callbacks import get_callbacks
+from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.model_loader import get_model
@@ -187,6 +187,9 @@ def run(config):
         model_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir)
 
+    progress_bar_callback = get_progress_bar(
+        stateful_metrics=[metric.name for metric in metrics])
+    callbacks.append(progress_bar_callback)
     callbacks.extend(compression_callbacks)
 
     validation_kwargs = {
@@ -210,6 +213,7 @@ def run(config):
     compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
+        callbacks=[progress_bar_callback],
         verbose=1)
 
     if 'export' in config.mode:
