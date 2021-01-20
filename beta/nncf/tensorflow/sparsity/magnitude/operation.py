@@ -13,10 +13,11 @@
 
 import tensorflow as tf
 
-from .functions import apply_mask
-from ...graph.utils import get_weight_by_name
-from ...layers.operation import NNCFOperation, InputType
-from ...layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from beta.nncf.tensorflow.graph.utils import get_weight_by_name
+from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
+from beta.nncf.tensorflow.layers.operation import InputType
+from beta.nncf.tensorflow.layers.operation import NNCFOperation
+from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 
 
 @NNCF_CUSTOM_OBJECTS.register()

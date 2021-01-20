@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from nncf.dynamic_graph.patch_pytorch import register_operator
 from nncf.layer_utils import COMPRESSION_MODULES
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 from nncf.utils import get_per_channel_scale_shape
 from nncf.binarization.binarize_functions import XNORBinarizeFn, DOREFABinarizeFn
 from nncf.binarization.binarize_functions import ActivationBinarizationScaleThresholdFn

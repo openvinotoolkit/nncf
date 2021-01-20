@@ -13,8 +13,8 @@
 
 import copy
 
-from examples.tensorflow.object_detection.models.retinanet_model import RetinanetModel
-from examples.tensorflow.object_detection.models.retinanet_config import RETINANET_CONFIG
+from beta.examples.tensorflow.object_detection.models.retinanet_model import RetinanetModel
+from beta.examples.tensorflow.object_detection.models.retinanet_config import RETINANET_CONFIG
 
 
 def get_predefined_config(model_name):

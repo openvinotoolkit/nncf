@@ -16,7 +16,9 @@ import networkx as nx
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from .utils import is_functional_model, is_sequential_model, get_expanded_node_name
+from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
+from beta.nncf.tensorflow.graph.utils import is_functional_model
+from beta.nncf.tensorflow.graph.utils import is_sequential_model
 
 
 def convert_keras_model_to_nxmodel(model):

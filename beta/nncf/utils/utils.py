@@ -13,7 +13,7 @@
 
 import re
 
-from ..tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 
 
 def is_ignored(node_name, ignored_scopes):

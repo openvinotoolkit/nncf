@@ -13,8 +13,8 @@
 
 import tensorflow as tf
 
-from examples.tensorflow.common.object_detection.ops import nms
-from examples.tensorflow.common.object_detection.utils import box_utils
+from beta.examples.tensorflow.common.object_detection.ops import nms
+from beta.examples.tensorflow.common.object_detection.utils import box_utils
 
 
 def multilevel_propose_rois(rpn_boxes,

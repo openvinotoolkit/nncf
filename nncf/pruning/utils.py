@@ -12,7 +12,7 @@
 """
 import math
 from collections import deque
-from typing import List
+from typing import List, Tuple
 
 import networkx as nx
 import torch
@@ -48,7 +48,7 @@ def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict):
     return None
 
 
-def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
+def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> Tuple[torch.nn.Module, Scope]:
     """
     Returns batch norm module that corresponds to module_scope convolution.
     :param target_model: NNCFNetwork to work with
@@ -60,8 +60,9 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
     bn_graph_node = get_bn_node_for_conv(graph._nx_graph, module_graph_node)
     bn_module = None
     if bn_graph_node:
+        bn_scope = bn_graph_node['op_exec_context'].scope_in_model
         bn_module = get_module_by_scope(target_model, bn_graph_node['op_exec_context'].scope_in_model)
-        return bn_module, bn_graph_node['id']
+        return bn_module, bn_scope
     return bn_module, bn_graph_node
 
 

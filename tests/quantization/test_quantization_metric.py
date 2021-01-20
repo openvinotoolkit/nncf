@@ -5,7 +5,6 @@ from collections import namedtuple
 from nncf.quantization.metrics import NetworkQuantizationShareMetric as NQSM,\
     MemoryCostMetric, ShareEdgesQuantizedDataPath
 from nncf import create_compressed_model, NNCFConfig
-from nncf.quantization.algo import QuantizerSetupType
 from tests import test_models
 
 def get_basic_quantization_config():
@@ -125,10 +124,10 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
         quantizer_setup_type='pattern_based',
         target_device='TRIAL',
         table={NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 100.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
-               NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 0.0, NQSM.ASYMMETRIC_STR: 100.0, 8: 83.33, 2: 16.66,\
+               NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 0.0, NQSM.ASYMMETRIC_STR: 100.0, 8: 100.0, 2: 0,\
                4: 0.0}, NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
                NQSM.PER_TENSOR_STR: 0.0, NQSM.SYMMETRIC_STR: 0.0,\
-               NQSM.ASYMMETRIC_STR: 0.0, 8: 72.72, 2: 18.18, 4: 9.09},\
+               NQSM.ASYMMETRIC_STR: 0.0, 8: 81.81, 2: 9.09, 4: 9.09},\
                NQSM.WEIGHTS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 100.0, NQSM.UNSIGNED_STR: 100.0,\
                NQSM.PER_TENSOR_STR: 0.0, NQSM.SYMMETRIC_STR: 100.0,\
                NQSM.ASYMMETRIC_STR: 0.0, 8: 60.0, 2: 20.0, 4: 20.0},\
@@ -153,9 +152,9 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
                4: 20.0, 6: 60.0}, NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0,\
                NQSM.UNSIGNED_STR: 100.0, NQSM.PER_TENSOR_STR: 100.0,\
                NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0,\
-               8: 83.33, 2: 16.66, 4: 0.0, 6: 0.0}, NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0,\
+               8: 100.00, 2: 0, 4: 0.0, 6: 0.0}, NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0,\
                NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0, NQSM.PER_TENSOR_STR: 0.0, NQSM.SYMMETRIC_STR: 0.0,\
-               NQSM.ASYMMETRIC_STR: 0.0, 8: 45.45, 2: 18.18, 4: 9.09, 6: 27.27}}
+               NQSM.ASYMMETRIC_STR: 0.0, 8: 54.54, 2: 9.09, 4: 9.09, 6: 27.27}}
     ),
     TestStruct(
         initializers={"precision": {
@@ -174,10 +173,10 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
                NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 100.0, NQSM.ASYMMETRIC_STR: 0.0, 8: 0.0, 2: 12.5,\
                4: 12.5, 6: 75.0}, NQSM.ACTIVATIONS_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0,\
                NQSM.UNSIGNED_STR: 100.0, NQSM.PER_TENSOR_STR: 100.0, NQSM.SYMMETRIC_STR: 100.0,\
-               NQSM.ASYMMETRIC_STR: 0.0, 8: 87.5, 2: 12.5, 4: 0.0, 6: 0.0},\
+               NQSM.ASYMMETRIC_STR: 0.0, 8: 100, 2: 0, 4: 0.0, 6: 0.0},\
                NQSM.TOTAL_RATIO_STR: {NQSM.SIGNED_STR: 0.0, NQSM.PER_CHANNEL_STR: 0.0, NQSM.UNSIGNED_STR: 0.0,\
                NQSM.PER_TENSOR_STR: 0.0, NQSM.SYMMETRIC_STR: 0.0, NQSM.ASYMMETRIC_STR: 0.0,\
-               8: 43.75, 2: 12.5, 4: 6.25, 6: 37.5}}
+               8: 50.0, 2: 6.25, 4: 6.25, 6: 37.5}}
     )
 ]
 
@@ -195,11 +194,8 @@ def test_network_quantization_share_metric(network_quantization_share_metric_tes
     config['compression']["ignored_scopes"] = network_quantization_share_metric_test_struct.ignored_scopes
     config['quantizer_setup_type'] = network_quantization_share_metric_test_struct.quantizer_setup_type
     config['target_device'] = network_quantization_share_metric_test_struct.target_device
-    cntrl, compressed_model = create_compressed_model(test_models.AlexNet(), config)
-    quantizer_setup_type = QuantizerSetupType.PATTERN_BASED if config['quantizer_setup_type'] == 'pattern_based'\
-         else QuantizerSetupType.PROPAGATION_BASED
-    qmetric = NQSM(compressed_model, cntrl.weight_quantizers,\
-         cntrl.non_weight_quantizers, quantizer_setup_type)
+    ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
+    qmetric = ctrl.non_stable_metric_collectors[0]
     qmetric.collect()
     # pylint: disable=protected-access
     qmetric_stat = qmetric._get_copy_statistics()

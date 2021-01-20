@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
 
 import numpy as np
 import random
@@ -44,7 +44,7 @@ def scopes_matched(scope_stack_0, scope_stack_1):
     return True
 
 
-def in_scope_list(scope, scope_list):
+def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
     if scope_list is None:
         return False
 
@@ -231,13 +231,13 @@ def get_per_channel_scale_shape(input_shape, is_weights):
     else:
         scale_shape[1] = input_shape[1]  # Per activation channel scales
 
-    elements = 1
-    for i in scale_shape:
-        elements *= i
-    if elements == 1:
-        return 1
-
     return scale_shape
+
+
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool) -> List[int]:
+    if not per_channel:
+        return [1]
+    return get_per_channel_scale_shape(input_shape, is_weights)
 
 
 def get_flat_tensor_contents_string(input_tensor):
@@ -296,6 +296,17 @@ def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 
+def maybe_get_iterator(obj):
+    it = None
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    if isinstance(obj, Mapping):
+        it = iteritems
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
+        it = enumerate
+    return it
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     if memo is None:
         memo = set()
@@ -303,16 +314,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     is_tuple = isinstance(obj, tuple)
     if is_tuple:
         obj = list(obj)
-
-    def maybe_get_iterator(obj):
-        it = None
-        # pylint:disable=isinstance-second-argument-not-valid-type
-        if isinstance(obj, Mapping):
-            it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
-        elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
-            it = enumerate
-        return it
 
     iterator = maybe_get_iterator(obj)
 
@@ -363,16 +364,20 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         model.train(is_original_mode_training)
 
 
-def compute_FLOPs_hook(module, input_, output, dict_to_save, name):
+def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
     if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
                            nn.ConvTranspose3d)):
         ks = module.weight.data.shape
         mac_count = np.prod(ks) * np.prod(output.shape[2:])
     elif isinstance(module, nn.Linear):
-        mac_count = input_[0].shape[1] * output.shape[-1]
+        if len(input_[0].shape) == 1:
+            # In some test cases input tensor could have dimension [N]
+            mac_count = input_[0].shape[0] * output.shape[-1]
+        else:
+            mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
     else:
         return
-    dict_to_save[name] = 2 * mac_count
+    dict_to_save[ctx.scope] = 2 * mac_count
 
 
 def add_domain(name_operator: str) -> str:

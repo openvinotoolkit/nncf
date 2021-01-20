@@ -57,7 +57,6 @@ model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
-
 def get_argument_parser():
     parser = get_common_argument_parser()
     parser.add_argument(
@@ -140,7 +139,13 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        nncf_config = register_default_init_args(nncf_config, init_loader, criterion, train_criterion_fn, config.device)
+        def autoq_eval_fn(model, eval_loader):
+            _, top5 = validate(eval_loader, model, criterion, config)
+            return top5
+
+        nncf_config = register_default_init_args(
+            nncf_config, init_loader, criterion, train_criterion_fn,
+            autoq_eval_fn, val_loader, config.device)
 
     # create model
     model = load_model(model_name,

@@ -16,9 +16,9 @@ from typing import List, Optional
 import pytest
 from addict import Dict
 
-from nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler, ExponentialSparsityScheduler, \
+from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler, ExponentialSparsityScheduler, \
     MultiStepSparsityScheduler
-from tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_config, \
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_config, \
     create_compressed_model_and_algo_for_test, get_mock_model
 
 

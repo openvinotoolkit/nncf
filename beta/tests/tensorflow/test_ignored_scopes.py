@@ -14,11 +14,11 @@
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 
-from nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.tensorflow.quantization import FakeQuantize
-from nncf.tensorflow.quantization.algorithm import ACTIVATIONS, WEIGHTS
-from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
-from tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.quantization import FakeQuantize
+from beta.nncf.tensorflow.quantization.algorithm import ACTIVATIONS, WEIGHTS
+from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from beta.tests.tensorflow.quantization.test_algorithm_quantization import get_basic_quantization_config
 
 
 def test_ignored_scopes():

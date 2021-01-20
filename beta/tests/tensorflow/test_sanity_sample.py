@@ -18,13 +18,13 @@ from operator import itemgetter
 import pytest
 import tensorflow as tf
 
-from tests.conftest import TEST_ROOT
-from tests.tensorflow.helpers import get_coco_dataset_builders
-from tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
+from beta.tests.conftest import TEST_ROOT
+from beta.tests.tensorflow.helpers import get_coco_dataset_builders
+from beta.tests.tensorflow.test_models import SequentialModel, SequentialModelNoInput
 
-from examples.tensorflow.classification import main as cls_main
-from examples.tensorflow.object_detection import main as od_main
-from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
+from beta.examples.tensorflow.classification import main as cls_main
+from beta.examples.tensorflow.object_detection import main as od_main
+from beta.examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 
 od_main.get_dataset_builders = get_coco_dataset_builders
 AVAILABLE_MODELS.update({
@@ -153,7 +153,7 @@ def test_model_eval(_config, tmp_path):
     main(convert_to_argv(args))
 
 
-@pytest.mark.dependency()
+@pytest.mark.dependency(name='tf_test_model_train')
 def test_model_train(_config, tmp_path, _case_common_dirs):
     checkpoint_save_dir = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
@@ -174,7 +174,7 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
 
 
-@pytest.mark.dependency(depends=['test_model_train'])
+@pytest.mark.dependency(depends=['tf_test_model_train'])
 def test_trained_model_eval(_config, tmp_path, _case_common_dirs):
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
@@ -191,7 +191,7 @@ def test_trained_model_eval(_config, tmp_path, _case_common_dirs):
     main(convert_to_argv(args))
 
 
-@pytest.mark.dependency(depends=['test_model_train'])
+@pytest.mark.dependency(depends=['tf_test_model_train'])
 def test_resume(_config, tmp_path, _case_common_dirs):
     checkpoint_save_dir = os.path.join(str(tmp_path), 'models')
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
@@ -215,7 +215,7 @@ def test_resume(_config, tmp_path, _case_common_dirs):
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
 
 
-@pytest.mark.dependency(depends=['test_model_train'])
+@pytest.mark.dependency(depends=['tf_test_model_train'])
 def test_trained_model_resume_train_test_export_last_ckpt(_config, tmp_path, _case_common_dirs):
     checkpoint_save_dir = os.path.join(str(tmp_path), 'models')
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
@@ -258,7 +258,7 @@ def get_export_model_name(export_format):
     return model_name
 
 
-@pytest.mark.dependency(depends=['test_model_train'])
+@pytest.mark.dependency(depends=['tf_test_model_train'])
 @pytest.mark.parametrize('export_format', FORMATS, ids=FORMATS)
 def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs):
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')

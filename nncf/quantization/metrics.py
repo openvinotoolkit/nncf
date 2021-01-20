@@ -1,6 +1,7 @@
 import numpy as np
 import networkx as nx
 from copy import deepcopy
+
 from texttable import Texttable
 from collections import deque
 
@@ -19,6 +20,12 @@ class BaseMetric:
 
     def get_metric_table(self):
         pass
+
+class NetworkQuantizationShareMetricBuildTimeInfo:
+    def __init__(self, num_potential_quantized_activations: int,
+                 num_potential_quantized_weights: int):
+        self.num_potential_quantized_activations = num_potential_quantized_activations
+        self.num_potential_quantized_weights = num_potential_quantized_weights
 
 
 class NetworkQuantizationShareMetric(BaseMetric):
@@ -53,19 +60,23 @@ class NetworkQuantizationShareMetric(BaseMetric):
     SHARE_WEIGHT_QUANTIZERS_STR = 'Placed WQs / Potential WQs'
     SHARE_ACTIVATION_QUANTIZERS_STR = 'Placed AQs / Potential AQs'
 
-    def __init__(self, compressed_model, weights_quantizers, non_weights_quantizers, quantizer_setup_type):
+    def __init__(self, compressed_model,
+                 weights_quantizers,
+                 non_weights_quantizers,
+                 quantizer_setup_type,
+                 build_time_info: NetworkQuantizationShareMetricBuildTimeInfo):
         super().__init__()
         self._compressed_model = compressed_model
         self._quantizer_setup_type = quantizer_setup_type # type: QuantizerSetupType
         self.non_weights_quantizers = {k: v.quantizer_module_ref for k, v in non_weights_quantizers.items()}
-        self.weights_quantizers = weights_quantizers
+        self.weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
         self._all_quantizations = {**self.weights_quantizers, **self.non_weights_quantizers}
         self.header = [self.PARAMS_STR, self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR]
         self.params = {self.PER_CHANNEL_STR, self.PER_TENSOR_STR, self.UNSIGNED_STR, self.SIGNED_STR,
                        self.SYMMETRIC_STR, self.ASYMMETRIC_STR}
         self.params_bits_stat = set()
-        self.num_potential_quantized_weights = len(compressed_model.get_nncf_modules())
-        self.num_potential_quantized_activations = self._get_num_potential_quantized_activations()
+        self.num_potential_quantized_weights = build_time_info.num_potential_quantized_weights
+        self.num_potential_quantized_activations = build_time_info.num_potential_quantized_activations
         self.num_placed_weight_quantizers = len(self.weights_quantizers)
         self.num_placed_activation_quantizers = len(self.non_weights_quantizers)
         self.num_all_potential_quantizer = self.num_potential_quantized_weights +\
@@ -75,22 +86,6 @@ class NetworkQuantizationShareMetric(BaseMetric):
             self.WEIGHTS_RATIO_STR: len(self.weights_quantizers),
             self.ACTIVATIONS_RATIO_STR: len(self.non_weights_quantizers),
             self.TOTAL_RATIO_STR: len(self._all_quantizations)}
-
-    def _get_num_potential_quantized_activations(self):
-        from nncf.quantization.algo import QuantizerSetupType
-        retval = 0
-        if self._quantizer_setup_type == QuantizerSetupType.PATTERN_BASED:
-            from nncf.quantization.algo import QuantizationBuilder
-            # pylint: disable=protected-access
-            default_pattern = QuantizationBuilder._make_default_quantizable_subgraph_pattern()
-            retval = len(self._compressed_model.get_post_pattern_insertion_points(default_pattern))
-        else:
-            from nncf.quantization.algo import QuantizerPropagationSolver
-            insertion_point_graph = self._compressed_model.get_insertion_point_graph()
-            prop_graph_solver = QuantizerPropagationSolver()
-            insertion_data = prop_graph_solver.run_on_ip_graph(insertion_point_graph)
-            retval = len(insertion_data)
-        return retval
 
     def collect(self):
         for quantizer in self._all_quantizations.values():
@@ -194,6 +189,7 @@ class NetworkQuantizationShareMetric(BaseMetric):
         table.add_rows(data)
         return table
 
+
 class MemoryCostMetric(BaseMetric):
     """
 
@@ -219,7 +215,7 @@ class MemoryCostMetric(BaseMetric):
     def __init__(self, compressed_model: NNCFNetwork, weights_quantizers, non_weight_quantizers):
         super().__init__()
         self._compressed_model = compressed_model
-        self._weights_quantizers = weights_quantizers
+        self._weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
         self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
         self.header = [self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR, self.SIZE_MEMORY_FP_WEIGHTS_STR,\
              self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR,\

@@ -21,7 +21,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 from .layer_utils import _NNCFModuleMixin
 
 
@@ -196,15 +196,17 @@ UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
-def register_module(cls, *quantizable_field_names: str):
-    # Will work for `weight` attributes only. Should later extend to registering
+def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
+    # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary
-    UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
-    nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
-    NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
-
-    return cls
-
+    def wrap(cls):
+        UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
+        nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
+        NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
+        if ignored_algorithms:
+            setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
+        return cls
+    return wrap
 
 def add_nncf_functionality_to_user_module(module: torch.nn.Module):
     user_class = module.__class__

@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 from functools import partial
+from random import random
 from torch.utils import model_zoo
 from torchvision.models import MobileNetV2, mobilenet_v2, resnet50, inception_v3
 from torchvision.transforms import transforms
@@ -38,25 +39,26 @@ from nncf.dynamic_graph.context import Scope, ScopeElement
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
-from nncf.quantization.algo import QuantizerSetupType
+from nncf.quantization.structs import QuantizerSetupType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
-from nncf.quantization.hw_precision_constraints import HWPrecisionConstraints
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizerConfig, QuantizersSwitcher
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizersSwitcher, QuantizerConfig
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
-from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode, HAWQPrecisionInitializer
-from nncf.quantization.precision_init.manual_init import WeightQuantizersHandler
+from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode, HAWQPrecisionInitializer, \
+    TraceOrderBitwidthMatcher
+from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
 from nncf.quantization.precision_init.perturbations import PerturbationObserver, Perturbations
 from nncf.quantization.precision_init.traces_order import TracesOrder, TracesPerLayer
 from nncf.quantization.quantizer_id import WeightQuantizerId
+from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.conftest import TEST_ROOT, EXAMPLES_DIR
 from tests.helpers import create_compressed_model_and_algo_for_test, create_conv, \
     create_mock_dataloader, BasicConvTestModel
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
     get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
-    get_squeezenet_quantization_config
+    get_squeezenet_quantization_config, create_rank_dataloader
 from tests.test_compressed_graph import check_graph
 
 # pylint:disable=unused-import
@@ -104,12 +106,10 @@ def compare_with_ref_if_exists(actual_state, path_to_ref):
             json.dump(actual_state, f)
 
 
-class HAWQConfigBuilder:
-    def __init__(self, config_creator_fn: Callable = None, batch_size=10, num_data_points=100, image_size=10):
+class BaseConfigBuilder:
+    def __init__(self, config_creator_fn: Callable = None):
         if config_creator_fn:
             self._config = config_creator_fn()
-        else:
-            self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
         self._options: Dict[str, str] = OrderedDict()
         self._extra_params: str = ''
 
@@ -117,17 +117,6 @@ class HAWQConfigBuilder:
         self._config['compression']['initializer']['precision']['compression_ratio'] = ratio
         self._options['ratio'] = str(ratio)
         return self
-
-    def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
-        self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
-        self._options['mode'] = str(mode.value)
-        return self
-
-    def strict_mode(self):
-        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.STRICT)
-
-    def liberal_mode(self):
-        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.LIBERAL)
 
     def _with_quantizer_setup_type(self, setup_type: QuantizerSetupType):
         self._config['quantizer_setup_type'] = setup_type.value
@@ -158,16 +147,13 @@ class HAWQConfigBuilder:
         return self
 
     def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value).prop_based().strict_mode()
+        return self._set_target_device(HWConfigType.VPU.value).prop_based()
 
     def for_cpu(self):
         return self._set_target_device(HWConfigType.CPU.value).prop_based()
 
     def for_trial(self):
         return self._set_target_device('TRIAL').prop_based()
-
-    def none_device(self):
-        self._config["target_device"] = None
 
     def build(self):
         return self._config
@@ -185,6 +171,32 @@ class HAWQConfigBuilder:
     def filename_suffix(self) -> str:
         ordered_options = OrderedDict(sorted(self._options.items()))
         return '__'.join(['_'.join([k, v]) for k, v in ordered_options.items()])
+
+
+class HAWQConfigBuilder(BaseConfigBuilder):
+    def __init__(self, config_creator_fn: Callable = None, batch_size=10, num_data_points=100, image_size=10):
+        super().__init__(config_creator_fn)
+        if not config_creator_fn:
+            self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
+        self.num_data_points = num_data_points
+
+    def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
+        self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
+        self._options['mode'] = str(mode.value)
+        return self
+
+    def strict_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.STRICT)
+
+    def liberal_mode(self):
+        return self._set_bitwidth_assignment_mode(BitwidthAssignmentMode.LIBERAL)
+
+    def build(self):
+        return self._config
+
+    def for_vpu(self):
+        super().for_vpu()
+        return self.strict_mode()
 
     @staticmethod
     def create_hawq_test_config(batch_size=10, num_data_points=100, image_size=10):
@@ -231,8 +243,21 @@ def ssd_vgg_512_test():
 
 
 def get_avg_traces(model, init_device: str):
-    num_traces = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
-    return torch.randperm(num_traces).to(init_device) + 1
+    num_layers = len(get_all_modules_by_type(model, ['Conv2d', 'Linear']))
+    return torch.randperm(num_layers).to(init_device) + 1
+
+
+def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
+    model = model.cuda()
+    all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
+    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
+    # graph may not contain some quantizers (e.g. in staged scenario)
+    quantizer_switcher.enable_quantizers()
+    model.rebuild_graph()
+    groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
+    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
+                                            groups_of_adjacent_quantizers)
+    check_graph(graph, path_to_dot, graph_dir, sort_dot_graph=False)
 
 
 class HAWQTestStruct(NamedTuple):
@@ -245,7 +270,7 @@ class HAWQTestStruct(NamedTuple):
         return '_'.join([self.model_creator.__name__, str(self.config_builder)])
 
 
-TEST_PARAMS = (
+HAWQ_TEST_PARAMS = (
     HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
@@ -277,7 +302,7 @@ TEST_PARAMS = (
 )
 
 
-@pytest.mark.parametrize('params', TEST_PARAMS, ids=[str(p) for p in TEST_PARAMS])
+@pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
     model = params.model_creator()
@@ -288,20 +313,149 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
     config = register_default_init_args(config, train_loader, criterion)
 
-    mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces')
-    mocked_trace.return_value = params.avg_traces_creator(model, 'cuda')
+    mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
+                                autospec=True)
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, 'cuda')
+
+    # There may be less traces required to be calculated during HAWQ than there are weightable layers.
+    def side_effect_fn(self, max_iter=500, tolerance=1e-5):
+        #pylint:disable=protected-access
+        return pregen_traces_for_all_layers[:len(self._parameter_handler.parameters)]
+
+    mocked_trace.side_effect = side_effect_fn
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    model = model.cuda()
-    all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
-    quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
-    # graph may not contain some quantizers (e.g. in staged scenario)
-    quantizer_switcher.enable_quantizers()
-    model.rebuild_graph()
-    groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers(algo_ctrl)
-    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
-                                            groups_of_adjacent_quantizers)
+
     path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
-    check_graph(graph, path_to_dot, os.path.join('quantized', 'hawq'), sort_dot_graph=False)
+    graph_dir = os.path.join('quantized', 'hawq')
+    check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
+
+
+class AutoQConfigBuilder(BaseConfigBuilder):
+    def __init__(self, config_creator_fn: Callable = None, batch_size=10, image_size=10, num_channels=3,
+                 num_init_samples=1):
+        super().__init__(config_creator_fn)
+        if not config_creator_fn:
+            self._config = self.create_autoq_test_config(batch_size, image_size, num_channels,
+                                                         num_init_samples=num_init_samples)
+        self.for_vpu()
+
+    def eval_subset_ratio(self, eval_subset_ratio):
+        self._options['eval_subset_ratio'] = str(eval_subset_ratio)
+        self._config['compression']['initializer']['precision']['eval_subset_ratio'] = eval_subset_ratio
+        return self
+
+    def iter_number(self, iter_number):
+        self._options['iter_number'] = str(iter_number)
+        self._config['compression']['initializer']['precision']['iter_number'] = iter_number
+        return self
+
+    def warmup_iter_number(self, warmup_iter_number):
+        self._options['warmup_iter_number'] = str(warmup_iter_number)
+        self._config['compression']['initializer']['precision']['warmup_iter_number'] = warmup_iter_number
+        return self
+
+    @staticmethod
+    def create_autoq_test_config(batch_size=10, image_size=10, num_channels=3, num_init_samples=1):
+        config = get_quantization_config_without_range_init()
+        config['input_info'] = {
+            "sample_size": [batch_size, num_channels, image_size, image_size],
+        }
+        config['batch_size'] = batch_size
+        config['compression'].update({
+            'initializer': {
+                'precision': {
+                    "type": "autoq",
+                    "bits": [2, 4, 8],
+                    "iter_number": 2,
+                    "compression_ratio": 0.15,
+                    "eval_subset_ratio": 1.0,
+                    "warmup_iter_number": 1
+                },
+                'range': {
+                    'num_init_samples': num_init_samples
+                },
+                'batchnorm_adaptation': {
+                    'num_bn_adaptation_samples': 0,
+                    'num_bn_forget_samples': 0
+                }
+            }})
+        return config
+
+
+class AutoQTestStruct(NamedTuple):
+    model_creator: Callable[[], nn.Module] = mobilenet_v2
+    config_builder: AutoQConfigBuilder = AutoQConfigBuilder().for_vpu()
+    filename_suffix: str = 'hw_config_vpu'
+
+    def __str__(self):
+        return '_'.join([self.model_creator.__name__, str(self.config_builder)])
+
+
+RATIO = 0.4
+AUTOQ_TEST_PARAMS = (
+    AutoQTestStruct(config_builder=AutoQConfigBuilder()),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().with_ratio(RATIO).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(config_builder=AutoQConfigBuilder().eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=squeezenet1_1,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 224, 224])),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder()),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().iter_number(4).warmup_iter_number(2)),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().with_ratio(RATIO)),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=resnet50,
+                    config_builder=AutoQConfigBuilder().with_ratio(RATIO).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=inception_v3,
+                    config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).with_ratio(RATIO)),
+    AutoQTestStruct(model_creator=inception_v3,
+                    config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).
+                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).eval_subset_ratio(RATIO)),
+    AutoQTestStruct(model_creator=ssd_vgg_512_test,
+                    config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).with_ratio(RATIO)),
+)
+
+
+@pytest.mark.parametrize('params', AUTOQ_TEST_PARAMS, ids=[str(p) for p in AUTOQ_TEST_PARAMS])
+def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
+    config = params.config_builder.build()
+    model = params.model_creator()
+    config['log_dir'] = str(tmp_path)
+
+    if not dataset_dir:
+        dataset_dir = str(tmp_path)
+    train_loader, _ = create_test_dataloaders(config, dataset_dir)
+
+    from nncf.automl.agent.ddpg.ddpg import DDPG
+    random_action_spy = mocker.spy(DDPG, 'random_action')
+    select_action_spy = mocker.spy(DDPG, 'select_action')
+
+    from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
+    autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
+
+    config = register_default_init_args(config, train_loader=train_loader,
+                                        autoq_eval_fn=lambda *x: random(),
+                                        autoq_eval_loader=train_loader)
+    model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    bw_init_config = config['compression']['initializer']['precision']
+    learning_iter_number = bw_init_config['iter_number'] - bw_init_config['warmup_iter_number']
+
+    experimental_ctrl = autoq_obj_init_spy.call_args[0][1]
+    n_quantizer = len(experimental_ctrl.all_quantizations)
+
+    assert random_action_spy.call_count == bw_init_config['warmup_iter_number'] * n_quantizer
+    assert select_action_spy.call_count == learning_iter_number * (n_quantizer + 1) + bw_init_config[
+        'warmup_iter_number']
+
+    path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
+    graph_dir = os.path.join('quantized', 'autoq')
+    check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
 
 
 def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
@@ -322,10 +476,9 @@ PrecisionConstraintsTestParams = namedtuple('PrecisionConstraintsTestParams',
 
 
 def get_mock_precision_constraints(constraints, ordered_weight_keys):
-    hw_precision_constraints = HWPrecisionConstraints(True)
+    hw_precision_constraints = HardwareQuantizationConstraints()
     for key, bits in zip(ordered_weight_keys, constraints):
-        bit_constraints = [QuantizerConfig(bits=bitwidth) for bitwidth in bits]
-        hw_precision_constraints.add(key, bit_constraints)
+        hw_precision_constraints.add(key, set(bits))
     return hw_precision_constraints
 
 
@@ -415,7 +568,7 @@ def get_size_of_search_space(m, L):
     return ref_num
 
 
-def test_constrained_bit_configs():
+def test_get_non_decreasing_bit_sequences():
     bits = [4, 2, 8]
     L = 4
     m = len(bits)
@@ -430,7 +583,10 @@ def test_constrained_bit_configs():
                 break
         if is_ok:
             ref_configs.append(list(bit_config))
-    actual_config = HAWQPrecisionInitializer.get_configs_constrained_by_traces_order(bits, L)
+
+    order = TracesOrder(list(range(L)))
+    matcher = TraceOrderBitwidthMatcher(bits, order)
+    actual_config = matcher.get_all_non_decreasing_bit_sequences()
     ref_num = get_size_of_search_space(m, L)
     assert len(ref_configs) == ref_num
     assert len(actual_config) == ref_num
@@ -460,7 +616,7 @@ def test_disable_quantizer_gradients():
 
 def test_enable_quantizer_gradients():
     switcher, params_to_restore, model, ctrl, origi_requires_grad_per_param = disable_quantizer_gradients()
-    quantized_modules = ctrl.quantized_weight_modules_registry
+    quantized_modules = ctrl.weight_quantizers
     HAWQPrecisionInitializer.restore_disabled_gradients(switcher, model, quantized_modules, params_to_restore)
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     assert origi_requires_grad_per_param == actual_requires_grad_per_param
@@ -480,7 +636,7 @@ def disable_quantizer_gradients():
     quantizers_switcher = QuantizersSwitcher(list(all_quantizations.values()))
     params_to_restore = HAWQPrecisionInitializer.disable_all_gradients_except_weights_of_quantized_modules(
         quantizers_switcher,
-        compression_ctrl.quantized_weight_modules_registry,
+        compression_ctrl.weight_quantizers,
         model,
         get_scopes_of_skipped_weight_quantizers())
     return quantizers_switcher, params_to_restore, model, compression_ctrl, original_requires_grad_per_param
@@ -492,11 +648,13 @@ def get_path_to_bitwidth_dump(tmp_path, rank):
 
 
 def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
-    data_loader = distributed_init_test_default(gpu, ngpus_per_node, config)
+    distributed_init_test_default(gpu, ngpus_per_node, config)
+    data_loader = create_rank_dataloader(config, gpu)
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, data_loader, criterion)
+    config = register_default_init_args(config, data_loader, criterion,
+                                        autoq_eval_fn=lambda *x: 0, autoq_eval_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
@@ -509,10 +667,10 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     torch.save(act_bitwidth_per_scope, str(out_file_path))
 
 
-def test_hawq_broadcast_avg_traces_in_distributed_mode(tmp_path):
-    num_data_points = 10
-    batch_size = 2
-    config = HAWQConfigBuilder(batch_size=batch_size, num_data_points=num_data_points, image_size=224).build()
+@pytest.mark.parametrize('config_builder', [HAWQConfigBuilder(batch_size=2, num_data_points=10).for_trial(),
+                                            AutoQConfigBuilder(batch_size=2).for_trial()])
+def test_can_broadcast_initialized_precisions_in_distributed_mode(config_builder, tmp_path):
+    config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
     torch.multiprocessing.spawn(hawq_dumping_worker,
@@ -559,23 +717,28 @@ def test_hawq_manual_configs(manual_config_params):
 
 
 @pytest.mark.parametrize(('method_name', 'expected_behavior'),
-                         [
-                             ('_calc_traces', pytest.raises(RuntimeError)),
-                             ('_filter_configs_by_precision_constraints', pytest.warns(RuntimeWarning))]
+                         [('_calc_traces', pytest.raises(RuntimeError))]
                          )
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
     config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).build()
+    config['compression']['initializer']['range']['num_init_samples'] = 0
     config['quantizer_setup_type'] = 'pattern_based'
     model = BasicConvTestModel()
     mock_train_loader = mocker.stub()
     mock_train_loader.batch_size = 1
-    config = register_default_init_args(config, mock_train_loader, mocker.stub())
+    config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=mocker.stub(),
+                                                                 criterion=mocker.stub(),
+                                                                 data_loader=mock_train_loader,
+                                                                 device='cuda')])
     mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
-    mocker.patch('nncf.quantization.algo.QuantizationController._do_range_init')
-    mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
+    mocked_calc_traces = mocker.patch(
+        'nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
+    stub = mocker.stub()
+    stub.traces_order = TracesOrder([0])
+    mocked_calc_traces.return_value = stub
 
-    mocked_trace = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.' + method_name)
-    mocked_trace.return_value = None
+    mocked_method = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.' + method_name)
+    mocked_method.return_value = None
 
     with expected_behavior:
         create_compressed_model_and_algo_for_test(model, config)
@@ -584,26 +747,37 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
 def test_check_hawq_dump(mocker, tmp_path):
     tensor1 = torch.Tensor([1])
     tensor2 = torch.Tensor([2])
-    bitwidth1 = 2
-    bitwidth2 = 4
+    qconf1 = QuantizerConfig(bits=2)
+    qconf2 = QuantizerConfig(bits=4)
     id_ = 0
-    bits_configurations = [[bitwidth1], [bitwidth2]]
+    quantizer_configurations = [[qconf1, qconf1], [qconf2, qconf2]]
     flops_per_config = [tensor1.item(), tensor2.item()]
     choosen_config_index = id_
     configuration_metric = [tensor1, tensor2]
     perturbations = Perturbations()
-    perturbations.add(id_, bitwidth1, tensor1)
-    perturbations.add(id_, bitwidth2, tensor2)
-    observer = PerturbationObserver(mocker.stub())
-    observer.perturbation = tensor1
-    observer.numels = id_
-    observer.input_norm = id_
-    weight_observers = [observer]
+    perturbations.add(id_, qconf1, tensor1)
+    perturbations.add(id_, qconf2, tensor2)
+    perturbations.add(id_ + 1, qconf1, tensor2)
+    perturbations.add(id_ + 1, qconf2, tensor1)
+
+    observer1 = PerturbationObserver(mocker.stub())
+    observer1.perturbation = tensor1
+    observer1.numels = id_
+    observer1.input_norm = id_
+
+    observer2 = PerturbationObserver(mocker.stub())
+    observer2.perturbation = tensor2
+    observer2.numels = id_
+    observer2.input_norm = id_
+    weight_observers = [observer1, observer2]
     traces_per_layer = TracesPerLayer(torch.cat((tensor1, tensor2)))
 
     set_debug_log_dir(str(tmp_path))
-    hawq_debugger = HAWQDebugger(bits_configurations, perturbations, weight_observers, traces_per_layer,
-                                 [bitwidth1, bitwidth2])
+    hawq_debugger = HAWQDebugger(quantizer_configurations, perturbations,
+                                 quantizer_configurations,
+                                 [weight_observers, weight_observers],
+                                 traces_per_layer,
+                                 [qconf1.bits, qconf2.bits])
 
     hawq_debugger.dump_metric_MB(configuration_metric)
     hawq_debugger.dump_metric_flops(configuration_metric, flops_per_config, choosen_config_index)
@@ -649,18 +823,17 @@ def test_quantization_configs__with_precisions_list():
 
     ref_bits = [('ModelForTest/NNCFConv2d[conv1]module_weight', 2),
                 ('ModelForTest/NNCFConv2d[conv2]module_weight', 4),
-                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0', 6),
-                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0', 6),
-                ('ModelForTest/NNCFConv2d[conv1]module_input', 2),
-                ('ModelForTest/NNCFConv2d[conv2]module_input', 4)]
+                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0|OUTPUT', 6),
+                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0|OUTPUT', 6),
+                ('/nncf_model_input_0|OUTPUT', 6)]
 
     for key, quantizer in compression_ctrl.all_quantizations.items():
         expected_bit = [ref_bit for (name, ref_bit) in ref_bits if name == str(key)][0]
         assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(key)
 
-    ref_rows = [['2', '16.667', '16.667', '33.333'],
-                ['4', '16.667', '16.667', '33.333'],
-                ['6', '0', '33.333', '33.333']]
+    ref_rows = [['2', '20', '0', '20'],
+                ['4', '20', '0', '20'],
+                ['6', '0', '60', '60']]
     table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
     # pylint: disable=protected-access
     assert table._rows == ref_rows
@@ -675,7 +848,7 @@ def get_quantization_config_with_ignored_scope():
 @pytest.mark.parametrize(('config_creator', 'ref_values'), (
     [
         get_quantization_config_without_range_init,
-        (1.75, pytest.approx(1.07, abs=1e-2), (1, 2), (1, 4), (1, 1.12))
+        (1.25, pytest.approx(1.42, abs=1e-2), (1, 2), (1, 4), (1, pytest.approx(1.8181, abs=1e-4)))
     ],
     [
         get_quantization_config_with_ignored_scope,
@@ -696,14 +869,15 @@ def test_flops(config_creator, ref_values):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
     quantizers = compression_ctrl.weight_quantizers
 
-    handler = WeightQuantizersHandler(model, quantizers, HWPrecisionConstraints(True))
+    handler = WeightQuantizersHandler(model, quantizers, HardwareQuantizationConstraints())
     flops_counter = CompressionRatioCalculator(model, handler)
 
     assert flops_counter.ratio_for_bits_configuration([4, 8]) == ref_values[0]
     assert flops_counter.ratio_for_bits_configuration([8, 4]) == ref_values[1]
     assert flops_counter.ratio_limits([4, 8]) == ref_values[2]
     assert flops_counter.ratio_limits([2, 4, 8]) == ref_values[3]
-    constraints = HWPrecisionConstraints(True).add(list(quantizers)[0], [QuantizerConfig(bits=8)])
+    constraints = HardwareQuantizationConstraints()
+    constraints.add(list(quantizers)[0], {8})
     assert flops_counter.ratio_limits([2, 8], constraints) == ref_values[4]
 
 
@@ -720,5 +894,5 @@ def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
                                                              resuming_state_dict=model_save.state_dict())
     for quantizer_info in ctrl_load.non_weight_quantizers.values():
         assert not quantizer_info.quantizer_module_ref.is_enabled_quantization()
-    for quantizer in ctrl_load.weight_quantizers.values():
-        assert quantizer.is_enabled_quantization()
+    for quantizer_info in ctrl_load.weight_quantizers.values():
+        assert quantizer_info.quantizer_module_ref.is_enabled_quantization()

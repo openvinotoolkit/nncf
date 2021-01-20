@@ -1,5 +1,5 @@
 import torch.nn as nn
-from .registry import Registry
+from nncf.common.utils.registry import Registry
 
 
 COMPRESSION_MODULES = Registry('compression modules')
@@ -14,8 +14,17 @@ class ProxyModule:
 
 
 class _NNCFModuleMixin:
+    """Default class for modules that will be optimized by NNCF.
+
+        Attributes:
+            op_func_name    Name of corresponding torch function.
+            target_weight_dim_for_compression   Target dimension of weights that will be compressed in some algorithms.
+            ignored_algorithms   List of algorithms that will skip the module.
+        """
+
     op_func_name = ""
     target_weight_dim_for_compression = 0
+    ignored_algorithms = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,6 +56,10 @@ class _NNCFModuleMixin:
 
     def remove_post_forward_operation(self, key):
         return self.post_ops.pop(key)
+
+    def reset(self):
+        self.pre_ops.clear()
+        self.post_ops.clear()
 
     def forward(self, *args):
         proxy_module = ProxyModule(self)

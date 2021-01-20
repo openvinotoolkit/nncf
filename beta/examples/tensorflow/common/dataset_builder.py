@@ -15,8 +15,8 @@ from abc import ABC, abstractmethod
 
 import tensorflow_datasets as tfds
 
-from examples.tensorflow.common.logger import logger
-from examples.tensorflow.common.utils import set_hard_limit_num_open_files
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.utils import set_hard_limit_num_open_files
 
 
 class BaseDatasetBuilder(ABC):

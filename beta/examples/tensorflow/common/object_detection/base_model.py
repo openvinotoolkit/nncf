@@ -15,7 +15,8 @@ import abc
 import re
 
 import tensorflow as tf
-from examples.tensorflow.common.object_detection import checkpoint_utils
+
+from beta.examples.tensorflow.common.object_detection import checkpoint_utils
 
 
 def _make_filter_trainable_variables_fn(frozen_variable_prefix):

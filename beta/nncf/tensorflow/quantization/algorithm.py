@@ -13,22 +13,29 @@
 
 import networkx as nx
 
-from .layers import FakeQuantize
-from .config import QuantizerConfig, QuantizationMode, QuantizationConstraints
-from .initializers.minmax import MinMaxInitializer
-from ..algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from ..graph.utils import get_original_name_and_instance_index
-from ..layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
-from ..layers.common import LAYERS_WITH_WEIGHTS, ELEMENTWISE_LAYERS, LAYERS_AGNOSTIC_TO_DATA_PRECISION
-from ...api.compression import CompressionAlgorithmBuilder, CompressionAlgorithmController
-from ..graph.converter import convert_keras_model_to_nxmodel
-from ..graph.pattern_matching import search_all
-from ..graph import patterns as p
-from ..graph.transformations.layout import TransformationLayout
-from ..graph.transformations.commands import InsertionCommand, AfterLayer, LayerWeight,\
-    TransformationPriority
-from ...utils.logger import logger
-from ...utils.utils import is_ignored
+from beta.nncf.api.compression import CompressionAlgorithmBuilder
+from beta.nncf.api.compression import CompressionAlgorithmController
+from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
+from beta.nncf.tensorflow.graph import patterns as p
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
+from beta.nncf.tensorflow.graph.pattern_matching import search_all
+from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.transformations.commands import InsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import AfterLayer
+from beta.nncf.tensorflow.graph.transformations.commands import LayerWeight
+from beta.nncf.tensorflow.graph.transformations.commands import TransformationPriority
+from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
+from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
+from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
+from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from beta.nncf.tensorflow.quantization.config import QuantizerConfig
+from beta.nncf.tensorflow.quantization.config import QuantizationMode
+from beta.nncf.tensorflow.quantization.config import QuantizationConstraints
+from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
+from beta.nncf.tensorflow.quantization.layers import FakeQuantize
+from beta.nncf.utils.logger import logger
+from beta.nncf.utils.utils import is_ignored
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"

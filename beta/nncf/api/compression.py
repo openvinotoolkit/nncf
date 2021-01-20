@@ -11,9 +11,9 @@
  limitations under the License.
 """
 
-from ..tensorflow.graph.model_transformer import ModelTransformer
-from ..configs.config import Config
-from ..tensorflow.utils.save import save_model
+from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
+from beta.nncf.configs.config import Config
+from beta.nncf.tensorflow.utils.save import save_model
 
 
 class CompressionLoss:

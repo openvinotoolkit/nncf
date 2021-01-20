@@ -10,12 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict
-from typing import List, Tuple, NamedTuple
+from typing import List, Tuple, NamedTuple, Dict
 
 from nncf.quantization.layers import BaseQuantizer
-from ..quantizer_id import QuantizerId
-from ..quantizer_propagation import QuantizersBetweenQuantizableLayers
+from nncf.quantization.quantizer_id import QuantizerId
+from nncf.quantization.quantizer_setup import QuantizationPointId, QuantizerSetupBase
 
 
 class AdjacentQuantizers(NamedTuple):
@@ -24,46 +23,42 @@ class AdjacentQuantizers(NamedTuple):
 
 
 class GroupsOfAdjacentQuantizers:
-    def __init__(self, quantization_ctrl: 'QuantizationController'):
-        repeated_groups = []
-        non_weight_quantizers = quantization_ctrl.non_weight_quantizers
-        sorted_quantizers = OrderedDict(sorted(non_weight_quantizers.items(), key=lambda x: str(x[0])))
-        for quantizer_id, quantizer_info in sorted_quantizers.items():
-            group = quantizer_info.quantizers_between_quantizable_layers  # type: QuantizersBetweenQuantizableLayers
-            if group:
-                repeated_groups.append(group)
-
+    def __init__(self):
         self._quantizer_per_group_id = {}
         self._groups_of_adjacent_quantizers: List[AdjacentQuantizers] = []
 
-        unique_groups = list(dict.fromkeys(repeated_groups))
+    def get_group_id_for_quantizer(self, quantizer_id: QuantizerId):
+        return self._quantizer_per_group_id.get(quantizer_id, None)
 
-        for i, group in enumerate(unique_groups):
-            quantized_module_scopes = group.quantized_module_scopes
-            paired_wq = []
-            for scope in quantized_module_scopes:
-                for quantizer_id, quantizer in quantization_ctrl.weight_quantizers.items():
-                    if scope == quantizer_id.get_scope():
-                        paired_wq.append((quantizer_id, quantizer))
-                        self._quantizer_per_group_id[id(quantizer)] = i
-                        break
-            paired_aq = []
-            for ia_op_ctx in group.activation_quantizer_ctxs:
-                for quantizer_id, quantizer_info in quantization_ctrl.non_weight_quantizers.items():
-                    if ia_op_ctx == quantizer_id.ia_op_exec_context:
-                        quantizer = quantizer_info.quantizer_module_ref
-                        paired_aq.append((quantizer_id, quantizer))
-                        self._quantizer_per_group_id[id(quantizer)] = i
-                        break
-
-            self._groups_of_adjacent_quantizers.append(AdjacentQuantizers(paired_aq, paired_wq))
-
-    def get_group_id_for_quantizer(self, quantizer: BaseQuantizer):
-        qid = id(quantizer)
-        return self._quantizer_per_group_id.get(qid, None)
+    def get_adjacent_quantizers_by_group_id(self, group_id):
+        return self._groups_of_adjacent_quantizers[group_id].weight_quantizers + \
+                self._groups_of_adjacent_quantizers[group_id].activation_quantizers
 
     def __iter__(self):
         return iter(self._groups_of_adjacent_quantizers)
 
     def __bool__(self):
         return bool(self._groups_of_adjacent_quantizers) and bool(self._quantizer_per_group_id)
+
+    def __getitem__(self, group_id):
+        return self._groups_of_adjacent_quantizers[group_id]
+
+    def parse_from_quantizer_setup(self, all_quantizations: Dict[QuantizerId, BaseQuantizer],
+                                   quantizer_setup: QuantizerSetupBase,
+                                   quantization_point_id_vs_quantizer_id: Dict[QuantizationPointId, QuantizerId]):
+
+        for group_idx, group in enumerate(quantizer_setup.shared_input_operation_set_groups):
+            act_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
+            wt_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
+            for qp_id in group:
+                quant_id = quantization_point_id_vs_quantizer_id[qp_id]
+                quantizer_module = all_quantizations[quant_id]
+                resulting_tuple = (quant_id, quantizer_module)
+                if quantizer_setup.quantization_points[qp_id].is_weight_quantization_point():
+                    wt_quant_tuples.append(resulting_tuple)
+                elif quantizer_setup.quantization_points[qp_id].is_activation_quantization_point():
+                    act_quant_tuples.append(resulting_tuple)
+                self._quantizer_per_group_id[quant_id] = group_idx
+
+            adj_quants = AdjacentQuantizers(act_quant_tuples, wt_quant_tuples)
+            self._groups_of_adjacent_quantizers.append(adj_quants)

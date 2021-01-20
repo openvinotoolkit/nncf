@@ -88,17 +88,23 @@ class GraphBuilder:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
-    def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None) -> 'NNCFGraph':
+    def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
+                    as_eval: bool = False) -> 'NNCFGraph':
         sd = deepcopy(model.state_dict())
 
         from nncf.dynamic_graph.context import TracingContext
         if context_to_use is None:
             context_to_use = TracingContext()
 
+        from nncf.utils import training_mode_switcher
         context_to_use.base_module_thread_local_replica = model
         with context_to_use as _ctx:
             with torch.no_grad():
-                self.custom_forward_fn(model)
+                if as_eval:
+                    with training_mode_switcher(model, is_training=False):
+                        self.custom_forward_fn(model)
+                else:
+                    self.custom_forward_fn(model)
         model.load_state_dict(sd)
 
         graph = context_to_use.graph

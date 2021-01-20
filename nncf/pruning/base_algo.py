@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
+from typing import Dict, List
 
 from functools import partial, update_wrapper
 from texttable import Texttable
@@ -19,9 +19,9 @@ from torch import nn
 from nncf.compression_method_api import CompressionAlgorithmBuilder, \
     CompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFNode
-from nncf.model_utils import get_module_by_scope
+from nncf.dynamic_graph.graph import NNCFNode
 from nncf.module_operations import UpdateWeight
+from nncf.model_utils import get_module_by_scope
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
@@ -32,16 +32,17 @@ from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES
 
 
 class BatchNormInfo:
-    def __init__(self, module: nn.Module, nncf_id: int):
+    def __init__(self, module_scope: Scope, module: nn.Module, nncf_id: int):
         self.module = module
+        self.module_scope = module_scope
         self.nncf_node_id = nncf_id
 
 
 class PrunedModuleInfo:
     BN_MODULE_NAME = 'bn_module'
 
-    def __init__(self, module_name: str, module: nn.Module, operand, related_modules: Dict, node_id: int):
-        self.module_name = module_name
+    def __init__(self, module_scope: Scope, module: nn.Module, operand, related_modules: Dict, node_id: int):
+        self.module_scope = module_scope
         self.module = module
         self.operand = operand
         self.related_modules = related_modules
@@ -80,12 +81,8 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
         self.pruned_module_groups_info = []
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        insertion_commands = self._prune_weights(target_model)
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
-        target_model.register_algorithm(self)
-        return target_model
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return self._prune_weights(target_model)
 
     def _prune_weights(self, target_model: NNCFNetwork):
         graph = target_model.get_original_graph()
@@ -93,7 +90,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
         device = next(target_model.parameters()).device
         insertion_commands = []
-        self.pruned_module_groups_info = Clusterization('module_name')
+        self.pruned_module_groups_info = Clusterization('module_scope')
 
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
@@ -110,10 +107,8 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                 hook = UpdateWeight(operation).to(device)
                 insertion_commands.append(
                     InsertionCommand(
-                        InsertionPoint(
-                            InputAgnosticOperationExecutionContext("", module_scope, 0),
-                            InsertionType.NNCF_MODULE_PRE_OP
-                        ),
+                        InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
+                                       module_scope=module_scope),
                         hook,
                         OperationPriority.PRUNING_PRIORITY
                     )
@@ -121,10 +116,11 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
                 related_modules = {}
                 if self.prune_batch_norms:
-                    bn_module, bn_id = get_bn_for_module_scope(target_model, module_scope)
-                    related_modules[PrunedModuleInfo.BN_MODULE_NAME] = BatchNormInfo(bn_module, bn_id)
+                    bn_module, bn_scope = get_bn_for_module_scope(target_model, module_scope)
+                    related_modules[PrunedModuleInfo.BN_MODULE_NAME] = BatchNormInfo(module_scope,
+                                                                                     bn_module, bn_scope)
 
-                minfo = PrunedModuleInfo(module_scope_str, module, hook.operand, related_modules, node.node_id)
+                minfo = PrunedModuleInfo(module_scope, module, hook.operand, related_modules, node.node_id)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self.pruned_module_groups_info.add_cluster(cluster)
@@ -172,6 +168,9 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         raise NotImplementedError
 
     def set_pruning_rate(self, pruning_rate):
+        raise NotImplementedError
+
+    def step(self, next_step):
         raise NotImplementedError
 
     def zero_grads_for_pruned_modules(self):
@@ -255,7 +254,7 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
         for minfo in self.pruned_module_groups_info.get_all_nodes():
             drow = {h: 0 for h in header}
-            drow["Name"] = minfo.module_name
+            drow["Name"] = str(minfo.module_scope)
             drow["Weight's Shape"] = list(minfo.module.weight.size())
 
             drow["Mask Shape"] = list(self.mask_shape(minfo))
@@ -273,8 +272,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         stats["pruning_statistic_by_module"] = table
         return self.add_algo_specific_stats(stats)
 
-    @staticmethod
-    def add_algo_specific_stats(stats):
+
+    def add_algo_specific_stats(self, stats):
         return stats
 
     def get_stats_for_pruned_modules(self):
@@ -303,8 +302,8 @@ class BasePruningAlgoController(CompressionAlgorithmController):
                 bn_info["b_shape"] = bn_module.bias.size() if bn_module.bias is not None else []
                 bn_info['params_count'] = sum(p.numel() for p in bn_module.parameters() if p.requires_grad)
                 bn_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
-                stats[minfo.module_name + '/BatchNorm'] = bn_info
+                stats[str(minfo.module_scope) + '/BatchNorm'] = bn_info
 
-            stats[minfo.module_name] = layer_info
+            stats[str(minfo.module_scope)] = layer_info
 
         return stats

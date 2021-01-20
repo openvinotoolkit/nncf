@@ -13,7 +13,8 @@
 
 import re
 import tensorflow as tf
-from examples.tensorflow.common.logger import logger
+
+from beta.examples.tensorflow.common.logger import logger
 
 
 def _build_assignment_map(keras_model, prefix='', skip_variables_regex=None, var_to_shape_map=None):

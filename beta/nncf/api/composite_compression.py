@@ -13,10 +13,12 @@
 
 import tensorflow as tf
 
-from .compression import CompressionLoss, CompressionScheduler,\
-    CompressionAlgorithmController, CompressionAlgorithmBuilder
-from ..tensorflow.graph.transformations.layout import TransformationLayout
-from ..tensorflow.utils.save import save_model
+from beta.nncf.api.compression import CompressionLoss
+from beta.nncf.api.compression import CompressionScheduler
+from beta.nncf.api.compression import CompressionAlgorithmBuilder
+from beta.nncf.api.compression import CompressionAlgorithmController
+from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.utils.save import save_model
 
 
 class CompositeCompressionLoss(CompressionLoss):

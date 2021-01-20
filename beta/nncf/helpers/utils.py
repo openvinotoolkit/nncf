@@ -13,7 +13,7 @@
 
 from texttable import Texttable
 
-from ..utils.logger import logger as default_logger
+from beta.nncf.utils.logger import logger as default_logger
 
 
 def print_statistics(stats, logger=default_logger):

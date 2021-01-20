@@ -17,9 +17,9 @@ from addict import Dict
 
 import tensorflow as tf
 
-from tests.tensorflow import test_models
-from tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
-from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
+from beta.tests.tensorflow import test_models
+from beta.tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
 def get_basic_quantization_config(qconfig, input_sample_sizes=None):

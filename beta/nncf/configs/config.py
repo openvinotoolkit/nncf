@@ -113,3 +113,12 @@ def product_dict(d):
     vals = d.values()
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
+
+
+def argument_parameters(*args, **kwargs):
+    return (args, kwargs)
+
+
+def add_argument(parser, condition, parameters):
+    if condition:
+        parser.add_argument(*parameters[0], **parameters[1])

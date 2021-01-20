@@ -22,7 +22,7 @@ from onnx import numpy_helper
 from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.nncf_network import InsertionInfo
-from nncf.quantization.algo import QuantizationBuilder
+from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -39,11 +39,13 @@ def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecuti
 
 
 def make_insertion_info_for_coalescing_test(scope_str: str,
-                                            linked_op_exec_contexts: List[OperationExecutionContext] = None):
+                                            linked_insertion_infos: List[InsertionInfo] = None,
+                                            in_port_id: int = None)\
+        -> InsertionInfo:
     op_exec_context = make_op_exec_context_for_coalescing_test(scope_str)
-    retval = InsertionInfo(op_exec_context)
-    if linked_op_exec_contexts is not None:
-        retval.linked_op_exec_contexts = linked_op_exec_contexts
+    retval = InsertionInfo(op_exec_context, in_port_id=in_port_id)
+    if linked_insertion_infos is not None:
+        retval.link_insertion_infos(linked_insertion_infos)
     return retval
 
 
@@ -57,7 +59,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      )
                                  ],
                                  [],
@@ -67,7 +70,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      )
                                  ],
                              ),
@@ -75,7 +79,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                              (
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
@@ -85,7 +90,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                  # Same as input
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
@@ -96,20 +102,24 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                              (
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      )
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0"], ["Foo/Xyz[leet]/__add___0"]],
                                  # Same as input again
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      )
                                  ]
                              ),
@@ -120,25 +130,31 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/linear_0"
+                                         "Foo/Baz[bar]/linear_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=1
                                      )
                                  ],
                                  [["Foo/Xyz[leet]/matmul_0", "Foo/Xyz[leet]/__add___0", "Foo/Baz[bar]/linear_0"]],
                                  [
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         linked_op_exec_contexts=[
-                                             make_op_exec_context_for_coalescing_test(
-                                                 "Foo/Baz[bar]/linear_0"
+                                         in_port_id=1,
+                                         linked_insertion_infos=[
+                                             make_insertion_info_for_coalescing_test(
+                                                 "Foo/Baz[bar]/linear_0",
+                                                 in_port_id=0
                                              ),
-                                             make_op_exec_context_for_coalescing_test(
-                                                 "Foo/Xyz[leet]/__add___0"
+                                             make_insertion_info_for_coalescing_test(
+                                                 "Foo/Xyz[leet]/__add___0",
+                                                 in_port_id=1
                                              ),
                                          ]
                                      ),
@@ -152,16 +168,19 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                              (
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
@@ -171,16 +190,19 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                  [
                                      # Same as input
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
@@ -195,10 +217,12 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/linear_0"
+                                         "Foo/Baz[bar]/linear_0",
+                                         in_port_id=0
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
+                                         in_port_id=1
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0"
@@ -207,7 +231,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/softmax_1"
+                                         "Foo/Asdf[jkl]/softmax_1",
+                                         in_port_id=0
                                      ),
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0",
@@ -216,17 +241,20 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                  [
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         linked_op_exec_contexts=[
-                                             make_op_exec_context_for_coalescing_test(
-                                                 "Foo/Baz[bar]/linear_0"
+                                         linked_insertion_infos=[
+                                             make_insertion_info_for_coalescing_test(
+                                                 "Foo/Baz[bar]/linear_0",
+                                                 in_port_id=0
                                              ),
                                          ]
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_1",
-                                         linked_op_exec_contexts=[
-                                             make_op_exec_context_for_coalescing_test(
-                                                 "Foo/Xyz[leet]/__add___0"
+                                         in_port_id=0,
+                                         linked_insertion_infos=[
+                                             make_insertion_info_for_coalescing_test(
+                                                 "Foo/Xyz[leet]/__add___0",
+                                                 in_port_id=1
                                              ),
                                          ]
                                      ),
@@ -258,7 +286,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"
+                                         "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0",
+                                         in_port_id=0,
                                      ),
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0", "Foo/Baz[bar]/linear_0", "Foo/Xyz[leet]/matmul_0"],
@@ -266,20 +295,21 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                  [
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         linked_op_exec_contexts=[
-                                             make_op_exec_context_for_coalescing_test(
+                                         linked_insertion_infos=[
+                                             make_insertion_info_for_coalescing_test(
                                                  "Foo/Baz[bar]/linear_0"
                                              ),
-                                             make_op_exec_context_for_coalescing_test(
+                                             make_insertion_info_for_coalescing_test(
                                                  "Foo/Xyz[leet]/matmul_0"
                                              )
                                          ]
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0",
-                                         linked_op_exec_contexts=[
-                                             make_op_exec_context_for_coalescing_test(
-                                                 "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"
+                                         linked_insertion_infos=[
+                                             make_insertion_info_for_coalescing_test(
+                                                 "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0",
+                                                 in_port_id=0,
                                              ),
                                          ]
                                      ),
@@ -302,7 +332,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Xyz[leet]/__add___0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=1,
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
@@ -325,16 +356,18 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0,
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/linear_0"
+                                         "Foo/Baz[bar]/linear_0",
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
+                                         "Foo/Xyz[leet]/__add___0",
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=1,
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
@@ -353,7 +386,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                              (
                                  [
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0"
+                                         "Foo/Baz[bar]/conv2d_0",
+                                         in_port_id=0,
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
@@ -362,7 +396,8 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                          "Foo/Xyz[leet]/__add___0"
                                      ),
                                      make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
+                                         "Foo/Xyz[leet]/matmul_0",
+                                         in_port_id=1,
                                      ),
                                      make_insertion_info_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
@@ -382,11 +417,12 @@ def test_insertion_info_coalescing(input_insertion_infos: List[InsertionInfo],
                                    ref_coalesced_insertion_infos: List[InsertionInfo]):
     if ref_coalesced_insertion_infos is None:
         with pytest.raises(RuntimeError):
-            _ = QuantizationBuilder.coalesce_insertion_infos(input_insertion_infos,
-                                                             linked_scopes_groups_list)
+            _ = PatternBasedQuantizerSetupGenerator.coalesce_insertion_infos(input_insertion_infos,
+                                                                             linked_scopes_groups_list)
     else:
-        test_coalesced_insertion_infos = QuantizationBuilder.coalesce_insertion_infos(input_insertion_infos,
-                                                                                      linked_scopes_groups_list)
+        test_coalesced_insertion_infos = PatternBasedQuantizerSetupGenerator.coalesce_insertion_infos(
+            input_insertion_infos,
+            linked_scopes_groups_list)
         assert Counter(test_coalesced_insertion_infos) == Counter(ref_coalesced_insertion_infos)
 
 
@@ -416,6 +452,7 @@ def test_quantizer_scale_linking():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config['quantizer_setup_type'] = 'pattern_based'
     nncf_config["compression"]["quantize_outputs"] = True
+    nncf_config["compression"]["quantize_inputs"] = False
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -456,7 +493,7 @@ def test_quantizer_scale_linking():
         InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path1]/__add___0"))
 
     shared_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path2]/__mul___0"))
+        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path2]/__add___0"))
 
     non_shared_mul_quantizer = compression_ctrl.non_weight_quantizers[non_shared_mul_quantizer_id].quantizer_module_ref
     non_shared_add_quantizer = compression_ctrl.non_weight_quantizers[non_shared_add_quantizer_id].quantizer_module_ref
@@ -519,7 +556,7 @@ def test_unified_scales_for_vpu():
     assert len(compression_ctrl.non_weight_quantizers) == 2
 
     total_quantizations = sum(
-        [len(info.affected_ia_op_exec_contexts) for info in compression_ctrl.non_weight_quantizers.values()])
+        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
     assert total_quantizations == 8
 
 

@@ -13,21 +13,31 @@
 """
 import random
 from collections import namedtuple
+from itertools import permutations
 from typing import Dict, List, Tuple
 
 import networkx as nx
 import pytest
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph
+from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.nncf_network import InsertionPointGraph, InsertionInfo, InsertionPointGraphNodeType
+from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType, InsertionPoint, \
+    InsertionType
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait, OPERATOR_METATYPES, DEFAULT_QUANT_TRAIT_TO_OP_DICT, \
     QuantizerPropagationSolver, TransitionStatus, PropagationStrategy, PropagatingQuantizer
 from tests.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
-from tests.test_nncf_network import get_mock_nncf_node_attrs
+from tests.test_nncf_network import get_mock_nncf_node_attrs, mark_input_ports_lexicographically_based_on_input_node_key
+
+
+def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> OperationExecutionContext:
+    return OperationExecutionContext(op_name,
+                                     Scope(),
+                                     call_order,
+                                     [None])
 
 
 def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
@@ -35,33 +45,76 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
-        node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = \
-            TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+        node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
 
 def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     graph = nx.DiGraph()
+    node_key_appearances = {k: 0 for k in op_name_keys}
+
+    actual_keys = []
     for node_key in op_name_keys:
         attrs = {
             NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
-                TestQuantizerPropagationSolver.get_mock_model_node_attrs_for_op_name(node_key)
+                get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key])
         }
-        graph.add_node(node_key, **attrs)
+        actual_key = node_key + '_{}'.format(node_key_appearances[node_key])
+        graph.add_node(actual_key, **attrs)
+        node_key_appearances[node_key] += 1
+        actual_keys.append(actual_key)
 
-    edges = [(op_name_keys[i], op_name_keys[i + 1]) for i in range(0, len(op_name_keys) - 1)]
+    edges = [(actual_keys[i], actual_keys[i + 1]) for i in range(0, len(actual_keys) - 1)]
     for from_key, to_key in edges:
         graph.add_edge(from_key, to_key)
+
+    mark_input_ports_lexicographically_based_on_input_node_key(graph)
     return graph
 
-class TestQuantizerPropagationSolver:
-    @staticmethod
-    def get_mock_model_node_attrs_for_op_name(op_name: str) -> OperationExecutionContext:
-        return OperationExecutionContext(op_name,
-                                         Scope(),
-                                         0,
-                                         [None])
 
+class TwoFcAfterDropout:
+    DROPOUT_OPERATION_EXECUTION_CONTEXT = OperationExecutionContext('dropout',
+                                                                    Scope.from_str('TwoFcAfterDropoutModel'),
+                                                                    0,
+                                                                    [None])
+    FC_1_OPERATION_EXECUTION_CONTEXT = OperationExecutionContext('linear',
+                                                                 Scope.from_str(
+                                                                     'TwoFcAfterDropoutModel/NNCFLinear[branch1]'),
+                                                                 0,
+                                                                 [None])
+
+    FC_2_SCOPE_STR = 'TwoFcAfterDropoutModel/NNCFLinear[branch2]'
+    FC_2_OPERATION_EXECUTION_CONTEXT = OperationExecutionContext('linear',
+                                                                 Scope.from_str(FC_2_SCOPE_STR),
+                                                                 0,
+                                                                 [None])
+
+    @staticmethod
+    def get_graph():
+        graph = nx.DiGraph()
+        dropout_node_attrs = {
+            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT
+        }
+
+        fc_1_node_attrs = {
+            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT
+        }
+
+        fc_2_node_attrs = {
+            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT
+        }
+
+        graph.add_node('dropout', **dropout_node_attrs)
+        graph.add_node('fc_1', **fc_1_node_attrs)
+        graph.add_node('fc_2', **fc_2_node_attrs)
+        graph.add_edge('dropout', 'fc_1')
+        graph.add_edge('dropout', 'fc_2')
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+class TestQuantizerPropagationSolver:
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
         for trait, arches in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
@@ -95,7 +148,7 @@ class TestQuantizerPropagationSolver:
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
         quant_prop_graph = QPSG(ip_graph)
-        quant_prop_solver = QuantizerPropagationSolver()
+        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
         quant_prop_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(quant_prop_graph)
         op_quant_traits_map = quant_prop_solver.get_operator_quantization_traits_map()
 
@@ -111,7 +164,7 @@ class TestQuantizerPropagationSolver:
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
         ops_to_quantize = ['batch_norm', 'conv2d', 'matmul', 'gelu']
         ops_not_to_quantize = ['max_pool2d', 'dropout', 'min', 'softmax']
-        node_keys = ops_to_quantize + ops_not_to_quantize
+        node_keys = ['nncf_model_input'] + ops_to_quantize + ops_not_to_quantize
         mock_graph = get_sequentially_connected_model_graph(node_keys)
 
         ip_graph = InsertionPointGraph(mock_graph)
@@ -124,222 +177,416 @@ class TestQuantizerPropagationSolver:
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
         qp_graph = QPSG(ip_graph)
-        quant_prop_solver = QuantizerPropagationSolver()
+        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
         qp_graph = quant_prop_solver.set_allowed_quantization_types_for_operator_nodes(qp_graph)
         qp_graph = quant_prop_solver.setup_initial_quantizers(qp_graph)
+        qp_graph.run_consistency_check()
 
         for node_key in ops_to_quantize:
-            pred_ip_key = next(qp_graph.predecessors(node_key))
-            node = qp_graph.nodes[node_key]
+            actual_key = node_key + '_0'
+            pred_ip_key = next(qp_graph.predecessors(actual_key))
+            node = qp_graph.nodes[actual_key]
             pred_ip_node = qp_graph.nodes[pred_ip_key]
             prop_quant = pred_ip_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR]
             assert prop_quant is not None
             assert node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] == [prop_quant]
 
-            edge = qp_graph.edges[pred_ip_key, node_key]
+            edge = qp_graph.edges[pred_ip_key, actual_key]
             assert edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] == [prop_quant]
 
         for node_key in ops_not_to_quantize:
-            pred_ip_key = next(qp_graph.predecessors(node_key))
-            node = qp_graph.nodes[node_key]
+            actual_key = node_key + '_0'
+            pred_ip_key = next(qp_graph.predecessors(actual_key))
+            node = qp_graph.nodes[actual_key]
             pred_ip_node = qp_graph.nodes[pred_ip_key]
             assert pred_ip_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] is None
 
             assert not node[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
-            edge = qp_graph.edges[pred_ip_key, node_key]
+            edge = qp_graph.edges[pred_ip_key, actual_key]
             assert not edge[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
+    MergeQConfigSolution = namedtuple('MergeQConfigSolution',
+                                      ('merge_qconfig_list', 'branch_qconfig_lists_after_merge'))
     MergeQConfigTestStruct = namedtuple('MergeQConfigTestStruct',
-                                        ('primary_config_list_before_merge',
-                                         'secondary_config_list_dict_before_merge',
-                                         'primary_config_list_after_merge',
-                                         'secondary_config_list_dict_after_merge'))
+                                        ('branch_qconfig_lists_before_merge',
+                                         'strategy_vs_solution_dict'))
     QCONFIG_PRIMARY_SECONDARY_BEFORE_AND_AFTER_MERGING = [
         # Compatible configs on all branches
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=8)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=8)],
-                "bar": [QuantizerConfig(bits=8)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=8)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=8)],
-                "bar": [QuantizerConfig(bits=8)]
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=8), ],
+                [QuantizerConfig(bits=8), ],
+                [QuantizerConfig(bits=8), ]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), ],
+                        [QuantizerConfig(bits=8), ],
+                        [QuantizerConfig(bits=8), ]
+                    ], ),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=8)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=8)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None])
             }),
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=6,
-                                                              mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "baz": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=6,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "baz": [QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)]
-            }),
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ]
+            ],
 
-        # Precision narrowed relative to primary config on some branches, but primary
-        # config is still compatible
-        MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
-            }),
-
-        MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=8,
-                                                              mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=8,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=4)],
-                "bar": [QuantizerConfig(bits=5)]
-            }),
-
-        # Potential primary configs excluded due to conflict with a branch
-        MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=8),
-                                              QuantizerConfig(bits=6)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7)],
-                "bar": [QuantizerConfig(bits=8)],
-                "baz": [QuantizerConfig(bits=7)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=8)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7)],
-                "bar": [QuantizerConfig(bits=8)],
-                "baz": [QuantizerConfig(bits=7)]
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ]
+                    ]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), ],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None,
+                                                      None]
+                ),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None,
+                                                      None])
             }),
 
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=7),
-                                              QuantizerConfig(bits=7,
-                                                              mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=7,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
-            }),
-        MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=7),
-                                              QuantizerConfig(bits=7,
-                                                              mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=7,
-                                                             mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC)]
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+                [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+            ],
+
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+                        [QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC), QuantizerConfig(bits=8)],
+                    ]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC),
+                                        QuantizerConfig(bits=8)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None]
+                ),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC),
+                                        QuantizerConfig(bits=8)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      None,
+                                                      None])
             }),
 
-        # Primary config propagation-induced config exclusion on branches:
+        # Requantization necessary for merge
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5)],
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6)],
-                "bar": [QuantizerConfig(bits=5)]
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=6), ],
+                [QuantizerConfig(bits=4), ],
+                [QuantizerConfig(bits=5), ]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[[QuantizerConfig(bits=6), ],
+                                                      [QuantizerConfig(bits=4), ],
+                                                      [QuantizerConfig(bits=5), ]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[[QuantizerConfig(bits=6), ],
+                                                      [QuantizerConfig(bits=4), ],
+                                                      [QuantizerConfig(bits=5), ]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=6)],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      [QuantizerConfig(bits=4), ],
+                                                      [QuantizerConfig(bits=5), ]])
             }),
 
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5),
-                        QuantizerConfig(bits=4,
-                                        mode=QuantizationMode.ASYMMETRIC)
-                        ],
-            },
-            primary_config_list_after_merge=[QuantizerConfig(bits=6)],
-            secondary_config_list_dict_after_merge={
-                "foo": [QuantizerConfig(bits=6)],
-                "bar": [QuantizerConfig(bits=5)]
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC), ],
+                [QuantizerConfig(bits=4), ],
+                [QuantizerConfig(bits=5), ]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC), ],
+                        [QuantizerConfig(bits=4), ],
+                        [QuantizerConfig(bits=5), ]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC), ],
+                        [QuantizerConfig(bits=4), ],
+                        [QuantizerConfig(bits=5), ]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC), ],
+                    branch_qconfig_lists_after_merge=[None,
+                                                      [QuantizerConfig(bits=4), ],
+                                                      [QuantizerConfig(bits=5), ]])
             }),
 
-        # Cases with conflicts resulting in no primary configs left after merge and,
-        # consequently, no propagation:
+        # A branch will either have to be requantized or not for the merge, based on the
+        # final choice of the branch qconfig w.r.t. the merge qconfig
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=3)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7),
-                        QuantizerConfig(bits=6),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5),
-                        QuantizerConfig(bits=4,
-                                        mode=QuantizationMode.ASYMMETRIC)
-                        ],
-            },
-            primary_config_list_after_merge=[],
-            secondary_config_list_dict_after_merge={}),
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=6)],
+                [QuantizerConfig(bits=7), ],
+                [QuantizerConfig(bits=8), ],
+                [QuantizerConfig(bits=7), ]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=7), ],
+                        [QuantizerConfig(bits=8), ],
+                        [QuantizerConfig(bits=7), ]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=7), ],
+                        [QuantizerConfig(bits=8), ],
+                        [QuantizerConfig(bits=7), ]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=8), ],
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=7), ],
+                        None,
+                        [QuantizerConfig(bits=7), ]
+                    ])
+            }),
 
         MergeQConfigTestStruct(
-            primary_config_list_before_merge=[QuantizerConfig(bits=8),
-                                              QuantizerConfig(bits=4,
-                                                              mode=QuantizationMode.ASYMMETRIC)],
-            secondary_config_list_dict_before_merge={
-                "foo": [QuantizerConfig(bits=7,
-                                        mode=QuantizationMode.ASYMMETRIC),
-                        QuantizerConfig(bits=6,
-                                        mode=QuantizationMode.ASYMMETRIC)],
-                "bar": [QuantizerConfig(bits=8),
-                        QuantizerConfig(bits=5)
-                        ],
-            },
-            primary_config_list_after_merge=[],
-            secondary_config_list_dict_after_merge={})
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=7), QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC)],
+                        None,
+                        None
+                    ])
+            }),
 
-        # TODO: extend with signed/unsigned test cases
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=6), ],
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=7), QuantizerConfig(bits=6)],
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=5)],
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=7), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)], ]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=7), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)], ]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[QuantizerConfig(bits=8), ],
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=7), QuantizerConfig(bits=6)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)],
+                    ])
+            }),
+
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=6), ],
+                [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                 QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                 QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=6), ],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                    ])
+            }),
+
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=3)],
+                [QuantizerConfig(bits=7), QuantizerConfig(bits=6), QuantizerConfig(bits=6,
+                                                                                   mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=5), QuantizerConfig(bits=4,
+                                                                                   mode=QuantizationMode.ASYMMETRIC)]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=3)],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=3)],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=3), ],
+                        [QuantizerConfig(bits=7), QuantizerConfig(bits=6),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5),
+                         QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                    ])
+            }),
+
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC),
+                 QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(bits=8), QuantizerConfig(bits=5)]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=4, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=7, mode=QuantizationMode.ASYMMETRIC),
+                         QuantizerConfig(bits=6, mode=QuantizationMode.ASYMMETRIC)],
+                        [QuantizerConfig(bits=8), QuantizerConfig(bits=5)]
+                    ])
+            }),
+
+        # Real-world scenarios
+        MergeQConfigTestStruct(
+            branch_qconfig_lists_before_merge=[
+                [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+                 QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                 QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                 QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
+                [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                 QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]
+            ],
+            strategy_vs_solution_dict={
+                PropagationStrategy.CONSERVATIVE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]]),
+                PropagationStrategy.MODERATE: MergeQConfigSolution(
+                    merge_qconfig_list=None,
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]]),
+                PropagationStrategy.AGGRESSIVE: MergeQConfigSolution(
+                    merge_qconfig_list=[
+                        QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                        QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+                        QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True), ],
+                    branch_qconfig_lists_after_merge=[
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
+                        [QuantizerConfig(bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]
+                    ])
+            })
     ]
 
     @staticmethod
@@ -347,24 +594,40 @@ class TestQuantizerPropagationSolver:
     def qconfig_merge_test_struct(request):
         return request.param
 
-    def test_get_merged_qconfigs(self, qconfig_merge_test_struct):
-        quant_prop_solver = QuantizerPropagationSolver()
-        ref_merged_primary_config_list = qconfig_merge_test_struct.primary_config_list_after_merge
-        ref_merged_secondary_config_dict_list = qconfig_merge_test_struct.secondary_config_list_dict_after_merge
+    def test_get_merged_qconfigs(self, qconfig_merge_test_struct: MergeQConfigTestStruct):
+        for strategy in PropagationStrategy:
+            quant_prop_solver = QuantizerPropagationSolver(propagation_strategy=strategy,
+                                                           run_consistency_checks=True)
+            solution_for_strategy = qconfig_merge_test_struct.strategy_vs_solution_dict[strategy]
+            ref_merge_qconfig_list = solution_for_strategy.merge_qconfig_list
+            ref_branch_qconfig_lists_after_merge = solution_for_strategy.branch_qconfig_lists_after_merge
 
-        merged_primary_config_list, merged_secondary_config_dict_list = quant_prop_solver.get_merged_qconfigs(
-            qconfig_merge_test_struct.primary_config_list_before_merge,
-            qconfig_merge_test_struct.secondary_config_list_dict_before_merge
-        )
+            merge_qconfig_list, branch_qconfig_lists_after_merge = \
+                quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(
+                    qconfig_merge_test_struct.branch_qconfig_lists_before_merge
+                )
 
-        assert ref_merged_primary_config_list == merged_primary_config_list
-        assert ref_merged_secondary_config_dict_list == merged_secondary_config_dict_list
+            assert ref_merge_qconfig_list == merge_qconfig_list
+            assert ref_branch_qconfig_lists_after_merge == branch_qconfig_lists_after_merge
 
+    def test_merged_qconfig_list_is_independent_of_branch_qconfig_list_order(self,
+                                                                             qconfig_merge_test_struct:
+                                                                             MergeQConfigTestStruct):
+        quant_prop_solver = QuantizerPropagationSolver(propagation_strategy=PropagationStrategy.AGGRESSIVE)
+        branch_qconfig_lists_before_merge = qconfig_merge_test_struct.branch_qconfig_lists_before_merge
+        ref_merge_qconfig_list, _ = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(
+            branch_qconfig_lists_before_merge)
+
+        for permutation in permutations(branch_qconfig_lists_before_merge):
+            test_merge_qconfig_list, _ = quant_prop_solver.get_merged_qconfigs_for_downward_branching_case(permutation)
+            assert ref_merge_qconfig_list == test_merge_qconfig_list
 
     def get_branching_model_graph(self):
         mock_node_attrs = get_mock_nncf_node_attrs()
         mock_graph = nx.DiGraph()
 
+        #     (O)  <-- treating this as an auxiliary "input" node
+        #      |
         #     (A)
         #      |
         #     (B)
@@ -377,12 +640,15 @@ class TestQuantizerPropagationSolver:
         #            |
         #           (J)
 
-        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+        node_keys = ['O', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         for node_key in node_keys:
             mock_graph.add_node(node_key, **mock_node_attrs)
 
-        mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('B', 'E'), ('C', 'F'),
+        mock_graph.add_edges_from([('O', 'A'),
+                                   ('A', 'B'), ('B', 'C'), ('B', 'D'), ('B', 'E'), ('C', 'F'),
                                    ('E', 'G'), ('E', 'H'), ('G', 'I'), ('H', 'I'), ('I', 'J')])
+
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
         return mock_graph
 
     BranchTransitionTestStruct = namedtuple('BranchTransitionTestStruct',
@@ -390,7 +656,7 @@ class TestQuantizerPropagationSolver:
                                                 'init_node_to_trait_and_configs_dict',
                                                 'starting_primary_quantizer_ip_node',
                                                 'target_branching_node_for_primary_quantizer',
-                                                'strategy_vs_expected_status_dict'))
+                                                'expected_status'))
 
     BRANCH_TRANSITION_TEST_CASES = [
         # Downward branches are quantization-agnostic
@@ -402,10 +668,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: None,
-                PropagationStrategy.AGGRESSIVE: None,
-            }
+            expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
         # Downward branches have compatible quantization configs
@@ -421,10 +684,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: None,
-                PropagationStrategy.AGGRESSIVE: None,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # A branch has a non-quantizable op
@@ -440,10 +700,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         BranchTransitionTestStruct(
@@ -458,10 +715,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
 
@@ -477,10 +731,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         BranchTransitionTestStruct(
@@ -495,10 +746,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         # All primary configs are incompatible with branch configs
@@ -514,10 +762,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
@@ -532,10 +777,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # Compatible quantizers exist on the branches, but each is below an incompatible quantizer
@@ -561,10 +803,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # Primary config options narrowing due to transition, but otherwise transition is permitted
@@ -580,10 +819,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('E'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: None,
-                PropagationStrategy.AGGRESSIVE: None
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # Branch config options narrowing due to transition - do not transition if the strategy
@@ -600,10 +836,7 @@ class TestQuantizerPropagationSolver:
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: None
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
     ]
 
@@ -616,7 +849,7 @@ class TestQuantizerPropagationSolver:
         init_node_to_trait_and_configs_dict = branch_transition_test_struct.init_node_to_trait_and_configs_dict
         starting_primary_quantizer_ip_node = branch_transition_test_struct.starting_primary_quantizer_ip_node
         target_node = branch_transition_test_struct.target_branching_node_for_primary_quantizer
-        strategy_vs_status = branch_transition_test_struct.strategy_vs_expected_status_dict
+        expected_status = branch_transition_test_struct.expected_status
 
         # Graph preparation
         mock_graph = self.get_branching_model_graph()
@@ -642,14 +875,14 @@ class TestQuantizerPropagationSolver:
                                               starting_primary_quantizer_ip_node)
         primary_prop_quant = quant_prop_graph.propagate_quantizer_via_path(primary_prop_quant,
                                                                            path[0])
+        quant_prop_graph.run_consistency_check()
 
         # The propagating quantizers are in place, now check the transition
-        for strategy, ref_status in strategy_vs_status.items():
-            solver = QuantizerPropagationSolver(propagation_strategy=strategy)
-            status = solver.check_branching_transition(quant_prop_graph,
-                                                       primary_prop_quant,
-                                                       target_node)
-            assert status == ref_status
+        solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        status = solver.check_branching_transition(quant_prop_graph,
+                                                   primary_prop_quant,
+                                                   target_node)
+        assert status == expected_status
 
     PathTransitionTestStruct = namedtuple('PathTransitionTestStruct',
                                           ('init_node_to_trait_configs_and_target_node_dict',
@@ -657,7 +890,7 @@ class TestQuantizerPropagationSolver:
                                            'starting_primary_quantizer_ip_node',
                                            'primary_quantizer_qconfigs',
                                            'target_node_for_primary_quantizer',
-                                           'strategy_vs_expected_status_dict'))
+                                           'expected_status'))
 
     @staticmethod
     def prepare_propagation_graph_state(ip_graph: InsertionPointGraph,
@@ -677,12 +910,14 @@ class TestQuantizerPropagationSolver:
                 ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key)
                 prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs,
                                                                         ip_node_key)
-                path = get_edge_paths_for_propagation(quant_prop_graph,
-                                                      target_node,
-                                                      ip_node_key)
-                prop_quant = quant_prop_graph.propagate_quantizer_via_path(prop_quant, path[0])
+                if target_node is not None:
+                    path = get_edge_paths_for_propagation(quant_prop_graph,
+                                                          target_node,
+                                                          ip_node_key)
+                    prop_quant = quant_prop_graph.propagate_quantizer_via_path(prop_quant, path[0])
                 prop_quantizers.append(prop_quant)
 
+        quant_prop_graph.run_consistency_check()
         return prop_quantizers, quant_prop_graph
 
     PATH_TRANSITION_TEST_CASES = [
@@ -696,10 +931,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('J'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('E'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
         # Non-intersecting paths, no branch influence
@@ -713,10 +945,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('C'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
         # Non-intersecting paths, branch influence
@@ -728,18 +957,12 @@ class TestQuantizerPropagationSolver:
                       InsertionPointGraph.get_pre_hook_node_key('C')),
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
-                'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
+                      InsertionPointGraph.get_pre_hook_node_key('E'))
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # Non-intersecting paths, branch influence with downward branch config narrowing
@@ -752,19 +975,12 @@ class TestQuantizerPropagationSolver:
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
                                                                 mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
-                'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
+                      InsertionPointGraph.get_pre_hook_node_key('E'))
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             primary_quantizer_qconfigs=[QuantizerConfig(bits=6)],
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         # Merge cases
@@ -773,18 +989,12 @@ class TestQuantizerPropagationSolver:
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('A')),
-                'D': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('A'))
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_MERGE,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_MERGE,
-            }
+            expected_status=TransitionStatus.SHOULD_MERGE
         ),
 
         PathTransitionTestStruct(
@@ -800,10 +1010,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('H'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_MERGE,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_MERGE,
-            }
+            expected_status=TransitionStatus.SHOULD_MERGE
         ),
 
         # No transition cases:
@@ -822,10 +1029,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('C'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         # Path blocked by a non-quantizable node
@@ -835,17 +1039,14 @@ class TestQuantizerPropagationSolver:
                 'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('H')),
-                'B': (QuantizationTrait.NON_QUANTIZABLE,
+                'C': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('F'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('A'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
 
@@ -853,9 +1054,9 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_post_hook_node_key('B')),
+                      InsertionPointGraph.get_pre_hook_node_key('E')),
                 'D': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
@@ -863,10 +1064,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('C'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         # Incompatible upstream quantizer
@@ -880,10 +1078,7 @@ class TestQuantizerPropagationSolver:
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         PathTransitionTestStruct(
@@ -891,18 +1086,12 @@ class TestQuantizerPropagationSolver:
             {
                 'E': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
-                      InsertionPointGraph.get_post_hook_node_key('A')),
-                'C': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(6)],
-                      InsertionPointGraph.get_post_hook_node_key('A')),
+                      InsertionPointGraph.get_post_hook_node_key('A'))
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
             target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('B'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         # Incompatible downstream quantizers
@@ -915,19 +1104,12 @@ class TestQuantizerPropagationSolver:
                 'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
                                                                 mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
-                'H': (QuantizationTrait.INPUTS_QUANTIZABLE,
-                      [QuantizerConfig(bits=6), QuantizerConfig(bits=5,
-                                                                mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('E')),
+                      InsertionPointGraph.get_pre_hook_node_key('E'))
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('D'),
             primary_quantizer_qconfigs=[QuantizerConfig(bits=4)],
             target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('A'),
-            strategy_vs_expected_status_dict={
-                PropagationStrategy.CONSERVATIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-                PropagationStrategy.AGGRESSIVE: TransitionStatus.SHOULD_NOT_TRANSITION,
-            }
+            expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
     ]
@@ -943,7 +1125,7 @@ class TestQuantizerPropagationSolver:
         starting_primary_quantizer_ip_node = path_transition_test_struct.starting_primary_quantizer_ip_node
         primary_quantizer_qconfigs = path_transition_test_struct.primary_quantizer_qconfigs
         target_node = path_transition_test_struct.target_node_for_primary_quantizer
-        strategy_vs_status = path_transition_test_struct.strategy_vs_expected_status_dict
+        ref_status = path_transition_test_struct.expected_status
 
         # Graph preparation
         mock_graph = self.get_branching_model_graph()
@@ -953,31 +1135,33 @@ class TestQuantizerPropagationSolver:
 
         primary_prop_quant = quant_prop_graph.add_propagating_quantizer(primary_quantizer_qconfigs,
                                                                         starting_primary_quantizer_ip_node)
+        quant_prop_graph.run_consistency_check()
         path = get_edge_paths_for_propagation(quant_prop_graph,
                                               target_node,
                                               starting_primary_quantizer_ip_node)[0]
 
-        for strategy, ref_status in strategy_vs_status.items():
-            solver = QuantizerPropagationSolver(propagation_strategy=strategy)
-            status = solver.check_transition_via_path(primary_prop_quant,
-                                                      path,
-                                                      quant_prop_graph)
-            assert status == ref_status
+        solver = QuantizerPropagationSolver(run_consistency_checks=True)
+        status = solver.check_transition_via_path(primary_prop_quant,
+                                                  path,
+                                                  quant_prop_graph)
+        assert status == ref_status
 
     PropagationStepTestStruct = namedtuple('PropagationStepTestStruct',
                                            ('init_node_to_trait_configs_and_target_node_dict',
                                             'expected_finished_status',
-                                            'current_location_node_key_for_propagated_quant'))
+                                            'current_location_node_key_for_propagated_quant',
+                                            'added_quantizer_location_node_keys'))
     PROPAGATION_STEP_TEST_CASES = [
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
                 'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('A'))
+                      InsertionPointGraph.get_post_hook_node_key('O'))
             },
             expected_finished_status=True,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('A')
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('O'),
+            added_quantizer_location_node_keys=[]
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
@@ -987,7 +1171,8 @@ class TestQuantizerPropagationSolver:
                       InsertionPointGraph.get_pre_hook_node_key('C'))
             },
             expected_finished_status=False,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('C')
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('C'),
+            added_quantizer_location_node_keys=[]
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
@@ -1001,8 +1186,28 @@ class TestQuantizerPropagationSolver:
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('I'))
             },
-            expected_finished_status=True,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('A')
+            expected_finished_status=False,
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('A'),
+            added_quantizer_location_node_keys=[]
+        ),
+
+        # Covers the case where the quantizer should be cloned
+        # (i.e. when passing through an upward branching node)
+        PropagationStepTestStruct(
+            init_node_to_trait_configs_and_target_node_dict={
+                'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      [QuantizerConfig()],
+                      InsertionPointGraph.get_post_hook_node_key('I')),
+                'F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      [QuantizerConfig()],
+                      InsertionPointGraph.get_pre_hook_node_key('A')),
+                'G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      [QuantizerConfig()],
+                      InsertionPointGraph.get_pre_hook_node_key('E')),
+            },
+            expected_finished_status=False,
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('I'),
+            added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=1)]
         )
     ]
 
@@ -1011,7 +1216,7 @@ class TestQuantizerPropagationSolver:
     def propagation_step_test_struct(request):
         return request.param
 
-    def test_propagation_step(self, propagation_step_test_struct):
+    def test_propagation_step(self, propagation_step_test_struct: PropagationStepTestStruct):
         # pylint:disable=line-too-long
         init_node_to_trait_configs_and_target_node_dict = propagation_step_test_struct.init_node_to_trait_configs_and_target_node_dict
         expected_finished_status = propagation_step_test_struct.expected_finished_status
@@ -1019,7 +1224,7 @@ class TestQuantizerPropagationSolver:
         # Graph preparation
         mock_graph = self.get_branching_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
-        quant_prop_solver = QuantizerPropagationSolver()
+        quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
         # pylint:disable=line-too-long
         prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
                                                                                  init_node_to_trait_configs_and_target_node_dict)
@@ -1033,6 +1238,7 @@ class TestQuantizerPropagationSolver:
 
         assert quant_prop is not None
         quant_prop_graph = quant_prop_solver.propagation_step(quant_prop, quant_prop_graph)
+        quant_prop_graph.run_consistency_check()
 
         if expected_finished_status:
             finished_propagating_quantizers = quant_prop_solver.get_finished_propagating_quantizers()
@@ -1045,57 +1251,138 @@ class TestQuantizerPropagationSolver:
             assert not pq in quant_prop_solver.get_active_propagating_quantizers_queue()
             assert not pq in quant_prop_solver.get_finished_propagating_quantizers()
 
+        # The quantizers that were added during preparation were not registered
+        # as active for the solvers; but the ones that may have appeared due to an upward
+        # branching transition will be registered, and so will the propagated quantizer
+        quantizers_count_after_step = quant_prop_solver.get_total_quantizer_count()
+        # Should be true for non-merge cases
+        assert quantizers_count_after_step == 1 + len(propagation_step_test_struct.added_quantizer_location_node_keys)
+
+    def test_handling_upward_branching_path_with_no_transition_creates_no_extra_quantizers(self, mocker):
+        # Graph preparation
+        mock_graph = self.get_branching_model_graph()
+        ip_graph = InsertionPointGraph(mock_graph)
+        quant_prop_solver = QuantizerPropagationSolver()
+        prep_data_dict = {
+
+            'I': (QuantizationTrait.NON_QUANTIZABLE,
+                  [],
+                  None),
+            'J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                  [QuantizerConfig()],
+                  InsertionPointGraph.get_post_hook_node_key('I'))
+        }
+
+        prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
+                                                                                 prep_data_dict)
+        assert len(prop_quantizers) == 1
+        pq = prop_quantizers[0]
+        mocker.spy(quant_prop_graph, "remove_propagating_quantizer")
+        mocker.spy(quant_prop_graph, "clone_propagating_quantizer")
+        _ = quant_prop_solver.propagation_step(pq, quant_prop_graph)
+        finished_pqs = quant_prop_solver.get_finished_propagating_quantizers()
+
+        #pylint:disable=no-member
+        assert quant_prop_graph.remove_propagating_quantizer.call_count == 1
+        assert quant_prop_graph.clone_propagating_quantizer.call_count == 1
+        assert len(finished_pqs) == 1
+        assert finished_pqs[0] is pq
+        assert not quant_prop_solver.get_active_propagating_quantizers_queue()
+        for edge in quant_prop_graph.edges():
+            edge_attrs = quant_prop_graph.edges[edge]
+            affecting_quantizers = edge_attrs[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+            assert (not affecting_quantizers) or (len(affecting_quantizers) == 1 and pq in affecting_quantizers)
+        for node_attrs in quant_prop_graph.nodes.values():
+            if node_attrs[QPSG.NODE_TYPE_NODE_ATTR] == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
+                affecting_pq = node_attrs[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR]
+                assert (affecting_pq is pq) or (affecting_pq is None)
+
+
     RunOnIpGraphTestStruct = namedtuple('RunOnIpGraphTestStruct',
-                                        ('list_ops',
-                                         'expected_retval',
+                                        ('base_graph',
+                                         'retval_qps',
+                                         'retval_unified_scale_qp_groups',
+                                         'retval_shared_input_operation_set_groups',
                                          'expected_count_finished_quant',
                                          'expected_count_active_quant',
                                          'ignored_scope'))
 
+
     RUN_ON_IP_GRAPH_TEST_CASES = [
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'batch_norm'],
-            expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
-            },
+            base_graph=get_sequentially_connected_model_graph(['conv2d', 'batch_norm']),
+            retval_qps={1: MultiConfigQuantizationPoint(
+                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                [QuantizerConfig()])},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
             ignored_scope=None
         ),
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'gelu', 'conv2d'],
-            expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
-                InsertionInfo(OperationExecutionContext('gelu', Scope(), 0, [None])): [QuantizerConfig()]
-            },
+            base_graph=get_sequentially_connected_model_graph(['conv2d', 'gelu', 'conv2d']),
+            retval_qps={1: MultiConfigQuantizationPoint(
+                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                [QuantizerConfig()]),
+                        2: MultiConfigQuantizationPoint(
+                            InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
+                                               "/gelu_0")),
+                            [QuantizerConfig()])},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}, {2}],
             expected_count_finished_quant=2,
             expected_count_active_quant=0,
             ignored_scope=None
         ),
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'matmul', 'gelu', 'softmax'],
-            expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
-            },
+            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul', 'gelu', 'softmax']),
+            retval_qps={1: MultiConfigQuantizationPoint(
+                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                [QuantizerConfig()])},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
             ignored_scope=['/gelu_0', '/conv2d_0']
         ),
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'matmul'],
-            expected_retval={
-                InsertionInfo(OperationExecutionContext('conv2d', Scope(), 0, [None])): [QuantizerConfig()],
-            },
+            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
+            retval_qps={1: MultiConfigQuantizationPoint(
+                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
+                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                [QuantizerConfig()])},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
             ignored_scope=['/conv2d_0']
         ),
         RunOnIpGraphTestStruct(
-            list_ops=['conv2d', 'matmul'],
-            expected_retval={},
+            base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
+            retval_qps={},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[],
             expected_count_finished_quant=0,
             expected_count_active_quant=0,
             ignored_scope=['/conv2d_0', '/matmul_0']
+        ),
+        RunOnIpGraphTestStruct(
+            base_graph=TwoFcAfterDropout.get_graph(),
+            retval_qps={1: MultiConfigQuantizationPoint(
+                InsertionPoint(InsertionType.OPERATOR_PRE_HOOK,
+                               ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic,
+                               input_port_id=0),
+                [QuantizerConfig()])},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}],
+            expected_count_finished_quant=1,
+            expected_count_active_quant=0,
+            ignored_scope=[TwoFcAfterDropout.FC_2_SCOPE_STR]
         )
     ]
 
@@ -1104,14 +1391,12 @@ class TestQuantizerPropagationSolver:
     def run_on_ip_graph_test_struct(request):
         return request.param
 
-    def test_run_on_ip_graph(self, run_on_ip_graph_test_struct):
-        expected_retval = run_on_ip_graph_test_struct.expected_retval
+    def test_run_on_ip_graph(self, run_on_ip_graph_test_struct: RunOnIpGraphTestStruct):
         expected_count_finished_quant = run_on_ip_graph_test_struct.expected_count_finished_quant
         expected_count_active_quant = run_on_ip_graph_test_struct.expected_count_active_quant
 
         # Graph preparation
-        node_keys = run_on_ip_graph_test_struct.list_ops
-        mock_graph = get_sequentially_connected_model_graph(node_keys)
+        mock_graph = run_on_ip_graph_test_struct.base_graph
         ip_graph = InsertionPointGraph(mock_graph)
 
         for node in ip_graph.nodes.values():
@@ -1122,11 +1407,14 @@ class TestQuantizerPropagationSolver:
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
-        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scope)
+        quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scope,
+                                                       run_consistency_checks=True)
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 
-
-        assert retval == expected_retval
+        assert retval.quantizer_setup.quantization_points == run_on_ip_graph_test_struct.retval_qps
+        assert retval.quantizer_setup.unified_scale_groups == run_on_ip_graph_test_struct.retval_unified_scale_qp_groups
+        assert retval.quantizer_setup.shared_input_operation_set_groups == \
+               run_on_ip_graph_test_struct.retval_shared_input_operation_set_groups
 
         assert len(quant_prop_solver.get_active_propagating_quantizers_queue()) == expected_count_active_quant
         assert len(quant_prop_solver.get_finished_propagating_quantizers()) == expected_count_finished_quant
