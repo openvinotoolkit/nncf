@@ -105,7 +105,7 @@ class IdentityMaskForwardOps(DefaultMetaOp):
         return True
 
     @classmethod
-    def mask_propagation(self, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
 
 
