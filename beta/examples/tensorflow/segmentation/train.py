@@ -14,6 +14,7 @@
 import os
 import sys
 from pathlib import Path
+import argparse
 
 import tensorflow as tf
 import numpy as np
@@ -46,6 +47,11 @@ def get_argument_parser():
                                         print_freq=False,
                                         dataset_type=False,
                                         cpu_only=False)
+    parser.add_argument('--mode', '-m',
+                        nargs='+',
+                        choices=['train'],
+                        default='train',
+                        help=argparse.SUPPRESS)
 
     parser.add_argument('--backbone-checkpoint',
                         default=None,

@@ -24,9 +24,13 @@ from beta.tests.tensorflow.test_models import SequentialModel, SequentialModelNo
 
 from beta.examples.tensorflow.classification import main as cls_main
 from beta.examples.tensorflow.object_detection import main as od_main
+from beta.examples.tensorflow.segmentation import train as seg_train
+from beta.examples.tensorflow.segmentation import evaluation as seg_eval
 from beta.examples.tensorflow.common.model_loader import AVAILABLE_MODELS
 
 od_main.get_dataset_builders = partial(get_coco_dataset_builders, train=True, validation=True)
+seg_train.get_dataset_builders = partial(get_coco_dataset_builders, train=True, calibration=True)
+seg_eval.get_dataset_builders = partial(get_coco_dataset_builders, validation=True)
 
 AVAILABLE_MODELS.update({
     'SequentialModel': SequentialModel,
@@ -60,17 +64,30 @@ def convert_to_argv(args):
 SAMPLE_TYPES = [
     'classification',
     'object_detection',
+    'segmentation',
 ]
 
+
 SAMPLES = {
-    'classification': cls_main.main,
-    'object_detection': od_main.main,
+    'classification': {
+        'train-test-export': cls_main.main
+    },
+    'object_detection': {
+        'train-test-export': od_main.main
+    },
+    'segmentation': {
+        'train': seg_train.main,
+        'test-export': seg_eval.main
+    },
 }
+
 
 DATASETS = {
     'classification': [('cifar10', 'tfds'), ('cifar10', 'tfds'), ('cifar10', 'tfds')],
     'object_detection': [('coco2017', 'tfrecords')],
+    'segmentation': [('coco2017', 'tfrecords')],
 }
+
 
 TEST_CONFIG_ROOT = TEST_ROOT.joinpath('tensorflow', 'data', 'configs')
 CONFIGS = {
@@ -82,12 +99,30 @@ CONFIGS = {
     'object_detection': [
         TEST_CONFIG_ROOT.joinpath('retinanet_coco2017_magnitude_sparsity_int8.json'),
     ],
+    'segmentation': [
+        TEST_CONFIG_ROOT.joinpath('mask_rcnn_coco2017_magnitude_sparsity_int8.json'),
+    ],
 }
 
-BATCHSIZE_PER_GPU = {
-    'classification': [256, 256, 256],
-    'object_detection': [3],
+
+BATCH_SIZE_PER_GPU = {
+    'classification': [32, 32, 32],
+    'object_detection': [2],
+    'segmentation': [1],
 }
+
+
+def get_global_batch_size():
+    num_gpus = len(tf.config.list_physical_devices('GPU'))
+    coeff = num_gpus if num_gpus else 1
+    global_batch_size = {}
+    for sample_type, batch_sizes in BATCH_SIZE_PER_GPU.items():
+        global_batch_size[sample_type] = [coeff * bs for bs in batch_sizes]
+    return global_batch_size
+
+
+GLOBAL_BATCH_SIZE = get_global_batch_size()
+
 
 DATASET_PATHS = {
     'classification': {
@@ -98,13 +133,30 @@ DATASET_PATHS = {
     },
     'object_detection': {
         'coco2017': lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data', 'mock_datasets', 'coco2017')
-    }
+    },
+    'segmentation': {
+        'coco2017': lambda dataset_root: TEST_ROOT.joinpath('tensorflow', 'data', 'mock_datasets', 'coco2017')
+    },
 }
+
+
+def get_sample_fn(sample_type, modes):
+    variants = []
+    for key in SAMPLES[sample_type].keys():
+        supported_modes = set(key.split('-'))
+        if set(modes).issubset(supported_modes):
+            variants.append(key)
+
+    if len(variants) != 1:
+        raise Exception('Can not choose a function for given arguments')
+
+    return SAMPLES[sample_type][variants[0]]
+
 
 def generate_config_params():
     config_params = []
     for sample_id, sample_type in enumerate(SAMPLE_TYPES):
-        config_paths, batch_sizes = CONFIGS[sample_type], BATCHSIZE_PER_GPU[sample_type]
+        config_paths, batch_sizes = CONFIGS[sample_type], GLOBAL_BATCH_SIZE[sample_type]
         dataset_names, dataset_types = zip(*DATASETS[sample_type])
 
         for params_id, params in enumerate(zip(config_paths, dataset_names, dataset_types, batch_sizes)):
@@ -161,7 +213,7 @@ def test_model_eval(_config, tmp_path):
         '--batch-size': _config['batch_size']
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
 
 
@@ -179,7 +231,7 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
         '--checkpoint-save-dir': checkpoint_save_dir
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['train'])
     main(convert_to_argv(args))
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)
@@ -199,7 +251,7 @@ def test_trained_model_eval(_config, tmp_path, _case_common_dirs):
         '--resume': ckpt_path
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['test'])
     main(convert_to_argv(args))
 
 
@@ -220,7 +272,7 @@ def test_resume(_config, tmp_path, _case_common_dirs):
         '--resume': ckpt_path
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['train'])
     main(convert_to_argv(args))
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)
@@ -229,6 +281,9 @@ def test_resume(_config, tmp_path, _case_common_dirs):
 
 @pytest.mark.dependency(depends=['tf_test_model_train'])
 def test_trained_model_resume_train_test_export_last_ckpt(_config, tmp_path, _case_common_dirs):
+    if _config['sample_type'] == 'segmentation':
+        pytest.skip()
+
     checkpoint_save_dir = os.path.join(str(tmp_path), 'models')
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
@@ -284,6 +339,10 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
             if config.get('algorithm', '') == 'quantization':
                 pytest.skip()
 
+    if _config['sample_type'] == 'segmentation' and export_format == 'h5':
+        pytest.skip('The {} sample does not support export to {} format.'.format(_config['sample_type'],
+                                                                                 export_format))
+
     export_path = os.path.join(str(tmp_path), get_export_model_name(export_format))
     args = {
         '--mode': 'export',
@@ -293,7 +352,7 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
         '--to-{}'.format(export_format): export_path,
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['export'])
     main(convert_to_argv(args))
 
     model_path = os.path.join(export_path, 'saved_model.pb') \
