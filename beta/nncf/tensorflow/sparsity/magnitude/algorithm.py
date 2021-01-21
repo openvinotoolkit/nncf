@@ -104,7 +104,7 @@ class MagnitudeSparsityBuilder(CompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        return MagnitudeSparsityController(model, self.config.params)
+        return MagnitudeSparsityController(model, self.config.get('params', {}))
 
 
 class MagnitudeSparsityController(CompressionAlgorithmController):

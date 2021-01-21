@@ -16,9 +16,9 @@ from typing import List, Type
 
 import jsonschema
 
-import nncf.config_schema
-from nncf.config_schema import ROOT_NNCF_CONFIG_SCHEMA, validate_single_compression_algo_schema
-from nncf.structures import NNCFExtraConfigStruct
+from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
+from nncf.config.schema import validate_single_compression_algo_schema
+from nncf.config.structure import NNCFExtraConfigStruct
 
 try:
     import jstyleson as json
@@ -75,8 +75,9 @@ class NNCFConfig(dict):
 
             # The default exception's __str__ result will contain the entire schema,
             # which is too large to be readable.
+            import nncf.config.schema as config_schema
             msg = e.message + ". See documentation or {} for an NNCF configuration file JSON schema definition".format(
-                nncf.config_schema.__file__)
+                config_schema.__file__)
             raise jsonschema.ValidationError(msg)
 
         compression_section = loaded_json.get("compression")

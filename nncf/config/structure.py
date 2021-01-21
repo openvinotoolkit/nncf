@@ -11,11 +11,7 @@
  limitations under the License.
 """
 
-from beta.nncf.version import __version__
-from beta.nncf.backend import backend
-
-from nncf.config import NNCFConfig
-
-from beta.nncf import tensorflow as nncf_tensorflow
-from beta.nncf.helpers.model_creation import create_compressed_model
-from beta.nncf.helpers.callback_creation import create_compression_callbacks
+class NNCFExtraConfigStruct:
+    @classmethod
+    def get_id(cls) -> str:
+        raise NotImplementedError

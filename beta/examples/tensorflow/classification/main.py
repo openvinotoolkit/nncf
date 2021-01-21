@@ -19,22 +19,22 @@ import tensorflow as tf
 
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
-from beta.nncf.configs.config import Config
 from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
+from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.callbacks import get_callbacks
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.model_loader import get_model
 from beta.examples.tensorflow.common.optimizer import build_optimizer
+from beta.examples.tensorflow.common.sample_config import create_sample_config
 from beta.examples.tensorflow.common.scheduler import build_scheduler
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
-from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
 
 
 def get_argument_parser():
@@ -63,9 +63,7 @@ def get_argument_parser():
 
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
-
-    config = Config.from_json(args.config)
-    config.update_from_args(args, parser)
+    config = create_sample_config(args, parser)
     configure_paths(config)
     return config
 
@@ -142,7 +140,7 @@ def run(config):
 
     with TFOriginalModelManager(model_fn, **model_params) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
             compression_callbacks = create_compression_callbacks(compression_ctrl,
                                                                  log_dir=config.log_dir)
 
@@ -225,7 +223,7 @@ def export(config):
                                     pretrained=config.get('pretrained', False),
                                     weights=config.get('weights', None))
     model = model(**model_params)
-    compression_ctrl, compress_model = create_compressed_model(model, config)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
     metrics = [
         tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
