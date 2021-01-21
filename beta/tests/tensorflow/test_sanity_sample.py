@@ -301,7 +301,7 @@ def test_trained_model_resume_train_test_export_last_ckpt(_config, tmp_path, _ca
         '--to-frozen-graph': export_path
     }
 
-    main = SAMPLES[_config['sample_type']]
+    main = get_sample_fn(_config['sample_type'], modes=['train', 'test', 'export'])
     main(convert_to_argv(args))
 
     assert tf.io.gfile.isdir(checkpoint_save_dir)
