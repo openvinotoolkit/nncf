@@ -138,21 +138,21 @@ class TestSotaCheckpoints:
         return onnx_name
 
     @staticmethod
-    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target, fp32_metric_=None,
-                       diff_fp32=None):
+    def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
+                       fp32_metric_=None, diff_fp32=None, metric_type_from_json=None):
         TestSotaCheckpoints.test = test
+        if fp32_metric_ is None:
+            fp32_metric_ = "-"
+            diff_fp32 = "-"
+        if metric_type_from_json and fp32_metric_ != "-":
+            fp32_metric_ = str("({})".format(fp32_metric_))
         if metric is not None:
-            if fp32_metric_ is None:
-                fp32_metric_ = "-"
-                diff_fp32 = "-"
             if test == 'eval':
                 row = [str(key), str(metrics_type_), str(expected_), str(metric), str(fp32_metric_), str(diff_fp32),
                        str(diff_target), str("-")]
             else:
                 row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str("-")]
         else:
-            if fp32_metric_ is None:
-                fp32_metric_ = "-"
             if test == 'eval':
                 row = [str(key), str(metrics_type_), str(expected_), str("Not executed"), str(fp32_metric_),
                        str("-"), str("-"), str(error_message)]
@@ -191,6 +191,8 @@ class TestSotaCheckpoints:
         with tag('p'):
             with tag('span', style="Background-color: #{}".format(BG_COLOR_RED_HEX)):
                 text('Thresholds for FP32 and Expected are failed')
+        with tag('p'):
+            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
         with tag('table', border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid;"):
             with tag('tr'):
                 for i in init_table_string:
@@ -349,14 +351,19 @@ class TestSotaCheckpoints:
             metric_value = None
 
         fp32_metric = None
+        metric_type_from_json = False
         if eval_test_struct.reference_ is not None:
+            fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
+            metric_type_from_json = True
             reference_metric_file_path = METRICS_DUMP_PATH / self.get_metric_file_name(eval_test_struct.reference_)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
-                fp32_metric = metrics['Accuracy']
+                if metrics['Accuracy'] != 0:
+                    fp32_metric = metrics['Accuracy']
+                    metric_type_from_json = False
             else:
-                fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
+                metric_type_from_json = True
 
         if is_ok:
             diff_target = round((metric_value - eval_test_struct.expected_), 2)
@@ -372,7 +379,8 @@ class TestSotaCheckpoints:
                                                                           metric_value,
                                                                           diff_target,
                                                                           fp32_metric,
-                                                                          diff_fp32)
+                                                                          diff_fp32,
+                                                                          metric_type_from_json)
         retval = self.threshold_check(is_ok,
                                       diff_target,
                                       eval_test_struct.diff_fp32_min_,
