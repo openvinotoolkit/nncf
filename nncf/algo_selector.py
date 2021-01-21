@@ -19,7 +19,8 @@ COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
 class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
-    pass
+    def build_controller(self, target_model: 'NNCFNetwork') -> CompressionAlgorithmController:
+        return NoCompressionAlgorithmController(target_model)
 
 
 # pylint:disable=abstract-method
