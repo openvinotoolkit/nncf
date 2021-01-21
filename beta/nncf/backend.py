@@ -25,9 +25,11 @@ def import_module_from_path(module_name, path):
     spec.loader.exec_module(module)
     return module
 
+source_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 backend = import_module_from_path(
-  'nncf.common.utils.backend',
-  'nncf/common/utils/backend.py'
+    'nncf.common.utils.backend',
+    os.path.join(source_root, 'nncf', 'common', 'utils', 'backend.py')
 )
 
 backend.__nncf_backend__ = 'TensorFlow'
