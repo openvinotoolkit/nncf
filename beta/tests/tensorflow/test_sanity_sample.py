@@ -107,7 +107,7 @@ CONFIGS = {
 
 BATCH_SIZE_PER_GPU = {
     'classification': [32, 32, 32],
-    'object_detection': [2],
+    'object_detection': [1],
     'segmentation': [1],
 }
 
