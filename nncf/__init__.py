@@ -41,4 +41,7 @@ if __nncf_backend__ == 'Torch':
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
     # so this call is moved to package __init__ to ensure this.
     from .dynamic_graph.patch_pytorch import patch_torch_operators
+
+    from nncf.extensions import force_build_cpu_extensions, force_build_cuda_extensions
+
     patch_torch_operators()

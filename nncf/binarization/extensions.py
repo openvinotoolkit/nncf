@@ -12,13 +12,11 @@
 """
 
 import os.path
-
 import torch
 from torch.utils.cpp_extension import load
 
-from nncf.extensions import CudaNotAvailableStub
+from nncf.extensions import CudaNotAvailableStub, ExtensionsType, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/binarization")
 
@@ -36,15 +34,34 @@ CUDA_EXT_SRC_LIST = [
     os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu")
 ]
 
-BinarizedFunctionsCPU = load(
-    'binarized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-    verbose=False
-)
+
+@EXTENSIONS.register()
+class BinarizedFunctionsCPULoader:
+    @staticmethod
+    def extension_type():
+        return ExtensionsType.CPU
+
+    @staticmethod
+    def load():
+        return load('binarized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+                    verbose=False)
+
+
+@EXTENSIONS.register()
+class BinarizedFunctionsCUDALoader:
+    @staticmethod
+    def extension_type():
+        return ExtensionsType.CUDA
+
+    @staticmethod
+    def load():
+        return load('binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+                    verbose=False)
+
+
+BinarizedFunctionsCPU = BinarizedFunctionsCPULoader.load()
 
 if torch.cuda.is_available():
-    BinarizedFunctionsCUDA = load(
-        'binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-        verbose=False
-    )
+    BinarizedFunctionsCUDA = BinarizedFunctionsCUDALoader.load()
 else:
     BinarizedFunctionsCUDA = CudaNotAvailableStub

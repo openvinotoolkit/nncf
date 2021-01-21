@@ -15,9 +15,8 @@ import os.path
 import torch
 from torch.utils.cpp_extension import load
 
-from nncf.extensions import CudaNotAvailableStub
+from nncf.extensions import CudaNotAvailableStub, ExtensionsType, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/quantization")
 
@@ -35,17 +34,34 @@ CUDA_EXT_SRC_LIST = [
     os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu")
 ]
 
-QuantizedFunctionsCPU = load(
-    'quantized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-    verbose=False
-)
+
+@EXTENSIONS.register()
+class QuanizedFunctionsCPULoader:
+    @staticmethod
+    def extension_type():
+        return ExtensionsType.CPU
+
+    @staticmethod
+    def load():
+        return load('quantized_functions_cpu', CPU_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+                    verbose=False)
+
+
+@EXTENSIONS.register()
+class QuantizedFunctionsCUDALoader:
+    @staticmethod
+    def extension_type():
+        return ExtensionsType.CUDA
+
+    @staticmethod
+    def load():
+        return load('quantized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+                    verbose=False)
+
+
+QuantizedFunctionsCPU = QuanizedFunctionsCPULoader.load()
 
 if torch.cuda.is_available():
-    ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cuda")
-    QuantizedFunctionsCUDA = load(
-        'quantized_functions_cuda', CUDA_EXT_SRC_LIST,
-        extra_include_paths=EXT_INCLUDE_DIRS,
-        verbose=False
-    )
+    QuantizedFunctionsCUDA = QuantizedFunctionsCUDALoader.load()
 else:
     QuantizedFunctionsCUDA = CudaNotAvailableStub
