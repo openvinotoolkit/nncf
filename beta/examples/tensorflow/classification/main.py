@@ -252,7 +252,7 @@ def main(argv):
 
     serialize_config(config, config.log_dir)
 
-    nncf_root = Path(__file__).absolute().parents[2]
+    nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, osp.join(config.log_dir, 'snapshot.tar.gz'))
     if 'train' in config.mode or 'test' in config.mode:
         run(config)
