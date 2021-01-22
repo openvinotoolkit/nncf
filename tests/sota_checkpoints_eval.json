@@ -297,8 +297,10 @@
                 "batch": 32,
                 "model_description": "SSD300-BN",
                 "compression_description": "Filter pruning, 40%, geometric median criterion",
-                "diff_fp32_min": -1.2,
-                "diff_fp32_max": 0.1
+                "diff_fp32_min": -4.6,
+                "diff_fp32_max": 0.1,
+                "diff_target_min": -4.6,
+                "diff_target_max": 0.1                
             },
             "ssd512_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc.json",
