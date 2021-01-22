@@ -12,7 +12,7 @@
 """
 import math
 from collections import deque
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import networkx as nx
 import torch
@@ -24,8 +24,9 @@ from nncf.model_utils import get_module_by_scope
 from nncf.layers import NNCF_CONV_MODULES_DICT, NNCF_DECONV_MODULES_DICT
 from nncf.nncf_network import NNCFNetwork
 
+
 # pylint: disable=protected-access
-def get_rounded_pruned_element_number(total, sparsity_rate, multiple_of=8):
+def get_rounded_pruned_element_number(total: int, sparsity_rate: int, multiple_of: int = 8) -> int:
     """
     Calculates number of sparsified elements (approximately sparsity rate) from total such as
     number of remaining items will be multiple of some value.
@@ -39,7 +40,7 @@ def get_rounded_pruned_element_number(total, sparsity_rate, multiple_of=8):
     return max(total - remaining_elems, 0)
 
 
-def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict):
+def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict) -> Optional[dict]:
     out_edges = graph.out_edges(conv_node['key'])
     for _, out_node_key in out_edges:
         out_node = graph.nodes[out_node_key]
@@ -66,7 +67,7 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
     return bn_module, bn_graph_node
 
 
-def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True):
+def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True) -> List[dict]:
     """
     Looking for first nodes with type from pruned_ops_types that are reachable from nodes.
     :param nncf_graph: NNCFGraph to work with
@@ -102,7 +103,8 @@ def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forwa
     return found_nodes
 
 
-def traverse_function(node: NNCFNode, output, nncf_graph: NNCFGraph, type_check_fn, visited):
+def traverse_function(node: NNCFNode, output: List[NNCFNode], nncf_graph: NNCFGraph, type_check_fn, visited) \
+        -> Tuple[bool, List[NNCFNode]]:
     nx_node = nncf_graph._nx_graph.nodes[nncf_graph.get_node_key_by_id(node.node_id)]
     node_type = nncf_graph.node_type_fn(nx_node)
     if visited[node.node_id]:
@@ -116,14 +118,14 @@ def traverse_function(node: NNCFNode, output, nncf_graph: NNCFGraph, type_check_
     return True, output
 
 
-def get_first_pruned_nodes(graph: NNCFGraph, pruned_ops_types):
+def get_first_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List[NNCFNode]:
     """
     Looking for first pruned node in graph.
     First == layer of pruned type, that there is a path from the input such that there are no other
     pruned operations on it.
     :param pruned_ops_types: types of modules that will be pruned
     :param graph: graph to work with
-    :return: list of all first pruned modules
+    :return: list of all first pruned nodes
     """
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
@@ -138,14 +140,14 @@ def get_first_pruned_nodes(graph: NNCFGraph, pruned_ops_types):
     return first_pruned_nodes
 
 
-def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types):
+def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List[NNCFNode]:
     """
     Looking for last pruned nodes in graph.
     Last == layer of pruned type, that there is a path from this layer to the model output
     such that there are no other pruned operations on it.
     :param pruned_ops_types: types of modules that will be pruned
     :param graph: graph to work with
-    :return: list of all last pruned modules
+    :return: list of all last pruned nodes
     """
     graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
 
@@ -160,7 +162,7 @@ def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types):
     return last_pruned_nodes
 
 
-def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
+def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
     """
     Source is a node of sourse such that there is path from this node to nx_node and on this path
     no node has one of sources_types type.
@@ -182,23 +184,23 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
     return source_nodes
 
 
-def is_conv_with_downsampling(node: NNCFNode):
+def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return not torch.all(torch.tensor(node.module_details["stride"]) == 1) and \
            not node.op_exec_context.operator_name in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
 
-def is_grouped_conv(node: NNCFNode):
+def is_grouped_conv(node: NNCFNode) -> bool:
     return node.module_details["groups"] != 1
 
 
-def is_depthwise_conv(node: NNCFNode):
+def is_depthwise_conv(node: NNCFNode) -> bool:
     return node.module_details["groups"] == node.module_details["in_channels"] \
            and (node.module_details["out_channels"] % node.module_details["in_channels"] == 0)
 
 
-def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode):
+def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode) -> Optional[NNCFNode]:
     """
-    Return source convolution of module. If node has other source type or there are more than one source - return None.
+    Return source convolution of node. If node has other source type or there are more than one source - return None.
     """
     conv_types = [str.lower(v.__name__) for v in NNCF_CONV_MODULES_DICT.values()]
 
@@ -233,7 +235,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     return next_nodes
 
 
-def get_next_nodes_of_types(model, nncf_node, types) -> List[NNCFNode]:
+def get_next_nodes_of_types(model: NNCFNetwork, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
     """
     Looking for nodes with type from types list from nncf_node such that there is path from nncf_node to this node and
     on this path no node has one of types type.
