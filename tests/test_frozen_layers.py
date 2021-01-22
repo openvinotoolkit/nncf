@@ -180,7 +180,6 @@ def test_frozen_layers(mocker, params):
     for scope in ignored_scopes:
         freeze_module(model, scope)
 
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     if params.is_error:
         with pytest.raises(RuntimeError):
             compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)

@@ -148,15 +148,20 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         if should_consider_scope(str(layer[0]), target_scopes, ignored_scopes):
             frozen_layers.append(layer)
     if len(frozen_layers) > 0:
-        if are_frozen_layers_allowed_for_algos(compression_algo_builder_list):
-            logger.warn('Frozen layers detected. Using ' +
-                          reduce(lambda x, y: x + " and " + y,
-                                 [builder.algo_name() for builder in compression_algo_builder_list]) +
-            ' but do not tune the weights.')
+        problem_algos = []
+        for builder in compression_algo_builder_list:
+            if not builder.are_frozen_layers_allowed():
+                problem_algos.append(builder.algo_name())
+        if len(problem_algos) > 0:
+            raise RuntimeError(
+                f'Frozen layers are not allowed for {problem_algos}. '
+                f'Please unfreeze them or put into the Ignored Scope.\n'
+                f'Frozen Layers: {[str(pair[0]) for pair in frozen_layers]}')
         else:
-            frozen_layers_scopes = [convert_scope_back_from_nncf(layer[0]) for layer in frozen_layers]
-            raise RuntimeError(f'Frozen layers detected. Please unfreeze them or put into the Ignored Scope.\n'
-                               f'Frozen Layers: {[str(scope) for scope in frozen_layers_scopes]}')
+            logger.warn('Frozen layers detected. Using ' +
+                        reduce(lambda x, y: x + " and " + y,
+                               [builder.algo_name() for builder in compression_algo_builder_list]) +
+                        ' but do not tune the weights.')
 
     compression_ctrl = compressed_model.commit_compression_changes()
 
