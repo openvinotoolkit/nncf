@@ -33,21 +33,35 @@ def update_config(config, update_dict):
     return config
 
 
-class FrozenLayersTestStruct(NamedTuple):
-    config: 'NNCFConfig' = get_quantization_config_without_range_init
-    model_creator: Callable[[], nn.Module] = TwoConvTestModel
-    is_error: bool = True
+#class FrozenLayersTestStruct(NamedTuple):
+#    config: 'NNCFConfig' = get_quantization_config_without_range_init
+#    model_creator: Callable[[], nn.Module] = TwoConvTestModel
+#    is_error: bool = True
+
+
+class FrozenLayersTestStruct:
+
+    def __init__(self, id='No_name', config=None, config_update={},
+                 model=TwoConvTestModel(), is_error=True):
+        self.id = id
+        if config is None:
+            self.config = get_quantization_config_without_range_init()
+        else:
+            self.config = config
+        self.config.update(config_update)
+        self.model = model
+        self.is_error = is_error
 
 
 TEST_PARAMS = [
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    FrozenLayersTestStruct(id='8_bits_quantization_with_ignored_scope',config_update={
         "compression": {
             "algorithm": "quantization"
         },
         "ignored_scopes": ['TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]']
-    })
-    , model_creator=TwoConvTestModel, is_error=False),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }
+    , model=TwoConvTestModel(), is_error=False),
+    FrozenLayersTestStruct(id='mixed_precision_quantization_with_ignored_scope',config_update={
         "target_device": "VPU",
         "compression": {
             "algorithm": "quantization",
@@ -59,9 +73,8 @@ TEST_PARAMS = [
             },
         "ignored_scopes": ['TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]']
         }
-    )
-    , model_creator=TwoConvTestModel, is_error=False),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    , model=TwoConvTestModel(), is_error=False),
+    FrozenLayersTestStruct(id='mixed_precision_quantization_with_target_scope',config_update={
         "target_device": "VPU",
         "compression": {
             "algorithm": "quantization",
@@ -72,11 +85,11 @@ TEST_PARAMS = [
             }
         },
         "target_scopes": ['TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]']
-    })
-    , model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=get_quantization_config_without_range_init(),
-                           model_creator=TwoConvTestModel, is_error=False),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }
+    , model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='8_bits_quantization',config=get_quantization_config_without_range_init(),
+                           model=TwoConvTestModel(), is_error=False),
+    FrozenLayersTestStruct(id='',config_update={
         "compression": {
         "algorithm": "quantization",
         "initializer": {
@@ -85,9 +98,9 @@ TEST_PARAMS = [
                 }
             }
         }
-    })
-    , model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }
+    , model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='4_bits_quantization', config_update={
         "target_device": "VPU",
         "compression": {
             "algorithm": "quantization",
@@ -98,14 +111,14 @@ TEST_PARAMS = [
                 "bits": 4
             }
         }
-    }),
-    model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    },
+    model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='',config_update={
         "compression": {
             "algorithm": "const_sparsity"
         }
-    }), model_creator=TwoConvTestModel, is_error=False),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }, model=TwoConvTestModel(), is_error=False),
+    FrozenLayersTestStruct(id='',config_update={
         "compression": [{
             "algorithm": "rb_sparsity"
         },
@@ -113,8 +126,8 @@ TEST_PARAMS = [
             "algorithm": "quantization"
         }
         ]
-    }), model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }, model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='',config_update={
         "compression": [{
             "algorithm": "const_sparsity"
         },
@@ -122,8 +135,8 @@ TEST_PARAMS = [
             "algorithm": "quantization"
         }
         ]
-    }), model_creator=TwoConvTestModel, is_error=False),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }, model=TwoConvTestModel(), is_error=False),
+    FrozenLayersTestStruct(id='',config_update={
         "target_device": "VPU",
         "compression": [{
             "algorithm": "const_sparsity"
@@ -138,8 +151,8 @@ TEST_PARAMS = [
             },
         }
         ]
-    }), model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=update_config(get_quantization_config_without_range_init(), {
+    }, model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='',config_update={
         "target_device": "VPU",
         "compression": [{
             "algorithm": "rb_sparsity"
@@ -154,8 +167,8 @@ TEST_PARAMS = [
             },
         }
         ]
-    }), model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=update_config(get_basic_pruning_config(), {
+    }, model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='',config=get_basic_pruning_config(), config_update={
         "compression":
         {
             "algorithm": "filter_pruning",
@@ -164,15 +177,15 @@ TEST_PARAMS = [
                 "prune_last_conv": True
             }
         }
-    }), model_creator=TwoConvTestModel, is_error=True),
-    FrozenLayersTestStruct(config=get_basic_sparsity_config(),
-                           model_creator=TwoConvTestModel, is_error=True)
+    }, model=TwoConvTestModel(), is_error=True),
+    FrozenLayersTestStruct(id='',config=get_basic_sparsity_config(),
+                           model=TwoConvTestModel(), is_error=True)
 ]
 
 
-@pytest.mark.parametrize('params', TEST_PARAMS, ids=[str(p.config['model']) for p in TEST_PARAMS])
+@pytest.mark.parametrize('params', TEST_PARAMS, ids=[p.id + '_is_error_' + str(p.is_error) for p in TEST_PARAMS])
 def test_frozen_layers(mocker, params):
-    model = params.model_creator()
+    model = params.model
     config = params.config
     mocker.patch('nncf.quantization.algo.QuantizationBuilder._parse_init_params')
     ignored_scopes = config.get('ignored_scopes', [None])

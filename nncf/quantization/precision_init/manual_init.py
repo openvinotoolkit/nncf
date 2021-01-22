@@ -21,8 +21,6 @@ from ...structures import QuantizationPrecisionInitArgs
 from ...utils import in_scope_list
 
 
-from nncf.utils import get_all_modules
-
 class ManualPrecisionInitParams(BasePrecisionInitParams):
     def __init__(self,
                  user_init_args: QuantizationPrecisionInitArgs = None,
@@ -52,15 +50,12 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                 raise ValueError('Invalid format of bitwidth per scope: [int, str] is expected')
             bitwidth = pair[0]
             scope_name = pair[1]
-            print(str(scope_name))
             is_matched = False
             for scope, quantizer in self._all_quantizers_per_scope.items():
-                print(str(scope))
                 if in_scope_list(str(scope), scope_name):
                     quantizer.num_bits = bitwidth
                     is_matched = True
             if not is_matched:
-                #print(get_all_modules(self._model).keys())
                 raise ValueError(
                     'Invalid scope name `{}`, failed to assign bitwidth {} to it'.format(scope_name, bitwidth))
         return self._algo.get_quantizer_setup_for_current_state()

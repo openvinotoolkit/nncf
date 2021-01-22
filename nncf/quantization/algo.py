@@ -1430,7 +1430,7 @@ class QuantizationDebugInterface(DebugInterface):
             self.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME: CallCountTracker(
                 QuantizationDebugInterface.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME),
             self.ACTIVATION_QUANTIZERS_TRACKER_NAME: CallCountTracker(
-                QuantizationDebugInterface.ACTIVATION_QUANTIZERS_TRACKER_NAME)
+                QuantizationDebugInterface.ACTIVATION_QUANTIZERS_TRACKER_NAME),
         }
         self.graph_size = 0
 

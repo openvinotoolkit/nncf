@@ -355,20 +355,13 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def get_frozen_nncf_modules(model, convert_scopes_back_from_nncf_modules=False):
+def get_frozen_nncf_modules(model, ignored_scopes=None, target_scopes=None):
     frozen_layers = []
     for scope, module in model.get_nncf_modules().items():
         if not module.weight.requires_grad:
-            frozen_layers.append((scope, module))
+            if should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                frozen_layers.append((scope, module))
     return frozen_layers
-    pass
-
-
-def convert_scope_back_from_nncf(scope):
-     for module_name in NNCF_MODULES_MAP.keys():
-         if module_name in str(scope):
-             from nncf.dynamic_graph.context import Scope
-             return Scope.from_str(str(scope).replace(module_name, NNCF_MODULES_MAP[module_name]))
 
 
 @contextmanager

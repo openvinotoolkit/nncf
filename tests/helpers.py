@@ -19,7 +19,6 @@ from copy import deepcopy
 from torch import nn
 from torch.nn import Module
 
-#from nncf.dynamic_graph.context import Scope
 from nncf import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
