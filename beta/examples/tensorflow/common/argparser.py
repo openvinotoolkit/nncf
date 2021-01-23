@@ -26,6 +26,14 @@ def get_common_argument_parser(**flags):
         help='Path to a config file with task/model-specific parameters.',
         required=True)
 
+    add_argument(
+        parser=parser,
+        condition=flags.get('metrics_dump', True),
+        parameters=argument_parameters(
+            '--metrics-dump',
+            type=str,
+            help='Name of metrics collecting .json file'))
+
     model_init_mode = parser.add_mutually_exclusive_group()
 
     add_argument(
@@ -198,6 +206,13 @@ def get_common_argument_parser(**flags):
     return parser
 
 
+def argument_parameters(*args, **kwargs):
+    return (args, kwargs)
+
+
+def add_argument(parser, condition, parameters):
+    if condition:
+        parser.add_argument(*parameters[0], **parameters[1])
 def argument_parameters(*args, **kwargs):
     return (args, kwargs)
 

@@ -19,7 +19,7 @@ except ImportError:
     tf = None
 
 TEST_ROOT = Path(__file__).parent.absolute()
-
+PROJECT_ROOT = TEST_ROOT.parent.absolute()
 
 @pytest.fixture(scope="function", autouse=True)
 def clear_session():
@@ -33,6 +33,24 @@ def pytest_addoption(parser):
         "--data", type=str, default=None,
         help="Path to test datasets"
     )
+    parser.addoption(
+        "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
+    )
+    parser.addoption(
+        "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
+    )
+
+
+@pytest.fixture(scope="module")
+def sota_checkpoints_dir(request):
+    return request.config.getoption("--sota-checkpoints-dir")
+
+
+@pytest.fixture(scope="module")
+def sota_data_dir(request):
+    return request.config.getoption("--sota-data-dir")
+
+
 
 
 @pytest.fixture(scope="module")
