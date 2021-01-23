@@ -368,11 +368,11 @@ class InsertionPointGraph(nx.DiGraph):
         return merged_ip_graph
 
     @staticmethod
-    def get_pre_hook_node_key(node_key: str, in_port_id: int = 0):
+    def get_pre_hook_node_key(node_key: str, in_port_id: int = 0) -> str:
         return InsertionPointGraph.PRE_HOOK_ID_PREFIX + str(in_port_id) + ' ' + node_key
 
     @staticmethod
-    def get_post_hook_node_key(node_key: str):
+    def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
 
     def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None) -> NodeExpression:

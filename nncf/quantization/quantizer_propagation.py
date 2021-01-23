@@ -355,7 +355,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
     def merge_quantizers_for_branching_node(self, quantizers_to_merge: List[PropagatingQuantizer],
                                             merged_qconf_list: List[QuantizerConfig],
-                                            branch_qconf_lists: List[List[QuantizerConfig]],
+                                            branch_qconf_lists: List[Optional[List[QuantizerConfig]]],
                                             branching_node_key: str):
         assert self.nodes[branching_node_key][QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] == \
                QuantizerPropagationStateGraphNodeType.INSERTION_POINT
@@ -501,6 +501,75 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         prop_quantizer.quantized_input_sink_operator_nodes.add(affected_op_node_key)
         return prop_quantizer
 
+    def _verify_nodes_and_edges_for_pq(self, prop_quantizer: PropagatingQuantizer):
+        node_keys_to_verify = list(prop_quantizer.affected_operator_nodes) + \
+                              list(prop_quantizer.quantized_input_sink_operator_nodes) + \
+                              [prop_quantizer.current_location_node_key] + \
+                              list(prop_quantizer.affected_ip_nodes)
+        if prop_quantizer.last_accepting_location_node_key is not None:
+            node_keys_to_verify.append(prop_quantizer.last_accepting_location_node_key)
+
+        for node_key in node_keys_to_verify:
+            if node_key not in self.nodes:
+                raise RuntimeError("Unknown node referenced by propagating quantizer to be registered: {}".format(
+                    node_key
+                ))
+        edge_keys_to_verify = list(prop_quantizer.affected_edges) + list(prop_quantizer.propagation_path)
+        for edge_key in edge_keys_to_verify:
+            if edge_key not in self.edges:
+                raise RuntimeError("Unknown edge referenced by propagating quantizer to be registered: {}".format(
+                    edge_key
+                ))
+
+    @staticmethod
+    def _verify_qconfig_matching(prop_quantizer: PropagatingQuantizer,
+                                 existing_prop_quantizers: List[PropagatingQuantizer]):
+        for existing_pq in existing_prop_quantizers:  # type: PropagatingQuantizer
+            if existing_pq.potential_quant_configs != prop_quantizer.potential_quant_configs:
+                raise RuntimeError("Configurations of the quantizer to be registered are conflicting with "
+                                   "existing quantizer {}".format(existing_pq.id))
+
+    def register_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer):
+        """Will only succeed if the new quantizer information is consistent with the rest of the graph state."""
+        all_pqs = self.collect_all_propagating_quantizers()
+        for existing_pq_id in all_pqs:
+            if prop_quantizer.id == existing_pq_id:
+                raise RuntimeError("The propagating quantizer to be registered has an ID that is already assigned to "
+                                   "an existing propagating quantizer!")
+        target_node = self.nodes[prop_quantizer.current_location_node_key]
+        pq_in_target_node = target_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
+        if pq_in_target_node is not None:
+            raise RuntimeError("The propagating quantizer to be registered is occupying the same position "
+                               "as an existing propagating quantizer {}!".format(pq_in_target_node.id))
+        target_node_affecting_quantizers = target_node[
+            QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+        if target_node_affecting_quantizers:
+            raise RuntimeError("Cannot register a propagating quantizer into a node that is already "
+                               "affected by existing propagating quantizers (ids: {})!".format(
+                [pq.id for pq in target_node_affecting_quantizers]))
+
+        self._verify_nodes_and_edges_for_pq(prop_quantizer)
+
+        for node_key in prop_quantizer.affected_operator_nodes:
+            node = self.nodes[node_key]
+            node_pqs = node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+            self._verify_qconfig_matching(prop_quantizer, node_pqs)
+            node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(prop_quantizer)
+
+        for node_key in prop_quantizer.affected_ip_nodes:
+            node = self.nodes[node_key]
+            node_pqs = node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+            self._verify_qconfig_matching(prop_quantizer, node_pqs)
+            node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(prop_quantizer)
+
+        for edge_key in prop_quantizer.affected_edges:
+            edge = self.edges[edge_key]
+            edge_pqs = edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
+            self._verify_qconfig_matching(prop_quantizer, edge_pqs)
+            edge[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(prop_quantizer)
+
+        target_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = prop_quantizer
+
     def clone_propagating_quantizer(self, prop_quantizer: PropagatingQuantizer) -> PropagatingQuantizer:
         cloned_prop_quant = deepcopy(prop_quantizer)
         cloned_prop_quant.id = self._get_next_prop_quantizer_id()
@@ -547,7 +616,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
             self._unified_scale_group_manager.remove_from_group(gid, prop_quantizer)
 
-    def propagate_quantizer_via_path(self, prop_quantizer: PropagatingQuantizer, path: List) -> PropagatingQuantizer:
+    def propagate_quantizer_via_path(self, prop_quantizer: PropagatingQuantizer,
+                                     path: List[Tuple[str, str]]) -> PropagatingQuantizer:
         curr_node_key = prop_quantizer.current_location_node_key
         curr_node = self.nodes[curr_node_key]
         existing_quantizer = curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
@@ -708,20 +778,35 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     def traverse_graph(self, curr_node_key: str,
                        traverse_function: Callable[[str, Any], Tuple[bool, Any]],
                        output: Any,
-                       traverse_forward: bool = True) -> Any:
+                       traverse_forward: bool = True,
+                       dfs: bool = False) -> Any:
         visited_node_keys = set()  # type: Set[str]
-        return self._traverse_graph_recursive_helper(curr_node_key,
-                                                     visited_node_keys,
-                                                     traverse_function, output, traverse_forward)
+        node_keys_to_visit = deque()  # type: Deque[str]
+        next_node_keys_indexer = self.succ if traverse_forward else self.pred
+        node_keys_to_visit.appendleft(curr_node_key)
+        while node_keys_to_visit:
+            if dfs:
+                node_key = node_keys_to_visit.popleft()
+            else:
+                node_key = node_keys_to_visit.pop()
+            is_finished, output = traverse_function(node_key, output)
+            visited_node_keys.add(node_key)
+            if not is_finished:
+                for next_node_key in next_node_keys_indexer[node_key]:
+                    if not next_node_key in visited_node_keys:
+                        node_keys_to_visit.appendleft(next_node_key)
+
+        return output
 
     def _traverse_graph_recursive_helper(self, curr_node_key: str, visited_node_keys: Set[str],
                                          traverse_function: Callable[[str, Any], Tuple[bool, Any]],
                                          output: Any, traverse_forward: bool):
+        """This is DFS, and may fail with 'maximum recursion depth exceeded' for complex graphs."""
         is_finished, output = traverse_function(curr_node_key, output)
         visited_node_keys.add(curr_node_key)
-        node_keys_holder = self.succ if traverse_forward else self.pred
+        next_node_keys_indexer = self.succ if traverse_forward else self.pred
         if not is_finished:
-            for node_key in node_keys_holder[curr_node_key]:
+            for node_key in next_node_keys_indexer[curr_node_key]:
                 if node_key not in visited_node_keys:
                     self._traverse_graph_recursive_helper(node_key, visited_node_keys,
                                                           traverse_function, output, traverse_forward)
@@ -790,6 +875,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         def merge_traverse_fn(curr_node_key: str,
                               affecting_pq_and_prev_node_key: Tuple[Optional[PropagatingQuantizer],
                                                                     str]) -> Tuple[Optional[PropagatingQuantizer], str]:
+            # For this to work, DFS must be used for graph traversal. Also, this only
+            # works with the generic traverse_graph interface because of
+            # Python's pass-by-value mechanism for tuples.
             affecting_pq, prev_node_key = affecting_pq_and_prev_node_key
             curr_node = self.nodes[curr_node_key]
             curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -818,7 +906,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 graph_roots.append(node_key)
 
         for graph_root_key in graph_roots:
-            self.traverse_graph(graph_root_key, merge_traverse_fn, (None, graph_root_key))
+            self.traverse_graph(graph_root_key, merge_traverse_fn, (None, graph_root_key), dfs=True)
 
     def collect_all_propagating_quantizers(self) -> Set[PropagatingQuantizer]:
         retval = set()  # type: Set[PropagatingQuantizer]
