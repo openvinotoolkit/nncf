@@ -696,7 +696,7 @@ TARGET_DEVICE_SCHEMA = {
 }
 
 ROOT_NNCF_CONFIG_SCHEMA = {
-    "$schema": "http://json-schema.org/draft/2019-09/schema#",
+    "$schema": "http://json-schema.org/draft-07/schema",
     "type": "object",
     "properties": {
         "input_info": with_attributes(make_object_or_array_of_objects_schema(SINGLE_INPUT_INFO_SCHEMA),
