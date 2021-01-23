@@ -32,11 +32,12 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
                 and gradients.
-    :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
+    :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
+                   use the device of the model's parameters.
     """
 
     def __init__(self, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 data_loader: DataLoader, device: str = 'cuda'):
+                 data_loader: DataLoader, device: str = None):
         self.criterion_fn = criterion_fn
         self.criterion = criterion
         self.data_loader = data_loader
@@ -55,10 +56,11 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
                 and gradients.
-    :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
+    :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
+                   use the device of the model's parameters.
     """
 
-    def __init__(self, data_loader: DataLoader, device: str = 'cuda'):
+    def __init__(self, data_loader: DataLoader, device: str = None):
         self.data_loader = data_loader
         self.device = device
 
@@ -75,10 +77,11 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
                 of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
                 and gradients.
-    :param device: Device to perform initialization at. Either 'cpu' or 'cuda' (default).
+    :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
+                   use the device of the model's parameters.
     """
 
-    def __init__(self, data_loader: DataLoader, device: str = 'cuda'):
+    def __init__(self, data_loader: DataLoader, device: str = None):
         self.data_loader = data_loader
         self.device = device
 

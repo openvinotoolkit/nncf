@@ -226,6 +226,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
             if self._hw_precision_constraints else params.bits
         self._init_device = init_args.device
+        if self._init_device is None:
+            self._init_device = next(self._model.parameters()).device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._dump_hawq_data = params.dump_hawq_data
         self._original_qp_id_vs_quantizer_module_id_dict = deepcopy(algo.setup_to_module_id_translation_dict)
@@ -233,6 +235,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def apply_init(self) -> SingleConfigQuantizerSetup:
         if not self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id():
             return self._algo.get_quantizer_setup_for_current_state()
+
         original_device = next(self._model.parameters()).device
         self._model.to(self._init_device)
 
