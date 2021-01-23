@@ -70,7 +70,6 @@ def get_argument_parser():
 
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
-
     config = create_sample_config(args, parser)
     configure_paths(config)
     return config

@@ -25,7 +25,7 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
-from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilde
+from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.optimizer import build_optimizer
 from beta.examples.tensorflow.common.sample_config import create_sample_config
 from beta.examples.tensorflow.common.scheduler import build_scheduler
