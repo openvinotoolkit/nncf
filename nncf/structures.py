@@ -29,9 +29,15 @@ class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
     arguments: outputs of model and targets. For all other specific cases, the callable object should be provided.
     E.g. for inception-v3, the losses for two outputs of the model are combined with different weight.
     :param criterion: loss function, instance of descendant of `torch.nn.modules.loss._Loss`,
-    :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
-                of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
-                and gradients.
+    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
+                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
+                *WARNING*: The final quantizer setup of the created compressed model is dependent on the data
+                provided by the data_loader. When using PyTorch's DistributedDataParallel with precision
+                initialization, make sure that each process in the distributed group receives the same data
+                from the data_loader as the other processes, otherwise the create_compressed_model call may
+                create different compressed model objects for each distributed process and the distributed training
+                will fail.
     :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
                    use the device of the model's parameters.
     """
@@ -53,9 +59,9 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
     Stores arguments for initialization of quantization's ranges.
     Initialization is done by collecting per-layer activation statistics on training dataset in order to choose proper
     output range for quantization.
-    :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
-                of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
-                and gradients.
+    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
+                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
     :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
                    use the device of the model's parameters.
     """
@@ -74,9 +80,9 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     Stores arguments for BatchNorm statistics adaptation procedure.
     Adaptation is done by inferring a number of data batches on a compressed model
     while the BN layers are updating the rolling_mean and rolling_variance stats.
-    :param data_loader: 'data_loader' - provides an iterable over the given dataset, instance of descendant
-                of 'torch.utils.data.DataLoader' class. Must return both inputs and targets to calculate loss
-                and gradients.
+    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
+                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
     :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
                    use the device of the model's parameters.
     """
@@ -90,6 +96,17 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         return "bn_adaptation_init_args"
 
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
+    """
+    :param data_loader: 'data_loader' - provides an iterable over the given dataset. Instance of
+                nncf.initialization.InitializingDataLoader; a regular 'torch.utils.data.DataLoader' may
+                also be passed, but only in the simple case when it returns a tuple of (input, target) tensors.
+                *WARNING*: The final quantizer setup of the created compressed model is dependent on the data
+                provided by the data_loader. When using PyTorch's DistributedDataParallel with precision
+                initialization, make sure that each process in the distributed group receives the same data
+                from the data_loader as the other processes, otherwise the create_compressed_model call may
+                create different compressed model objects for each distributed process and the distributed training
+                will fail.
+    """
     def __init__(self, data_loader: DataLoader,
                  eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
                  nncf_config: 'NNCFConfig'):
