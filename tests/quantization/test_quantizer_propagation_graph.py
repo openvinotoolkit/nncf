@@ -684,6 +684,7 @@ class TestQuantizerPropagationStateGraph:
 
             assert quantizer.affected_edges == expected_prop_path
 
+class TestRedundantQuantizerMerge:
     class RedundantQuantizerMergeTestStruct(ABC):
         ref_remaining_pq_positions: Set[str]
         operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
@@ -769,6 +770,33 @@ class TestQuantizerPropagationStateGraph:
                                                      InsertionPointGraph.get_post_hook_node_key('B'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
                                            InsertionPointGraph.get_pre_hook_node_key('E'))
+            return qpsg
+
+    class BranchHandlingState0(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=0),
+            InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=1),
+            InsertionPointGraph.get_pre_hook_node_key('C'),
+            InsertionPointGraph.get_pre_hook_node_key('D')
+        }
+        operator_node_key_vs_trait_dict = {
+            'I': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'G': QuantizationTrait.NON_QUANTIZABLE,
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            # This case will fail if, after going depth-first through the 'D' branch of the graph,
+            # the merge traversal function state is not reset (which is incorrect behavior)
+            # when starting to traverse the 'C' branch.
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=0))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=1))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('C'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('D'))
             return qpsg
 
     class MergeState0(RedundantQuantizerMergeTestStruct):
@@ -877,6 +905,7 @@ class TestQuantizerPropagationStateGraph:
         NoConnectingPathsState1(),
         NoConnectingPathsState2(),
         NoConnectingPathsState3(),
+        BranchHandlingState0(),
         MergeState0(),
         MergeState1(),
         NoRedundancyState0(),
@@ -886,6 +915,41 @@ class TestQuantizerPropagationStateGraph:
     @pytest.fixture(params=REDUNDANT_QUANTIZER_MERGE_TEST_CASES)
     def redundant_pq_merge_test_struct(self, request):
         return request.param
+
+
+    @pytest.fixture
+    def model_graph_qpsg(self):
+        mock_graph = self.get_model_graph()
+        ip_graph = InsertionPointGraph(mock_graph)
+        quant_prop_graph = QPSG(ip_graph)
+        return quant_prop_graph
+
+    @staticmethod
+    def get_model_graph():
+        mock_node_attrs = get_mock_nncf_node_attrs()
+        mock_graph = nx.DiGraph()
+
+        #     (A)
+        #      |
+        #     (B)
+        #   /     \
+        # (C)     (D)
+        #  |       |
+        # (F)     (E)
+        #  |       |
+        # (G)      |
+        #  |       |
+        # (H)      |
+        #   \     /
+        #     (I)
+        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+        for node_key in node_keys:
+            mock_graph.add_node(node_key, **mock_node_attrs)
+
+        mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F'),
+                                   ('F', 'G'), ('G', 'H'), ('H', 'I'), ('E', 'I')])
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+        return mock_graph
 
     def test_merge_redundant_subsequent_quantizers_across_graph(self, model_graph_qpsg: QPSG,
                                                                 redundant_pq_merge_test_struct:

@@ -779,22 +779,27 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                        traverse_function: Callable[[str, Any], Tuple[bool, Any]],
                        output: Any,
                        traverse_forward: bool = True,
-                       dfs: bool = False) -> Any:
+                       dfs: bool = True) -> Any:
         visited_node_keys = set()  # type: Set[str]
-        node_keys_to_visit = deque()  # type: Deque[str]
+        node_keys_to_visit = deque()  # type: Deque[Tuple[str, Any]]
         next_node_keys_indexer = self.succ if traverse_forward else self.pred
-        node_keys_to_visit.appendleft(curr_node_key)
+        # Storing the node-specific operation output is required so that this function
+        # interface could generalize to situations where 'output' is not a global storage
+        # for some sort of data to be gathered from the graph as a whole, but is a traversal history-
+        # aware node-specific output, such as which quantizer affects the current node.
+        node_keys_to_visit.appendleft((curr_node_key, output))
+
         while node_keys_to_visit:
             if dfs:
-                node_key = node_keys_to_visit.popleft()
+                node_key, local_output = node_keys_to_visit.popleft()
             else:
-                node_key = node_keys_to_visit.pop()
-            is_finished, output = traverse_function(node_key, output)
+                node_key, local_output = node_keys_to_visit.pop()
+            is_finished, new_output = traverse_function(node_key, local_output)
             visited_node_keys.add(node_key)
             if not is_finished:
                 for next_node_key in next_node_keys_indexer[node_key]:
-                    if not next_node_key in visited_node_keys:
-                        node_keys_to_visit.appendleft(next_node_key)
+                    if next_node_key not in visited_node_keys:
+                        node_keys_to_visit.appendleft((next_node_key, new_output))
 
         return output
 
@@ -906,7 +911,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 graph_roots.append(node_key)
 
         for graph_root_key in graph_roots:
-            self.traverse_graph(graph_root_key, merge_traverse_fn, (None, graph_root_key), dfs=True)
+            self.traverse_graph(graph_root_key, merge_traverse_fn, (None, graph_root_key))
 
     def collect_all_propagating_quantizers(self) -> Set[PropagatingQuantizer]:
         retval = set()  # type: Set[PropagatingQuantizer]
