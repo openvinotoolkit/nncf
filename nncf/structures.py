@@ -16,11 +16,7 @@ import torch
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
-
-class NNCFExtraConfigStruct:
-    @classmethod
-    def get_id(cls) -> str:
-        raise NotImplementedError
+from nncf.config.structure import NNCFExtraConfigStruct
 
 
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):

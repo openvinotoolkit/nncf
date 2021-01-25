@@ -10,8 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set
 from collections import namedtuple, Counter
 
 import networkx as nx
@@ -39,6 +40,7 @@ def get_edge_paths_for_propagation(graph, start_node_key, finish_node_key) -> Li
 
 
 class TestQuantizerPropagationStateGraph:
+    #pylint:disable=too-many-public-methods
     @staticmethod
     @pytest.fixture()
     def mock_qp_graph():
@@ -404,20 +406,28 @@ class TestQuantizerPropagationStateGraph:
     def dominated_nodes_test_struct(request):
         return request.param
 
+    @staticmethod
+    def mark_nodes_with_traits(qpsg: QPSG, node_keys_vs_traits_dict: Dict[str, QuantizationTrait]) -> QPSG:
+        for node_key, node in qpsg.nodes.items():
+            if node_key in node_keys_vs_traits_dict:
+                node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = node_keys_vs_traits_dict[node_key]
+        return qpsg
+
     def test_get_quantizable_op_nodes_immediately_dominated_by_node(self, mock_qp_graph, dominated_nodes_test_struct):
         nodes_to_mark_as_quantizable = dominated_nodes_test_struct[0]
 
-        for node in mock_qp_graph.nodes.values():
-            node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
+        node_keys_vs_trait_dict = {}
+        for node_key in mock_qp_graph.nodes:
+            node_keys_vs_trait_dict[node_key] = QuantizationTrait.QUANTIZATION_AGNOSTIC
 
         traits_to_mark_with = [QuantizationTrait.INPUTS_QUANTIZABLE,
                                QuantizationTrait.NON_QUANTIZABLE]
 
         for trait in traits_to_mark_with:
             for node_key in nodes_to_mark_as_quantizable:
-                node = mock_qp_graph.nodes[node_key]
-                node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
+                node_keys_vs_trait_dict[node_key] = trait
 
+            mock_qp_graph = self.mark_nodes_with_traits(mock_qp_graph, node_keys_vs_trait_dict)
             for start_node_key, ref_dominated_quantizable_nodes_set in dominated_nodes_test_struct[1].items():
                 dominated_quantizable_nodes_list = \
                     mock_qp_graph.get_non_quant_agnostic_op_nodes_immediately_dominated_by_node(start_node_key)
@@ -594,10 +604,15 @@ class TestQuantizerPropagationStateGraph:
     def merge_quantizer_into_path_test_struct(request):
         return request.param
 
-    def test_merge_quantizer_into_path(self, merge_quantizer_into_path_test_struct):
+    @pytest.fixture
+    def model_graph_qpsg(self):
         mock_graph = self.get_model_graph()
         ip_graph = InsertionPointGraph(mock_graph)
         quant_prop_graph = QPSG(ip_graph)
+        return quant_prop_graph
+
+    def test_merge_quantizer_into_path(self, model_graph_qpsg, merge_quantizer_into_path_test_struct):
+        quant_prop_graph = model_graph_qpsg
 
         for quantizers_test_struct in merge_quantizer_into_path_test_struct.start_set_quantizers:
             init_node_to_trait_and_configs_dict = quantizers_test_struct.init_node_to_trait_and_configs_dict
@@ -605,14 +620,19 @@ class TestQuantizerPropagationStateGraph:
             target_node = quantizers_test_struct.target_node_for_quantizer
             is_merged = quantizers_test_struct.is_merged
             prop_path = quantizers_test_struct.prop_path
-            for node in quant_prop_graph.nodes.values():
-                node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
+            node_key_vs_trait_dict = {}  # type: Dict[str, QuantizationTrait]
+            for node_key in quant_prop_graph.nodes:
+                node_key_vs_trait_dict[node_key] = QuantizationTrait.QUANTIZATION_AGNOSTIC
             primary_prop_quant = None
             merged_prop_quant = []
             for node_key, trait_and_configs_tuple in init_node_to_trait_and_configs_dict.items():
                 trait = trait_and_configs_tuple[0]
+                node_key_vs_trait_dict[node_key] = trait
+            quant_prop_graph = self.mark_nodes_with_traits(quant_prop_graph, node_key_vs_trait_dict)
+
+            for node_key, trait_and_configs_tuple in init_node_to_trait_and_configs_dict.items():
+                trait = trait_and_configs_tuple[0]
                 qconfigs = trait_and_configs_tuple[1]
-                quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key)
                     prop_quant = quant_prop_graph.add_propagating_quantizer(qconfigs,
@@ -663,3 +683,282 @@ class TestQuantizerPropagationStateGraph:
                     assert quantizer in final_quant_prop_graph.nodes[from_node_key][QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
             assert quantizer.affected_edges == expected_prop_path
+
+class TestRedundantQuantizerMerge:
+    class RedundantQuantizerMergeTestStruct(ABC):
+        ref_remaining_pq_positions: Set[str]
+        operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
+
+        def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
+            qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)
+            return self._setup_and_propagate_quantizers(qpsg)
+
+        @abstractmethod
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pass
+
+    class NoConnectingPathsState0(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('D'),
+            InsertionPointGraph.get_pre_hook_node_key('F')
+        }
+        operator_node_key_vs_trait_dict = {
+            'D': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'F': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('D'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('F'))
+            return qpsg
+
+    class NoConnectingPathsState1(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('C'),
+            InsertionPointGraph.get_pre_hook_node_key('F')
+        }
+        operator_node_key_vs_trait_dict = {
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'F': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('C'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('F'))
+            return qpsg
+
+    class NoConnectingPathsState2(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('B'),
+            InsertionPointGraph.get_pre_hook_node_key('E')
+        }
+        operator_node_key_vs_trait_dict = {
+            'B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'D': QuantizationTrait.INPUTS_QUANTIZABLE,
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('B'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('E'))
+            return qpsg
+
+    class NoConnectingPathsState3(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_post_hook_node_key('B'),
+            InsertionPointGraph.get_pre_hook_node_key('E')
+        }
+        operator_node_key_vs_trait_dict = {
+            'B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'D': QuantizationTrait.INPUTS_QUANTIZABLE,
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('C'))
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('D'))
+            qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig()],
+                                                     [None, None],
+                                                     InsertionPointGraph.get_post_hook_node_key('B'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('E'))
+            return qpsg
+
+    class BranchHandlingState0(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=0),
+            InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=1),
+            InsertionPointGraph.get_pre_hook_node_key('C'),
+            InsertionPointGraph.get_pre_hook_node_key('D')
+        }
+        operator_node_key_vs_trait_dict = {
+            'I': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'G': QuantizationTrait.NON_QUANTIZABLE,
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            # This case will fail if, after going depth-first through the 'D' branch of the graph,
+            # the merge traversal function state is not reset (which is incorrect behavior)
+            # when starting to traverse the 'C' branch.
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=0))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('I', in_port_id=1))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('C'))
+            qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('D'))
+            return qpsg
+
+    class MergeState0(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_post_hook_node_key('C')
+        }
+        operator_node_key_vs_trait_dict = {
+            'F': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('F'))
+
+            qpsg.propagate_quantizer_via_path(pq_1, [
+                (InsertionPointGraph.get_post_hook_node_key('C'),
+                 InsertionPointGraph.get_pre_hook_node_key('F'))
+            ])
+            _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                               InsertionPointGraph.get_pre_hook_node_key('F'))
+            return qpsg
+
+    class MergeState1(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_post_hook_node_key('B')
+        }
+        operator_node_key_vs_trait_dict = {
+            'B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'E': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('C'))
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                           InsertionPointGraph.get_pre_hook_node_key('D'))
+            qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig()],
+                                                     [None, None],
+                                                     InsertionPointGraph.get_post_hook_node_key('B'))
+            pq_3 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],  # sic!
+                                                  InsertionPointGraph.get_pre_hook_node_key('E'))
+            # pq_3 should be considered redundant w.r.t the upstream per-tensor quantizer
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_pre_hook_node_key('D'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('E'))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_3, path)
+            return qpsg
+
+    class NoRedundancyState0(RedundantQuantizerMergeTestStruct):
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_post_hook_node_key('C'),
+            InsertionPointGraph.get_pre_hook_node_key('F'),
+        }
+        operator_node_key_vs_trait_dict = {
+            'F': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('F'))
+
+            qpsg.propagate_quantizer_via_path(pq_1, [
+                (InsertionPointGraph.get_post_hook_node_key('C'),
+                 InsertionPointGraph.get_pre_hook_node_key('F'))
+            ])
+            _ = qpsg.add_propagating_quantizer([QuantizerConfig(bits=6)],
+                                               InsertionPointGraph.get_pre_hook_node_key('F'))
+            return qpsg
+
+    class NoRedundancyState1(RedundantQuantizerMergeTestStruct):
+
+        ref_remaining_pq_positions = {
+            InsertionPointGraph.get_post_hook_node_key('B'),
+            InsertionPointGraph.get_pre_hook_node_key('D')
+        }
+        operator_node_key_vs_trait_dict = {
+            'B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'C': QuantizationTrait.INPUTS_QUANTIZABLE,
+            'D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            'E': QuantizationTrait.INPUTS_QUANTIZABLE
+        }
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('C'))
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('D'))
+            qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig(per_channel=True)],
+                                                     [None, None],
+                                                     InsertionPointGraph.get_post_hook_node_key('B'))
+            pq_3 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('E'))
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_pre_hook_node_key('D'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('E'))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_3, path)
+            return qpsg
+
+    REDUNDANT_QUANTIZER_MERGE_TEST_CASES = [
+        # No connecting quantization-agnostic paths between quantizers
+        NoConnectingPathsState0(),
+        NoConnectingPathsState1(),
+        NoConnectingPathsState2(),
+        NoConnectingPathsState3(),
+        BranchHandlingState0(),
+        MergeState0(),
+        MergeState1(),
+        NoRedundancyState0(),
+        NoRedundancyState1()
+    ]
+
+    @pytest.fixture(params=REDUNDANT_QUANTIZER_MERGE_TEST_CASES)
+    def redundant_pq_merge_test_struct(self, request):
+        return request.param
+
+
+    @pytest.fixture
+    def model_graph_qpsg(self):
+        mock_graph = self.get_model_graph()
+        ip_graph = InsertionPointGraph(mock_graph)
+        quant_prop_graph = QPSG(ip_graph)
+        return quant_prop_graph
+
+    @staticmethod
+    def get_model_graph():
+        mock_node_attrs = get_mock_nncf_node_attrs()
+        mock_graph = nx.DiGraph()
+
+        #     (A)
+        #      |
+        #     (B)
+        #   /     \
+        # (C)     (D)
+        #  |       |
+        # (F)     (E)
+        #  |       |
+        # (G)      |
+        #  |       |
+        # (H)      |
+        #   \     /
+        #     (I)
+        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+        for node_key in node_keys:
+            mock_graph.add_node(node_key, **mock_node_attrs)
+
+        mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F'),
+                                   ('F', 'G'), ('G', 'H'), ('H', 'I'), ('E', 'I')])
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+        return mock_graph
+
+    def test_merge_redundant_subsequent_quantizers_across_graph(self, model_graph_qpsg: QPSG,
+                                                                redundant_pq_merge_test_struct:
+                                                                RedundantQuantizerMergeTestStruct):
+        model_graph_qpsg = redundant_pq_merge_test_struct.prepare_qpsg_state(model_graph_qpsg)
+        model_graph_qpsg.merge_redundant_subsequent_quantizers_across_graph()
+        remaining_pqs = model_graph_qpsg.collect_all_propagating_quantizers()
+        ref_remaining_pq_positions = redundant_pq_merge_test_struct.ref_remaining_pq_positions
+        for pq in remaining_pqs:
+            assert pq.current_location_node_key in ref_remaining_pq_positions
+
+        assert len(remaining_pqs) == len(ref_remaining_pq_positions)

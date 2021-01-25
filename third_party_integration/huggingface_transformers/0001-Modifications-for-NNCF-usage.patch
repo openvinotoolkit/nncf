@@ -1,4 +1,4 @@
-From b2de21339758d892b3364d9e5905c31a37c867cb Mon Sep 17 00:00:00 2001
+From 65d164690835f65ee90d491903e0a0c5f255772e Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Fri, 29 Nov 2019 18:33:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -8,19 +8,19 @@ Subject: [PATCH] Modifications for NNCF usage
  examples/question-answering/run_squad.py      | 128 ++++++++++++++++--
  examples/text-classification/run_glue.py      |  38 +++++-
  examples/text-classification/run_xnli.py      | 127 +++++++++++++++--
- nncf_bert_config_squad.json                   |  43 ++++++
+ nncf_bert_config_squad.json                   |  46 +++++++
  ...config_squad_magnitude_sparsity_cubic.json |  31 +++++
  nncf_bert_config_xnli.json                    |  36 +++++
  nncf_distilbert_config_sst2.json              |  33 +++++
- nncf_gpt2_config_wikitext_hw_config.json      |  55 ++++++++
- nncf_mobilebert_config_squad_int8.json        |  43 ++++++
+ nncf_gpt2_config_wikitext_hw_config.json      |  58 ++++++++
+ nncf_mobilebert_config_squad_int8.json        |  46 +++++++
  nncf_roberta_config_mnli.json                 |  36 +++++
  src/transformers/modeling_gpt2.py             |   5 +-
  src/transformers/modeling_utils.py            |  26 +++-
  src/transformers/tokenization_utils_base.py   |   2 +-
  src/transformers/trainer.py                   |  65 ++++++++-
  src/transformers/training_args.py             |   8 ++
- 16 files changed, 699 insertions(+), 55 deletions(-)
+ 16 files changed, 708 insertions(+), 55 deletions(-)
  create mode 100644 nncf_bert_config_squad.json
  create mode 100644 nncf_bert_config_squad_magnitude_sparsity_cubic.json
  create mode 100644 nncf_bert_config_xnli.json
@@ -767,10 +767,10 @@ index c1db6fa3..ca44bd1c 100644
              result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
 diff --git a/nncf_bert_config_squad.json b/nncf_bert_config_squad.json
 new file mode 100644
-index 00000000..7b0b4c6e
+index 00000000..d3a34e92
 --- /dev/null
 +++ b/nncf_bert_config_squad.json
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,46 @@
 +{
 +    "input_info": [
 +        {
@@ -792,8 +792,11 @@ index 00000000..7b0b4c6e
 +            "range": {
 +                "num_init_samples": 32,
 +                "type": "percentile",
-+                "min_percentile": 0.01,
-+                "max_percentile": 99.99
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
 +            }
 +        },
 +        "ignored_scopes": ["{re}BertSelfAttention\\[self\\]/__add___0",
@@ -853,7 +856,7 @@ index 00000000..b4452e8d
 +}
 diff --git a/nncf_bert_config_xnli.json b/nncf_bert_config_xnli.json
 new file mode 100644
-index 00000000..d916689b
+index 00000000..a21a522f
 --- /dev/null
 +++ b/nncf_bert_config_xnli.json
 @@ -0,0 +1,36 @@
@@ -895,7 +898,7 @@ index 00000000..d916689b
 +}
 diff --git a/nncf_distilbert_config_sst2.json b/nncf_distilbert_config_sst2.json
 new file mode 100644
-index 00000000..746b3e1b
+index 00000000..6b648ca5
 --- /dev/null
 +++ b/nncf_distilbert_config_sst2.json
 @@ -0,0 +1,33 @@
@@ -934,10 +937,10 @@ index 00000000..746b3e1b
 +}
 diff --git a/nncf_gpt2_config_wikitext_hw_config.json b/nncf_gpt2_config_wikitext_hw_config.json
 new file mode 100644
-index 00000000..344d23cc
+index 00000000..4b237613
 --- /dev/null
 +++ b/nncf_gpt2_config_wikitext_hw_config.json
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,58 @@
 +{
 +    "input_info": [
 +        {
@@ -952,8 +955,11 @@ index 00000000..344d23cc
 +            "range": {
 +                "num_init_samples": 16,
 +                "type": "percentile",
-+                "min_percentile": 0.01,
-+                "max_percentile": 99.99
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
 +            }
 +        },
 +        "ignored_scopes": [
@@ -995,10 +1001,10 @@ index 00000000..344d23cc
 +}
 diff --git a/nncf_mobilebert_config_squad_int8.json b/nncf_mobilebert_config_squad_int8.json
 new file mode 100644
-index 00000000..107360f8
+index 00000000..89504d2c
 --- /dev/null
 +++ b/nncf_mobilebert_config_squad_int8.json
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,46 @@
 +{
 +    "input_info": [
 +        {
@@ -1020,8 +1026,11 @@ index 00000000..107360f8
 +            "range": {
 +                "num_init_samples": 64,
 +                "type": "percentile",
-+                "min_percentile": 0.01,
-+                "max_percentile": 99.99
++                "params":
++                {
++                    "min_percentile": 0.01,
++                    "max_percentile": 99.99
++                }
 +            }
 +        },
 +        "ignored_scopes": ["{re}MobileBertSelfAttention\\[self\\]/__add___0",
@@ -1044,7 +1053,7 @@ index 00000000..107360f8
 +}
 diff --git a/nncf_roberta_config_mnli.json b/nncf_roberta_config_mnli.json
 new file mode 100644
-index 00000000..f65e9dd0
+index 00000000..edbe0f84
 --- /dev/null
 +++ b/nncf_roberta_config_mnli.json
 @@ -0,0 +1,36 @@

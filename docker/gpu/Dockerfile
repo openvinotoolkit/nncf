@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         apt-transport-https \
@@ -21,17 +21,12 @@ RUN apt-get update && \
         openssh-server \
         openssh-client \
         sudo \
-    && \
+		python3 \
+		python3-dev \
+		python3-pip &&\
+	cd /usr/bin && \
+	ln -s python3.8 python && \
     rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends  python3-dev  && \
-    cd /usr/bin && \
-    ln -s python3.5 python && \
-    curl https://bootstrap.pypa.io/get-pip.py | python \
-    && \
-    rm -rf /var/lib/apt/lists/* 
 
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
@@ -45,4 +40,4 @@ ARG no_proxy
 ENV https_proxy=$https_proxy
 ENV no_proxy=$no_proxy
 
-ENTRYPOINT cd /home/nncf/nn-compression-framework/ && python setup.py install  && bash
+ENTRYPOINT cd /home/nncf/ && python setup.py install && bash

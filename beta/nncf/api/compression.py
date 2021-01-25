@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
+from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
-from beta.nncf.configs.config import Config
 from beta.nncf.tensorflow.utils.save import save_model
 
 
@@ -210,7 +210,7 @@ class CompressionAlgorithmBuilder:
     order to enable algorithm-specific compression during fine-tuning.
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: NNCFConfig):
         """
         Arguments:
           `config` - a dictionary that contains parameters of compression method.

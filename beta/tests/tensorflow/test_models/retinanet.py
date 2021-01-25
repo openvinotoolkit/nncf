@@ -11,8 +11,9 @@
  limitations under the License.
 """
 
-from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config, get_model_builder
-from beta.nncf.configs.config import Config
+from beta.examples.tensorflow.common.sample_config import SampleConfig
+from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
+from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.tests.conftest import TEST_ROOT
 
 
@@ -20,7 +21,7 @@ def RetinaNet(input_shape=None): # pylint: disable=W0613
     NNCF_ROOT = TEST_ROOT.parent
     path_to_config = NNCF_ROOT.joinpath('examples', 'tensorflow', 'object_detection', 'configs', 'retinanet_coco.json')
 
-    config_from_json = Config.from_json(path_to_config)
+    config_from_json = SampleConfig.from_json(path_to_config)
     predefined_config = get_predefined_config(config_from_json.model)
     predefined_config.update(config_from_json)
 

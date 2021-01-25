@@ -19,21 +19,21 @@ import tensorflow as tf
 import numpy as np
 
 from beta.nncf import create_compressed_model
-from beta.nncf.configs.config import Config
 from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.optimizer import build_optimizer
+from beta.examples.tensorflow.common.sample_config import create_sample_config
 from beta.examples.tensorflow.common.scheduler import build_scheduler
 from beta.examples.tensorflow.common.utils import SummaryWriter
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
-from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
@@ -63,11 +63,10 @@ def get_argument_parser():
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
-    config_from_json = Config.from_json(args.config)
+    config_from_json = create_sample_config(args, parser)
     predefined_config = get_predefined_config(config_from_json.model)
 
     predefined_config.update(config_from_json)
-    predefined_config.update_from_args(args, parser)
     configure_paths(predefined_config)
 
     return predefined_config
@@ -252,7 +251,7 @@ def run(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
             scheduler = build_scheduler(
                 config=config,
@@ -304,7 +303,7 @@ def export(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model(weights=config.get('weights', None))
 
-    compression_ctrl, compress_model = create_compressed_model(model, config)
+    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
     if config.ckpt_path:
         checkpoint = tf.train.Checkpoint(model=compress_model)
@@ -321,7 +320,7 @@ def main(argv):
 
     serialize_config(config, config.log_dir)
 
-    nncf_root = Path(__file__).absolute().parents[2]
+    nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
 
     if 'train' in config.mode or 'test' in config.mode:

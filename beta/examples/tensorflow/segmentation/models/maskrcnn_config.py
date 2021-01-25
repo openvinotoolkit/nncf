@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from beta.nncf.configs.config import Config
+from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 
-MASKRCNN_CONFIG = Config({
+MASKRCNN_CONFIG = SampleConfig({
     "include_mask": True,
     "model_params": {
         "architecture": {

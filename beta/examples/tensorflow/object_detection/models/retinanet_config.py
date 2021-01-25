@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from beta.nncf.configs.config import Config
+from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 
-RETINANET_CONFIG = Config({
+RETINANET_CONFIG = SampleConfig({
     "preprocessing": {
         "match_threshold": 0.5,
         "unmatched_threshold": 0.5,
