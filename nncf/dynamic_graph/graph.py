@@ -188,7 +188,7 @@ class ConvolutionAttributes(BaseAttributes):
 
 
 class NNCFNode:
-    def __init__(self, node_id: int, op_exec_context: OperationExecutionContext, attributes: dict = None):
+    def __init__(self, node_id: int, op_exec_context: OperationExecutionContext, attributes: BaseAttributes = None):
         self.node_id = node_id
         self.op_exec_context = op_exec_context
         self.attributes = attributes

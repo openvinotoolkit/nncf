@@ -38,7 +38,11 @@ class PruningNodeSelector:
                  prune_last: bool,
                  prune_downsample_convs: bool):
         """
-        :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of
+        :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
+        metatypes describing operations with common pruning mask application and propagation properties, e.g.
+        IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+        Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
+        and provide some output masks
         :param prune_operations: names of operations with prunable filters
         :param grouping_operations: names of operations causing the need to prune connected to them operations together
         :param ignored_scopes: ignored scopes
