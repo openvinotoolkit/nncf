@@ -57,8 +57,8 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph):
 
     nx_graph = nx.DiGraph()
 
-    for node_name, atrrs in nodes.items():
-        nx_graph.add_node(node_name, **atrrs)
+    for node_name, attrs in nodes.items():
+        nx_graph.add_node(node_name, **attrs)
 
     for edge in edges:
         nx_graph.add_edge(*edge)
