@@ -873,4 +873,3 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                                   module.out_channels,
                                                                   module.stride,
                                                                   module.groups)
-

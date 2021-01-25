@@ -14,7 +14,6 @@
 import logging
 
 import os.path as osp
-from functools import partial
 from pathlib import Path
 from typing import List, Dict, Union, Tuple, Callable
 
