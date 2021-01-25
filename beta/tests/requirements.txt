@@ -1,0 +1,2 @@
+yattag>=1.14.0
+prettytable>=2.0.0

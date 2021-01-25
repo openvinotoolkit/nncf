@@ -8,7 +8,6 @@ import pytest
 import subprocess
 import re
 import shlex
-import sysconfig
 from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
