@@ -11,16 +11,17 @@
  limitations under the License.
 """
 
+from addict import Dict
+
 import argparse
-import itertools
 import os
+
+from beta.nncf import NNCFConfig
 
 try:
     import jstyleson as json
 except ImportError:
     import json
-
-from addict import Dict
 
 
 _DEFAULT_KEY_TO_ENV = {
@@ -70,20 +71,12 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
         return super().parse_known_args(args, namespace)
 
 
-class Config(Dict):
-    """
-    A regular dictionary object extended with some utility functions.
-    """
-    def __getattr__(self, item):
-        if item not in self:
-            raise KeyError("Key {} not found in config".format(item))
-        return super().__getattr__(item)
-
+class SampleConfig(Dict):
     @classmethod
-    def from_json(cls, path):
+    def from_json(cls, path) -> 'SampleConfig':
         with open(path) as f:
-            loaded_json = cls(json.load(f))
-        return loaded_json
+            loaded_json = json.load(f)
+        return cls(loaded_json)
 
     def update_from_args(self, args, argparser=None):
         if argparser is not None:
@@ -108,17 +101,11 @@ class Config(Dict):
                 self[k] = int(os.environ[v])
 
 
-def product_dict(d):
-    keys = d.keys()
-    vals = d.values()
-    for instance in itertools.product(*vals):
-        yield dict(zip(keys, instance))
+def create_sample_config(args, parser) -> SampleConfig:
+    nncf_config = NNCFConfig.from_json(args.config)
 
+    sample_config = SampleConfig.from_json(args.config)
+    sample_config.update_from_args(args, parser)
+    sample_config.nncf_config = nncf_config
 
-def argument_parameters(*args, **kwargs):
-    return (args, kwargs)
-
-
-def add_argument(parser, condition, parameters):
-    if condition:
-        parser.add_argument(*parameters[0], **parameters[1])
+    return sample_config

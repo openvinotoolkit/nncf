@@ -37,7 +37,7 @@ def get_basic_quantization_config(qconfig, input_sample_sizes=None):
 
 
 def check_graph(graph, ref_graph_dir, ref_graph_file_name):
-    data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'reference_graphs')
     graph_dir = os.path.join(data_dir, ref_graph_dir)
     graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_file_name))
 

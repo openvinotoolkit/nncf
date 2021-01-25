@@ -12,9 +12,8 @@
 """
 
 import tensorflow as tf
-from addict import Dict
 
-from beta.nncf.configs.config import Config
+from beta.nncf import NNCFConfig
 from beta.tests.tensorflow.helpers import create_conv, check_equal
 
 
@@ -69,8 +68,7 @@ def test_magnitude_model_has_expected_params():
 def get_basic_magnitude_sparsity_config(input_sample_size=None):
     if input_sample_size is None:
         input_sample_size = [1, 4, 4, 1]
-    config = Config()
-    config.update(Dict({
+    config = NNCFConfig({
         "model": "basic_sparse_conv",
         "input_info":
             {
@@ -81,5 +79,5 @@ def get_basic_magnitude_sparsity_config(input_sample_size=None):
                 "algorithm": "magnitude_sparsity",
                 "params": {}
             }
-    }))
+        })
     return config
