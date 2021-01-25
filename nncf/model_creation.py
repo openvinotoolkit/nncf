@@ -24,7 +24,7 @@ from nncf.config import NNCFConfig
 from nncf.debug import is_debug, set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
-from nncf.utils import is_main_process, get_frozen_nncf_modules, should_consider_scope
+from nncf.utils import is_main_process, get_frozen_nncf_modules
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
@@ -179,5 +179,5 @@ def handle_frozen_layers(frozen_layers, compression_algo_builder_list):
                 f'Frozen Layers: {[str(pair[0]) for pair in frozen_layers]}')
         else:
             algo_names = reduce(lambda x, y: x + " and " + y,
-                               [builder.algo_name() for builder in compression_algo_builder_list])
+                                [builder.algo_name() for builder in compression_algo_builder_list])
             logger.warn('Frozen layers detected. Using ' + algo_names + ' but do not tune the weights.')
