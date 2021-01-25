@@ -116,14 +116,6 @@ class TestSotaCheckpoints:
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
 
-    '''
-    @staticmethod
-    def q_dq_config(config):
-        nncf_config = NNCFConfig.from_json(config)
-        nncf_config["export_to_onnx_standard_ops"] = True
-        return nncf_config
-    '''
-
     @staticmethod
     def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
         print()
@@ -362,6 +354,7 @@ class TestSotaCheckpoints:
     @pytest.mark.parametrize("eval_test_struct", param_list,
                              ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
+        # pylint: disable=too-many-branches
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
         test = "eval"
@@ -391,7 +384,7 @@ class TestSotaCheckpoints:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
             cmd += " --resume {}".format(resume_file_path)
         else:
-            if not MODE == "TF2" or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
+            if MODE != "TF2" or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
                 cmd += " --pretrained"
         if eval_test_struct.batch_:
             cmd += " -b {}".format(eval_test_struct.batch_)
@@ -440,7 +433,17 @@ class TestSotaCheckpoints:
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
 
+
 Tsc = TestSotaCheckpoints
+
+
+@pytest.fixture(autouse=True, scope="class")
+def clean_previous_metrics_dump_dir():
+    files = [file for file in os.listdir(METRICS_DUMP_PATH) if os.path.isfile(file)]
+    for file in files:
+        os.remove(file)
+    yield
+
 
 @pytest.fixture(autouse=True, scope="class")
 def results(sota_data_dir):

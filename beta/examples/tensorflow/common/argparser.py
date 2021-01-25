@@ -213,10 +213,3 @@ def argument_parameters(*args, **kwargs):
 def add_argument(parser, condition, parameters):
     if condition:
         parser.add_argument(*parameters[0], **parameters[1])
-def argument_parameters(*args, **kwargs):
-    return (args, kwargs)
-
-
-def add_argument(parser, condition, parameters):
-    if condition:
-        parser.add_argument(*parameters[0], **parameters[1])
