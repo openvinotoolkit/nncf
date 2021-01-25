@@ -1088,7 +1088,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                              input_port_id=curr_insertion_info.in_port_id)
             insertion_commands.append(
                 InsertionCommand(insertion_point, hook, OperationPriority.QUANTIZATION_PRIORITY))
-            return quantizer_id, insertion_commands
+        return quantizer_id, insertion_commands
 
     def are_frozen_layers_allowed(self) -> bool:
         for quantizer in self._weight_quantizers.values():
