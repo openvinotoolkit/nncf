@@ -509,9 +509,10 @@ def openvino_preinstall(openvino):
 @pytest.fixture(autouse=True, scope="class")
 def clean_previous_metrics_dump_dir():
     if os.path.isdir(METRICS_DUMP_PATH):
-        files = [file for file in os.listdir(METRICS_DUMP_PATH) if os.path.isfile(file)]
+        files = [os.path.join(METRICS_DUMP_PATH, file) for file in os.listdir(METRICS_DUMP_PATH)]
         for file in files:
-            os.remove(file)
+            if os.path.isfile(file):
+                os.remove(file)
     yield
 
 
