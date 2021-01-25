@@ -169,12 +169,17 @@ class OperationExecutionContext:
 
 
 class BaseAttributes:
-    def __init__(self, weight_requires_grad):
+    def __init__(self, weight_requires_grad: bool):
         self.weight_requires_grad = weight_requires_grad
 
 
 class ConvolutionAttributes(BaseAttributes):
-    def __init__(self, weight_requires_grad, in_channels, out_channels, stride, groups):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 in_channels: int,
+                 out_channels: int,
+                 stride: Tuple[int, int],
+                 groups: int):
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels
