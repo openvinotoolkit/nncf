@@ -173,10 +173,11 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
+    timer = Timer()
 
-    logger.info('Training started')
+    logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
-        logger.info('Epoch {}/{}'.format(epoch, epochs))
+        logger.info('Epoch: {}/{}'.format(epoch, epochs))
         compression_ctrl.scheduler.epoch_step(epoch)
 
         for step, x in enumerate(train_dist_dataset):
@@ -187,6 +188,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
                 break
 
+            timer.tic()
             compression_ctrl.scheduler.step()
             train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
@@ -197,9 +199,10 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
+            time = timer.toc(average=False)
 
             if step % 100 == 0:
-                logger.info('Step {}/{}'.format(step, steps_per_epoch))
+                logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
 
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
@@ -292,14 +295,13 @@ def run(config):
                                                                      config.ckpt_path,
                                                                      steps_per_epoch)
             else:
-                logger.info('initialization...')
+                logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        logger.info('Training...')
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches)
 

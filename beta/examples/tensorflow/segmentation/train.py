@@ -35,6 +35,7 @@ from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
@@ -158,9 +159,11 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
     train_summary_writer = SummaryWriter(log_dir, 'train')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
-    logger.info('Training started')
+    timer = Timer()
+
+    logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
-        logger.info('Epoch {}/{}'.format(epoch, epochs))
+        logger.info('Epoch: {}/{}'.format(epoch, epochs))
         compression_ctrl.scheduler.epoch_step(epoch)
 
         for step, x in enumerate(train_dist_dataset):
@@ -174,6 +177,7 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
                 logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
                 break
 
+            timer.tic()
             compression_ctrl.scheduler.step()
             train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
@@ -184,9 +188,10 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
+            time = timer.toc(average=False)
 
             if step % 100 == 0:
-                logger.info('Step {}/{}'.format(step, steps_per_epoch))
+                logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
 
         statistics = compression_ctrl.statistics()
@@ -256,7 +261,6 @@ def run_train(config):
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
 
-    logger.info('Training...')
     train(train_step, train_dist_dataset, initial_epoch, initial_step,
           epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer)
 
