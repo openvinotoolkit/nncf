@@ -65,48 +65,6 @@ def create_compression_algorithm_builders(config: NNCFConfig,
         retval.append(get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
     return retval
 
-def fusing(model):
-    from torch.nn import BatchNorm2d, Conv2d, Identity
-
-    from nncf.utils import Conv2dBN2d, Conv2dBN2d_seq
-
-    def get_names_modules_for_fusing(model):
-        from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
-
-        prev_module_name = None
-        prev_module = None
-        should_be_fused = []
-        for module_name, module in model._modules.items():
-            if prev_module_name is None:
-                prev_module_name = module_name
-                prev_module = module
-            if len(module._modules) == 0:
-                if isinstance(module, BatchNorm2d) and isinstance(prev_module, Conv2d):
-                    #conv, bn = fuse_known_modules([prev_module, module])
-                    # model._modules[prev_module_name] = Conv2dBN2d(prev_module.in_channels,
-                    #                                               prev_module.out_channels,
-                    #                                               prev_module.kernel_size,
-                    #                                               prev_module.stride,
-                    #                                               prev_module.padding,
-                    #                                               prev_module.dilation,
-                    #                                               prev_module.groups,
-                    #                                               prev_module.bias,
-                    #                                               prev_module.padding_mode)
-                    conv_bn = Conv2dBN2d_seq(prev_module, module)
-                    conv_bn.initialization()
-                    model._modules[prev_module_name] = conv_bn
-                    model._modules[module_name] = Identity()
-            else:
-                module = get_names_modules_for_fusing(module)
-            prev_module_name = module_name
-            prev_module = module
-        return model
-
-    model_fused = get_names_modules_for_fusing(model)
-
-    a = 0
-    return model_fused
-
 
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
@@ -148,8 +106,6 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
     # As a consequence, no need to care about spoiling BN statistics, as there're disabled in eval mode.
-    import torch.nn.intrinsic.qat.modules.conv_fused
-    #model = fusing(model)
     model.eval()
 
     if dump_graphs:

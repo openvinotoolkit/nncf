@@ -841,36 +841,3 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
             nx_graph.add_edge(node_scope, node_name)
 
     return graph
-
-def fusing(model):
-    from torch.nn import BatchNorm2d, Conv2d
-
-    def get_names_modules_for_fusing(model):
-        from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
-
-        prev_module_name = None
-        prev_module = None
-        should_be_fused = []
-        for module_name, module in model._modules.items():
-            if prev_module_name is None:
-                prev_module_name = module_name
-                prev_module = module
-            if len(module._modules) == 0:
-                if isinstance(module, BatchNorm2d) and isinstance(prev_module, Conv2d):
-                    conv, bn = fuse_known_modules([prev_module, module])
-                    model._modules[prev_module_name] = conv
-                    model._modules[module_name] = bn
-            else:
-                module = get_names_modules_for_fusing(module)
-            prev_module_name = module_name
-            prev_module = module
-        return model
-
-    model_fused = get_names_modules_for_fusing(model)
-
-    a = 0
-    return model_fused
-
-
-
-

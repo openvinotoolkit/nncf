@@ -361,83 +361,12 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
 
 from copy import deepcopy
 
-class Conv2dBN2d(torch.nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode):
-        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias, padding_mode)
-        self.bn = torch.nn.BatchNorm2d(out_channels)
-
-    def forward(self, x):
-        running_std = torch.sqrt(self.bn.running_var + self.bn.eps)
-        scale_factor = self.bn.weight / running_std
-        weights_shape = [1] * len(self.weight.shape)
-        weights_shape[0] = -1
-        bias_shape = [1] * len(self.weight.shape)
-        bias_shape[1] = -1
-        #scaled_weight = self.weight_fake_quant(self.weight * scale_factor.reshape(weight_shape))
-        # using zero bias here since the bias for original conv
-        # will be added later
-        if self.bias is not None:
-            copy_bias = deepcopy(self.bias)
-            zero_bias = torch.zeros_like(self.bias)
-            self.bias = zero_bias
-            conv = self._conv_forward(x, self.weight)
-            self.bias = copy_bias
-        else:
-            conv = self._conv_forward(x, self.weight)
-
-        conv_orig = conv / scale_factor.reshape(bias_shape)
-        if self.bias is not None:
-            conv_orig = conv_orig + self.bias.reshape(bias_shape)
-        conv = self.bn(conv_orig)
-        return conv
-
-    def freezing_bn(self):
-        self.freeze_bn = True
-        self.bn.training = False
-
-class Conv2dBN2d_seq(torch.nn.Sequential):
-    #def __init__(self, *args: Module):
-    #    super().__init__(args)
-    #    a = 0
-    #    #self.bn = torch.nn.BatchNorm2d(out_channels)
-
-    def forward(self, x):
-        running_std = torch.sqrt(self.bn.running_var + self.bn.eps)
-        scale_factor = self.bn.weight / running_std
-        weights_shape = [1] * len(self.conv.weight.shape)
-        weights_shape[0] = -1
-        bias_shape = [1] * len(self.conv.weight.shape)
-        bias_shape[1] = -1
-        #scaled_weight = self.weight_fake_quant(self.weight * scale_factor.reshape(weight_shape))
-        # using zero bias here since the bias for original conv
-        # will be added later
-        if self.conv.bias is not None:
-            copy_bias = deepcopy(self.conv.bias)
-            zero_bias = torch.zeros_like(self.conv.bias)
-            self.conv.bias = zero_bias
-            conv = self.conv._conv_forward(x, self.conv.weight)
-            self.conv.bias = copy_bias
-        else:
-            conv = self.conv._conv_forward(x, self.conv.weight)
-
-        conv_orig = conv / scale_factor.reshape(bias_shape)
-        if self.conv.bias is not None:
-            conv_orig = conv_orig + self.conv.bias.reshape(bias_shape)
-        conv = self.bn(conv_orig)
-        return conv
-
-    def initialization(self):
-        assert len(self._modules) == 2
-        self.conv = self._modules['0']
-        self.bn = self._modules['1']
-
 def get_pair_conv_bn(model):
-    from torch.nn import BatchNorm2d, Conv2d, Identity
+    from torch.nn import BatchNorm2d
 
     from nncf.layers import NNCFConv2d
-    from nncf.utils import Conv2dBN2d, Conv2dBN2d_seq
 
-    def get_names_modules_for_fusing(model, result):
+    def get_modules_for_fusing(model, result):
         from torch.quantization.fuse_modules import fuse_modules, fuse_known_modules
         from nncf.dynamic_graph.transform_graph import is_nncf_module
         prev_module_name = None
@@ -451,11 +380,11 @@ def get_pair_conv_bn(model):
                 if isinstance(module, BatchNorm2d) and isinstance(prev_module, NNCFConv2d):
                     result[prev_module] = module
             elif not is_nncf_module(module):
-                module = get_names_modules_for_fusing(module, result)
+                module = get_modules_for_fusing(module, result)
             prev_module_name = module_name
             prev_module = module
         return module
     res = {}
-    get_names_modules_for_fusing(model, res)
+    get_modules_for_fusing(model, res)
 
     return res

@@ -344,19 +344,6 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
 
-        logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
-
-        loss, (iou, miou) = val_obj.run_epoch(config.print_step)
-
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
-                        format(epoch, loss, miou))
-
-        logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
-
-        loss, (iou, miou) = val_obj.run_epoch(config.print_step)
-
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
-                        format(epoch, loss, miou))
 
         if (epoch + 1) % config.save_freq == 0 or epoch + 1 == config.epochs:
             logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))

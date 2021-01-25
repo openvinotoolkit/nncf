@@ -37,7 +37,7 @@
     },
     "compression": {
             "algorithm": "quantization",
-            "folding_conv_bn_target_epoch": 0,
-            "freeze_bn_stats_target_epoch" : 3
+            "folding_conv_bn_target_epoch": 250,
+            "freeze_bn_stats_target_epoch" : -1
     }
 }

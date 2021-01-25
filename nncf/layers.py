@@ -103,20 +103,6 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
 
 
 
-from nncf.utils import Conv2dBN2d
-
-class NNCFConv2dBN2d(_NNCFModuleMixin, Conv2dBN2d):
-    op_func_name = 'Conv2dBN2d'
-
-    @staticmethod
-    def from_module(module):
-        assert module.__class__.__name__ == Conv2dBN2d.__name__
-        nncf_conv2dbn2d = NNCFConv2dBN2d(module.in_channels, module.out_channels, module.kernel_size, module.stride,
-            module.padding, module.dilation, module.groups, hasattr(module, 'bias'), module.padding_mode)
-        dict_update(nncf_conv2dbn2d.__dict__, module.__dict__)
-        return nncf_conv2dbn2d
-
-
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
     op_func_name = "linear"
 
@@ -201,8 +187,7 @@ NNCF_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
-    NNCFEmbedding: nn.Embedding,
-    NNCFConv2dBN2d: Conv2dBN2d
+    NNCFEmbedding: nn.Embedding
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
@@ -211,8 +196,7 @@ NNCF_MODULES = list(NNCF_MODULES_MAP.keys())
 NNCF_CONV_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
-    NNCFConv3d: nn.Conv3d,
-    NNCFConv2dBN2d: Conv2dBN2d
+    NNCFConv3d: nn.Conv3d
 }
 NNCF_DECONV_MODULES_DICT = {
     NNCFConvTranspose2d: nn.ConvTranspose2d,
