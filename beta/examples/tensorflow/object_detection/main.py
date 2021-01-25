@@ -30,6 +30,7 @@ from beta.examples.tensorflow.common.optimizer import build_optimizer
 from beta.examples.tensorflow.common.sample_config import create_sample_config
 from beta.examples.tensorflow.common.scheduler import build_scheduler
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
@@ -166,7 +167,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer):
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
@@ -201,8 +202,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Step {}/{}'.format(step, steps_per_epoch))
                 logger.info('Training metric = {}'.format(train_metric_result))
 
-        logger.info('Evaluation...')
-        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
         eval_metric.reset_states()
         logger.info('Validation metric = {}'.format(test_metric_result))
@@ -220,13 +220,28 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     compression_summary_writer.close()
 
 
-def evaluate(test_step, metric, test_dist_dataset):
+def evaluate(test_step, metric, test_dist_dataset, num_batches):
     """Runs evaluation steps and aggregate metrics"""
-    for x in test_dist_dataset:
+    timer = Timer()
+
+    logger.info('Testing...')
+    for batch_idx, x in enumerate(test_dist_dataset):
+        timer.tic()
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
+        time = timer.toc(average=False)
+        logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx + 1, num_batches, time))
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
 
-    return metric.result()
+    timer.reset()
+
+    logger.info('Evaluating predictions...')
+    timer.tic()
+    result = metric.result()
+    timer.toc(average=False)
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
+
+    return result
 
 
 def run(config):
@@ -235,7 +250,7 @@ def run(config):
     # Create dataset
     builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
-    train_builder, _ = builders
+    train_builder, test_builder = builders
     train_dataset, test_dataset = datasets
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
@@ -243,6 +258,7 @@ def run(config):
     # Training parameters
     epochs = config.epochs
     steps_per_epoch = train_builder.steps_per_epoch
+    num_test_batches = test_builder.steps_per_epoch
 
     # Create model builder
     model_builder = get_model_builder(config)
@@ -285,11 +301,10 @@ def run(config):
     if 'train' in config.mode:
         logger.info('Training...')
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-              epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer)
+            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches)
 
-    logger.info('Evaluation...')
     print_statistics(compression_ctrl.statistics())
-    metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
     logger.info('Validation metric = {}'.format(metric_result))
 
     if config.metrics_dump is not None:
