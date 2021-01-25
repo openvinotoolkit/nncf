@@ -21,7 +21,6 @@ from nncf.compression_method_api import CompressionAlgorithmBuilder, \
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFNode
 from nncf.module_operations import UpdateWeight
-from nncf.model_utils import get_module_by_scope
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
@@ -96,7 +95,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
             group_minfos = []
             for node in group.nodes:
                 module_scope = node.op_exec_context.scope_in_model
-                module = get_module_by_scope(target_model, module_scope)
+                module = target_model.get_module_by_scope(module_scope)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)
 

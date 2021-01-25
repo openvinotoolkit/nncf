@@ -34,7 +34,6 @@ from collections import OrderedDict
 from natsort import natsorted
 
 from nncf.debug import is_debug, DEBUG_LOG_DIR
-from nncf.model_utils import get_module_by_scope
 from nncf.nncf_logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
@@ -64,7 +63,7 @@ class ModelSizeCalculator:
         for qid, qconfig_space in per_quantizer_config_space.items():
             if isinstance(qid, WeightQuantizerId):
                 self._bw_space_map[qid] = [qconf.bits for qconf in qconfig_space]
-                m = get_module_by_scope(qmodel, qid.scope)
+                m = qmodel.get_module_by_scope(qid.scope)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
         self.min_model_size, self.max_model_size = \
@@ -275,7 +274,7 @@ class QuantizationEnv:
         df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
         df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
         df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
-        df['state_module'] = df['state_scope'].apply(partial(get_module_by_scope, self.qmodel))
+        df['state_module'] = df['state_scope'].apply(self.qmodel.get_module_by_scope)
 
         quantizer_table = df.loc[natsorted(df.index)]
         return quantizer_table

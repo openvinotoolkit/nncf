@@ -13,7 +13,6 @@
 import networkx as nx
 import torch
 
-from nncf.model_utils import get_module_by_scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
     PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype, SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, \
@@ -116,7 +115,7 @@ class Convolution(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
-        if node.module_details['groups'] != 1:
+        if is_grouped_conv(node):
             if not is_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
@@ -128,7 +127,7 @@ class Convolution(DefaultMetaOp):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
         if node_module.pre_ops:
             output_mask = node_module.pre_ops['0'].op.binary_filter_pruning_mask
@@ -155,7 +154,7 @@ class Convolution(DefaultMetaOp):
         new_num_channels = int(torch.sum(input_mask))
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
         is_depthwise = nx_node['is_depthwise']
         old_num_clannels = int(node_module.weight.size(1))
 
@@ -184,7 +183,7 @@ class Convolution(DefaultMetaOp):
         bool_mask = torch.tensor(mask, dtype=torch.bool)
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.out_channels = int(torch.sum(mask))
@@ -212,7 +211,7 @@ class TransposeConvolution(DefaultMetaOp):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
         if node_module.pre_ops:
             output_mask = node_module.pre_ops['0'].op.binary_filter_pruning_mask
@@ -229,7 +228,7 @@ class TransposeConvolution(DefaultMetaOp):
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.in_channels = int(torch.sum(bool_mask))
@@ -248,7 +247,7 @@ class TransposeConvolution(DefaultMetaOp):
         new_num_channels = int(torch.sum(bool_mask))
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(1))
 
         in_channels = node_module.weight.size(0)
@@ -285,7 +284,7 @@ class BatchNorm(DefaultMetaOp):
             return
 
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         old_num_clannels = int(node_module.weight.size(0))
@@ -379,7 +378,7 @@ class Elementwise(DefaultMetaOp):
             return
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
-        node_module = get_module_by_scope(model, nncf_node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
             assert node_module.target_weight_dim_for_compression == 0,\
@@ -452,7 +451,7 @@ class ModelPruner:
                 node_type = self.graph.node_type_fn(node)
                 node_cls = self.get_class_by_type_name(node_type)
                 nncf_node = self.graph._nx_node_to_nncf_node(node)
-                node_module = get_module_by_scope(self.model, nncf_node.op_exec_context.scope_in_model)
+                node_module = self.model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
                 # Some modules can be associated with several nodes
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self.model, node, self.graph, self.nx_graph)

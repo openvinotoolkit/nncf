@@ -23,7 +23,8 @@ from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext, \
+    ConvolutionAttributes
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
     ModelInputInfo
@@ -33,11 +34,10 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
-from nncf.model_utils import get_module_by_scope
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
@@ -454,6 +454,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
                                                                as_eval=True)
+        self._extend_original_graph_with_attributes()
 
         self._compressed_context = TracingContext()
 
@@ -547,7 +548,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
-            nncf_module = get_module_by_scope(self, point.module_scope)
+            nncf_module = self.get_module_by_scope(point.module_scope)
             if point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
@@ -755,7 +756,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 op_name = op_exec_context.operator_name
                 scope = op_exec_context.scope_in_model
                 op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                module = get_module_by_scope(self, scope)
+                module = self.get_module_by_scope(scope)
                 if module is not None:
                     subtype = op_arch.determine_subtype(containing_module=module)
                     if subtype is not None:
@@ -763,6 +764,22 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch
         return ip_graph
 
+    def get_module_by_scope(self, scope: 'Scope') -> torch.nn.Module:
+        curr_module = self.get_nncf_wrapped_model()
+        for scope_element in scope[1:]:  # omit first scope element which corresponds to base module
+            if scope_element.calling_field_name is None:
+                # The module used is being created in-place every time and never stored in the model,
+                # happens for nn.Softmax in BERT implementations.
+                return None
+            # pylint: disable=protected-access
+            next_module = curr_module._modules.get(scope_element.calling_field_name)
+            if next_module is None:
+                raise RuntimeError("Could not find a {} module member in {} module of scope {} during node search"
+                                   .format(scope_element.calling_field_name,
+                                           scope_element.calling_module_class_name,
+                                           str(scope)))
+            curr_module = next_module
+        return curr_module
 
     def get_parameters_count_in_model(self):
         """
@@ -844,3 +861,16 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if op_exec_context:
                 result.append(str(op_exec_context.input_agnostic))
         return result
+
+    def _extend_original_graph_with_attributes(self):
+        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
+        for node in self._original_graph.get_nodes_by_types(general_conv_types):
+            scope = node.op_exec_context.scope_in_model
+            module = self.get_module_by_scope(scope)
+            nx_node = self._original_graph.find_node_in_nx_graph_by_scope(scope)
+            nx_node[NNCFGraph.ATTRIBUTES] = ConvolutionAttributes(module.weight.requires_grad,
+                                                                  module.in_channels,
+                                                                  module.out_channels,
+                                                                  module.stride,
+                                                                  module.groups)
+

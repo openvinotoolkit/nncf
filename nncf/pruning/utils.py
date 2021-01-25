@@ -20,7 +20,6 @@ from functools import partial
 
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
-from nncf.model_utils import get_module_by_scope
 from nncf.layers import NNCF_CONV_MODULES_DICT, NNCF_DECONV_MODULES_DICT
 from nncf.nncf_network import NNCFNetwork
 
@@ -62,7 +61,7 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
     bn_module = None
     if bn_graph_node:
         bn_scope = bn_graph_node['op_exec_context'].scope_in_model
-        bn_module = get_module_by_scope(target_model, bn_graph_node['op_exec_context'].scope_in_model)
+        bn_module = target_model.get_module_by_scope(bn_graph_node['op_exec_context'].scope_in_model)
         return bn_module, bn_scope
     return bn_module, bn_graph_node
 
@@ -185,17 +184,17 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return not torch.all(torch.tensor(node.module_details["stride"]) == 1) and \
+    return not torch.all(torch.tensor(node.attributes.stride) == 1) and \
            not node.op_exec_context.operator_name in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
-    return node.module_details["groups"] != 1
+    return node.attributes.groups != 1
 
 
 def is_depthwise_conv(node: NNCFNode) -> bool:
-    return node.module_details["groups"] == node.module_details["in_channels"] \
-           and (node.module_details["out_channels"] % node.module_details["in_channels"] == 0)
+    return node.attributes.groups == node.attributes.in_channels \
+           and (node.attributes.out_channels % node.attributes.in_channels == 0)
 
 
 def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode) -> Optional[NNCFNode]:

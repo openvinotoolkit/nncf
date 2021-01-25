@@ -7,7 +7,6 @@ from collections import deque
 
 from nncf.quantization.layers import SymmetricQuantizer
 from nncf.nncf_network import NNCFNetwork, NNCFGraph
-from nncf.model_utils import get_module_by_scope
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT, QuantizationTrait
 
@@ -292,7 +291,7 @@ class MemoryCostMetric(BaseMetric):
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor =\
              max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
-        module = get_module_by_scope(self._compressed_model, scope_u_node)
+        module = self._compressed_model.get_module_by_scope(scope_u_node)
         if is_nncf_module(module):
             status, quantizer = self._get_quantizer_for_scope(scope_u_node, self._weights_quantizers)
             if status:

@@ -67,7 +67,6 @@ from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
 from nncf.utils import in_scope_list, is_main_process, should_consider_scope
-from nncf.model_utils import get_module_by_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -873,8 +872,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                                         log_module_name=str(insertion_point))
         op = UpdateWeight(quantizer).to(device)
         self._weight_quantizers[quantizer_id] = WeightQuantizerInfo(quantizer,
-                                                                    get_module_by_scope(
-                                                                        target_model,
+                                                                    target_model.get_module_by_scope(
                                                                         insertion_point.module_scope
                                                                     ))
         command = InsertionCommand(insertion_point, op, OperationPriority.QUANTIZATION_PRIORITY)
@@ -1297,7 +1295,7 @@ class QuantizationController(QuantizationControllerBase):
         def traverse_graph(curr_nx_node_key: str, weight_quantizers: List[nn.Module]) -> Optional[List[nn.Module]]:
             nx_node = nncf_graph.get_nx_node_by_key(curr_nx_node_key)
             module_scope = nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
-            module = get_module_by_scope(nncf_network, module_scope)
+            module = nncf_network.get_module_by_scope(module_scope)
             if is_nncf_module(module):
                 if hasattr(module, 'pre_ops'):
                     for ops in module.pre_ops.values():

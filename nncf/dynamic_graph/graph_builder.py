@@ -16,9 +16,6 @@ from copy import deepcopy
 
 import torch
 
-from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.model_utils import get_module_by_scope
-
 
 class ModelInputInfo:
     FILLER_TYPE_ONES = "ones"
@@ -107,26 +104,9 @@ class GraphBuilder:
                     self.custom_forward_fn(model)
         model.load_state_dict(sd)
 
-        graph = context_to_use.graph
-        self.set_module_details(model, graph)
         if isinstance(model, PostGraphBuildActing):
             model.post_build_graph_actions()
-        return graph
-
-    def set_module_details(self, model: torch.nn.Module, graph: 'NNCFGraph'):
-        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
-        for node in graph.get_nodes_by_types(general_conv_types):
-            scope = node.op_exec_context.scope_in_model
-            module = get_module_by_scope(model, scope)
-            nx_node = graph.find_node_in_nx_graph_by_scope(scope)
-            module_details = {
-                "stride": module.stride,
-                "groups": module.groups,
-                "in_channels": module.in_channels,
-                "out_channels": module.out_channels,
-                "weight_requires_grad": module.weight.requires_grad,
-            }
-            nx_node["module_details"] = module_details
+        return context_to_use.graph
 
 
 class PostGraphBuildActing:

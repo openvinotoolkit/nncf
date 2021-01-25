@@ -18,7 +18,6 @@ from nncf.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 
 from nncf.dynamic_graph.context import Scope
-from nncf.model_utils import get_module_by_scope
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_helpers import IdentityMaskForwardOps, PRUNING_OPERATOR_METATYPES, Elementwise
 from nncf.pruning.model_analysis import NodesCluster, Clusterization, cluster_special_ops, ModelAnalyzer
@@ -140,7 +139,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
     all_pruned_modules = [info.module for info in all_pruned_modules_info]
     print([minfo.module_scope for minfo in all_pruned_modules_info])
     for module_name in not_pruned_modules:
-        module = get_module_by_scope(compressed_model, Scope.from_str(module_name))
+        module = compressed_model.get_module_by_scope(Scope.from_str(module_name))
         assert module not in all_pruned_modules
 
     # 2. Check that all pruned groups are valid
@@ -148,7 +147,7 @@ def test_groups(test_input_info_struct_: GroupPruningModulesTestStruct):
         first_node_scope = Scope.from_str(group[0])
         cluster = clusters.get_cluster_by_node_id(first_node_scope)
         cluster_modules = [n.module for n in cluster.nodes]
-        group_modules = [get_module_by_scope(compressed_model, Scope.from_str(module_scope)) for module_scope in group]
+        group_modules = [compressed_model.get_module_by_scope(Scope.from_str(module_scope)) for module_scope in group]
 
         assert cluster_modules == group_modules
 
@@ -179,10 +178,10 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     # 1. Check all not pruned modules
     all_pruned_nodes = pruning_groups.get_all_nodes()
-    all_pruned_modules = [get_module_by_scope(nncf_network, node.op_exec_context.scope_in_model)
+    all_pruned_modules = [nncf_network.get_module_by_scope(node.op_exec_context.scope_in_model)
                           for node in all_pruned_nodes]
     for module_name in not_pruned_modules:
-        module = get_module_by_scope(nncf_network, Scope.from_str(module_name))
+        module = nncf_network.get_module_by_scope(Scope.from_str(module_name))
         assert module not in all_pruned_modules
 
     # 2. Check that all pruned groups are valid

@@ -30,7 +30,6 @@ from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.layers import NNCFConv2d
 from nncf.utils import get_all_modules_by_type
-from nncf.model_utils import get_module_by_scope
 
 
 class HAWQDebugger:
@@ -176,7 +175,7 @@ class HAWQDebugger:
             if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
                 operator_name = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
                 scope = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic.scope_in_model
-                module = get_module_by_scope(model, scope)
+                module = model.get_module_by_scope(scope)
                 if isinstance(module, NNCFConv2d):
                     color = 'lightblue'
                     if module.groups == module.in_channels:
