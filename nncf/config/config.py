@@ -12,6 +12,7 @@
 """
 
 import itertools
+from copy import deepcopy
 from typing import List, Type
 
 import jsonschema
@@ -45,7 +46,7 @@ class NNCFConfig(dict):
         """
 
         NNCFConfig.validate(nncf_dict)
-        return cls(nncf_dict)
+        return cls(deepcopy(nncf_dict))
 
     @classmethod
     def from_json(cls, path) -> 'NNCFConfig':

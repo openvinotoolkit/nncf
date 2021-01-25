@@ -866,7 +866,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         WeightQuantizerId, InsertionCommand]:
         device = next(target_model.parameters()).device
         quantizer_id = WeightQuantizerId(insertion_point.module_scope)
-        quantizer = self.__create_quantize_module(quantizer_config)
+        quantizer = self.__create_quantize_module(quantizer_config).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
                                         log_module_name=str(insertion_point))

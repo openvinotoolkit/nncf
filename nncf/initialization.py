@@ -2,7 +2,7 @@ import math
 
 
 from functools import partial
-from typing import Dict, Tuple, Any, Callable
+from typing import Dict, Tuple, Any, Callable, Optional
 
 import torch
 from torch.utils.data import DataLoader
@@ -99,7 +99,7 @@ class PartialDataLoader:
 
 
 class DataLoaderBaseRunner:
-    def __init__(self, model, init_device: str):
+    def __init__(self, model, init_device: Optional[str]):
         self.model = model
         self.init_device = init_device
         self.progressbar_description = 'Algorithm initialization'
@@ -121,8 +121,9 @@ class DataLoaderBaseRunner:
         self.model(*args, **kwargs)
 
     def run(self, data_loader, num_init_steps):
-        original_device = next(iter(self.model.parameters())).device
-        self.model.to(self.init_device)
+        if self.init_device is not None:
+            original_device = next(iter(self.model.parameters())).device
+            self.model.to(self.init_device)
 
         self._prepare_initialization()
         device = next(self.model.parameters()).device
@@ -132,7 +133,8 @@ class DataLoaderBaseRunner:
             self._run_model_inference(data_loader, num_init_steps, device)
             self._apply_initializers()
 
-        self.model.to(original_device)
+        if self.init_device is not None:
+            self.model.to(original_device)
 
     def _prepare_initialization(self):
         raise NotImplementedError
@@ -215,7 +217,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                autoq_eval_loader: torch.utils.data.DataLoader = None,
-                               device='cuda') -> 'NNCFConfig':
+                               device: str = None) -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                   device=device),
