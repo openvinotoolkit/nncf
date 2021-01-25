@@ -199,6 +199,9 @@ class BaseQuantizer(nn.Module):
     def set_export_mode(self, mode: QuantizerExportMode):
         self._export_mode = mode
 
+    def _get_input_low_input_high(self):
+        raise NotImplementedError
+
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
             input_low, input_high = self._get_input_low_input_high()
@@ -221,20 +224,15 @@ class BaseQuantizer(nn.Module):
 
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
             if self.per_channel:
-                try:
-                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
-                            y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
-                        y_scale, y_zero_point = y_scale[0], y_zero_point[0]
-                        # TODO:: do we need Clip?
-                        return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-                    raise RuntimeError("PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear "
-                                       "doesn't support per channel quantization")
-                except IndexError:
+                if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
+                        y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    y_scale, y_zero_point = y_scale[0], y_zero_point[0]
                     return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                raise RuntimeError("PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear "
+                                   "doesn't support per channel quantization")
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
 
         if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
-            # TODO:: do we need Clip?
             return ExportQuantizeToFakeQuantize.apply(x, levels,
                                                       input_low,
                                                       input_high,

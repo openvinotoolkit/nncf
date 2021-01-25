@@ -374,8 +374,8 @@ def test_quantize_inputs():
         '/nncf_model_input_3|OUTPUT',
         '/nncf_model_input_4|OUTPUT'
     ]
-    actual_input_quantizer_str_scopes =\
-         [str_scope for str_scope in model.activation_quantizers if 'nncf_model_input' in str_scope]
+    actual_input_quantizer_str_scopes = \
+        [str_scope for str_scope in model.activation_quantizers if 'nncf_model_input' in str_scope]
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
     for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
         assert isinstance(model.activation_quantizers[ref_qinput_scope_str], SymmetricQuantizer)
