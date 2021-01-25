@@ -297,40 +297,40 @@ class TestSotaCheckpoints:
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
         for dataset_name in datasets:
-            for dataset_type in datasets[dataset_name].get('dataset_types'):
-                model_dict = datasets[dataset_name].get('topologies')
-                for model_name in model_dict:
-                    config_name = model_dict[model_name].get('config', {})
-                    weights = None
-                    if model_dict[model_name].get("weights", {}):
-                        weights = model_dict[model_name].get("weights", {})
-                    reference = None
-                    if model_dict[model_name].get('reference', {}):
-                        reference = model_dict[model_name].get('reference', {})
-                    else:
-                        ref_fp32_dict[model_name] = model_dict[model_name].get('target', {})
-                    expected = model_dict[model_name].get('target', {})
-                    metric_type = model_dict[model_name].get('metric_type', {})
-                    if model_dict[model_name].get('resume', {}):
-                        resume_file = model_dict[model_name].get('resume', {})
-                    else:
-                        resume_file = None
-                    if model_dict[model_name].get('batch', {}):
-                        batch = model_dict[model_name].get('batch', {})
-                    else:
-                        batch = None
-                    if model_dict[model_name].get('mean_value', {}):
-                        mean_val = model_dict[model_name].get('mean_value', {})
-                    else:
-                        mean_val = '[123.675,116.28,103.53]'
-                    if model_dict[model_name].get('scale_value', {}):
-                        scale_val = model_dict[model_name].get('scale_value', {})
-                    else:
-                        scale_val = '[58.4795,57.1429,57.4713]'
-                    diff_fp32_min = model_dict[model_name].get('diff_fp32_min') if not None else None
-                    diff_fp32_max = model_dict[model_name].get('diff_fp32_max') if not None else None
-                    diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
-                    diff_target_max = model_dict[model_name].get('diff_target_max') if not None else None
+            model_dict = datasets[dataset_name].get('topologies')
+            for model_name in model_dict:
+                config_name = model_dict[model_name].get('config', {})
+                weights = None
+                if model_dict[model_name].get("weights", {}):
+                    weights = model_dict[model_name].get("weights", {})
+                reference = None
+                if model_dict[model_name].get('reference', {}):
+                    reference = model_dict[model_name].get('reference', {})
+                else:
+                    ref_fp32_dict[model_name] = model_dict[model_name].get('target', {})
+                expected = model_dict[model_name].get('target', {})
+                metric_type = model_dict[model_name].get('metric_type', {})
+                if model_dict[model_name].get('resume', {}):
+                    resume_file = model_dict[model_name].get('resume', {})
+                else:
+                    resume_file = None
+                if model_dict[model_name].get('batch', {}):
+                    batch = model_dict[model_name].get('batch', {})
+                else:
+                    batch = None
+                if model_dict[model_name].get('mean_value', {}):
+                    mean_val = model_dict[model_name].get('mean_value', {})
+                else:
+                    mean_val = '[123.675,116.28,103.53]'
+                if model_dict[model_name].get('scale_value', {}):
+                    scale_val = model_dict[model_name].get('scale_value', {})
+                else:
+                    scale_val = '[58.4795,57.1429,57.4713]'
+                diff_fp32_min = model_dict[model_name].get('diff_fp32_min') if not None else None
+                diff_fp32_max = model_dict[model_name].get('diff_fp32_max') if not None else None
+                diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
+                diff_target_max = model_dict[model_name].get('diff_target_max') if not None else None
+                for dataset_type in datasets[dataset_name].get('dataset_types'):
                     # Change model name to keep dataset version
                     model_name_with_datatype = model_name + '_' + dataset_type
                     param_list.append(EvalRunParamsStruct(config_name_=config_name,
