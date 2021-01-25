@@ -14,7 +14,6 @@
 import os
 import sys
 from pathlib import Path
-import argparse
 
 import tensorflow as tf
 import numpy as np
