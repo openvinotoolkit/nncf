@@ -170,7 +170,6 @@ def handle_frozen_layers(frozen_layers, compression_algo_builder_list):
     if len(frozen_layers) > 0:
         problem_algos = []
         for builder in compression_algo_builder_list:
-            a = builder.are_frozen_layers_allowed()
             if not builder.are_frozen_layers_allowed():
                 problem_algos.append(builder.algo_name())
         if len(problem_algos) > 0:
