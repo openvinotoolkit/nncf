@@ -222,7 +222,6 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
     checkpoint_save_dir = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
     config_factory = ConfigFactory(_config['nncf_config'], tmp_path / 'config.json')
     args = {
-        '--mode': 'train',
         '--data': _config['dataset_path'],
         '--config': config_factory.serialize(),
         '--log-dir': tmp_path,
@@ -230,6 +229,9 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
         '--epochs': 1,
         '--checkpoint-save-dir': checkpoint_save_dir
     }
+
+    if _config['sample_type'] != 'segmentation':
+        args['--mode'] = 'train'
 
     main = get_sample_fn(_config['sample_type'], modes=['train'])
     main(convert_to_argv(args))
@@ -262,7 +264,6 @@ def test_resume(_config, tmp_path, _case_common_dirs):
     ckpt_path = os.path.join(_case_common_dirs['checkpoint_save_dir'], _config['tid'])
 
     args = {
-        '--mode': 'train',
         '--data': _config['dataset_path'],
         '--config': config_factory.serialize(),
         '--log-dir': tmp_path,
@@ -271,6 +272,9 @@ def test_resume(_config, tmp_path, _case_common_dirs):
         '--checkpoint-save-dir': checkpoint_save_dir,
         '--resume': ckpt_path
     }
+
+    if _config['sample_type'] != 'segmentation':
+        args['--mode'] = 'train'
 
     main = get_sample_fn(_config['sample_type'], modes=['train'])
     main(convert_to_argv(args))
