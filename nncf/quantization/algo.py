@@ -1108,10 +1108,8 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
                     bits.append(quantizer.quantizer_module_ref.num_bits)
             if len(bits) > 1:
                 return 'mixed precision quantization'
-            else:
-                return f'{bits[0]} bits quantization'
-        else:
-            return 'unknown quantization'
+            return f'{bits[0]} bits quantization'
+        return 'unknown quantization'
 
 
 class QuantizationControllerBase(CompressionAlgorithmController):

@@ -177,7 +177,6 @@ def handle_frozen_layers(frozen_layers, compression_algo_builder_list):
                 f'Frozen layers are not allowed for {problem_algos}. '
                 f'Please unfreeze them or put into the Ignored Scope.\n'
                 f'Frozen Layers: {[str(pair[0]) for pair in frozen_layers]}')
-        else:
-            algo_names = reduce(lambda x, y: x + " and " + y,
-                                [builder.algo_name() for builder in compression_algo_builder_list])
-            logger.warn('Frozen layers detected. Using ' + algo_names + ' but do not tune the weights.')
+        algo_names = reduce(lambda x, y: x + " and " + y,
+                            [builder.algo_name() for builder in compression_algo_builder_list])
+        logger.warning('Frozen layers detected. Using {} but do not tune the weights.'.format(algo_names))

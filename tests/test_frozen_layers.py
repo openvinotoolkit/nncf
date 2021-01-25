@@ -190,8 +190,8 @@ def test_frozen_layers(caplog, mocker, params):
 
     if params.is_error:
         with pytest.raises(RuntimeError):
-            compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+            __, _ = create_compressed_model_and_algo_for_test(model, config)
     else:
-        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+        __, _ = create_compressed_model_and_algo_for_test(model, config)
         if ignored_scopes[0] is None:
             assert 'Frozen layers' in caplog.text
