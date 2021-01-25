@@ -29,6 +29,7 @@ from beta.examples.tensorflow.common.sample_config import SampleConfig
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import write_metrics
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
@@ -206,6 +207,10 @@ def run_evaluation(config, eval_timeout=None):
             logger.info('Validation metric = {}'.format(metric_result))
 
         validation_summary_writer.close()
+
+    if config.metrics_dump is not None:
+        write_metrics(metric_result['AP'], config.metrics_dump)
+
 
 
 def export(config):

@@ -171,7 +171,7 @@
                     "resume": "mask_rcnn_baseline",
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_baseline",
-                    "batch": 256
+                    "batch": 16
                 },
                 "mask_rcnn_int8_w_sym_t_a_sym_t": {
                     "config": "examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json",
