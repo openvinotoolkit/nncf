@@ -22,18 +22,13 @@ def freeze_module(model, scope=None):
             break
 
 
-def update_config(config, update_dict):
-    config.update(update_dict)
-    return config
-
-
 class FrozenLayersTestStruct:
 
     def __init__(self, name='No_name', config_creator=get_quantization_config_without_range_init, config_update=None,
                  model_creator=TwoConvTestModel, is_error=True):
         if config_update is None:
             config_update = {}
-        self.id = name
+        self.name = name
         self.config_factory = config_creator
         self.config_update = config_update
         self.model_creator = model_creator

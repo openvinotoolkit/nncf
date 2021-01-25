@@ -19,7 +19,9 @@ from copy import deepcopy
 from torch import nn
 from torch.nn import Module
 
-from nncf import NNCFConfig
+from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.config import NNCFConfig
+from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model, create_compression_algorithm_builders
@@ -160,7 +162,7 @@ def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFCo
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               resuming_state_dict: dict = None) \
-        -> Tuple[NNCFNetwork, 'CompressionAlgorithmController']:
+        -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
@@ -202,7 +204,7 @@ class MockModel(nn.Module):
 
 
 def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model: NNCFNetwork) \
-        -> Tuple[Dict['Scope', Module], Dict['Scope', Module]]:
+        -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:
     """
     Check that all convolutions in model was replaced by NNCF convolution.
     :param model: original model

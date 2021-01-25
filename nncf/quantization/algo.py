@@ -1111,7 +1111,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             else:
                 return f'{bits[0]} bits quantization'
         else:
-            return 'unknown'
+            return 'unknown quantization'
 
 
 class QuantizationControllerBase(CompressionAlgorithmController):
