@@ -439,9 +439,10 @@ Tsc = TestSotaCheckpoints
 
 @pytest.fixture(autouse=True, scope="class")
 def clean_previous_metrics_dump_dir():
-    files = [file for file in os.listdir(METRICS_DUMP_PATH) if os.path.isfile(file)]
-    for file in files:
-        os.remove(file)
+    if os.path.isdir(METRICS_DUMP_PATH):
+        files = [file for file in os.listdir(METRICS_DUMP_PATH) if os.path.isfile(file)]
+        for file in files:
+            os.remove(file)
     yield
 
 
