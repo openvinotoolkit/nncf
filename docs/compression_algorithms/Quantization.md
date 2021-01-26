@@ -132,7 +132,7 @@ AVX2 and AVX512 utilize a 16-bit register to store the result of operations on t
 This leads to accuracy degradation.
 
 To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used. 
-This regime is used when `"target_device": "CPU"` set.
+This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set.
 
 ---
 
