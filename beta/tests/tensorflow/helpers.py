@@ -86,15 +86,27 @@ class MockCOCODatasetBuilder(COCODatasetBuilder):
         return 5
 
 
-def get_coco_dataset_builders(config, strategy):
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
+def get_coco_dataset_builders(config, num_devices, **kwargs):
+    builders = []
 
-    train_builder = MockCOCODatasetBuilder(config=config,
-                                           is_train=True,
-                                           num_devices=num_devices)
+    if kwargs.get('train', False):
+        builders.append(MockCOCODatasetBuilder(config=config,
+                                               is_train=True,
+                                               num_devices=num_devices))
 
-    val_builder = MockCOCODatasetBuilder(config=config,
-                                         is_train=False,
-                                         num_devices=num_devices)
+        if kwargs.get('calibration', False):
+            config_ = config.deepcopy()
+            config_.batch_size = builders[0].batch_size
+            builders.append(MockCOCODatasetBuilder(config=config_,
+                                                   is_train=True,
+                                                   num_devices=1))
 
-    return train_builder, val_builder
+    if kwargs.get('validation', False):
+        builders.append(MockCOCODatasetBuilder(config=config,
+                                               is_train=False,
+                                               num_devices=num_devices))
+
+    if len(builders) == 1:
+        builders = builders[0]
+
+    return builders

@@ -68,8 +68,7 @@ def get_config_from_argv(argv, parser):
     return config
 
 
-def get_dataset_builders(config, strategy, one_hot=True):
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
+def get_dataset_builders(config, num_devices, one_hot=True):
     image_size = config.input_info.sample_size[-2]
 
     train_builder = DatasetBuilder(
@@ -128,7 +127,7 @@ def run(config):
                                        pretrained=config.get('pretrained', False),
                                        weights=config.get('weights', None))
 
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
 
     train_builder, validation_builder = builders
