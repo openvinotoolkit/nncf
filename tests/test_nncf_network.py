@@ -236,13 +236,11 @@ class TestInsertionCommands:
             ctx = self.compressed_model.get_tracing_context()
             assert ctx._post_hooks[command.insertion_point.ia_op_exec_context][0] is hook
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.module_scope)
+            module = self.compressed_model.get_module_by_scope(command.insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
 
         if insertion_point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(
-                command.insertion_point.module_scope)
+            module = self.compressed_model.get_module_by_scope(command.insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]

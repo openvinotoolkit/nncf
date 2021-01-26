@@ -15,7 +15,7 @@ import pytest
 from nncf.dynamic_graph.context import Scope
 from nncf.pruning.filter_pruning.algo import FilterPruningBuilder
 from nncf.pruning.utils import get_rounded_pruned_element_number, get_bn_for_module_scope, \
-    get_first_pruned_modules, get_last_pruned_modules
+    get_first_pruned_nodes, get_last_pruned_nodes
 from tests.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
     TestModelBranching
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -72,8 +72,10 @@ def test_get_first_pruned_layers(model, ref_first_module_names):
     config['compression']['algorithm'] = 'filter_pruning'
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
-    first_pruned_modules = get_first_pruned_modules(pruned_model,
-                                                    FilterPruningBuilder(config).get_op_types_of_pruned_modules())
+    first_pruned_nodes = get_first_pruned_nodes(pruned_model.get_original_graph(),
+                                                FilterPruningBuilder(config).get_op_types_of_pruned_modules())
+    first_pruned_modules = [pruned_model.get_module_by_scope(n.op_exec_context.scope_in_model)
+                            for n in first_pruned_nodes]
     ref_first_modules = [getattr(pruned_model, module_name) for module_name in ref_first_module_names]
     assert set(first_pruned_modules) == set(ref_first_modules)
 
@@ -89,7 +91,9 @@ def test_get_last_pruned_layers(model, ref_last_module_names):
     config['compression']['algorithm'] = 'filter_pruning'
     pruned_model, _ = create_compressed_model_and_algo_for_test(model(), config)
 
-    first_pruned_modules = get_last_pruned_modules(pruned_model,
-                                                   FilterPruningBuilder(config).get_op_types_of_pruned_modules())
+    last_pruned_nodes = get_last_pruned_nodes(pruned_model.get_original_graph(),
+                                              FilterPruningBuilder(config).get_op_types_of_pruned_modules())
+    last_pruned_modules = [pruned_model.get_module_by_scope(n.op_exec_context.scope_in_model)
+                           for n in last_pruned_nodes]
     ref_last_modules = [getattr(pruned_model, module_name) for module_name in ref_last_module_names]
-    assert set(first_pruned_modules) == set(ref_last_modules)
+    assert set(last_pruned_modules) == set(ref_last_modules)

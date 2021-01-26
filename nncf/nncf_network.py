@@ -23,7 +23,8 @@ from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext, \
+    ConvolutionModuleAttributes
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
     ModelInputInfo
@@ -33,7 +34,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
@@ -453,6 +454,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
                                                                as_eval=True)
+        self._mark_original_graph_nodes_with_module_attributes()
 
         self._compressed_context = TracingContext()
 
@@ -859,3 +861,15 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if op_exec_context:
                 result.append(str(op_exec_context.input_agnostic))
         return result
+
+    def _mark_original_graph_nodes_with_module_attributes(self):
+        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
+        for node in self._original_graph.get_nodes_by_types(general_conv_types):
+            scope = node.op_exec_context.scope_in_model
+            module = self.get_module_by_scope(scope)
+            nx_node = self._original_graph.find_node_in_nx_graph_by_scope(scope)
+            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
+                                                                               module.in_channels,
+                                                                               module.out_channels,
+                                                                               module.stride,
+                                                                               module.groups)
