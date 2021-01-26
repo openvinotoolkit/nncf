@@ -440,7 +440,7 @@ Tsc = TestSotaCheckpoints
 @pytest.fixture(autouse=True, scope="class")
 def clean_previous_metrics_dump_dir():
     if os.path.isdir(METRICS_DUMP_PATH):
-        subprocess.run("rm *.json", cwd=METRICS_DUMP_PATH, check=True, shell=True)
+        subprocess.run("rm -f *.json", cwd=METRICS_DUMP_PATH, check=True, shell=True)
     yield
 
 
