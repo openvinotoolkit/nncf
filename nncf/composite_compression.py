@@ -18,6 +18,7 @@ import torch.nn
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler, \
     CompressionAlgorithmController, CompressionLevel
 from nncf.nncf_network import NNCFNetwork
+from nncf.pruning.base_algo import BasePruningAlgoController
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -109,6 +110,11 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         return stats
 
     def prepare_for_export(self):
+        if len(self.child_ctrls) > 1 and any(isinstance(x, BasePruningAlgoController) for x in self.child_ctrls):
+            # Waiting for the implementation of the related function in OpenVINO
+            raise NotImplementedError("Exporting a model that was compressed by filter pruning algorithm "
+                                      "in combination with another compression algorithm is not yet supporting")
+
         for child_ctrl in self.child_ctrls:
             child_ctrl.prepare_for_export()
 
