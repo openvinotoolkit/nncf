@@ -100,7 +100,7 @@ def test_is_correct_saturation_issue_levels():
     assert quantizer.level_high == 127
 
 
-def test_hw_config_saturation_issue_set():
+def test_hw_config_saturation_fix_applied():
     nncf_config = get_config_for_export_mode(True)
 
     # Test CPU, ANY device in which we use saturation issue
