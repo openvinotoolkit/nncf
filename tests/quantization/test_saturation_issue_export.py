@@ -103,12 +103,12 @@ def test_is_correct_saturation_issue_levels():
 def test_hw_config_saturation_fix_applied():
     nncf_config = get_config_for_export_mode(True)
 
-    # Test CPU, ANY device in which we use saturation issue
+    # Test CPU, ANY devices in which we use saturation issue
     def test_with_saturation_helper(target_device):
         model = TwoConvTestModel()
         nncf_config.update({"target_device": target_device})
 
-        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
         for quantizer in compression_ctrl.weight_quantizers.values():
             assert quantizer.quantizer_module_ref.is_saturation_fix
@@ -124,7 +124,7 @@ def test_hw_config_saturation_fix_applied():
         model = TwoConvTestModel()
         nncf_config.update({"target_device": target_device})
 
-        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
         for quantizer in compression_ctrl.weight_quantizers.values():
             assert not quantizer.quantizer_module_ref.is_saturation_fix
@@ -142,7 +142,7 @@ def test_are_onnx_exported_weights_tensors_clipped(tmp_path):
     model = TwoConvTestModel()
     nncf_config = get_config_for_export_mode(True)
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     # Set scale tensors
     first_scale_tensor = torch.tensor((0.5, 0.5), dtype=torch.float32, requires_grad=True)
@@ -166,6 +166,7 @@ def test_are_onnx_exported_weights_tensors_clipped(tmp_path):
     onnx_model = onnx.load(onnx_checkpoint_path)
 
     # Find weight tensors in ONNX model
+    # pylint:disable=no-member
     for node in onnx_model.graph.node:
         try:
             if node.op_type == 'Constant':
