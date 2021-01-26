@@ -184,17 +184,17 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
 
 
 def is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return not torch.all(torch.tensor(node.attributes.stride) == 1) and \
+    return not torch.all(torch.tensor(node.module_attributes.stride) == 1) and \
            not node.op_exec_context.operator_name in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
-    return node.attributes.groups != 1
+    return node.module_attributes.groups != 1
 
 
 def is_depthwise_conv(node: NNCFNode) -> bool:
-    return node.attributes.groups == node.attributes.in_channels \
-           and (node.attributes.out_channels % node.attributes.in_channels == 0)
+    return node.module_attributes.groups == node.module_attributes.in_channels \
+           and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0)
 
 
 def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode) -> Optional[NNCFNode]:

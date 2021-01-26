@@ -24,7 +24,7 @@ from torch import nn
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext, \
-    ConvolutionAttributes
+    ConvolutionModuleAttributes
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
     ModelInputInfo
@@ -868,8 +868,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             scope = node.op_exec_context.scope_in_model
             module = self.get_module_by_scope(scope)
             nx_node = self._original_graph.find_node_in_nx_graph_by_scope(scope)
-            nx_node[NNCFGraph.ATTRIBUTES] = ConvolutionAttributes(module.weight.requires_grad,
-                                                                  module.in_channels,
-                                                                  module.out_channels,
-                                                                  module.stride,
-                                                                  module.groups)
+            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
+                                                                               module.in_channels,
+                                                                               module.out_channels,
+                                                                               module.stride,
+                                                                               module.groups)

@@ -180,7 +180,7 @@ class PruningNodeSelector:
         output_non_pruned_nodes = get_last_pruned_nodes(graph, self._prune_operations + ['linear'])
         node_scope_str = str(node.op_exec_context.scope_in_model)
 
-        if self._ignore_frozen_layers and not node.attributes.weight_requires_grad:
+        if self._ignore_frozen_layers and not node.module_attributes.weight_requires_grad:
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                     " the layer appears to be frozen (requires_grad=False)".format(node_scope_str)
             prune = False

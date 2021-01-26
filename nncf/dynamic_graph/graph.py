@@ -168,12 +168,12 @@ class OperationExecutionContext:
         return self.input_agnostic.call_order
 
 
-class BaseAttributes:
+class BaseModuleAttributes:
     def __init__(self, weight_requires_grad: bool):
         self.weight_requires_grad = weight_requires_grad
 
 
-class ConvolutionAttributes(BaseAttributes):
+class ConvolutionModuleAttributes(BaseModuleAttributes):
     def __init__(self,
                  weight_requires_grad: bool,
                  in_channels: int,
@@ -188,10 +188,13 @@ class ConvolutionAttributes(BaseAttributes):
 
 
 class NNCFNode:
-    def __init__(self, node_id: int, op_exec_context: OperationExecutionContext, attributes: BaseAttributes = None):
+    def __init__(self,
+                 node_id: int,
+                 op_exec_context: OperationExecutionContext,
+                 module_attributes: BaseModuleAttributes = None):
         self.node_id = node_id
         self.op_exec_context = op_exec_context
-        self.attributes = attributes
+        self.module_attributes = module_attributes
 
     def __str__(self):
         return str(self.node_id) + " " + str(self.op_exec_context)
@@ -279,7 +282,7 @@ class DefaultScopeNodeMatcher:
         for nx_node in node_candidates.values():
             nncf_node_candidates.append(NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR],
                                                  op_exec_context,
-                                                 nx_node.get(NNCFGraph.ATTRIBUTES)))
+                                                 nx_node.get(NNCFGraph.MODULE_ATTRIBUTES)))
         result = None
         if len(nncf_node_candidates) == 1:
             result = nncf_node_candidates[0]
@@ -385,7 +388,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         for nx_node in node_candidates.values():
             nncf_node_candidates.append(NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR],
                                                  op_exec_context,
-                                                 nx_node.get(NNCFGraph.ATTRIBUTES)))
+                                                 nx_node.get(NNCFGraph.MODULE_ATTRIBUTES)))
 
         result = None
         if len(nncf_node_candidates) == 1:
@@ -496,7 +499,7 @@ class NNCFGraph:
     OP_EXEC_CONTEXT_NODE_ATTR = "op_exec_context"
     ACTIVATION_SHAPE_EDGE_ATTR = "activation_shape"
     IN_PORT_NAME_EDGE_ATTR = "in_port"
-    ATTRIBUTES = "attributes"
+    MODULE_ATTRIBUTES = "module_attributes"
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -798,7 +801,7 @@ class NNCFGraph:
     def _nx_node_to_nncf_node(nx_node) -> 'NNCFNode':
         return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR],
                         nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR],
-                        nx_node.get(NNCFGraph.ATTRIBUTES))
+                        nx_node.get(NNCFGraph.MODULE_ATTRIBUTES))
 
     def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[dict]:
         """
