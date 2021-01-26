@@ -454,7 +454,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
                                                                as_eval=True)
-        self._extend_original_graph_with_attributes()
+        self._mark_original_graph_nodes_with_module_attributes()
 
         self._compressed_context = TracingContext()
 
@@ -862,7 +862,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 result.append(str(op_exec_context.input_agnostic))
         return result
 
-    def _extend_original_graph_with_attributes(self):
+    def _mark_original_graph_nodes_with_module_attributes(self):
         general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
         for node in self._original_graph.get_nodes_by_types(general_conv_types):
             scope = node.op_exec_context.scope_in_model
