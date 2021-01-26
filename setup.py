@@ -115,8 +115,7 @@ else:
 
 EXTRAS_REQUIRE = {
     "tests": [
-        "pytest",
-        "onnxruntime"],
+        "pytest"],
     "docs": []
 }
 
