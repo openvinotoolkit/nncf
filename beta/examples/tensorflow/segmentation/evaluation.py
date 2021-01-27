@@ -212,7 +212,6 @@ def run_evaluation(config, eval_timeout=None):
         write_metrics(metric_result['AP'], config.metrics_dump)
 
 
-
 def export(config):
     model_builder = get_model_builder(config)
 
