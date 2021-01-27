@@ -1,4 +1,4 @@
-From 65d164690835f65ee90d491903e0a0c5f255772e Mon Sep 17 00:00:00 2001
+From 24e975fb879f8b5b6b590e83d0ffb8e0359c11dc Mon Sep 17 00:00:00 2001
 From: Vasily Shamporov <vasily.shamporov@intel.com>
 Date: Fri, 29 Nov 2019 18:33:05 +0300
 Subject: [PATCH] Modifications for NNCF usage
@@ -1117,7 +1117,7 @@ index b839cba1..1808e58b 100644
          w = torch.where(mask.bool(), w, self.masked_bias.to(w.dtype))
  
 diff --git a/src/transformers/modeling_utils.py b/src/transformers/modeling_utils.py
-index 5b000c81..af21329e 100644
+index 5b000c81..05df28a7 100644
 --- a/src/transformers/modeling_utils.py
 +++ b/src/transformers/modeling_utils.py
 @@ -24,6 +24,9 @@ from torch import Tensor, device, dtype, nn
@@ -1200,7 +1200,7 @@ index 5b000c81..af21329e 100644
  
 -
 +import nncf
-+@nncf.register_module
++@nncf.register_module()
  class Conv1D(nn.Module):
      def __init__(self, nf, nx):
          """ Conv1D layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2)
