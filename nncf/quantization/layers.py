@@ -209,7 +209,15 @@ class BaseQuantizer(nn.Module):
             level_high = self.level_high
             levels = self.levels
             if self.is_saturation_fix:
-                x = torch.max(torch.min(x, input_high), input_low)
+                if x.size()[0] > 1:
+                    for i, channel in enumerate(x):
+                        try:
+                            x[i] = torch.clamp(channel, min=input_low[i], max=input_high[i])
+                        except TypeError:
+                            x[i] = torch.clamp(channel, min=input_low[i].item(), max=input_high[i].item())
+                else:
+                    x = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                # x = torch.max(torch.min(x, input_high), input_low)
                 level_low *= 2
                 level_high = 2 * level_high + 1
                 levels = level_high - level_low + 1
