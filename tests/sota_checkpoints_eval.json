@@ -250,7 +250,7 @@
             "ssd300_mobilenet_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd_mobilenet_voc_magnitude_int8.json",
                 "reference": "ssd300_mobilenet_voc",
-                "target": 85.45,
+                "target": 85.82,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-BN",
