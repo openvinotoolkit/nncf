@@ -39,16 +39,16 @@ class TestModelDiffConvs(nn.Module):
     def __init__(self):
         super().__init__()
         # Usual conv
-        self.conv1 = create_conv(1, 3, 2, 9, -2)
+        self.conv1 = create_conv(1, 32, 2, 9, -2)
         self.relu = nn.ReLU()
         # Depthwise conv
-        self.conv2 = nn.Conv2d(3, 3, 1, groups=3)
+        self.conv2 = nn.Conv2d(32, 32, 1, groups=32)
 
         # Downsample conv
-        self.conv3 = create_conv(3, 8, 3, -10, 0, stride=2)
+        self.conv3 = create_conv(32, 32, 3, -10, 0, stride=2)
 
         # Group conv
-        self.conv4 = nn.Conv2d(8, 4, 1, groups=4)
+        self.conv4 = nn.Conv2d(32, 16, 1, groups=8)
 
     def forward(self, x):
         x = self.conv1(x)

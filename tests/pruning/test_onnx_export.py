@@ -13,7 +13,7 @@
 import pytest
 
 from tests.pruning.helpers import BigPruningTestModel, get_basic_pruning_config, \
-    PruningTestModelConcat, PruningTestModelEltwise
+    PruningTestModelConcat, PruningTestModelEltwise, TestModelDiffConvs
 from tests.test_helpers import load_exported_onnx_version
 
 
@@ -91,6 +91,33 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
                          )
 def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_shapes):
     model = PruningTestModelEltwise()
+    nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    nncf_config['compression']['algorithm'] = 'filter_pruning'
+
+    nncf_config['compression']['params']['prune_first_conv'] = prune_first
+    nncf_config['compression']['params']['prune_last_conv'] = prune_last
+    nncf_config['compression']['pruning_init'] = 0.5
+    onnx_model_proto = load_exported_onnx_version(nncf_config, model,
+                                                  path_to_storage_dir=tmp_path)
+    for i in range(1, 5):
+        conv_name = "nncf_module.conv{}".format(i)
+        check_bias_and_weight_shape(conv_name, onnx_model_proto, *ref_shapes[i - 1])
+
+
+@pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
+                         [
+                          (False, True, [[[32, 1, 2, 2], [32]], [[32, 1, 1, 1], [32]], [[32, 32, 3, 3], [32]],
+                                        [[16, 4, 1, 1], [16]]]),
+                          (True, True, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
+                                        [[16, 4, 1, 1], [16]]]),
+                          (False, False, [[[32, 1, 2, 2], [32]], [[32, 1, 1, 1], [32]], [[32, 32, 3, 3], [32]],
+                                          [[16, 4, 1, 1], [16]]]),
+                          (True, False, [[[16, 1, 2, 2], [16]], [[16, 1, 1, 1], [16]], [[32, 16, 3, 3], [32]],
+                                         [[16, 4, 1, 1], [16]]]),
+                          ]
+                         )
+def test_pruning_export_diffconvs_model(tmp_path, prune_first, prune_last, ref_shapes):
+    model = TestModelDiffConvs()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     nncf_config['compression']['algorithm'] = 'filter_pruning'
 

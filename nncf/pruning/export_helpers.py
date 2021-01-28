@@ -177,7 +177,7 @@ class Convolution(DefaultMetaOp):
         node_module.out_channels = int(torch.sum(mask))
         node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
 
-        if node_module.bias is not None and not nx_node['is_depthwise']:
+        if node_module.bias is not None:
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
         nncf_logger.info('Pruned Convolution {} by pruning mask. Old output filters number: {}, new filters number:'
