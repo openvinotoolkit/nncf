@@ -16,7 +16,8 @@ from pathlib import Path
 
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
-    # For security reasons, should not follow symlinks.
+    # For security reasons, should not follow symlinks. Use .resolve() on any Path
+    # objects before passing them here.
     if file.is_symlink():
         raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
     with open(str(file), *args, **kwargs) as f:

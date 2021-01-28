@@ -126,7 +126,7 @@ class HWConfig(list):
 
     @classmethod
     def from_json(cls, path):
-        file_path = Path(path)
+        file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
             return HWConfig.from_dict(json_config)

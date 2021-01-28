@@ -52,7 +52,7 @@ class NNCFConfig(dict):
 
     @classmethod
     def from_json(cls, path) -> 'NNCFConfig':
-        file_path = Path(path)
+        file_path = Path(path).resolve()
         with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
