@@ -187,9 +187,8 @@ def run(config):
         model_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir)
 
-    progress_bar_callback = get_progress_bar(
-        stateful_metrics=[metric.name for metric in metrics])
-    callbacks.append(progress_bar_callback)
+    callbacks.append(get_progress_bar(
+        stateful_metrics=[metric.name for metric in metrics]))
     callbacks.extend(compression_callbacks)
 
     validation_kwargs = {
@@ -213,7 +212,8 @@ def run(config):
     compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
-        callbacks=[progress_bar_callback],
+        callbacks=[get_progress_bar(
+            stateful_metrics=[metric.name for metric in metrics])],
         verbose=1)
 
     if 'export' in config.mode:
