@@ -23,10 +23,10 @@
             "nesterov": true
         }
     },
-     "pruning_init": 0.1,
      "compression": [
        {
           "algorithm": "filter_pruning",
+          "pruning_init": 0.1,
           "params": {
           "schedule": "exponential",
               "pruning_target": 0.4,

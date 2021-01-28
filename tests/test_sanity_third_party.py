@@ -57,7 +57,7 @@ class TestTransformers:
         self.activate_venv = str(". {}/bin/activate".format(self.VENV_TRANS_PATH))
 
     def test_install_trans_(self):
-        subprocess.call("virtualenv -ppython3.6 {}".format(self.VENV_TRANS_PATH), shell=True)
+        subprocess.call("virtualenv -ppython3.7 {}".format(self.VENV_TRANS_PATH), shell=True)
         subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run("{} && pip install torch==1.7.0".format(self.activate_venv),
@@ -212,7 +212,7 @@ class TestMmdetection:
         self.MMDET_PATH = str(os.path.join(self.VENV_MMDET_PATH, "mmdetection"))
 
     def test_install_mmdet(self):
-        subprocess.call("virtualenv -ppython3.6 {}".format(self.VENV_MMDET_PATH), shell=True)
+        subprocess.call("virtualenv -ppython3.7 {}".format(self.VENV_MMDET_PATH), shell=True)
         subprocess.run("{} pip install --upgrade pip".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run(

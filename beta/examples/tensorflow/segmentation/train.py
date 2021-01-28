@@ -19,7 +19,6 @@ import tensorflow as tf
 import numpy as np
 
 from beta.nncf import create_compressed_model
-from beta.nncf.configs.config import Config
 from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
@@ -29,6 +28,8 @@ from beta.examples.tensorflow.common.distributed import get_distribution_strateg
 from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
 from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.optimizer import build_optimizer
+from beta.examples.tensorflow.common.sample_config import create_sample_config
+from beta.examples.tensorflow.common.sample_config import SampleConfig
 from beta.examples.tensorflow.common.scheduler import build_scheduler
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import create_code_snapshot
@@ -63,28 +64,21 @@ def get_argument_parser():
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
-    sample_config = Config(
+    sample_config = SampleConfig(
         {'dataset_type': 'tfrecords'}
     )
 
-    config_from_json = Config.from_json(args.config)
+    config_from_json = create_sample_config(args, parser)
     predefined_config = get_predefined_config(config_from_json.model)
 
     sample_config.update(predefined_config)
     sample_config.update(config_from_json)
-    sample_config.update_from_args(args, parser)
     configure_paths(sample_config)
 
     return sample_config
 
 
-def get_dataset_builders(config, strategy):
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-
+def get_dataset_builders(config, num_devices):
     train_builder = COCODatasetBuilder(config=config,
                                        is_train=True,
                                        num_devices=num_devices)
@@ -210,7 +204,8 @@ def run_train(config):
     strategy = get_distribution_strategy(config)
 
     # Create dataset
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
+
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, calibration_dataset = datasets
@@ -230,7 +225,7 @@ def run_train(config):
                                 weights=config.get('weights', None),
                                 is_training=True) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
             scheduler = build_scheduler(
                 config=config,
@@ -274,8 +269,12 @@ def main(argv):
 
     serialize_config(config, config.log_dir)
 
-    nncf_root = Path(__file__).absolute().parents[2]
+    nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     run_train(config)
 

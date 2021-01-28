@@ -33,9 +33,8 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.model_analysis import Clusterization
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.utils import get_filters_num
+from nncf.utils import get_filters_num, compute_FLOPs_hook
 from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
-from nncf.utils import compute_FLOPs_hook
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -118,8 +117,8 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Init in/out channels for potentially prunable modules
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
-            node_module = self._model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
             scope = nncf_node.op_exec_context.scope_in_model
+            node_module = self._model.get_module_by_scope(scope)
             in_channels, out_channels = get_in_out_channels(node_module)
             if in_channels:
                 self.modules_in_channels[scope] = in_channels

@@ -16,7 +16,6 @@ import sys
 import tensorflow as tf
 
 from beta.nncf import create_compressed_model
-from beta.nncf.configs.config import Config
 from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
@@ -25,6 +24,8 @@ from beta.examples.tensorflow.common.distributed import get_distribution_strateg
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.object_detection.datasets.builder import COCODatasetBuilder
 from beta.examples.tensorflow.common.object_detection.checkpoint_utils import get_variables
+from beta.examples.tensorflow.common.sample_config import create_sample_config
+from beta.examples.tensorflow.common.sample_config import SampleConfig
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import SummaryWriter
@@ -71,19 +72,26 @@ def get_argument_parser():
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
-    sample_config = Config(
+    sample_config = SampleConfig(
         {'dataset_type': 'tfrecords'}
     )
 
-    config_from_json = Config.from_json(args.config)
+    config_from_json = create_sample_config(args, parser)
     predefined_config = get_predefined_config(config_from_json.model)
 
     sample_config.update(predefined_config)
     sample_config.update(config_from_json)
-    sample_config.update_from_args(args, parser)
     configure_paths(sample_config)
 
     return sample_config
+
+
+def get_dataset_builders(config, num_devices):
+    val_builder = COCODatasetBuilder(config=config,
+                                     is_train=False,
+                                     num_devices=num_devices)
+
+    return val_builder
 
 
 def load_checkpoint(checkpoint, ckpt_path):
@@ -139,15 +147,9 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
-
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The evaluation.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
     strategy = get_distribution_strategy(config)
 
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-    dataset_builder = COCODatasetBuilder(config=config, is_train=False, num_devices=num_devices)
+    dataset_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     dataset = dataset_builder.build()
     test_dist_dataset = strategy.experimental_distribute_dataset(dataset)
 
@@ -160,7 +162,7 @@ def run_evaluation(config, eval_timeout=None):
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
         with strategy.scope():
-            compression_ctrl, compress_model = create_compressed_model(model, config)
+            compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables, step=tf.Variable(0))
             eval_metric = model_builder.eval_metrics()
@@ -212,7 +214,7 @@ def export(config):
     with TFOriginalModelManager(model_builder.build_model,
                                 weights=config.get('weights', None),
                                 is_training=False) as model:
-        compression_ctrl, compress_model = create_compressed_model(model, config)
+        compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
     if config.ckpt_path:
         variables = get_variables(compress_model)
@@ -228,6 +230,10 @@ def main(argv):
     tf.get_logger().setLevel('INFO')
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     if 'train' in config.mode or 'test' in config.mode:
         run_evaluation(config)

@@ -11,3 +11,5 @@ opencv-python
 pytest
 pytest-mock
 pytest-dependency
+jsonschema==3.2.0
+pydot

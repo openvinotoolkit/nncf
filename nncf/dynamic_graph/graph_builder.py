@@ -17,7 +17,6 @@ from copy import deepcopy
 import torch
 
 
-
 class ModelInputInfo:
     FILLER_TYPE_ONES = "ones"
     FILLER_TYPE_ZEROS = "zeros"
