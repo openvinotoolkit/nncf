@@ -169,7 +169,7 @@
                 "mask_rcnn_baseline": {
                     "config": "examples/tensorflow/segmentation/configs/mask_rcnn_coco.json",
                     "target": 37.33,
-                    "resume": "mask_rcnn_baseline",
+                    "weights": "mask_rcnn_baseline",
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_baseline",
                     "batch": 16
