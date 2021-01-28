@@ -26,8 +26,6 @@ DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
-METRICS_DUMP_PATH = PROJECT_ROOT / 'metrics_dump'
-
 OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
@@ -512,8 +510,8 @@ def openvino_preinstall(openvino):
 def make_metrics_dump_path(metrics_dump_dir):
     if pytest.metrics_dump_path is None:
         data = datetime.datetime.now()
-        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / \
-            f"metrics_dump_{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" \
+            f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
     assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
