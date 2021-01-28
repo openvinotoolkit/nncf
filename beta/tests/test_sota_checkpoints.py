@@ -2,6 +2,7 @@ import os
 import json
 import sys
 import csv
+import datetime
 from typing import Tuple, List, Optional
 
 import pytest
@@ -22,8 +23,6 @@ DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
-
-METRICS_DUMP_PATH = PROJECT_ROOT / 'metrics_dump'
 
 MODE = "TF2"
 
@@ -193,7 +192,7 @@ class TestSotaCheckpoints:
             writer.writerow({'model': filename, 'launcher': '-', 'device': '-', 'dataset': '-', 'tags': '-',
                              'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
 
-    def write_results_table(self, init_table_string):
+    def write_results_table(self, init_table_string, path):
         result_table = PrettyTable()
         result_table.field_names = init_table_string
         for key in self.row_dict:
@@ -227,7 +226,7 @@ class TestSotaCheckpoints:
                         with tag('td'):
                             text(i)
         print("Write results at ", os.path.join(PROJECT_ROOT, "results.html"))
-        f = open('results.html', 'w')
+        f = open(path / 'results.html', 'w')
         f.write(doc.getvalue())
         f.close()
 
@@ -360,8 +359,8 @@ class TestSotaCheckpoints:
         test = "eval"
         sample_type = eval_test_struct.sample_type_
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-        metrics_dump_file_path = METRICS_DUMP_PATH / metric_file_name
-        log_dir = METRICS_DUMP_PATH / "logs"
+        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
+        log_dir = pytest.metrics_dump_path / "logs"
         if MODE == 'TF2':
             cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
                                                 dataset=sota_data_dir,
@@ -398,7 +397,7 @@ class TestSotaCheckpoints:
 
         fp32_metric = None
         if eval_test_struct.reference_ is not None:
-            reference_metric_file_path = METRICS_DUMP_PATH / self.get_metric_file_name(eval_test_struct.reference_)
+            reference_metric_file_path = pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
@@ -438,9 +437,16 @@ Tsc = TestSotaCheckpoints
 
 
 @pytest.fixture(autouse=True, scope="class")
-def clean_previous_metrics_dump_dir():
-    if os.path.isdir(METRICS_DUMP_PATH):
-        subprocess.run("rm -f *.json", cwd=METRICS_DUMP_PATH, check=True, shell=True)
+def make_metrics_dump_path(metrics_dump_dir):
+    if pytest.metrics_dump_path is None:
+        data = datetime.datetime.now()
+        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" / \
+            f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+    else:
+        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
+    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
+        f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
+    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
     yield
 
 
@@ -448,10 +454,10 @@ def clean_previous_metrics_dump_dir():
 def results(sota_data_dir):
     yield
     if sota_data_dir:
-        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=METRICS_DUMP_PATH)
+        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Tsc.test == "eval":
             header = ["Model", "Metrics type", "Expected", "Measured", "Reference FP32", "Diff FP32", "Diff Expected",
                       "Error"]
         else:
             header = ["Model", "Metrics type", "Expected", "Measured", "Diff Expected", "Error"]
-        Tsc().write_results_table(header)
+        Tsc().write_results_table(header, pytest.metrics_dump_path)
