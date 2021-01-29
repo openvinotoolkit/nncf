@@ -18,7 +18,7 @@ import os
 
 from nncf.debug import is_debug
 from nncf.hw_config import HWConfigType
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup

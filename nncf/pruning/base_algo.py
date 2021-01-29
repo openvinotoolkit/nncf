@@ -21,7 +21,7 @@ from nncf.compression_method_api import CompressionAlgorithmBuilder, \
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFNode
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.model_analysis import NodesCluster, Clusterization

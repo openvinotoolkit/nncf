@@ -24,7 +24,7 @@ from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.layer_utils import _NNCFModuleMixin
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
 from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, TransposeConvolution

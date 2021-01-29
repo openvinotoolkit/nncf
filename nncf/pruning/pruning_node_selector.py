@@ -18,7 +18,7 @@ from nncf.pruning.utils import get_sources_of_node, is_depthwise_conv, get_previ
 from nncf.pruning.export_helpers import PruningOperationsMetatypeRegistry
 from nncf.pruning.model_analysis import ModelAnalyzer, Clusterization, cluster_special_ops, NodesCluster
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.utils import should_consider_scope
 
 

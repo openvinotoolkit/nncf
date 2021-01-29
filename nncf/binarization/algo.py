@@ -24,7 +24,7 @@ from nncf.compression_method_api import CompressionAlgorithmBuilder, Compression
 from nncf.config import NNCFConfig
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateWeight, UpdateInputs
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import QuantizationControllerBase

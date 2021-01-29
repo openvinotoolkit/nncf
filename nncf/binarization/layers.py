@@ -21,7 +21,7 @@ from nncf.utils import get_per_channel_scale_shape
 from nncf.binarization.binarize_functions import XNORBinarizeFn, DOREFABinarizeFn
 from nncf.binarization.binarize_functions import ActivationBinarizationScaleThresholdFn
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 BINARIZATION_MODULES = Registry('binarization_modules')
 

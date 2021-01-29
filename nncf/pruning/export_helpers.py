@@ -19,7 +19,7 @@ from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype
     DropoutMetatype, Conv1dMetatype, Conv2dMetatype, Conv3dMetatype, BatchNormMetatype, CatMetatype, AddMetatype, \
     SubMetatype, DivMetatype, MulMetatype, LinearMetatype, MatMulMetatype, MinMetatype, MaxMetatype, MeanMetatype, \
     ConvTranspose2dMetatype, ConvTranspose3dMetatype
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
     fill_input_masks

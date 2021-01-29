@@ -22,7 +22,7 @@ from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacen
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver

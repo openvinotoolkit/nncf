@@ -36,7 +36,7 @@ from nncf.quantization.quantizer_setup import QuantizationPointId, MultiConfigQu
     SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode
 from nncf.utils import in_scope_list
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class QuantizationTrait(Enum):

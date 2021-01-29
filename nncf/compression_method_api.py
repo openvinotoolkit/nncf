@@ -30,7 +30,7 @@ from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
