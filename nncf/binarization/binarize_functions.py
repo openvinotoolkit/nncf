@@ -14,8 +14,10 @@
 import warnings
 
 import torch
-from .extensions import BinarizedFunctionsCUDA
 
+from nncf.utils import add_domain
+
+from .extensions import BinarizedFunctionsCUDA
 
 class XNORBinarizeFn(torch.autograd.Function):
     """ Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
@@ -28,7 +30,7 @@ class XNORBinarizeFn(torch.autograd.Function):
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[1, 2, 3])
         scale_neg = g.op("Neg", scale)
-        return g.op("FakeQuantize", x, zero, zero, scale_neg, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2)
 
     @staticmethod
     def forward(ctx, x):
@@ -59,7 +61,7 @@ class DOREFABinarizeFn(torch.autograd.Function):
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[0, 1, 2, 3])
         scale_neg = g.op("Neg", scale)
-        return g.op("FakeQuantize", x, zero, zero, scale_neg, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2)
 
     @staticmethod
     def forward(ctx, x):
@@ -87,7 +89,7 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
         zero = g.op("Unsqueeze", zero, axes_i=[0, 2, 3])
         threshold = g.op("Mul", threshold, scale)
         scale = g.op("Unsqueeze", scale, axes_i=[0, 2, 3])
-        return g.op("FakeQuantize", x, threshold, threshold, zero, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, threshold, threshold, zero, scale, levels_i=2)
 
     @staticmethod
     def forward(ctx, input_, scale, threshold):

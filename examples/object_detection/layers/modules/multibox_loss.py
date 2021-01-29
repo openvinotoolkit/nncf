@@ -43,7 +43,7 @@ class MultiBoxLoss(nn.Module):
 
     def __init__(self, cfg, num_classes, overlap_thresh, prior_for_matching,
                  bkg_label, neg_mining, neg_pos, neg_overlap, encode_target, device=None):
-        super(MultiBoxLoss, self).__init__()
+        super().__init__()
         self.device = device
         self.num_classes = num_classes
         self.threshold = overlap_thresh

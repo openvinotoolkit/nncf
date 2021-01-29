@@ -17,9 +17,11 @@ This package defines the API for the NNCF compression methods, so that the user 
 extend the existing algorithms.
 """
 import functools
+import numpy
 from copy import copy
 from enum import Enum
 from functools import partial
+from typing import List
 
 import torch
 from torch import nn
@@ -27,10 +29,14 @@ from torch import nn
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.initialization import DataLoaderBNAdaptationRunner
+from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
+
+
+DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
 
 class CompressionLoss(nn.Module):
@@ -48,9 +54,13 @@ class CompressionLoss(nn.Module):
         """
         return torch.zeros([])
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
+
+        Args:
+            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
+            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
         """
         return {}
 
@@ -64,42 +74,44 @@ class CompressionScheduler:
     """
 
     def __init__(self):
-        self.last_epoch = -1
-        self.last_step = -1
+        self.current_step = -1 # Global step - count of all step during training
         self._steps_in_current_epoch = 0
+        self._current_epoch = -1
 
-    def step(self, last=None):
+    def step(self, next_step=None):
         """
-        Should be called after each optimizer step during training.
+        Should be called before each optimizer step during training.
         Arguments:
-            `last` - specifies the initial "previous" step
+            `next_step` - specifies the initial "next" step which should be set now
         """
-        if last is None:
-            last = self.last_step + 1
-        self.last_step = last
+        self.current_step = self.current_step + 1 if next_step is None else next_step
         self._steps_in_current_epoch += 1
 
-    def epoch_step(self, last=None):
+    def epoch_step(self, next_epoch=None):
         """
-        Should be called after each training epoch.
+        Should be called before each training epoch.
         Arguments:
-            `last` - specifies the initial "previous" epoch
+            `next` - specifies the initial "next" epoch which should be set now
         """
-        if last is None:
-            last = self.last_epoch + 1
-        self.last_epoch = last
+        if next_epoch is None:
+            self._current_epoch += 1
+        else:
+            self._current_epoch = next_epoch
         self._steps_in_current_epoch = 0
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
 
     def state_dict(self):
-        default_keys = {'last_step', 'last_epoch'}
+        default_keys = {'current_step', '_current_epoch'}
         return {key: val for key, val in self.__dict__.items() if key in default_keys}
 
     def initialize(self):
         pass
 
+    @property
+    def current_epoch(self):
+        return 0 if self._current_epoch == -1 else self._current_epoch
 
 @functools.total_ordering
 class CompressionLevel(Enum):
@@ -165,33 +177,48 @@ class CompressionAlgorithmController:
         """
         raise NotImplementedError()
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
+
+        Args:
+            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
+            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
         """
         stats = self._loss.statistics()
         if hasattr(self._model, 'statistics'):
-            stats.update(self._model.statistics())
+            stats.update(self._model.statistics(quickly_collected_only))
         return stats
 
     def run_batchnorm_adaptation(self, config):
         initializer_params = config.get("initializer", {})
         init_bn_adapt_config = initializer_params.get('batchnorm_adaptation', {})
-        num_bn_adaptation_steps = init_bn_adapt_config.get('num_bn_adaptation_steps', 0)
-        num_bn_forget_steps = init_bn_adapt_config.get('num_bn_forget_steps', 5)
+        num_bn_adaptation_samples = init_bn_adapt_config.get('num_bn_adaptation_samples', 0)
+        num_bn_forget_samples = init_bn_adapt_config.get('num_bn_forget_samples', 0)
+        try:
+            bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
+            has_bn_adapt_init_args = True
+        except KeyError:
+            has_bn_adapt_init_args = False
 
-        if num_bn_adaptation_steps < 0:
-            raise AttributeError('Number of batch adaptation steps must be >= 0')
-        if num_bn_adaptation_steps > 0:
-            try:
-                bn_adaptation_args = config.get_extra_struct(BNAdaptationInitArgs)
-            except KeyError:
+        if not init_bn_adapt_config:
+            if has_bn_adapt_init_args:
+                nncf_logger.warning("Enabling quantization batch norm adaptation with default parameters.")
+                num_bn_adaptation_samples = 2000
+                num_bn_forget_samples = 1000
+
+        if num_bn_adaptation_samples < 0:
+            raise AttributeError('Number of adaptation samples must be >= 0')
+        if num_bn_adaptation_samples > 0:
+            if not has_bn_adapt_init_args:
                 nncf_logger.info(
                     'Could not run batchnorm adaptation '
                     'as the adaptation data loader is not provided as an extra struct. '
                     'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class')
                 return
-
+            batch_size = bn_adaptation_args.data_loader.batch_size
+            num_bn_forget_steps = numpy.ceil(num_bn_forget_samples / batch_size)
+            num_bn_adaptation_steps = numpy.ceil(num_bn_adaptation_samples / batch_size)
             bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device,
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
@@ -199,7 +226,8 @@ class CompressionAlgorithmController:
     def prepare_for_export(self):
         pass
 
-    def export_model(self, filename, *args, **kwargs):
+    # pylint: disable=keyword-arg-before-vararg
+    def export_model(self, filename, input_names: List[str] = None, output_names: List[str] = None, *args, **kwargs):
         """
         Used to export the compressed model for inference into the ONNX format.
         Makes method-specific preparations of the model graph,
@@ -207,6 +235,8 @@ class CompressionAlgorithmController:
         then exports the model and dumps it into the output file.
         Parameters:
             `filename` - a path to the file for the exported model to be saved into.
+            `input_names` - list of input tensors names (optional).
+            `output_names` - list of output tensors names (optional).
             *args, **kwargs - if the model's `forward` requires additional parameters
             during export, specify these here.
         """
@@ -223,7 +253,11 @@ class CompressionAlgorithmController:
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
             torch.onnx.export(model, tuple(input_tensor_list),
-                              filename, verbose=True, enable_onnx_checker=False, opset_version=10)
+                              filename, input_names=input_names,
+                              output_names=output_names,
+                              enable_onnx_checker=False,
+                              opset_version=10,
+                              training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
         model.forward = original_forward
 
 
@@ -233,6 +267,8 @@ class CompressionAlgorithmBuilder:
     order to enable algorithm-specific compression during fine-tuning. Operates
     on an NNCFNetwork object wrapping a target PyTorch model (torch.nn.Module).
     """
+
+    _registered_name: str = None  # Attribute will set by COMPRESSION_ALGORITHMS registry
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         """
@@ -245,6 +281,7 @@ class CompressionAlgorithmBuilder:
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
+        self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
         """
@@ -256,7 +293,16 @@ class CompressionAlgorithmBuilder:
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
         self._model = target_model  # type: NNCFNetwork
+        insertion_commands = self._apply_to(target_model)
+
+        for command in insertion_commands:
+            target_model.register_insertion_command(command)
+
+        target_model.register_algorithm(self)
         return target_model
+
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+        return []
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         """
@@ -270,3 +316,21 @@ class CompressionAlgorithmBuilder:
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+
+    def _nncf_module_types_to_compress(self) -> List[str]:
+        """
+        Return list of NNCF module types which should be compressed by specific algorithm.
+        As name of algorithm used self._registered_name that set by decorator @nncf.registry_module.
+        :return: List of names of modules
+        """
+        filtered_nncf_module_names_list = list()
+        for module in list(NNCF_MODULES_DICT) + list(NNCF_WRAPPED_USER_MODULES_DICT.values()):
+            if self._registered_name not in module.ignored_algorithms:
+                filtered_nncf_module_names_list.append(module.__name__)
+        return filtered_nncf_module_names_list
+
+
+class StubCompressionScheduler(CompressionScheduler):
+
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL

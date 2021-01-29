@@ -26,7 +26,7 @@ from nncf.nncf_logger import logger as nncf_logger
 
 
 class ParameterHandler:
-    def __init__(self, parameters: List[Parameter], device: torch.device):
+    def __init__(self, parameters: List[Parameter], device: str):
         self._device = device
         self._parameters = parameters
 
@@ -98,7 +98,7 @@ class HessianTraceEstimator:
     """
 
     def __init__(self, model: nn.Module, criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor], criterion: _Loss,
-                 device: torch.device, data_loader: DataLoader,
+                 device: str, data_loader: DataLoader,
                  num_data_points: int):
         self._model = model
         parameters = [p for p in model.parameters() if p.requires_grad]

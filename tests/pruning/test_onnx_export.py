@@ -34,15 +34,21 @@ def check_bias_and_weight_shape(node_name, onnx_model_proto, weight_shape, bias_
 def test_pruning_export_simple_model(tmp_path):
     model = BigPruningTestModel()
     nncf_config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    nncf_config['compression']['pruning_init'] = 0.5
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     # Check that conv2 + BN were pruned by output filters
+    # WARNING: starting from at least torch 1.7.0, torch.onnx.export will fuses BN into previous
+    # convs if torch.onnx.export is done with `training=False`, so this test might fail.
     check_bias_and_weight_shape('nncf_module.conv2', onnx_model_proto, [16, 16, 3, 3], [16])
     check_bias_and_weight_shape('nncf_module.bn', onnx_model_proto, [16], [16])
 
+    # Check that up was pruned by input filters
+    check_bias_and_weight_shape('nncf_module.up', onnx_model_proto, [16, 32, 3, 3], [32])
+
     # Check that conv3 was pruned by input filters
-    check_bias_and_weight_shape('nncf_module.conv3', onnx_model_proto, [1, 16, 5, 5], [1])
+    check_bias_and_weight_shape('nncf_module.conv3', onnx_model_proto, [1, 32, 5, 5], [1])
 
 
 @pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
@@ -63,6 +69,7 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
     nncf_config['compression']['params']['prune_last_conv'] = prune_last
+    nncf_config['compression']['pruning_init'] = 0.5
 
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
@@ -72,14 +79,14 @@ def test_pruning_export_concat_model(tmp_path, prune_first, prune_last, ref_shap
 
 
 @pytest.mark.parametrize(('prune_first', 'prune_last', 'ref_shapes'),
-                         [(False, True, [[[16, 1, 2, 2], [16]], [[32, 16, 2, 2], [32]], [[32, 16, 2, 2], [32]],
-                                         [[8, 32, 3, 3], [8]]]),
-                          (True, True, [[[8, 1, 2, 2], [8]], [[32, 8, 2, 2], [32]], [[32, 8, 2, 2], [32]],
-                                        [[8, 32, 3, 3], [8]]]),
-                          (False, False, [[[16, 1, 2, 2], [16]], [[32, 16, 2, 2], [32]], [[32, 16, 2, 2], [32]],
-                                          [[16, 32, 3, 3], [16]]]),
-                          (True, False, [[[8, 1, 2, 2], [8]], [[32, 8, 2, 2], [32]], [[32, 8, 2, 2], [32]],
-                                         [[16, 32, 3, 3], [16]]]),
+                         [(False, True, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
+                                         [[8, 16, 3, 3], [8]]]),
+                          (True, True, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
+                                        [[8, 16, 3, 3], [8]]]),
+                          (False, False, [[[16, 1, 2, 2], [16]], [[16, 16, 2, 2], [16]], [[16, 16, 2, 2], [16]],
+                                          [[16, 16, 3, 3], [16]]]),
+                          (True, False, [[[8, 1, 2, 2], [8]], [[16, 8, 2, 2], [16]], [[16, 8, 2, 2], [16]],
+                                         [[16, 16, 3, 3], [16]]]),
                           ]
                          )
 def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_shapes):
@@ -89,7 +96,7 @@ def test_pruning_export_eltwise_model(tmp_path, prune_first, prune_last, ref_sha
 
     nncf_config['compression']['params']['prune_first_conv'] = prune_first
     nncf_config['compression']['params']['prune_last_conv'] = prune_last
-
+    nncf_config['compression']['pruning_init'] = 0.5
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     for i in range(1, 5):

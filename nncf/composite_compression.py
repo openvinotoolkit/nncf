@@ -38,7 +38,7 @@ class CompositeCompressionLoss(CompressionLoss):
             result_loss += loss()
         return result_loss
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = {}
         for loss in self._child_losses:
             stats.update(loss.statistics())
@@ -57,15 +57,15 @@ class CompositeCompressionScheduler(CompressionScheduler):
     def add(self, child_scheduler):
         self._child_schedulers.append(child_scheduler)
 
-    def step(self, last=None):
-        super().step(last)
+    def step(self, next_step=None):
+        super().step(next_step)
         for scheduler in self._child_schedulers:
-            scheduler.step(last)
+            scheduler.step(next_step)
 
-    def epoch_step(self, last=None):
-        super().epoch_step(last)
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
         for scheduler in self._child_schedulers:
-            scheduler.epoch_step(last)
+            scheduler.epoch_step(next_epoch)
 
     def state_dict(self):
         result = {}
@@ -102,7 +102,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             ctrl.distributed()
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         stats = {}
         for ctrl in self.child_ctrls:
             stats.update(ctrl.statistics())

@@ -37,6 +37,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
+    scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.1)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.219, 0.01)
     assert scheduler.prev_ind == 0
@@ -81,6 +82,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
                              "params": {"schedule": "multistep", 'multistep_steps': [1]}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
     scheduler = compression_ctrl.scheduler
+    scheduler.epoch_step()
     assert isinstance(scheduler, MultiStepSparsityScheduler)
     assert pytest.approx(scheduler.current_sparsity_level) == 0.1
     assert scheduler.sparsity_levels == [0.1, 0.5]

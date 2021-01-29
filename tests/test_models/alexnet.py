@@ -18,7 +18,7 @@ __all__ = ['AlexNet']
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes=10):
-        super(AlexNet, self).__init__()
+        super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),

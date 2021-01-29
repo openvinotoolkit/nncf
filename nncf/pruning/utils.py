@@ -12,17 +12,16 @@
 """
 import math
 from collections import deque
+from typing import List, Tuple
 
+import networkx as nx
 import torch
 from functools import partial
 
-import networkx as nx
-from nncf.layers import NNCF_CONV_MODULES_DICT
-
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
+from nncf.layers import NNCF_CONV_MODULES_DICT, NNCF_DECONV_MODULES_DICT
 from nncf.nncf_network import NNCFNetwork
-
 
 # pylint: disable=protected-access
 def get_rounded_pruned_element_number(total, sparsity_rate, multiple_of=8):
@@ -48,7 +47,7 @@ def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict):
     return None
 
 
-def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
+def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> Tuple[torch.nn.Module, Scope]:
     """
     Returns batch norm module that corresponds to module_scope convolution.
     :param target_model: NNCFNetwork to work with
@@ -60,8 +59,10 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope):
     bn_graph_node = get_bn_node_for_conv(graph._nx_graph, module_graph_node)
     bn_module = None
     if bn_graph_node:
+        bn_scope = bn_graph_node['op_exec_context'].scope_in_model
         bn_module = target_model.get_module_by_scope(bn_graph_node['op_exec_context'].scope_in_model)
-    return bn_module
+        return bn_module, bn_scope
+    return bn_module, bn_graph_node
 
 
 def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True):
@@ -100,14 +101,14 @@ def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forwa
     return found_nodes
 
 
-def traverse_function(node: NNCFNode, output, nncf_graph: NNCFGraph, required_types, visited):
+def traverse_function(node: NNCFNode, output, nncf_graph: NNCFGraph, type_check_fn, visited):
     nx_node = nncf_graph._nx_graph.nodes[nncf_graph.get_node_key_by_id(node.node_id)]
     node_type = nncf_graph.node_type_fn(nx_node)
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
 
-    if node_type not in required_types:
+    if not type_check_fn(node_type):
         return False, output
 
     output.append(node)
@@ -127,7 +128,8 @@ def get_first_pruned_modules(target_model: NNCFNetwork, pruned_ops_types):
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=pruned_ops_types,
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+                                        type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
 
     first_pruned_nodes = []
@@ -151,7 +153,8 @@ def get_last_pruned_modules(target_model: NNCFNetwork, pruned_ops_types):
     graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=pruned_ops_types,
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+                                        type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
     last_pruned_nodes = []
     for output in graph_outputs:
@@ -172,7 +175,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
     :return: list of all sources nodes
     """
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, required_types=sources_types,
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.op_exec_context.operator_name in sources_types:
@@ -185,7 +188,8 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types):
 
 
 def is_conv_with_downsampling(conv_module):
-    return not torch.all(torch.tensor(conv_module.stride) == 1)
+    return not torch.all(torch.tensor(conv_module.stride) == 1) and \
+           not isinstance(conv_module, tuple(NNCF_DECONV_MODULES_DICT.keys()))
 
 
 def is_grouped_conv(conv_module):
@@ -209,3 +213,53 @@ def get_previous_conv(target_model: NNCFNetwork, module, module_scope):
     if len(sources) == 1 and sources[0].op_exec_context.operator_name in conv_types:
         return sources[0]
     return None
+
+
+def find_next_nodes_not_of_types(model: NNCFNetwork, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
+    """
+    Traverse nodes in the graph from nncf node to find first nodes that aren't of type from types list.
+    First nodes with some condition mean nodes:
+    - for which this condition is true
+    - reachable from nncf_node such that on the path from nncf_node to this nodes there are no other nodes with
+    fulfilled condition
+    :param model: model to worh with
+    :param nncf_node: NNCFNode to start search
+    :param types: list of types
+    :return: list of next nodes for nncf_node of type not from types list
+    """
+    graph = model.get_original_graph()
+    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x not in types,
+                                        visited=visited)
+    nncf_nodes = [nncf_node]
+    if nncf_node.op_exec_context.operator_name not in types:
+        nncf_nodes = graph.get_next_nodes(nncf_node)
+
+    next_nodes = []
+    for node in nncf_nodes:
+        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
+    return next_nodes
+
+
+def get_next_nodes_of_types(model, nncf_node, types) -> List[NNCFNode]:
+    """
+    Looking for nodes with type from types list from nncf_node such that there is path from nncf_node to this node and
+    on this path no node has one of types type.
+    :param model: model to work with
+    :param nncf_node: NNCFNode to start search
+    :param types: list of types to find
+    :return: list of next nodes of nncf_node with type from types list
+    """
+    sources_types = types
+    graph = model.get_original_graph()
+    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
+                                        visited=visited)
+    nncf_nodes = [nncf_node]
+    if nncf_node.op_exec_context.operator_name in sources_types:
+        nncf_nodes = graph.get_next_nodes(nncf_node)
+
+    next_nodes = []
+    for node in nncf_nodes:
+        next_nodes.extend(graph.traverse_graph(node, partial_traverse_function))
+    return next_nodes

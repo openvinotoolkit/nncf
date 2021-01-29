@@ -1,6 +1,7 @@
 {
     "model": "unet",
     "dataset" : "mapillary",
+    "batch_size_init": 2,
     "preprocessing": {
         "resize": {
             "height": 512,
@@ -37,6 +38,7 @@
     "compression": [
         {
             "algorithm": "magnitude_sparsity",
+            "sparsity_init": 0.1,
             "params": {
                 "schedule": "multistep",
                 "multistep_steps": [

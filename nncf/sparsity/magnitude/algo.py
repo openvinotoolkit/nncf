@@ -14,9 +14,10 @@
 from typing import List
 
 import torch
+from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
+from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel, StubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
@@ -44,23 +45,45 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.config = config
         params = self.config.get("params", {})
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
-        sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
+        self.sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         self._scheduler = None
-        if sparsity_level_mode == 'global':
+        self.sparsity_init = self.config.get("sparsity_init", 0)
+        if self.sparsity_level_mode == 'global':
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, params)
+        else:
+            self._scheduler = StubCompressionScheduler()
 
-    def statistics(self):
+        self.set_sparsity_level(self.sparsity_init)
+
+    def statistics(self, quickly_collected_only=False):
         stats = super().statistics()
-        stats['sparsity_threshold'] =\
-             self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+        if self.sparsity_level_mode == 'global':
+            stats['sparsity_threshold'] =\
+                 self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+        else:
+            table = Texttable()
+            header = ["Name", "Per-layer sparsity threshold"]
+            data = [header]
+
+            for minfo in self.sparsified_module_info:
+                drow = {h: 0 for h in header}
+                drow["Name"] = minfo.module_name
+                drow['Per-layer sparsity threshold'] =\
+                     self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+                row = [drow[h] for h in header]
+                data.append(row)
+            table.add_rows(data)
+            stats['sparsity_thresholds'] = table
         return stats
 
     def freeze(self):
         for layer in self.sparsified_module_info:
             layer.operand.frozen = True
 
-    def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
+    def set_sparsity_level(self, sparsity_level,
+                           target_sparsified_module_info: SparseModuleInfo = None,
+                           run_batchnorm_adaptation: bool = False):
         if sparsity_level >= 1 or sparsity_level < 0:
             raise AttributeError(
                 'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
@@ -70,7 +93,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             target_sparsified_module_info_list = [target_sparsified_module_info]
         threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
         self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
-        self.run_batchnorm_adaptation(self.config)
+        if run_batchnorm_adaptation:
+            self.run_batchnorm_adaptation(self.config)
 
     def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
         all_weights = self._collect_all_weights(target_sparsified_module_info_list)
@@ -101,3 +125,6 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self.scheduler is not None:
             return self.scheduler.compression_level()
         return CompressionLevel.NONE
+
+    def get_sparsity_init(self):
+        return self.sparsity_init

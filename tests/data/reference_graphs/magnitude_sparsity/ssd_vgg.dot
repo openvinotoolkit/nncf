@@ -65,8 +65,8 @@ strict digraph  {
 "63 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[47]/conv2d" [id=63, scope="SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[47]", type=conv2d];
 "64 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[48]/batch_norm" [id=64, scope="SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[48]", type=batch_norm];
 "65 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/RELU" [id=65, scope="SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]", type=RELU];
-"66 SSD_VGG/L2Norm[L2Norm]/div" [id=66, scope="SSD_VGG/L2Norm[L2Norm]", type=div];
-"67 SSD_VGG/L2Norm[L2Norm]/__rmul__" [id=67, scope="SSD_VGG/L2Norm[L2Norm]", type=__rmul__];
+"66 SSD_VGG/NNCFUserL2Norm[L2Norm]/div" [id=66, scope="SSD_VGG/NNCFUserL2Norm[L2Norm]", type=div];
+"67 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul__" [id=67, scope="SSD_VGG/NNCFUserL2Norm[L2Norm]", type=__rmul__];
 "68 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" [id=68, scope="SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]", type=apply_binary_mask];
 "69 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d" [id=69, scope="SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]", type=conv2d];
 "70 SSD_VGG/MultiOutputSequential[extras]/BatchNorm2d[1]/batch_norm" [id=70, scope="SSD_VGG/MultiOutputSequential[extras]/BatchNorm2d[1]", type=batch_norm];
@@ -170,7 +170,7 @@ strict digraph  {
 "41 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[30]/conv2d" -> "42 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[31]/batch_norm";
 "42 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[31]/batch_norm" -> "43 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/RELU";
 "43 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/RELU" -> "44 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[33]/max_pool2d";
-"43 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/RELU" -> "66 SSD_VGG/L2Norm[L2Norm]/div";
+"43 SSD_VGG/MultiOutputSequential[basenet]/ReLU[32]/RELU" -> "66 SSD_VGG/NNCFUserL2Norm[L2Norm]/div";
 "44 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[33]/max_pool2d" -> "46 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/conv2d";
 "45 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "46 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/conv2d";
 "46 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[34]/conv2d" -> "47 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[35]/batch_norm";
@@ -193,7 +193,7 @@ strict digraph  {
 "63 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[47]/conv2d" -> "64 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[48]/batch_norm";
 "64 SSD_VGG/MultiOutputSequential[basenet]/BatchNorm2d[48]/batch_norm" -> "65 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/RELU";
 "65 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/RELU" -> "69 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d";
-"66 SSD_VGG/L2Norm[L2Norm]/div" -> "67 SSD_VGG/L2Norm[L2Norm]/__rmul__";
+"66 SSD_VGG/NNCFUserL2Norm[L2Norm]/div" -> "67 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul__";
 "68 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "69 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d";
 "69 SSD_VGG/MultiOutputSequential[extras]/NNCFConv2d[0]/conv2d" -> "70 SSD_VGG/MultiOutputSequential[extras]/BatchNorm2d[1]/batch_norm";
 "70 SSD_VGG/MultiOutputSequential[extras]/BatchNorm2d[1]/batch_norm" -> "71 SSD_VGG/MultiOutputSequential[extras]/ReLU[2]/RELU";
@@ -227,8 +227,8 @@ strict digraph  {
 "98 SSD_VGG/MultiOutputSequential[extras]/BatchNorm2d[22]/batch_norm" -> "99 SSD_VGG/MultiOutputSequential[extras]/ReLU[23]/RELU";
 "65 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/RELU" -> "105 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]/conv2d";
 "65 SSD_VGG/MultiOutputSequential[basenet]/ReLU[49]/RELU" -> "107 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]/conv2d";
-"67 SSD_VGG/L2Norm[L2Norm]/__rmul__" -> "101 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d";
-"67 SSD_VGG/L2Norm[L2Norm]/__rmul__" -> "103 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d";
+"67 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul__" -> "101 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]/conv2d";
+"67 SSD_VGG/NNCFUserL2Norm[L2Norm]/__rmul__" -> "103 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]/conv2d";
 "75 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/RELU" -> "109 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[loc]/conv2d";
 "75 SSD_VGG/MultiOutputSequential[extras]/ReLU[5]/RELU" -> "111 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[conf]/conv2d";
 "83 SSD_VGG/MultiOutputSequential[extras]/ReLU[11]/RELU" -> "113 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[3]/NNCFConv2d[loc]/conv2d";

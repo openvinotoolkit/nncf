@@ -12,14 +12,15 @@
 """
 # pylint:disable=relative-beyond-top-level
 from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
-from .registry import Registry
+from nncf.common.utils.registry import Registry
 
-COMPRESSION_ALGORITHMS = Registry('compression algorithm')
+COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
 class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
-    pass
+    def build_controller(self, target_model: 'NNCFNetwork') -> CompressionAlgorithmController:
+        return NoCompressionAlgorithmController(target_model)
 
 
 # pylint:disable=abstract-method

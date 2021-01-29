@@ -10,10 +10,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from examples.common.models import squeezenet1_1_custom, torch
 from nncf import register_default_init_args
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.quantization.algo import QuantizationControllerBase
@@ -21,6 +21,7 @@ from nncf.quantization.schedulers import StagedQuantizationScheduler
 from nncf.structures import QuantizationRangeInitArgs
 from tests.helpers import create_compressed_model_and_algo_for_test, OnesDatasetMock
 from tests.quantization.test_algo_quantization import get_squeezenet_quantization_config
+from tests.test_models import squeezenet1_1
 
 
 def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
@@ -88,6 +89,9 @@ def test_staged_scheduler_enables_quantizations_on_epoch_step(mocker):
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
     scheduler.epoch_step()
+    ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
+
+    scheduler.epoch_step()
     ctrl_spy.check_call_counts(0, 1, 1, 1, 1)
 
     scheduler.epoch_step()
@@ -100,12 +104,16 @@ def test_staged_scheduler_enables_quantizations_on_epoch_step__at_the_same_time(
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
     scheduler.epoch_step()
+    ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
+
+    scheduler.epoch_step()
     ctrl_spy.check_call_counts(1, 1, 1, 1, 1)
 
 
 def test_staged_scheduler_enables_quantizations_on_load(mocker):
     old_ctrl_spy = QuantizationCtrlBaseSpy(mocker)
     old_scheduler = create_staged_scheduler(old_ctrl_spy)
+    old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     scheduler_state_dict = old_scheduler.state_dict()
@@ -129,13 +137,16 @@ def test_staged_scheduler_with_empty_quantization():
             "weights_quant_start_epoch": 2,
         }
     })
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=10, dropout=0)
 
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 
+    scheduler.epoch_step()
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         if module.is_weights:
@@ -157,11 +168,11 @@ def test_staged_scheduler_with_range_init():
         },
         'initializer': {
             'range': {
-                'num_init_steps': 1
+                'num_init_samples': 1
             }
         }
     })
-    model = squeezenet1_1_custom(num_classes=10, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=10, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
@@ -174,6 +185,10 @@ def test_staged_scheduler_with_range_init():
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
 
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
+
+    scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 
@@ -211,7 +226,7 @@ def test_staged_scheduler_with_hawq():
         },
         'initializer': {
             'range': {
-                'num_init_steps': 1
+                'num_init_samples': 1
             },
             'precision': {
                 "type": "hawq",
@@ -222,7 +237,7 @@ def test_staged_scheduler_with_hawq():
         }
     })
     num_classes = 10
-    model = squeezenet1_1_custom(num_classes=num_classes, pretrained=False, dropout=0)
+    model = squeezenet1_1(num_classes=num_classes, dropout=0)
 
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
@@ -236,6 +251,10 @@ def test_staged_scheduler_with_hawq():
     model, algo = create_compressed_model_and_algo_for_test(model, config)
     scheduler = algo.scheduler
 
+    for module in algo.all_quantizations.values():
+        assert not module.is_enabled_quantization()
+
+    scheduler.epoch_step()
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
 

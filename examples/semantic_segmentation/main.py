@@ -14,8 +14,8 @@
 # Major parts of this sample reuse code from:
 # https://github.com/davidtvs/PyTorch-ENet
 # https://github.com/pytorch/vision/tree/master/references/segmentation
-
 import sys
+from copy import deepcopy
 from os import path as osp
 
 import functools
@@ -23,6 +23,7 @@ import numpy as np
 import os
 import torch
 import torchvision.transforms as T
+
 from examples.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -30,16 +31,16 @@ import examples.semantic_segmentation.utils.data as data_utils
 import examples.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.semantic_segmentation.utils.transforms as JT
 from examples.common.argparser import get_common_argument_parser
-from examples.common.distributed import configure_distributed
 from examples.common.example_logger import logger
-from examples.common.execution import ExecutionMode, get_device, get_execution_mode, \
+from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.compression_method_api import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested
+    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
+    configure_device
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
@@ -48,7 +49,7 @@ from nncf import create_compressed_model
 from nncf.utils import is_main_process
 
 
-def get_arguments(args):
+def get_arguments_parser():
     parser = get_common_argument_parser()
     parser.add_argument(
         "--dataset",
@@ -56,7 +57,7 @@ def get_arguments(args):
         choices=["camvid", "cityscapes", "mapillary"],
         default=None
     )
-    return parser.parse_args(args=args)
+    return parser
 
 
 def get_preprocessing_transforms(config):
@@ -175,12 +176,20 @@ def load_dataset(dataset, config):
         batch_size //= config.ngpus_per_node
         num_workers //= config.ngpus_per_node
 
+    def create_train_data_loader(batch_size_):
+        return torch.utils.data.DataLoader(
+            train_set,
+            batch_size=batch_size_,
+            sampler=train_sampler, num_workers=num_workers,
+            collate_fn=data_utils.collate_fn, drop_last=True)
     # Loaders
-    train_loader = torch.utils.data.DataLoader(
-        train_set,
-        batch_size=batch_size,
-        sampler=train_sampler, num_workers=num_workers,
-        collate_fn=data_utils.collate_fn, drop_last=True)
+    train_loader = create_train_data_loader(batch_size)
+    if config.batch_size_init:
+        init_loader = create_train_data_loader(config.batch_size_init)
+    else:
+        init_loader = deepcopy(train_loader)
+    if config.distributed:
+        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
     val_sampler = torch.utils.data.SequentialSampler(val_set)
     val_loader = torch.utils.data.DataLoader(
@@ -188,7 +197,7 @@ def load_dataset(dataset, config):
         batch_size=1, num_workers=num_workers,
         shuffle=False,
         sampler=val_sampler,
-        collate_fn=data_utils.collate_fn)
+        collate_fn=data_utils.collate_fn, drop_last=True)
 
     # Get encoding between pixel values in label images and RGB colors
     class_encoding = train_set.color_encoding
@@ -232,7 +241,7 @@ def load_dataset(dataset, config):
 
     logger.info("Class weights: {}".format(class_weights))
 
-    return (train_loader, val_loader), class_weights
+    return (train_loader, val_loader, init_loader), class_weights
 
 
 def get_criterion(class_weights, config):
@@ -315,6 +324,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                    config.model)
 
     for epoch in range(config.start_epoch, config.epochs):
+        compression_ctrl.scheduler.epoch_step()
         logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
 
         if config.distributed:
@@ -324,7 +334,6 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
-        compression_ctrl.scheduler.epoch_step()
 
         logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
                     format(epoch, epoch_loss, miou))
@@ -335,7 +344,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             config.tb.add_scalar("train/learning_rate", optimizer.param_groups[0]['lr'], epoch)
             config.tb.add_scalar("train/compression_loss", compression_ctrl.loss(), epoch)
 
-            for key, value in compression_ctrl.statistics().items():
+            for key, value in compression_ctrl.statistics(quickly_collected_only=True).items():
                 if isinstance(value, (int, float)):
                     config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
 
@@ -375,11 +384,11 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             # Save the model if it's the best thus far
             if is_main_process():
                 checkpoint_path = save_checkpoint(model,
-                                                  optimizer, epoch + 1, best_miou,
+                                                  optimizer, epoch, best_miou,
                                                   compression_level,
                                                   compression_ctrl.scheduler, config)
 
-                make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
+                make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
                 print_statistics(compression_ctrl.statistics())
 
     return model
@@ -426,6 +435,7 @@ def test(model, test_loader, criterion, class_encoding, config):
             gt_labels = center_crop(gt_labels, outputs_size_hw).contiguous()
         data_utils.show_ground_truth_vs_prediction(images, gt_labels, color_predictions, class_encoding)
 
+    return miou
 
 def predict(model, images, class_encoding, config):
     images = images.to(config.device)
@@ -446,18 +456,14 @@ def predict(model, images, class_encoding, config):
 
 
 def main_worker(current_gpu, config):
-    config.current_gpu = current_gpu
-    config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
-    if config.distributed:
-        configure_distributed(config)
-
+    configure_device(current_gpu, config)
+    config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
 
     logger.info(config)
 
-    config.device = get_device(config)
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
     num_classes = len(color_encoding)
@@ -481,9 +487,15 @@ def main_worker(current_gpu, config):
         assert pretrained or (resuming_checkpoint_path is not None)
     else:
         loaders, w_class = load_dataset(dataset, config)
-        train_loader, val_loader = loaders
+        train_loader, val_loader, init_loader = loaders
         criterion = get_criterion(w_class, config)
-        nncf_config = register_default_init_args(nncf_config, train_loader, criterion, criterion_fn, config.device)
+
+        def autoq_test_fn(model, eval_loader):
+            return test(model, eval_loader, criterion, color_encoding, config)
+
+        nncf_config = register_default_init_args(
+            nncf_config, init_loader, criterion, criterion_fn,
+            autoq_test_fn, val_loader, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -504,10 +516,14 @@ def main_worker(current_gpu, config):
     if config.distributed:
         compression_ctrl.distributed()
 
+    log_common_mlflow_params(config)
+
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
         logger.info("Saved to {}".format(config.to_onnx))
         return
+    if is_main_process():
+        print_statistics(compression_ctrl.statistics())
 
     if config.mode.lower() == 'test':
         logger.info(model)
@@ -516,7 +532,6 @@ def main_worker(current_gpu, config):
         logger.info("Trainable argument count:{params}".format(params=params))
         model = model.to(config.device)
         test(model, val_loader, criterion, color_encoding, config)
-        print_statistics(compression_ctrl.statistics())
     elif config.mode.lower() == 'train':
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
               resuming_checkpoint)
@@ -528,7 +543,7 @@ def main_worker(current_gpu, config):
 
 
 def main(argv):
-    parser = get_common_argument_parser()
+    parser = get_arguments_parser()
     arguments = parser.parse_args(args=argv)
     config = create_sample_config(arguments, parser)
     if arguments.dist_url == "env://":

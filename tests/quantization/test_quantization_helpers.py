@@ -60,7 +60,7 @@ def get_quantization_config_without_range_init(model_size=4):
                 "algorithm": "quantization",
                 "initializer": {
                     "range": {
-                        "num_init_steps": 0
+                        "num_init_samples": 0
                     }
                 }
             }
@@ -70,7 +70,7 @@ def get_quantization_config_without_range_init(model_size=4):
 
 def get_squeezenet_quantization_config(image_size=32, batch_size=3):
     config = get_quantization_config_without_range_init(image_size)
-    config['model'] = 'squeezenet1_1_custom'
+    config['model'] = 'squeezenet1_1'
     config['input_info'] = {
         "sample_size": [batch_size, 3, image_size, image_size],
     }
@@ -85,15 +85,17 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
     config.rank = gpu
     config.distributed = True
 
-    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8899',
+    torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8199',
                                          world_size=config.world_size, rank=config.rank)
 
+
+def create_rank_dataloader(config, rank):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], config.rank),
+    data_loader = torch.utils.data.DataLoader(RankDatasetMock(input_sample_size[1:], rank),
                                               batch_size=3,
-                                              num_workers=0, #  workaround
-                                              shuffle=False)
+                                              num_workers=0,  # workaround
+                                              shuffle=False, drop_last=True)
     return data_loader
 
 

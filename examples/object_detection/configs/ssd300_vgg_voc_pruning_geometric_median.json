@@ -1,0 +1,64 @@
+{
+  "model": "ssd_vgg",
+  "batchnorm": true,
+  "input_info": {
+    "sample_size":  [2, 3, 300, 300]
+  },
+  "pretrained": true,
+  "basenet": "./vgg16_bn-6c64b313.pth", // Download this from https://download.pytorch.org/models/vgg16_bn-6c64b313.pth if you want to pretrain your own FP32 net
+  "num_classes": 21,
+  "dataset": "voc",
+  "preprocessing": {
+    "mean": [0.406, 0.456, 0.485],
+    "std": [0.255, 0.224, 0.229],
+    "normalize_coef": 255,
+    "rgb": true
+  },
+  "batch_size": 256,
+  "test_interval": 5000, // in iterations
+  "max_iter": 100000,
+  "iter_size": 1,
+  "save_freq": 50, // in epochs
+  "optimizer": {
+    "type": "Adam",
+    "base_lr": 1e-3,
+    "weight_decay": 5e-4,
+    "schedule_type": "multistep",
+    "steps": [100, 200, 300, 400] // in epochs
+  },
+  "ssd_params": {
+    "clip": false,
+    "variance": [0.1, 0.1, 0.2, 0.2],
+    "max_sizes": [60, 111, 162, 213, 264, 315],
+    "min_sizes": [30, 60, 111, 162, 213, 264],
+    "steps": [8, 16, 32, 64, 100, 300],
+    "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
+    "flip": true
+  },
+  "compression": [
+  {
+    "algorithm": "filter_pruning",
+    "pruning_init": 0.05,
+    "params": {
+      "schedule": "exponential",
+      "pruning_steps": 50,
+      "pruning_target": 0.4,
+      "weight_importance": "geometric_median"
+    },
+    "ignored_scopes": [
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[0]/NNCFConv2d[conf]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[1]/NNCFConv2d[conf]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[2]/NNCFConv2d[conf]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[3]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[3]/NNCFConv2d[conf]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[4]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[4]/NNCFConv2d[conf]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[loc]",
+      "SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]"
+    ]
+  }
+  ]
+}

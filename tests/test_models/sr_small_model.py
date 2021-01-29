@@ -16,7 +16,7 @@ import torch.nn as nn
 
 class SmallBlock(nn.Module):
     def __init__(self, channels):
-        super(SmallBlock, self).__init__()
+        super().__init__()
 
         self.conv1 = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=3, stride=1, padding=1,
                                bias=False)
@@ -38,7 +38,7 @@ class SmallBlock(nn.Module):
 
 class SmallModel(nn.Module):
     def __init__(self, scale=3, num_of_ch_enc=16, num_of_ch_dec=8, num_of_res_blocks=4):
-        super(SmallModel, self).__init__()
+        super().__init__()
 
         self.conv_input = nn.Conv2d(in_channels=3, out_channels=num_of_ch_enc,
                                     kernel_size=3, stride=1, padding=1, bias=True)

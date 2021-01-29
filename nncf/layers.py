@@ -21,7 +21,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
-from nncf.registry import Registry
+from nncf.common.utils.registry import Registry
 from .layer_utils import _NNCFModuleMixin
 
 
@@ -34,6 +34,8 @@ def dict_update(src, dst, recursive=True):
 
 
 class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
+    op_func_name = "conv1d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv1d.__name__
@@ -46,6 +48,8 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
 
 
 class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
+    op_func_name = "conv2d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv2d.__name__
@@ -58,6 +62,8 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
 
 
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
+    op_func_name = "linear"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Linear.__name__
@@ -68,6 +74,9 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
 
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
+    op_func_name = "conv_transpose2d"
+    target_weight_dim_for_compression = 1
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose2d.__name__
@@ -82,6 +91,8 @@ class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
 
 
 class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
+    op_func_name = "conv3d"
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.Conv3d.__name__
@@ -95,6 +106,9 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
 
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
+    op_func_name = "conv_transpose3d"
+    target_weight_dim_for_compression = 1
+
     @staticmethod
     def from_module(module):
         assert module.__class__.__name__ == nn.ConvTranspose3d.__name__
@@ -109,6 +123,8 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
 
 
 class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
+    op_func_name = "embedding"
+
     # Note that this does not require activation quantization because it's basically a lookup.
     @staticmethod
     def from_module(module):
@@ -122,6 +138,22 @@ class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
         return nncf_embedding
 
 
+class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
+    op_func_name = "embedding_bag"
+
+    @staticmethod
+    def from_module(module):
+        assert module.__class__.__name__ == nn.EmbeddingBag.__name__
+
+        args = [module.num_embeddings, module.embedding_dim,
+                module.max_norm, module.norm_type, module.scale_grad_by_freq,
+                module.mode, module.sparse, module.weight,
+                module.include_last_offset]
+        nncf_embedding_bag = NNCFEmbeddingBag(*args)
+        dict_update(nncf_embedding_bag.__dict__, module.__dict__)
+        return nncf_embedding_bag
+
+
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
     NNCFConv2d: nn.Conv2d,
@@ -129,7 +161,8 @@ NNCF_MODULES_DICT = {
     NNCFLinear: nn.Linear,
     NNCFConvTranspose2d: nn.ConvTranspose2d,
     NNCFConvTranspose3d: nn.ConvTranspose3d,
-    NNCFEmbedding: nn.Embedding
+    NNCFEmbedding: nn.Embedding,
+    NNCFEmbeddingBag: nn.EmbeddingBag
 }
 
 NNCF_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_MODULES_DICT.items()}
@@ -147,19 +180,31 @@ NNCF_DECONV_MODULES_DICT = {
 NNCF_CONV_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
 NNCF_CONV_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
 
+NNCF_PRUNING_MODULES_DICT = {
+    NNCFConv1d: nn.Conv1d,
+    NNCFConv2d: nn.Conv2d,
+    NNCFConv3d: nn.Conv3d,
+    NNCFConvTranspose2d: nn.ConvTranspose2d,
+    NNCFConvTranspose3d: nn.ConvTranspose3d,
+}
+NNCF_PRUNING_MODULES_MAP = {k.__name__: v.__name__ for k, v in NNCF_CONV_MODULES_DICT.items()}
+NNCF_PRUNING_MODULES = list(NNCF_CONV_MODULES_MAP.keys())
+
 UNWRAPPED_USER_MODULES = Registry('user_modules')
 NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
-def register_module(cls, *quantizable_field_names: str):
-    # Will work for `weight` attributes only. Should later extend to registering
+def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
+    # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary
-    UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
-    nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
-    NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
-
-    return cls
-
+    def wrap(cls):
+        UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
+        nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
+        NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
+        if ignored_algorithms:
+            setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
+        return cls
+    return wrap
 
 def add_nncf_functionality_to_user_module(module: torch.nn.Module):
     user_class = module.__class__

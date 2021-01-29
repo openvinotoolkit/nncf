@@ -1,0 +1,5 @@
+strict digraph  {
+"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
+"1 TestModel/Dropout[_layer]/dropout" [id=1, scope="TestModel/Dropout[_layer]", type=dropout];
+"0 /nncf_model_input" -> "1 TestModel/Dropout[_layer]/dropout";
+}

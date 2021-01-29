@@ -76,9 +76,9 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.6 or later
+- Python\* 3.7 or later
 - NVidia CUDA\* Toolkit 10.2
-- PyTorch\* 1.5.0
+- PyTorch\* 1.7 or later.
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -108,6 +108,11 @@ pip install nncf
 #### As a Docker image
 Use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-samples).
 
+**NOTE**: If you want to use sample training scripts provided in the NNCF repository under `examples`, you should install the corresponding Python package dependencies:
+```
+pip install examples/requirements.txt
+```
+
 ## Contributing
 Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contributions to the NNCF repository.
 
@@ -134,35 +139,35 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|76.13|76.08|
-|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.13|76.31|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.13|75.29|
-|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.13|75.63|
-|ResNet-50|Filter pruning, 30%, magnitude criterion|ImageNet|76.13|75.7|
-|ResNet-50|Filter pruning, 30%, geometric median criterion|ImageNet|76.13|75.7|
-|Inception V3|INT8|ImageNet|77.32|76.90|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.32|76.98|
-|MobileNet V2|INT8|ImageNet|71.81|71.29|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.81|70.89|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.81|70.91|
-|SqueezeNet V1.1|INT8|ImageNet|58.18|58.07|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.18|58.85|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.76|61.61|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.76|61.59|
-|ResNet-18|Filter pruning, 30%, magnitude criterion|ImageNet|69.76|68.73|
-|ResNet-18|Filter pruning, 30%, geometric median criterion|ImageNet|69.76|68.97|
-|ResNet-34|Filter pruning, 30%, magnitude criterion|ImageNet|73.31|72.54|
-|ResNet-34|Filter pruning, 30%, geometric median criterion|ImageNet|73.31|72.62|
-|GoogLeNet|Filter pruning, 30%, geometric median criterion|ImageNet|69.78|69.67|
+|ResNet-50|INT8|ImageNet|76.04|75.97|
+|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.04|76.31|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.04|75.21|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.04|75.73|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.04|75.57|
+|Inception V3|INT8|ImageNet|77.31|76.97|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.31|76.95|
+|MobileNet V2|INT8|ImageNet|71.75|71.32|
+|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.75|71.03|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.75|70.94|
+|SqueezeNet V1.1|INT8|ImageNet|58.24|58.04|
+|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.24|58.77|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.68|61.57|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.68|61.65|
+|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.68|69.19|
+|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.68|69.29|
+|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|73.26|72.72|
+|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.72|68.89|
 
 #### Object detection
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|SSD300-BN|INT8|VOC12+07|78.28|78.08|
-|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|78.28|77.62|
-|SSD512-BN|INT8|VOC12+07|80.26|80.11|
-|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07|80.26|79.75|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|86.02|85.82|
+|SSD300-BN|INT8|VOC12+07 train, VOC12 eval|96.53|96.5|
+|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|96.53|95.4|
+|SSD300-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC12 eval|96.53|91.98|
+|SSD512-BN|INT8|VOC12+07 train, VOC12 eval|97.59|97.37|
+|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|97.59|96.66|
 
 #### Semantic segmentation
 
@@ -170,10 +175,11 @@ Quick jump to sample type:
 | :---: | :---: | :---: | :---: | :---: |
 |UNet|INT8|CamVid|71.95|71.66|
 |UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|INT8|CamVid|67.89|67.85|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.23|
+|ICNet|INT8|CamVid|67.89|67.78|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.16|
 |UNet|INT8|Mapillary|56.23|56.1|
 |UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.01|
+|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|56.23|55.62|
 
 
 #### NLP

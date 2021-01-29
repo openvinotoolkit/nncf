@@ -58,6 +58,7 @@ class Train:
         epoch_loss = 0.0
         self.metric.reset()
         for step, batch_data in enumerate(self.data_loader):
+            compression_scheduler.step()
             # Get the inputs and labels
             inputs = batch_data[0].to(self.device)
             labels = batch_data[1].to(self.device)
@@ -78,7 +79,6 @@ class Train:
             loss.backward()
             self.optim.step()
 
-            compression_scheduler.step()
 
             # Keep track of loss for current epoch
             epoch_loss += loss.item()

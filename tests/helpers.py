@@ -24,7 +24,7 @@ from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
-from nncf.model_creation import create_compressed_model
+from nncf.model_creation import create_compressed_model, create_compression_algorithm_builders
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import get_all_modules_by_type
 
@@ -47,8 +47,15 @@ def fill_linear_weight(linear, value):
         linear.weight[:n, :n] += torch.eye(n)
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init):
-    conv = nn.Conv2d(in_channels, out_channels, kernel_size)
+def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
+    conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
+
+
+def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
+    conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
     return conv
@@ -122,7 +129,8 @@ class TwoConvTestModel(nn.Module):
         return 2
 
 
-def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None):
+def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
+                     input_info=None):
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 
@@ -135,7 +143,7 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
     config.update({
         "model": "basic_sparse_conv",
         "model_size": model_size,
-        "input_info": _create_input_info()
+        "input_info": input_info if input_info else _create_input_info()
     })
     return config
 
@@ -154,13 +162,36 @@ def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFCo
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               resuming_state_dict: dict = None) \
-    -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
+        -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
                                           wrap_inputs_fn=wrap_inputs_fn,
                                           resuming_state_dict=resuming_state_dict)
     return model, algo
+
+
+def create_nncf_model_and_algo_builder(model: NNCFNetwork, config: NNCFConfig,
+                                       dummy_forward_fn: Callable[[Module], Any] = None,
+                                       wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+                                       resuming_state_dict: dict = None):
+    assert isinstance(config, NNCFConfig)
+    NNCFConfig.validate(config)
+    input_info_list = create_input_infos(config)
+    scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
+    ignored_scopes = config.get('ignored_scopes')
+    target_scopes = config.get('target_scopes')
+
+    compressed_model = NNCFNetwork(model, input_infos=input_info_list,
+                                   dummy_forward_fn=dummy_forward_fn,
+                                   wrap_inputs_fn=wrap_inputs_fn,
+                                   ignored_scopes=ignored_scopes,
+                                   target_scopes=target_scopes,
+                                   scopes_without_shape_matching=scopes_without_shape_matching)
+
+    should_init = resuming_state_dict is None
+    compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
+    return compressed_model, compression_algo_builder_list
 
 
 class MockModel(nn.Module):
@@ -173,7 +204,7 @@ class MockModel(nn.Module):
 
 
 def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model: NNCFNetwork) \
-    -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:
+        -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:
     """
     Check that all convolutions in model was replaced by NNCF convolution.
     :param model: original model
@@ -214,6 +245,6 @@ def create_mock_dataloader(config, num_samples=1):
     input_sample_size = input_infos_list[0].shape
     data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
                                               batch_size=1,
-                                              num_workers=0, # Workaround
-                                              shuffle=False)
+                                              num_workers=0,  # Workaround
+                                              shuffle=False, drop_last=True)
     return data_loader

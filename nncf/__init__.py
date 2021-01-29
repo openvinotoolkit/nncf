@@ -12,30 +12,32 @@
 """
 
 from .version import __version__
+from .common.utils.backend import __nncf_backend__
 
-# Required for correct COMPRESSION_ALGORITHMS registry functioning
-from .binarization import algo as binarization_algo
-from .quantization import algo as quantization_algo
-from .sparsity.const import algo as const_sparsity_algo
-from .sparsity.magnitude import algo as magnitude_sparsity_algo
-from .sparsity.rb import algo as rb_sparsity_algo
-from .pruning.filter_pruning import algo as filter_pruning_algo
+if __nncf_backend__ == 'Torch':
+    # Required for correct COMPRESSION_ALGORITHMS registry functioning
+    from .binarization import algo as binarization_algo
+    from .quantization import algo as quantization_algo
+    from .sparsity.const import algo as const_sparsity_algo
+    from .sparsity.magnitude import algo as magnitude_sparsity_algo
+    from .sparsity.rb import algo as rb_sparsity_algo
+    from .pruning.filter_pruning import algo as filter_pruning_algo
 
-# Functions most commonly used in integrating NNCF into training pipelines are
-# listed below for importing convenience
+    # Functions most commonly used in integrating NNCF into training pipelines are
+    # listed below for importing convenience
 
-from .model_creation import create_compressed_model
-from .checkpoint_loading import load_state
-from .config import NNCFConfig
-from .nncf_logger import disable_logging
-from .nncf_logger import set_log_level
-from .initialization import register_default_init_args
-from .layers import register_module
-from .dynamic_graph.patch_pytorch import register_operator
-from .dynamic_graph.input_wrapping import nncf_model_input
+    from .model_creation import create_compressed_model
+    from .checkpoint_loading import load_state
+    from .config import NNCFConfig
+    from .nncf_logger import disable_logging
+    from .nncf_logger import set_log_level
+    from .initialization import register_default_init_args
+    from .layers import register_module
+    from .dynamic_graph.patch_pytorch import register_operator
+    from .dynamic_graph.input_wrapping import nncf_model_input
 
-# NNCF relies on tracing PyTorch operations. Each code that uses NNCF
-# should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
-# so this call is moved to package __init__ to ensure this.
-from .dynamic_graph.patch_pytorch import patch_torch_operators
-patch_torch_operators()
+    # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
+    # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
+    # so this call is moved to package __init__ to ensure this.
+    from .dynamic_graph.patch_pytorch import patch_torch_operators
+    patch_torch_operators()

@@ -26,14 +26,14 @@ Below is an example of the NNCF configuration file
                 },
             ],
         },
-        "target_device": "VPU", // The target device, the specificity of which will be taken into account while compressing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'NONE'). Set this value to 'NONE' if you are going to use a custom quantization schema.. Optional.
+        "target_device": "VPU", // The target device, the specificity of which will be taken into account while compressing in order to obtain the best performance for this type of device. The default "ANY" means compatible quantization supported by any HW. The parameter takes values from the set ('CPU', 'GPU', 'VPU', 'ANY', 'TRIAL'). Set this value to 'TRIAL' if you are going to use a custom quantization schema.. Optional.
         "quantizer_setup_type": "propagation_based" // Selects the mode of placement quantizers - either 'pattern_based' or 'propagation_based'. By default "propagation_based".
         "compression": [ // One or more definitions for the compression algorithms to be applied to the model; either a single JSON object or an array of JSON objects. See README for each compression algorithm for a description of the available config parameters.
             {
                 "algorithm": quantization,
                 "initializer": {
                     "range": {
-                        "num_init_steps": 10
+                        "num_init_samples": 256
                     }
                 }
             },
@@ -78,4 +78,4 @@ The [example scripts](../examples) use the same configuration file structure to 
 These extensions are training pipeline-specific rather than NNCF-specific and their format differs across the example scripts.
 
 > **NOTE**: You can extend the configuration file format for custom usage in your own training pipeline, but only at the root level of the JSON file and only for the keywords that are not already used by NNCF.
-If you wish to extend NNCF with a new compression algorithm (which is to be specified in the "compression" section), you should register it within the NNCF config [JSON schema](../nncf/config_schema.py), against which the config files are validated.
+If you wish to extend NNCF with a new compression algorithm (which is to be specified in the "compression" section), you should register it within the NNCF config [JSON schema](../nncf/config/schema.py), against which the config files are validated.

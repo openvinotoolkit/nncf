@@ -40,14 +40,14 @@ class FilterPruningBlock(nn.Module):
         return conv_weight
 
 
-def broadcast_filter_mask(filter_mask, shape):
+def broadcast_filter_mask(filter_mask, shape, dim=0):
     broadcasted_shape = np.ones(len(shape), dtype=np.int64)
-    broadcasted_shape[0] = filter_mask.size(0)
+    broadcasted_shape[dim] = filter_mask.size(0)
     broadcasted_filter_mask = torch.reshape(filter_mask, tuple(broadcasted_shape))
     return broadcasted_filter_mask
 
 
-def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_name=""):
+def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_scope, dim=0):
     """
     Inplace applying binary filter mask to weight (or bias) of the convolution
     (by first dim of the conv weight).
@@ -55,14 +55,14 @@ def inplace_apply_filter_binary_mask(filter_mask, conv_weight, module_name=""):
     :param conv_weight: weight or bias of convolution
     :return: result with applied mask
     """
-    if filter_mask.size(0) != conv_weight.size(0):
+    if filter_mask.size(0) != conv_weight.size(dim):
         raise RuntimeError("Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
-                           " ".format(filter_mask.shape, module_name, conv_weight.shape))
-    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape)
+                           " ".format(filter_mask.shape, str(module_scope), conv_weight.shape))
+    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape, dim)
     return conv_weight.mul_(broadcasted_filter_mask)
 
 
-def apply_filter_binary_mask(filter_mask, conv_weight, module_name=""):
+def apply_filter_binary_mask(filter_mask, conv_weight, module_name="", dim=0):
     """
     Applying binary filter mask to weight (or bias) of the convolution (applying by first dim of the conv weight)
     without changing the weight.
@@ -70,8 +70,9 @@ def apply_filter_binary_mask(filter_mask, conv_weight, module_name=""):
     :param conv_weight: weight or bias of convolution
     :return: result with applied mask
     """
-    if filter_mask.size(0) != conv_weight.size(0):
+    if filter_mask.size(0) != conv_weight.size(dim):
         raise RuntimeError("Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
                            " ".format(filter_mask.shape, module_name, conv_weight.shape))
-    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape)
+
+    broadcasted_filter_mask = broadcast_filter_mask(filter_mask, conv_weight.shape, dim)
     return broadcasted_filter_mask * conv_weight

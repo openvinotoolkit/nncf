@@ -25,7 +25,7 @@ from nncf.nncf_logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
     get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from ..layer_utils import COMPRESSION_MODULES
-from ..registry import Registry
+from nncf.common.utils.registry import Registry
 from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
@@ -43,13 +43,15 @@ class QuantizerConfig:
                  signedness_to_force=None,
                  per_channel=False,
                  input_shape=None,
-                 is_weights=False):
+                 is_weights=False,
+                 logarithm_scale=False):
         self.bits = bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
+        self.logarithm_scale = logarithm_scale
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
@@ -65,11 +67,35 @@ class QuantizerConfig:
     def __hash__(self):
         return hash(str(self))
 
-    def __lt__(self, other):
-        return self.bits < other.bits or \
-               (self.mode == QuantizationMode.SYMMETRIC and other.mode == QuantizationMode.ASYMMETRIC) or \
-               (self.signedness_to_force is None and other.signedness_to_force is not None) or \
-               (not self.per_channel and other.per_channel)
+    def is_valid_requantization_for(self, other: 'QuantizerConfig') -> bool:
+        #pylint:disable=too-many-return-statements
+        """Quantizer config A is a valid requantization for quantizer config B if A is more strict -
+        specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
+        the requantization will further constrain the input tensor data w.r.t. values it can take, but
+        putting quantizer A after quantizer B would be unreasonable."""
+        if self.bits > other.bits:
+            return False
+        if self.mode is QuantizationMode.ASYMMETRIC and other.mode is \
+                QuantizationMode.SYMMETRIC:
+            return False
+        if self.signedness_to_force is None and other.signedness_to_force is not None:
+            return False
+        if self.signedness_to_force is True and other.signedness_to_force is False:
+            return False
+
+        return True
+
+    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: 'QuantizerConfig'):
+        return self.bits == linked_qconfig.bits and \
+               self.mode == linked_qconfig.mode and \
+               self.signedness_to_force == linked_qconfig.signedness_to_force and \
+               self.per_channel == linked_qconfig.per_channel
+
+    def is_a_bitwidth_variant(self, other_qconfig: 'QuantizerConfig') -> bool:
+        return self.per_channel == other_qconfig.per_channel and \
+               self.signedness_to_force == other_qconfig.signedness_to_force and \
+               self.is_weights == other_qconfig.is_weights and \
+               self.mode == other_qconfig.mode
 
 
 class QuantizerExportMode(Enum):
@@ -92,6 +118,7 @@ class BaseQuantizer(nn.Module):
         self.per_channel = config.per_channel
         self.is_weights = config.is_weights
         self.signedness_to_force = config.signedness_to_force
+        self._is_using_log_scale_storage = config.logarithm_scale
         self._num_bits = nn.Parameter(torch.IntTensor([config.bits]), requires_grad=False)
         self.level_high = None
         self.level_low = None
@@ -167,10 +194,25 @@ class BaseQuantizer(nn.Module):
 
     def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         """min_values and max_values must have the same shape as specified in self.scale_shape"""
+        if self.initialized:
+            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
+            return
+        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
+            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+        own_device = next(self.parameters()).device
+        min_values = min_values.to(own_device)
+        max_values = max_values.to(own_device)
+        self._apply_minmax_init(min_values, max_values, log_module_name)
+
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         raise NotImplementedError
 
     def set_level_ranges(self):
         raise NotImplementedError
+
+    @property
+    def is_using_log_scale_storage(self):
+        return self._is_using_log_scale_storage
 
     @property
     def signed(self):
@@ -191,6 +233,13 @@ class BaseQuantizer(nn.Module):
         self._export_mode = mode
 
     def run_export_quantization(self, x: torch.Tensor):
+        raise NotImplementedError
+
+    def extra_repr(self):
+        return 'bit={}, ch={}, wt={}'.format(
+            self.num_bits, self.per_channel, self.is_weights)
+
+    def get_current_config(self) -> QuantizerConfig:
         raise NotImplementedError
 
 
@@ -219,10 +268,44 @@ class QuantizersSwitcher:
         self.originally_disabled = []
 
 
+class StorageRedirectingLoadStateDictHook:
+    def __init__(self, storage_attribute_in_module: str, name_in_state_dict: str,
+                 use_log_storage_in_module: bool = False):
+        self._storage_attribute_in_module = storage_attribute_in_module
+        self._name_in_state_dict = name_in_state_dict
+        self._use_log_storage_in_module = use_log_storage_in_module
+
+    def __call__(self, state_dict, prefix, local_metadata, strict,
+                 missing_keys, unexpected_keys, error_msgs) -> None:
+        state_dict_key = prefix + self._name_in_state_dict
+        if state_dict_key in state_dict:
+            v = state_dict.pop(state_dict_key)
+            if self._use_log_storage_in_module:
+                v = v.abs().log().detach()
+            state_dict[prefix + self._storage_attribute_in_module] = v
+        else:
+            missing_keys.append(state_dict_key)
+
+
+class StorageRedirectingStateDictHook:
+    def __init__(self, storage_attribute_in_module: str, name_in_state_dict: str,
+                 use_log_storage_in_module: bool = False):
+        self._storage_attribute_in_module = storage_attribute_in_module
+        self._name_in_state_dict = name_in_state_dict
+        self._use_log_storage_in_module = use_log_storage_in_module
+
+    def __call__(self, module, state_dict, prefix, local_metadata) -> None:
+        v = state_dict.pop(prefix + self._storage_attribute_in_module)
+        if self._use_log_storage_in_module:
+            v = v.exp().detach()
+        state_dict[prefix + self._name_in_state_dict] = v
+
+
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(BaseQuantizer):
     SCALE_PARAM_NAME = 'scale'
+    _SCALE_PARAM_STORAGE_ATTR = '_scale_param_storage'
 
     def __init__(self, config):
         super().__init__(config)
@@ -230,17 +313,53 @@ class SymmetricQuantizer(BaseQuantizer):
         self.collect_scale_statistics = False
         if self.per_channel:
             self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
-        self.scale = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
-        self.eps = 1e-16
+
+        setattr(self, self._SCALE_PARAM_STORAGE_ATTR, nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
+        if self._is_using_log_scale_storage:
+            self._scale_param_storage.data.log_()
+            self.eps = 0
+        else:
+            self.eps = 1e-16
         if config.signedness_to_force is not None:
             self.signed = int(config.signedness_to_force)
         self.set_level_ranges()
 
+        self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
+            storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
+            name_in_state_dict=self.SCALE_PARAM_NAME,
+            use_log_storage_in_module=self._is_using_log_scale_storage
+        ))
+
+        self._register_state_dict_hook(StorageRedirectingStateDictHook(
+            storage_attribute_in_module=self._SCALE_PARAM_STORAGE_ATTR,
+            name_in_state_dict=self.SCALE_PARAM_NAME,
+            use_log_storage_in_module=self._is_using_log_scale_storage
+        ))
+
+    @property
+    def scale(self):
+        return self._scale_param_storage.exp() if self._is_using_log_scale_storage else self._scale_param_storage
+
+    @scale.setter
+    def scale(self, v):
+        self._scale_param_storage = v
+        if self._is_using_log_scale_storage:
+            self._scale_param_storage.data.log_()
+
+    def __setattr__(self, key, value):
+        """Need to handle the redirect-storage attributes (which are implemented using Python properties
+         here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
+         assignment."""
+        if key == self.SCALE_PARAM_NAME:
+            object.__setattr__(self, key, value)
+        else:
+            super().__setattr__(key, value)
+
     def enable_gradients(self):
-        self.scale.requires_grad = True
+        self._scale_param_storage.requires_grad = True
 
     def disable_gradients(self):
-        self.scale.requires_grad = False
+        self._scale_param_storage.requires_grad = False
 
     def set_level_ranges(self):
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits,
@@ -271,10 +390,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
             raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
         sign = torch.any(torch.lt(min_values, 0))
@@ -285,18 +401,19 @@ class SymmetricQuantizer(BaseQuantizer):
 
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
         SCALE_LOWER_THRESHOLD = 0.1
-        self.scale.fill_(SCALE_LOWER_THRESHOLD)
         mask = torch.gt(abs_max, SCALE_LOWER_THRESHOLD)
-        self.scale = torch.nn.Parameter(torch.where(mask, abs_max, SCALE_LOWER_THRESHOLD * torch.ones_like(self.scale)))
+        self._scale_param_storage.data = torch.where(mask, abs_max,
+                                                     SCALE_LOWER_THRESHOLD * torch.ones_like(self._scale_param_storage))
+        if self._is_using_log_scale_storage:
+            self._scale_param_storage.data.log_()
 
-        nncf_logger.info(
-            "Set sign: {} and scale: {} for {}".format(self.signed,
-                                                       get_flat_tensor_contents_string(self.scale),
-                                                       log_module_name))
+        nncf_logger.info("Set sign: {} and scale: {} for {}".format(self.signed,
+                                                                    get_flat_tensor_contents_string(self.scale),
+                                                                    log_module_name))
 
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
-        distributed.broadcast(self.scale, src=src)
+        distributed.broadcast(self._scale_param_storage, src=src)
         distributed.broadcast(self.signed_tensor, src=src)
 
     def run_export_quantization(self, x: torch.Tensor):
@@ -325,12 +442,21 @@ class SymmetricQuantizer(BaseQuantizer):
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
         raise RuntimeError
 
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.SYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(BaseQuantizer):
     INPUT_LOW_PARAM_NAME = 'input_low'
     INPUT_RANGE_PARAM_NAME = 'input_range'
+    _INPUT_RANGE_PARAM_STORAGE_ATTR = '_input_range_param_storage'
 
     def __init__(self, config):
         super().__init__(config)
@@ -338,17 +464,56 @@ class AsymmetricQuantizer(BaseQuantizer):
             self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
 
         self.input_low = nn.Parameter(torch.zeros(self.scale_shape), requires_grad=True)
-        self.input_range = nn.Parameter(torch.ones(self.scale_shape), requires_grad=True)
-        self.eps = 1e-16
+        setattr(self, self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+                nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
+
+        if self._is_using_log_scale_storage:
+            self._input_range_param_storage.data.log_()
+            self.eps = 0
+        else:
+            self.eps = 1e-16
         self.set_level_ranges()
+
+        self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
+            storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+            name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
+            use_log_storage_in_module=self._is_using_log_scale_storage
+        ))
+
+        self._register_state_dict_hook(StorageRedirectingStateDictHook(
+            storage_attribute_in_module=self._INPUT_RANGE_PARAM_STORAGE_ATTR,
+            name_in_state_dict=self.INPUT_RANGE_PARAM_NAME,
+            use_log_storage_in_module=self._is_using_log_scale_storage
+        ))
+
+    @property
+    def input_range(self):
+        if self._is_using_log_scale_storage:
+            return self._input_range_param_storage.exp()
+        return self._input_range_param_storage
+
+    @input_range.setter
+    def input_range(self, v: torch.Tensor):
+        self._input_range_param_storage = v
+        if self._is_using_log_scale_storage:
+            self._input_range_param_storage.data.log_()
+
+    def __setattr__(self, key, value):
+        """Need to handle the redirect-storage attributes (which are implemented using Python properties
+         here) specially - otherwise the torch.nn.Module's __setattr__ will try to set them during
+         assignment."""
+        if key == self.INPUT_RANGE_PARAM_NAME:
+            object.__setattr__(self, key, value)
+        else:
+            super().__setattr__(key, value)
 
     def enable_gradients(self):
         self.input_low.requires_grad = True
-        self.input_range.requires_grad = True
+        self._input_range_param_storage.requires_grad = True
 
     def disable_gradients(self):
         self.input_low.requires_grad = False
-        self.input_range.requires_grad = False
+        self._input_range_param_storage.requires_grad = False
 
     @property
     def signed(self):
@@ -372,17 +537,15 @@ class AsymmetricQuantizer(BaseQuantizer):
         return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),
                 self.INPUT_RANGE_PARAM_NAME: self.input_range.detach()}
 
-    def apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
-        if self.initialized:
-            nncf_logger.debug("Skipped initializing {} - loaded from checkpoint".format(log_module_name))
-            return
-        if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
-            raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
+    def _apply_minmax_init(self, min_values, max_values, log_module_name: str = None):
         ranges = max_values - min_values
         max_range = torch.max(max_values - min_values)
         eps = 1e-2
         correction = (clamp(ranges, low=eps * max_range, high=max_range) - ranges) * 0.5
-        self.input_range.data = (ranges + 2 * correction).data
+        self._input_range_param_storage.data = (ranges + 2 * correction).data
+        if self._is_using_log_scale_storage:
+            self._input_range_param_storage.data.log_()
+
         self.input_low.data = (min_values - correction).data
 
         nncf_logger.info("Set input_low: {} and input_range: {} for {}"
@@ -392,7 +555,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def broadcast_initialized_params(self, src: int = 0):
         super().broadcast_initialized_params(src)
         distributed.broadcast(self.input_low, src)
-        distributed.broadcast(self.input_range, src)
+        distributed.broadcast(self._input_range_param_storage, src)
 
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
@@ -420,3 +583,12 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                       input_low_tuned, input_high_tuned,
                                                       input_low_tuned, input_high_tuned)
         raise RuntimeError
+
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
+                               mode=QuantizationMode.ASYMMETRIC,
+                               signedness_to_force=self.signed,
+                               per_channel=self.per_channel,
+                               input_shape=self.input_shape,
+                               is_weights=self.is_weights,
+                               logarithm_scale=self.is_using_log_scale_storage)

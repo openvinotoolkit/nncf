@@ -15,10 +15,16 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
+from nncf.utils import add_domain
+from nncf import register_module
 
+
+@register_module(
+    ignored_algorithms=['quantization', 'binarization', 'const_sparsity', 'magnitude_sparsity', 'rb_sparsity']
+)
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale, eps, across_spatial=0, channel_shared=0):
-        super(L2Norm, self).__init__()
+        super().__init__()
         self.n_channels = n_channels
         self.scale = scale or None
         self.eps = eps
@@ -53,5 +59,5 @@ class L2NormFunction(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, x, weight, l2NormParams):
-        return g.op("Normalize", x, weight, eps_f=l2NormParams.eps,
+        return g.op(add_domain("Normalize"), x, weight, eps_f=l2NormParams.eps,
                     across_spatial_i=l2NormParams.across_spatial, channel_shared_i=l2NormParams.channel_shared)

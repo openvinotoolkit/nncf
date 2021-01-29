@@ -14,6 +14,7 @@ import itertools
 from typing import Dict, List
 
 import copy
+import onnx
 import os
 import pytest
 from functools import partial
@@ -22,7 +23,7 @@ from torch.nn import DataParallel
 
 from nncf import NNCFConfig
 from nncf.checkpoint_loading import load_state
-from nncf.compression_method_api import CompressionLevel
+from nncf.compression_method_api import CompressionLevel, DOMAIN_CUSTOM_OPS_NAME
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
@@ -37,6 +38,14 @@ class BasicLinearTestModel(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
+class BasicTestModelWithTwoInputOutput(nn.Module):
+    def __init__(self, size=4):
+        super().__init__()
+        self.fc0 = nn.Linear(size, size)
+        self.fc1 = nn.Linear(size, size)
+
+    def forward(self, x0, x1):
+        return self.fc0(x0), self.fc1(x1)
 
 def get_const_sparsity_config():
     config = get_empty_config()
@@ -47,7 +56,7 @@ def get_const_sparsity_config():
 def get_basic_asym_quantization_config(model_size=4):
     config = get_quantization_config_without_range_init(model_size)
     config['compression']['activations'] = {"mode": "asymmetric"}
-    config['compression']['initializer']['range'] = {"num_init_steps": 0}
+    config['compression']['initializer']['range'] = {"num_init_samples": 0}
     return config
 
 
@@ -67,7 +76,6 @@ class TestCompressionAlgos:
 
         compression_ctrl.export_model(test_path)
         assert os.path.exists(test_path)
-
 
 class TestConfigCreator:
     def __init__(self):
@@ -126,7 +134,6 @@ LIST_OF_TEST_PARAMS = [
     ),
     CompressionLevelTestStruct(
         config_provider=TestConfigCreator().add_algo('rb_sparsity', {
-            'sparsity_init': 0,
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
@@ -172,6 +179,9 @@ def test_can_get_compression_level(test_struct: CompressionLevelTestStruct):
     model = BasicConvTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config_provider.create())
     compression_scheduler = compression_ctrl.scheduler
+    assert compression_ctrl.compression_level() == compression_levels[0]
+
+    compression_scheduler.epoch_step()
     assert compression_ctrl.compression_level() == compression_levels[0]
 
     compression_scheduler.epoch_step()
@@ -320,3 +330,53 @@ def test_ordinary_load(algo, _model_wrapper, is_resume):
     num_loaded = load_state(model_resume, model_save.state_dict(), is_resume)
 
     assert num_loaded == len(model_save.state_dict())
+
+def test_can_export_compressed_model_with_input_output_names(tmp_path):
+    test_path = str(tmp_path.joinpath('test.onnx'))
+    target_input_names = ['input1', 'input2']
+    target_output_names = ['output1', 'output2']
+
+    model = BasicTestModelWithTwoInputOutput()
+    config = get_basic_asym_quantization_config()
+
+    config["input_info"] = [{'sample_size': [1, 1, 4, 4]}, {'sample_size': [1, 1, 4, 4]}]
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    compression_ctrl.export_model(test_path, input_names=target_input_names,
+                                  output_names=target_output_names)
+
+    assert os.path.exists(test_path)
+
+    onnx_model = onnx.load(test_path)
+    # pylint: disable=no-member
+    curr_input_names = [node.name for node in onnx_model.graph.input]
+    curr_output_names = [node.name for node in onnx_model.graph.output]
+
+    assert curr_input_names == target_input_names
+    assert curr_output_names == target_output_names
+
+def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_path):
+    test_path = str(tmp_path.joinpath('test.onnx'))
+
+    model = BasicTestModelWithTwoInputOutput()
+    config = get_basic_asym_quantization_config()
+
+    config["input_info"] = [{'sample_size': [1, 1, 4, 4]}, {'sample_size': [1, 1, 4, 4]}]
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    compression_ctrl.export_model(test_path)
+
+    assert os.path.exists(test_path)
+
+    onnx_model = onnx.load(test_path)
+
+    count_custom_ops = 0
+    # pylint: disable=no-member
+    for op_node in onnx_model.graph.node:
+        if op_node.op_type == "FakeQuantize":
+            assert op_node.domain == DOMAIN_CUSTOM_OPS_NAME
+            count_custom_ops += 1
+
+    assert count_custom_ops == 4

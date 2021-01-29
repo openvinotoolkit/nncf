@@ -18,7 +18,7 @@
         "quantizable_subgraph_patterns": [["cat", "batch_norm"], "cat"],
         "initializer": {
             "range": {
-                "num_init_steps": 10
+                "num_init_samples": 320
             }
         }
     }

@@ -28,7 +28,7 @@ class RecurrentAttention(nn.Module):
         :param init_weight: range for the uniform initializer
         """
 
-        super(RecurrentAttention, self).__init__()
+        super().__init__()
 
         self.rnn = nn.LSTM(input_size, hidden_size, num_layers, bias=True,
                            batch_first=batch_first)
@@ -74,7 +74,7 @@ class Classifier(nn.Module):
         :param out_features: number of output features (size of vocabulary)
         :param init_weight: range for the uniform initializer
         """
-        super(Classifier, self).__init__()
+        super().__init__()
         self.classifier = nn.Linear(in_features, out_features)
         nn.init.uniform_(self.classifier.weight.data, -init_weight, init_weight)
         nn.init.uniform_(self.classifier.bias.data, -init_weight, init_weight)
@@ -119,7 +119,7 @@ class ResidualRecurrentDecoder(nn.Module):
             create new embedding layer
         :param init_weight: range for the uniform initializer
         """
-        super(ResidualRecurrentDecoder, self).__init__()
+        super().__init__()
 
         self.num_layers = num_layers
 

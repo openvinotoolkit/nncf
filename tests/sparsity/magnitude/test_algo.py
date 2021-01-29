@@ -16,6 +16,7 @@ import torch
 from copy import deepcopy
 from pytest import approx
 
+from nncf.compression_method_api import StubCompressionScheduler
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.algo import MagnitudeSparsityController
@@ -193,13 +194,14 @@ def test_can_do_sparsity_freeze_epoch():
 
     model = BasicConvTestModel()
     config = get_empty_config()
-    config['compression'] = {'algorithm': "magnitude_sparsity",
-                             "params": {"sparsity_init": 0.1,
-                                        "sparsity_target": 0.9,
+    config['compression'] = {"algorithm": "magnitude_sparsity",
+                             "sparsity_init": 0.1,
+                             "params": {"sparsity_target": 0.9,
                                         "sparsity_target_epoch": 3,
-                                        "sparsity_freeze_epoch": 2}}
+                                        "sparsity_freeze_epoch": 3}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     sparsified_minfo_before_update = deepcopy(compression_ctrl.sparsified_module_info)
+    compression_ctrl.scheduler.epoch_step() # update binary_masks
     compression_ctrl.scheduler.epoch_step() # update binary_masks
     compression_ctrl.scheduler.epoch_step() # update binary_masks, freeze binary_masks
     sparsified_minfo_after_update = deepcopy(compression_ctrl.sparsified_module_info)
@@ -224,3 +226,11 @@ def test_can_freeze_binary_masks():
 
     for sparse_layer in compression_ctrl.sparsified_module_info:
         assert sparse_layer.operand.frozen
+
+def test_create_magnitude_algo_with_stub_scheduler():
+    config = get_empty_config()
+    config['compression'] = {'algorithm': "magnitude_sparsity", "params": {"sparsity_level_setting_mode": 'local'}}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
+
+    # pylint: disable=protected-access
+    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)

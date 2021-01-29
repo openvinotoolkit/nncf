@@ -80,7 +80,7 @@ def extra_layers(start_input_channels):
 
 class MobileNetSSD(nn.Module):
     def __init__(self, num_classes, cfg):
-        super(MobileNetSSD, self).__init__()
+        super().__init__()
         self.cfg = cfg
         self.num_classes = num_classes
 
@@ -106,6 +106,11 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
         logger.debug('Loading base network...')
+        #
+        # ** WARNING: torch.load functionality uses Python's pickling facilities that
+        # may be used to perform arbitrary code execution during unpickling. Only load the data you
+        # trust.
+        #
         basenet_weights = torch.load(config.basenet)['state_dict']
         new_weights = {}
         for wn, wv in basenet_weights.items():

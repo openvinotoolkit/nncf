@@ -112,6 +112,14 @@ def get_common_argument_parser():
              "--multiprocessing-distributed mode."
              "Default: 10")
     parser.add_argument(
+        "--batch-size-init",
+        type=int,
+        default=None,
+        metavar='N',
+        help="Batch size for initialization of the compression. Can be helpful for the scenario when GPU memory is not "
+             "enough to perform memory-consuming initialization (e.g. HAWQ-based bitwidth assignment for quantization) "
+             "with a large training batch size")
+    parser.add_argument(
         "--epochs",
         type=int,
         default=300,
@@ -151,7 +159,7 @@ def get_common_argument_parser():
         "--log-dir",
         type=str,
         default='runs',
-        help="The directory where models and TensorboardX summaries"
+        help="The directory where models and Tensorboard summaries"
              " are saved. Default: runs")
 
     parser.add_argument('--save-freq', default=5, type=int,

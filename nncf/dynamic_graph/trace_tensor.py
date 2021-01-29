@@ -17,6 +17,7 @@ import numpy as np
 import torch
 
 
+
 class TensorMeta:
     @staticmethod
     def default_comparator(lhs: 'TensorMeta', rhs: 'TensorMeta'):
@@ -51,9 +52,22 @@ class TracedTensor(torch.Tensor):
         tensor.__class__ = TracedTensor
         return tensor
 
+    def as_subclass(self, cls: 'TracedTensor') -> 'TracedTensor':
+        """Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
+        API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions"""
+
+        return self
+
+    # NOTE: This disables the __torch_function__ API altogether when using NNCF.
+    # TODO: make NNCF utilize the __torch_function__ API instead.
+    #pylint:disable=protected-access
+    if hasattr(torch._C, "_disabled_torch_function_impl"):
+        __torch_function__ = torch._C._disabled_torch_function_impl
+
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
+    # pylint:disable=isinstance-second-argument-not-valid-type
     return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
 
 
@@ -84,9 +98,10 @@ def trace_tensors(operator_output, node: 'NNCFNode'):
     raise ValueError("Unknown return type. Can not trace function call")
 
 
-def make_input_infos(inputs):
+def make_input_infos(inputs: 'OperatorInput'):
     input_infos = []
-    for i, node_input in enumerate(inputs):
+    for i, node_input_index_entry in enumerate(inputs):
+        node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
             input_infos.append(node_input.tensor_meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):

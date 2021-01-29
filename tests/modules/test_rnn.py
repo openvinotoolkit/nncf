@@ -433,7 +433,7 @@ class TestNumberOfNodes:
         for name, quantizer in algo.all_quantizations.items():
             counter = Counter()
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
-            if str(name) == '/nncf_model_input_0':
+            if str(name) == '/nncf_model_input_0|OUTPUT':
                 counter_for_input_quantizer = counter
                 continue
             counters[name] = counter

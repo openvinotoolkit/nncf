@@ -42,6 +42,13 @@
                 "type": "hawq",
                 "num_data_points": 3,
                 "iter_number": 1
+            },
+            "batchnorm_adaptation": {
+                "num_bn_adaptation_samples": 2,
+                "num_bn_forget_samples": 1
+            },
+            "range": {
+                "num_init_samples": 1
             }
         }
     }

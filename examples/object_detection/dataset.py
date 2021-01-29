@@ -85,7 +85,7 @@ def get_testing_dataset(dataset_name, path_to_annotations, path_to_imgs, config)
     )
     if dataset_name == 'voc':
         testing_dataset = VOCDetection(
-            path_to_imgs, [('2007', 'test')],
+            path_to_imgs, [('2012', 'val')],
             transform=transform,
             target_transform=VOCAnnotationTransform(keep_difficult=True),
             return_image_info=True,

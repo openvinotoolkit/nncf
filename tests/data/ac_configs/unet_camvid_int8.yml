@@ -26,3 +26,5 @@ models:
 
         metrics:
           - type: mean_iou
+            use_argmax: True
+            ignore_label: 11

@@ -3,6 +3,7 @@
 
 #include <THC/THC.h>
 #include <THC/THCDeviceUtils.cuh>
+#include <ATen/DeviceGuard.h>
 
 #include <vector>
 #include <iostream>
@@ -67,6 +68,7 @@ __global__ void nms_kernel(const int n_boxes, const float nms_overlap_thresh,
 
 // boxes is a N x 5 tensor
 at::Tensor nms_gpu(const at::Tensor& boxes, float nms_overlap_thresh, int64_t top_k) {
+  at::DeviceGuard guard(boxes.device());
   using scalar_t = float;
   AT_ASSERTM(boxes.type().is_cuda(), "boxes must be a CUDA tensor");
   int boxes_num = std::min(boxes.size(0), top_k);

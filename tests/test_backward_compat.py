@@ -127,8 +127,7 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
         pytest.skip("DataParallel eval takes too long for this test to be run during pre-commit")
 
     runner = Command(create_command_line(get_cli_dict_args(args), "classification"))
-    res = runner.run()
-    assert res == 0
+    runner.run()
 
     with open(metrics_path) as metric_file:
         metrics = json.load(metric_file)

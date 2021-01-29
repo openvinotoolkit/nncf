@@ -13,22 +13,10 @@
 from pathlib import Path
 
 import pytest
-try:
-    import torch
-except ImportError:
-    torch = None
-
 
 TEST_ROOT = Path(__file__).parent.absolute()
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / 'examples'
-
-
-@pytest.fixture(scope="function", autouse=True)
-def empty_cache():
-    yield
-    if torch:
-        torch.cuda.empty_cache()
 
 
 def pytest_addoption(parser):

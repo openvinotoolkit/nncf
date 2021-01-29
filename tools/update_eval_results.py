@@ -26,10 +26,11 @@ import json
 from collections import OrderedDict
 from typing import List, Optional
 
+#pylint:disable=import-error
 from mdutils import MdUtils
 import argparse
 
-BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.5.0'
+BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.6.0/'
 
 SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT = {
     'classification': 'Classification',
@@ -77,7 +78,9 @@ def build_per_model_row(with_links: bool, with_fp32_baseline: bool,
         row.append(fp32_metric)
     row.append(compressed_metric)
     if with_links:
-        row.append(config_path)
+        local_config_path = '/'.join(config_path.split('/')[2:])
+        config_name = local_config_path.split('/')[-1]
+        row.append('[{}]({})'.format(config_name, local_config_path))
         if checkpoint_url is not None:
             row.append('[Link]({})'.format(checkpoint_url))
         else:
@@ -143,7 +146,7 @@ def update_target_metrics(config_dict: dict, model_name_to_metric_dict):
     for sample_name in config_dict:
         for dataset_name in config_dict[sample_name]:
             for model_name in config_dict[sample_name][dataset_name]:
-                config_dict[sample_name][dataset_name][model_name] = model_name_to_metric_dict[model_name]
+                config_dict[sample_name][dataset_name][model_name]["target"] = model_name_to_metric_dict[model_name]
 
 
 def get_display_dataset_name(data_name):
@@ -152,7 +155,7 @@ def get_display_dataset_name(data_name):
     elif data_name == 'camvid':
         dataset_name = 'CamVid'
     elif data_name == 'VOCdevkit':
-        dataset_name = 'VOC12+07'
+        dataset_name = 'VOC12+07 train, VOC12 eval'
     else:
         dataset_name = "Mapillary"
     return dataset_name
@@ -230,4 +233,4 @@ delete_four_head_lines(overview_file_name)
 if args.output is not None:
     update_target_metrics(sota_checkpoints_eval, measured_metrics)
     with open(output, "w") as write_file:
-        json.dump(sota_checkpoints_eval, write_file, indent=8)
+        json.dump(sota_checkpoints_eval, write_file, indent=4)

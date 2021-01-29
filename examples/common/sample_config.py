@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from pathlib import Path
 
 from addict import Dict
 
@@ -17,6 +18,7 @@ import argparse
 import os
 
 from nncf import NNCFConfig
+from nncf.common.os import safe_open
 
 try:
     import jstyleson as json
@@ -72,14 +74,10 @@ class CustomArgumentParser(CustomActionContainer, argparse.ArgumentParser):
 
 
 class SampleConfig(Dict):
-    def __getattr__(self, item):
-        if item not in self:
-            raise KeyError("Key {} not found in config".format(item))
-        return super().__getattr__(item)
-
     @classmethod
     def from_json(cls, path) -> 'SampleConfig':
-        with open(path) as f:
+        file_path = Path(path).resolve()
+        with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls(loaded_json)
 

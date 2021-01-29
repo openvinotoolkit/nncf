@@ -57,7 +57,7 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
     # per-channel quantization is not supported in onnxruntime.
     model = TwoConvTestModel()
     nncf_config = get_config_for_export_mode(should_be_onnx_standard=True)
-    nncf_config['target_device'] = 'NONE'
+    nncf_config['target_device'] = 'TRIAL'
     onnx_model_proto = load_exported_onnx_version(nncf_config, model,
                                                   path_to_storage_dir=tmp_path)
     num_q = 0

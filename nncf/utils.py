@@ -11,17 +11,18 @@
  limitations under the License.
 """
 from collections import OrderedDict
-from contextlib import contextmanager
-from typing import Dict, Callable, Any, Mapping, Sequence, Set, List
+from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
 
 import numpy as np
 import random
 import re
 import torch
-from torch import distributed as dist
+from torch import distributed as dist, nn
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
+from nncf.layer_utils import _NNCFModuleMixin
+from contextlib import contextmanager
 
 
 def scopes_matched(scope_stack_0, scope_stack_1):
@@ -43,7 +44,7 @@ def scopes_matched(scope_stack_0, scope_stack_1):
     return True
 
 
-def in_scope_list(scope, scope_list):
+def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
     if scope_list is None:
         return False
 
@@ -104,7 +105,7 @@ def get_all_modules(model, prefix=None):
     return found
 
 
-def get_all_modules_by_type(model, module_types, current_scope=None,
+def get_all_modules_by_type(model, module_types=None, current_scope=None,
                             ignored_scopes=None, target_scopes=None) -> Dict['Scope', Module]:
     if isinstance(module_types, str):
         module_types = [module_types]
@@ -123,7 +124,7 @@ def get_all_modules_by_type(model, module_types, current_scope=None,
             continue
 
         if target_scopes is None or in_scope_list(str(child_scope), target_scopes):
-            if module_types.count(str(type(module).__name__)) != 0:
+            if module_types is None or module_types.count(str(type(module).__name__)) != 0:
                 found[child_scope] = module
             sub_found = get_all_modules_by_type(module, module_types,
                                                 current_scope=child_scope,
@@ -171,6 +172,12 @@ def get_module_by_node_name(model: torch.nn.Module, node_scope_str: str, prefix=
     return None
 
 
+def get_filters_num(module):
+    if isinstance(module, _NNCFModuleMixin):
+        return module.weight.size(module.target_weight_dim_for_compression)
+    return module.weight.size(0)
+
+
 def apply_by_node_name(model, node_names, command=lambda x: x, prefix=None):
     if prefix is None:
         prefix = model.__class__.__name__
@@ -192,15 +199,15 @@ def is_tracing_state():
     return torch._C._get_tracing_state()
 
 
-@contextmanager
-def no_jit_trace():
-    # pylint: disable=protected-access
-    disable_tracing = torch.jit._disable_tracing()
-    disable_tracing.__enter__()
-    yield disable_tracing
-    disable_tracing.__exit__()
+class no_jit_trace:
+    def __enter__(self):
+        # pylint: disable=protected-access
+        self.state = torch._C._get_tracing_state()
+        torch._C._set_tracing_state(None)
 
-
+    def __exit__(self, *args):
+        torch._C._set_tracing_state(self.state)
+        self.state = None
 
 
 def sum_like(tensor_to_sum, ref_tensor):
@@ -224,13 +231,13 @@ def get_per_channel_scale_shape(input_shape, is_weights):
     else:
         scale_shape[1] = input_shape[1]  # Per activation channel scales
 
-    elements = 1
-    for i in scale_shape:
-        elements *= i
-    if elements == 1:
-        return 1
-
     return scale_shape
+
+
+def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool) -> List[int]:
+    if not per_channel:
+        return [1]
+    return get_per_channel_scale_shape(input_shape, is_weights)
 
 
 def get_flat_tensor_contents_string(input_tensor):
@@ -289,6 +296,17 @@ def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
 
+def maybe_get_iterator(obj):
+    it = None
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    if isinstance(obj, Mapping):
+        it = iteritems
+        # pylint:disable=isinstance-second-argument-not-valid-type
+    elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
+        it = enumerate
+    return it
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     if memo is None:
         memo = set()
@@ -296,14 +314,6 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     is_tuple = isinstance(obj, tuple)
     if is_tuple:
         obj = list(obj)
-
-    def maybe_get_iterator(obj):
-        it = None
-        if isinstance(obj, Mapping):
-            it = iteritems
-        elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
-            it = enumerate
-        return it
 
     iterator = maybe_get_iterator(obj)
 
@@ -342,3 +352,34 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
                and not in_scope_list(scope_str, ignored_scopes)
+
+
+@contextmanager
+def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
+    is_original_mode_training = model.training
+    model.train(is_training)
+    try:
+        yield
+    finally:
+        model.train(is_original_mode_training)
+
+
+def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
+    if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
+                           nn.ConvTranspose3d)):
+        ks = module.weight.data.shape
+        mac_count = np.prod(ks) * np.prod(output.shape[2:])
+    elif isinstance(module, nn.Linear):
+        if len(input_[0].shape) == 1:
+            # In some test cases input tensor could have dimension [N]
+            mac_count = input_[0].shape[0] * output.shape[-1]
+        else:
+            mac_count = np.prod(input_[0].shape[1:]) * output.shape[-1]
+    else:
+        return
+    dict_to_save[ctx.scope] = 2 * mac_count
+
+
+def add_domain(name_operator: str) -> str:
+    from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
+    return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator

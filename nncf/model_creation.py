@@ -20,12 +20,12 @@ from torch.nn import Module
 
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.debug import is_debug, set_debug_log_dir
+from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.quantization.algo import QuantizerSetupType
+from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
 from nncf.nncf_logger import logger
@@ -47,7 +47,7 @@ def create_compression_algorithm_builders(config: NNCFConfig,
     quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
     if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
         target_device = config.get("target_device", "ANY")
-        if target_device != 'NONE':
+        if target_device != 'TRIAL':
             hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
     if isinstance(compression_config_json_section, dict):
@@ -103,6 +103,11 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
     as an object of NNCFNetwork."""
 
+    # Compress model that will be deployed for the inference on target device. No need to compress parts of the
+    # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
+    # As a consequence, no need to care about spoiling BN statistics, as there're disabled in eval mode.
+    model.eval()
+
     if dump_graphs:
         if dummy_forward_fn is None:
             input_info_list = create_input_infos(config)
@@ -116,8 +121,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             graph = graph_builder.build_graph(model)
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
 
-    if is_debug():
-        set_debug_log_dir(config.get("log_dir", "."))
+    set_debug_log_dir(config.get("log_dir", "."))
 
     input_info_list = create_input_infos(config)
     scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
@@ -138,18 +142,18 @@ def create_compressed_model(model: Module, config: NNCFConfig,
         compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
 
-    if dump_graphs and is_main_process() and compression_algo_builder_list:
-        if dummy_forward_fn is None:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=
-                                                    create_dummy_forward_fn(input_info_list,
-                                                                            with_input_tracing=False))
-        else:
-            compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
+    try:
+        if resuming_state_dict is not None:
+            load_state(compressed_model, resuming_state_dict, is_resume=True)
+    finally:
+        if dump_graphs and is_main_process() and compression_algo_builder_list:
+            if dummy_forward_fn is None:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=
+                                                        create_dummy_forward_fn(input_info_list,
+                                                                                with_input_tracing=False))
+            else:
+                compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
-        graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
-        graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
-
-    if resuming_state_dict is not None:
-        load_state(compressed_model, resuming_state_dict, is_resume=True)
-
+            graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
+            graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
     return compression_ctrl, compressed_model
