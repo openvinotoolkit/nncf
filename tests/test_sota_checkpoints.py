@@ -517,7 +517,6 @@ def make_metrics_dump_path(metrics_dump_dir):
     assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
                                     f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
     print(f"metrics_dump_path: {pytest.metrics_dump_path}")
-    yield
 
 
 @pytest.fixture(autouse=True, scope="class")
