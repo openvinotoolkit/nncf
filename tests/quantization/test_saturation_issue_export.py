@@ -6,7 +6,8 @@ import torch.nn as nn
 from onnx import numpy_helper
 
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
-from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv
+from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, get_nodes_by_type, \
+    get_all_inputs_for_graph_node
 from tests.quantization.test_onnx_export import get_config_for_export_mode
 
 
@@ -159,21 +160,40 @@ class EightConvTestModel(nn.Module):
         return self.features(x)
 
 
-def test_are_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
-    in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
-    model = EightConvTestModel(in_out_ch)
-    nncf_config = get_config_for_export_mode(False)
-    nncf_config.update({"input_info": {
-        "sample_size": [1, 1, 20, 20]
-    }})
+class DepthWiseConvTestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.features.append(nn.Conv2d(1, 3, 3, groups=1))
+        self.features.append(nn.Conv2d(3, 30, 3, groups=3))
+        self.features.append(nn.Conv2d(30, 1, 3))
+        self.features = nn.Sequential(*self.features)
 
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    def forward(self, x):
+        return self.features(x)
 
+
+def check_fq_nodes(tmp_path, compression_ctrl):
     # Update scale tensors in the model
     quantizers = compression_ctrl.weight_quantizers.values()
-    for quantizer in quantizers:
-        quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
-            torch.rand(quantizer.quantized_module.weight.shape[0], dtype=torch.float32, requires_grad=True))
+    with torch.no_grad():
+        for quantizer in quantizers:
+            assert quantizer.quantizer_module_ref.levels == 128
+            assert quantizer.quantizer_module_ref.is_saturation_fix
+            if isinstance(quantizer.quantizer_module_ref, AsymmetricQuantizer):
+                assert quantizer.quantizer_module_ref.level_low == 0
+                assert quantizer.quantizer_module_ref.level_high == 127
+                quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
+                    5 * torch.rand_like(quantizer.quantizer_module_ref.input_range,
+                                        dtype=torch.float32, requires_grad=True))
+            elif isinstance(quantizer.quantizer_module_ref, SymmetricQuantizer):
+                assert quantizer.quantizer_module_ref.level_low == -64
+                assert quantizer.quantizer_module_ref.level_high == 63
+                quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
+                    5 * torch.rand_like(quantizer.quantizer_module_ref.scale,
+                                        dtype=torch.float32, requires_grad=True))
+            else:
+                assert 'Incorrect quantizer type'
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
@@ -181,39 +201,109 @@ def test_are_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
     onnx_model = onnx.load(onnx_checkpoint_path)
 
     # Find weight tensors in ONNX model
-    onnx_conv_weight_tensors = []
+    fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
+    inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
 
-    # Add conv weights tensors
-    # pylint:disable=no-member
-    for weight_tensor in onnx_model.graph.initializer:
-        if 'weight' in weight_tensor.name:
-            onnx_conv_weight_tensors.append(numpy_helper.to_array(weight_tensor))
-
-    # Add last convolution weights
-    for node in onnx_model.graph.node:
-        try:
-            if node.op_type == 'Constant':
-                if node.attribute[0].t.dims[0] == 1 and node.attribute[0].t.dims[1] == 3 and \
-                        node.attribute[0].t.dims[2] == 1 and node.attribute[0].t.dims[3] == 1:
-                    onnx_conv_weight_tensors.append(numpy_helper.to_array(node.attribute[0].t))
-        except (AttributeError, IndexError):
-            continue
-
+    # TODO:Change magic constants
+    level_high_ratio = 127. / 63.
     level_positive_negative_ratio = 64. / 63.
 
-    for quantizer, conv_filter in zip(quantizers, onnx_conv_weight_tensors):
-        for scale, channel in zip(quantizer.quantizer_module_ref.scale, conv_filter):
-            negative_max_val = level_positive_negative_ratio * scale
-            assert scale >= np.max(channel)
-            assert -negative_max_val <= np.min(channel)
+    if isinstance(quantizer.quantizer_module_ref, AsymmetricQuantizer):
+        for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+            tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+            quantizer_weight, quantizer_input_range, quantizer_input_low = quantizer.quantized_module.weight.detach().numpy(), \
+                                                                           quantizer.quantizer_module_ref.input_range, \
+                                                                           quantizer.quantizer_module_ref.input_low
+
+            input_low = -level_positive_negative_ratio * quantizer_input_range.detach().numpy()
+            input_high = quantizer_input_range.detach().numpy()
+            # Clamp weight tensors as we do in exporting
+            if quantizer_weight.shape[0] > 1:
+                for i in range(quantizer_weight.shape[0]):
+                    try:
+                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
+                    except TypeError:
+                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
+                                                      a_max=input_high[i].item())
+            else:
+                quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+
+            assert np.allclose(tensor_weight, quantizer_weight)
+            #TODO: change magic const
+            assert np.allclose(255. / 127. * quantizer_input_range.detach().numpy(), input_output_high)
+            assert np.allclose(quantizer_input_low.detach().numpy(),
+                               input_output_low)
+
+
+    elif isinstance(quantizer.quantizer_module_ref, SymmetricQuantizer):
+        for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+            tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+            quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
+                                                quantizer.quantizer_module_ref.scale
+
+            input_low = -level_positive_negative_ratio * quantizer_scale.detach().numpy()
+            input_high = quantizer_scale.detach().numpy()
+            # Clamp weight tensors as we do in exporting
+            if quantizer_weight.shape[0] > 1:
+                for i in range(quantizer_weight.shape[0]):
+                    try:
+                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
+                    except TypeError:
+                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
+                                                      a_max=input_high[i].item())
+            else:
+                quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+
+            assert np.allclose(tensor_weight, quantizer_weight)
+            assert np.allclose(level_high_ratio * quantizer_scale.detach().numpy(), input_output_high)
+            assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
+                               input_output_low)
+
+
+def test_are_fq_exported_depthwise_per_channel_weights_tensors_clipped(tmp_path):
+    model = DepthWiseConvTestModel()
+    nncf_config = get_config_for_export_mode(False)
+    nncf_config.update({"input_info": {
+        "sample_size": [1, 1, 20, 20]
+    }})
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    check_fq_nodes(tmp_path, compression_ctrl)
+
+
+def test_are_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
+    in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
+    model = EightConvTestModel(in_out_ch)
+    nncf_config = get_config_for_export_mode(False)
+    nncf_config.update({"input_info": {
+        "sample_size": [1, 1, 20, 20]
+    }})
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    check_fq_nodes(tmp_path, compression_ctrl)
+
+
+def test_are_fq_exported_per_channel_assymetric_weights_tensors_clipped(tmp_path):
+    in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
+    model = EightConvTestModel(in_out_ch)
+    nncf_config = get_config_for_export_mode(False)
+    nncf_config.update({"input_info": {
+        "sample_size": [1, 1, 20, 20]
+    }})
+    nncf_config.update({"compression": {
+        "algorithm": "quantization",
+        "export_to_onnx_standard_ops": False,
+        "weights": {
+            "mode": "asymmetric"
+        },
+    }
+    })
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    check_fq_nodes(tmp_path, compression_ctrl)
 
 
 def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
     model = TwoConvTestModel()
     nncf_config = get_config_for_export_mode(True)
-
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-
     # Set scale tensors
     first_scale_tensor = torch.tensor((0.1, 0.1), dtype=torch.float32, requires_grad=True)
     second_scale_tensor = torch.tensor(3000, dtype=torch.float32, requires_grad=True)
@@ -224,11 +314,11 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
     first_quantizer.quantizer_module_ref.scale = torch.nn.Parameter(first_scale_tensor)
     second_quantizer.quantizer_module_ref.scale = torch.nn.Parameter(second_scale_tensor)
 
-    # Set weight tensors bigger then scale tensor
-    first_quantizer.quantized_module.weight.data = -0.5 + torch.ones_like(
-        first_quantizer.quantized_module.weight)
-    second_quantizer.quantized_module.weight.data = 2000 * torch.ones_like(
-        second_quantizer.quantized_module.weight)
+    for quantizer in [first_quantizer, second_quantizer]:
+        assert quantizer.quantizer_module_ref.levels == 128
+        assert quantizer.quantizer_module_ref.level_low == -64
+        assert quantizer.quantizer_module_ref.level_high == 63
+        assert quantizer.quantizer_module_ref.is_saturation_fix
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
@@ -236,32 +326,39 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
     onnx_model = onnx.load(onnx_checkpoint_path)
 
     # Find weight tensors in ONNX model
-    onnx_conv_weight_tensors = []
+    quantize_nodes = get_nodes_by_type(onnx_model, 'QuantizeLinear')
+    inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in quantize_nodes]
 
-    # Add conv weights tensors
-    # pylint:disable=no-member
-    for weight_tensor in onnx_model.graph.initializer:
-        if 'weight' in weight_tensor.name:
-            onnx_conv_weight_tensors.append(numpy_helper.to_array(weight_tensor))
-
-    # pylint:disable=no-member
-    for node in onnx_model.graph.node:
-        try:
-            if node.op_type == 'Constant':
-                if node.attribute[0].t.dims[0] == 1 and node.attribute[0].t.dims[1] == 2 and \
-                        node.attribute[0].t.dims[2] == 3 and node.attribute[0].t.dims[3] == 3:
-                    onnx_conv_weight_tensors.append(numpy_helper.to_array(node.attribute[0].t))
-        except (AttributeError, IndexError):
-            continue
-
+    level_high_ratio = 127. / 63.
     level_positive_negative_ratio = 64. / 63.
 
-    assert np.max(onnx_conv_weight_tensors[0]) <= np.max(first_scale_tensor.detach().numpy())
-    assert np.min(onnx_conv_weight_tensors[0]) >= level_positive_negative_ratio * -np.max(
-        first_scale_tensor.detach().numpy())
-    assert np.max(onnx_conv_weight_tensors[1]) <= np.max(second_scale_tensor.detach().numpy())
-    assert np.min(onnx_conv_weight_tensors[1]) >= level_positive_negative_ratio * -np.max(
-        second_scale_tensor.detach().numpy())
+    for quantizer, onnx_q_parametres in zip([first_quantizer, second_quantizer], inputs[1::2]):
+        onnx_tensor_weight, onnx_q_scale, onnx_zero_level = list(onnx_q_parametres.values())
+        quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
+                                            quantizer.quantizer_module_ref.scale
+
+        quantizer_scale = quantizer_scale.detach().numpy()
+        input_low = -level_positive_negative_ratio * quantizer_scale
+        input_high = quantizer_scale
+        onnx_input_output_low = -128 * onnx_q_scale + onnx_zero_level
+        onnx_input_output_high = 127 * onnx_q_scale + onnx_zero_level
+
+        # Clamp weight tensors as we do in exporting
+        if quantizer_weight.shape[0] > 1:
+            for i in range(quantizer_weight.shape[0]):
+                try:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
+                except IndexError:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
+                                                  a_max=input_high[i].item())
+        else:
+            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+
+        if len(quantizer_scale.shape):
+            quantizer_scale = quantizer_scale[0]
+        assert np.allclose(onnx_tensor_weight, quantizer_weight)
+        assert np.allclose(level_high_ratio * quantizer_scale, onnx_input_output_high)
+        assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)
 
 
 def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path):

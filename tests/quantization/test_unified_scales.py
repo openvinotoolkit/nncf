@@ -30,7 +30,7 @@ from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-
+from tests.helpers import get_nodes_by_type
 
 def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecutionContext:
     ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
@@ -563,12 +563,6 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
 
     onnx_model = onnx.load(onnx_path)
 
-    def get_fq_nodes(onnx_model: onnx.ModelProto) -> List[onnx.NodeProto]:
-        retval = []
-        for node in onnx_model.graph.node:
-            if str(node.op_type) == "FakeQuantize":
-                retval.append(node)
-        return retval
 
     def immediately_dominates_add_or_mul(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
         if len(node.output) != 1:
@@ -607,7 +601,7 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 retval[input_] = numpy_helper.to_array(val.t)
         return retval
 
-    fq_nodes = get_fq_nodes(onnx_model)
+    fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
     eltwise_predicate = partial(immediately_dominates_add_or_mul, graph=onnx_model.graph)
     eltwise_fq_nodes = list(filter(eltwise_predicate, fq_nodes))
     fq_nodes_grouped_by_output = group_nodes_by_output_target(eltwise_fq_nodes, onnx_model.graph)

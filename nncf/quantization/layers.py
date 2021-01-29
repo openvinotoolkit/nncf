@@ -202,57 +202,38 @@ class BaseQuantizer(nn.Module):
     def _get_input_low_input_high(self):
         raise NotImplementedError
 
-    def run_export_quantization(self, x: torch.Tensor):
+    def _prepare_export_quantization(self, x: torch.Tensor):
+        raise NotImplementedError
+
+    def _prepare_fq_export_quantization(self, x: torch.Tensor):
+        x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
-            def symmetric_my_get_input_low_input_high(scale, eps, level_low, level_high):
-                input_range = abs(scale) + eps
-                input_low = input_range * level_low / level_high
-                input_high = input_range
-                return input_low, input_high
+            levels = level_high - level_low
+        return x, levels, input_low, input_high
 
-            def asymmetric_my_get_input_low_input_high(input_range, eps, input_low, levels):
-                input_range_safe = abs(input_range) + eps
-                input_low, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
-                input_high = input_low + input_range_tuned
-                return input_low, input_high
+    def _prepare_qdq_export_quantization(self, x: torch.Tensor):
+        x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
+        with no_jit_trace():
+            y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
+                                                                           level_high,
+                                                                           input_low,
+                                                                           input_high)
+        return x, y_scale, y_zero_point
 
-            input_low, input_high = self._get_input_low_input_high()
-            level_low = self.level_low
-            level_high = self.level_high
-            levels = self.levels
-            if self.is_saturation_fix:
-                if x.shape[0] > 1:
-                    for i, channel in enumerate(x):
-                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
-                else:
-                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
-                if isinstance(self, SymmetricQuantizer):
-                    input_low, input_high = symmetric_my_get_input_low_input_high(127. / 63. * self.scale,
-                                                                                  self.eps,
-                                                                                  2 * self.level_low,
-                                                                                  2 * self.level_high + 1)
-                elif isinstance(self, AsymmetricQuantizer):
-                    input_low, input_high = asymmetric_my_get_input_low_input_high(127. / 63. * self.scale,
-                                                                                   self.eps,
-                                                                                   2 * self.level_low,
-                                                                                   2 * self.level_high + 1)
-                level_low *= 2
-                level_high = 2 * level_high + 1
-                levels = level_high - level_low + 1
-                # input_low *= level_low / self.level_low
-                # input_high *= level_high / self.level_high
-
-            if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
-                y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
-                                                                               level_high,
-                                                                               input_low,
-                                                                               input_high)
-
-        if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+    def run_export_quantization(self, x: torch.Tensor):
+        if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
+            x, levels, input_low, input_high = self._prepare_fq_export_quantization(x)
+            return ExportQuantizeToFakeQuantize.apply(x, levels,
+                                                      input_low,
+                                                      input_high,
+                                                      input_low,
+                                                      input_high)
+        elif self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+            x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
             if self.per_channel:
                 try:
-                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and torch.allclose(
-                            y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
+                            torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                         y_scale, y_zero_point = y_scale[0], y_zero_point[0]
                         return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
                     raise RuntimeError("PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear "
@@ -260,13 +241,6 @@ class BaseQuantizer(nn.Module):
                 except IndexError:
                     return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
-
-        if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
-            return ExportQuantizeToFakeQuantize.apply(x, levels,
-                                                      input_low,
-                                                      input_high,
-                                                      input_low,
-                                                      input_high)
         raise RuntimeError('Unknown export mode')
 
     def extra_repr(self):
@@ -456,14 +430,36 @@ class SymmetricQuantizer(BaseQuantizer):
         distributed.broadcast(self._scale_param_storage, src=src)
         distributed.broadcast(self.signed_tensor, src=src)
 
-    def _get_input_low_input_high(self):
-        input_range = abs(self.scale) + self.eps
-        input_low = input_range * self.level_low / self.level_high
+    def _get_input_low_input_high(self, scale, level_low, level_high, eps):
+        input_range = abs(scale) + eps
+        input_low = input_range * level_low / level_high
         input_high = input_range
         return input_low, input_high
 
-    def get_quantizer_config(self) -> QuantizerConfig:
-        return QuantizerConfig(num_bits=self.num_bits,
+   def _prepare_export_quantization(self, x: torch.Tensor):
+        with no_jit_trace():
+            input_low, input_high = self._get_input_low_input_high(self.scale,
+                                                                   self.level_low,
+                                                                   self.level_high,
+                                                                   self.eps)
+            level_low = self.level_low
+            level_high = self.level_high
+            if self.is_saturation_fix:
+                if x.shape[0] > 1:
+                    for i, channel in enumerate(x):
+                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
+                else:
+                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                level_low = 2 * self.level_low
+                level_high = 2 * self.level_high + 1
+                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.scale,
+                                                                       level_low,
+                                                                       level_high,
+                                                                       self.eps)
+        return x, level_high, level_low, input_low, input_high
+
+    def get_current_config(self) -> QuantizerConfig:
+        return QuantizerConfig(bits=self.num_bits,
                                mode=QuantizationMode.SYMMETRIC,
                                signedness_to_force=self.signed,
                                per_channel=self.per_channel)
@@ -572,11 +568,34 @@ class AsymmetricQuantizer(BaseQuantizer):
         distributed.broadcast(self.input_low, src)
         distributed.broadcast(self._input_range_param_storage, src)
 
-    def _get_input_low_input_high(self):
-        input_range_safe = abs(self.input_range) + self.eps
-        input_low, input_range_tuned = TuneRange.apply(self.input_low, input_range_safe, self.levels)
+    def _get_input_low_input_high(self, input_range, input_low, levels, eps):
+        input_range_safe = abs(input_range) + eps
+        input_low, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
         input_high = input_low + input_range_tuned
         return input_low, input_high
+
+    def _prepare_export_quantization(self, x: torch.Tensor):
+        with no_jit_trace():
+            input_low, input_high = self._get_input_low_input_high(self.input_range,
+                                                                   self.input_low,
+                                                                   self.levels,
+                                                                   self.eps)
+
+            if self.is_saturation_fix:
+                if x.shape[0] > 1:
+                    for i, channel in enumerate(x):
+                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
+                else:
+                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                level_low = 2 * self.level_low
+                level_high = 2 * self.level_high + 1
+                # TODO:need to write a test and recheck the formula and arguments to this function
+                input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,
+                                                                       self.input_low,
+                                                                       self.levels,
+                                                                       self.eps)
+
+        return x, level_low, level_high, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(num_bits=self.num_bits,
