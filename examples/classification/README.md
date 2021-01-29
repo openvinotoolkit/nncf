@@ -39,6 +39,8 @@ python main.py -m test --config=configs/quantization/mobilenet_v2_imagenet_int8.
 ```
 To validate an FP32 model checkpoint, make sure the compression algorithm settings are empty in the configuration file or `pretrained=True` is set.
 
+**WARNING**: The samples use `torch.load` functionality for checkpoint loading which, in turn, uses pickle facilities by default which are known to be vulnerable to arbitrary code execution attacks. **Only load the data you trust**
+
 #### Export Compressed Model
 
 To export trained model to the ONNX format, use the following command:

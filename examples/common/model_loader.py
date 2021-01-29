@@ -24,6 +24,13 @@ from nncf.utils import safe_thread_call
 
 def load_model(model, pretrained=True, num_classes=1000, model_params=None,
                weights_path: str = None) -> torch.nn.Module:
+    """
+
+       ** WARNING: This is implemented using torch.load functionality,
+       which itself uses Python's pickling facilities that may be used to perform
+       arbitrary code execution during unpickling. Only load the data you trust.
+
+    """
     logger.info("Loading model: {}".format(model))
     if model_params is None:
         model_params = {}
