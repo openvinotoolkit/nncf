@@ -218,7 +218,7 @@ class TestSotaCheckpoints:
                             i = '-'
                         with tag('td'):
                             text(i)
-        print("Write results at ", os.path.join(PROJECT_ROOT, "results.html"))
+        print("Write results at ", path / "results.html")
         f = open(path / 'results.html', 'w')
         f.write(doc.getvalue())
         f.close()
@@ -390,7 +390,8 @@ class TestSotaCheckpoints:
 
         fp32_metric = None
         if eval_test_struct.reference_ is not None:
-            reference_metric_file_path = pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_)
+            reference_metric_file_path = \
+                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
@@ -433,7 +434,7 @@ Tsc = TestSotaCheckpoints
 def make_metrics_dump_path(metrics_dump_dir):
     if pytest.metrics_dump_path is None:
         data = datetime.datetime.now()
-        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" / \
+        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" \
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
