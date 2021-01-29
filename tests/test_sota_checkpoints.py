@@ -90,7 +90,22 @@ class TestSotaCheckpoints:
     @staticmethod
     def q_dq_config(config):
         nncf_config = NNCFConfig.from_json(config)
-        nncf_config["export_to_onnx_standard_ops"] = True
+        if "compression" in nncf_config:
+            compression_config = nncf_config["compression"]
+            quantization_config = None
+            if isinstance(compression_config, list):
+                matches = []
+                for subconfig in compression_config:
+                    if subconfig["algorithm"] == "quantization":
+                        matches.append(subconfig)
+                if matches:
+                    assert len(matches) == 1
+                    quantization_config = matches[0]
+            else:
+                if compression_config["algorithm"] == "quantization":
+                    quantization_config = compression_config
+            if quantization_config is not None:
+                quantization_config["export_to_onnx_standard_ops"] = True
         return nncf_config
 
     @staticmethod

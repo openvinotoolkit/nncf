@@ -26,19 +26,17 @@ from torchvision.models import squeezenet1_1
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.nncf_network import InsertionPoint, InsertionType
-from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup, SingleConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.quantization.structs import QuantizerGroup
-from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector, \
     MedianMADStatisticCollector
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
-from tests.quantization.test_precision_init import HAWQConfigBuilder
 from torch.utils.data import DataLoader
 
 from nncf import utils
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
-from nncf.initialization import register_default_init_args, DefaultInitializingDataLoader
+from nncf.initialization import DefaultInitializingDataLoader
 from nncf.quantization.init_range import RangeInitParams, PerLayerRangeInitConfig, \
     RangeInitConfig
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
@@ -49,7 +47,7 @@ from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump,
     get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init, \
     create_rank_dataloader
 from tests.helpers import TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_mock_dataloader, BasicConvTestModel
+    create_compressed_model_and_algo_for_test, create_mock_dataloader
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
@@ -569,54 +567,6 @@ def test_init_ranges_are_set(quantization_mode: str, per_channel: bool,
 
     weight_quantizer_info = next(iter(compression_ctrl.weight_quantizers.values()))
     check_scales(weight_quantizer_info.quantizer_module_ref, per_channel)
-
-
-@pytest.mark.parametrize(("config_cutter", "tensor_statistics_collection_count", "precision_init_call_count",
-                          "bn_adaptation_call_count"),
-                         [
-                             # 1 stat collection for setting up an experimental quantization setup for precision init,
-                             # + 1 stat collection for implicit range initialization with default parameters
-                             (lambda x: x['initializer'].pop('range'), 2, 1, 1),
-                             (lambda x: x.pop('initializer'), 1, 0, 1),
-                             (lambda x: x['initializer'].pop('precision'), 1, 0, 1),
-                             (lambda x: x['initializer']['range'].update({'num_init_samples': 0}), 0, 1, 1),
-                         ], ids=['precision_init_only', 'no_init_params', 'range_init_only', 'skip_range_init'])
-def test_range_init_is_called(config_cutter, tensor_statistics_collection_count, precision_init_call_count,
-                              bn_adaptation_call_count, mocker):
-    config = HAWQConfigBuilder().build()
-    config['compression']['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5}})
-    config['input_info'] = {"sample_size": [1, 1, 4, 4]}
-
-    model = BasicConvTestModel()
-
-    mocker_train_loader = mocker.stub()
-    mocker_criterion = mocker.stub()
-    mocker_criterion.batch_size = 1
-    mocker_train_loader.batch_size = 1
-
-    config = register_default_init_args(config, mocker_train_loader, mocker_criterion)
-
-    _ = mocker.patch('nncf.initialization.SimpleDataLoaderRunner.run')
-    stat_builder_apply_to_spy = mocker.spy(TensorStatisticsCollectionBuilder, 'apply_to')
-    stat_builder_build_controller_mm = mocker.patch(
-        'nncf.tensor_statistics.algo.TensorStatisticsCollectionBuilder.build_controller')
-    stat_builder_build_controller_mm.return_value = TensorStatisticsCollectionController(None, {})
-
-    precision_init_spy = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init',
-                                      autospec=True)  # autospec=True will patch the function as an instance method
-    bn_adaptation_spy = mocker.patch('nncf.initialization.DataLoaderBNAdaptationRunner.run')
-
-    #pylint:disable=protected-access
-    def fn(self) -> SingleConfigQuantizerSetup:
-        return self._algo.get_quantizer_setup_for_current_state()
-    precision_init_spy.side_effect = fn
-
-    config_cutter(config['compression'])
-    create_compressed_model_and_algo_for_test(model, config)
-
-    assert stat_builder_apply_to_spy.call_count == tensor_statistics_collection_count
-    assert precision_init_spy.call_count == precision_init_call_count
-    assert bn_adaptation_spy.call_count == bn_adaptation_call_count
 
 
 RangeInitCallCountTestStruct = namedtuple('RangeInitCallCountTestStruct',

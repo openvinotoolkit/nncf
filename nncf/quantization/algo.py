@@ -67,6 +67,7 @@ from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
 from nncf.utils import in_scope_list, is_main_process, should_consider_scope
+from nncf.common.os import safe_open
 
 
 class QuantizerSetupGeneratorBase:
@@ -866,7 +867,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         WeightQuantizerId, InsertionCommand]:
         device = next(target_model.parameters()).device
         quantizer_id = WeightQuantizerId(insertion_point.module_scope)
-        quantizer = self.__create_quantize_module(quantizer_config)
+        quantizer = self.__create_quantize_module(quantizer_config).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
                                         log_module_name=str(insertion_point))
@@ -1478,7 +1479,7 @@ class QuantizationDebugInterface(DebugInterface):
         quantizer_normalized_name = re.sub(r'[^\w\-_\. ]', '_', quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
-            with open(str(self.scale_dump_dir / fname), "ba") as file:
+            with safe_open(self.scale_dump_dir / fname, "ba") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):

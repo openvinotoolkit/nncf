@@ -74,6 +74,11 @@ class SSD_VGG(nn.Module):
         _, ext = os.path.splitext(base_file)
         if ext == '.pkl' or '.pth':
             logger.debug('Loading weights into state dict...')
+            #
+            # ** WARNING: torch.load functionality uses Python's pickling facilities that
+            # may be used to perform arbitrary code execution during unpickling. Only load the data you
+            # trust.
+            #
             self.load_state_dict(torch.load(base_file,
                                             map_location=lambda storage, loc: storage))
             logger.debug('Finished!')

@@ -20,7 +20,7 @@ from torch.nn import Module
 
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
-from nncf.debug import is_debug, set_debug_log_dir
+from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
@@ -121,8 +121,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             graph = graph_builder.build_graph(model)
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
 
-    if is_debug():
-        set_debug_log_dir(config.get("log_dir", "."))
+    set_debug_log_dir(config.get("log_dir", "."))
 
     input_info_list = create_input_infos(config)
     scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])

@@ -5,29 +5,13 @@
       "sample_size": [2, 3, 224, 224]
     },
     "num_classes": 1000,
-    "batch_size" : 128,
-    "epochs": 5,
-    "optimizer": {
-        "type": "Adam",
-        "base_lr": 0.00001,
-        "schedule_type": "multistep",
-        "steps": [
-            5
-        ]
-    },
-    "target_device": "TRIAL",
+    "batch_size" : 200,
+    "epochs": 10,
+    "workers": 6,
+    "multiprocessing_distributed": true,
+    "target_device": "VPU",
     "compression": {
         "algorithm": "quantization",
-        "weights": {
-            "mode": "asymmetric",
-            "bits": 8,
-            "per_channel": true
-        },
-        "activations": {
-            "mode": "asymmetric",
-            "bits": 8,
-            "per_channel": false
-        },
         "initializer": {
             "batchnorm_adaptation": {
                 "num_bn_adaptation_samples": 4000
@@ -40,11 +24,20 @@
             "precision": {
                 "type": "autoq",
                 "bits": [2, 4, 8],
-                "iter_number": 600,
+                "iter_number": 300,
                 "compression_ratio": 0.15,
                 "eval_subset_ratio": 0.20,
                 "dump_init_precision_data": true
             }
+        },
+        "params": {
+            "base_lr": 3.1e-4,
+            "base_wd": 1e-5,
+            "batch_multiplier": 1,
+            "activations_quant_start_epoch": 0,
+            "weights_quant_start_epoch": 0,
+            "lr_poly_drop_start_epoch": 0,
+            "lr_poly_drop_duration_epochs": 10,
         }
     }
 }
