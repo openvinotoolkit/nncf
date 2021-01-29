@@ -28,7 +28,7 @@ from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 
 
 def get_compression_algorithm(config):

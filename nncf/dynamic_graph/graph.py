@@ -25,7 +25,7 @@ from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
 from nncf.layers import ITERATION_MODULES
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 # pylint: disable=too-many-public-methods

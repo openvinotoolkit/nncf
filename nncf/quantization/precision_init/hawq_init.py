@@ -26,7 +26,7 @@ from torch.nn.modules.loss import _Loss
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.layers import QuantizersSwitcher, QuantizerConfig
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator

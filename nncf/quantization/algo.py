@@ -48,7 +48,7 @@ from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig, HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, InsertionInfo
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints

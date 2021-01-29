@@ -14,7 +14,7 @@
 import re
 import torch
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 
 
