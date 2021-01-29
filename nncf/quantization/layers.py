@@ -204,25 +204,43 @@ class BaseQuantizer(nn.Module):
 
     def run_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
+            def symmetric_my_get_input_low_input_high(scale, eps, level_low, level_high):
+                input_range = abs(scale) + eps
+                input_low = input_range * level_low / level_high
+                input_high = input_range
+                return input_low, input_high
+
+            def asymmetric_my_get_input_low_input_high(input_range, eps, input_low, levels):
+                input_range_safe = abs(input_range) + eps
+                input_low, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
+                input_high = input_low + input_range_tuned
+                return input_low, input_high
+
             input_low, input_high = self._get_input_low_input_high()
             level_low = self.level_low
             level_high = self.level_high
             levels = self.levels
             if self.is_saturation_fix:
-                if x.size()[0] > 1:
+                if x.shape[0] > 1:
                     for i, channel in enumerate(x):
-                        try:
-                            x[i] = torch.clamp(channel, min=input_low[i], max=input_high[i])
-                        except TypeError:
-                            x[i] = torch.clamp(channel, min=input_low[i].item(), max=input_high[i].item())
+                        x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
                 else:
-                    x = torch.clamp(x, min=input_low.item(), max=input_high.item())
-                # x = torch.max(torch.min(x, input_high), input_low)
+                    x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
+                if isinstance(self, SymmetricQuantizer):
+                    input_low, input_high = symmetric_my_get_input_low_input_high(127. / 63. * self.scale,
+                                                                                  self.eps,
+                                                                                  2 * self.level_low,
+                                                                                  2 * self.level_high + 1)
+                elif isinstance(self, AsymmetricQuantizer):
+                    input_low, input_high = asymmetric_my_get_input_low_input_high(127. / 63. * self.scale,
+                                                                                   self.eps,
+                                                                                   2 * self.level_low,
+                                                                                   2 * self.level_high + 1)
                 level_low *= 2
                 level_high = 2 * level_high + 1
                 levels = level_high - level_low + 1
-                input_low *= level_low / self.level_low
-                input_high *= level_high / self.level_high
+                # input_low *= level_low / self.level_low
+                # input_high *= level_high / self.level_high
 
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low,
