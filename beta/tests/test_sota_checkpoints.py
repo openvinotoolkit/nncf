@@ -44,13 +44,6 @@ DATASET_TYPE_AVAILABILITY = {
     "segmentation": False,
 }
 
-'''
-OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
-if not os.path.exists(OPENVINO_DIR):
-    OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
-ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
-MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
-'''
 
 class EvalRunParamsStruct:
     def __init__(self,
