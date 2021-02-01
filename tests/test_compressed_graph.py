@@ -23,13 +23,13 @@ import torchvision
 from functools import partial
 from copy import deepcopy
 
+from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.dynamic_graph.context import get_version_agnostic_name, TracingContext
 from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph_builder import create_input_infos, create_mock_tensor, GraphBuilder, \
     create_dummy_forward_fn, ModelInputInfo
 from nncf import nncf_model_input
 from nncf.layers import LSTMCellNNCF, NNCF_RNN
-from nncf.model_creation import create_compression_algorithm_builders
 from nncf.nncf_network import NNCFNetwork, InsertionType
 from nncf.utils import get_all_modules_by_type
 from tests import test_models
@@ -374,10 +374,9 @@ def test_gnmt_quantization(_case_config):
                                    ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/'
                                     'BahdanauAttention[attn]'])
 
-    compression_algo_builder_list = create_compression_algorithm_builders(config)
+    composite_builder = CompositeCompressionAlgorithmBuilder(config)
+    composite_builder.apply_to(compressed_model)
 
-    for builder in compression_algo_builder_list:
-        compressed_model = builder.apply_to(compressed_model)
     _ = compressed_model.commit_compression_changes()
     check_model_graph(compressed_model, 'gnmt_variable.dot', _case_config.graph_dir)
 
@@ -790,8 +789,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
     # pylint:disable=protected-access
-    compression_algo_builder = create_compression_algorithm_builders(config)[0]  # type: QuantizationBuilder
-    single_config_quantizer_setup = compression_algo_builder._get_quantizer_setup(compressed_model)
+    quantization_builder = CompositeCompressionAlgorithmBuilder(config).child_builders[0]  # type: QuantizationBuilder
+    single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
