@@ -173,27 +173,18 @@ class DepthWiseConvTestModel(nn.Module):
         return self.features(x)
 
 
-def check_fq_nodes(tmp_path, compression_ctrl):
+def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
     # Update scale tensors in the model
     quantizers = compression_ctrl.weight_quantizers.values()
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == 128
             assert quantizer.quantizer_module_ref.is_saturation_fix
-            if isinstance(quantizer.quantizer_module_ref, AsymmetricQuantizer):
-                assert quantizer.quantizer_module_ref.level_low == 0
-                assert quantizer.quantizer_module_ref.level_high == 127
-                quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
-                    5 * torch.rand_like(quantizer.quantizer_module_ref.input_range,
-                                        dtype=torch.float32, requires_grad=True))
-            elif isinstance(quantizer.quantizer_module_ref, SymmetricQuantizer):
-                assert quantizer.quantizer_module_ref.level_low == -64
-                assert quantizer.quantizer_module_ref.level_high == 63
-                quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
-                    5 * torch.rand_like(quantizer.quantizer_module_ref.scale,
-                                        dtype=torch.float32, requires_grad=True))
-            else:
-                assert 'Incorrect quantizer type'
+            assert quantizer.quantizer_module_ref.level_low == -64
+            assert quantizer.quantizer_module_ref.level_high == 63
+            quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
+                5 * torch.rand_like(quantizer.quantizer_module_ref.scale,
+                                    dtype=torch.float32, requires_grad=True))
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
@@ -202,75 +193,116 @@ def check_fq_nodes(tmp_path, compression_ctrl):
 
     # Find weight tensors in ONNX model
     fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
+    # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
 
-    # TODO:Change magic constants
-    level_high_ratio = 127. / 63.
-    level_positive_negative_ratio = 64. / 63.
+    level_high_ratio = (2 * quantizer.quantizer_module_ref.level_high + 1) / quantizer.quantizer_module_ref.level_high
+    level_positive_negative_ratio = abs(quantizer.quantizer_module_ref.level_low /
+                                        quantizer.quantizer_module_ref.level_high)
 
-    if isinstance(quantizer.quantizer_module_ref, AsymmetricQuantizer):
-        for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
-            tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
-            quantizer_weight, quantizer_input_range, quantizer_input_low = quantizer.quantized_module.weight.detach().numpy(), \
-                                                                           quantizer.quantizer_module_ref.input_range, \
-                                                                           quantizer.quantizer_module_ref.input_low
+    for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+        tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+        quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
+                                            quantizer.quantizer_module_ref.scale
 
-            input_low = -level_positive_negative_ratio * quantizer_input_range.detach().numpy()
-            input_high = quantizer_input_range.detach().numpy()
-            # Clamp weight tensors as we do in exporting
-            if quantizer_weight.shape[0] > 1:
-                for i in range(quantizer_weight.shape[0]):
-                    try:
-                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
-                    except TypeError:
-                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
-                                                      a_max=input_high[i].item())
-            else:
-                quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+        input_low = -level_positive_negative_ratio * quantizer_scale.detach().numpy()
+        input_high = quantizer_scale.detach().numpy()
+        # Clamp weight tensors as we do in exporting
+        if quantizer_weight.shape[0] > 1:
+            for i in range(quantizer_weight.shape[0]):
+                try:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
+                except TypeError:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
+                                                  a_max=input_high[i].item())
+        else:
+            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
 
-            assert np.allclose(tensor_weight, quantizer_weight)
-            #TODO: change magic const
-            assert np.allclose(255. / 127. * quantizer_input_range.detach().numpy(), input_output_high)
-            assert np.allclose(quantizer_input_low.detach().numpy(),
-                               input_output_low)
+        assert np.allclose(tensor_weight, quantizer_weight)
+        assert np.allclose(level_high_ratio * quantizer_scale.detach().numpy(), input_output_high)
+        assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
+                           input_output_low)
 
 
-    elif isinstance(quantizer.quantizer_module_ref, SymmetricQuantizer):
-        for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
-            tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
-            quantizer_weight, quantizer_scale = quantizer.quantized_module.weight.detach().numpy(), \
-                                                quantizer.quantizer_module_ref.scale
+def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
+    # Update scale tensors in the model
+    quantizers = compression_ctrl.weight_quantizers.values()
+    with torch.no_grad():
+        for quantizer in quantizers:
+            assert quantizer.quantizer_module_ref.levels == 128
+            assert quantizer.quantizer_module_ref.is_saturation_fix
+            assert quantizer.quantizer_module_ref.level_low == 0
+            assert quantizer.quantizer_module_ref.level_high == 127
+            quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
+                5 * torch.rand_like(quantizer.quantizer_module_ref.input_range,
+                                    dtype=torch.float32, requires_grad=True))
 
-            input_low = -level_positive_negative_ratio * quantizer_scale.detach().numpy()
-            input_high = quantizer_scale.detach().numpy()
-            # Clamp weight tensors as we do in exporting
-            if quantizer_weight.shape[0] > 1:
-                for i in range(quantizer_weight.shape[0]):
-                    try:
-                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
-                    except TypeError:
-                        quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
-                                                      a_max=input_high[i].item())
-            else:
-                quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+    onnx_checkpoint_path = str(tmp_path / 'model.onnx')
+    compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
 
-            assert np.allclose(tensor_weight, quantizer_weight)
-            assert np.allclose(level_high_ratio * quantizer_scale.detach().numpy(), input_output_high)
-            assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale.detach().numpy(),
-                               input_output_low)
+    onnx_model = onnx.load(onnx_checkpoint_path)
+
+    # Find weight tensors in ONNX model
+    fq_nodes = get_nodes_by_type(onnx_model, 'FakeQuantize')
+    # pylint:disable=no-member
+    inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
+
+    level_high_ratio = (2 * quantizer.quantizer_module_ref.level_high + 1) / quantizer.quantizer_module_ref.level_high
+
+    for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
+        tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
+        quantizer_weight = quantizer.quantized_module.weight.detach().numpy()
+        quantizer_input_range = quantizer.quantizer_module_ref.input_range
+        quantizer_input_low = quantizer.quantizer_module_ref.input_low
+
+        input_low = quantizer_input_low.detach().numpy()
+        input_high = quantizer_input_range.detach().numpy()
+        # Clamp weight tensors as we do in exporting
+        if quantizer_weight.shape[0] > 1:
+            for i in range(quantizer_weight.shape[0]):
+                try:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i], a_max=input_high[i])
+                except TypeError:
+                    quantizer_weight[i] = np.clip(quantizer_weight[i], a_min=input_low[i].item(),
+                                                  a_max=input_high[i].item())
+        else:
+            quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
+
+        assert np.allclose(tensor_weight, quantizer_weight)
+        assert np.allclose(level_high_ratio * quantizer_input_range.detach().numpy(), input_output_high)
+        assert np.allclose(quantizer_input_low.detach().numpy(),
+                           input_output_low)
 
 
-def test_are_fq_exported_depthwise_per_channel_weights_tensors_clipped(tmp_path):
+def test_are_symmetric_fq_exported_depthwise_per_channel_weights_tensors_clipped(tmp_path):
     model = DepthWiseConvTestModel()
     nncf_config = get_config_for_export_mode(False)
     nncf_config.update({"input_info": {
         "sample_size": [1, 1, 20, 20]
     }})
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    check_fq_nodes(tmp_path, compression_ctrl)
+    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
 
 
-def test_are_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
+def test_are_asymmetric_fq_exported_depthwise_per_channel_weights_tensors_clipped(tmp_path):
+    model = DepthWiseConvTestModel()
+    nncf_config = get_config_for_export_mode(False)
+    nncf_config.update({"input_info": {
+        "sample_size": [1, 1, 20, 20]
+    }})
+    nncf_config.update({"compression": {
+        "algorithm": "quantization",
+        "export_to_onnx_standard_ops": False,
+        "weights": {
+            "mode": "asymmetric"
+        },
+    }
+    })
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
+
+
+def test_are_symmetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
     in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
     model = EightConvTestModel(in_out_ch)
     nncf_config = get_config_for_export_mode(False)
@@ -278,10 +310,10 @@ def test_are_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
         "sample_size": [1, 1, 20, 20]
     }})
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    check_fq_nodes(tmp_path, compression_ctrl)
+    are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
 
 
-def test_are_fq_exported_per_channel_assymetric_weights_tensors_clipped(tmp_path):
+def test_are_assymetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
     in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
     model = EightConvTestModel(in_out_ch)
     nncf_config = get_config_for_export_mode(False)
@@ -297,7 +329,7 @@ def test_are_fq_exported_per_channel_assymetric_weights_tensors_clipped(tmp_path
     }
     })
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    check_fq_nodes(tmp_path, compression_ctrl)
+    are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
 
 
 def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
@@ -327,6 +359,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
 
     # Find weight tensors in ONNX model
     quantize_nodes = get_nodes_by_type(onnx_model, 'QuantizeLinear')
+    # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in quantize_nodes]
 
     level_high_ratio = 127. / 63.
