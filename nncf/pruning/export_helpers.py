@@ -162,6 +162,7 @@ class Convolution(DefaultMetaOp):
             # In depthwise case prune output channels by input mask, here only fix for new number of input channels
             node_module.groups = new_num_channels
             node_module.in_channels = new_num_channels
+            old_num_clannels = int(node_module.weight.size(0))
         else:
             out_channels = node_module.weight.size(0)
             broadcasted_mask = bool_mask.repeat(out_channels).view(out_channels, bool_mask.size(0))
@@ -189,7 +190,7 @@ class Convolution(DefaultMetaOp):
         node_module.out_channels = int(torch.sum(mask))
         node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
 
-        if node_module.bias is not None and not nx_node['is_depthwise']:
+        if node_module.bias is not None:
             node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
 
         nncf_logger.info('Pruned Convolution {} by pruning mask. Old output filters number: {}, new filters number:'
