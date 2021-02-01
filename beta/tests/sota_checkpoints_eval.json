@@ -85,6 +85,16 @@
                     "diff_fp32_min": -1,
                     "diff_fp32_max": 1
                 },
+                "tf1_mobilenet_v2_1.0_224_sparsity_35": {
+                    "config": "examples/tensorflow/classification/configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json",
+                    "target": 71.73,
+                    "resume": "tf1_mobilenet_v2_1.0_224_sparsity_35",
+                    "metric_type": "Acc@1",
+                    "model_description": "tf1 mobilenet_v2_sparsity_35",
+                    "compression_description": "Sparsity 35",
+                    "diff_fp32_min": -1,
+                    "diff_fp32_max": 1
+                },
                 "resnet50": {
                     "config": "tests/tensorflow/data/configs/classification/resnet50_imagenet.json",
                     "target": 75.04,
