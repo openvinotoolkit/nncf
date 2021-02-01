@@ -396,7 +396,8 @@ class TestSotaCheckpoints:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             metric_type_from_json = True
             reference_metric_file_path = \
-                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_)
+                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_ + '_' +
+                                                                     eval_test_struct.dataset_type_)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
