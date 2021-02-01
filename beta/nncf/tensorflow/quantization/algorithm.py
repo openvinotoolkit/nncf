@@ -35,7 +35,7 @@ from beta.nncf.tensorflow.quantization.config import QuantizationMode
 from beta.nncf.tensorflow.quantization.config import QuantizationConstraints
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
-from beta.nncf.utils.utils import is_ignored
+from beta.nncf.tensorflow.utils.node import is_ignored
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
