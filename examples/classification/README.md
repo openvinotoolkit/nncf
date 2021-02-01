@@ -54,7 +54,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 #### Run the example in Colab environment
 
-To test the algorithms in Google Colab use `nncf_colab_demo.ipynb`.
+To test the algorithms in Google Colaboratory use the `nncf_colab_demo.ipynb` IPython notebook in this directory.
 
 ### Results for quantization
 
