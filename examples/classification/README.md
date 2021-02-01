@@ -52,6 +52,10 @@ python main.py -m test --config=configs/quantization/mobilenet_v2_imagenet_int8.
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
+#### Run the example in Colab environment
+
+To test the algorithms in Google Colab use `nncf_colab_demo.ipynb`.
+
 ### Results for quantization
 
 |Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch checkpoint|
