@@ -395,9 +395,12 @@ class TestSotaCheckpoints:
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             metric_type_from_json = True
+            dataset_type_postfix = ''
+            if MODE == 'TF2':
+                dataset_type_postfix = '_' + eval_test_struct.dataset_type_
             reference_metric_file_path = \
-                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_ + '_' +
-                                                                     eval_test_struct.dataset_type_)
+                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_ +
+                                                                     dataset_type_postfix)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
