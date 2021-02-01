@@ -102,6 +102,7 @@ _NB_: For launching example scripts in this repository, we recommend replacing t
 NNCF can be installed as a regular PyPI package via pip:
 ```
 sudo apt install python3-dev
+pip install --upgrade pip
 pip install nncf
 ```
 
