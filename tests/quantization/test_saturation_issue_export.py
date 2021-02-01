@@ -3,7 +3,6 @@ import onnx
 import onnxruntime as rt
 import torch
 import torch.nn as nn
-from onnx import numpy_helper
 
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, get_nodes_by_type, \
@@ -174,14 +173,17 @@ class DepthWiseConvTestModel(nn.Module):
 
 
 def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
+    level_high = 63
+    level_low = -64
+    levels = 128
     # Update scale tensors in the model
     quantizers = compression_ctrl.weight_quantizers.values()
     with torch.no_grad():
         for quantizer in quantizers:
-            assert quantizer.quantizer_module_ref.levels == 128
+            assert quantizer.quantizer_module_ref.levels == levels
             assert quantizer.quantizer_module_ref.is_saturation_fix
-            assert quantizer.quantizer_module_ref.level_low == -64
-            assert quantizer.quantizer_module_ref.level_high == 63
+            assert quantizer.quantizer_module_ref.level_low == level_low
+            assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
                 5 * torch.rand_like(quantizer.quantizer_module_ref.scale,
                                     dtype=torch.float32, requires_grad=True))
@@ -196,9 +198,8 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
     # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
 
-    level_high_ratio = (2 * quantizer.quantizer_module_ref.level_high + 1) / quantizer.quantizer_module_ref.level_high
-    level_positive_negative_ratio = abs(quantizer.quantizer_module_ref.level_low /
-                                        quantizer.quantizer_module_ref.level_high)
+    level_high_ratio = (2 * level_high + 1) / level_high
+    level_positive_negative_ratio = abs(level_low / level_high)
 
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
@@ -225,14 +226,17 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
 
 
 def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl):
+    level_high = 127
+    level_low = 0
+    levels = 128
     # Update scale tensors in the model
     quantizers = compression_ctrl.weight_quantizers.values()
     with torch.no_grad():
         for quantizer in quantizers:
-            assert quantizer.quantizer_module_ref.levels == 128
+            assert quantizer.quantizer_module_ref.levels == levels
             assert quantizer.quantizer_module_ref.is_saturation_fix
-            assert quantizer.quantizer_module_ref.level_low == 0
-            assert quantizer.quantizer_module_ref.level_high == 127
+            assert quantizer.quantizer_module_ref.level_low == level_low
+            assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
                 5 * torch.rand_like(quantizer.quantizer_module_ref.input_range,
                                     dtype=torch.float32, requires_grad=True))
@@ -247,8 +251,7 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, c
     # pylint:disable=no-member
     inputs = [get_all_inputs_for_graph_node(fq_node, onnx_model.graph) for fq_node in fq_nodes]
 
-    level_high_ratio = (2 * quantizer.quantizer_module_ref.level_high + 1) / quantizer.quantizer_module_ref.level_high
-
+    level_high_ratio = (2 * level_high + 1) / level_high
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
         tensor_weight, input_output_low, input_output_high = list(fq_parametres.values())
         quantizer_weight = quantizer.quantized_module.weight.detach().numpy()

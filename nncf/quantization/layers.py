@@ -444,7 +444,7 @@ class SymmetricQuantizer(BaseQuantizer):
             level_high = self.level_high
             if self.is_saturation_fix:
                 if self.scale_shape[0] > 1:
-                    for i, channel in enumerate(x):
+                    for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
                 else:
                     x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
@@ -582,12 +582,11 @@ class AsymmetricQuantizer(BaseQuantizer):
             level_high = self.level_high
             if self.is_saturation_fix:
                 if self.scale_shape[0] > 1:
-                    for i, channel in enumerate(x):
+                    for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
                 else:
                     x.data = torch.clamp(x, min=input_low.item(), max=input_high.item())
                 level_low = 2 * level_low
-                level_high = 2 * level_high + 1
                 level_high = 2 * level_high + 1
                 input_low, input_high = self._get_input_low_input_high(level_high / self.level_high * self.input_range,
                                                                        self.input_low,
