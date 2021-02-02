@@ -156,9 +156,6 @@ def get_sample_fn(sample_type, modes):
 def generate_config_params():
     config_params = []
     for sample_id, sample_type in enumerate(SAMPLE_TYPES):
-        # workaround to disable segmentation tests
-        if sample_type == 'segmentation':
-            continue
         config_paths, batch_sizes = CONFIGS[sample_type], GLOBAL_BATCH_SIZE[sample_type]
         dataset_names, dataset_types = zip(*DATASETS[sample_type])
 
