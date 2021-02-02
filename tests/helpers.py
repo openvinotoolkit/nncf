@@ -19,15 +19,15 @@ from copy import deepcopy
 from torch import nn
 from torch.nn import Module
 
+from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import CompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
-from nncf.model_creation import create_compressed_model, create_compression_algorithm_builders
+from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import get_all_modules_by_type
-
 
 def fill_conv_weight(conv, value):
     conv.weight.data.fill_(value)
@@ -190,8 +190,8 @@ def create_nncf_model_and_algo_builder(model: NNCFNetwork, config: NNCFConfig,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
     should_init = resuming_state_dict is None
-    compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
-    return compressed_model, compression_algo_builder_list
+    composite_builder = CompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    return compressed_model, composite_builder
 
 
 class MockModel(nn.Module):

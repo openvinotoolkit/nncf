@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from nncf.common.utils.logger import logger as nncf_logger
+
 TEST_ROOT = Path(__file__).parent.absolute()
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / 'examples'
@@ -124,3 +126,10 @@ def third_party(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
+
+
+@pytest.yield_fixture()
+def _nncf_caplog(caplog):
+    nncf_logger.propagate = True
+    yield caplog
+    nncf_logger.propagate = False

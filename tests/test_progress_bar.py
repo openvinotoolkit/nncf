@@ -14,17 +14,9 @@ import logging
 
 import pytest
 
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.progress_bar import ProgressBar
 
 TEST_RANGE = range(3)
-
-
-@pytest.yield_fixture()
-def _nncf_caplog(caplog):
-    nncf_logger.propagate = True
-    yield caplog
-    nncf_logger.propagate = False
 
 
 def test_can_print_by_default(_nncf_caplog):

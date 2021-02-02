@@ -21,7 +21,7 @@ import numpy
 from copy import copy
 from enum import Enum
 from functools import partial
-from typing import List
+from typing import List, Tuple
 
 import torch
 from torch import nn
@@ -278,6 +278,8 @@ class CompressionAlgorithmBuilder:
         """
         self.config = config
         self.should_init = should_init
+        self.ignored_scopes = None
+        self.target_scopes = None
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
@@ -294,12 +296,28 @@ class CompressionAlgorithmBuilder:
         """
         self._model = target_model  # type: NNCFNetwork
         insertion_commands = self._apply_to(target_model)
+        self._handle_frozen_layers()
 
         for command in insertion_commands:
             target_model.register_insertion_command(command)
 
         target_model.register_algorithm(self)
         return target_model
+
+    def _handle_frozen_layers(self):
+        scopes_of_frozen_layers = self._get_scopes_of_compressed_and_frozen_modules()
+        scopes_to_print = '\n'.join(scopes_of_frozen_layers)
+        if len(scopes_of_frozen_layers) > 0:
+            is_allowed, reason = self._are_frozen_layers_allowed()
+            if is_allowed:
+                nncf_logger.warning('{}, compressing them without tuning weights.\n'
+                               'Frozen layers:\n'
+                               '{}'.format(reason, scopes_to_print))
+            else:
+                raise RuntimeError(f'{reason}.\n'
+                                   f'Please unfreeze them or put into the Ignored Scope.\n'
+                                   f'Frozen Layers:\n'
+                                   f'{scopes_to_print}')
 
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         return []
@@ -328,6 +346,18 @@ class CompressionAlgorithmBuilder:
             if self._registered_name not in module.ignored_algorithms:
                 filtered_nncf_module_names_list.append(module.__name__)
         return filtered_nncf_module_names_list
+
+    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+        algo_name = self._registered_name.replace('_', ' ')
+        return False, f'Frozen layers are not allowed for {algo_name}'
+
+    def _get_scopes_of_compressed_and_frozen_modules(self) -> List[str]:
+        result = []
+        for scope, module in self._model.get_nncf_modules().items():
+            if not module.weight.requires_grad:
+                if should_consider_scope(str(scope), self.target_scopes, self.ignored_scopes):
+                    result.append(str(scope))
+        return result
 
 
 class StubCompressionScheduler(CompressionScheduler):
