@@ -262,7 +262,7 @@ def run(config):
                 scheduler=scheduler)
 
             eval_metric = model_builder.eval_metrics()
-            loss_fn = model_builder.build_loss_fn()
+            loss_fn = model_builder.build_loss_fn(compress_model)
             predict_post_process_fn = model_builder.post_processing
 
             checkpoint = tf.train.Checkpoint(model=compress_model, optimizer=optimizer)
