@@ -202,7 +202,7 @@ class TestShuffleUnit(nn.Module):
                  in_channels,
                  out_channels,
                  downsample):
-        super(TestShuffleUnit, self).__init__()
+        super().__init__()
         self.downsample = downsample
         mid_channels = out_channels // 2
 
