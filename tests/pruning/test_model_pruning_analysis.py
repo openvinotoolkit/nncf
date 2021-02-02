@@ -24,7 +24,8 @@ from nncf.pruning.model_analysis import NodesCluster, Clusterization, cluster_sp
 from nncf.pruning.pruning_node_selector import PruningNodeSelector
 from tests.helpers import create_compressed_model_and_algo_for_test, create_nncf_model_and_algo_builder
 from tests.pruning.helpers import PruningTestModelEltwise, get_basic_pruning_config, TestModelBranching, \
-    TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs
+    TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs, \
+    TestModelShuffleNetUnit, TestModelShuffleNetUnitDW
 
 
 # pylint: disable=protected-access
@@ -309,6 +310,24 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
                             'TestModelBranching/NNCFConv2d[conv3]': True,
                             'TestModelBranching/NNCFConv2d[conv4]': True,
                             'TestModelBranching/NNCFConv2d[conv5]': True},
+    ),
+    ModulePrunableTestStruct(
+        model=TestModelShuffleNetUnitDW,
+        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        is_module_prunable={'TestModelShuffleNetUnitDW/NNCFConv2d[conv]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv4]': False,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv5]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]': False,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv3]': True},
+    ),
+    ModulePrunableTestStruct(
+        model=TestModelShuffleNetUnit,
+        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        is_module_prunable={'TestModelShuffleNetUnit/NNCFConv2d[conv]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv3]': True},
     )
 ]
 
