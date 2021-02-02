@@ -37,6 +37,13 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
+        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
+                                                            "Directory must be empty or should not exist."
+                                                            "Metric keeps in "
+                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+                                                            "if param not specified"
+    )
+    parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
     )
     parser.addoption(
@@ -80,6 +87,11 @@ def sota_checkpoints_dir(request):
 @pytest.fixture(scope="module")
 def sota_data_dir(request):
     return request.config.getoption("--sota-data-dir")
+
+
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
 
 
 @pytest.fixture(scope="module")

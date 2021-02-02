@@ -2,6 +2,7 @@ import os
 import json
 import sys
 import csv
+import datetime
 from typing import Tuple, List, Optional
 
 import pytest
@@ -24,8 +25,6 @@ DIFF_TARGET_MIN_GLOBAL = -0.1
 DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
-
-METRICS_DUMP_PATH = PROJECT_ROOT / 'metrics_dump'
 
 OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
@@ -185,7 +184,7 @@ class TestSotaCheckpoints:
             writer.writerow({'model': filename, 'launcher': '-', 'device': '-', 'dataset': '-', 'tags': '-',
                              'metric_name': '-', 'metric_type': '-', 'metric_value': error_message})
 
-    def write_results_table(self, init_table_string):
+    def write_results_table(self, init_table_string, path):
         result_table = PrettyTable()
         result_table.field_names = init_table_string
         for key in self.row_dict:
@@ -220,7 +219,7 @@ class TestSotaCheckpoints:
                             i = '-'
                         with tag('td'):
                             text(i)
-        f = open('results.html', 'w')
+        f = open(path / 'results.html', 'w')
         f.write(doc.getvalue())
         f.close()
 
@@ -343,8 +342,8 @@ class TestSotaCheckpoints:
             pytest.skip('Path to datasets is not set')
         test = "eval"
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-        metrics_dump_file_path = METRICS_DUMP_PATH / metric_file_name
-        log_dir = METRICS_DUMP_PATH / "logs"
+        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
+        log_dir = pytest.metrics_dump_path / "logs"
         cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
                                             dataset=sota_data_dir,
                                             data_name=eval_test_struct.dataset_name_,
@@ -370,7 +369,8 @@ class TestSotaCheckpoints:
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             metric_type_from_json = True
-            reference_metric_file_path = METRICS_DUMP_PATH / self.get_metric_file_name(eval_test_struct.reference_)
+            reference_metric_file_path = pytest.metrics_dump_path / \
+                                         self.get_metric_file_name(eval_test_struct.reference_)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
@@ -522,13 +522,26 @@ def openvino_preinstall(openvino):
 
 
 @pytest.fixture(autouse=True, scope="class")
+def make_metrics_dump_path(metrics_dump_dir):
+    if pytest.metrics_dump_path is None:
+        data = datetime.datetime.now()
+        pytest.metrics_dump_path = PROJECT_ROOT / "test_results" / "metrics_dump_" \
+            f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+    else:
+        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
+    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
+                                    f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
+    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
+
+
+@pytest.fixture(autouse=True, scope="class")
 def results(sota_data_dir):
     yield
     if sota_data_dir:
-        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=METRICS_DUMP_PATH)
+        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
         if Tsc.test == "eval":
             header = ["Model", "Metrics type", "Expected", "Measured", "Reference FP32", "Diff FP32", "Diff Expected",
                       "Error"]
         else:
             header = ["Model", "Metrics type", "Expected", "Measured", "Diff Expected", "Error"]
-        Tsc().write_results_table(header)
+        Tsc().write_results_table(header, pytest.metrics_dump_path)
