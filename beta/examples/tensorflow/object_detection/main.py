@@ -34,6 +34,7 @@ from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
+from beta.examples.tensorflow.common.utils import write_metrics
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
@@ -290,6 +291,9 @@ def run(config):
     print_statistics(compression_ctrl.statistics())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
     logger.info('Validation metric = {}'.format(metric_result))
+
+    if config.metrics_dump is not None:
+        write_metrics(metric_result['AP'], config.metrics_dump)
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)
