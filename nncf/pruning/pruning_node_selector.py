@@ -195,11 +195,10 @@ class PruningNodeSelector:
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                              " this scope is one of the last convolutions".format(node_scope_str)
             prune = False
-        elif is_grouped_conv(node):
-            if not is_depthwise_conv(node):
-                msg = "Ignored adding Weight Pruner in scope: {} because" \
-                      " this scope is grouped convolution".format(node_scope_str)
-                prune = False
+        elif is_grouped_conv(node) and not is_depthwise_conv(node):
+            msg = "Ignored adding Weight Pruner in scope: {} because" \
+                  " this scope is grouped convolution".format(node_scope_str)
+            prune = False
         elif not self._prune_downsample_convs and is_conv_with_downsampling(node):
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                              " this scope is convolution with downsample".format(node_scope_str)

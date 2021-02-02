@@ -53,6 +53,11 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, 
     fill_bias(conv, bias_init)
     return conv
 
+def create_depthwise_conv(channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
+    conv = nn.Conv2d(channels, channels, kernel_size, padding=padding, stride=stride, groups=channels)
+    fill_conv_weight(conv, weight_init)
+    fill_bias(conv, bias_init)
+    return conv
 
 def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
     conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
