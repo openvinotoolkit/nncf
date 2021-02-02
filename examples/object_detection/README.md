@@ -23,6 +23,9 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 It may take a few epochs to get the baseline accuracy results.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
+- Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful
+ if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
+om scratch.
 
 #### Validate your model checkpoint
 To estimate the test scores of your model checkpoint use the following command:
