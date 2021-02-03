@@ -26,11 +26,12 @@ class NNCFOperation:
     The abstract class represents main building block for adding compression
     extensions to a model.
     """
-    def __init__(self):
+    def __init__(self, trainable=False):
         """
         Initializes internal NNCF operation state
         """
         self._call_pre_hooks = OrderedDict()
+        self.trainable = trainable
 
     def build(self, input_shape, input_type, name, layer):
         """
