@@ -24,7 +24,8 @@ from nncf.config import product_dict
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config_op_names import HWConfigOpName
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
+from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer
+from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
 from nncf.common.os import safe_open
 
 
@@ -148,7 +149,7 @@ class HWConfig(list):
         raise RuntimeError("Invalid quantization granularity specified in HW config")
 
     @staticmethod
-    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict, for_weights=False):
+    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -170,11 +171,10 @@ class HWConfig(list):
                     "Invalid value of quantizer parameter `level_high`.\
                          The parameter must be consistent with other parameters!"
 
-        return QuantizerConfig(bits=bits,
+        return QuantizerConfig(num_bits=bits,
                                mode=mode,
                                per_channel=is_per_channel,
-                               signedness_to_force=signedness_to_force,
-                               is_weights=for_weights)
+                               signedness_to_force=signedness_to_force)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
@@ -207,7 +207,7 @@ class HWConfig(list):
             qconf_list_with_possible_duplicates = []
             for hw_config_qconf_dict in allowed_qconfs:
                 qconf_list_with_possible_duplicates.append(
-                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
+                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict))
 
             qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 

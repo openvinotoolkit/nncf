@@ -33,7 +33,7 @@ from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
 from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
@@ -605,7 +605,7 @@ class HAWQDescriptor(TestCaseDescriptor):
         bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
         assert len(bitwidth_list) == self.n_weight_quantizers
         # with default compression ratio = 1.5 all precisions should be different from the default one
-        assert set(bitwidth_list) != {QuantizerConfig().bits}
+        assert set(bitwidth_list) != {QuantizerConfig().num_bits}
 
         init_data_loader = self.hessian_trace_estimator_spy.call_args[0][5]
         expected_batch_size = self.batch_size_init if self.batch_size_init else self.batch_size
@@ -638,7 +638,7 @@ class AutoQDescriptor(TestCaseDescriptor):
     def validate_spy(self):
         ctrl = self.commit_compression_changes_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
-        assert set(final_bits) != {QuantizerConfig().bits}
+        assert set(final_bits) != {QuantizerConfig().num_bits}
         assert all([bit in AutoQDescriptor.BITS for bit in final_bits])
 
 

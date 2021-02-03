@@ -57,7 +57,7 @@ class PTCompositeCompressionAlgorithmBuilder(
         CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
     def __init__(self, config: 'NNCFConfig', should_init: bool = True):
         from nncf import NNCFConfig
-        from nncf.quantization.structs import QuantizerSetupType
+        from nncf.common.quantization.structs import QuantizerSetupType
         from nncf.model_creation import get_compression_algorithm
 
         super().__init__(config, should_init)

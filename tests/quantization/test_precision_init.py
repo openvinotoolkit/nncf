@@ -48,6 +48,7 @@ from nncf.dynamic_graph.context import ScopeElement
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
+from nncf.common.quantization.structs import QuantizerSetupType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.layers import QuantizerConfig
@@ -64,7 +65,6 @@ from nncf.quantization.precision_init.perturbations import Perturbations
 from nncf.quantization.precision_init.traces_order import TracesOrder
 from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.quantization.quantizer_id import WeightQuantizerId
-from nncf.quantization.structs import QuantizerSetupType
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type
 from nncf.utils import safe_thread_call
@@ -276,7 +276,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
     quantizer_switcher.enable_quantizers()
     model.rebuild_graph()
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
-    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model, all_quantizers_per_full_scope,
+    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model,
                                             groups_of_adjacent_quantizers)
     check_graph(graph, path_to_dot, graph_dir, sort_dot_graph=False)
 
@@ -846,8 +846,8 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
 def test_check_hawq_dump(mocker, tmp_path):
     tensor1 = torch.Tensor([1])
     tensor2 = torch.Tensor([2])
-    qconf1 = QuantizerConfig(bits=2)
-    qconf2 = QuantizerConfig(bits=4)
+    qconf1 = QuantizerConfig(num_bits=2)
+    qconf2 = QuantizerConfig(num_bits=4)
     id_ = 0
     quantizer_configurations = [[qconf1, qconf1], [qconf2, qconf2]]
     flops_per_config = [tensor1.item(), tensor2.item()]
@@ -876,7 +876,7 @@ def test_check_hawq_dump(mocker, tmp_path):
                                  quantizer_configurations,
                                  [weight_observers, weight_observers],
                                  traces_per_layer,
-                                 [qconf1.bits, qconf2.bits])
+                                 [qconf1.num_bits, qconf2.num_bits])
 
     hawq_debugger.dump_metric_MB(configuration_metric)
     hawq_debugger.dump_metric_flops(configuration_metric, flops_per_config, choosen_config_index)

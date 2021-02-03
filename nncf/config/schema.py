@@ -101,9 +101,6 @@ QUANTIZER_CONFIG_PROPERTIES = {
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
                                           "differing signs, will reset to performing signed quantization instead."),
-    "logarithm_scale": with_attributes(_BOOLEAN,
-                                       description="Whether to use log of scale as optimized parameter"
-                                                   " instead of scale itself."),
     "per_channel": with_attributes(_BOOLEAN,
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
@@ -115,12 +112,16 @@ IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to 
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
                             " - functions as a 'denylist'. Optional."
 
+
 QUANTIZER_GROUP_PROPERTIES = {
     **QUANTIZER_CONFIG_PROPERTIES,
     "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
-                                     description=TARGET_SCOPES_DESCRIPTION)
+                                     description=TARGET_SCOPES_DESCRIPTION),
+    "logarithm_scale": with_attributes(_BOOLEAN,
+                                       description="Whether to use log of scale as optimized parameter"
+                                                   " instead of scale itself."),
 }
 
 WEIGHTS_GROUP_SCHEMA = {

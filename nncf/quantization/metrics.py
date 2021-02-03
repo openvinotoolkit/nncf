@@ -97,10 +97,10 @@ class NetworkQuantizationShareMetric(BaseMetric):
             for p in self.params_bits_stat:
                 self.stat[h][p] = 0
 
-        for quantizer in self._all_quantizations.values():  # type: BaseQuantizer
+        for qid, quantizer in self._all_quantizations.items():  # type: Tuple[QuantizerId, BaseQuantizer]
             num_bits = quantizer.num_bits
             self.stat[self.TOTAL_RATIO_STR][num_bits] += 1
-            type_ = self.WEIGHTS_RATIO_STR if quantizer.is_weights else self.ACTIVATIONS_RATIO_STR
+            type_ = self.WEIGHTS_RATIO_STR if qid in self.weights_quantizers else self.ACTIVATIONS_RATIO_STR
             self.stat[type_][num_bits] += 1
             if quantizer.per_channel:
                 self.stat[type_][self.PER_CHANNEL_STR] += 1
@@ -377,13 +377,24 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 if node[self.IS_MERGED_GRAPH_ATTR]:
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
                     scope_str = str(last_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-                    if scope_str in self._compressed_model.activation_quantizers:
+                    matched = False
+                    for aq_key in self._compressed_model.activation_quantizers.keys():
+                        if scope_str in aq_key:
+                            matched = True
+                            break
+                    if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         self._marking_edges(merged_original_graph, node_key, queue, False)
                 else:
                     scope_str = str(node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-                    if scope_str in self._compressed_model.activation_quantizers:
+
+                    matched = False
+                    for aq_key in self._compressed_model.activation_quantizers.keys():
+                        if scope_str in aq_key:
+                            matched = True
+                            break
+                    if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True

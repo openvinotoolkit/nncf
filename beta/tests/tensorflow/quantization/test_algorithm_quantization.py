@@ -24,11 +24,10 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.quantization import FakeQuantize
 from beta.nncf.tensorflow.quantization.algorithm import QuantizationController
-from beta.nncf.tensorflow.quantization.config import QuantizationMode
-from beta.nncf.tensorflow.quantization.config import QuantizerConfig
-from beta.nncf.tensorflow.quantization.quantizers import Quantizer
+from beta.nncf.tensorflow.quantization.quantizers import Quantizer, TFQuantizerSpec
 from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model
+from nncf.common.quantization.structs import QuantizationMode
 
 
 def get_basic_quantization_config(model_size=4):
@@ -53,14 +52,14 @@ def get_basic_asym_quantization_config(model_size=4):
     return config
 
 
-def compare_qconfigs(config: QuantizerConfig, quantizer):
-    assert config.num_bits == quantizer.num_bits
-    assert config.per_channel == quantizer.per_channel
-    assert config.narrow_range == quantizer.narrow_range
-    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATONS.get(config.mode))
-    if config.mode == QuantizationMode.SYMMETRIC:
+def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
+    assert qspec.num_bits == quantizer.num_bits
+    assert qspec.per_channel == quantizer.per_channel
+    assert qspec.narrow_range == quantizer.narrow_range
+    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATONS.get(qspec.mode))
+    if qspec.mode == QuantizationMode.SYMMETRIC:
         # pylint: disable=protected-access
-        assert config.signed == quantizer._initial_signedness
+        assert qspec.signedness_to_force == quantizer.signedness_to_force
 
 
 def get_quantizers(model):
@@ -91,21 +90,21 @@ def test_quantization_configs__with_defaults():
                     if isinstance(op, Quantizer):
                         weight_quantizers.append(op)
 
-    ref_weight_qconfig = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
-                                         num_bits=8,
-                                         signed=None,
-                                         per_channel=False,
-                                         narrow_range=True)
+    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                       num_bits=8,
+                                       signedness_to_force=None,
+                                       per_channel=False,
+                                       narrow_range=True)
     for wq in weight_quantizers:
-        compare_qconfigs(ref_weight_qconfig, wq)
+        compare_qspecs(ref_weight_qspec, wq)
 
-    ref_activation_qconfig = QuantizerConfig(mode=QuantizationMode.SYMMETRIC,
-                                             num_bits=8,
-                                             signed=None,
-                                             per_channel=False,
-                                             narrow_range=False)
+    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=None,
+                                           per_channel=False,
+                                           narrow_range=False)
     for wq in activation_quantizers:
-        compare_qconfigs(ref_activation_qconfig, wq)
+        compare_qspecs(ref_activation_qspec, wq)
 
 
 def test_quantization_configs__custom():
@@ -129,21 +128,21 @@ def test_quantization_configs__custom():
     assert isinstance(compression_ctrl, QuantizationController)
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
 
-    ref_weight_qconfig = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
-                                         num_bits=4,
-                                         signed=None,
-                                         per_channel=True,
-                                         narrow_range=True)
+    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.ASYMMETRIC,
+                                       num_bits=4,
+                                       signedness_to_force=None,
+                                       per_channel=True,
+                                       narrow_range=True)
     for wq in weight_quantizers:
-        compare_qconfigs(ref_weight_qconfig, wq)
+        compare_qspecs(ref_weight_qspec, wq)
 
-    ref_activation_qconfig = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
-                                             num_bits=4,
-                                             signed=True,
-                                             per_channel=False,
-                                             narrow_range=False)
+    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.ASYMMETRIC,
+                                           num_bits=4,
+                                           signedness_to_force=True,
+                                           per_channel=False,
+                                           narrow_range=False)
     for wq in activation_quantizers:
-        compare_qconfigs(ref_activation_qconfig, wq)
+        compare_qspecs(ref_activation_qspec, wq)
 
 
 def get_quantize_inputs_test_model(input_shapes):

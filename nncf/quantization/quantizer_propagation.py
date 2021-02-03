@@ -20,7 +20,7 @@ import warnings
 from copy import deepcopy
 
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
@@ -29,12 +29,12 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.nncf_network import InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, \
-    InsertionPoint, InsertionInfo
-from nncf.quantization.structs import QuantizationConstraints, QuantizerGroup, QuantizableModule, \
-    QuantizersBetweenQuantizableLayers
+    InsertionPoint
+from nncf.quantization.structs import QuantizersBetweenQuantizableLayers
+from nncf.common.quantization.structs import QuantizationConstraints, QuantizerGroup, QuantizableModule
 from nncf.quantization.quantizer_setup import QuantizationPointId, MultiConfigQuantizationPoint, \
     SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode
+from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
 from nncf.utils import in_scope_list
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -889,7 +889,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             ds_config = ds_configs[0]
             us_config = us_configs[0]
             is_redundant = True
-            is_redundant = is_redundant and (ds_config.bits == us_config.bits)
+            is_redundant = is_redundant and (ds_config.num_bits == us_config.num_bits)
 
             # Avoid asymmetric quantization if a symmetrically quantized tensor arrived
             is_redundant = is_redundant and ((ds_config.mode == us_config.mode) or (
@@ -1208,7 +1208,7 @@ class QuantizationProposal:
                     def is_final_qconfig_compatible_to_initial(initial_qconfig: QuantizerConfig):
                         return final_qconfig.per_channel == initial_qconfig.per_channel and \
                                final_qconfig.mode == initial_qconfig.mode and \
-                               final_qconfig.bits == initial_qconfig.bits and \
+                               final_qconfig.num_bits == initial_qconfig.num_bits and \
                                (final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force or
                                 initial_qconfig.signedness_to_force is None or
                                 final_qconfig.signedness_to_force is None)
@@ -1239,7 +1239,7 @@ class QuantizerPropagationSolver:
        capabilities."""
 
     DEFAULT_QUANTIZATION_TYPES = [QuantizerConfig(
-        bits=8,
+        num_bits=8,
         mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=None,
         per_channel=False)]
@@ -1254,7 +1254,7 @@ class QuantizerPropagationSolver:
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
                  run_consistency_checks: bool = False):
         self._quantizers_between_quantizable_layers_per_key = {}  # type: Dict[str, QuantizersBetweenQuantizableLayers]
-        self.default_qlobal_qconfig_list = default_qconfig_list
+        self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
         self._debug_interface = debug_interface
         self._propagation_strategy = propagation_strategy  # TODO: determine from config
@@ -1379,24 +1379,6 @@ class QuantizerPropagationSolver:
 
     def get_num_potential_quantized_activations(self) -> int:
         return self._num_potential_quantized_activations
-
-    def _get_insertion_info_for_propagating_quantizer(self, prop_quant: PropagatingQuantizer,
-                                                      quant_prop_graph: QuantizerPropagationStateGraph) -> \
-            InsertionInfo:
-
-        insertion_point = quant_prop_graph.get_insertion_point_for_propagating_quantizer(prop_quant)
-        in_port_id = None
-        if insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
-            in_port_id = insertion_point.input_port_id
-
-        op_exec_context = OperationExecutionContext(
-            operator_name=insertion_point.ia_op_exec_context.operator_name,
-            scope_in_model=insertion_point.ia_op_exec_context.scope_in_model,
-            call_order=insertion_point.ia_op_exec_context.call_order,
-            tensor_metas=[None]  # TODO: fix this, rethink InsertionInfo here and elsewhere
-        )
-        insertion_info = InsertionInfo(op_exec_context, in_port_id=in_port_id)
-        return insertion_info
 
     def _handle_quantizer_merge(self, waiting_pqs: Set[PropagatingQuantizer],
                                 quant_prop_graph: QuantizerPropagationStateGraph,
@@ -1628,8 +1610,8 @@ class QuantizerPropagationSolver:
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                     for op_meta in meta_list:  # type: OperatorMetatype
-                        if self.default_qlobal_qconfig_list is not None:
-                            retval[op_meta] = deepcopy(self.default_qlobal_qconfig_list)
+                        if self.default_global_qconfig_list is not None:
+                            retval[op_meta] = deepcopy(self.default_global_qconfig_list)
                         else:
                             retval[op_meta] = deepcopy(self.DEFAULT_QUANTIZATION_TYPES)
                 elif trait == QuantizationTrait.NON_QUANTIZABLE:
@@ -2042,9 +2024,9 @@ class QuantizerPropagationSolver:
 
             def __lt__(self, other: 'QConfigComparator'):
                 # Prefer higher bitwidths, per-tensor, symmetrical
-                if self.qconfig.bits > other.qconfig.bits:
+                if self.qconfig.num_bits > other.qconfig.num_bits:
                     return True
-                if self.qconfig.bits < other.qconfig.bits:
+                if self.qconfig.num_bits < other.qconfig.num_bits:
                     return False
                 if self.qconfig.per_channel is False and other.qconfig.per_channel is True:
                     return True
