@@ -2,3 +2,4 @@ yattag>=1.14.0
 prettytable>=2.0.0
 # Required for test_algo_common not to fail because of google namespace issues
 protobuf==3.14.0
+onnx>=1.8.0
