@@ -40,7 +40,7 @@
                 }
             },
             "min_level": 2,
-            "max_level": 6,
+            "max_level": 2,
             "multilevel_features": "fpn",
             "fpn_params": {
                 "fpn_feat_dims": 256,
