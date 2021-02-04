@@ -208,7 +208,7 @@ class BaseQuantizer(nn.Module):
     def _prepare_fq_export_quantization(self, x: torch.Tensor):
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
-            levels = level_high - level_low
+            levels = level_high - level_low + 1
         return x, levels, input_low, input_high
 
     def _prepare_qdq_export_quantization(self, x: torch.Tensor):
