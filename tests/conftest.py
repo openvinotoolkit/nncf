@@ -64,6 +64,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
     )
+    parser.addoption(
+        "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
+    )
+    parser.addoption(
+        "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -133,3 +139,13 @@ def _nncf_caplog(caplog):
     nncf_logger.propagate = True
     yield caplog
     nncf_logger.propagate = False
+
+
+@pytest.fixture(scope="module")
+def onnx_dir(request):
+    return request.config.getoption("--onnx-dir")
+
+
+@pytest.fixture(scope="module")
+def ov_config_dir(request):
+    return request.config.getoption("--ov-config-dir")

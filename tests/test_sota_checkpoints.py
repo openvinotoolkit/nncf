@@ -26,6 +26,7 @@ DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
+ONNX_PATH = '/home/jenkins/workspace/NNCF/manual/Convert_ONNX/src/onnx/'
 OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
 if not os.path.exists(OPENVINO_DIR):
     OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
@@ -146,10 +147,17 @@ class TestSotaCheckpoints:
         err_string = "\n".join(error_lines) if error_lines else None
         return exit_code, err_string
 
+    # pylint:disable=unused-variable
     @staticmethod
     def get_onnx_model_file_path(name):
-        onnx_name = PROJECT_ROOT / "onnx" / str(name + ".onnx")
-        return onnx_name
+        onnx_name = str(name + ".onnx")
+        path_to_model = None
+        for root, dirs, files in os.walk('/'):
+            if onnx_name in files:
+                path_to_model = os.path.join(root, onnx_name)
+                print("Found ", onnx_name)
+                break
+        return path_to_model
 
     @staticmethod
     def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
@@ -335,6 +343,7 @@ class TestSotaCheckpoints:
                                              model_name))
                     train_ids_list.append(model_name)
 
+    @pytest.mark.eval
     @pytest.mark.parametrize("eval_test_struct", param_list,
                              ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
@@ -409,17 +418,17 @@ class TestSotaCheckpoints:
         assert is_accuracy_within_thresholds
 
     # pylint:disable=too-many-branches
+    @pytest.mark.convert
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_openvino_eval(self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir, ov_data_dir,
-                           eval_test_struct: EvalRunParamsStruct, onnx_type):
+    def test_convert_to_onnx(self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir,
+                             eval_test_struct: EvalRunParamsStruct, onnx_type):
         if not openvino:
             pytest.skip()
         os.chdir(PROJECT_ROOT)
         onnx_path = PROJECT_ROOT / 'onnx'
         q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
-        ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
-        q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
+
         with open(str(q_dq_config_path), 'w') as outfile:
             json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
         if not os.path.exists(onnx_path):
@@ -448,35 +457,47 @@ class TestSotaCheckpoints:
         else:
             onnx_cmd += " --pretrained"
         exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
+        if exit_code != 0 and err_str is not None:
+            pytest.fail(err_str)
+
+    @pytest.mark.oveval
+    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
+    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
+    def test_openvino_eval(self, eval_test_struct: EvalRunParamsStruct, ov_data_dir, onnx_type, openvino, onnx_dir,
+                           ov_config_dir):
+        if not openvino or not onnx_dir:
+            pytest.skip()
+        if ov_config_dir:
+            config_folder = ov_config_dir
+        else:
+            config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
+        ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
+        q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
+        mean_val = eval_test_struct.mean_val_
+        scale_val = eval_test_struct.scale_val_
+        if onnx_type == "q_dq":
+            onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
+            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                     " --mean_values={} --scale_values={} --output_dir {}" \
+                .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+        else:
+            onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
+            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
+                     " --mean_values={} --scale_values={} --output_dir {}" \
+                .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
+        exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
         if exit_code == 0 and err_str is None:
-            mean_val = eval_test_struct.mean_val_
-            scale_val = eval_test_struct.scale_val_
             if onnx_type == "q_dq":
-                onnx_model = self.get_onnx_model_file_path(str("q_dq/" + eval_test_struct.model_name_))
-                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                         " --mean_values={} --scale_values={} --output_dir {}" \
-                    .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
+                ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
+                         "{}/q_dq_report.csv".format(config_folder, eval_test_struct.model_name_, ov_data_dir,
+                                                     q_dq_ir_model_folder, PROJECT_ROOT)
             else:
-                onnx_model = self.get_onnx_model_file_path(eval_test_struct.model_name_)
-                mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                         " --mean_values={} --scale_values={} --output_dir {}" \
-                    .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
-            exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
-            if exit_code == 0 and err_str is None:
-                config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
-                if onnx_type == "q_dq":
-                    ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                             "{}/q_dq_report.csv".format(config_folder, eval_test_struct.model_name_, ov_data_dir,
-                                                         q_dq_ir_model_folder, PROJECT_ROOT)
-                else:
-                    ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                             "{}/{config}.csv".format(config_folder, ov_data_dir,
-                                                      ir_model_folder, PROJECT_ROOT,
-                                                      config=eval_test_struct.model_name_)
-                exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
-                if exit_code != 0 or err_str is not None:
-                    pytest.fail(err_str)
-            else:
+                ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
+                         "{}/{config}.csv".format(config_folder, ov_data_dir,
+                                                  ir_model_folder, PROJECT_ROOT,
+                                                  config=eval_test_struct.model_name_)
+            exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
+            if exit_code != 0 or err_str is not None:
                 pytest.fail(err_str)
         else:
             pytest.fail(err_str)
@@ -510,8 +531,8 @@ Tsc = TestSotaCheckpoints
 
 
 @pytest.fixture(autouse=True, scope="class")
-def openvino_preinstall(openvino):
-    if openvino:
+def openvino_preinstall(ov_data_dir):
+    if ov_data_dir:
         subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
         subprocess.run("pip install scikit-image==0.17.2", check=True, shell=True)
         subprocess.run("{} setup.py install".format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
