@@ -92,17 +92,17 @@ class RBSparsityBuilder(CompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        sparsity_init = self.config.get("sparsity_init", 0)
-        return RBSparsityController(model, self.config.get('params', {}), sparsity_init)
+        return RBSparsityController(model, self.config.get('params', {}))
 
 
 class RBSparsityController(CompressionAlgorithmController):
     def __init__(self, target_model,
-                 params, sparsity_init):
+                 params):
         super().__init__(target_model)
         self._scheduler = None
         self._distributed = False
-        self.sparsity_init = sparsity_init
+        # TODO: Find out how to init sparsity properly
+        self.sparsity_init = params.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         sparsifyed_layers = collect_wrapped_layers(target_model)
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
@@ -114,7 +114,6 @@ class RBSparsityController(CompressionAlgorithmController):
             schedule_type = params.get("schedule", "exponential")
             scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
             self._scheduler = scheduler_cls(self, params)
-            self.set_sparsity_level(self.sparsity_init)
 
     def set_sparsity_level(self, sparsity_level, target_layer: NNCFWrapper = None):
         if target_layer is None:
@@ -122,12 +121,6 @@ class RBSparsityController(CompressionAlgorithmController):
             self._loss.set_target_sparsity_loss(sparsity_level)
         else:
             self._loss.set_target_sparsity_loss(sparsity_level, target_layer)
-
-    # TODO ask about CompressionLevel
-    def compression_level(self) -> CompressionLevel:
-        if self.scheduler is not None:
-            return self.scheduler.compression_level()
-        return CompressionLevel.NONE
 
     def freeze(self):
         self._loss.disable()
@@ -173,15 +166,15 @@ class RBSparsityController(CompressionAlgorithmController):
     '''
     def add_algo_specific_stats(self, stats):
         stats["target_sparsity_rate"] = self.loss.target_sparsity_rate
-        if self._distributed and self._check_sparsity_masks:
-            stats["masks_consistents"] = self.check_distributed_masks()
+        #if self._distributed and self._check_sparsity_masks:
+        #    stats["masks_consistents"] = self.check_distributed_masks()
         return stats
-
-    def set_sparsity_level_for_module(self, sparsity_level: float,
-                                      target_sparsified_module_info: List[SparseModuleInfo]):
-        # ???
-        sparse_op = target_sparsified_module_info[0].operand
-        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op)
+    # TODO: Ask about this piece of code
+    #def set_sparsity_level_for_module(self, sparsity_level: float,
+    #                                  target_sparsified_module_info: List[SparseModuleInfo]):
+    #    # ???
+    #    sparse_op = target_sparsified_module_info[0].operand
+    #    self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op)
 
     def get_sparsity_init(self):
         return self.sparsity_init

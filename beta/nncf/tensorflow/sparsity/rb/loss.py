@@ -28,7 +28,7 @@ class SparseLoss(CompressionLoss):
         self.current_sparsity = 0
         self.mean_sparse_prob = 0
 
-    def set_layers(self, sparse_layers):
+    def set_layers(self, sparse_layers: [NNCFWrapper]):
         self._sparse_layers = sparse_layers
 
     def disable(self):

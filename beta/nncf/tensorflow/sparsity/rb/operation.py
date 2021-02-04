@@ -24,6 +24,11 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
+
+    def __init__(self, trainable=True):
+        '''Setup trainable param'''
+        super().__init__(trainable=trainable)
+
     def build(self, input_shape, input_type, name, layer):
         if input_type is not InputType.WEIGHTS:
             raise ValueError(
@@ -41,12 +46,12 @@ class RBSparsifyingWeight(NNCFOperation):
             'mask': mask
         }
 
-    def call(self, layer_weights, previous_mask, _):
+    def call(self, layer_weights, mask, _):
         '''Apply rb sparsity mask to given weights
         :param layer_weights: target weights to sparsify
-        :param previous_mask: mask from previous training iteration
+        :param mask: rb sparsity mask
         :param _:'''
-        return apply_mask(layer_weights, calc_rb_binary_mask(previous_mask))
+        return apply_mask(layer_weights, calc_rb_binary_mask(mask['mask']))
 
     @staticmethod
     def loss(mask):

@@ -10,21 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import tensorflow as tf
-
-from beta.nncf.tensorflow.functions import logit
-
-
-@tf.custom_gradient
-def st_binary_mask(mask):
-    def grad(upstream):
-        return upstream
-    return tf.round(tf.math.sigmoid(mask)), grad
-
-
-def calc_rb_binary_mask(mask, eps=0.01):
-    # TODO: check in distributed mode (mirrored strategy)
-    uniform = tf.random.uniform(mask.shape, minval=0, maxval=1)
-    mask = mask + logit(tf.clip_by_value(uniform, eps, 1 - eps))
-    return st_binary_mask(mask)
