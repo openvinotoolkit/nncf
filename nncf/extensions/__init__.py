@@ -1,6 +1,8 @@
 import enum
 import torch
 
+import os
+
 from nncf.common.utils.registry import Registry
 
 EXTENSIONS = Registry('extensions')
@@ -22,8 +24,15 @@ def force_build_cpu_extensions():
     _force_build_extensions(ExtensionsType.CPU)
 
 
-def force_build_cuda_extensions():
+def force_build_cuda_extensions(arch_list):
+    """
+    arch_list can be one or more architectures, e.g. arch_list = ['3.5','5.2','6.0','6.1','7.0+PTX']
+    See cmake/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake
+    """
+    saved_env = os.environ.get('TORCH_CUDA_ARCH_LIST', '')
+    os.environ['TORCH_CUDA_ARCH_LIST'] = ';'.join(arch_list)
     _force_build_extensions(ExtensionsType.CUDA)
+    os.environ['TORCH_CUDA_ARCH_LIST'] = saved_env
 
 
 class CudaNotAvailableStub:

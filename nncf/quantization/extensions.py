@@ -34,9 +34,9 @@ CUDA_EXT_SRC_LIST = [
     os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu")
 ]
 
-
+print ('Registring Quantization extensions')
 @EXTENSIONS.register()
-class QuanizedFunctionsCPULoader:
+class QuantizedFunctionsCPULoader:
     @staticmethod
     def extension_type():
         return ExtensionsType.CPU
@@ -59,7 +59,7 @@ class QuantizedFunctionsCUDALoader:
                     verbose=False)
 
 
-QuantizedFunctionsCPU = QuanizedFunctionsCPULoader.load()
+QuantizedFunctionsCPU = QuantizedFunctionsCPULoader.load()
 
 if torch.cuda.is_available():
     QuantizedFunctionsCUDA = QuantizedFunctionsCUDALoader.load()
