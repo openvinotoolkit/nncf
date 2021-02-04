@@ -201,7 +201,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
 
             if step % print_freq == 0:
                 time = timer.toc(average=False)
-                logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
+                logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
                 timer.tic()
 
