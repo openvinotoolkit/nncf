@@ -390,8 +390,9 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         else:
             quantizer_weight = np.clip(quantizer_weight, a_min=input_low.item(), a_max=input_high.item())
 
-        if len(quantizer_scale.shape):
-            quantizer_scale = quantizer_scale[0]
+        if not quantizer_scale.shape:
+            if len(quantizer_scale.shape):
+                quantizer_scale = quantizer_scale[0]
         assert np.allclose(onnx_tensor_weight, quantizer_weight)
         assert np.allclose(level_high_ratio * quantizer_scale, onnx_input_output_high)
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)

@@ -237,8 +237,7 @@ class BaseQuantizer(nn.Module):
                     return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
                 raise RuntimeError("PyTorch export to ONNX using QuantizeLinear-DequantizeLinear "
                                    "doesn't support per channel quantization")
-            else:
-                return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+            return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
         raise RuntimeError('Unknown export mode')
 
     def extra_repr(self):
@@ -593,7 +592,7 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                        self.levels,
                                                                        self.eps)
 
-        return x, level_low, level_high, input_low, input_high
+        return x, level_high, level_low, input_low, input_high
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(num_bits=self.num_bits,
