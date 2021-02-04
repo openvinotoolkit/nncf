@@ -160,7 +160,7 @@ No need to overuse nested local functions or classes and inner classes.
 
 - Inner classes are fine when it creates more readable and simple code.
 
-- Do not nest a function just to hide it from users of a module. Instead, prefix its name with an _ at the module 
+- Do not nest a function just to hide it from users of a module. Instead, prefix its name with an `_` at the module 
   level so that it can still be accessed by tests.
   ```Python
   # Wrong:
@@ -500,17 +500,18 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
     the model's state_dict parameters while discarding irrelevant prefixes added during wrapping
     in NNCFNetwork or DataParallel/DistributedDataParallel objects, and load the matched parameters
     from the state_dict_to_load into the model's state dict.
-    
+
     :param model: The target module for the state_dict_to_load to be loaded to.
     :param state_dict_to_load: A state dict containing the parameters to be loaded into the model.
-    :param is_resume: Determines the behavior when the function cannot do a successful parameter match
-    when loading. If True, the function will raise an exception if it cannot match the state_dict_to_load
-    parameters to the model's parameters (i.e. if some parameters required by model are missing in
-    state_dict_to_load, or if state_dict_to_load has parameters that could not be matched to model parameters,
-    or if the shape of parameters is not matching). If False, the exception won't be raised.
-    Usually is_resume is specified as False when loading uncompressed model's weights into the model with
-    compression algorithms already applied, and as True when loading a compressed model's weights into the model
-    with compression algorithms applied to evaluate the model.
+    :param is_resume: Determines the behavior when the function cannot do a successful parameter 
+        match when loading. If True, the function will raise an exception if it cannot match 
+        the state_dict_to_load parameters to the model's parameters (i.e. if some parameters required 
+        by model are missing in state_dict_to_load, or if state_dict_to_load has parameters that 
+        could not be matched to model parameters, or if the shape of parameters is not matching). 
+        If False, the exception won't be raised. Usually is_resume is specified as False when loading 
+        uncompressed model's weights into the model with compression algorithms already applied, and 
+        as True when loading a compressed model's weights into the model with compression algorithms 
+        applied to evaluate the model.
     :return: The number of state_dict_to_load entries successfully matched and loaded into model.
     """
 ```
