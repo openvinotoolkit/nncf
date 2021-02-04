@@ -233,7 +233,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
 
-        if batch_idx % print_freq:
+        if batch_idx % print_freq == 0:
             time = timer.toc(average=False)
             logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
             timer.tic()
