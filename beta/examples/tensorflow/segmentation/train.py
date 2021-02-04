@@ -45,7 +45,6 @@ def get_argument_parser():
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         export_args=False,
-                                        print_freq=False,
                                         dataset_type=False,
                                         cpu_only=False,
                                         metrics_dump=False)
@@ -154,7 +153,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, train_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer):
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
@@ -189,7 +188,7 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
-            if step % 100 == 0:
+            if step % print_freq == 0:
                 time = timer.toc(average=False)
                 logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
@@ -263,7 +262,7 @@ def run_train(config):
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
 
     train(train_step, train_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer)
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, config.print_freq)
 
     logger.info('Compression statistics')
     print_statistics(compression_ctrl.statistics())

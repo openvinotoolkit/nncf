@@ -42,8 +42,7 @@ from beta.examples.tensorflow.object_detection.models.model_selector import get_
 
 def get_argument_parser():
     parser = get_common_argument_parser(precision=False,
-                                        save_checkpoint_freq=False,
-                                        print_freq=False)
+                                        save_checkpoint_freq=False)
 
     parser.add_argument(
         '--mode',
@@ -167,7 +166,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches):
+    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
@@ -200,13 +199,13 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
-            if step % 100 == 0:
+            if step % print_freq == 0:
                 time = timer.toc(average=False)
                 logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
                 timer.tic()
 
-        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
+        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
         eval_metric.reset_states()
         logger.info('Validation metric = {}'.format(test_metric_result))
@@ -224,7 +223,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     compression_summary_writer.close()
 
 
-def evaluate(test_step, metric, test_dist_dataset, num_batches):
+def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     """Runs evaluation steps and aggregate metrics"""
     timer = Timer()
     timer.tic()
@@ -234,7 +233,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches):
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
 
-        if batch_idx % 100:
+        if batch_idx % print_freq:
             time = timer.toc(average=False)
             logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
             timer.tic()
@@ -308,10 +307,11 @@ def run(config):
 
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches)
+            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
+            config.print_freq)
 
     print_statistics(compression_ctrl.statistics())
-    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
+    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 
     if config.metrics_dump is not None:

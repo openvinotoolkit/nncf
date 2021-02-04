@@ -41,7 +41,6 @@ def get_argument_parser():
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         to_h5=False,
-                                        print_freq=False,
                                         dataset_type=False)
 
     parser.add_argument(
@@ -117,7 +116,7 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def evaluate(test_step, metric, test_dist_dataset, num_batches):
+def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     """Runs evaluation steps and aggregate metrics"""
     timer = Timer()
     timer.tic()
@@ -127,7 +126,7 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches):
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
 
-        if batch_idx % 100:
+        if batch_idx % print_freq:
             time = timer.toc(average=False)
             logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
             timer.tic()
@@ -198,7 +197,7 @@ def run_evaluation(config, eval_timeout=None):
 
         statistics = compression_ctrl.statistics()
         print_statistics(statistics)
-        metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches)
+        metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
         eval_metric.reset_states()
         logger.info('Test metric = {}'.format(metric_result))
 
@@ -217,7 +216,7 @@ def run_evaluation(config, eval_timeout=None):
             status.expect_partial()
             logger.info('Checkpoint file {} found and restoring from checkpoint'.format(checkpoint_path))
             logger.info('Checkpoint step: {}'.format(checkpoint.step.numpy()))
-            metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches)
+            metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
 
             current_step = checkpoint.step.numpy()
             validation_summary_writer(metrics=metric_result, step=current_step)
