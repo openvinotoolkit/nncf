@@ -15,6 +15,7 @@ from collections import OrderedDict
 from inspect import getfullargspec
 
 import tensorflow as tf
+from tensorflow.python.training.tracking.data_structures import _DictWrapper
 
 from beta.nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
@@ -123,7 +124,12 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         for _, ops in self.weights_attr_ops.items():
             for op_name, op in ops.items():
                 if op.trainable == trainable:
-                    result.append(self._ops_weights[op_name])
+                    ops_weight = self._ops_weights[op_name]
+                    if isinstance(ops_weight, _DictWrapper):
+                        for weight in ops_weight.values():
+                            result.append(weight)
+                    else:
+                        result.append(ops_weight)
         return result
 
     def _apply_ops(self, training):
