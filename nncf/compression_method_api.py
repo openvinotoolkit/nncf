@@ -106,9 +106,6 @@ class CompressionScheduler:
         default_keys = {'current_step', '_current_epoch'}
         return {key: val for key, val in self.__dict__.items() if key in default_keys}
 
-    def initialize(self):
-        pass
-
     @property
     def current_epoch(self):
         return 0 if self._current_epoch == -1 else self._current_epoch

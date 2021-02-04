@@ -35,9 +35,6 @@ class SparsityScheduler(CompressionScheduler):
         self.sparsity_target_epoch = self._params.get('sparsity_target_epoch', 90)
         self.sparsity_freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
 
-    def initialize(self):
-        self._set_sparsity_level()
-
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
         self._set_sparsity_level()
@@ -107,10 +104,6 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
         self._steps_in_current_epoch = 0
         super().epoch_step(next_epoch)
-
-    def load_state_dict(self, state_dict):
-        super().load_state_dict(state_dict)
-        self._set_sparsity_level()
 
     def state_dict(self):
         sd = super().state_dict()
@@ -209,15 +202,11 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     def __init__(self, sparsity_algo, params):
         super().__init__(sparsity_algo, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
-        self.steps = self._params.get('multistep_steps', [90])
+        self.steps = sorted(self._params.get('multistep_steps', [90]))
         if len(self.steps) + 1 != len(self.sparsity_levels):
             raise AttributeError('number of sparsity levels must equal to number of steps + 1')
 
         self.initial_sparsity = self.sparsity_level = self.sparsity_levels[0]
-        self.max_sparsity = max(self.sparsity_levels)
-        self.sparsity_algo = sparsity_algo
-        self.steps = sorted(self.steps)
-        self.max_step = self.steps[-1]
         self.prev_ind = 0
 
     def epoch_step(self, next_epoch=None):
