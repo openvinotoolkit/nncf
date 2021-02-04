@@ -35,9 +35,6 @@ class SparsityScheduler(CompressionScheduler):
         self.sparsity_target_epoch = self._params.get('sparsity_target_epoch', 90)
         self.sparsity_freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
 
-    def initialize(self):
-        self._set_sparsity_level()
-
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
         self._set_sparsity_level()
