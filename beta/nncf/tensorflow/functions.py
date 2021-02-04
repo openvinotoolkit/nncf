@@ -14,5 +14,6 @@
 import tensorflow as tf
 
 
+@tf.function
 def logit(x):
     return tf.math.log(x / (1 - x))

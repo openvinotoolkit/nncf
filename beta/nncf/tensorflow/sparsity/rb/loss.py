@@ -15,9 +15,11 @@ import tensorflow as tf
 
 from beta.nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
+
 
 class SparseLoss(CompressionLoss):
-    def __init__(self, sparse_layers: list(NNCFWrapper) = None, target=1.0, p=0.05):
+    def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
         super().__init__()
         self._sparse_layers = sparse_layers
         self.target = target
@@ -33,9 +35,9 @@ class SparseLoss(CompressionLoss):
         if not self.disabled:
             self.disabled = True
 
-            # ???
             for sparse_layer in self._sparse_layers:
-                sparse_layer.frozen = True
+                for _, op in sparse_layer.get_ops_by_classname(RBSparsifyingWeight).items():
+                    op.trainable = False
 
     def call(self):
         if self.disabled:
@@ -49,14 +51,14 @@ class SparseLoss(CompressionLoss):
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if not sparse_layer.frozen:
-                sw_loss = sparse_layer.loss()
-                params = params + sw_loss.view(-1).size(0)
-                loss = loss + sw_loss.sum()
-                sparse_prob_sum += tf.math.sigmoid(sparse_layer.mask).sum()
+                sw_loss, params_layer, mask = self.loss(sparse_layer)
+                params = params + params_layer
+                loss = loss + sw_loss
+                sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
 
-        self.mean_sparse_prob = (sparse_prob_sum / params).item()
+        self.mean_sparse_prob = (sparse_prob_sum / params)
         self.current_sparsity = 1 - loss / params
-        return ((loss / params - self.target) / self.p).pow(2)
+        return tf.math.pow(((loss / params - self.target) / self.p), 2)
 
     @property
     def target_sparsity_rate(self):
@@ -65,19 +67,26 @@ class SparseLoss(CompressionLoss):
             raise IndexError("Target is not within range(0,1)")
         return rate
 
+    @staticmethod
+    def loss(sparse_layer):
+        # TODO: do something with getting op from wrapper
+        op_name, op = sparse_layer.get_ops_by_classname(RBSparsifyingWeight).items()[0]
+        mask = sparse_layer.ops_weights[op_name]
+        return op.loss(mask), tf.squeeze(mask).shape[0], mask
+
     def statistics(self, quickly_collected_only=False):
         return {'mean_sparse_prob': 1 - self.mean_sparse_prob}
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
 
+
 class SparseLossForPerLayerSparsity(SparseLoss):
-    def __init__(self, sparse_layers: NNCFWrapper = None, target=1.0, p=0.05):
+    def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
         super().__init__(sparse_layers, target, p)
         self.per_layer_target = {}
         for sparse_layer in self._sparse_layers:
             self.per_layer_target[sparse_layer] = self.target
-
 
     def call(self):
         if self.disabled:
@@ -91,14 +100,13 @@ class SparseLossForPerLayerSparsity(SparseLoss):
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if sparse_layer.sparsify:
-                sw_loss = sparse_layer.loss()
-                params_layer = sw_loss.view(-1).size(0)
-                params += params_layer
-                sparse_layers_loss -= tf.math.abs(sw_loss.sum() / params_layer - self.per_layer_target[sparse_layer])
-                sparse_prob_sum += tf.math.sigmoid(sparse_layer.mask).sum()
+                sw_loss, params_layer, mask = self.loss(sparse_layer)
+                params = params + params_layer
+                sparse_layers_loss += tf.math.abs(sw_loss / params_layer - self.per_layer_target[sparse_layer])
+                sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(sparse_layer.mask))
 
-        self.mean_sparse_prob = (sparse_prob_sum / params).item()
-        return (sparse_layers_loss / self.p).pow(2)
+        self.mean_sparse_prob = (sparse_prob_sum / params)
+        return tf.math.pow((sparse_layers_loss / self.p), 2)
 
     def set_target_sparsity_loss(self, target, sparse_layer):
         self.per_layer_target[sparse_layer] = 1 - target

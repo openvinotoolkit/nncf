@@ -18,7 +18,7 @@ from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
-from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask
+from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
 
@@ -37,11 +37,18 @@ class RBSparsifyingWeight(NNCFOperation):
             trainable=True,
             aggregation=tf.VariableAggregation.MEAN)
 
-        return mask  # TODO: should be a dictionary
+        return {
+            'mask': mask
+        }
 
     def call(self, layer_weights, previous_mask, _):
-        """Apply rb sparsity mask to given weights
+        '''Apply rb sparsity mask to given weights
         :param layer_weights: target weights to sparsify
         :param previous_mask: mask from previous training iteration
-        :param _:"""
+        :param _:'''
         return apply_mask(layer_weights, calc_rb_binary_mask(previous_mask))
+
+    @staticmethod
+    def loss(mask):
+        '''Return count of non zero weight in mask'''
+        return tf.squeeze(st_binary_mask(st_binary_mask)).shape[0]
