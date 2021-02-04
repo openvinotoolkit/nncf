@@ -174,6 +174,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
     timer = Timer()
+    timer.tic()
 
     logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
@@ -188,7 +189,6 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
                 break
 
-            timer.tic()
             compression_ctrl.scheduler.step()
             train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
@@ -199,11 +199,12 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
-            time = timer.toc(average=False)
 
             if step % 100 == 0:
+                time = timer.toc(average=False)
                 logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
+                timer.tic()
 
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
@@ -226,14 +227,18 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
 def evaluate(test_step, metric, test_dist_dataset, num_batches):
     """Runs evaluation steps and aggregate metrics"""
     timer = Timer()
+    timer.tic()
 
     logger.info('Testing...')
     for batch_idx, x in enumerate(test_dist_dataset):
-        timer.tic()
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
-        time = timer.toc(average=False)
-        logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx + 1, num_batches, time))
+
+        if batch_idx % 100:
+            time = timer.toc(average=False)
+            logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
+            timer.tic()
+
     logger.info('Total time: {:.3f} sec'.format(timer.total_time))
 
     timer.reset()

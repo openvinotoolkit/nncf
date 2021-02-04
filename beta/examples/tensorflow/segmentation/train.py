@@ -160,6 +160,7 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
     timer = Timer()
+    timer.tic()
 
     logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
@@ -177,7 +178,6 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
                 logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
                 break
 
-            timer.tic()
             compression_ctrl.scheduler.step()
             train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
@@ -188,11 +188,12 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
-            time = timer.toc(average=False)
 
             if step % 100 == 0:
-                logger.info('Step: {}/{} Time: {:.3f}'.format(step, steps_per_epoch, time))
+                time = timer.toc(average=False)
+                logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
+                timer.tic()
 
         statistics = compression_ctrl.statistics()
         print_statistics(statistics)

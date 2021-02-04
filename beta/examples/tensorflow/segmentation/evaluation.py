@@ -120,14 +120,18 @@ def load_checkpoint(checkpoint, ckpt_path):
 def evaluate(test_step, metric, test_dist_dataset, num_batches):
     """Runs evaluation steps and aggregate metrics"""
     timer = Timer()
+    timer.tic()
 
     logger.info('Testing...')
     for batch_idx, x in enumerate(test_dist_dataset):
-        timer.tic()
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
-        time = timer.toc(average=False)
-        logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx + 1, num_batches, time))
+
+        if batch_idx % 100:
+            time = timer.toc(average=False)
+            logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
+            timer.tic()
+
     logger.info('Total time: {:.3f} sec'.format(timer.total_time))
 
     timer.reset()
