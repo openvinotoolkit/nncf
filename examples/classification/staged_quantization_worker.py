@@ -135,7 +135,7 @@ def staged_quantization_main_worker(current_gpu, config):
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
         def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
+            _, top5, _ = validate(eval_loader, model, criterion, config)
             return top5
 
         nncf_config = register_default_init_args(
@@ -234,7 +234,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
-            acc1, _ = validate(val_loader, model, criterion, config)
+            acc1, _, _ = validate(val_loader, model, criterion, config)
 
         compression_level = compression_ctrl.compression_level()
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint

@@ -31,8 +31,10 @@ from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, T
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
+from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
 from nncf.pruning.model_analysis import Clusterization
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.structures import LeGRInitArgs
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 
@@ -82,12 +84,18 @@ class FilterPruningController(BasePruningAlgoController):
         self.current_flops = self.full_flops
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
-        self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
+        self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
+        self.weight_importance = params.get('weight_importance', 'legr')
         self.all_weights = params.get("all_weights", False)
+        self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        if self.weight_importance == 'legr':
+            legr_init_args = config.get_extra_struct(LeGRInitArgs)
+            legr = LeGR(self, target_model, legr_init_args)
+            self.ranking_coeffs = legr.train_global_ranking()
+
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
-
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
@@ -360,7 +368,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _set_binary_masks_for_all_pruned_modules_by_flops_target(self, target_flops_pruning_rate):
         """
         Sorting all prunable filters in the network by importance and prune such amount less important filters
-        to archieve target pruning rate by flops.
+        to achieve target pruning rate by flops.
         :param target_flops_pruning_rate: target proportion of flops removed from the model
         :return:
         """
@@ -386,10 +394,14 @@ class FilterPruningController(BasePruningAlgoController):
             cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
             # Calculate cumulative importance for all filters in this group
             for minfo in cluster.nodes:
-                normalized_weight = self.weights_normalizer(minfo.module.weight)
-                filters_importance = self.filter_importance(normalized_weight,
+                # TODO: check why here normalization is needed (in LEGR case normalization shouldn't be done)
+                # normalized_weight = self.weights_normalizer(minfo.module.weight)
+                weight = minfo.module.weight
+                filters_importance = self.filter_importance(weight,
                                                             minfo.module.target_weight_dim_for_compression)
-                cumulative_filters_importance += filters_importance
+                scaled_importance = self.ranking_coeffs[minfo.module_scope][0] * filters_importance + \
+                                    self.ranking_coeffs[minfo.module_scope][1]
+                cumulative_filters_importance += scaled_importance
 
             filter_importances.append(cumulative_filters_importance)
             cluster_indexes.append(cluster.id * torch.ones_like(cumulative_filters_importance))
@@ -405,12 +417,13 @@ class FilterPruningController(BasePruningAlgoController):
         cur_num = 0
         tmp_in_channels = self.modules_in_channels.copy()
         tmp_out_channels = self.modules_out_channels.copy()
+        tmp_pruning_quotas = self.pruning_quotas.copy()
         while cur_num < len(sorted_importances):
             cluster_idx = int(sorted_importances[cur_num][1])
             filter_idx = int(sorted_importances[cur_num][2])
 
-            if self.pruning_quotas[cluster_idx] > 0:
-                self.pruning_quotas[cluster_idx] -= 1
+            if tmp_pruning_quotas[cluster_idx] > 0:
+                tmp_pruning_quotas[cluster_idx] -= 1
             else:
                 cur_num += 1
                 continue

@@ -140,12 +140,24 @@ def main_worker(current_gpu, config: SampleConfig):
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
         def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
+            _, top5, _ = validate(eval_loader, model, criterion, config)
             return top5
 
+        def train_steps_fn(loader, model, optimizer, steps):
+            train_steps(loader, model, criterion, train_criterion_fn, optimizer, config, steps)
+
+        def validate_fn(eval_loader, model):
+            top1, top5, loss = validate(eval_loader, model, criterion, config)
+            return top1, loss
+
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            nncf_config, init_loader, train_loader,
+            criterion, train_criterion_fn,
+            train_steps_fn,
+            autoq_eval_fn,
+            val_loader,
+            validate_fn,
+            config.device)
 
     # create model
     model = load_model(model_name,
@@ -224,7 +236,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
-            acc1, _ = validate(val_loader, model, criterion, config)
+            acc1, _, _ = validate(val_loader, model, criterion, config)
 
         compression_level = compression_ctrl.compression_level()
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
@@ -447,6 +459,47 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
+def train_steps(train_loader, model, criterion, criterion_fn, optimizer, config, steps=None):
+    losses = AverageMeter()
+    criterion_losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to train mode
+    model.train()
+    if steps is None:
+        steps = len(train_loader)
+
+    for i, (input_, target) in enumerate(train_loader):
+        # measure data loading time
+        input_ = input_.to(config.device)
+        target = target.to(config.device)
+
+        # compute output
+        output = model(input_)
+        criterion_loss = criterion_fn(output, target, criterion)
+
+        # compute compression loss
+        loss = criterion_loss
+
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
+        # measure accuracy and record loss
+        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+        losses.update(loss.item(), input_.size(0))
+        criterion_losses.update(criterion_loss.item(), input_.size(0))
+        top1.update(acc1, input_.size(0))
+        top5.update(acc5, input_.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if i >= steps:
+            break
+
+
 def validate(val_loader, model, criterion, config):
     batch_time = AverageMeter()
     losses = AverageMeter()
@@ -503,7 +556,7 @@ def validate(val_loader, model, criterion, config):
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
 
-    return top1.avg, top5.avg
+    return top1.avg, top5.avg, losses.avg
 
 
 class AverageMeter:

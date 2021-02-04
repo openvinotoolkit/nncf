@@ -311,7 +311,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, train_loader, criterion)
 
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
@@ -438,9 +438,10 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
     autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
 
-    config = register_default_init_args(config, train_loader=train_loader,
+    config = register_default_init_args(config, init_loader=train_loader,
+                                        train_loader=train_loader,
                                         autoq_eval_fn=lambda *x: random(),
-                                        autoq_eval_loader=train_loader)
+                                        val_loader=train_loader)
     model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     bw_init_config = config['compression']['initializer']['precision']
@@ -465,7 +466,7 @@ def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, train_loader, criterion)
 
     create_compressed_model_and_algo_for_test(model, config)
 
@@ -653,8 +654,8 @@ def hawq_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, data_loader, criterion,
-                                        autoq_eval_fn=lambda *x: 0, autoq_eval_loader=data_loader)
+    config = register_default_init_args(config, data_loader, None, criterion,
+                                        autoq_eval_fn=lambda *x: 0, val_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
@@ -705,7 +706,8 @@ def test_hawq_manual_configs(manual_config_params):
     config_path = EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / config_name
     config = NNCFConfig.from_json(str(config_path))
     config['quantizer_setup_type'] = 'pattern_based'
-    config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
+    config = register_default_init_args(config, init_loader=create_mock_dataloader(config),
+                                        train_loader=create_mock_dataloader(config), criterion=None)
     model = load_model(config['model'], pretrained=False)
     model.eval()
 

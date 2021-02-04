@@ -10,7 +10,7 @@ from torch.nn.modules.loss import _Loss
 
 from nncf.progress_bar import ProgressBar
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
-    BNAdaptationInitArgs, AutoQPrecisionInitArgs
+    BNAdaptationInitArgs, AutoQPrecisionInitArgs, LeGRInitArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
@@ -209,31 +209,43 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
+# TODO: fix this function usage in all examples and tests (and chech whether train loader is always a train or ut can be init)
 def register_default_init_args(nncf_config: 'NNCFConfig',
+                               init_loader: torch.utils.data.DataLoader,
                                train_loader: torch.utils.data.DataLoader,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
+                               train_steps_fn: Callable = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-                               autoq_eval_loader: torch.utils.data.DataLoader = None,
+                               val_loader: torch.utils.data.DataLoader = None,
+                               validate_fn: Callable = None,
                                device='cuda') -> 'NNCFConfig':
 
-    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
+    nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
                                                                   device=device),
-                                        BNAdaptationInitArgs(data_loader=train_loader,
-                                                             device=device)])
+                                        BNAdaptationInitArgs(data_loader=init_loader,
+                                                             device=device),
+                                        LeGRInitArgs(
+                                            train_loader=train_loader,
+                                            train_fn=train_steps_fn,
+                                            val_loader=val_loader,
+                                            val_fn=validate_fn,
+                                            nncf_config=nncf_config,
+                                        )
+                                        ])
 
     if criterion:
         if not criterion_fn:
             criterion_fn = default_criterion_fn
         nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
                                                                           criterion=criterion,
-                                                                          data_loader=train_loader,
+                                                                          data_loader=init_loader,
                                                                           device=device)])
 
     if autoq_eval_fn:
-        if not autoq_eval_loader:
-            autoq_eval_loader = train_loader
-        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
+        if not val_loader:
+            val_loader = init_loader
+        nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=val_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
 

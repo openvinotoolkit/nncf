@@ -86,6 +86,7 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
     def get_id(cls) -> str:
         return "bn_adaptation_init_args"
 
+
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     def __init__(self, data_loader: DataLoader,
                  eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
@@ -97,3 +98,20 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return "autoq_precision_init_args"
+
+
+class LeGRInitArgs(NNCFExtraConfigStruct):
+    def __init__(self, train_loader,
+                 train_fn,
+                 val_loader,
+                 val_fn,
+                 nncf_config: 'NNCFConfig'):
+        self.train_loader = train_loader
+        self.train_steps_fn = train_fn
+        self.val_loader = val_loader
+        self.val_fn = val_fn
+        self.config = nncf_config
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "legr_init_args"
