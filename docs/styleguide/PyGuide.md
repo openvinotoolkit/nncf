@@ -118,7 +118,7 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
   ```
   and use `myclass.MyClass` and `foo.bar.yourclass.YourClass`.
 
-- Wildcard imports (from <module> import *) should be avoided, as they make it unclear which names are present 
+- Wildcard imports (`from module import *`) should be avoided, as they make it unclear which names are present 
   in the namespace, confusing both readers and many automated tools.
 
 <a id="s2.3-3rd-party-packages"></a>
@@ -158,9 +158,9 @@ No need to overuse nested local functions or classes and inner classes.
       return mul
   ```
 
-- Inner classes are fine when it creates more readble and simple code.
+- Inner classes are fine when it creates more readable and simple code.
 
-- Do not nest a function just to hide it from users of a module. Instead, prefix its name with an \_ at the module 
+- Do not nest a function just to hide it from users of a module. Instead, prefix its name with an _ at the module 
   level so that it can still be accessed by tests.
   ```Python
   # Wrong:
@@ -201,7 +201,6 @@ if key not in adict: ...
 if obj in alist: ...
 for line in afile: ...
 for k, v in adict.items(): ...
-for k, v in six.iteritems(adict): ...
 ```
 ```python
  # Wrong:
@@ -464,7 +463,7 @@ inline comments.
 <a id="modules"></a>
 #### 3.5.1 Modules 
 
-Every file should contain license boilerplate.
+Every file should contain a license boilerplate.
 
 ```python
 """
@@ -581,7 +580,7 @@ knows Python (though not what you're trying to do) better than you do.
 <a id="strings"></a>
 ### 3.6 Strings 
 
-Use 'something' instead of "something"
+Use `'something'` instead of `"something"`
 
 ```python
 # Correct:
@@ -627,9 +626,10 @@ nncf_logger.info('Test message: %s', nncf.__version__)
 ### 3.8 Error Messages 
 
 Error messages (such as: message strings on exceptions like `ValueError`, or
-messages shown to the user) should follow three guidelines:
+messages shown to the user) should follow guidelines:
 - The message needs to precisely match the actual error condition.
 - Interpolated pieces need to always be clearly identifiable as such.
+- The message should start with a capital letter.
 
 <a id="s3.9-todo-comments"></a>
 <a id="39-todo-comments"></a>
@@ -640,7 +640,7 @@ Use `TODO` comments for code that is temporary, a short-term solution, or
 good-enough but not perfect.
 
 A `TODO` comment begins with the string `TODO` in all caps and a parenthesized
-name, e-mail address, or other identifier
+name, e-mail address, or another identifier
 of the person or issue with the best context about the problem. This is followed
 by an explanation of what there is to do.
 
@@ -804,7 +804,7 @@ Always use a `.py` filename extension. Never use dashes.
 #### 3.10.4 File Naming 
 
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
-This allows them to be imported and unittested.
+This allows them to be imported and unit tested.
 
 <a id="s3.11-main"></a>
 <a id="311-main"></a>
