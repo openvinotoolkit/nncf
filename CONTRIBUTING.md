@@ -31,6 +31,8 @@ If your testing code is more extensive than unit tests (in terms of test executi
 
 
 ## Code style
+Changes to NNCF Python code should conform to [Python Style Guide](./docs/styleguide/PyGuide.md)
+
 Pylint is used throughout the project to ensure code cleanliness and quality. 
 A Pylint run is also done as part of the pre-commit scope - the pre-commit `pytest` scope will not be run if your code fails the Pylint checks.
 The Pylint rules and exceptions for this repository are described in the standard [.pylintrc](./.pylintrc) format - make sure your local linter uses these.
