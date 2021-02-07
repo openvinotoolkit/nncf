@@ -75,7 +75,6 @@ class CompressionScheduler:
 
     def __init__(self):
         self.current_step = -1 # Global step - count of all step during training
-        self._steps_in_current_epoch = 0
         self._current_epoch = -1
 
     def step(self, next_step=None):
@@ -85,7 +84,6 @@ class CompressionScheduler:
             `next_step` - specifies the initial "next" step which should be set now
         """
         self.current_step = self.current_step + 1 if next_step is None else next_step
-        self._steps_in_current_epoch += 1
 
     def epoch_step(self, next_epoch=None):
         """
@@ -97,7 +95,6 @@ class CompressionScheduler:
             self._current_epoch += 1
         else:
             self._current_epoch = next_epoch
-        self._steps_in_current_epoch = 0
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)

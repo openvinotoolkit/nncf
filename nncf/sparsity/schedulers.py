@@ -71,6 +71,7 @@ class SparsityScheduler(CompressionScheduler):
 class PolynomialSparseScheduler(SparsityScheduler):
     def __init__(self, sparsity_algo, params=None):
         super().__init__(sparsity_algo, params)
+        self._steps_in_current_epoch = 0
         self.power = self._params.get('power', 0.9)
         self.concave = self._params.get('concave', False)
         self._update_per_optimizer_step = self._params.get('update_per_optimizer_step', False)
@@ -84,6 +85,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
     def step(self, next_step=None):
         super().step(next_step)
+        self._steps_in_current_epoch += 1
         if self._update_per_optimizer_step and self._steps_per_epoch is not None:
             self._set_sparsity_level()
 
