@@ -19,6 +19,7 @@ except ImportError:
     tf = None
 
 TEST_ROOT = Path(__file__).parent.absolute()
+PROJECT_ROOT = TEST_ROOT.parent.absolute()
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -33,6 +34,34 @@ def pytest_addoption(parser):
         "--data", type=str, default=None,
         help="Path to test datasets"
     )
+    parser.addoption(
+        "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
+    )
+    parser.addoption(
+        "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
+    )
+    parser.addoption(
+        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
+                                                            "Directory must be empty or should not exist."
+                                                            "Metric keeps in "
+                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+                                                            "if param not specified"
+    )
+
+
+@pytest.fixture(scope="module")
+def sota_checkpoints_dir(request):
+    return request.config.getoption("--sota-checkpoints-dir")
+
+
+@pytest.fixture(scope="module")
+def sota_data_dir(request):
+    return request.config.getoption("--sota-data-dir")
+
+
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
 
 
 @pytest.fixture(scope="module")

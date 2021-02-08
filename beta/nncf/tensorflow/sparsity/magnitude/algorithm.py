@@ -37,7 +37,7 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.utils.utils import is_ignored
+from beta.nncf.tensorflow.utils.node import is_ignored
 
 
 PRUNING_LAYERS = {

@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from nncf.common.utils.logger import logger as nncf_logger
+
 TEST_ROOT = Path(__file__).parent.absolute()
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / 'examples'
@@ -37,6 +39,13 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
+        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
+                                                            "Directory must be empty or should not exist."
+                                                            "Metric keeps in "
+                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+                                                            "if param not specified"
+    )
+    parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
     )
     parser.addoption(
@@ -54,6 +63,12 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+    )
+    parser.addoption(
+        "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
+    )
+    parser.addoption(
+        "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
     )
 
 
@@ -80,6 +95,11 @@ def sota_checkpoints_dir(request):
 @pytest.fixture(scope="module")
 def sota_data_dir(request):
     return request.config.getoption("--sota-data-dir")
+
+
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
 
 
 @pytest.fixture(scope="module")
@@ -112,3 +132,20 @@ def third_party(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
+
+
+@pytest.yield_fixture()
+def _nncf_caplog(caplog):
+    nncf_logger.propagate = True
+    yield caplog
+    nncf_logger.propagate = False
+
+
+@pytest.fixture(scope="module")
+def onnx_dir(request):
+    return request.config.getoption("--onnx-dir")
+
+
+@pytest.fixture(scope="module")
+def ov_config_dir(request):
+    return request.config.getoption("--ov-config-dir")

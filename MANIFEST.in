@@ -1,7 +1,3 @@
 graft nncf/extensions
 graft nncf/hw_configs
 include LICENSE
-include nncf/install_type
-prune examples
-prune tests
-prune tools

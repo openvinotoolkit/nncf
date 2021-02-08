@@ -305,7 +305,7 @@ HAWQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator()
+    model = params.model_creator().cuda()
 
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
@@ -424,7 +424,7 @@ AUTOQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', AUTOQ_TEST_PARAMS, ids=[str(p) for p in AUTOQ_TEST_PARAMS])
 def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator()
+    model = params.model_creator().cuda()
     config['log_dir'] = str(tmp_path)
 
     if not dataset_dir:

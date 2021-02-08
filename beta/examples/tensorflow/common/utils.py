@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import time
 import datetime
 import json
 import logging
@@ -60,6 +61,19 @@ def get_name(config):
         else:
             retval += "_{}".format(algo_name)
     return retval
+
+
+def write_metrics(acc, filename):
+    avg = round(acc * 100, 2)
+    metrics = {"Accuracy": avg}
+    if os.path.isfile(filename):
+        path = Path(filename)
+        metric_data = json.loads(path.read_text(encoding='utf-8'))
+        metric_data.update(metrics)
+        path.write_text(json.dumps(metric_data, indent=2), encoding='utf-8')
+    else:
+        with open(filename, 'w') as outfile:
+            json.dump(metrics, outfile)
 
 
 def configure_paths(config):
@@ -159,3 +173,31 @@ class SummaryWriter:
 
     def close(self):
         self.writer.close()
+
+
+class Timer:
+    """A simple timer."""
+
+    def __init__(self):
+        self.reset()
+
+    def tic(self):
+        # using time.time instead of time.clock because time time.clock
+        # does not normalize for multithreading
+        self.start_time = time.time()
+
+    def toc(self, average=True):
+        self.diff = time.time() - self.start_time
+        self.total_time += self.diff
+        self.calls += 1
+        self.average_time = self.total_time / self.calls
+        if average:
+            return self.average_time
+        return self.diff
+
+    def reset(self):
+        self.total_time = 0.
+        self.calls = 0
+        self.start_time = 0.
+        self.diff = 0.
+        self.average_time = 0.

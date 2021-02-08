@@ -36,6 +36,7 @@ import re
 from io import StringIO
 from copy import deepcopy
 
+from nncf.common.os import safe_open
 
 
 class AutoQPrecisionInitParams(BasePrecisionInitParams):
@@ -118,7 +119,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             self.policy_dict = OrderedDict() #key: episode
             self.best_policy_dict = OrderedDict() #key: episode
 
-            self._init_args.config['episodic_nncfcfg'] = osp.join(self.dump_dir, "episodic_nncfcfg")
+            self._init_args.config['episodic_nncfcfg'] = self.dump_dir / "episodic_nncfcfg"
             os.makedirs(self._init_args.config['episodic_nncfcfg'], exist_ok=True)
 
             try:
@@ -298,9 +299,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             episode, final_reward, _, accuracy, model_ratio, _, _, _ = episodic_info_tuple
 
             # Save nncf compression cfg
-            episode_cfgfile = osp.join(self._init_args.config['episodic_nncfcfg'],
-                                       '{0:03d}_nncfcfg.json'.format(episode))
-            with open(episode_cfgfile, "w") as outfile:
+            episode_cfgfile = self._init_args.config['episodic_nncfcfg'] / '{0:03d}_nncfcfg.json'.format(episode)
+            with safe_open(episode_cfgfile, "w") as outfile:
                 json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')

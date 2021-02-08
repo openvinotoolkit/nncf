@@ -83,13 +83,13 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
                     user_init_args: QuantizationPrecisionInitArgs) -> 'HAWQPrecisionInitParams':
         return cls(
             user_init_args=user_init_args,
-            bits=hawq_init_config_dict.get('bits', [4, 8]),
+            bits=hawq_init_config_dict.get('bits', [2, 4, 8]),
             traces_per_layer_path=hawq_init_config_dict.get('traces_per_layer_path', None),
             num_data_points=hawq_init_config_dict.get('num_data_points', 100),
             iter_number=hawq_init_config_dict.get('iter_number', 200),
             tolerance=hawq_init_config_dict.get('tolerance', 1e-4),
             compression_ratio=hawq_init_config_dict.get('compression_ratio', 1.5),
-            dump_hawq_data=hawq_init_config_dict.get('dump_hawq_data', False),
+            dump_hawq_data=hawq_init_config_dict.get('dump_init_precision_data', False),
             bitwidth_assignment_mode=BitwidthAssignmentMode.from_str(
                 hawq_init_config_dict.get('bitwidth_assignment_mode', BitwidthAssignmentMode.LIBERAL.value)
             )
@@ -226,6 +226,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         self._bits = self._hw_precision_constraints.get_all_unique_bits() \
             if self._hw_precision_constraints else params.bits
         self._init_device = init_args.device
+        if self._init_device is None:
+            self._init_device = next(self._model.parameters()).device
         self.flops_counter = CompressionRatioCalculator(self._model, self._quantizers_handler)
         self._dump_hawq_data = params.dump_hawq_data
         self._original_qp_id_vs_quantizer_module_id_dict = deepcopy(algo.setup_to_module_id_translation_dict)
@@ -233,6 +235,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def apply_init(self) -> SingleConfigQuantizerSetup:
         if not self._quantizers_handler.get_weight_quantizers_in_execution_order_per_id():
             return self._algo.get_quantizer_setup_for_current_state()
+
         original_device = next(self._model.parameters()).device
         self._model.to(self._init_device)
 
@@ -277,8 +280,9 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         config_index = self.choose_configuration(configuration_metric, flops_bits_per_config)
         chosen_config_in_traces_order = weight_qconfigs_in_trace_order[config_index]
         chosen_config_in_execution_order = traces_order.get_execution_order_config(chosen_config_in_traces_order)
+        biwidth_per_weightable_layer = [qconfig.bits for qconfig in chosen_config_in_execution_order]
         nncf_logger.info('Chosen HAWQ configuration with ratio={:.2f}, config per weightable layer={}'.format(
-            flops_bits_per_config[config_index], chosen_config_in_execution_order))
+            flops_bits_per_config[config_index], biwidth_per_weightable_layer))
         nncf_logger.debug('Order of the weightable layers in the HAWQ configuration (in descending order of average '
                           'Hessian traces) ={}'.format(traces_order))
 

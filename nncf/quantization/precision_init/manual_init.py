@@ -32,7 +32,7 @@ class ManualPrecisionInitParams(BasePrecisionInitParams):
     def from_config(cls,
                     manual_init_params_dict: Dict):
         return cls(user_init_args=None,
-                   bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", [[]]))
+                   bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", []))
 
 
 class ManualPrecisionInitializer(BasePrecisionInitializer):

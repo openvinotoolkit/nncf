@@ -9,13 +9,11 @@ import pytest
 import subprocess
 import re
 import shlex
-import sysconfig
 from prettytable import PrettyTable
 from collections import OrderedDict
 from yattag import Doc
 from pathlib import Path
-from tests.conftest import TEST_ROOT, PROJECT_ROOT
-from nncf.config import NNCFConfig
+from beta.tests.conftest import TEST_ROOT, PROJECT_ROOT
 
 BG_COLOR_GREEN_HEX = 'ccffcc'
 BG_COLOR_YELLOW_HEX = 'ffffcc'
@@ -26,12 +24,25 @@ DIFF_TARGET_MAX_GLOBAL = 0.1
 DIFF_FP32_MIN_GLOBAL = -1.0
 DIFF_FP32_MAX_GLOBAL = 0.1
 
-ONNX_PATH = '/home/jenkins/workspace/NNCF/manual/Convert_ONNX/src/onnx/'
-OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino'
-if not os.path.exists(OPENVINO_DIR):
-    OPENVINO_DIR = PROJECT_ROOT.parent / 'intel' / 'openvino_2021'
-ACC_CHECK_DIR = OPENVINO_DIR / 'deployment_tools' / 'open_model_zoo' / 'tools' / 'accuracy_checker'
-MO_DIR = OPENVINO_DIR / 'deployment_tools' / 'model_optimizer'
+MODE = "TF2"
+
+EVAL_SCRIPT_NAME_MAP = {
+    "classification": "main.py",
+    "object_detection": "main.py",
+    "segmentation": "evaluation.py",
+}
+
+PRETRAINED_PARAM_AVAILABILITY = {
+    "classification": True,
+    "object_detection": False,
+    "segmentation": False,
+}
+
+DATASET_TYPE_AVAILABILITY = {
+    "classification": True,
+    "object_detection": True,
+    "segmentation": False,
+}
 
 
 class EvalRunParamsStruct:
@@ -41,8 +52,10 @@ class EvalRunParamsStruct:
                  expected_: float,
                  metric_type_: str,
                  dataset_name_: str,
+                 dataset_type_: str,
                  sample_type_: str,
                  resume_file_: str,
+                 weights_: str,
                  batch_: int,
                  mean_val_: Optional[str],
                  scale_val_: Optional[str],
@@ -57,8 +70,10 @@ class EvalRunParamsStruct:
         self.expected_ = expected_
         self.metric_type_ = metric_type_
         self.dataset_name_ = dataset_name_
+        self.dataset_type_ = dataset_type_
         self.sample_type_ = sample_type_
         self.resume_file_ = resume_file_
+        self.weights_ = weights_
         self.batch_ = batch_
         self.mean_val_ = mean_val_
         self.scale_val_ = scale_val_
@@ -83,30 +98,15 @@ class TestSotaCheckpoints:
     def get_metric_file_name(model_name: str):
         return "{}.metrics.json".format(model_name)
 
-    CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py -m {} --config {conf} \
+
+    if MODE == "TF2":
+        CMD_FORMAT_STRING = "{} examples/tensorflow/{sample_type}/{eval_script_name} -m {} --config {conf} \
+         --data {dataset}/{data_type}/{data_name}/ --log-dir={log_dir} --metrics-dump \
+          {metrics_dump_file_path}"
+    else:
+        CMD_FORMAT_STRING = "{} examples/tensorflow/{sample_type}/main.py -m {} --config {conf} \
          --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
           {metrics_dump_file_path}"
-
-    @staticmethod
-    def q_dq_config(config):
-        nncf_config = NNCFConfig.from_json(config)
-        if "compression" in nncf_config:
-            compression_config = nncf_config["compression"]
-            quantization_config = None
-            if isinstance(compression_config, list):
-                matches = []
-                for subconfig in compression_config:
-                    if subconfig["algorithm"] == "quantization":
-                        matches.append(subconfig)
-                if matches:
-                    assert len(matches) == 1
-                    quantization_config = matches[0]
-            else:
-                if compression_config["algorithm"] == "quantization":
-                    quantization_config = compression_config
-            if quantization_config is not None:
-                quantization_config["export_to_onnx_standard_ops"] = True
-        return nncf_config
 
     @staticmethod
     def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
@@ -147,17 +147,10 @@ class TestSotaCheckpoints:
         err_string = "\n".join(error_lines) if error_lines else None
         return exit_code, err_string
 
-    # pylint:disable=unused-variable
     @staticmethod
     def get_onnx_model_file_path(name):
-        onnx_name = str(name + ".onnx")
-        path_to_model = None
-        for root, dirs, files in os.walk('/'):
-            if onnx_name in files:
-                path_to_model = os.path.join(root, onnx_name)
-                print("Found ", onnx_name)
-                break
-        return path_to_model
+        onnx_name = PROJECT_ROOT / "onnx" / str(name + ".onnx")
+        return onnx_name
 
     @staticmethod
     def make_table_row(test, expected_, metrics_type_, key, error_message, metric, diff_target,
@@ -227,6 +220,7 @@ class TestSotaCheckpoints:
                             i = '-'
                         with tag('td'):
                             text(i)
+        print("Write results at ", path / "results.html")
         f = open(path / 'results.html', 'w')
         f.write(doc.getvalue())
         f.close()
@@ -288,9 +282,12 @@ class TestSotaCheckpoints:
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
         for dataset_name in datasets:
-            model_dict = datasets[dataset_name]
+            model_dict = datasets[dataset_name].get('topologies')
             for model_name in model_dict:
                 config_name = model_dict[model_name].get('config', {})
+                weights = None
+                if model_dict[model_name].get("weights", {}):
+                    weights = model_dict[model_name].get("weights", {})
                 reference = None
                 if model_dict[model_name].get('reference', {}):
                     reference = model_dict[model_name].get('reference', {})
@@ -318,51 +315,71 @@ class TestSotaCheckpoints:
                 diff_fp32_max = model_dict[model_name].get('diff_fp32_max') if not None else None
                 diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
                 diff_target_max = model_dict[model_name].get('diff_target_max') if not None else None
-                param_list.append(EvalRunParamsStruct(config_name,
-                                                      reference,
-                                                      expected,
-                                                      metric_type,
-                                                      dataset_name,
-                                                      sample_type_,
-                                                      resume_file,
-                                                      batch,
-                                                      mean_val,
-                                                      scale_val,
-                                                      diff_fp32_min,
-                                                      diff_fp32_max,
-                                                      model_name,
-                                                      diff_target_min,
-                                                      diff_target_max))
-                ids_list.append(model_name)
-                if model_dict[model_name].get('compression_description', {}):
-                    train_param_list.append((config_name,
-                                             expected,
-                                             metric_type,
-                                             dataset_name,
-                                             sample_type_,
-                                             model_name))
-                    train_ids_list.append(model_name)
+                for dataset_type in datasets[dataset_name].get('dataset_types'):
+                    # Change model name to keep dataset version
+                    model_name_with_datatype = model_name + '_' + dataset_type
+                    param_list.append(EvalRunParamsStruct(config_name_=config_name,
+                                                          reference_=reference,
+                                                          expected_=expected,
+                                                          metric_type_=metric_type,
+                                                          dataset_name_=dataset_name,
+                                                          dataset_type_=dataset_type,
+                                                          sample_type_=sample_type_,
+                                                          resume_file_=resume_file,
+                                                          weights_=weights,
+                                                          batch_=batch,
+                                                          mean_val_=mean_val,
+                                                          scale_val_=scale_val,
+                                                          diff_fp32_min_=diff_fp32_min,
+                                                          diff_fp32_max_=diff_fp32_max,
+                                                          model_name_=model_name_with_datatype,
+                                                          diff_target_min_=diff_target_min,
+                                                          diff_target_max_=diff_target_max))
+                    ids_list.append(model_name_with_datatype)
+                    if model_dict[model_name].get('compression_description', {}):
+                        train_param_list.append((config_name,
+                                                 expected,
+                                                 metric_type,
+                                                 dataset_name,
+                                                 sample_type_,
+                                                 model_name))
+                        train_ids_list.append(model_name)
 
-    @pytest.mark.eval
     @pytest.mark.parametrize("eval_test_struct", param_list,
                              ids=ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
+        # pylint: disable=too-many-branches
         if sota_data_dir is None:
             pytest.skip('Path to datasets is not set')
         test = "eval"
+        sample_type = eval_test_struct.sample_type_
         metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
         metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
         log_dir = pytest.metrics_dump_path / "logs"
-        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
-                                            dataset=sota_data_dir,
-                                            data_name=eval_test_struct.dataset_name_,
-                                            sample_type=eval_test_struct.sample_type_,
-                                            metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+        if MODE == 'TF2':
+            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
+                                                dataset=sota_data_dir,
+                                                data_name=eval_test_struct.dataset_name_,
+                                                data_type=eval_test_struct.dataset_type_,
+                                                sample_type=sample_type,
+                                                eval_script_name=EVAL_SCRIPT_NAME_MAP[sample_type],
+                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
+            if eval_test_struct.weights_:
+                cmd += " --weights {}".format(os.path.join(sota_checkpoints_dir, eval_test_struct.weights_))
+            if DATASET_TYPE_AVAILABILITY[sample_type]:
+                cmd += " --dataset-type {}".format(eval_test_struct.dataset_type_)
+        else:
+            cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'test', conf=eval_test_struct.config_name_,
+                                                dataset=sota_data_dir,
+                                                data_name=eval_test_struct.dataset_name_,
+                                                sample_type=eval_test_struct.sample_type_,
+                                                metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
         if eval_test_struct.resume_file_:
             resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
             cmd += " --resume {}".format(resume_file_path)
         else:
-            cmd += " --pretrained"
+            if MODE != "TF2" or PRETRAINED_PARAM_AVAILABILITY[sample_type]:
+                cmd += " --pretrained"
         if eval_test_struct.batch_:
             cmd += " -b {}".format(eval_test_struct.batch_)
         exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
@@ -378,8 +395,12 @@ class TestSotaCheckpoints:
         if eval_test_struct.reference_ is not None:
             fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
             metric_type_from_json = True
-            reference_metric_file_path = pytest.metrics_dump_path / \
-                                         self.get_metric_file_name(eval_test_struct.reference_)
+            dataset_type_postfix = ''
+            if MODE == 'TF2':
+                dataset_type_postfix = '_' + eval_test_struct.dataset_type_
+            reference_metric_file_path = \
+                pytest.metrics_dump_path / self.get_metric_file_name(eval_test_struct.reference_ +
+                                                                     dataset_type_postfix)
             if os.path.exists(reference_metric_file_path):
                 with open(str(reference_metric_file_path)) as ref_metric:
                     metrics = json.load(ref_metric)
@@ -417,129 +438,8 @@ class TestSotaCheckpoints:
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
 
-    # pylint:disable=too-many-branches
-    @pytest.mark.convert
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_convert_to_onnx(self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir,
-                             eval_test_struct: EvalRunParamsStruct, onnx_type):
-        if not openvino:
-            pytest.skip()
-        os.chdir(PROJECT_ROOT)
-        onnx_path = PROJECT_ROOT / 'onnx'
-        q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
-
-        with open(str(q_dq_config_path), 'w') as outfile:
-            json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
-        if not os.path.exists(onnx_path):
-            os.mkdir(onnx_path)
-        self.CMD_FORMAT_STRING = "{} examples/{sample_type}/main.py --cpu-only --config {conf} \
-             --data {dataset}/{data_name} --to-onnx={onnx_path}"
-        self.test = "openvino_eval"
-        if onnx_type == "q_dq":
-            if not os.path.exists(onnx_path / 'q_dq'):
-                os.mkdir(onnx_path / 'q_dq')
-            onnx_name = str("q_dq/" + eval_test_struct.model_name_ + ".onnx")
-            with open(str(q_dq_config_path), 'w') as outfile:
-                json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
-            nncf_config_path = q_dq_config_path
-        else:
-            onnx_name = str(eval_test_struct.model_name_ + ".onnx")
-            nncf_config_path = eval_test_struct.config_name_
-        onnx_cmd = self.CMD_FORMAT_STRING.format(sys.executable, conf=nncf_config_path,
-                                                 dataset=sota_data_dir,
-                                                 data_name=eval_test_struct.dataset_name_,
-                                                 sample_type=eval_test_struct.sample_type_,
-                                                 onnx_path=(onnx_path / onnx_name))
-        if eval_test_struct.resume_file_:
-            resume_file_path = sota_checkpoints_dir + '/' + eval_test_struct.resume_file_
-            onnx_cmd += " --resume {}".format(resume_file_path)
-        else:
-            onnx_cmd += " --pretrained"
-        exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
-        if exit_code != 0 and err_str is not None:
-            pytest.fail(err_str)
-
-    @pytest.mark.oveval
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_openvino_eval(self, eval_test_struct: EvalRunParamsStruct, ov_data_dir, onnx_type, openvino, onnx_dir,
-                           ov_config_dir):
-        if not openvino or not onnx_dir:
-            pytest.skip()
-        if ov_config_dir:
-            config_folder = ov_config_dir
-        else:
-            config_folder = PROJECT_ROOT / 'tests' / 'data' / 'ac_configs'
-        ir_model_folder = PROJECT_ROOT / 'ir_models' / eval_test_struct.model_name_
-        q_dq_ir_model_folder = PROJECT_ROOT / 'q_dq_ir_models' / eval_test_struct.model_name_
-        mean_val = eval_test_struct.mean_val_
-        scale_val = eval_test_struct.scale_val_
-        if onnx_type == "q_dq":
-            onnx_model = str(onnx_dir + 'q_dq/' + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(sys.executable, onnx_model, mean_val, scale_val, q_dq_ir_model_folder)
-        else:
-            onnx_model = str(onnx_dir + eval_test_struct.model_name_ + '.onnx')
-            mo_cmd = "{} mo.py --input_model {} --framework=onnx --data_type=FP16 --reverse_input_channels" \
-                     " --mean_values={} --scale_values={} --output_dir {}" \
-                .format(sys.executable, onnx_model, mean_val, scale_val, ir_model_folder)
-        exit_code, err_str = self.run_cmd(mo_cmd, cwd=MO_DIR)
-        if exit_code == 0 and err_str is None:
-            if onnx_type == "q_dq":
-                ac_cmd = "accuracy_check -c {}/{}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                         "{}/q_dq_report.csv".format(config_folder, eval_test_struct.model_name_, ov_data_dir,
-                                                     q_dq_ir_model_folder, PROJECT_ROOT)
-            else:
-                ac_cmd = "accuracy_check -c {}/{config}.yml -s {} -d dataset_definitions.yml -m {} --csv_result " \
-                         "{}/{config}.csv".format(config_folder, ov_data_dir,
-                                                  ir_model_folder, PROJECT_ROOT,
-                                                  config=eval_test_struct.model_name_)
-            exit_code, err_str = self.run_cmd(ac_cmd, cwd=ACC_CHECK_DIR)
-            if exit_code != 0 or err_str is not None:
-                pytest.fail(err_str)
-        else:
-            pytest.fail(err_str)
-
-    @pytest.mark.train
-    @pytest.mark.parametrize("config_name_, expected_, metric_type_, dataset_name_, _sample_type_, model_name_",
-                             train_param_list, ids=train_ids_list)
-    def test_train(self, sota_data_dir, config_name_, expected_, metric_type_, dataset_name_, _sample_type_,
-                   model_name_):
-        if sota_data_dir is None:
-            pytest.skip('Path to datasets is not set')
-        test = 'train'
-        metric_file_name = self.get_metric_file_name(model_name=model_name_)
-        metrics_dump_file_path = PROJECT_ROOT / metric_file_name
-        log_dir = PROJECT_ROOT / "logs"
-        cmd = self.CMD_FORMAT_STRING.format(sys.executable, 'train', conf=config_name_, dataset=sota_data_dir,
-                                            data_name=dataset_name_, sample_type=_sample_type_,
-                                            metrics_dump_file_path=metrics_dump_file_path, log_dir=log_dir)
-
-        _, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-        metric_value = self.read_metric(str(metrics_dump_file_path))
-        diff_target = round((metric_value - expected_), 2)
-        self.row_dict[model_name_] = self.make_table_row(test, expected_, metric_type_, model_name_, err_str,
-                                                         metric_value, diff_target)
-        self.color_dict[model_name_], is_accuracy_within_thresholds = self.threshold_check(err_str is not None,
-                                                                                           diff_target)
-        assert is_accuracy_within_thresholds
-
 
 Tsc = TestSotaCheckpoints
-
-
-@pytest.fixture(autouse=True, scope="class")
-def openvino_preinstall(ov_data_dir):
-    if ov_data_dir:
-        subprocess.run("pip install -r requirements_onnx.txt", cwd=MO_DIR, check=True, shell=True)
-        subprocess.run("pip install scikit-image==0.17.2", check=True, shell=True)
-        subprocess.run("{} setup.py install".format(sys.executable), cwd=ACC_CHECK_DIR, check=True, shell=True)
-
-        # Workaround to fix protobuf error
-        subprocess.run("touch __init__.py", cwd=os.path.join(sysconfig.get_paths()["purelib"], 'google'),
-                       check=True, shell=True)
 
 
 @pytest.fixture(autouse=True, scope="class")
@@ -551,7 +451,7 @@ def make_metrics_dump_path(metrics_dump_dir):
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
     assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(pytest.metrics_dump_path), \
-                                    f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
+        f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
     print(f"metrics_dump_path: {pytest.metrics_dump_path}")
 
 

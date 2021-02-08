@@ -12,33 +12,23 @@
 """
 
 # pylint:disable=too-many-lines
-import functools
 from collections import OrderedDict, Counter
-from copy import deepcopy
 from pathlib import Path
+from string import Template
 from typing import List, Dict, Tuple, Optional, Callable, Set
 
+import functools
 import networkx as nx
 import numpy as np
 import operator
 import shutil
 import torch
-from nncf.config import NNCFConfig
-from nncf.layer_utils import _NNCFModuleMixin
-from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
-    StatCollectorGenerator, DataLoaderRangeInitializeRunner
-from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
-from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
-from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
-from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.quantization.structs import QuantizerSetupType, QuantizationConstraints, QuantizerGroup, QuantizableModule, \
-    NonWeightQuantizerInfo, WeightQuantizerInfo
-from nncf.quantization.quantizer_setup import QuantizationPointId, SingleConfigQuantizationPoint, QuantizerSetupBase, \
-    SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
+from copy import deepcopy
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.config import NNCFConfig
 from nncf.debug import is_debug, DebugInterface, CallCountTracker
 from nncf.dynamic_graph.context import TracingContext, Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
@@ -47,26 +37,38 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig, HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
+from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdateWeight
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
     InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, InsertionInfo
-from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.init_precision import PrecisionInitializerFactory
+from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
+    StatCollectorGenerator, DataLoaderRangeInitializeRunner
 from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
     QuantizerExportMode, QuantizersSwitcher
 from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath, \
     NetworkQuantizationShareMetricBuildTimeInfo
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
+from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
+from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
+from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
     QuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_setup import QuantizationPointId, SingleConfigQuantizationPoint, QuantizerSetupBase, \
+    SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
+from nncf.quantization.structs import QuantizerSetupType, QuantizationConstraints, QuantizerGroup, QuantizableModule, \
+    NonWeightQuantizerInfo, WeightQuantizerInfo
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
 from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
 from nncf.utils import in_scope_list, is_main_process, should_consider_scope
+from nncf.common.os import safe_open
 
 
 class QuantizerSetupGeneratorBase:
@@ -866,7 +868,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         WeightQuantizerId, InsertionCommand]:
         device = next(target_model.parameters()).device
         quantizer_id = WeightQuantizerId(insertion_point.module_scope)
-        quantizer = self.__create_quantize_module(quantizer_config)
+        quantizer = self.__create_quantize_module(quantizer_config).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
                                         log_module_name=str(insertion_point))
@@ -1089,6 +1091,23 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
             insertion_commands.append(
                 InsertionCommand(insertion_point, hook, OperationPriority.QUANTIZATION_PRIORITY))
         return quantizer_id, insertion_commands
+
+    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+        message_template = Template('Frozen layers are$denial allowed for $algo_prefix quantization')
+        bits = set()
+        bits.update({wq.quantizer_module_ref.num_bits for wq in self._weight_quantizers.values()})
+        bits.update({nwq.quantizer_module_ref.num_bits for nwq in self._non_weight_quantizers.values()})
+
+        if self._precision_init_params or len(bits) > 1:
+            return False, message_template.substitute(denial=' not', algo_prefix='mixed precision')
+
+        if len(bits) == 1:
+            bitwidth = bits.pop()
+            algo_prefix = f'INT{bitwidth}'
+            if bitwidth == 8:
+                return True, message_template.substitute(denial='', algo_prefix=algo_prefix)
+            return False, message_template.substitute(denial=' not', algo_prefix=algo_prefix)
+        return True, message_template.substitute(denial='', algo_name='empty')
 
 
 class QuantizationControllerBase(CompressionAlgorithmController):
@@ -1478,7 +1497,7 @@ class QuantizationDebugInterface(DebugInterface):
         quantizer_normalized_name = re.sub(r'[^\w\-_\. ]', '_', quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
-            with open(str(self.scale_dump_dir / fname), "ba") as file:
+            with safe_open(self.scale_dump_dir / fname, "ba") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):

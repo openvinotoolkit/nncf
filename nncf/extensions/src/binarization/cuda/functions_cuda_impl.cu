@@ -147,6 +147,7 @@ __global__ void ab_cuda_grad_thresholds_kernel(
 at::Tensor wb_cuda_forward(
         at::Tensor input,
         bool per_channel) {
+    at::DeviceGuard guard(input.device());
     const auto quantized_elements_count = input.numel();
 
     int64_t elements_per_scale = 0;
@@ -196,6 +197,7 @@ at::Tensor ab_cuda_forward(
         at::Tensor input,
         at::Tensor scale,
         at::Tensor thresholds) {
+    at::DeviceGuard guard(input.device());
     const auto quantized_elements_count = input.numel();
 
     int64_t input_elements_count = input.numel();
@@ -226,6 +228,7 @@ std::vector<at::Tensor> ab_cuda_backward(
         at::Tensor input,
         at::Tensor scale,
         at::Tensor output) {
+    at::DeviceGuard guard(input.device());
     int64_t input_elements_count = input.numel();
     int64_t threshold_count = input.size(1);
     int64_t channel_offset = input.numel() / input.size(0);

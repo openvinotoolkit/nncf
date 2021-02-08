@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Tuple
 
 from nncf.compression_method_api import CompressionAlgorithmController
 from nncf.nncf_network import NNCFNetwork
@@ -25,6 +26,9 @@ class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
 
     def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
         return ConstSparsityController(target_model, self._sparsified_module_info)
+
+    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+        return True, 'Frozen layers are allowed for const sparsity'
 
 
 class ConstSparsityController(BaseSparsityAlgoController):

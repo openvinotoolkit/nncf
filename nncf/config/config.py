@@ -12,6 +12,8 @@
 """
 
 import itertools
+from copy import deepcopy
+from pathlib import Path
 from typing import List, Type
 
 import jsonschema
@@ -19,6 +21,7 @@ import jsonschema
 from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structure import NNCFExtraConfigStruct
+from nncf.common.os import safe_open
 
 try:
     import jstyleson as json
@@ -45,11 +48,12 @@ class NNCFConfig(dict):
         """
 
         NNCFConfig.validate(nncf_dict)
-        return cls(nncf_dict)
+        return cls(deepcopy(nncf_dict))
 
     @classmethod
     def from_json(cls, path) -> 'NNCFConfig':
-        with open(path) as f:
+        file_path = Path(path).resolve()
+        with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
 
