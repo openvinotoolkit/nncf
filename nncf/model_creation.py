@@ -17,13 +17,14 @@ from typing import Callable, Any, Tuple, List, Dict
 from nncf.checkpoint_loading import load_state
 from nncf.hw_config import HWConfigType
 from torch.nn import Module
+from torch import load
 
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
 from nncf.debug import is_debug, set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
-from nncf.utils import is_main_process
+from nncf.utils import is_main_process, objwalk, is_tensor
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
@@ -129,6 +130,9 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     ignored_scopes = config.get('ignored_scopes')
     target_scopes = config.get('target_scopes')
 
+    if config.get('distillation', False):
+        original_model = deepcopy(model)
+
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
@@ -142,6 +146,9 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     for builder in compression_algo_builder_list:
         compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
+
+    if config.get('distillation', False):
+        compression_ctrl.add_kd_loss(original_model)
 
     try:
         if resuming_state_dict is not None:

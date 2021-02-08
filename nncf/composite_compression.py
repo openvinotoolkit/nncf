@@ -16,7 +16,7 @@ from typing import List
 import torch.nn
 
 from nncf.compression_method_api import CompressionLoss, CompressionScheduler, \
-    CompressionAlgorithmController, CompressionLevel
+    CompressionAlgorithmController, CompressionLevel, KDLossCalculator
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoController
 
@@ -33,10 +33,11 @@ class CompositeCompressionLoss(CompressionLoss):
     def add(self, child_loss):
         self._child_losses.append(child_loss)
 
-    def forward(self):
+    def forward(self, input_=None, target=None):
         result_loss = 0
         for loss in self._child_losses:
-            result_loss += loss()
+            a = loss(input_, target)
+            result_loss += a
         return result_loss
 
     def statistics(self, quickly_collected_only=False):
@@ -108,6 +109,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             stats.update(ctrl.statistics())
         return stats
+
+    def add_kd_loss(self, original_model):
+        self._loss.add(KDLossCalculator(original_model))
 
     def prepare_for_export(self):
         if len(self.child_ctrls) > 1 and any(isinstance(x, BasePruningAlgoController) for x in self.child_ctrls):

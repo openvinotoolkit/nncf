@@ -34,6 +34,7 @@ from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
+from torch_lr_finder import LRFinder
 
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
@@ -56,6 +57,7 @@ from examples.classification.common import set_seed, load_resuming_checkpoint
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
+
 
 def get_argument_parser():
     parser = get_common_argument_parser()
@@ -390,9 +392,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         # compute output
         output = model(input_)
         criterion_loss = criterion_fn(output, target, criterion)
-
         # compute compression loss
-        compression_loss = compression_ctrl.loss()
+        compression_loss = compression_ctrl.loss(output, input_)
         loss = criterion_loss + compression_loss
 
         if isinstance(output, InceptionOutputs):

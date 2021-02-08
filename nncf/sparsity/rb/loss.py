@@ -38,7 +38,7 @@ class SparseLoss(CompressionLoss):
             for sparse_layer in self._sparse_layers:
                 sparse_layer.frozen = True
 
-    def forward(self):
+    def forward(self, input_=None, target=None):
         if self.disabled:
             return 0
 
@@ -72,6 +72,7 @@ class SparseLoss(CompressionLoss):
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
 
+
 class SparseLossForPerLayerSparsity(SparseLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
         super().__init__(sparse_layers, target, p)
@@ -79,7 +80,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         for sparse_layer in self._sparse_layers:
             self.per_layer_target[sparse_layer] = self.target
 
-    def forward(self):
+    def forward(self, input_=None, target=None):
         if self.disabled:
             return 0
 

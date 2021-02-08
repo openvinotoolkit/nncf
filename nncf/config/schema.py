@@ -367,7 +367,7 @@ COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                     description=TARGET_SCOPES_DESCRIPTION),
+                                     description=TARGET_SCOPES_DESCRIPTION)
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {
@@ -741,6 +741,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                             "on all possible quantized layers and then the algorithm "
                                                             "their propagation is run from the bottom up. Also in "
                                                             "this mode it is possible to use hw config."),
+        "distillation": with_attributes(_BOOLEAN, description="Knowledge distillation on/off")
     },
     "required": ["input_info"],
     "definitions": REF_VS_ALGO_SCHEMA,
