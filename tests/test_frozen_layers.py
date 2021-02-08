@@ -1,5 +1,6 @@
 import pytest
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.utils import get_all_modules_by_type
 from tests.helpers import create_compressed_model_and_algo_for_test, TwoConvTestModel, get_empty_config
 
@@ -185,6 +186,13 @@ TEST_PARAMS = [
         .add_algo(AlgoBuilder().name('binarization'))
         .expects_error()
 ]
+
+
+@pytest.yield_fixture()
+def _nncf_caplog(caplog):
+    nncf_logger.propagate = True
+    yield caplog
+    nncf_logger.propagate = False
 
 
 @pytest.mark.parametrize('params', TEST_PARAMS, ids=[p.name for p in TEST_PARAMS])
