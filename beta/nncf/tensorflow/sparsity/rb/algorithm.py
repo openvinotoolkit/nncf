@@ -16,6 +16,7 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from beta.nncf.api.compression import CompressionAlgorithmBuilder
 from beta.nncf.api.compression import CompressionAlgorithmController
+from beta.nncf.api.compression import CompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
@@ -32,10 +33,7 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
-from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS, StubCompressionScheduler
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
@@ -108,7 +106,7 @@ class RBSparsityController(CompressionAlgorithmController):
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsifyed_layers)
-            self._scheduler = StubCompressionScheduler()
+            self._scheduler = CompressionScheduler()
         else:
             self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
             schedule_type = params.get("schedule", "exponential")

@@ -49,7 +49,8 @@ class TestSparseModules:
         ctl, compr_model = create_compressed_model(model, config)
         loss = ctl.loss
         assert not loss.disabled
-        assert loss.target_sparsity_rate == 0
+        tf.debugging.assert_near(loss.target_sparsity_rate,
+                                        config['compression']['params']['multistep_sparsity_levels'][0])
         assert loss.p == 0.05
 '''
 @pytest.mark.parametrize(('mask_value', 'ref_loss'),
@@ -69,11 +70,11 @@ class TestSparseModules:
             sw.mask = new_mask
         input_ = torch.ones([1, 1, 1, 1])
         assert model(input_).item() == ref_loss
-
+        
     @pytest.mark.parametrize(('frozen', 'raising'), ((None, True), (True, True), (False, False)),
                              ids=('default', 'frozen', 'not_frozen'))
-    def test_calc_loss(self, module, frozen, raising):
-        model = sparse_model(module, frozen)
+    def test_calc_loss(self, frozen, raising):
+        model = get_basic_conv_test_model()
         sw = model.sparsifier
         assert sw.frozen is (True if frozen is None else frozen)
         loss = SparseLoss([model.sparsifier])

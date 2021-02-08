@@ -15,7 +15,7 @@ import tensorflow as tf
 
 from beta.nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
+from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 
 
 class SparseLoss(CompressionLoss):
@@ -36,8 +36,8 @@ class SparseLoss(CompressionLoss):
             self.disabled = True
 
             for sparse_layer in self._sparse_layers:
-                for _, op in sparse_layer.get_ops_by_classname(RBSparsifyingWeight).items():
-                    op.trainable = False
+                op = sparse_layer.get_op_by_name(OP_NAME)
+                op.freeze(sparse_layer.ops_weights[OP_NAME])
 
     def call(self):
         if self.disabled:
@@ -51,7 +51,7 @@ class SparseLoss(CompressionLoss):
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if not sparse_layer.frozen:
-                sw_loss, params_layer, mask = self.loss(sparse_layer)
+                sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
                 params = params + params_layer
                 loss = loss + sw_loss
                 sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
@@ -68,10 +68,9 @@ class SparseLoss(CompressionLoss):
         return rate
 
     @staticmethod
-    def loss(sparse_layer):
-        # TODO: do something with getting op from wrapper
-        op_name, op = sparse_layer.get_ops_by_classname(RBSparsifyingWeight).items()[0]
-        mask = sparse_layer.ops_weights[op_name]
+    def _get_params_from_sparse_layer(sparse_layer):
+        op = sparse_layer.get_op_by_name(OP_NAME)
+        mask = sparse_layer.ops_weights[OP_NAME]
         return op.loss(mask), tf.squeeze(mask).shape[0], mask
 
     def statistics(self, quickly_collected_only=False):
@@ -100,7 +99,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if sparse_layer.sparsify:
-                sw_loss, params_layer, mask = self.loss(sparse_layer)
+                sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
                 params = params + params_layer
                 sparse_layers_loss += tf.math.abs(sw_loss / params_layer - self.per_layer_target[sparse_layer])
                 sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(sparse_layer.mask))
