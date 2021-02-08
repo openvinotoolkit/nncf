@@ -21,13 +21,15 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
+OP_NAME = 'rb_sparsity_mask_apply'
 
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
 
     def __init__(self, trainable=True):
         '''Setup trainable param'''
-        super().__init__(trainable=trainable)
+        super().__init__(trainable=trainable,
+                         name=OP_NAME)
 
     def build(self, input_shape, input_type, name, layer):
         if input_type is not InputType.WEIGHTS:
@@ -42,18 +44,28 @@ class RBSparsifyingWeight(NNCFOperation):
             trainable=True,
             aggregation=tf.VariableAggregation.MEAN)
 
+        trainable = layer.add_weight(
+            name + '_trainable',
+            initializer=tf.keras.initializers.Constant(1),
+            trainable=False,
+            dtype=tf.int8)
+
         return {
-            'mask': mask
+            'mask': mask,
+            'trainable': trainable,
         }
 
-    def call(self, layer_weights, mask, _):
+    def call(self, layer_weights, op_weights, _):
         '''Apply rb sparsity mask to given weights
         :param layer_weights: target weights to sparsify
-        :param mask: rb sparsity mask
+        :param op_weights: operation weights contains
+           mask and param trainable
         :param _:'''
-        return apply_mask(layer_weights, calc_rb_binary_mask(mask['mask']))
+        if tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)):
+            return apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask']))
+        return tf.stop_gradient(apply_mask(layer_weights, st_binary_mask(op_weights['mask'])))
 
     @staticmethod
     def loss(mask):
         '''Return count of non zero weight in mask'''
-        return tf.squeeze(st_binary_mask(st_binary_mask)).shape[0]
+        return tf.squeeze(st_binary_mask(mask['mask'])).shape[0]

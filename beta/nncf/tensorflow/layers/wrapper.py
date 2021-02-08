@@ -125,8 +125,12 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             for op_name, op in ops.items():
                 if op.trainable == trainable:
                     ops_weight = self._ops_weights[op_name]
-                    for weight in ops_weight.values():
-                        result.append(weight)
+                    # TODO: unify
+                    if isinstance(ops_weight, _DictWrapper):
+                        for weight in ops_weight.values():
+                            result.append(weight)
+                    else:
+                        result.append(ops_weight)
         return result
 
     def _apply_ops(self, training):
@@ -143,7 +147,10 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op_name is None:
-            op_name = 'nncf_op_{}:{}'.format(weights_attr, len(self.weights_attr_ops[weights_attr]))
+            if op.name is None:
+                op_name = 'nncf_op_{}:{}'.format(weights_attr, len(self.weights_attr_ops[weights_attr]))
+            else:
+                op_name = op.name
 
         self.weights_attr_ops[weights_attr][op_name] = op
         return op_name
