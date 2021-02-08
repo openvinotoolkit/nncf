@@ -148,8 +148,8 @@ class TestPolynomialSparsityScheduler:
             set_sparsity_mock.reset_mock()
 
     @pytest.mark.parametrize("concavity_and_ref_sparsity_levels", [
-        (True, [0.1, pytest.approx(13 / 90), pytest.approx(25 / 90), 0.5, 0.5]),
-        (False, [pytest.approx(0.1), pytest.approx(29 / 90), pytest.approx(41 / 90), 0.5, 0.5])],
+        (False, [0.1, pytest.approx(13 / 90), pytest.approx(25 / 90), 0.5, 0.5]),
+        (True, [pytest.approx(0.1), pytest.approx(29 / 90), pytest.approx(41 / 90), 0.5, 0.5])],
                              ids=["concave", "convex"])
     def test_polynomial_schedule_per_epoch_step(self, magnitude_algo_mock, concavity_and_ref_sparsity_levels):
         concave = concavity_and_ref_sparsity_levels[0]
@@ -206,7 +206,7 @@ class TestPolynomialSparsityScheduler:
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
             "update_per_optimizer_step": True,
-            "concave": True
+            "concave": False
         }
 
         if specify_steps_per_epoch_in_config:
