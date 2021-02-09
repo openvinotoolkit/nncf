@@ -261,6 +261,7 @@ def export(config):
 
 
 def main(argv):
+    tf.executing_eagerly()
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
 

@@ -17,6 +17,7 @@ from beta.nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback
 from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatisticsCallback
 from beta.nncf.tensorflow.sparsity.callbacks import UpdateMask
 from beta.nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
+from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
 
 
 def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_text=True, log_dir=None):

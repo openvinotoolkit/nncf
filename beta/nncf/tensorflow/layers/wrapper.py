@@ -123,12 +123,15 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         result = []
         for _, ops in self.weights_attr_ops.items():
             for op_name, op in ops.items():
-                op_weights = self._ops_weights[op_name]
-                # TODO: unify
-                if isinstance(op_weights, _DictWrapper) and \
-                        op.trainable(op_weights) == trainable:
-                    for weight in op_weights.values():
-                        result.append(weight)
+                op_weights = self._ops_weights[op_name].copy()
+                if op.trainable == trainable:
+                    # TODO: unify
+                    if isinstance(op_weights, _DictWrapper):
+                        if trainable:
+                            op_weights.pop('trainable')
+                        result += list(op_weights.values())
+                    else:
+                        result.append(op_weights)
         return result
 
     def _apply_ops(self, training):
