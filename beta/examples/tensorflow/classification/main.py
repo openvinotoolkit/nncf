@@ -24,7 +24,7 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
-from beta.examples.tensorflow.common.callbacks import get_callbacks
+from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.model_loader import get_model
@@ -191,6 +191,8 @@ def run(config):
         model_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir)
 
+    callbacks.append(get_progress_bar(
+        stateful_metrics=[metric.name for metric in metrics]))
     callbacks.extend(compression_callbacks)
 
     validation_kwargs = {
@@ -214,6 +216,8 @@ def run(config):
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
+        callbacks=[get_progress_bar(
+            stateful_metrics=[metric.name for metric in metrics])],
         verbose=1)
 
     if config.metrics_dump is not None:
