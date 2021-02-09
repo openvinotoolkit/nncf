@@ -18,6 +18,7 @@ import shutil
 from tests.conftest import TEST_ROOT, PROJECT_ROOT
 
 INSTALL_CHECKS_FILENAME = 'install_checks.py'
+subprocess.call("pip install --upgrade pip", shell=True)
 
 
 @pytest.fixture(name="venv_type",
@@ -45,8 +46,8 @@ def test_install(install_type, tmp_path, package_type, venv_type):
     if venv_type == 'virtualenv':
         subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
     elif venv_type == 'venv':
-        subprocess.call("python{} -m venv {}".format(version_string, venv_path), shell=True)
-        subprocess.call("{} install --upgrade pip".format(pip_with_venv), shell=True)
+        subprocess.call("python{} -m venv {} --without-pip --system-site-packages".format(version_string, venv_path),
+                        shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
