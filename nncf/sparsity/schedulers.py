@@ -72,7 +72,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
     def __init__(self, sparsity_algo, params=None):
         super().__init__(sparsity_algo, params)
         self.power = self._params.get('power', 0.9)
-        self.concave = self._params.get('concave', False)
+        self.concave = self._params.get('concave', True)
         self._update_per_optimizer_step = self._params.get('update_per_optimizer_step', False)
         if self._update_per_optimizer_step:
             self._steps_per_epoch = self._params.get('steps_per_epoch')
@@ -126,7 +126,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
         else:
             progress = (min(self.sparsity_target_epoch, self.current_epoch) / self.sparsity_target_epoch)
 
-        if self.concave:
+        if not self.concave:
             current_sparsity = self.initial_sparsity + (self.sparsity_target - self.initial_sparsity) * (
                 progress ** self.power)
         else:
