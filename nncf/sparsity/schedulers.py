@@ -35,14 +35,6 @@ class SparsityScheduler(CompressionScheduler):
         self.sparsity_target_epoch = self._params.get('sparsity_target_epoch', 90)
         self.sparsity_freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
 
-    def epoch_step(self, next_epoch=None):
-        super().epoch_step(next_epoch)
-        self._set_sparsity_level()
-
-    def load_state_dict(self, state_dict):
-        super().load_state_dict(state_dict)
-        self._set_sparsity_level()
-
     def _set_sparsity_level(self):
         if self.current_epoch >= self.sparsity_freeze_epoch:
             self.algo.freeze()
@@ -106,6 +98,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
         self._steps_in_current_epoch = 0
         super().epoch_step(next_epoch)
+        self._set_sparsity_level()
 
     def state_dict(self):
         sd = super().state_dict()
@@ -140,12 +133,17 @@ class PolynomialSparseScheduler(SparsityScheduler):
     def current_step_in_current_epoch(self):
         return self._steps_in_current_epoch - 1 if self._steps_in_current_epoch > 0 else 0
 
+
 @SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
     def __init__(self, sparsity_algo, params=None):
         super().__init__(sparsity_algo, params)
         self.a, self.k = self._init_exp(self.initial_sparsity, self.sparsity_target,
                                         sparsity_steps=self.sparsity_target_epoch)
+
+    def epoch_step(self, next_epoch=None):
+        super().epoch_step(next_epoch)
+        self._set_sparsity_level()
 
     @property
     def current_sparsity_level(self):
@@ -205,27 +203,17 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         super().__init__(sparsity_algo, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
         self.steps = sorted(self._params.get('multistep_steps', [90]))
+
         if len(self.steps) + 1 != len(self.sparsity_levels):
             raise AttributeError('number of sparsity levels must equal to number of steps + 1')
 
-        self.initial_sparsity = self.sparsity_level = self.sparsity_levels[0]
-        self.prev_ind = 0
+        self.sparsity_level = self.sparsity_levels[0]
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
         ind = bisect_right(self.steps, self.current_epoch)
-        if ind != self.prev_ind:
-            self.sparsity_level = self.sparsity_levels[ind]
-            self.prev_ind = ind
+        self.sparsity_level = self.sparsity_levels[ind]
         self._set_sparsity_level()
-
-    def load_state_dict(self, state_dict):
-        super().load_state_dict(state_dict)
-        ind = bisect_right(self.steps, self._current_epoch)
-        if ind > 0:
-            self.prev_ind = ind
-            self.sparsity_level = self.sparsity_levels[ind]
-            self._set_sparsity_level()
 
     @property
     def current_sparsity_level(self):
