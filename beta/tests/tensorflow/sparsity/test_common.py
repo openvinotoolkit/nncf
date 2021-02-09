@@ -24,7 +24,7 @@ from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_c
 
 
 @pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity',))
+                         ('magnitude_sparsity', 'rb_sparsity'))
 @pytest.mark.parametrize(('schedule_type', 'scheduler_class'),
                          (
                              ('polynomial', PolynomialSparsityScheduler),
@@ -35,9 +35,23 @@ from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_c
 
 def test_can_choose_scheduler(algo, schedule_type, scheduler_class):
     config = get_empty_config()
-    config['compression'] = Dict({'algorithm': algo, "params": {"schedule": schedule_type}})
+    config['compression'] = Dict({'algorithm': algo, 'params': {'schedule': schedule_type}})
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
     assert isinstance(compression_ctrl.scheduler, scheduler_class)
+
+
+def test_can_create_rb_algo__with_adaptive_scheduler():
+    config = get_empty_config()
+    config['compression'] = {'algorithm': 'rb_sparsity', 'params': {'schedule': 'adaptive'}}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
+    assert isinstance(compression_ctrl.scheduler, AdaptiveSparsityScheduler)
+
+
+def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
+    config = get_empty_config()
+    config['compression'] = {'algorithm': 'magnitude_sparsity', 'params': {'schedule': 'adaptive'}}
+    with pytest.raises(TypeError):
+        _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 
 def get_poly_params():
@@ -56,12 +70,12 @@ def get_multistep_params():
 
 
 @pytest.mark.parametrize('algo',
-                         ('magnitude_sparsity',))
+                         ('magnitude_sparsity', 'rb_sparsity'))
 class TestSparseModules:
     def test_can_create_sparse_scheduler__with_defaults(self, algo):
         config = get_empty_config()
 
-        config['compression'] = Dict({'algorithm': algo, "params": {"schedule": 'polynomial'}})
+        config['compression'] = Dict({'algorithm': algo, 'params': {'schedule': 'polynomial'}})
         _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
         scheduler = compression_ctrl.scheduler
         assert scheduler.initial_level == 0
@@ -97,7 +111,7 @@ class TestSparseModules:
             assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
 
-@pytest.fixture(name="magnitude_algo_mock")
+@pytest.fixture(name='magnitude_algo_mock')
 def magnitude_algo_mock_(mocker):
     class MockSparsityAlgo:
         def __init__(self):
@@ -156,6 +170,8 @@ class TestPolynomialSparsityScheduler:
 
         scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
+        mock.assert_called_once_with(ref_sparsity_levels[0])
+        mock.reset_mock()
 
         steps_per_epoch = 3
 
@@ -184,7 +200,7 @@ class TestPolynomialSparsityScheduler:
             self.run_epoch(steps_per_epoch, scheduler, mock, ref_sparsity_levels, explicit, epoch + i)
             assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
 
-    @pytest.mark.parametrize("explicit", [True, False], ids=["explicit_steps", "implicit_steps"])
+    @pytest.mark.parametrize('explicit', [True, False], ids=['explicit_steps', 'implicit_steps'])
     def test_polynomial_schedule_per_optimizer_step(self,
                                                     magnitude_algo_mock,
                                                     explicit):
@@ -216,3 +232,95 @@ class TestPolynomialSparsityScheduler:
                                                         ref_level_sequence,
                                                         explicit,
                                                         epoch)
+
+
+@pytest.fixture(name='rb_algo_mock')
+def rb_algo_mock_(mocker):
+    class MockSparsityAlgo:
+        def __init__(self):
+            self.set_sparsity_level = mocker.stub()
+            self.freeze = mocker.stub()
+            from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
+            self.loss = SparseLoss()
+            self.loss.current_sparsity = 0.3
+            self.sparsity_init = 0
+
+    return MockSparsityAlgo()
+
+
+class TestAdaptiveSparsityScheduler:
+    @staticmethod
+    def run_epoch(steps_per_epoch, scheduler, set_sparsity_mock):
+        set_sparsity_mock.reset_mock()
+        scheduler.epoch_step()
+        for _ in range(steps_per_epoch):
+            scheduler.step()
+
+    @pytest.mark.parametrize('ref_sparsity_levels', [([pytest.approx(x) for x in \
+                                                          [0.2, 0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.4, 0.4]])])
+    def test_adaptive_scheduler_per_epoch_step(self, rb_algo_mock, ref_sparsity_levels):
+        params = {
+            'sparsity_target': 0.4,
+            'sparsity_target_epoch': 3,
+            'sparsity_freeze_epoch': 7,
+            'sparsity_init': 0.2
+        }
+
+        scheduler = AdaptiveSparsityScheduler(rb_algo_mock, params=params)
+        mock = rb_algo_mock.set_sparsity_level
+
+        steps_per_epoch = 3
+
+        # Init sparsity
+        assert scheduler.initial_sparsity == ref_sparsity_levels[0]
+        # After epoch 0
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[1],)
+
+        rb_algo_mock.loss.current_sparsity = 0.2
+        # After epoch 1
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[2],)
+
+        rb_algo_mock.loss.current_sparsity = 0.22
+
+        # After epoch 2
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[3],)
+
+        rb_algo_mock.loss.current_sparsity = 0.31
+
+        # After epoch 3
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[4],)
+
+        rb_algo_mock.loss.current_sparsity = 0.34
+
+        # After epoch 4
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[5],)
+
+        rb_algo_mock.loss.current_sparsity = 0.37
+
+        # After epoch 5
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[6],)
+
+        rb_algo_mock.loss.current_sparsity = 0.48
+
+        # After epoch 6
+        self.run_epoch(steps_per_epoch, scheduler, mock)
+
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[7],)
