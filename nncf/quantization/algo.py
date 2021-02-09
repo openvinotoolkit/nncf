@@ -12,10 +12,16 @@
 """
 
 # pylint:disable=too-many-lines
-from collections import OrderedDict, Counter
+from collections import Counter
+from collections import OrderedDict
 from pathlib import Path
 from string import Template
-from typing import List, Dict, Tuple, Optional, Callable, Set
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 
 import functools
 import networkx as nx
@@ -27,48 +33,86 @@ from copy import deepcopy
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.common.os import safe_open
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.compression_method_api import CompressionAlgorithmBuilder
+from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
-from nncf.debug import is_debug, DebugInterface, CallCountTracker
-from nncf.dynamic_graph.context import TracingContext, Scope
+from nncf.debug import CallCountTracker
+from nncf.debug import DebugInterface
+from nncf.debug import is_debug
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import NNCFNodeExpression as N, NNCFGraph
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import NNCFNodeExpression as N
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
-from nncf.hw_config import HWConfig, HWConfigType
+from nncf.hw_config import HWConfig
+from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdateWeight
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, ExtraCompressionModuleType, InsertionCommand, OperationPriority, \
-    InsertionPoint, InsertionType, InsertionPointGraph, InsertionPointGraphNodeType, InsertionInfo
+from nncf.nncf_network import ExtraCompressionModuleType
+from nncf.nncf_network import InsertionCommand
+from nncf.nncf_network import InsertionInfo
+from nncf.nncf_network import InsertionPoint
+from nncf.nncf_network import InsertionPointGraph
+from nncf.nncf_network import InsertionPointGraphNodeType
+from nncf.nncf_network import InsertionType
+from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import OperationPriority
 from nncf.quantization.init_precision import PrecisionInitializerFactory
-from nncf.quantization.init_range import RangeInitParams, RangeInitConfig, PerLayerRangeInitConfig, \
-    StatCollectorGenerator, DataLoaderRangeInitializeRunner
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizationMode, QuantizerConfig, BaseQuantizer, \
-    QuantizerExportMode, QuantizersSwitcher
-from nncf.quantization.metrics import NetworkQuantizationShareMetric, MemoryCostMetric, ShareEdgesQuantizedDataPath, \
-    NetworkQuantizationShareMetricBuildTimeInfo
+from nncf.quantization.init_range import DataLoaderRangeInitializeRunner
+from nncf.quantization.init_range import PerLayerRangeInitConfig
+from nncf.quantization.init_range import RangeInitConfig
+from nncf.quantization.init_range import RangeInitParams
+from nncf.quantization.init_range import StatCollectorGenerator
+from nncf.quantization.layers import BaseQuantizer
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.layers import QuantizationMode
+from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.layers import QuantizerExportMode
+from nncf.quantization.layers import QuantizersSwitcher
+from nncf.quantization.metrics import MemoryCostMetric
+from nncf.quantization.metrics import NetworkQuantizationShareMetric
+from nncf.quantization.metrics import NetworkQuantizationShareMetricBuildTimeInfo
+from nncf.quantization.metrics import ShareEdgesQuantizedDataPath
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId, InputQuantizerId, \
-    QuantizerId
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver, QuantizerPropagationStateGraph
-from nncf.quantization.quantizer_setup import QuantizationPointId, SingleConfigQuantizationPoint, QuantizerSetupBase, \
-    SingleConfigQuantizerSetup, MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_id import InputQuantizerId
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.quantization.quantizer_id import QuantizerId
+from nncf.quantization.quantizer_id import WeightQuantizerId
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import QuantizerSetupBase
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.quantization.structs import QuantizerSetupType, QuantizationConstraints, QuantizerGroup, QuantizableModule, \
-    NonWeightQuantizerInfo, WeightQuantizerInfo
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, AutoQPrecisionInitArgs
+from nncf.quantization.structs import NonWeightQuantizerInfo
+from nncf.quantization.structs import QuantizableModule
+from nncf.quantization.structs import QuantizationConstraints
+from nncf.quantization.structs import QuantizerGroup
+from nncf.quantization.structs import QuantizerSetupType
+from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.structures import AutoQPrecisionInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs
+from nncf.structures import QuantizationRangeInitArgs
 from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
-from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic
-from nncf.utils import in_scope_list, is_main_process, should_consider_scope
-from nncf.common.os import safe_open
+from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.tensor_statistics.statistics import TensorStatistic
+from nncf.utils import in_scope_list
+from nncf.utils import is_main_process
+from nncf.utils import should_consider_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -1576,6 +1620,9 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         super().__init__(NNCFConfig(), should_init=should_init)
         self._quantizer_setup = quantizer_setup
         self._tensor_stats = tensor_stats_for_all_setup_variations
+
+    def _handle_frozen_layers(self):
+        pass
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
         return self._quantizer_setup

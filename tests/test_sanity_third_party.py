@@ -56,8 +56,10 @@ class TestTransformers:
         self.TRANS_PATH = str(os.path.join(self.VENV_TRANS_PATH, "transformers"))
         self.activate_venv = str(". {}/bin/activate".format(self.VENV_TRANS_PATH))
 
+    @pytest.mark.dependency(name='install_trans')
     def test_install_trans_(self):
-        subprocess.call("virtualenv -ppython3.7 {}".format(self.VENV_TRANS_PATH), shell=True)
+        version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
+        subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_TRANS_PATH), shell=True)
         subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run("{} && pip install torch==1.7.0".format(self.activate_venv),
@@ -81,6 +83,7 @@ class TestTransformers:
             "{} && {}/bin/python setup.py develop".format(self.activate_venv, self.VENV_TRANS_PATH), check=True,
             shell=True, cwd=PROJECT_ROOT)
 
+    @pytest.mark.dependency(depends=['install_trans'], name='xnli_train')
     def test_xnli_train(self, temp_folder):
         com_line = "examples/text-classification/run_xnli.py --model_name_or_path bert-base-chinese" \
                    " --language zh --train_language zh --do_train --data_dir {} --per_gpu_train_batch_size 24" \
@@ -92,6 +95,7 @@ class TestTransformers:
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "xnli", "pytorch_model.bin"))
 
+    @pytest.mark.dependency(depends=['install_trans', 'xnli_train'])
     def test_xnli_eval(self, temp_folder):
         com_line = "examples/text-classification/run_xnli.py --model_name_or_path {output}" \
                    " --language zh --do_eval --data_dir {} --learning_rate 5e-5 --max_seq_length 128 --output_dir" \
@@ -101,6 +105,7 @@ class TestTransformers:
                                              self.cuda_visible_string), self.TRANS_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_trans'], name='squad_train')
     def test_squad_train(self, temp_folder):
         com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path " \
                    "bert-large-uncased-whole-word-masking-finetuned-squad --do_train --do_lower_case " \
@@ -113,6 +118,7 @@ class TestTransformers:
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "squad", "pytorch_model.bin"))
 
+    @pytest.mark.dependency(depends=['install_trans', 'squad_train'])
     def test_squad_eval(self, temp_folder):
         com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path {output}" \
                    " --do_eval --do_lower_case  --predict_file {}/squad/dev-v1.1.json --learning_rate 3e-5" \
@@ -123,6 +129,7 @@ class TestTransformers:
                                              self.cuda_visible_string), self.TRANS_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_trans'], name='glue_roberta_train')
     def test_glue_train(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
                    " roberta-large-mnli --task_name mnli --do_train --data_dir {}/glue/glue_data/MNLI" \
@@ -135,6 +142,7 @@ class TestTransformers:
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "roberta_mnli", "pytorch_model.bin"))
 
+    @pytest.mark.dependency(depends=['install_trans', 'glue_roberta_train'])
     def test_glue_eval(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path {output}" \
                    " --task_name mnli --do_eval --data_dir {}/glue/glue_data/MNLI --learning_rate 2e-5" \
@@ -145,6 +153,7 @@ class TestTransformers:
                                              self.cuda_visible_string), self.TRANS_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_trans'], name='glue_distilbert_train')
     def test_glue_distilbert_train(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path" \
                    " distilbert-base-uncased" \
@@ -158,6 +167,7 @@ class TestTransformers:
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "distilbert_output", "pytorch_model.bin"))
 
+    @pytest.mark.dependency(depends=['install_trans', 'glue_distilbert_train'])
     def test_glue_distilbert_eval(self, temp_folder):
         com_line = "examples/text-classification/run_glue.py --model_name_or_path {output}" \
                    " --task_name SST-2 --do_eval --max_seq_length 128" \
@@ -168,6 +178,7 @@ class TestTransformers:
                                              self.cuda_visible_string), self.TRANS_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_trans'], name='lm_train')
     def test_lm_train(self, temp_folder):
         com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 --model_name_or_path gpt2" \
                    " --do_train --per_gpu_train_batch_size 8" \
@@ -180,6 +191,7 @@ class TestTransformers:
         runner.run()
         assert os.path.exists(os.path.join(temp_folder["models"], "lm_output", "pytorch_model.bin"))
 
+    @pytest.mark.dependency(depends=['install_trans', 'lm_train'])
     def test_lm_eval(self, temp_folder):
         com_line = "examples/language-modeling/run_language_modeling.py --model_type gpt2 " \
                    "--model_name_or_path {output} --do_eval " \
@@ -190,6 +202,7 @@ class TestTransformers:
                                              self.cuda_visible_string), self.TRANS_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_trans'])
     def test_convert_to_onnx(self, temp_folder):
         com_line = "examples/question-answering/run_squad.py --model_type bert --model_name_or_path {output}" \
                    " --output_dir {output}" \
@@ -211,8 +224,10 @@ class TestMmdetection:
         self.mmdet_python = str("{}/bin/python".format(self.VENV_MMDET_PATH))
         self.MMDET_PATH = str(os.path.join(self.VENV_MMDET_PATH, "mmdetection"))
 
+    @pytest.mark.dependency(name='install_mmdet')
     def test_install_mmdet(self):
-        subprocess.call("virtualenv -ppython3.7 {}".format(self.VENV_MMDET_PATH), shell=True)
+        version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
+        subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_MMDET_PATH), shell=True)
         subprocess.run("{} pip install --upgrade pip".format(self.activate_venv),
                        check=True, shell=True)
         subprocess.run(
@@ -251,6 +266,7 @@ class TestMmdetection:
                        shell=True,
                        cwd=self.MMDET_PATH)
 
+    @pytest.mark.dependency(depends=['install_mmdet'], name='ssd300_train')
     def test_ssd300_train(self):
         subprocess.run(
             "wget https://s3.ap-northeast-2.amazonaws.com/open-mmlab/mmdetection/models/ssd300_voc_vgg16_caffe_240e_20190501-7160d09a.pth",
@@ -260,12 +276,14 @@ class TestMmdetection:
         runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "ssd300_voc_int8", "latest.pth"))
 
+    @pytest.mark.dependency(depends=['install_mmdet', 'ssd300_train'])
     def test_ssd300_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "ssd300_voc_int8", "latest.pth")
         comm_line = "tools/test.py configs/pascal_voc/ssd300_voc_int8.py {} --eval mAP".format(checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_mmdet', 'ssd300_train'])
     def test_ssd300_export2onnx(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "ssd300_voc_int8", "latest.pth")
         comm_line = "tools/pytorch2onnx.py configs/pascal_voc/ssd300_voc_int8.py {} --output-file ssd300_voc_int8.onnx".format(
@@ -274,6 +292,7 @@ class TestMmdetection:
         runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "ssd300_voc_int8.onnx"))
 
+    @pytest.mark.dependency(depends=['install_mmdet'], name='retinanet_train')
     def test_retinanet_train(self):
         subprocess.run(
             "wget https://open-mmlab.s3.ap-northeast-2.amazonaws.com/mmdetection/models/retinanet_r50_fpn_2x_20190616-75574209.pth",
@@ -283,12 +302,14 @@ class TestMmdetection:
         runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "work_dirs", "retinanet_r50_fpn_1x_int8", "latest.pth"))
 
+    @pytest.mark.dependency(depends=['install_mmdet', 'retinanet_train'])
     def test_retinanet_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "retinanet_r50_fpn_1x_int8", "latest.pth")
         comm_line = "tools/test.py configs/retinanet/retinanet_r50_fpn_1x_int8.py {} --eval bbox".format(checkpoint)
         runner = Command(create_command_line(comm_line, self.activate_venv, self.mmdet_python), self.MMDET_PATH)
         runner.run()
 
+    @pytest.mark.dependency(depends=['install_mmdet', 'retinanet_train'])
     def test_retinanet_export2onnx(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "retinanet_r50_fpn_1x_int8", "latest.pth")
         comm_line = "tools/pytorch2onnx.py configs/retinanet/retinanet_r50_fpn_1x_int8.py {} --output-file retinanet_r50_fpn_1x_int8.onnx".format(
@@ -297,6 +318,7 @@ class TestMmdetection:
         runner.run()
         assert os.path.exists(os.path.join(self.MMDET_PATH, "retinanet_r50_fpn_1x_int8.onnx"))
 
+    @pytest.mark.dependency(depends=['install_mmdet'], name='maskrcnn_train')
     def test_maskrcnn_train(self):
         subprocess.run(
             "wget http://download.openmmlab.com/mmdetection/v2.0/mask_rcnn/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco/mask_rcnn_r50_caffe_fpn_mstrain-poly_3x_coco_bbox_mAP-0.408__segm_mAP-0.37_20200504_163245-42aa3d00.pth",
@@ -307,6 +329,7 @@ class TestMmdetection:
         assert os.path.exists(
             os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth"))
 
+    @pytest.mark.dependency(depends=['install_mmdet', 'maskrcnn_train'])
     def test_maskrcnn_eval(self):
         checkpoint = os.path.join(self.MMDET_PATH, "work_dirs", "mask_rcnn_r50_caffe_fpn_1x_coco_int8", "latest.pth")
         comm_line = "tools/test.py configs/mask_rcnn/mask_rcnn_r50_caffe_fpn_1x_coco_int8.py {} --eval bbox".format(

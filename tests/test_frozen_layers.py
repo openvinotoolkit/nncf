@@ -1,8 +1,13 @@
 import pytest
 
+from nncf import NNCFConfig
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type
-from tests.helpers import create_compressed_model_and_algo_for_test, TwoConvTestModel, get_empty_config
+from tests.helpers import TwoConvTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_mock_dataloader
+from tests.helpers import get_empty_config
 
 FIRST_NNCF_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]'
 FIRST_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]'
@@ -51,14 +56,18 @@ class FrozenLayersTestStruct:
         self.raising_error = False
         self.printing_warning = False
         self._freeze_all = False
+        self._config_updaters = []
 
     def freeze_all(self):
         self._freeze_all = True
         return self
 
     def create_config(self):
+        self.with_range_init()
         config = get_empty_config()
         config.update(self.config_update)
+        for config_updater in self._config_updaters:
+            config = config_updater(config)
         return config
 
     def create_frozen_model(self):
@@ -72,6 +81,21 @@ class FrozenLayersTestStruct:
 
     def add_algo(self, algo_builder: AlgoBuilder):
         self.config_update['compression'].append(algo_builder.get_config())
+        return self
+
+    def with_range_init(self):
+        def add_range_init(config):
+            for compression in config['compression']:
+                if compression['algorithm'] == 'quantization':
+                    if 'initializer' not in compression:
+                        compression['initializer'] = {}
+                    compression['initializer'].update({'range': {'num_init_samples': 1}})
+                    data_loader = create_mock_dataloader(config)
+                    config = NNCFConfig.from_dict(config)
+                    config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
+            return config
+
+        self._config_updaters.append(add_range_init)
         return self
 
     def ignore_first_conv(self, is_nncf=False):
@@ -92,6 +116,7 @@ class FrozenLayersTestStruct:
 
 
 TEST_PARAMS = [
+    FrozenLayersTestStruct(name='no_compression'),
     FrozenLayersTestStruct(name='8_bits_quantization')
         .add_algo(AlgoBuilder().name('quantization'))
         .expects_warning(),
@@ -205,5 +230,8 @@ def test_frozen_layers(_nncf_caplog, params):
             __, _ = create_compressed_model_and_algo_for_test(model, config)
     else:
         __, _ = create_compressed_model_and_algo_for_test(model, config)
+    are_frozen_layers_mentioned = 'Frozen layers' in _nncf_caplog.text
     if params.printing_warning:
-        assert 'Frozen layers' in _nncf_caplog.text
+        assert are_frozen_layers_mentioned
+    else:
+        assert not are_frozen_layers_mentioned
