@@ -12,6 +12,7 @@
 """
 
 from collections import OrderedDict
+import tensorflow as tf
 
 from beta.nncf.tensorflow.utils.hook_handle import HookHandle
 
@@ -26,12 +27,11 @@ class NNCFOperation:
     The abstract class represents main building block for adding compression
     extensions to a model.
     """
-    def __init__(self, trainable=False, name=None):
+    def __init__(self, name=None):
         """
         Initializes internal NNCF operation state
         """
         self._call_pre_hooks = OrderedDict()
-        self.trainable = trainable
         self.name = name
 
     def build(self, input_shape, input_type, name, layer):
@@ -73,6 +73,17 @@ class NNCFOperation:
         handle = HookHandle(self._call_pre_hooks)
         self._call_pre_hooks[handle.hook_id] = hook
         return handle
+
+    @staticmethod
+    def trainable(op_weights):
+        """
+        Return true if `op_weights` contains trainable indicator
+        weight and it's indicate that operation is trainable
+        """
+        trainable = op_weights.get('trainable', None)
+        if trainable is not None:
+            return tf.equal(trainable, tf.constant(1, dtype=tf.int8))
+        return False
 
     def __call__(self, *args, **kwargs):
         inputs = args[0]

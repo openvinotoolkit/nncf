@@ -212,7 +212,6 @@ class TFModelTransformer(ModelTransformer):
 
         for weights_attr_name, operations in weight_operations:
             for op in operations:
-                # TODO: OPERATION NAME
                 wrapper.registry_weight_operation(weights_attr_name, op)
 
         self._replace(layer_name, wrapper)

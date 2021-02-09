@@ -34,7 +34,7 @@ from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS, StubCompressionScheduler
+from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
 
@@ -99,7 +99,6 @@ class RBSparsityController(CompressionAlgorithmController):
         super().__init__(target_model)
         self._scheduler = None
         self._distributed = False
-        # TODO: Find out how to init sparsity properly
         self.sparsity_init = params.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         sparsifyed_layers = collect_wrapped_layers(target_model)
