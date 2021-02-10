@@ -48,7 +48,6 @@ from examples.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf import create_compressed_model
 from nncf.utils import is_main_process
 
-original_model = None
 
 def get_arguments_parser():
     parser = get_common_argument_parser()
@@ -320,7 +319,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
 
     # Start Training
     train_obj = Train(model, train_loader, optimizer, criterion, compression_ctrl, metric, config.device,
-                      config.model, original_model)
+                      config.model)
     val_obj = Test(model, val_loader, criterion, metric, config.device,
                    config.model)
 
@@ -501,7 +500,6 @@ def main_worker(current_gpu, config):
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, criterion_fn,
             autoq_test_fn, val_loader, config.device)
-    global original_model
     model = load_model(config.model,
                        pretrained=pretrained,
                        num_classes=num_classes,
@@ -515,8 +513,6 @@ def main_worker(current_gpu, config):
         resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
             resuming_checkpoint_path)
 
-    original_model = deepcopy(model)
-    original_model.to(config.device)
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
     model, model_without_dp = prepare_model_for_execution(model, config)
 

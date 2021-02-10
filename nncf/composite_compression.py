@@ -31,7 +31,8 @@ class CompositeCompressionLoss(CompressionLoss):
         return self._child_losses
 
     def add(self, child_loss):
-        self._child_losses.append(child_loss)
+        if not child_loss.__class__ == CompressionLoss:
+            self._child_losses.append(child_loss)
 
     def forward(self, input_=None, target=None):
         result_loss = 0

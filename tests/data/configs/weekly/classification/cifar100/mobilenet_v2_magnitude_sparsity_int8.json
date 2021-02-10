@@ -39,6 +39,7 @@
             "algorithm": "quantization"
         }
     ],
+    "distillation": true,
     "dataset": "cifar100",
     "epochs": 12
 }

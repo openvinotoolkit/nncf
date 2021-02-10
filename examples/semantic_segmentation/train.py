@@ -33,7 +33,7 @@ class Train:
     of the results (i.e. whether center crop should be applied, what outputs should be counted in metrics, etc.)
     """
 
-    def __init__(self, model, data_loader, optim, criterion, compression_ctrl, metric, device, model_name, orig_model):
+    def __init__(self, model, data_loader, optim, criterion, compression_ctrl, metric, device, model_name):
         self.model = model
         self.data_loader = data_loader
         self.optim = optim
@@ -42,7 +42,6 @@ class Train:
         self.metric = metric
         self.device = device
         self.model_name = model_name
-        self.orig_model = orig_model
 
     def run_epoch(self, iteration_loss=False):
         """Runs an epoch of training.
@@ -64,14 +63,8 @@ class Train:
             # Get the inputs and labels
             inputs = batch_data[0].to(self.device)
             labels = batch_data[1].to(self.device)
-            for child_loss in self.compression_ctrl.loss.child_losses:
-                if isinstance(child_loss, KDLossCalculator):
-                    orig_model = child_loss.original_model
             # Forward propagation
             outputs = self.model(inputs)
-            orig_outputs = self.orig_model(inputs)
-            # kd model isn't downscaled
-            kd_outputs = orig_model(inputs)
 
             labels, loss_outputs, metric_outputs = do_model_specific_postprocessing(self.model_name, labels, outputs)
 

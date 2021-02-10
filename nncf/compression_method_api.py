@@ -70,6 +70,7 @@ class KDLossCalculator(CompressionLoss):
     def __init__(self, original_model):
         super().__init__()
         self.original_model = original_model
+        self.original_model.train()
         self.mse = torch.nn.MSELoss()
 
     def forward(self, input_=None, target=None):
@@ -82,11 +83,11 @@ class KDLossCalculator(CompressionLoss):
                 return True
             return False
         ref_outputs = self.original_model(target)
-        tensors_to_list = lambda obj: [obj] if isinstance(obj, torch.Tensor) else list(obj)
+        tensors_to_list = lambda obj: [obj] if isinstance(obj, torch.Tensor)\
+            else list(obj.values() if isinstance(obj, dict) else obj)
+        a = objwalk(ref_outputs, is_loss, lambda x: x)
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
-        pass
-        a = 1
         return reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
                       zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
 
@@ -258,7 +259,9 @@ class CompressionAlgorithmController:
 
     def add_kd_loss(self, original_model):
         from nncf.composite_compression import CompositeCompressionLoss
-        self._loss = CompositeCompressionLoss().add(self._loss)
+        loss = self._loss
+        self._loss = CompositeCompressionLoss()
+        self._loss.add(loss)
         self._loss.add(KDLossCalculator(original_model))
 
     # pylint: disable=keyword-arg-before-vararg
