@@ -171,7 +171,22 @@ class QuantizationEnv:
                 self.qconfig_space_map[qid] = conf_list_to_set
         else:
             for qid in self.qconfig_space_map:
-                self.qconfig_space_map[qid] = self._hw_precision_constraints.get(qid)
+                conf_list_to_set = []
+                bw_vs_qconfigs_dict = self._hw_precision_constraints.get_bitwidth_vs_qconfigs_dict(qid)
+                for bitwidth, qconf_list in bw_vs_qconfigs_dict.items():
+                    target_qconf = qconf_list[0]
+                    if len(qconf_list) > 1:
+                        logger.warning("Received multiple quantizer configurations {qc_lst} for same bitwidth {bw} "
+                                       "for quantizer {q} - AutoQ can currently only choose among bitwidths, but not "
+                                       "within quantizer configuration space with the same bitwidths. Selecting {qc} "
+                                       "as the target configuration for bitwidth {bw}".format(
+                            qc_lst=";".join([str(qconf) for qconf in qconf_list]),
+                            bw=bitwidth,
+                            q=str(qid),
+                            qc=str(target_qconf)))
+                    conf_list_to_set.append(target_qconf)
+
+                self.qconfig_space_map[qid] = conf_list_to_set
 
         # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
