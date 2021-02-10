@@ -165,10 +165,12 @@ def run(config):
                 tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
                 tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
             ]
-            loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
+            loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1,
+                                                               reduction=tf.keras.losses.Reduction.SUM)
+            loss_complete = compression_ctrl.get_complete_loss(loss_obj)
 
             compress_model.compile(optimizer=optimizer,
-                                   loss=loss_obj,
+                                   loss=loss_complete,
                                    metrics=metrics,
                                    run_eagerly=config.get('eager_mode', False))
 

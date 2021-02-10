@@ -47,10 +47,10 @@ class SparseLoss(CompressionLoss):
         loss = 0
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
-            if not self.disabled and sparse_layer.frozen:
+            if not self.disabled and not sparse_layer.trainable:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
-            if not sparse_layer.frozen:
+            if sparse_layer.trainable:
                 sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
                 params = params + params_layer
                 loss = loss + sw_loss
@@ -70,7 +70,7 @@ class SparseLoss(CompressionLoss):
     @staticmethod
     def _get_params_from_sparse_layer(sparse_layer):
         op = sparse_layer.get_op_by_name(OP_NAME)
-        mask = sparse_layer.ops_weights[OP_NAME]
+        mask = sparse_layer.ops_weights[OP_NAME]['mask']
         return op.loss(mask), tf.squeeze(mask).shape[0], mask
 
     def statistics(self, quickly_collected_only=False):
@@ -95,10 +95,11 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         sparse_prob_sum = 0
         sparse_layers_loss = 0
         for sparse_layer in self._sparse_layers:
-            if not self.disabled and not sparse_layer.sparsify:
+            if not self.disabled: #and not sparse_layer.sparsify:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
-            if sparse_layer.sparsify:
+            # TODO: find out how it works
+            if True:#sparse_layer.sparsify:
                 sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
                 params = params + params_layer
                 sparse_layers_loss += tf.math.abs(sw_loss / params_layer - self.per_layer_target[sparse_layer])

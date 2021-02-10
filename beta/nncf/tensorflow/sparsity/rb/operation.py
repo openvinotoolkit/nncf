@@ -28,7 +28,8 @@ class RBSparsifyingWeight(NNCFOperation):
 
     def __init__(self):
         '''Setup trainable param'''
-        super().__init__(name=OP_NAME)
+        super().__init__(name=OP_NAME,
+                         trainable=True)
 
     # TODO: make it static
     def build(self, input_shape, input_type, name, layer):
@@ -66,11 +67,11 @@ class RBSparsifyingWeight(NNCFOperation):
             return apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask']))
         return tf.stop_gradient(apply_mask(layer_weights, st_binary_mask(op_weights['mask'])))
 
-    @staticmethod
-    def freeze(op_weights):
+    def freeze(self, op_weights):
         op_weights['trainable'].assign(0)
+        self._trainable = False
 
     @staticmethod
     def loss(op_weights):
         '''Return count of non zero weight in mask'''
-        return tf.squeeze(st_binary_mask(op_weights['mask'])).shape[0]
+        return tf.reduce_sum(st_binary_mask(op_weights))
