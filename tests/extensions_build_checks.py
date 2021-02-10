@@ -1,3 +1,4 @@
+import os
 import sys
 import pathlib
 
@@ -20,8 +21,10 @@ assert not cuda_ext_dir.exists()
 cuda_ext_so = (cuda_ext_dir / 'quantized_functions_cuda.so')
 assert not cuda_ext_so.exists()
 
-arch_list = ['7.5+PTX']
-force_build_cuda_extensions(arch_list)
+# Set CUDA Architecture
+# See cmake/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake
+os.environ['TORCH_CUDA_ARCH_LIST'] = '7.5+PTX'
+force_build_cuda_extensions()
 
 cuda_ext_dir = (torch_ext_dir / 'quantized_functions_cuda')
 assert cuda_ext_dir.exists()
