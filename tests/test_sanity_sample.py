@@ -258,8 +258,8 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
 
 @pytest.mark.parametrize(
     "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(name=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(name=["train_dataparallel"]))],
+        pytest.param(True, marks=pytest.mark.dependency(name="train_distributed")),
+        pytest.param(False, marks=pytest.mark.dependency(name="train_dataparallel"))],
     ids=['distributed', 'dataparallel'])
 def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     checkpoint_save_dir = os.path.join(case_common_dirs["checkpoint_save_dir"],
