@@ -147,7 +147,7 @@ def main_worker(current_gpu, config: SampleConfig):
             train_steps(loader, model, criterion, train_criterion_fn, optimizer, config, steps)
 
         def validate_fn(eval_loader, model):
-            top1, top5, loss = validate(eval_loader, model, criterion, config)
+            top1, top5, loss = validate(eval_loader, model, criterion, config, False)
             return top1, loss
 
         nncf_config = register_default_init_args(
@@ -500,7 +500,7 @@ def train_steps(train_loader, model, criterion, criterion_fn, optimizer, config,
             break
 
 
-def validate(val_loader, model, criterion, config):
+def validate(val_loader, model, criterion, config, log_validation_info=True):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -529,7 +529,7 @@ def validate(val_loader, model, criterion, config):
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if i % config.print_freq == 0:
+            if i % config.print_freq == 0 and log_validation_info:
                 logger.info(
                     '{rank}'
                     'Test: [{0}/{1}] '
@@ -550,7 +550,8 @@ def validate(val_loader, model, criterion, config):
             config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), config.get('cur_epoch', 0))
             config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), config.get('cur_epoch', 0))
 
-        logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
+        if log_validation_info:
+            logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 
         acc = top1.avg / 100
         if config.metrics_dump is not None:

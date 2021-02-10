@@ -50,8 +50,6 @@ class EvolutionOptimizer():
         self.last_action = None
 
     def _save_episode_info(self, reward):
-        print('Best reward ', self.max_reward)
-        print('cur reward ', reward)
         if reward > self.max_reward:
             self.max_reward = reward
             self.best_action = self.last_action
@@ -168,10 +166,8 @@ class LeGREvolutionEnv():
         new_state = torch.zeros(1)
 
         reduced = self.filter_pruner.prune(self.prune_target, action)
-        print('train')
         self.train_steps(self.steps)
 
-        print('test')
         acc, loss = self.get_reward()
         loss = loss.item()
         if self.loss_as_reward:

@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from nncf.pruning.filter_pruning.global_ranking.RL_evolution import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
+from nncf.nncf_logger import logger as nncf_logger
 
 
 class LeGR:
@@ -28,18 +29,15 @@ class LeGR:
                                     train_steps, pruning_max)
 
     def train_global_ranking(self):
-        accuracy = []
         reward_list = []
 
-        for episode in range(self.GENERATIONS):
-            # logger.info('Episode {}'.format(episode))
+        for episode in range(5):
             state, info = self.env.reset()
 
             # Beginning of the episode
             done = 0
             reward = 0
             episode_reward = []
-            # episode_loss = 0
             self.agent.tell(state, reward, done, episode, info)
 
             while not done:
@@ -50,9 +48,10 @@ class LeGR:
                 state = new_state
                 episode_reward.append(reward)
 
-            print('Testing loss = {}'.format(episode_reward))
-            # accuracy.append(episode_acc)
-            reward_list.append(episode_reward)
+            nncf_logger.info('Generation = {}, reward = {}\n'.format(episode, episode_reward[0]))
+            reward_list.append(episode_reward[0])
+        self.env.reset()
+        nncf_logger.info('Rewards history = {}'.format(reward_list))
 
         best_ranking = self.agent.best_action
         return best_ranking

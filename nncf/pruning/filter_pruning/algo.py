@@ -15,28 +15,27 @@ from typing import Dict
 import numpy as np
 import torch
 from functools import partial
-
-from nncf.dynamic_graph.context import Scope
 from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
-from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.dynamic_graph.context import Scope
 from nncf.layer_utils import _NNCFModuleMixin
+from nncf.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
 from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, TransposeConvolution
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.model_analysis import Clusterization
 from nncf.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 from nncf.structures import LeGRInitArgs
 from nncf.utils import get_filters_num, compute_FLOPs_hook
-from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -85,14 +84,17 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.weights_normalizer = tensor_l2_normalizer  # for all weights in common case
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('filter_importance', 'L2'))
-        self.weight_importance = params.get('weight_importance', 'legr')
+        self.weight_importance = params.get('weight_importance', 'uniform')
         self.all_weights = params.get("all_weights", False)
-        self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+
         if self.weight_importance == 'legr':
             legr_init_args = config.get_extra_struct(LeGRInitArgs)
             legr = LeGR(self, target_model, legr_init_args)
             self.ranking_coeffs = legr.train_global_ranking()
+            nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope) for scope in self.ranking_coeffs}))
+        else:
+            self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)

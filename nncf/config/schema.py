@@ -625,10 +625,13 @@ FILTER_PRUNING_SCHEMA = {
                                                      description="Number of epochs during which the pruning rate is"
                                                                  " increased from `pruning_init` to `pruning_target`"
                                                                  " value."),
-                    "weight_importance": with_attributes(_STRING,
+                    "filter_importance": with_attributes(_STRING,
                                                          description="The type of filter importance metric. Can be"
                                                                      " one of `L1`, `L2`, `geometric_median`."
                                                                      " `L2` by default."),
+                    "weight_importance": with_attributes(_STRING,
+                                                         description="The type of filter ranking across the layers."
+                                                                     " Can be one of `uniform` or `legr`."),
                     "all_weights": with_attributes(_BOOLEAN,
                                                    description="Whether to prune layers independently (choose filters"
                                                                " with the smallest importance in each layer separately)"
