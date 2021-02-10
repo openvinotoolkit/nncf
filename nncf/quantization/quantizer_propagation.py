@@ -45,6 +45,9 @@ class QuantizationTrait(Enum):
     NON_QUANTIZABLE = -1
     QUANTIZATION_AGNOSTIC = 0
     INPUTS_QUANTIZABLE = 1
+    # A concat node should ultimately either have all of its inputs quantized with the same configuration
+    # or none at all. This cannot be determined ahead of time, hence the special trait.
+    CONCAT = 100
 
 
 DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
@@ -80,6 +83,9 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         EmbeddingBagMetatype,
         SoftmaxMetatype
     ],
+    QuantizationTrait.CONCAT: [
+        CatMetatype
+    ]
 }  # type: Dict[QuantizationTrait, List[OperatorMetatype]]
 
 
@@ -1389,32 +1395,45 @@ class QuantizerPropagationSolver:
     def _handle_quantizer_merge(self, waiting_pqs: Set[PropagatingQuantizer],
                                 quant_prop_graph: QuantizerPropagationStateGraph,
                                 branching_node_key: str):
+        #pylint:disable=too-many-branches
         waiting_pqs_list = list(waiting_pqs)
-        # All quantizers that are dominated by the current branching node are waiting
-        # for the merge - should merge them now
-        nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
-        qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
-        merged_qconf_list, branch_qconf_lists = \
-            self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
-
-        if merged_qconf_list is None and self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
-            nncf_logger.warning("Could not merge the quantizers at branching point {} - no common quantizer "
-                                "configurations found among the following: \n{}".format(
-                branching_node_key, '\n'.join([str(qconfs) for qconfs in qconfs_list])))
-
-        merge_pq = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
-                                                                        merged_qconf_list,
-                                                                        branch_qconf_lists,
-                                                                        branching_node_key)
-
         merged_pqs = []
         unmerged_pqs = []
+        abort_merge = False
+        for pq in waiting_pqs_list:
+            # While the quantizers were waiting for the merge, one of the concat nodes
+            # that will be affected by the merge may have been determined to be unquantizable.
+            # Need another check for that.
+            sts = self.check_branching_transition(quant_prop_graph, pq, branching_node_key)
+            if sts is TransitionStatus.SHOULD_NOT_TRANSITION:
+                abort_merge = True
+        if not abort_merge:
+            # All quantizers that are dominated by the current branching node are waiting
+            # for the merge - should merge them now
+            nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
+            merged_qconf_list, branch_qconf_lists = \
+                self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
 
-        for idx, qconf_list in enumerate(branch_qconf_lists):
-            if qconf_list is None:
-                merged_pqs.append(waiting_pqs_list[idx])
-            else:
-                unmerged_pqs.append(waiting_pqs_list[idx])
+            if merged_qconf_list is None and \
+                    self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
+                nncf_logger.warning("Could not merge the quantizers at branching point {} - no common quantizer "
+                                    "configurations found among the following: \n{}".format(
+                    branching_node_key, '\n'.join([str(qconfs) for qconfs in qconfs_list])))
+
+            merge_pq = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
+                                                                            merged_qconf_list,
+                                                                            branch_qconf_lists,
+                                                                            branching_node_key)
+            for idx, qconf_list in enumerate(branch_qconf_lists):
+                if qconf_list is None:
+                    merged_pqs.append(waiting_pqs_list[idx])
+                else:
+                    unmerged_pqs.append(waiting_pqs_list[idx])
+        else:
+            nncf_logger.debug("Merge aborted for PQs {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            merge_pq = None
+            unmerged_pqs = waiting_pqs_list
 
         queue_to_cull = list(reversed(self._active_propagating_quantizers_queue))
         self._active_propagating_quantizers_queue.clear()
@@ -1683,7 +1702,8 @@ class QuantizerPropagationSolver:
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
-                 QuantizationTrait.QUANTIZATION_AGNOSTIC]:
+                 QuantizationTrait.QUANTIZATION_AGNOSTIC,
+                 QuantizationTrait.CONCAT]:
             return
 
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
@@ -1771,13 +1791,31 @@ class QuantizerPropagationSolver:
         dom_op_quantizers = set()
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
+            trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
             affecting_prop_quantizers = op_node[
                 QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
-            if not affecting_prop_quantizers:
-                # The branch op is forced to be FP32 - should not proceed through the branch node.
-                return TransitionStatus.SHOULD_NOT_TRANSITION
-            for aff_pq in affecting_prop_quantizers:
-                dom_op_quantizers.add(aff_pq)
+            if affecting_prop_quantizers:
+                for aff_pq in affecting_prop_quantizers:
+                    dom_op_quantizers.add(aff_pq)
+            else:
+                if trait is not QuantizationTrait.CONCAT:
+                    # The branch op is forced to be FP32 - should not proceed through the branch node.
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
+
+                # Have to determine if the concat node will potentially have input quantization applied
+                # as a result of further propagation.
+                pqs_dominated_by_cat = quant_prop_graph.get_propagating_quantizers_immediately_dominated_by_node(
+                    op_node_key)
+                active_pqs_dominated_by_cat = set(
+                    filter(lambda x: x in self._active_propagating_quantizers_queue,
+                           pqs_dominated_by_cat))
+                if not active_pqs_dominated_by_cat:
+                    # There is no chance for this concat node to be quantized later,
+                    # should not attempt merge.
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
+                # There are still some quantizers that may propagate upwards through this concat node
+                # and ultimately lead to the concat node having quantized inputs
+                dom_op_quantizers.update(active_pqs_dominated_by_cat)
 
         dom_op_quantizers.discard(prop_quant_to_transition)
         if dom_op_quantizers:
