@@ -12,14 +12,14 @@
 """
 import numpy as np
 import scipy.optimize
-from nncf.compression_method_api import CompressionScheduler
+from nncf.compression_method_api import PTCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.common.utils.registry import Registry
 
 PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 
 
-class PruningScheduler(CompressionScheduler):
+class PruningScheduler(PTCompressionScheduler):
     def __init__(self, pruning_algo, params: NNCFConfig = None):
         super().__init__()
         if params is None:

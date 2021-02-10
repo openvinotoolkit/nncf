@@ -23,7 +23,8 @@ from torch.nn import DataParallel
 
 from nncf import NNCFConfig
 from nncf.checkpoint_loading import load_state
-from nncf.compression_method_api import CompressionLevel, DOMAIN_CUSTOM_OPS_NAME
+from nncf.api.compression import CompressionLevel
+from nncf.api.compression import DOMAIN_CUSTOM_OPS_NAME
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config

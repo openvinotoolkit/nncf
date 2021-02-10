@@ -11,10 +11,10 @@
  limitations under the License.
 """
 
-from beta.nncf.tensorflow.graph.transformations.commands import Layer
-from beta.nncf.tensorflow.graph.transformations.commands import MultipleInsertionCommands
-from beta.nncf.tensorflow.graph.transformations.commands import TargetType
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from nncf.common.graph.transformations.commands import Layer
+from nncf.common.graph.transformations.commands import MultipleInsertionCommands
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 
 
 OPERATION_POINTS = [

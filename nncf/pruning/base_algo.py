@@ -16,8 +16,8 @@ from functools import partial, update_wrapper
 from texttable import Texttable
 from torch import nn
 
-from nncf.compression_method_api import CompressionAlgorithmBuilder, \
-    CompressionAlgorithmController
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFNode
 from nncf.module_operations import UpdateWeight
@@ -56,7 +56,7 @@ class NodeInfo:
         self.module_scope = module_scope
 
 
-class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
+class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         params = config.get('params', {})
@@ -123,7 +123,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
             self.pruned_module_groups_info.add_cluster(cluster)
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BasePruningAlgoController(target_model, self.pruned_module_groups_info, self._params)
 
     def create_weight_pruning_operation(self, module):
@@ -145,7 +145,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         raise NotImplementedError
 
 
-class BasePruningAlgoController(CompressionAlgorithmController):
+class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  pruned_module_groups_info: Clusterization,
                  config):

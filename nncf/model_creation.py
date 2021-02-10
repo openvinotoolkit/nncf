@@ -16,8 +16,8 @@ from typing import Callable, Any, Tuple, Dict
 from torch.nn import Module
 
 from nncf.checkpoint_loading import load_state
-from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
@@ -39,7 +39,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             dump_graphs=True, ) \
-    -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+    -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -104,7 +104,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
     should_init = resuming_state_dict is None
-    composite_builder = CompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     composite_builder.apply_to(compressed_model)
 
     compression_ctrl = compressed_model.commit_compression_changes()

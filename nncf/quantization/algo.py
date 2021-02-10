@@ -35,9 +35,9 @@ from torch import nn
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.common.os import safe_open
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.compression_method_api import CompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionAlgorithmController
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.debug import CallCountTracker
 from nncf.debug import DebugInterface
@@ -692,7 +692,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
 
 
 @COMPRESSION_ALGORITHMS.register('quantization')
-class QuantizationBuilder(CompressionAlgorithmBuilder):
+class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self._debug_interface = QuantizationDebugInterface() if is_debug() else None
@@ -891,7 +891,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
         return single_config_quantizer_setup
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return QuantizationController(target_model,
                                       self.config,
                                       self.should_init,
@@ -1154,7 +1154,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return True, message_template.substitute(denial='', algo_name='empty')
 
 
-class QuantizationControllerBase(CompressionAlgorithmController):
+class QuantizationControllerBase(PTCompressionAlgorithmController):
     def enable_activation_quantization(self):
         raise NotImplementedError
 
@@ -1634,7 +1634,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         InsertionPoint, Dict[ReductionShape, TensorStatistic]]:
         return self._tensor_stats
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()
         all_quantizations = {}  # type: Dict[QuantizerId, BaseQuantizer]
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._weight_quantizers.items()})

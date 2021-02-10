@@ -17,7 +17,7 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
-from nncf.compression_method_api import StubCompressionScheduler
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
@@ -234,4 +234,4 @@ def test_create_rb_algo_with_stub_scheduler():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
     # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)
+    assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)

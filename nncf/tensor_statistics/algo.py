@@ -14,9 +14,9 @@ from typing import Dict
 from typing import List
 from typing import Set
 
-from nncf.compression_method_api import CompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionAlgorithmController
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import InsertionCommand
@@ -41,7 +41,7 @@ class TensorStatisticObservationPoint:
         return self.insertion_point == other.insertion_point
 
 
-class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
+class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig,
                  observation_points_vs_collectors: Dict[TensorStatisticObservationPoint,
                                                         TensorStatisticCollectorBase]):
@@ -73,7 +73,7 @@ class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
         pass
 
 
-class TensorStatisticsCollectionController(CompressionAlgorithmController):
+class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  ip_vs_collector_dict: Dict[InsertionPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)

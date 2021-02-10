@@ -20,7 +20,9 @@ from torch import nn
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
     ActivationBinarizationScaleThreshold, BaseBinarizer
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateWeight, UpdateInputs
@@ -32,7 +34,7 @@ from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 
 
 @COMPRESSION_ALGORITHMS.register('binarization')
-class BinarizationBuilder(CompressionAlgorithmBuilder):
+class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self.mode = self.config.get('mode', BinarizationMode.XNOR)
@@ -71,7 +73,7 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
                 insertion_commands.append(InsertionCommand(ip, op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BinarizationController(target_model, self.config)
 
 

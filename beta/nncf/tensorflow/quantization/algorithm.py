@@ -13,18 +13,18 @@
 
 import networkx as nx
 
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.transformations.commands import InsertionCommand
+from nncf.common.graph.transformations.commands import AfterLayer
+from nncf.common.graph.transformations.commands import LayerWeight
+from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger
-from beta.nncf.api.compression import CompressionAlgorithmBuilder
-from beta.nncf.api.compression import CompressionAlgorithmController
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph import patterns as p
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
-from beta.nncf.tensorflow.graph.transformations.commands import InsertionCommand
-from beta.nncf.tensorflow.graph.transformations.commands import AfterLayer
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationPriority
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
@@ -53,7 +53,7 @@ NOT_SUPPORT_LAYERS = [
 
 
 @TF_COMPRESSION_ALGORITHMS.register('quantization')
-class QuantizationBuilder(CompressionAlgorithmBuilder):
+class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         super().__init__(config)
 
@@ -215,7 +215,7 @@ class QuantizationBuilder(CompressionAlgorithmBuilder):
         return '{}/fake_quantize_{}'.format(node_name, instance_index)
 
 
-class QuantizationController(CompressionAlgorithmController):
+class QuantizationController(TFCompressionAlgorithmController):
     def __init__(self, target_model):
         super().__init__(target_model)
         self._initializer = MinMaxInitializer()

@@ -16,7 +16,7 @@ import torch
 from copy import deepcopy
 from pytest import approx
 
-from nncf.compression_method_api import StubCompressionScheduler
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.algo import MagnitudeSparsityController
@@ -233,4 +233,4 @@ def test_create_magnitude_algo_with_stub_scheduler():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
     # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)
+    assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)
