@@ -168,6 +168,8 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
     strategy = get_distribution_strategy(config)
+    if config.metrics_dump is not None:
+        write_metrics(0, config.metrics_dump)
 
     dataset_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     dataset = dataset_builder.build()
