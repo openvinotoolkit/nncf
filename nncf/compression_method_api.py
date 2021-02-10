@@ -81,11 +81,12 @@ class KDLossCalculator(CompressionLoss):
             if obj.requires_grad:
                 return True
             return False
-
         ref_outputs = self.original_model(target)
         tensors_to_list = lambda obj: [obj] if isinstance(obj, torch.Tensor) else list(obj)
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
+        pass
+        a = 1
         return reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
                       zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
 
