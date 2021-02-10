@@ -69,13 +69,11 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
 
     @property
     def trainable_weights(self):
-        return self._trainable_weights + self.layer.trainable_weights \
-                                        + self._get_ops_weights_by_condition(trainable=True)
+        return self._trainable_weights + self.layer.trainable_weights
 
     @property
     def non_trainable_weights(self):
-        return self._non_trainable_weights + self.layer.non_trainable_weights \
-                                            + self._get_ops_weights_by_condition(trainable=False)
+        return self._non_trainable_weights + self.layer.non_trainable_weights
 
     @property
     def updates(self):
@@ -118,21 +116,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             outputs = self.layer.call(inputs)
 
         return outputs
-
-    def _get_ops_weights_by_condition(self, trainable=True):
-        result = []
-        for _, ops in self.weights_attr_ops.items():
-            for op_name, op in ops.items():
-                op_weights = self._ops_weights[op_name].copy()
-                if op.trainable == trainable:
-                    # TODO: unify
-                    if isinstance(op_weights, _DictWrapper):
-                        if trainable:
-                            op_weights.pop('trainable')
-                        result += list(op_weights.values())
-                    else:
-                        result.append(op_weights)
-        return result
 
     def _apply_ops(self, training):
         for weight_attr, ops in self.weights_attr_ops.items():
