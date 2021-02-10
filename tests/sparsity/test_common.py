@@ -272,56 +272,49 @@ class TestAdaptiveSparsityScheduler:
 
         # After epoch 0
         self.run_epoch(steps_per_epoch, scheduler, mock)
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[0],)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[1],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[1],)
 
         rb_algo_mock.loss.current_sparsity = 0.2
         # After epoch 1
         self.run_epoch(steps_per_epoch, scheduler, mock)
 
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[1],)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[2],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[2],)
 
         rb_algo_mock.loss.current_sparsity = 0.22
 
         # After epoch 2
         self.run_epoch(steps_per_epoch, scheduler, mock)
 
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[2],)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[3],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[3],)
 
         rb_algo_mock.loss.current_sparsity = 0.31
 
         # After epoch 3
         self.run_epoch(steps_per_epoch, scheduler, mock)
 
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[3],)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[4],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[4],)
 
         rb_algo_mock.loss.current_sparsity = 0.34
 
         # After epoch 4
         self.run_epoch(steps_per_epoch, scheduler, mock)
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[4],)
-        assert mock.call_args_list[1][0] == (pytest.approx(ref_sparsity_levels[5]),)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (pytest.approx(ref_sparsity_levels[5]),)
 
         rb_algo_mock.loss.current_sparsity = 0.37
 
         # After epoch 5
         self.run_epoch(steps_per_epoch, scheduler, mock)
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (pytest.approx(ref_sparsity_levels[6]),)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[7],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[7],)
 
         rb_algo_mock.loss.current_sparsity = 0.48
 
         # After epoch 6
         self.run_epoch(steps_per_epoch, scheduler, mock)
-        assert mock.call_count == 2
-        assert mock.call_args_list[0][0] == (ref_sparsity_levels[7],)
-        assert mock.call_args_list[1][0] == (ref_sparsity_levels[8],)
+        assert mock.call_count == 1
+        assert mock.call_args_list[0][0] == (ref_sparsity_levels[8],)
