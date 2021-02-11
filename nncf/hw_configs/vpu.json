@@ -10,7 +10,10 @@
             "q8_ch": {
                 "bits": 8,
                 "mode": "symmetric",
-                "granularity": "perchannel"
+                "granularity": [
+                    "perchannel",
+                    "pertensor"
+                ]
             },
             "q4_tn": {
                 "bits": 4,
