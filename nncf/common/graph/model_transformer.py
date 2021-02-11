@@ -11,22 +11,30 @@
  limitations under the License.
 """
 
+from typing import TypeVar
+
+from nncf.common.graph.transformations.layout import TransformationLayout
+
+ModelType = TypeVar('ModelType')
+
+
 class ModelTransformer:
     """
     Applies transformations to the model.
     """
 
-    def __init__(self, model, transformation_layout):
+    def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
         Initializes Model Transformer
 
         :param model: The model to be transformed
-        :param transformation_layout: List of transformations
+        :param transformation_layout: An instance of `TransformationLayout` that
+            includes a list of transformations to be applied to the model.
         """
         self._model = model
         self._transformations = transformation_layout.transformations
 
-    def transform(self):
+    def transform(self) -> ModelType:
         """
         Applies transformations to the model.
 

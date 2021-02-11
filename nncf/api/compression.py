@@ -92,7 +92,7 @@ class CompressionScheduler:
             - `current_epoch` is the training epoch index (numbering from zero).
             The initial value is -1.
 
-        The `current_step` and` current_epoch` specify the training step and epoch,
+        The `current_step` and `current_epoch` specify the training step and epoch,
         respectively, for which the compression scheduler has updated the state of
         the compression method, in particular its hyperparameters. It means that
         the compression method is configured and ready to continue training at
@@ -108,7 +108,7 @@ class CompressionScheduler:
     def step(self, next_step: Optional[int] = None) -> None:
         """
         Should be called at the beginning of each training step to prepare
-        the compression method to continue training the model in the 'next_step'.
+        the compression method to continue training the model in the `next_step`.
 
         :param next_step: The global step index for which the compression scheduler
             will update the state of the compression method.
@@ -120,7 +120,7 @@ class CompressionScheduler:
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         """
         Should be called at the beginning of each training epoch to prepare
-        the compression method to continue training the model in the 'next_epoch'.
+        the compression method to continue training the model in the `next_epoch`.
 
         :param next_epoch: The epoch index for which the compression scheduler
             will update the state of the compression method.
