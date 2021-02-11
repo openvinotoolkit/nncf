@@ -90,7 +90,8 @@ class FilterPruningController(BasePruningAlgoController):
 
         if self.weight_importance == 'legr':
             legr_init_args = config.get_extra_struct(LeGRInitArgs)
-            legr = LeGR(self, target_model, legr_init_args)
+            legr_params = params.get("legr_params", {})
+            legr = LeGR(self, target_model, legr_init_args, **legr_params)
             self.ranking_coeffs = legr.train_global_ranking()
             nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope) for scope in self.ranking_coeffs}))
         else:

@@ -670,6 +670,21 @@ FILTER_PRUNING_SCHEMA = {
                                                  description="Whether to setting gradients corresponding to zeroed"
                                                              " filters to zero during training, `True` by default.",
                                                  default=True),
+                    "legr_params":
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "generations": with_attributes(_NUMBER,
+                                                                       description="Number of generations for evolution"
+                                                                                   "algorithm"),
+                                        "train_steps": with_attributes(_NUMBER,
+                                                                       description="Number of training steps to estimate"
+                                                                                   "pruned model accuracy"),
+                                        "max_pruning": with_attributes(_NUMBER,
+                                                                       description="Maximum possible pruning level for "
+                                                                                   "the model to train LeGR algo on it.")
+                                    }
+                                },
 
                 },
                 "additionalProperties": False,

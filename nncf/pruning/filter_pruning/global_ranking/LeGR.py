@@ -15,8 +15,8 @@ from nncf.nncf_logger import logger as nncf_logger
 
 
 class LeGR:
-    def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, pruning_max=0.8):
-        self.GENERATIONS = 400
+    def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, generations=400, max_pruning=0.8):
+        self.GENERATIONS = generations
 
         self.pruner = LeGRPruner(pruning_ctrl, target_model)
         initial_filter_ranks = self.pruner.init_filter_ranks
@@ -26,7 +26,7 @@ class LeGR:
         self.agent = EvolutionOptimizer(initial_filter_ranks, agent_hparams)
         self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader, legr_init_args.val_loader,
                                     legr_init_args.train_steps_fn, legr_init_args.val_fn, legr_init_args.config,
-                                    train_steps, pruning_max)
+                                    train_steps, max_pruning)
 
     def train_global_ranking(self):
         reward_list = []

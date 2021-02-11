@@ -22,7 +22,7 @@ from nncf.utils import get_filters_num
 class EvolutionOptimizer():
     def __init__(self, initial_filter_ranks, hparams):
         # Optimizer hyper-params
-        self.POPULATIONS = hparams.get('POPULATIONS', 20)
+        self.POPULATIONS = hparams.get('POPULATIONS', 64)
         self.GENERATIONS = hparams.get('GENERATIONS', 400)
         self.SAMPLES = hparams.get('SAMPLES', 16)
         self.mutate_percent = hparams.get('mutate_percent', 0.1)
