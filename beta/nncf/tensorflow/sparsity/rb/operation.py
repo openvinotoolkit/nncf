@@ -19,7 +19,7 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask
-from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from beta.nncf.tensorflow.functions import logit
 
 OP_NAME = 'rb_sparsity_mask_apply'
 
@@ -41,7 +41,7 @@ class RBSparsifyingWeight(NNCFOperation):
         mask = layer.add_weight(
             name + '_mask',
             shape=input_shape,
-            initializer=tf.keras.initializers.Constant(1.0),
+            initializer=tf.keras.initializers.Constant(logit(0.99)),
             trainable=True,
             aggregation=tf.VariableAggregation.MEAN)
 

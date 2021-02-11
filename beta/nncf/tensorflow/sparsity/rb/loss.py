@@ -43,8 +43,8 @@ class SparseLoss(CompressionLoss):
         if self.disabled:
             return 0
 
-        params = 0
-        loss = 0
+        params = tf.zeros((1, ), dtype=tf.int32)
+        loss = tf.zeros((1, ))
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.trainable:
@@ -56,6 +56,7 @@ class SparseLoss(CompressionLoss):
                 loss = loss + sw_loss
                 sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
 
+        params = tf.cast(params, dtype=tf.float32)
         self.mean_sparse_prob = (sparse_prob_sum / params)
         self.current_sparsity = 1 - loss / params
         return tf.math.pow(((loss / params - self.target) / self.p), 2)
@@ -71,7 +72,7 @@ class SparseLoss(CompressionLoss):
     def _get_params_from_sparse_layer(sparse_layer):
         op = sparse_layer.get_op_by_name(OP_NAME)
         mask = sparse_layer.ops_weights[OP_NAME]['mask']
-        return op.loss(mask), tf.squeeze(mask).shape[0], mask
+        return op.loss(mask), tf.size(mask), mask
 
     def statistics(self, quickly_collected_only=False):
         return {'mean_sparse_prob': 1 - self.mean_sparse_prob}
@@ -91,8 +92,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         if self.disabled:
             return 0
 
-        params = 0
-        sparse_prob_sum = 0
+        params = tf.zeros((1, ), dtype=tf.int32)
+        sparse_prob_sum = tf.zeros((1, ))
         sparse_layers_loss = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled: #and not sparse_layer.sparsify:
@@ -105,6 +106,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
                 sparse_layers_loss += tf.math.abs(sw_loss / params_layer - self.per_layer_target[sparse_layer])
                 sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(sparse_layer.mask))
 
+        params = tf.cast(params, dtype=tf.float32)
         self.mean_sparse_prob = (sparse_prob_sum / params)
         return tf.math.pow((sparse_layers_loss / self.p), 2)
 

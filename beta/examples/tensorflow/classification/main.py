@@ -165,8 +165,12 @@ def run(config):
                 tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
                 tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
             ]
+            reduction = tf.keras.losses.Reduction.SUM \
+                if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy) \
+                else tf.keras.losses.Reduction.AUTO
+
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1,
-                                                               reduction=tf.keras.losses.Reduction.SUM)
+                                                               reduction=reduction)
             loss_complete = compression_ctrl.get_complete_loss(loss_obj)
 
             compress_model.compile(optimizer=optimizer,
@@ -263,9 +267,10 @@ def export(config):
 
 
 def main(argv):
-    tf.executing_eagerly()
+    #tf.executing_eagerly()
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+    #hconfig['eager_mode'] = True
 
     serialize_config(config, config.log_dir)
 
