@@ -10,13 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Set, List, Dict
+from typing import Dict
+from typing import List
+from typing import Set
 
+from nncf.compression_method_api import CompressionAlgorithmBuilder
+from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_network import InsertionPoint, NNCFNetwork, InsertionCommand, OperationPriority, InsertionType
-from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape
+from nncf.nncf_network import InsertionCommand
+from nncf.nncf_network import InsertionPoint
+from nncf.nncf_network import InsertionType
+from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import OperationPriority
+from nncf.tensor_statistics.collectors import ReductionShape
+from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
 class TensorStatisticObservationPoint:
@@ -59,6 +68,9 @@ class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
         return TensorStatisticsCollectionController(target_model,
                                                     {k.insertion_point: v
                                                      for k, v in self._observation_points_vs_collectors.items()})
+
+    def _handle_frozen_layers(self):
+        pass
 
 
 class TensorStatisticsCollectionController(CompressionAlgorithmController):
