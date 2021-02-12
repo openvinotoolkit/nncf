@@ -25,19 +25,12 @@
         "params": {
             "schedule": "multistep",
             "multistep_steps": [
-                5,
-                10,
-                15,
-                20,
-                25
+               0
             ],
+            "sparsity_freeze_epoch": 0,
             "multistep_sparsity_levels": [
-                0.1,
-                0.15,
-                0.20,
-                0.25,
-                0.30,
-                0.35
+                0.0,
+                0.0
             ]
         }
     }

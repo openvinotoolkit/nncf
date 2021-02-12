@@ -16,6 +16,7 @@ import os.path as osp
 from pathlib import Path
 
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
@@ -162,19 +163,20 @@ def run(config):
                 scheduler=scheduler)
 
             metrics = [
-                tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
-                tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
+               tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
+               # tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
             ]
-            reduction = tf.keras.losses.Reduction.SUM \
-                if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy) \
-                else tf.keras.losses.Reduction.AUTO
 
-            loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1,
-                                                               reduction=reduction)
-            loss_complete = compression_ctrl.get_complete_loss(loss_obj)
+            loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
+
+            metrics += [loss_obj,
+                        tfa.metrics.MeanMetricWrapper(compression_ctrl.loss,
+                                                      name='rb_loss')]
+
+            compress_model.add_loss(compression_ctrl.loss)
 
             compress_model.compile(optimizer=optimizer,
-                                   loss=loss_complete,
+                                   loss=loss_obj,
                                    metrics=metrics,
                                    run_eagerly=config.get('eager_mode', False))
 
@@ -267,10 +269,10 @@ def export(config):
 
 
 def main(argv):
-    #tf.executing_eagerly()
+    tf.executing_eagerly()
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
-    #hconfig['eager_mode'] = True
+    config['eager_mode'] = True
 
     serialize_config(config, config.log_dir)
 

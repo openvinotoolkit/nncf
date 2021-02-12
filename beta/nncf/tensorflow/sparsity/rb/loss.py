@@ -39,7 +39,7 @@ class SparseLoss(CompressionLoss):
                 op = sparse_layer.get_op_by_name(OP_NAME)
                 op.freeze(sparse_layer.ops_weights[OP_NAME])
 
-    def call(self):
+    def call(self, *args, **kwargs):
         if self.disabled:
             return 0
 
@@ -59,7 +59,7 @@ class SparseLoss(CompressionLoss):
         params = tf.cast(params, dtype=tf.float32)
         self.mean_sparse_prob = (sparse_prob_sum / params)
         self.current_sparsity = 1 - loss / params
-        return tf.math.pow(((loss / params - self.target) / self.p), 2)
+        return tf.reshape(tf.math.pow(((loss / params - self.target) / self.p), 2), shape=[])
 
     @property
     def target_sparsity_rate(self):
@@ -79,6 +79,23 @@ class SparseLoss(CompressionLoss):
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
+
+    def as_metric(self, name='rb_sparse_loss', **kwargs):
+        class SparseLossMetric(tf.keras.metrics.Metric):
+            def __init__(self, loss):
+                super().__init__(name=name, **kwargs)
+                self.loss = loss
+                self.val = self.add_weight(name='val', initializer='zeros',
+                                           shape=[1])
+
+            def update_state(self, *args, **kwargs):
+                self.val.assign(self.loss)
+
+            def result(self):
+                return self.val
+
+        return SparseLossMetric(self)
+
 
 
 class SparseLossForPerLayerSparsity(SparseLoss):
@@ -108,7 +125,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
 
         params = tf.cast(params, dtype=tf.float32)
         self.mean_sparse_prob = (sparse_prob_sum / params)
-        return tf.math.pow((sparse_layers_loss / self.p), 2)
+        return tf.reshape(tf.math.pow((sparse_layers_loss / self.p), 2), shape=[])
 
     def set_target_sparsity_loss(self, target, sparse_layer):
         self.per_layer_target[sparse_layer] = 1 - target
