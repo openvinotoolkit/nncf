@@ -35,10 +35,12 @@ class BinaryMask(NNCFOperation):
             trainable=False,
             aggregation=tf.VariableAggregation.MEAN)
 
-        return mask  # TODO: should be a dictionary
+        return {
+            'mask': mask
+        }
 
     def call(self, inputs, weights, _):
-        return apply_mask(inputs, weights)
+        return apply_mask(inputs, weights['mask'])
 
 
 @NNCF_CUSTOM_OBJECTS.register()
@@ -53,8 +55,8 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
         return super().build(input_shape, input_type, name, layer)
 
     def call(self, inputs, weights, _):
-        self.bkup_var.assign(tf.where(weights > 0.5, inputs, self.bkup_var))
-        return apply_mask(self.bkup_var, weights)
+        self.bkup_var.assign(tf.where(weights['mask'] > 0.5, inputs, self.bkup_var))
+        return apply_mask(self.bkup_var, weights['mask'])
 
     @staticmethod
     def _create_bkup_weights(layer, w_name):

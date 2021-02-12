@@ -187,7 +187,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
 
                 for op_name, op in ops.items():
                     if isinstance(op, BinaryMask):
-                        wrapped_layer.ops_weights[op_name].assign(
+                        wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
                                                        self.weight_importance,
                                                        threshold_val)
@@ -224,7 +224,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
                     if isinstance(op, BinaryMaskWithWeightsBackup):
                         total_bkup_weights_number += tf.size(op.bkup_var)
                     if isinstance(op, BinaryMask):
-                        mask = wrapped_layer.ops_weights[op_name]
+                        mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))
                         weights_number = tf.size(mask)
