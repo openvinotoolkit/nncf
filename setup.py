@@ -69,10 +69,9 @@ elif python_version[1] < 6:
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-INSTALL_REQUIRES.extend(["torch", "torchvision"])
+INSTALL_REQUIRES.extend("torch")
 
 TORCH_VERSION = "1.7.0"
-TORCHVISION_VERSION = "0.8.1"
 CUDA_VERSION = "102"
 IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER = True
 
@@ -90,11 +89,6 @@ if "--cpu-only" in sys.argv:
             tv=TORCH_VERSION,
             ver=version_string,
             mode=mode,
-            whl_mode=whl_mode),
-        TORCHVISION_SOURCE_URL_TEMPLATE.format(
-            tvv=TORCHVISION_VERSION,
-            ver=version_string,
-            mode=mode,
             whl_mode=whl_mode)]
     sys.argv.remove("--cpu-only")
 else:
@@ -103,11 +97,6 @@ else:
     DEPENDENCY_LINKS = [
         TORCH_SOURCE_URL_TEMPLATE.format(
             tv=TORCH_VERSION,
-            ver=version_string,
-            mode=mode,
-            whl_mode=whl_mode),
-        TORCHVISION_SOURCE_URL_TEMPLATE.format(
-            tvv=TORCHVISION_VERSION,
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
