@@ -1,0 +1,4 @@
+# scipy for yolo_postprocess_np
+scipy
+# bokeh for visualization in eval.py
+bokeh 
