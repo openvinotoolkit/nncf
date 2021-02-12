@@ -56,12 +56,6 @@ def main(args):
 
     callbacks=[logging, checkpoint, reduce_lr, early_stopping, terminate_on_nan]
 
-
-
-
-
-
-
     config = {}
     config['dataset'] = 'coco/2017'
     config['dataset_type'] = 'tfds'
@@ -117,9 +111,6 @@ def main(args):
     # model input shape check
     input_shape = args.model_image_size
     assert (input_shape[0]%32 == 0 and input_shape[1]%32 == 0), 'model_image_size should be multiples of 32'
-
-
-
 
 
     # #################################### Pipeline testing ###############################

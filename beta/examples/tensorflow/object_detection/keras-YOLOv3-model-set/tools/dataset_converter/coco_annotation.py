@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict, OrderedDict
 
-sets=[('instances_train2017', 'train2017_test'), ('instances_val2017', 'val2017_test')]
+sets=[('instances_train2017', 'train2017'), ('instances_val2017', 'val2017')]
 
 class_count = {}
 
@@ -137,9 +137,6 @@ for dataset, datatype in sets:
         # merge to image bbox annotations
         image_annotation_dict[image_file].append([annotation['bbox'], category_id])
 
-        print('annotation[bbox]', annotation['bbox'])
-        break
-
         # count object class for statistic
         class_name = classes[category_id]
         class_count[class_name] = class_count[class_name] + 1
@@ -163,8 +160,6 @@ for dataset, datatype in sets:
 
             box_annotation = " %d,%d,%d,%d,%d" % (
                 x_min, y_min, x_max, y_max, int(category_id))
-            print('box_annotation', box_annotation)
-            break
             annotation_file.write(box_annotation)
         annotation_file.write('\n')
         pbar.update(1)

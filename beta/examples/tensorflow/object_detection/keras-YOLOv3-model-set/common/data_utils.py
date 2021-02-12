@@ -10,7 +10,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 
 
 def rand(a=0, b=1):
-    return 0.4*(b-a) + a # np.random.rand()*(b-a) + a      0.4*(b-a) + a
+    return np.random.rand()*(b-a) + a
 
 
 def letterbox_resize(image, target_size, return_padding_info=False):

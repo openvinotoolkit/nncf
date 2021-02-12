@@ -371,6 +371,7 @@ def yolo3_loss(args, anchors, num_classes, ignore_thresh=.5, label_smoothing=0, 
 
     return loss, total_location_loss, total_confidence_loss, total_class_loss
 
+<<<<<<< HEAD
 
 
 
@@ -537,3 +538,5 @@ def build_loss_fn(anchors, num_classes, label_smoothing=0, elim_grid_sense=False
         }
 
     return _total_loss_fn
+=======
+>>>>>>> 9dde6a2... moved all revevant code from repo - it is tunable

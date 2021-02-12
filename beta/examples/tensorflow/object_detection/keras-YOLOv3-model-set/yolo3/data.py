@@ -40,7 +40,6 @@ def get_ground_truth_data(annotation_line, input_shape, augment=True, max_boxes=
     image, padding_size, padding_offset = random_resize_crop_pad(image, target_size=model_input_size)
 
     # print('\n ORIGIN after random_resize_crop_pad\n', np.array(image)[100:102, 100:102, :])
-
     # random horizontal flip image
     image, horizontal_flip = random_horizontal_flip(image)
 
@@ -212,9 +211,7 @@ def yolo3_data_generator(annotation_lines, batch_size, input_shape, anchors, num
             i = (i+1) % n
         image_data = np.array(image_data)
         box_data = np.array(box_data)
-
         # print('box_data[0] after batching', box_data[0])
-
         if enhance_augment == 'mosaic':
             # add random mosaic augment on batch ground truth data
             image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
