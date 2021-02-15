@@ -15,7 +15,7 @@ import os.path
 import torch
 from torch.utils.cpp_extension import load
 
-from nncf.extensions import CudaNotAvailableStub, ExtensionsType, EXTENSIONS
+from nncf.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/quantization")
@@ -34,9 +34,9 @@ CUDA_EXT_SRC_LIST = [
     os.path.join(BASE_EXT_DIR, "cuda/functions_cuda_impl.cu")
 ]
 
-print ('Registring Quantization extensions')
+
 @EXTENSIONS.register()
-class QuantizedFunctionsCPULoader:
+class QuantizedFunctionsCPULoader(ExtensionLoader):
     @staticmethod
     def extension_type():
         return ExtensionsType.CPU
@@ -48,7 +48,7 @@ class QuantizedFunctionsCPULoader:
 
 
 @EXTENSIONS.register()
-class QuantizedFunctionsCUDALoader:
+class QuantizedFunctionsCUDALoader(ExtensionLoader):
     @staticmethod
     def extension_type():
         return ExtensionsType.CUDA

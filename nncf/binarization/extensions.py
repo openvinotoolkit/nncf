@@ -15,7 +15,7 @@ import os.path
 import torch
 from torch.utils.cpp_extension import load
 
-from nncf.extensions import CudaNotAvailableStub, ExtensionsType, EXTENSIONS
+from nncf.extensions import CudaNotAvailableStub, ExtensionsType, ExtensionLoader, EXTENSIONS
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 
 BASE_EXT_DIR = os.path.join(NNCF_PACKAGE_ROOT_DIR, "extensions/src/binarization")
@@ -36,7 +36,7 @@ CUDA_EXT_SRC_LIST = [
 
 
 @EXTENSIONS.register()
-class BinarizedFunctionsCPULoader:
+class BinarizedFunctionsCPULoader(ExtensionLoader):
     @staticmethod
     def extension_type():
         return ExtensionsType.CPU
@@ -48,7 +48,7 @@ class BinarizedFunctionsCPULoader:
 
 
 @EXTENSIONS.register()
-class BinarizedFunctionsCUDALoader:
+class BinarizedFunctionsCUDALoader(ExtensionLoader):
     @staticmethod
     def extension_type():
         return ExtensionsType.CUDA

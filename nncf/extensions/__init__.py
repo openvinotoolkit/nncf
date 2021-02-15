@@ -1,6 +1,7 @@
 import enum
 import torch
 
+from abc import ABC, abstractmethod
 from nncf.common.utils.registry import Registry
 
 EXTENSIONS = Registry('extensions')
@@ -9,6 +10,18 @@ EXTENSIONS = Registry('extensions')
 class ExtensionsType(enum.Enum):
     CPU = 0
     CUDA = 1
+
+
+class ExtensionLoader(ABC):
+    @staticmethod
+    @abstractmethod
+    def extension_type():
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def load():
+        pass
 
 
 def _force_build_extensions(ext_type):
