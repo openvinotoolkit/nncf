@@ -14,13 +14,13 @@
 from bisect import bisect_right
 import numpy as np
 
-from beta.nncf.api.compression import CompressionScheduler
 from nncf.common.utils.registry import Registry
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(CompressionScheduler):
+class SparsityScheduler(TFCompressionScheduler):
     def __init__(self, sparsity_algo, params: dict = None):
         super().__init__()
         if params is None:

@@ -14,6 +14,8 @@
 from .version import __version__
 from .common.utils.backend import __nncf_backend__
 
+from .config import NNCFConfig
+
 if __nncf_backend__ == 'Torch':
     # Required for correct COMPRESSION_ALGORITHMS registry functioning
     from .binarization import algo as binarization_algo
@@ -28,7 +30,6 @@ if __nncf_backend__ == 'Torch':
 
     from .model_creation import create_compressed_model
     from .checkpoint_loading import load_state
-    from .config import NNCFConfig
     from .common.utils.logger import disable_logging
     from .common.utils.logger import set_log_level
     from .initialization import register_default_init_args

@@ -22,8 +22,8 @@ from copy import deepcopy
 from torchvision.models import resnet50, squeezenet1_1
 
 from nncf.checkpoint_loading import load_state
-from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionLoss, CompressionScheduler
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionLoss, PTCompressionScheduler
 from nncf.dynamic_graph.context import ScopeElement, Scope
 from nncf.hw_config import HWConfigType
 from nncf.layers import NNCFConv2d
@@ -225,7 +225,7 @@ def test_get_weight_activation_pairs__with_extra_module():
 def test_can_load_quant_algo__with_defaults():
     model = BasicConvTestModel()
     config = get_quantization_config_without_range_init()
-    composite_builder = CompositeCompressionAlgorithmBuilder(config)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
     assert len(composite_builder.child_builders) == 1
     assert isinstance(composite_builder.child_builders[0], QuantizationBuilder)
 
@@ -254,10 +254,10 @@ def test_can_create_quant_loss_and_scheduler():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
     loss = compression_ctrl.loss
-    assert isinstance(loss, CompressionLoss)
+    assert isinstance(loss, PTCompressionLoss)
 
     scheduler = compression_ctrl.scheduler
-    assert isinstance(scheduler, CompressionScheduler)
+    assert isinstance(scheduler, PTCompressionScheduler)
 
 
 def get_path_to_keys(tmp_path, rank):

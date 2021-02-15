@@ -19,8 +19,8 @@ from copy import deepcopy
 from torch import nn
 from torch.nn import Module
 
-from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
@@ -167,7 +167,7 @@ def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFCo
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               resuming_state_dict: dict = None) \
-        -> Tuple[NNCFNetwork, CompressionAlgorithmController]:
+        -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
     algo, model = create_compressed_model(model, config, dump_graphs=False, dummy_forward_fn=dummy_forward_fn,
@@ -195,7 +195,7 @@ def create_nncf_model_and_algo_builder(model: NNCFNetwork, config: NNCFConfig,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
     should_init = resuming_state_dict is None
-    composite_builder = CompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     return compressed_model, composite_builder
 
 

@@ -533,8 +533,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if len(self._builders) == 1:
             return self._builders[0].build_controller(self)
 
-        from nncf.composite_compression import CompositeCompressionAlgorithmController
-        composite_controller = CompositeCompressionAlgorithmController(self)
+        from nncf.composite_compression import PTCompositeCompressionAlgorithmController
+        composite_controller = PTCompositeCompressionAlgorithmController(self)
         for algo_builder in self._builders:
             composite_controller.add(algo_builder.build_controller(self))
         return composite_controller

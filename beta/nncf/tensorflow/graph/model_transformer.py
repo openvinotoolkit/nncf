@@ -16,8 +16,9 @@ from collections import namedtuple
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.transformations.commands import TargetType
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 from beta.nncf.tensorflow.graph.utils import get_custom_objects
 from beta.nncf.tensorflow.graph.utils import get_weight_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
@@ -29,33 +30,32 @@ WeightOperations = namedtuple('WeightOperations',
                               ('weights_attr_name', 'operations'))
 
 
-class ModelTransformer:
+class TFModelTransformer(ModelTransformer):
     """
     Applies transformations to a Keras model graph.
     """
     def __init__(self, model, transformation_layout):
         """
-        Constructor
+        Initializes Model Transformer
 
         :param model: Keras model to be transformed
-        :param transformation_layout: list of transformations
+        :param transformation_layout: List of transformations
         """
         if not is_sequential_or_functional_model(model):
             raise ValueError(
                 'Only tf.keras sequential or functional models can be transformed.')
 
-        self._model = model
+        super().__init__(model, transformation_layout)
         self._model_config = model.get_config()
         self._custom_objects = dict(
             list(get_custom_objects(model).items()) + list(get_nncf_custom_objects().items())
         )
-        self._transformations = transformation_layout.transformations
         self._name_mapping = {}
 
     def transform(self):
         """ Applies transformations to the Keras model.
 
-        :return: transformed Keras model
+        :return: The transformed Keras model
         """
         layer_weights_map = {}
         for layer in self._model.layers:

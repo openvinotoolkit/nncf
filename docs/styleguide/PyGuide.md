@@ -526,24 +526,27 @@ Classes should have a docstring below the class definition describing the class.
 ```python
 class ModelTransformer:
     """
-    Applies transformations to a Keras model graph.
+    Applies transformations to the model.
     """
-    def __init__(self, model, transformation_layout):
+    
+    def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
-        Initializes ModelTransformer 
+        Initializes Model Transformer
 
-        :param model: Keras model to be transformed
-        :param transformation_layout: list of transformations
+        :param model: The model to be transformed
+        :param transformation_layout: An instance of `TransformationLayout` that
+            includes a list of transformations to be applied to the model.
         """
         self._model = model
-        self._transformation_layout = transformation_layout
+        self._transformations = transformation_layout.transformations
 
-    def transform(self):
+    def transform(self) -> ModelType:
         """
-        Applies transformations to the Keras model.
+        Applies transformations to the model.
 
-        :return: transformed Keras model
+        :return: The transformed model
         """
+        raise NotImplementedError()
 ```
 
 <a id="s3.5.4-block-and-inline-comments"></a>

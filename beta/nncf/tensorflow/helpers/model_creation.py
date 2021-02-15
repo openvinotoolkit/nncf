@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from beta.nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
+from beta.nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.helpers.utils import get_built_model
 
 
@@ -22,7 +22,7 @@ def create_compression_algorithm_builder(config):
     if isinstance(compression_config, dict):
         return get_compression_algorithm_builder(compression_config)(compression_config)
     if isinstance(compression_config, list):
-        composite_builder = CompositeCompressionAlgorithmBuilder()
+        composite_builder = TFCompositeCompressionAlgorithmBuilder()
         for algo_config in compression_config:
             composite_builder.add(get_compression_algorithm_builder(algo_config)(algo_config))
         return composite_builder

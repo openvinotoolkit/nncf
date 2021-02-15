@@ -17,7 +17,9 @@ import torch
 from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel, StubCompressionScheduler
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
@@ -30,7 +32,7 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, module):
         return BinaryMask(module.weight.size())
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         params = self.config.get("params", {})
         return MagnitudeSparsityController(target_model, self._sparsified_module_info,
                                            self.config,
@@ -52,7 +54,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
             self._scheduler = scheduler_cls(self, params)
         else:
-            self._scheduler = StubCompressionScheduler()
+            self._scheduler = PTStubCompressionScheduler()
 
         self.set_sparsity_level(self.sparsity_init)
 

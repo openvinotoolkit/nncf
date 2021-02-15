@@ -16,12 +16,13 @@ from bisect import bisect_right
 
 from nncf.common.utils.logger import logger
 from ..algo_selector import Registry
-from ..compression_method_api import CompressionScheduler, CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(CompressionScheduler):
+class SparsityScheduler(PTCompressionScheduler):
     def __init__(self, sparsity_algo, params: dict = None):
         super().__init__()
         if params is None:

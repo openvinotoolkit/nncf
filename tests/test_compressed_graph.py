@@ -23,7 +23,7 @@ import torchvision
 from functools import partial
 from copy import deepcopy
 
-from nncf.composite_compression import CompositeCompressionAlgorithmBuilder
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.dynamic_graph.context import get_version_agnostic_name, TracingContext
 from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph_builder import create_input_infos, create_mock_tensor, GraphBuilder, \
@@ -374,7 +374,7 @@ def test_gnmt_quantization(_case_config):
                                    ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/'
                                     'BahdanauAttention[attn]'])
 
-    composite_builder = CompositeCompressionAlgorithmBuilder(config)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
     composite_builder.apply_to(compressed_model)
 
     _ = compressed_model.commit_compression_changes()
@@ -789,7 +789,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
     # pylint:disable=protected-access
-    quantization_builder = CompositeCompressionAlgorithmBuilder(config).child_builders[0]  # type: QuantizationBuilder
+    quantization_builder = PTCompositeCompressionAlgorithmBuilder(config).child_builders[0]  # type: QuantizationBuilder
     single_config_quantizer_setup = quantization_builder._get_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.get_original_graph()
 
