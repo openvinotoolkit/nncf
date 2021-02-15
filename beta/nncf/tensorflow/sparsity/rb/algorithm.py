@@ -37,6 +37,7 @@ from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
+from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
 
 
 PRUNING_LAYERS = {
@@ -161,6 +162,59 @@ class RBSparsityController(CompressionAlgorithmController):
 
         return ncor_values / nvalues
     '''
+    def statistics(self):
+        raw_sparsity_statistics = self.raw_statistics()
+        return convert_raw_to_printable(raw_sparsity_statistics)
+
+    def raw_statistics(self):
+        raw_sparsity_statistics = {}
+        sparsity_levels = []
+        mask_names = []
+        weights_shapes = []
+        weights_numbers = []
+        total_weights_number = tf.constant(0)
+        total_sparsified_weights_number = tf.constant(0)
+        total_bkup_weights_number = tf.constant(0)
+        wrapped_layers = collect_wrapped_layers(self._model)
+        for wrapped_layer in wrapped_layers:
+            for ops in wrapped_layer.weights_attr_ops.values():
+                for op_name, op in ops.items():
+                    mask = st_binary_mask(wrapped_layer.ops_weights[op_name]['mask'])
+                    mask_names.append(mask.name)
+                    weights_shapes.append(list(mask.shape))
+                    weights_number = tf.size(mask)
+                    weights_numbers.append(weights_number)
+                    sparsified_weights_number = weights_number - tf.reduce_sum(tf.cast(mask, tf.int32))
+                    sparsity_levels.append(sparsified_weights_number / weights_number)
+                    total_weights_number += weights_number
+                    total_sparsified_weights_number += sparsified_weights_number
+
+        sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
+        model_weights_number = count_params(self._model.weights) - total_weights_number - total_bkup_weights_number
+        sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
+
+        raw_sparsity_statistics.update({
+            'sparsity_rate_for_sparsified_modules': sparsity_rate_for_sparsified_modules,
+            'sparsity_rate_for_model': sparsity_rate_for_model,
+            'mean_sparse_prob': self.loss.mean_sparse_prob,
+        })
+
+        sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
+        weights_percentages = [weights_number / total_weights_number * 100
+                               for weights_number in weights_numbers]
+        weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
+        mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
+        raw_sparsity_statistics['sparsity_statistic_by_module'] = []
+        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
+            raw_sparsity_statistics['sparsity_statistic_by_module'].append({
+                'Name': mask_name,
+                'Weight\'s Shape': weights_shape,
+                'SR': sparsity_level,
+                '% weights': weights_percentage
+            })
+
+        return raw_sparsity_statistics
+
     def add_algo_specific_stats(self, stats):
         stats["target_sparsity_rate"] = self.loss.target_sparsity_rate
         #if self._distributed and self._check_sparsity_masks:

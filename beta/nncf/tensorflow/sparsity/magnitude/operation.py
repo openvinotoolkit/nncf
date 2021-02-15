@@ -35,7 +35,9 @@ class BinaryMask(NNCFOperation):
             trainable=False,
             aggregation=tf.VariableAggregation.MEAN)
 
-        return mask # TODO: return dict
+        return {
+            'mask': mask
+        }
 
     def call(self, inputs, weights, _):
         return apply_mask(inputs, weights['mask'])

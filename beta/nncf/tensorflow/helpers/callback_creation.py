@@ -25,10 +25,11 @@ def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_tex
         if isinstance(compression_ctrl, CompositeCompressionAlgorithmController) \
         else [compression_ctrl]
     for ctrl in compression_controllers:
-        if isinstance(ctrl, (MagnitudeSparsityController, BasePruningAlgoController)):
+        if isinstance(ctrl, (MagnitudeSparsityController, BasePruningAlgoController,
+                             RBSparsityController)):
             callbacks = [UpdateMask(ctrl.scheduler)]
             if log_tensorboard or log_text:
-                if isinstance(ctrl, MagnitudeSparsityController):
+                if isinstance(ctrl, MagnitudeSparsityController, RBSparsityController):
                     statistics_callback_cls = SparsityStatisticsCallback
                 else:
                     statistics_callback_cls = PruningStatisticsCallback

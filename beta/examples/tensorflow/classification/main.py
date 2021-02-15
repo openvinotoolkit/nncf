@@ -224,6 +224,7 @@ def run(config):
 
     logger.info('evaluation...')
     print_statistics(compression_ctrl.statistics())
+    compression_ctrl.freeze()
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
@@ -269,10 +270,10 @@ def export(config):
 
 
 def main(argv):
-    tf.executing_eagerly()
+    #tf.executing_eagerly()
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
-    config['eager_mode'] = True
+    #config['eager_mode'] = True
 
     serialize_config(config, config.log_dir)
 
