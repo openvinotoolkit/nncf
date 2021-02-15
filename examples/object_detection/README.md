@@ -9,6 +9,14 @@ This sample demonstrates DL model compression capabailites for object detection 
 - DataParallel and DistributedDataParallel modes
 - Tensorboard output
 
+## Installation
+
+To work with the sample you should install the corresponding Python package dependencies
+
+```
+pip install examples/requirements.txt
+```
+
 ## Quantize FP32 pretrained model
 This scenario demonstrates quantization with fine-tuning of SSD300 on VOC dataset.
 
