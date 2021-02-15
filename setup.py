@@ -40,6 +40,7 @@ def find_version(*file_paths):
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
 
+
 INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "addict>=2.4.0",
                     "texttable>=1.6.3",
@@ -69,7 +70,7 @@ elif python_version[1] < 6:
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-INSTALL_REQUIRES.extend("torch")
+INSTALL_REQUIRES.extend(["torch"])
 
 TORCH_VERSION = "1.7.0"
 CUDA_VERSION = "102"
@@ -77,8 +78,6 @@ IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER = True
 
 TORCH_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torch-{tv}{whl_mode}-cp{ver}-cp{' \
                             'ver}m-linux_x86_64.whl'
-TORCHVISION_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torchvision-{tvv}{whl_mode}-cp{ver}-cp{' \
-                                  'ver}m-linux_x86_64.whl'
 WHL_MODE_TEMPLATE = '%2B{mode}'
 
 if "--cpu-only" in sys.argv:
@@ -100,7 +99,6 @@ else:
             ver=version_string,
             mode=mode,
             whl_mode=whl_mode)]
-
 
 EXTRAS_REQUIRE = {
     "tests": [
@@ -136,9 +134,9 @@ setup(
     include_package_data=True
 )
 
-path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"]+"/ninja*/ninja/data/bin/"))
+path_to_ninja = glob.glob(str(sysconfig.get_paths()["purelib"] + "/ninja*/ninja/data/bin/"))
 if path_to_ninja:
-    path_to_ninja = str(path_to_ninja[0]+"ninja")
+    path_to_ninja = str(path_to_ninja[0] + "ninja")
     if not os.access(path_to_ninja, os.X_OK):
         st = os.stat(path_to_ninja)
         os.chmod(path_to_ninja, st.st_mode | stat.S_IEXEC)
