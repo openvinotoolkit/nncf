@@ -15,7 +15,7 @@ import numpy as np
 from bisect import bisect_right
 
 from nncf.common.utils.logger import logger
-from ..algo_selector import Registry
+from nncf.common.utils.registry import Registry
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionScheduler
 
