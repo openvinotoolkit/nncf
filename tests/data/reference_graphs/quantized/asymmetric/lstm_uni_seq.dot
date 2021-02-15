@@ -56,8 +56,8 @@ strict digraph  {
 "20 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "21 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize";
 "21 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize" -> "22 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__";
 "22 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__" -> "23 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize";
+"22 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__" -> "30 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "23 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize" -> "24 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/tanh";
-"23 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize" -> "30 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "24 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/tanh" -> "25 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize";
 "25 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/AsymmetricQuantizer/asymmetric_quantize" -> "26 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__";
 "26 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "27 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat";

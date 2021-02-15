@@ -45,6 +45,9 @@ class QuantizationTrait(Enum):
     NON_QUANTIZABLE = -1
     QUANTIZATION_AGNOSTIC = 0
     INPUTS_QUANTIZABLE = 1
+    # A concat node should ultimately either have all of its inputs quantized with the same configuration
+    # or none at all. This cannot be determined ahead of time, hence the special trait.
+    CONCAT = 100
 
 
 DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
@@ -80,6 +83,9 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         EmbeddingBagMetatype,
         SoftmaxMetatype
     ],
+    QuantizationTrait.CONCAT: [
+        CatMetatype
+    ]
 }  # type: Dict[QuantizationTrait, List[OperatorMetatype]]
 
 
@@ -123,11 +129,22 @@ class TransitionStatus(Enum):
 
 
 class PropagationStrategy(Enum):
-    CONSERVATIVE = 0  # While propagating up through a downward-branching node,
-                      # do not merge at all, or ...
-    MODERATE = 1      # ... only merge for exact matches
-    AGGRESSIVE = 2    # ... merge common parts, and if a branch quantizer has options for scope narrowing in addition to
-                      # the common part, keep the quantizer on branch
+    # While propagating up through a downward-branching node:
+    # ... do not merge at all
+    DO_NOT_MERGE_BRANCH_FQS = 0
+
+    # ... only merge for exact configuration space matches
+    MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME = 1
+
+    # ... merge common parts, and if a branch quantizer has options for
+    # narrowing (bitwidth/mode/per-channel/etc.) in addition to
+    # the common part, keep the quantizer on branch
+    MERGE_WITH_POTENTIAL_REQUANTIZATION = 2
+
+    # ... merge common config options into a single config space for the global FQ,
+    # do not merge if this is impossible for the current branching situation and given
+    # HW config file
+    MERGE_WITH_SINGLE_FQ_RESULT = 3
 
 
 class QuantizerPropagationStateGraphNodeType(Enum):
@@ -229,7 +246,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
         self._input_node_keys_vs_contexts = {}  # type: Dict[str, InputAgnosticOperationExecutionContext]
 
-        barrier_node_extra_edges = []
+        iteration_scope_node_keys = []
         for node_key, node in ip_graph.nodes.items():
             qpg_node = {
                 self.NODE_TYPE_NODE_ATTR: \
@@ -262,12 +279,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 if in_scope_list(node_scope, self._ignored_scopes):
                     self.ignored_node_keys.append(node_key)
-                    qpg_node_barrier = {
-                        self.NODE_TYPE_NODE_ATTR: QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER,
-                        'label': QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX}
-                    barrier_node_key = self.get_barrier_node_key(node_key)
-                    self.add_node(barrier_node_key, **qpg_node_barrier)
-                    barrier_node_extra_edges.append((barrier_node_key, node_key))
+
+                if node_ia_op_exec_context.scope_in_model.get_iteration_scopes():
+                    iteration_scope_node_keys.append(node_key)
 
             self.add_node(node_key, **qpg_node)
 
@@ -275,12 +289,21 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             edge_data[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
             self.add_edge(from_node, to_node, **edge_data)
 
-        for u_node_key, v_node_key in barrier_node_extra_edges:
-            edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
-            next_v_node_key = list(self.succ[v_node_key].keys())[0]  # POST HOOK v
-            self.add_edge(v_node_key, u_node_key, **edge_attr)
-            self.add_edge(u_node_key, next_v_node_key, **edge_attr)
-            self.remove_edge(v_node_key, next_v_node_key)
+        for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
+            self._add_barrier_after_node(barred_node_key)
+
+    def _add_barrier_after_node(self, node_key: str):
+        qpg_node_barrier = {
+            self.NODE_TYPE_NODE_ATTR: QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER,
+            'label': QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX}
+        barrier_node_key = self.get_barrier_node_key(node_key)
+        self.add_node(barrier_node_key, **qpg_node_barrier)
+
+        edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
+        next_node_key = list(self.succ[node_key].keys())[0]  # POST HOOK v
+        self.add_edge(node_key, barrier_node_key, **edge_attr)
+        self.add_edge(barrier_node_key, next_node_key, **edge_attr)
+        self.remove_edge(node_key, next_node_key)
 
     @staticmethod
     def ipg_node_type_to_qpsg_node_type(ipg_node_type: InsertionPointGraphNodeType) \
@@ -1223,7 +1246,7 @@ class QuantizerPropagationSolver:
 
     def __init__(self, ignored_scopes=None, hw_config: HWConfig = None,
                  debug_interface: 'QuantizationDebugInterface' = None,
-                 propagation_strategy: PropagationStrategy = PropagationStrategy.AGGRESSIVE,
+                 propagation_strategy: PropagationStrategy = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT,
                  default_qconfig_list: List[QuantizerConfig] = None,
                  input_infos: List[ModelInputInfo] = None,
                  quantizable_modules: List[QuantizableModule] = None,
@@ -1378,27 +1401,45 @@ class QuantizerPropagationSolver:
     def _handle_quantizer_merge(self, waiting_pqs: Set[PropagatingQuantizer],
                                 quant_prop_graph: QuantizerPropagationStateGraph,
                                 branching_node_key: str):
+        #pylint:disable=too-many-branches
         waiting_pqs_list = list(waiting_pqs)
-        # All quantizers that are dominated by the current branching node are waiting
-        # for the merge - should merge them now
-        nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
-        qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
-        merged_qconf_list, branch_qconf_lists = \
-            self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
-
-        merge_pq = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
-                                                                        merged_qconf_list,
-                                                                        branch_qconf_lists,
-                                                                        branching_node_key)
-
         merged_pqs = []
         unmerged_pqs = []
+        abort_merge = False
+        for pq in waiting_pqs_list:
+            # While the quantizers were waiting for the merge, one of the concat nodes
+            # that will be affected by the merge may have been determined to be unquantizable.
+            # Need another check for that.
+            sts = self.check_branching_transition(quant_prop_graph, pq, branching_node_key)
+            if sts is TransitionStatus.SHOULD_NOT_TRANSITION:
+                abort_merge = True
+        if not abort_merge:
+            # All quantizers that are dominated by the current branching node are waiting
+            # for the merge - should merge them now
+            nncf_logger.debug("Merging PQs: {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            qconfs_list = [pq.potential_quant_configs for pq in waiting_pqs_list]
+            merged_qconf_list, branch_qconf_lists = \
+                self.get_merged_qconfigs_for_downward_branching_case(qconfs_list)
 
-        for idx, qconf_list in enumerate(branch_qconf_lists):
-            if qconf_list is None:
-                merged_pqs.append(waiting_pqs_list[idx])
-            else:
-                unmerged_pqs.append(waiting_pqs_list[idx])
+            if merged_qconf_list is None and \
+                    self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
+                nncf_logger.warning("Could not merge the quantizers at branching point {} - no common quantizer "
+                                    "configurations found among the following: \n{}".format(
+                    branching_node_key, '\n'.join([str(qconfs) for qconfs in qconfs_list])))
+
+            merge_pq = quant_prop_graph.merge_quantizers_for_branching_node(waiting_pqs_list,
+                                                                            merged_qconf_list,
+                                                                            branch_qconf_lists,
+                                                                            branching_node_key)
+            for idx, qconf_list in enumerate(branch_qconf_lists):
+                if qconf_list is None:
+                    merged_pqs.append(waiting_pqs_list[idx])
+                else:
+                    unmerged_pqs.append(waiting_pqs_list[idx])
+        else:
+            nncf_logger.debug("Merge aborted for PQs {}".format(",".join([str(pq.id) for pq in waiting_pqs_list])))
+            merge_pq = None
+            unmerged_pqs = waiting_pqs_list
 
         queue_to_cull = list(reversed(self._active_propagating_quantizers_queue))
         self._active_propagating_quantizers_queue.clear()
@@ -1667,7 +1708,8 @@ class QuantizerPropagationSolver:
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
-                 QuantizationTrait.QUANTIZATION_AGNOSTIC]:
+                 QuantizationTrait.QUANTIZATION_AGNOSTIC,
+                 QuantizationTrait.CONCAT]:
             return
 
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
@@ -1755,13 +1797,31 @@ class QuantizerPropagationSolver:
         dom_op_quantizers = set()
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
+            trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
             affecting_prop_quantizers = op_node[
                 QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
-            if not affecting_prop_quantizers:
-                # The branch op is forced to be FP32 - should not proceed through the branch node.
-                return TransitionStatus.SHOULD_NOT_TRANSITION
-            for aff_pq in affecting_prop_quantizers:
-                dom_op_quantizers.add(aff_pq)
+            if affecting_prop_quantizers:
+                for aff_pq in affecting_prop_quantizers:
+                    dom_op_quantizers.add(aff_pq)
+            else:
+                if trait is not QuantizationTrait.CONCAT:
+                    # The branch op is forced to be FP32 - should not proceed through the branch node.
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
+
+                # Have to determine if the concat node will potentially have input quantization applied
+                # as a result of further propagation.
+                pqs_dominated_by_cat = quant_prop_graph.get_propagating_quantizers_immediately_dominated_by_node(
+                    op_node_key)
+                active_pqs_dominated_by_cat = set(
+                    filter(lambda x: x in self._active_propagating_quantizers_queue,
+                           pqs_dominated_by_cat))
+                if not active_pqs_dominated_by_cat:
+                    # There is no chance for this concat node to be quantized later,
+                    # should not attempt merge.
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
+                # There are still some quantizers that may propagate upwards through this concat node
+                # and ultimately lead to the concat node having quantized inputs
+                dom_op_quantizers.update(active_pqs_dominated_by_cat)
 
         dom_op_quantizers.discard(prop_quant_to_transition)
         if dom_op_quantizers:
@@ -1862,17 +1922,17 @@ class QuantizerPropagationSolver:
     def get_merged_qconfigs_for_downward_branching_case(self,
                                                         potential_qconfigs_for_each_branch: List[
                                                             List[Optional[QuantizerConfig]]]) -> \
-            Tuple[Optional[List[QuantizerConfig]], List[List[Optional[QuantizerConfig]]]]:
+            Tuple[Optional[List[QuantizerConfig]], List[Optional[List[QuantizerConfig]]]]:
         """Returns a tuple, of which the first element is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of elements which are either None (which means that the corresponding branch quantizer has been successfully
         merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
         requantization to a lower bitwidth has to be done for this branch)"""
         #pylint:disable=too-many-branches
-        if self._propagation_strategy == PropagationStrategy.CONSERVATIVE:
+        if self._propagation_strategy == PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS:
             # Do not merge at all
             return None, potential_qconfigs_for_each_branch
-        if self._propagation_strategy == PropagationStrategy.MODERATE:
+        if self._propagation_strategy == PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME:
             # Only merge for exact matches of the qconfig lists
             first_pq_list = potential_qconfigs_for_each_branch[0]
             first_pq_list_counter = Counter(first_pq_list)
@@ -1882,13 +1942,16 @@ class QuantizerPropagationSolver:
                     return None, potential_qconfigs_for_each_branch
             return first_pq_list, [None for _ in potential_qconfigs_for_each_branch]
 
-        # Aggressive
+        # Attempt to produce a merged config options space
         qconfigs_union = set()
         for branch_qconfig_list in potential_qconfigs_for_each_branch:
             qconfigs_union.update(set(branch_qconfig_list))
         merged_qconfig_list = []
 
-        def compatible(qconf, other_qconf_list):
+        nncf_logger.debug("Union of configs: {}".format(";".join([str(qc) for qc in qconfigs_union])))
+
+        def compatible_with_requant(qconf: QuantizerConfig,
+                                    other_qconf_list: List[QuantizerConfig]) -> bool:
             if qconf in other_qconf_list:
                 return True
             for other_qconf in other_qconf_list:
@@ -1896,55 +1959,77 @@ class QuantizerPropagationSolver:
                     return False
             return True
 
-        nncf_logger.debug("Union of configs: {}".format(";".join([str(qc) for qc in qconfigs_union])))
-        for qconf in qconfigs_union:
-            if all([compatible(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch]):
-                merged_qconfig_list.append(qconf)
+        def compatible_wo_requant(qconf: QuantizerConfig,
+                                  other_qconf_list: List[QuantizerConfig]) -> bool:
+            if qconf in other_qconf_list:
+                return True
+            return False
 
-        merged_qconfig_list_counter = Counter(merged_qconfig_list)
-        resulting_branch_qconfig_lists = [None for _ in potential_qconfigs_for_each_branch]
-        for idx, branch_qconfig_list in enumerate(potential_qconfigs_for_each_branch):
-            if Counter(branch_qconfig_list) == merged_qconfig_list_counter:
-                continue  # This branch will have the branch quantizer removed
-            resulting_branch_qconfig_lists[idx] = branch_qconfig_list
+        if self._propagation_strategy == PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+            compatible_fn = compatible_with_requant
+        elif self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
+            compatible_fn = compatible_wo_requant
+        else:
+            raise RuntimeError("Unknown propagation strategy: {}".format(self._propagation_strategy))
+
+        for qconf in qconfigs_union:
+            if all([compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch]):
+                merged_qconfig_list.append(qconf)
 
         nncf_logger.debug("Merged list before sorting: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
 
         if not merged_qconfig_list:
-            merged_qconfig_list = None
+            # Impossible to produce a merged configuration space of any kind, won't merge
+            return None, potential_qconfigs_for_each_branch
 
-        if merged_qconfig_list is not None:
-            # Sort the merged list according to an ad-hoc-calculated priority
-            # Basically, the original branches vote on a priority of a config in the merged
-            # qconfig list based on the position of said qconfig in their own qconfig list.
-            # TODO: This still does not properly disambiguate configs in all situations. Downstream code
-            # takes 0-th config in the list as the final config file. Without an external, unambiguous
-            # priority mechanism or manual config selection there is no way to do a consistent, branch order-independent
-            # merge.
-            qconfig_and_priority_list = []  # type: List[Tuple[QuantizerConfig, int]]
-            for merged_qconfig in merged_qconfig_list:
-                priority = 0
-                max_original_list_len = max([len(x) for x in potential_qconfigs_for_each_branch])
-                for original_branch_qconfig_list in potential_qconfigs_for_each_branch:
-                    try:
-                        idx = original_branch_qconfig_list.index(merged_qconfig)
-                    except ValueError:
-                        # Move the configs that inevitably lead to requantization closer to the end of the list
-                        idx = max_original_list_len + 1
-                    priority += idx
-                qconfig_and_priority_list.append((merged_qconfig, priority))
+        # Sort the merged list according to an ad-hoc-calculated priority
+        qconfig_and_priority_list = self.__assign_priorities_to_configs_in_merged_list(
+            merged_qconfig_list,
+            potential_qconfigs_for_each_branch)
 
-            qconfig_and_priority_list_sorted_by_priority = sorted(qconfig_and_priority_list, key=lambda x: x[1])
-            nncf_logger.debug(
-                "Priority-sorted merge qconfigs: {}".format(";".join(
-                    [str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
-                     qconfig_and_priority_list_sorted_by_priority])))
+        qconfig_and_priority_list_sorted_by_priority = sorted(qconfig_and_priority_list, key=lambda x: x[1])
+        nncf_logger.debug(
+            "Priority-sorted merge qconfigs: {}".format(";".join(
+                [str(qc_tup[1]) + ':' + str(qc_tup[0]) for qc_tup in
+                 qconfig_and_priority_list_sorted_by_priority])))
 
-            merged_qconfig_list = self.__disambiguate_config_list(qconfig_and_priority_list_sorted_by_priority)
-            nncf_logger.debug(
-                "Disambiguated merge qconfig list: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+        merged_qconfig_list = self.__disambiguate_config_list(qconfig_and_priority_list_sorted_by_priority)
+        nncf_logger.debug(
+            "Disambiguated merge qconfig list: {}".format(";".join([str(qc) for qc in merged_qconfig_list])))
+
+        merged_qconfig_list_counter = Counter(merged_qconfig_list)
+        resulting_branch_qconfig_lists = [None for _ in potential_qconfigs_for_each_branch]
+
+        if self._propagation_strategy == PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION:
+            for idx, branch_qconfig_list in enumerate(potential_qconfigs_for_each_branch):
+                if Counter(branch_qconfig_list) == merged_qconfig_list_counter:
+                    continue  # This branch will have the branch quantizer removed
+                resulting_branch_qconfig_lists[idx] = branch_qconfig_list
 
         return merged_qconfig_list, resulting_branch_qconfig_lists
+
+    def __assign_priorities_to_configs_in_merged_list(self, merged_qconfig_list: List[QuantizerConfig],
+                                                      potential_qconfigs_for_each_branch: List[
+                                                          List[QuantizerConfig]]) -> List[Tuple[QuantizerConfig, int]]:
+        # Basically, the original branches vote on a priority of a config in the merged
+        # qconfig list based on the position of said qconfig in their own qconfig list.
+        # TODO: This still does not properly disambiguate configs in all situations. Downstream code
+        # takes 0-th config in the list as the final config file. Without an external, unambiguous
+        # priority mechanism or manual config selection there is no way to do a consistent, branch order-independent
+        # merge.
+        qconfig_and_priority_list = []  # type: List[Tuple[QuantizerConfig, int]]
+        for merged_qconfig in merged_qconfig_list:
+            priority = 0
+            max_original_list_len = max([len(x) for x in potential_qconfigs_for_each_branch])
+            for original_branch_qconfig_list in potential_qconfigs_for_each_branch:
+                try:
+                    idx = original_branch_qconfig_list.index(merged_qconfig)
+                except ValueError:
+                    # Move the configs that inevitably lead to requantization closer to the end of the list
+                    idx = max_original_list_len + 1
+                priority += idx
+            qconfig_and_priority_list.append((merged_qconfig, priority))
+        return qconfig_and_priority_list
 
     def __disambiguate_config_list(self, qconfig_list_with_priority: List[Tuple[QuantizerConfig, int]]) -> \
             List[QuantizerConfig]:
