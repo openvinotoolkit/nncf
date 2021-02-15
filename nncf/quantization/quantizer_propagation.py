@@ -246,7 +246,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
         self._input_node_keys_vs_contexts = {}  # type: Dict[str, InputAgnosticOperationExecutionContext]
 
-        barrier_node_extra_edges = []
+        iteration_scope_node_keys = []
         for node_key, node in ip_graph.nodes.items():
             qpg_node = {
                 self.NODE_TYPE_NODE_ATTR: \
@@ -279,12 +279,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
                 if in_scope_list(node_scope, self._ignored_scopes):
                     self.ignored_node_keys.append(node_key)
-                    qpg_node_barrier = {
-                        self.NODE_TYPE_NODE_ATTR: QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER,
-                        'label': QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX}
-                    barrier_node_key = self.get_barrier_node_key(node_key)
-                    self.add_node(barrier_node_key, **qpg_node_barrier)
-                    barrier_node_extra_edges.append((barrier_node_key, node_key))
+
+                if node_ia_op_exec_context.scope_in_model.get_iteration_scopes():
+                    iteration_scope_node_keys.append(node_key)
 
             self.add_node(node_key, **qpg_node)
 
@@ -292,12 +289,21 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             edge_data[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
             self.add_edge(from_node, to_node, **edge_data)
 
-        for u_node_key, v_node_key in barrier_node_extra_edges:
-            edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
-            next_v_node_key = list(self.succ[v_node_key].keys())[0]  # POST HOOK v
-            self.add_edge(v_node_key, u_node_key, **edge_attr)
-            self.add_edge(u_node_key, next_v_node_key, **edge_attr)
-            self.remove_edge(v_node_key, next_v_node_key)
+        for barred_node_key in self.ignored_node_keys + iteration_scope_node_keys:
+            self._add_barrier_after_node(barred_node_key)
+
+    def _add_barrier_after_node(self, node_key: str):
+        qpg_node_barrier = {
+            self.NODE_TYPE_NODE_ATTR: QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER,
+            'label': QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX}
+        barrier_node_key = self.get_barrier_node_key(node_key)
+        self.add_node(barrier_node_key, **qpg_node_barrier)
+
+        edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
+        next_node_key = list(self.succ[node_key].keys())[0]  # POST HOOK v
+        self.add_edge(node_key, barrier_node_key, **edge_attr)
+        self.add_edge(barrier_node_key, next_node_key, **edge_attr)
+        self.remove_edge(node_key, next_node_key)
 
     @staticmethod
     def ipg_node_type_to_qpsg_node_type(ipg_node_type: InsertionPointGraphNodeType) \
