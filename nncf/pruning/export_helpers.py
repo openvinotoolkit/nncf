@@ -42,7 +42,7 @@ class DefaultMetaOp:
         raise NotImplementedError
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node: dict, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         """
         Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
         Should set the following attributes:
@@ -56,13 +56,13 @@ class DefaultMetaOp:
         raise NotImplementedError
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node: dict, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         """
         Prune nx_node by input_masks (if masks is not none and operation support it).
         """
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def output_prune(cls, model: NNCFNetwork, nx_node: dict, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         """
         Prune nx_node by output_mask (if mask is not none and operation support it).
         """
@@ -84,7 +84,7 @@ class Input(DefaultMetaOp):
     subtypes = [NoopMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return False
 
     @classmethod
@@ -100,11 +100,11 @@ class IdentityMaskForwardOps(DefaultMetaOp):
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
 
 
@@ -113,7 +113,7 @@ class Convolution(DefaultMetaOp):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
             if not is_depthwise_conv(node):
@@ -121,7 +121,7 @@ class Convolution(DefaultMetaOp):
         return accept_pruned_input
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         output_mask = None
         is_depthwise = False
         input_masks = get_input_masks(nx_node, nx_graph)
@@ -146,7 +146,7 @@ class Convolution(DefaultMetaOp):
         nx_node['is_depthwise'] = is_depthwise
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
         if input_mask is None:
             return
@@ -176,7 +176,7 @@ class Convolution(DefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def output_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         mask = nx_node['output_mask']
         if mask is None:
             return
@@ -202,11 +202,11 @@ class TransposeConvolution(DefaultMetaOp):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         output_mask = None
         accept_pruned_input = True
         input_masks = get_input_masks(nx_node, nx_graph)
@@ -222,7 +222,7 @@ class TransposeConvolution(DefaultMetaOp):
         nx_node['accept_pruned_input'] = accept_pruned_input
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
         if input_mask is None:
             return
@@ -239,7 +239,7 @@ class TransposeConvolution(DefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, node_module.in_channels))
 
     @classmethod
-    def output_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def output_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         output_mask = nx_node['output_mask']
         if output_mask is None:
             return
@@ -271,16 +271,16 @@ class BatchNorm(DefaultMetaOp):
     subtypes = [BatchNormMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return True
 
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
         if input_mask is None:
             return
@@ -343,7 +343,7 @@ class Concat(DefaultMetaOp):
     subtypes = [CatMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return True
 
     @classmethod
@@ -377,7 +377,7 @@ class Concat(DefaultMetaOp):
         return False
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         result_mask = None
 
         if cls.check_concat(nx_node, nx_graph, graph):
@@ -397,11 +397,11 @@ class Elementwise(DefaultMetaOp):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return True
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nx_node['input_masks'] = input_masks
@@ -435,11 +435,11 @@ class StopMaskForwardOps(DefaultMetaOp):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         return False
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_masks = get_input_masks(nx_node, nx_graph)
 
         nx_node['input_masks'] = input_masks
@@ -447,7 +447,7 @@ class StopMaskForwardOps(DefaultMetaOp):
 
 
 class ModelPruner:
-    def __init__(self, model: NNCFNetwork, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def __init__(self, model: NNCFNetwork, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         self.model = model
         self.graph = graph
         self.nx_graph = nx_graph

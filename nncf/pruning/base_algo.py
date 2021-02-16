@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
@@ -53,7 +53,7 @@ class PrunedModuleInfo:
 
 
 class NodeInfo:
-    def __init__(self, nncf_node: NNCFNode, module: nn.Module, module_scope: Scope):
+    def __init__(self, nncf_node: PTNNCFNode, module: nn.Module, module_scope: Scope):
         self.node = nncf_node
         self.id = nncf_node.node_id
         self.module = module

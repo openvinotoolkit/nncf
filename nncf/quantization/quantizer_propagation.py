@@ -32,7 +32,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFGraph
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
@@ -277,7 +277,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 qpg_node[self.IS_IN_IGNORED_SCOPES] = False
 
                 node_ia_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
+                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model
                 qpg_node[self.OPERATOR_IA_OP_EXEC_CONTEXT_NODE_ATTR] = node_ia_op_exec_context
                 node_scope = str(node_ia_op_exec_context)

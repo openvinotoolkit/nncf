@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_dummy_forward_fn, GraphBuilder
 from tests.test_compressed_graph import get_basic_quantization_config
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -47,7 +47,7 @@ def test_ambiguous_function():
     unique_op_exec_contexts = set()
     # pylint:disable=protected-access
     for _, node in graph._nx_graph.nodes.items():
-        node_op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        node_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
         assert node_op_exec_context not in unique_op_exec_contexts
 
 

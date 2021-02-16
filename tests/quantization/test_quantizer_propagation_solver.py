@@ -23,7 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import OperationExecutionContext, PTNNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
@@ -47,7 +47,7 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
-        node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+        node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -59,7 +59,7 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
     actual_keys = []
     for node_key in op_name_keys:
         attrs = {
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
                 get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key])
         }
         actual_key = node_key + '_{}'.format(node_key_appearances[node_key])
@@ -96,15 +96,15 @@ class TwoFcAfterDropout:
     def get_graph():
         graph = nx.DiGraph()
         dropout_node_attrs = {
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT
         }
 
         fc_1_node_attrs = {
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT
         }
 
         fc_2_node_attrs = {
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT
         }
 
         graph.add_node('dropout', **dropout_node_attrs)
@@ -144,7 +144,7 @@ class TestQuantizerPropagationSolver:
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
@@ -173,7 +173,7 @@ class TestQuantizerPropagationSolver:
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
@@ -1593,7 +1593,7 @@ class TestQuantizerPropagationSolver:
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta

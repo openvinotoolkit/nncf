@@ -38,11 +38,11 @@ from nncf.debug import is_debug
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.module_attributes import BaseModuleAttributes
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import BaseModuleAttributes
-from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
-from nncf.dynamic_graph.graph import GroupNormModuleAttributes
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
@@ -135,7 +135,7 @@ class InsertionPointGraph(nx.DiGraph):
 
         IN_PORT_ID_ATTR_NAME = "in_port_id"
         for edge in self._base_nx_graph.edges:
-            in_port_id = self._base_nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            in_port_id = self._base_nx_graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR]
             from_node, to_node = edge
             attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
             self.add_edge(from_node, to_node, **attrs)
@@ -150,7 +150,7 @@ class InsertionPointGraph(nx.DiGraph):
         node_keys_working_set = [deepcopy(node_key) for node_key in self.nodes.keys()]
         for operator_node_key in node_keys_working_set:
             original_node = self.nodes[operator_node_key][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = original_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_context = original_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
 
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
@@ -328,7 +328,7 @@ class InsertionPointGraph(nx.DiGraph):
         for node in self.nodes().values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 nncf_graph_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                op_exec_context = nncf_graph_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
                 op_scope = op_exec_context.input_agnostic.scope_in_model
                 if op_scope in scope:
                     matching_ip_graph_op_nodes_list.append(node)
@@ -503,12 +503,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return getattr(wrapped_module, name)
         return super().__getattr__(name)
 
-    def get_graph(self) -> NNCFGraph:
+    def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0:
             self.rebuild_graph()
         return self._compressed_context.graph
 
-    def get_original_graph(self) -> NNCFGraph:
+    def get_original_graph(self) -> PTNNCFGraph:
         return self._original_graph
 
     def get_tracing_context(self) -> TracingContext:
@@ -661,7 +661,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return ip_graph
 
     def get_op_arch_by_graph_node(self, nncf_graph_node_ref: dict) -> 'OperatorMetatype':
-        op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        op_exec_context = nncf_graph_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
         op_name = op_exec_context.operator_name
         scope = op_exec_context.scope_in_model
         op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
@@ -766,7 +766,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         eval_graph = graph_builder.build_graph(model, as_eval=True)
         for node_key in eval_graph.get_all_node_keys():
             node = eval_graph.get_nx_node_by_key(node_key)
-            op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+            op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
             if op_exec_context:
                 result.append(str(op_exec_context.input_agnostic))
         return result
@@ -778,7 +778,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             input_agnostic = node.op_exec_context.input_agnostic
             module = self.get_module_by_scope(scope)
             nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
-            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
+            nx_node[PTNNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
 
 
 def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:
