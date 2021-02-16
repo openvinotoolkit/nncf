@@ -14,7 +14,7 @@ This sample demonstrates DL model compression capabilities for semantic segmenta
 To work with the sample you should install the corresponding Python package dependencies
 
 ```
-pip install examples/requirements.txt
+pip install -r examples/requirements.txt
 ```
 
 ## Quantize FP32 pretrained model
