@@ -259,11 +259,11 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
                     4,
-                    "MobileNetV2/Sequential[features]/InvertedResidual[8]/Sequential[conv]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]"
+                    "InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]"
                 ], // A tuple of a bitwidth and a scope
                 [
                     4,
-                    "ModuleDict/AsymmetricQuantizer[MobileNetV2/Sequential[features]/InvertedResidual[15]/Sequential[conv]/ReLU6[5]/hardtanh_0]"
+                    "InsertionType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
                 ]
             ]
         }
