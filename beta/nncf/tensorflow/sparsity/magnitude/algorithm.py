@@ -14,18 +14,18 @@
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from nncf.common.graph.transformations.commands import InsertionCommand
-from nncf.common.graph.transformations.commands import LayerWeight
-from nncf.common.graph.transformations.commands import LayerWeightOperation
-from nncf.common.graph.transformations.commands import RemovalCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeightOperation
+from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
@@ -64,7 +64,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
         shared_nodes = set()
 
         for node_name, node in nxmodel.nodes.items():
@@ -79,8 +79,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = PRUNING_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
-                InsertionCommand(
-                    target_point=LayerWeight(original_node_name, weight_attr_name),
+                TFInsertionCommand(
+                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
                     callable_object=BinaryMask(),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
@@ -92,8 +92,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                         and not is_ignored(node_name, self.ignored_scopes):
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     transformations.register(
-                        InsertionCommand(
-                            target_point=LayerWeight(layer.name, weight_attr_name),
+                        TFInsertionCommand(
+                            target_point=TFLayerWeight(layer.name, weight_attr_name),
                             callable_object=BinaryMaskWithWeightsBackup(weight_attr_name),
                             priority=TransformationPriority.SPARSIFICATION_PRIORITY
                         ))
@@ -127,7 +127,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
             raise ValueError(
                 'Expected model to be a `tf.keras.Model` instance but got: ', model)
 
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
 
         for layer in model.layers:
             if isinstance(layer, NNCFWrapper):
@@ -138,8 +138,8 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
                         self._apply_mask(layer, weight_attr, op_name)
 
                         transformations.register(
-                            RemovalCommand(
-                                target_point=LayerWeightOperation(
+                            TFRemovalCommand(
+                                target_point=TFLayerWeightOperation(
                                     layer.name,
                                     weights_attr_name=weight_attr,
                                     operation_name=op_name)
