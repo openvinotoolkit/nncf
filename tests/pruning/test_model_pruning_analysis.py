@@ -19,9 +19,15 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_network import NNCFNetwork
-from nncf.pruning.export_helpers import IdentityMaskForwardOps, PRUNING_OPERATOR_METATYPES, Elementwise
-from nncf.pruning.model_analysis import NodesCluster, Clusterization, cluster_special_ops, ModelAnalyzer
-from nncf.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.pruning.export_helpers import PTIdentityMaskForwardOps
+from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.pruning.export_helpers import PTElementwise
+from nncf.pruning.filter_pruning.pruning_node_selector import PTPruningNodeSelector
+from nncf.pruning.utils import pt_is_depthwise_conv
+from nncf.common.pruning.model_analysis import NodesCluster
+from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.model_analysis import cluster_special_ops
+from nncf.common.pruning.model_analysis import ModelAnalyzer
 from tests.helpers import create_compressed_model_and_algo_for_test, create_nncf_model_and_algo_builder
 from tests.pruning.helpers import PruningTestModelEltwise, get_basic_pruning_config, TestModelBranching, \
     TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs, \
@@ -160,15 +166,15 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     prune_first, prune_last, prune_downsample = test_input_info_struct_.prune_params
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
-    grouping_operations = Elementwise.get_all_op_aliases()
-    pruning_node_selector = PruningNodeSelector(PRUNING_OPERATOR_METATYPES,
-                                                pruning_operations,
-                                                grouping_operations,
-                                                None,
-                                                None,
-                                                prune_first,
-                                                prune_last,
-                                                prune_downsample)
+    grouping_operations = PTElementwise.get_all_op_aliases()
+    pruning_node_selector = PTPruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
+                                                  pruning_operations,
+                                                  grouping_operations,
+                                                  None,
+                                                  None,
+                                                  prune_first,
+                                                  prune_last,
+                                                  prune_downsample)
     model = model()
     model.eval()
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 8, 8])])
@@ -224,7 +230,7 @@ def test_group_special_nodes(test_special_ops_struct: GroupSpecialModulesTestStr
 
     special_ops_clusterization = cluster_special_ops(nncf_model.get_original_graph(),
                                                      algo_builder.get_types_of_grouping_ops(),
-                                                     IdentityMaskForwardOps.get_all_op_aliases())
+                                                     PTIdentityMaskForwardOps.get_all_op_aliases())
 
     for ref_cluster in test_special_ops_struct.eltwise_clusters:
         cluster = special_ops_clusterization.get_cluster_by_node_id(ref_cluster[0])
@@ -255,7 +261,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
     nncf_model, _ = create_nncf_model_and_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
 
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PRUNING_OPERATOR_METATYPES)
+    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, pt_is_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():
         assert can_prune_analysis[node_id] == test_struct.ref_can_prune[node_id]

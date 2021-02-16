@@ -13,7 +13,10 @@
 import networkx as nx
 import torch
 
-from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
+from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.utils import is_grouped_conv
+from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
     PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype, SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, \
     DropoutMetatype, Conv1dMetatype, Conv2dMetatype, Conv3dMetatype, BatchNormMetatype, CatMetatype, AddMetatype, \
@@ -23,24 +26,15 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
     fill_input_masks
-from nncf.pruning.utils import get_sources_of_node, is_depthwise_conv, is_grouped_conv
+from nncf.common.pruning.utils import get_sources_of_node
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.pruning.utils import pt_is_depthwise_conv
 
-PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
+PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
 # pylint: disable=protected-access
-class DefaultMetaOp:
-    subtypes = []
-    additional_types = []
-
-    @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
-        """
-        :return: accept_pruned_input - can this operation work with pruned input or not
-        """
-        raise NotImplementedError
-
+class PTDefaultMetaOp(DefaultMetaOp):
     @classmethod
     def mask_propagation(cls, model: NNCFNetwork, nx_node: dict, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         """
@@ -67,20 +61,9 @@ class DefaultMetaOp:
         Prune nx_node by output_mask (if mask is not none and operation support it).
         """
 
-    @classmethod
-    def get_all_op_aliases(cls):
-        """
-        :return: list of all aliases of types in metatype
-        """
-        op_types = []
-        for subtype in cls.subtypes:
-            op_types.extend(subtype.get_all_aliases())
-        op_types = list(set(op_types)) + cls.additional_types
-        return op_types
 
-
-@PRUNING_OPERATOR_METATYPES.register('model_input')
-class Input(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('model_input')
+class PTInput(PTDefaultMetaOp):
     subtypes = [NoopMetatype]
 
     @classmethod
@@ -93,8 +76,8 @@ class Input(DefaultMetaOp):
         nx_node['output_mask'] = None
 
 
-@PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
-class IdentityMaskForwardOps(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
+class PTIdentityMaskForwardOps(PTDefaultMetaOp):
     subtypes = [HardTanhMetatype, TanhMetatype, RELUMetatype, PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype,
                 SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, DropoutMetatype]
     additional_types = ['h_sigmoid', 'h_swish', 'RELU']
@@ -108,15 +91,15 @@ class IdentityMaskForwardOps(DefaultMetaOp):
         identity_mask_propagation(nx_node, nx_graph)
 
 
-@PRUNING_OPERATOR_METATYPES.register('convolution')
-class Convolution(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('convolution')
+class PTConvolution(PTDefaultMetaOp):
     subtypes = [Conv1dMetatype, Conv2dMetatype, Conv3dMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: PTNNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
-            if not is_depthwise_conv(node):
+            if not pt_is_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
 
@@ -134,7 +117,7 @@ class Convolution(DefaultMetaOp):
 
         # In case of group convs we can't prune by output filters
         if is_grouped_conv(nncf_node):
-            if is_depthwise_conv(nncf_node):
+            if pt_is_depthwise_conv(nncf_node):
                 # Depthwise case
                 is_depthwise = True
                 output_mask = input_masks[0]
@@ -197,8 +180,8 @@ class Convolution(DefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, node_module.out_channels))
 
 
-@PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
-class TransposeConvolution(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
+class PTTransposeConvolution(PTDefaultMetaOp):
     subtypes = [ConvTranspose2dMetatype, ConvTranspose3dMetatype]
 
     @classmethod
@@ -266,8 +249,8 @@ class TransposeConvolution(DefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, node_module.out_channels))
 
 
-@PRUNING_OPERATOR_METATYPES.register('batch_norm')
-class BatchNorm(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('batch_norm')
+class PTBatchNorm(PTDefaultMetaOp):
     subtypes = [BatchNormMetatype]
 
     @classmethod
@@ -338,8 +321,8 @@ class GroupNorm(DefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
 
 
-@PRUNING_OPERATOR_METATYPES.register('concat')
-class Concat(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('concat')
+class PTConcat(PTDefaultMetaOp):
     subtypes = [CatMetatype]
 
     @classmethod
@@ -362,11 +345,11 @@ class Concat(DefaultMetaOp):
             if input_masks[i] is not None:
                 continue
             nncf_input_node = graph._nx_node_to_nncf_node(nx_graph.nodes[inp])
-            source_nodes = get_sources_of_node(nncf_input_node, graph, Convolution.get_all_op_aliases() +
-                                               StopMaskForwardOps.get_all_op_aliases() +
-                                               Input.get_all_op_aliases())
+            source_nodes = get_sources_of_node(nncf_input_node, graph, PTConvolution.get_all_op_aliases() +
+                                               PTStopMaskForwardOps.get_all_op_aliases() +
+                                               PTInput.get_all_op_aliases())
             sources_types = [node.op_exec_context.operator_name for node in source_nodes]
-            if any([t in sources_types for t in StopMaskForwardOps.get_all_op_aliases()]):
+            if any([t in sources_types for t in PTStopMaskForwardOps.get_all_op_aliases()]):
                 return False
         return True
 
@@ -392,8 +375,8 @@ class Concat(DefaultMetaOp):
         nx_node['output_mask'] = result_mask
 
 
-@PRUNING_OPERATOR_METATYPES.register('elementwise')
-class Elementwise(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
+class PTElementwise(PTDefaultMetaOp):
     subtypes = [AddMetatype, SubMetatype, DivMetatype, MulMetatype]
 
     @classmethod
@@ -410,7 +393,7 @@ class Elementwise(DefaultMetaOp):
         nx_node['output_mask'] = input_masks[0]
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node: dict, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node: dict, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
         if input_mask is None:
             return
@@ -430,8 +413,8 @@ class Elementwise(DefaultMetaOp):
                              ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
 
 
-@PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
-class StopMaskForwardOps(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
+class PTStopMaskForwardOps(PTDefaultMetaOp):
     subtypes = [MeanMetatype, MaxMetatype, MinMetatype, LinearMetatype, MatMulMetatype]
 
     @classmethod
@@ -453,15 +436,15 @@ class ModelPruner:
         self.nx_graph = nx_graph
 
     @staticmethod
-    def get_class_by_type_name(type_name):
+    def get_class_by_type_name(type_name) -> PTDefaultMetaOp:
         """
         Return class of metaop that corresponds to type_name type.
         """
-        cls = PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
+        cls = PT_PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
         if cls is None:
             nncf_logger.warning(
                 "Layer {} is not pruneable - will not propagate pruned filters through it".format(type_name))
-            cls = StopMaskForwardOps
+            cls = PTStopMaskForwardOps
         return cls
 
     def mask_propagation(self):

@@ -28,10 +28,10 @@ from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.pruning.model_analysis import NodesCluster, Clusterization
-from nncf.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.pruning.filter_pruning.pruning_node_selector import PTPruningNodeSelector
+from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
 from nncf.pruning.utils import get_bn_for_module_scope
-from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES
+from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 
 
 class BatchNormInfo:
@@ -71,14 +71,14 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
-        self.pruning_node_selector = PruningNodeSelector(PRUNING_OPERATOR_METATYPES,
-                                                         self.get_op_types_of_pruned_modules(),
-                                                         self.get_types_of_grouping_ops(),
-                                                         self.ignored_scopes,
-                                                         self.target_scopes,
-                                                         self.prune_first,
-                                                         self.prune_last,
-                                                         self.prune_downsample_convs)
+        self.pruning_node_selector = PTPruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
+                                                           self.get_op_types_of_pruned_modules(),
+                                                           self.get_types_of_grouping_ops(),
+                                                           self.ignored_scopes,
+                                                           self.target_scopes,
+                                                           self.prune_first,
+                                                           self.prune_last,
+                                                           self.prune_downsample_convs)
 
         self.pruned_module_groups_info = []
 

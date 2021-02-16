@@ -10,14 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Callable
 from typing import List
 
 import networkx as nx
 
-from nncf.dynamic_graph.graph import NNCFNode, NNCFGraph
-from nncf.pruning.export_helpers import DefaultMetaOp
-from nncf.pruning.utils import is_depthwise_conv, find_next_nodes_not_of_types
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry
 
 
@@ -163,7 +164,7 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_typ
 
         all_outputs = find_next_nodes_not_of_types(graph, nncf_node, identity_types)
         all_output_special_nodes = [node for node in all_outputs
-                                    if node.op_exec_context.operator_name in special_types]
+                                    if node.node_type in special_types]
         if graph.node_type_fn(node) in special_types:
             all_output_special_nodes.append(nncf_node)
         merge_clusters_for_nodes(all_output_special_nodes, clusterization)
@@ -187,7 +188,8 @@ class ModelAnalyzer:
     As a result, all nodes marked by the can_prune attribute as potentially prunable or not.
     """
     def __init__(self, graph: NNCFGraph,
-                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
+                 pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
+                 is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
         self.graph = graph
         self._nx_graph = self.graph._nx_graph
 
@@ -196,6 +198,8 @@ class ModelAnalyzer:
         self._stop_propagation_op_metatype = pruning_op_metatypes_dict['stop_propagation_ops']
         self._concat_op_metatype = pruning_op_metatypes_dict['concat']
         self._convolution_op_metatype = pruning_op_metatypes_dict['convolution']
+
+        self._is_depthwise_conv_fn = is_depthwise_conv_fn
 
         self.can_prune = {idx: True for idx in self.graph.get_all_node_idxs()}
         self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_idxs()}
@@ -207,16 +211,15 @@ class ModelAnalyzer:
         :param nncf_node: node to work with
         :return: bool: propagates this node can_prune throw or not
         """
-        node_type = nncf_node.op_exec_context.operator_name
+        node_type = nncf_node.node_type
         is_conv = node_type in self._convolution_op_metatype.get_all_op_aliases()
-        return not is_conv or (is_conv and is_depthwise_conv(nncf_node))
+        return not is_conv or (is_conv and self._is_depthwise_conv_fn(nncf_node))
 
     def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
         """
         Return whether nx_node accept pruned and not pruned inputs as inputs at the same time.
         """
-        node_type = nncf_node.op_exec_context.operator_name
-        return node_type in self._concat_op_metatype.get_all_op_aliases()
+        return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
     def get_class_by_type_name(self, type_name: str) -> DefaultMetaOp:
         """
@@ -267,8 +270,7 @@ class ModelAnalyzer:
 
     def set_accept_pruned_input_attr(self):
         for nncf_node in self.graph.get_all_nodes():
-            node_type = nncf_node.op_exec_context.operator_name
-            cls = self.get_class_by_type_name(node_type)
+            cls = self.get_class_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
     def analyse_model_before_pruning(self):

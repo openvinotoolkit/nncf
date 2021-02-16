@@ -14,8 +14,10 @@ import pytest
 
 from nncf.dynamic_graph.context import Scope
 from nncf.pruning.filter_pruning.algo import FilterPruningBuilder
-from nncf.pruning.utils import get_rounded_pruned_element_number, get_bn_for_module_scope, \
-    get_first_pruned_nodes, get_last_pruned_nodes
+from nncf.pruning.utils import get_bn_for_module_scope
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.utils import get_first_pruned_nodes
+from nncf.common.pruning.utils import get_last_pruned_nodes
 from tests.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
     TestModelBranching
 from tests.helpers import create_compressed_model_and_algo_for_test
