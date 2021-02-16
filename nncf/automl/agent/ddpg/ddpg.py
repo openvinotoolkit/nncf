@@ -223,7 +223,7 @@ class DDPG:
         # Actor update
         self.actor.zero_grad()
 
-        policy_loss = -self.critic([
+        policy_loss = (-1) * self.critic([
             to_tensor(state_batch),
             self.actor(to_tensor(state_batch))
         ])
