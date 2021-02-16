@@ -43,14 +43,14 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
 
 class PTCompositeCompressionScheduler(CompositeCompressionScheduler, CompressionScheduler):
     def get_state(self):
-        result = {}
+        result = []
         for child_scheduler in self._child_schedulers:
-            result.update(child_scheduler.get_state())
+            result.append(child_scheduler.get_state())
         return result
 
     def load_state(self, state):
-        for child_scheduler in self._child_schedulers:
-            child_scheduler.load_state(state)
+        for child_scheduler, child_state in zip(self._child_schedulers, state):
+            child_scheduler.load_state(child_state)
 
 
 class PTCompositeCompressionAlgorithmBuilder(
