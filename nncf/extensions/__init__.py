@@ -24,7 +24,7 @@ class ExtensionLoader(ABC):
         pass
 
 
-def _force_build_extensions(ext_type):
+def _force_build_extensions(ext_type: ExtensionsType):
     for class_type in EXTENSIONS.registry_dict.values():
         if class_type.extension_type() != ext_type:
             continue
