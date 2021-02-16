@@ -31,7 +31,7 @@ class LeGR:
     def train_global_ranking(self):
         reward_list = []
 
-        for episode in range(5):
+        for episode in range(self.GENERATIONS):
             state, info = self.env.reset()
 
             # Beginning of the episode

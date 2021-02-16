@@ -93,7 +93,8 @@ class FilterPruningController(BasePruningAlgoController):
             legr_params = params.get("legr_params", {})
             legr = LeGR(self, target_model, legr_init_args, **legr_params)
             self.ranking_coeffs = legr.train_global_ranking()
-            nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope) for scope in self.ranking_coeffs}))
+            nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
+                                                                         for scope in self.ranking_coeffs}))
         else:
             self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
