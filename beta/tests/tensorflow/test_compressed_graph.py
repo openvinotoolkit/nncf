@@ -168,10 +168,13 @@ class ModelDesc:
 SKIP_MAP = {
     'quantization': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
-        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18')
+        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
+        'xception': pytest.mark.skip(reason='gitlab issue #28')
     },
     'magnitude_sparsity': {
-        'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17')
+        'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
+        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
+        'xception': pytest.mark.skip(reason='gitlab issue #28')
     }
 }
 
@@ -193,7 +196,10 @@ def get_test_models_desc(algorithm):
         ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
         ModelDesc('resnet50_v2.pb', test_models.ResNet50V2, [1, 32, 32, 3]),
         ModelDesc('vgg16.pb', test_models.VGG16, [1, 32, 32, 3]),
-        ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
+        pytest.param(
+            ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
+            marks=SKIP_MAP[algorithm].get('xception', ())
+        ),
         ModelDesc('retinanet.pb', test_models.RetinaNet, [1, None, None, 3]),
         ModelDesc('sequential_model.pb', test_models.SequentialModel, [1, 224, 224, 3]),
         ModelDesc('sequential_no_input_model.pb', test_models.SequentialModelNoInput, [1, 224, 224, 3]),

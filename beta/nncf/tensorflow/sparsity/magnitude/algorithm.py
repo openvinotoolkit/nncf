@@ -31,29 +31,17 @@ from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
+from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.utils.node import is_ignored
 
-
-PRUNING_LAYERS = {
-    'Conv1D': {'weight_attr_name': 'kernel'},
-    'Conv2D': {'weight_attr_name': 'kernel'},
-    'DepthwiseConv2D': {'weight_attr_name': 'depthwise_kernel'},
-    'Conv3D': {'weight_attr_name': 'kernel'},
-    'Conv2DTranspose': {'weight_attr_name': 'kernel'},
-    'Conv3DTranspose': {'weight_attr_name': 'kernel'},
-    'Dense': {'weight_attr_name': 'kernel'},
-    'SeparableConv1D': {'weight_attr_name': 'pointwise_kernel'},
-    'SeparableConv2D': {'weight_attr_name': 'pointwise_kernel'},
-    'Embedding': {'weight_attr_name': 'embeddings'},
-    'LocallyConnected1D': {'weight_attr_name': 'kernel'},
-    'LocallyConnected2D': {'weight_attr_name': 'kernel'}
-}
+SPARSITY_LAYERS = LAYERS_WITH_WEIGHTS
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -69,7 +57,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         for node_name, node in nxmodel.nodes.items():
             original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if node['type'] not in PRUNING_LAYERS \
+            if node['type'] not in SPARSITY_LAYERS \
                     or is_ignored(node_name, self.ignored_scopes) \
                     or original_node_name in shared_nodes:
                 continue
@@ -77,7 +65,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            weight_attr_name = PRUNING_LAYERS[node['type']]['weight_attr_name']
+            weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
@@ -88,7 +76,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         for layer in get_custom_layers(model):
             nxmodel = convert_layer_graph_to_nxmodel(layer)
             for node_name, node in nxmodel.nodes.items():
-                if node['type'] in PRUNING_LAYERS \
+                if node['type'] in SPARSITY_LAYERS \
                         and not is_ignored(node_name, self.ignored_scopes):
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     transformations.register(
@@ -126,43 +114,10 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
         self.set_sparsity_level(self.sparsity_init)
 
     def strip_model(self, model):
-        if not isinstance(model, tf.keras.Model):
-            raise ValueError(
-                'Expected model to be a `tf.keras.Model` instance but got: ', model)
-
-        transformations = TFTransformationLayout()
-
-        for layer in model.layers:
-            if isinstance(layer, NNCFWrapper):
-                for weight_attr, ops in layer.weights_attr_ops.items():
-                    # BinaryMask operation must be the first operation
-                    op_name, op = next(iter(ops.items()))
-                    if isinstance(op, BinaryMask):
-                        self._apply_mask(layer, weight_attr, op_name)
-
-                        transformations.register(
-                            TFRemovalCommand(
-                                target_point=TFOperationWithWeights(
-                                    layer.name,
-                                    weights_attr_name=weight_attr,
-                                    operation_name=op_name)
-                            ))
-
-        return TFModelTransformer(model, transformations).transform()
+        return strip_model_from_masks(model)
 
     def freeze(self):
         self.frozen = True
-
-    @staticmethod
-    def _apply_mask(wrapped_layer, weight_attr, op_name):
-        layer_weight = wrapped_layer.layer_weights[weight_attr]
-        op = wrapped_layer.weights_attr_ops[weight_attr][op_name]
-        layer_weight.assign(
-            op(layer_weight,
-               wrapped_layer.ops_weights[op_name],
-               False)
-        )
-        wrapped_layer.set_layer_weight(weight_attr, layer_weight)
 
     def set_sparsity_level(self, sparsity_level):
         if not self.frozen:

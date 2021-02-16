@@ -29,6 +29,7 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
@@ -119,7 +120,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True))
 
-            weight_attr_name = QUANTIZATION_LAYERS[node['type']]['weight_attr_name']
+            weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),

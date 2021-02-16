@@ -13,28 +13,14 @@
 
 from typing import Callable
 
-import tensorflow as tf
-
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
+from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
+from beta.nncf.tensorflow.pruning.utils import prepare_for_tensorboard
 
 
-class UpdateMask(tf.keras.callbacks.Callback):
-    def __init__(self, scheduler):
-        super().__init__()
-        self._scheduler = scheduler
-
-    def on_train_batch_begin(self, batch, logs=None):
-        self._scheduler.step()
-
-    def on_epoch_begin(self, epoch, logs=None):
-        self._scheduler.epoch_step(epoch)
-
-
-class SparsityStatisticsCallback(StatisticsCallback):
+class PruningStatisticsCallback(StatisticsCallback):
     """
-    Callback for logging sparsity compression statistics to tensorboard and stdout
+    Callback for logging cruning compression statistics to tensorboard and stdout
     """
 
     def __init__(self,
@@ -50,8 +36,8 @@ class SparsityStatisticsCallback(StatisticsCallback):
         """
         super().__init__(raw_statistics_fn, log_tensorboard, log_text, log_dir)
 
-    def _prepare_for_tensorboard(self, raw_statistics: dict):
+    def _prepare_for_tensorboard(self, raw_statistics: dict) -> dict:
         return prepare_for_tensorboard(raw_statistics)
 
-    def _convert_raw_to_printable(self, raw_statistics: dict):
+    def _convert_raw_to_printable(self, raw_statistics: dict) -> dict:
         return convert_raw_to_printable(raw_statistics)
