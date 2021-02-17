@@ -13,9 +13,8 @@
 from typing import List
 
 import tensorflow as tf
-from texttable import Texttable
 
-from beta.nncf.api.compression import CompressionAlgorithmController
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
@@ -37,13 +36,13 @@ from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
 
-    def build_controller(self, target_model: tf.keras.Model) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self._prunable_types,
                                        self._pruned_layer_groups_info,

@@ -15,13 +15,13 @@ from typing import Dict, List
 
 import tensorflow as tf
 
-from beta.nncf.api.compression import CompressionAlgorithmBuilder
-from beta.nncf.api.compression import CompressionAlgorithmController
-from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationPriority
-from beta.nncf.tensorflow.graph.transformations.commands import InsertionCommand
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.common.graph.transformations.commands import LayerWeight
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.commands import InsertionCommand
+from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.graph.graph import TFNNCFGraph
 from beta.nncf.tensorflow.graph.graph import tf_get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
@@ -37,9 +37,9 @@ from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.nncf_logger import logger as nncf_logger
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class PrunedLayerInfo:
@@ -50,7 +50,7 @@ class PrunedLayerInfo:
         self.related_layers = related_layers
 
 
-class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
+class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
     def __init__(self, config):
         super().__init__(config)
@@ -70,7 +70,6 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
                                                             types_of_grouping_ops,
                                                             None, # self.ignored_scopes,
                                                             None, # self.target_scopes,
-                                                            self._ignore_frozen_layers,
                                                             self._prune_first,
                                                             self._prune_last,
                                                             self._prune_downsample_convs)
@@ -79,7 +78,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
         transformation_layout = self.get_transformation_layout(model)
-        return ModelTransformer(model, transformation_layout).transform()
+        return TFModelTransformer(model, transformation_layout).transform()
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TransformationLayout:
         graph = TFNNCFGraph(model)
@@ -154,7 +153,7 @@ class BasePruningAlgoBuilder(CompressionAlgorithmBuilder):
         raise NotImplementedError
 
 
-class BasePruningAlgoController(CompressionAlgorithmController):
+class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
@@ -185,11 +184,11 @@ class BasePruningAlgoController(CompressionAlgorithmController):
         if pruning_target and pruning_flops_target:
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
 
-    def statistics(self) -> dict:
+    def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()
         return convert_raw_to_printable(raw_pruning_statistics)
 
-    def raw_statistics(self) -> dict:
+    def raw_statistics(self) -> Dict[str, object]:
         raw_pruning_statistics = {}
         pruning_rates = []
         mask_names = []
@@ -232,5 +231,5 @@ class BasePruningAlgoController(CompressionAlgorithmController):
 
         return raw_pruning_statistics
 
-    def strip_model(self, model):
+    def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model)

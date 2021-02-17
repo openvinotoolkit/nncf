@@ -23,19 +23,6 @@ class PruningStatisticsCallback(StatisticsCallback):
     Callback for logging cruning compression statistics to tensorboard and stdout
     """
 
-    def __init__(self,
-                 raw_statistics_fn: Callable[[], dict],
-                 log_tensorboard: bool = True,
-                 log_text: bool = True,
-                 log_dir: str = None):
-        """
-        :param raw_statistics_fn: callable to evaluate raw sparsity compression statistics
-        :param log_tensorboard: whether to log statistics to tensorboard or not
-        :param log_text: whether to log statistics to stdout
-        :param log_dir: the directory for tensorbard logging
-        """
-        super().__init__(raw_statistics_fn, log_tensorboard, log_text, log_dir)
-
     def _prepare_for_tensorboard(self, raw_statistics: dict) -> dict:
         return prepare_for_tensorboard(raw_statistics)
 

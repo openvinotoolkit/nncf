@@ -14,6 +14,8 @@
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
+from nncf.common.graph.transformations.commands import InsertionCommand
+from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS

@@ -15,10 +15,10 @@ from texttable import Texttable
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeightOperation
-from beta.nncf.tensorflow.graph.transformations.commands import RemovalCommand
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from nncf.common.graph.transformations.commands import LayerWeightOperation
+from nncf.common.graph.transformations.commands import RemovalCommand
+from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
@@ -76,7 +76,7 @@ def strip_model_from_masks(model: tf.keras.Model) -> tf.keras.Model:
                                 operation_name=op_name)
                         ))
 
-    return ModelTransformer(model, transformations).transform()
+    return TFModelTransformer(model, transformations).transform()
 
 
 def apply_mask(wrapped_layer: NNCFWrapper, weight_attr: str, op_name: str):
