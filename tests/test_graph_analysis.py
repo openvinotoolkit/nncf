@@ -48,11 +48,17 @@ def test_graph_pattern_io_building():
     graph._node_id_to_key_dict.update({k + 1: v for k, v in enumerate(node_keys)})
 
     def make_mock_edge(from_id: int, to_id: int):
-        return NNCFGraphEdge(PTNNCFNode(from_id, None),
-                             PTNNCFNode(to_id, None), None)
+
+        return NNCFGraphEdge(make_mock_node(from_id),
+                             make_mock_node(to_id), None)
 
     def make_mock_node(id_: int):
-        return PTNNCFNode(id_, None)
+        data_ = {
+            PTNNCFGraph.ID_NODE_ATTR: id_,
+            PTNNCFGraph.KEY_NODE_ATTR: str(id_),
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None
+        }
+        return PTNNCFNode(id_, None, data_)
 
     ref_patterns_and_ios = [
         (['1', '2'], NNCFGraphPatternIO(input_edges=[],

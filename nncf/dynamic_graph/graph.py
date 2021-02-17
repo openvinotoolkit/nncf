@@ -176,7 +176,9 @@ class PTNNCFNode(NNCFNode):
 
     @property
     def node_type(self):
-        return self.op_exec_context.input_agnostic.operator_name
+        if self.op_exec_context:
+            return self.op_exec_context.input_agnostic.operator_name
+        return None
 
     def __str__(self):
         return str(self.node_id) + ' ' + str(self.op_exec_context)

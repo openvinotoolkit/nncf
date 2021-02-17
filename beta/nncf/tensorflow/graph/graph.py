@@ -33,7 +33,7 @@ class TFNNCFNode(NNCFNode):
 
     @property
     def node_type(self):
-        return self.data[TFNNCFGraph.NODE_TYPE_ATTR]
+        return self.data.get(TFNNCFGraph.NODE_TYPE_ATTR)
 
 
 def tf_get_layer_identifier(node: NNCFNode):
