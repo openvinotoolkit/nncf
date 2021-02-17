@@ -116,13 +116,13 @@ def test_staged_scheduler_enables_quantizations_on_load(mocker):
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
-    scheduler_state_dict = old_scheduler.state_dict()
+    scheduler_state = old_scheduler.get_state()
 
     ctrl_spy = QuantizationCtrlBaseSpy(mocker)
     scheduler = create_staged_scheduler(ctrl_spy, 1, 3)
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
-    scheduler.load_state_dict(scheduler_state_dict)
+    scheduler.load_state(scheduler_state)
     ctrl_spy.check_call_counts(1, 0, 1, 2, 0)
 
     scheduler.epoch_step()

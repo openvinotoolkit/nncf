@@ -17,12 +17,12 @@ from bisect import bisect_right
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
 from nncf.api.compression import CompressionLevel
-from nncf.compression_method_api import PTCompressionScheduler
+from nncf.api.compression import CompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(PTCompressionScheduler):
+class SparsityScheduler(CompressionScheduler):
     def __init__(self, sparsity_algo, params: dict = None):
         super().__init__()
         if params is None:
@@ -101,8 +101,8 @@ class PolynomialSparseScheduler(SparsityScheduler):
         super().epoch_step(next_epoch)
         self._set_sparsity_level()
 
-    def state_dict(self):
-        sd = super().state_dict()
+    def get_state(self):
+        sd = super().get_state()
         if self._update_per_optimizer_step:
             sd['_steps_per_epoch'] = self._steps_per_epoch
         return sd
@@ -187,8 +187,8 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
             self.current_sparsity_target = min(self.current_sparsity_target + self.decay_step, self.sparsity_target)
         self._set_sparsity_level()
 
-    def state_dict(self):
-        sd = super().state_dict()
+    def get_state(self):
+        sd = super().get_state()
         sd['num_bad_epochs'] = self.num_bad_epochs
         sd['current_sparsity_level'] = self.current_sparsity_level
         return sd

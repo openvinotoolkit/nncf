@@ -14,7 +14,7 @@ import logging
 
 from nncf.common.utils.registry import Registry
 from nncf.api.compression import CompressionLevel
-from nncf.compression_method_api import PTCompressionScheduler
+from nncf.api.compression import CompressionScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ QUANTIZATION_SCHEDULERS = Registry("quantization_schedulers")
 
 
 @QUANTIZATION_SCHEDULERS.register("staged")
-class StagedQuantizationScheduler(PTCompressionScheduler):
+class StagedQuantizationScheduler(CompressionScheduler):
     def __init__(self, quantization_ctrl: 'QuantizationController', params=None):
         super().__init__()
         if params is None:
@@ -48,8 +48,8 @@ class StagedQuantizationScheduler(PTCompressionScheduler):
         if should_call_init:
             self.algo.init_range()
 
-    def load_state_dict(self, state_dict):
-        super().load_state_dict(state_dict)
+    def load_state(self, state):
+        super().load_state(state)
         # Just enables/disables quantizers without calling initialization of ranges, because it's called on epoch_step
         # in the end of previous epoch before saving the scheduler's state dict.
         self._set_quantization_status()
