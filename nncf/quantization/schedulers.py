@@ -55,13 +55,13 @@ class StagedQuantizationScheduler(CompressionScheduler):
         self._set_quantization_status()
 
     def _set_quantization_status(self):
-        if self.current_epoch >= self.activations_quant_start_epoch:
+        if max(self.current_epoch, 0) >= self.activations_quant_start_epoch:
             self.algo.enable_activation_quantization()
             logger.info('Enabled quantization of activations')
         else:
             self.algo.disable_activation_quantization()
             logger.info('Disabled quantization of activations')
-        if self.current_epoch >= self.weights_quant_start_epoch:
+        if max(self.current_epoch, 0) >= self.weights_quant_start_epoch:
             self.algo.enable_weight_quantization()
             logger.info('Enabled quantization of weights')
         else:

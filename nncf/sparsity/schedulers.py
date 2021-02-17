@@ -88,7 +88,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
                 self._steps_per_epoch = self._steps_in_current_epoch
 
                 # Reset step and epoch step counters
-                next_epoch = -1
+                next_epoch = 0
             if self._steps_in_current_epoch != self._steps_per_epoch and self._steps_in_current_epoch > 0:
                 self._steps_per_epoch = self._steps_in_current_epoch
                 logger.warning("Actual optimizer steps per epoch is different than what is "
@@ -150,6 +150,10 @@ class ExponentialSparsityScheduler(SparsityScheduler):
     def current_sparsity_level(self):
         if self.sparsity_target_epoch == 0:
             return self.sparsity_target
+
+        if self.current_epoch == -1:
+            return self.initial_sparsity
+
         curr_sparsity = 1 - self.a * np.exp(-self.k * self.current_epoch)
         return curr_sparsity if curr_sparsity <= self.sparsity_target else self.sparsity_target
 
