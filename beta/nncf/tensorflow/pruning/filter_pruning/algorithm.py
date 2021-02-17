@@ -142,7 +142,7 @@ class FilterPruningController(BasePruningAlgoController):
                     if isinstance(op, BinaryMask):
                         filter_axis = get_filter_axis(layer, weight_attr)
                         broadcasted_mask = broadcast_filter_mask(filter_mask, weight_shape, filter_axis)
-                        layer.ops_weights[op_name].assign(broadcasted_mask)
+                        layer.ops_weights[op_name]['mask'].assign(broadcasted_mask)
 
     def _set_binary_masks_for_all_pruned_layers(self, pruning_rate: float):
         nncf_logger.debug('Setting new binary masks for all pruned modules together.')

@@ -199,7 +199,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 for op_name, op in ops.items():
                     if isinstance(op, BinaryMask):
-                        mask = wrapped_layer.ops_weights[op_name]
+                        mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))
                         reduce_axes = list(range(len(mask.shape)))
