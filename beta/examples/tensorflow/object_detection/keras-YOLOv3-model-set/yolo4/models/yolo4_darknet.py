@@ -67,7 +67,15 @@ def yolo4_body(inputs, num_anchors, num_classes, weights_path=None):
 
     y1, y2, y3 = yolo4_predictions((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num), num_anchors, num_classes)
 
-    return Model(inputs, [y1, y2, y3])
+    # return Model(inputs, [y1, y2, y3])
+
+    outputs = {
+        'y1': y1,
+        'y2': y2,
+        'y3': y3
+    }
+
+    return Model(inputs, outputs)
 
 
 BASE_WEIGHT_PATH = (

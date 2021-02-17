@@ -6,16 +6,21 @@ Retrain the YOLO model for your own dataset.
 import os, time, random, argparse
 import numpy as np
 import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Input, Lambda
 # from tensorflow.keras.utils import multi_gpu_model
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, TerminateOnNaN, LambdaCallback
 # from tensorflow_model_optimization.sparsity import keras as sparsity
 
-
-from yolo3.model import get_yolo3_train_model
-from yolo3.data import yolo3_data_generator_wrapper, Yolo3DataGenerator
+from yolo3.loss import build_loss_fn
+from yolo3.model import get_yolo3_model, get_yolo3_train_model, get_yolo3_train_model_custom
+from yolo3.data import yolo3_data_generator_wrapper, get_dataset_builders # Yolo3DataGenerator
 from common.utils import get_classes, get_anchors, get_dataset, optimize_tf_gpu
 from common.model_utils import get_optimizer
 # from common.callbacks import EvalCallBack, DatasetShuffleCallBack
+
+from beta.examples.tensorflow.common.distributed import get_distribution_strategy
+from beta.examples.tensorflow.common.logger import logger
+from beta.examples.tensorflow.common.utils import Timer
 
 # Try to enable Auto Mixed Precision on TF 2.0
 os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
@@ -51,6 +56,46 @@ def main(args):
 
     callbacks=[logging, checkpoint, reduce_lr, early_stopping, terminate_on_nan]
 
+
+
+
+
+
+
+    config = {}
+    config['dataset'] = 'coco/2017'
+    config['dataset_type'] = 'tfds'
+    config['global_batch_size'] = args.batch_size
+    config['dataset_dir'] = '/datasets/coco2017_tfds'
+    config['model'] = 'YOLOv4'
+    config['input_shape'] = args.model_image_size
+    config['enhance_augment'] = args.enhance_augment
+    config['anchors_path'] = args.anchors_path
+    config['num_classes'] = num_classes
+    config['multi_anchor_assign'] = args.multi_anchor_assign
+    config['checkpoint_save_dir'] = 'logs'
+    config['print_freq'] = 1
+
+    num_devices = args.gpu_num
+
+    strategy = get_distribution_strategy(config)
+
+    print('Building dataset')
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    datasets = [builder.build() for builder in builders]
+    train_builder, test_builder = builders
+    train_dataset, test_dataset = datasets
+    train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
+    # test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
+
+
+    # import tensorflow_datasets as tfds
+    # for ds_item in tfds.as_numpy(train_dataset):
+    #     ds_item = ds_item[0]
+    #     print('ds_item\n', type(ds_item)) # ds_item[0].shape
+    #     break
+
+
     # get train&val dataset
     dataset = get_dataset(annotation_file)
     if args.val_annotation_file:
@@ -74,119 +119,271 @@ def main(args):
     assert (input_shape[0]%32 == 0 and input_shape[1]%32 == 0), 'model_image_size should be multiples of 32'
 
 
-    # elif args.model_type.startswith('yolo3_') or args.model_type.startswith('yolo4_'):
-    #if num_anchors == 9:
-    # YOLOv3 & v4 entrance, use 9 anchors
-    get_train_model = get_yolo3_train_model
-    data_generator = yolo3_data_generator_wrapper
-
-    # tf.keras.Sequence style data generator
-    #train_data_generator = Yolo3DataGenerator(dataset[:num_train], args.batch_size, input_shape, anchors, num_classes, args.enhance_augment, rescale_interval, args.multi_anchor_assign)
-    #val_data_generator = Yolo3DataGenerator(dataset[num_train:], args.batch_size, input_shape, anchors, num_classes, multi_anchor_assign=args.multi_anchor_assign)
-
-    # tiny_version = False
 
 
-    # # prepare online evaluation callback
-    # if args.eval_online:
-    #     eval_callback = EvalCallBack(args.model_type, dataset[num_train:], anchors, class_names, args.model_image_size, args.model_pruning, log_dir, eval_epoch_interval=args.eval_epoch_interval, save_eval_checkpoint=args.save_eval_checkpoint, elim_grid_sense=args.elim_grid_sense)
-    #     callbacks.append(eval_callback)
+
+    # #################################### Pipeline testing ###############################
+    # # Fix np.random.rand()*(b-a) in common/data_utils.py
+    # # undo np.random.shuffle(annotation_lines) in data.py
+    # # set self._num_preprocess_workers to one on data.py ???
+    # data_generator = yolo3_data_generator_wrapper
+    # import tensorflow_datasets as tfds
+    # print('\nTFDS pipeline\n')
     #
-    # # prepare train/val data shuffle callback
-    # if args.data_shuffle:
-    #     shuffle_callback = DatasetShuffleCallBack(dataset)
-    #     callbacks.append(shuffle_callback)
+    # for ds_item in tfds.as_numpy(train_dataset):
+    #     ds_item = ds_item[0]
+    #     break
+    #
+    # filenames = [item.decode("utf-8") for item in ds_item['filename']] # first 000000050124.jpg 000000271058.jpg
+    # filename = filenames[0]
+    # print('filename', filename)
+    #
+    # image_tfds = ds_item['image_input'][0]
+    # out0 = ds_item['y_true_0'][0]
+    # out1 = ds_item['y_true_1'][0]
+    # out2 = ds_item['y_true_2'][0]
+    #
+    # print(image_tfds.shape, out0.shape, out1.shape, out2.shape)
+    # print('image mean', image_tfds.mean())
+    # print('image\n', image_tfds[100:102, 100:102, :])
+    # print('out means', out1.mean(), out1.mean(), out2.mean())
+    #
+    #
+    #
+    #
+    # print('\nOriginal pipeline\n')
+    # dataset = dataset[:num_train]
+    # print('founding the item in origin dataset...')
+    # for item in dataset:
+    #     if filename in item:
+    #         print('Found the item', item)
+    #         break
+    # dataset.insert(0, item)
+    # data_gen = data_generator(dataset, args.batch_size, input_shape, anchors, num_classes, args.enhance_augment,
+    #                rescale_interval, multi_anchor_assign=args.multi_anchor_assign)
+    #
+    # out = next(data_gen)
+    # image, out0, out1, out2 = out[0]
+    # image = image[0]
+    # out0 = out0[0]
+    # out1 = out1[0]
+    # out2 = out2[0]
+    # print(image.shape, out0.shape, out1.shape, out2.shape)
+    # print('image mean', image.mean())
+    # print('image\n', image[100:102, 100:102, :])
+    # print('out means', out0.mean(), out1.mean(), out2.mean())
+    # ######################################################################
 
-    # prepare model pruning config
-    pruning_end_step = np.ceil(1.0 * num_train / args.batch_size).astype(np.int32) * args.total_epoch
-    # if args.model_pruning:
-    #     pruning_callbacks = [sparsity.UpdatePruningStep(), sparsity.PruningSummaries(log_dir=log_dir, profile_batch=0)]
-    #     callbacks = callbacks + pruning_callbacks
 
-    # prepare optimizer
-    optimizer = get_optimizer(args.optimizer, args.learning_rate, decay_type=None)
 
-    # support multi-gpu training
-    if args.gpu_num >= 2:
-        # devices_list=["/gpu:0", "/gpu:1"]
-        devices_list=["/gpu:{}".format(n) for n in range(args.gpu_num)]
-        strategy = tf.distribute.MirroredStrategy(devices=devices_list)
-        print ('Number of devices: {}'.format(strategy.num_replicas_in_sync))
-        with strategy.scope():
-            # get multi-gpu train model
-            model = get_train_model(args.model_type, anchors, num_classes, weights_path=args.weights_path, optimizer=optimizer, label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense, model_pruning=args.model_pruning, pruning_end_step=pruning_end_step)
 
-    else:
-        # get normal train model
-        model = get_train_model(args.model_type, anchors, num_classes, weights_path=args.weights_path, optimizer=optimizer, label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense, model_pruning=args.model_pruning, pruning_end_step=pruning_end_step)
+    # # Get and prepare the model
+    # get_train_model = get_yolo3_train_model
+    #
+    # # prepare optimizer
+    # optimizer = get_optimizer(args.optimizer, args.learning_rate, decay_type=None)
+    #
+    # # support multi-gpu training
+    # if args.gpu_num >= 2:
+    #     # devices_list=["/gpu:0", "/gpu:1"]
+    #     devices_list=["/gpu:{}".format(n) for n in range(args.gpu_num)]
+    #     strategy = tf.distribute.MirroredStrategy(devices=devices_list)
+    #     print ('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+    #     with strategy.scope():
+    #         # get multi-gpu train model
+    #         model = get_train_model(args.model_type, anchors, num_classes, weights_path=args.weights_path, optimizer=optimizer, label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense)
+    # else:
+    #     # get normal train model
+    #     model = get_train_model(args.model_type, anchors, num_classes, weights_path=args.weights_path, optimizer=optimizer, label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense)
+    #
+    # model.summary()
+    #
+    # if args.decay_type:
+    #     # rebuild optimizer to apply learning rate decay, only after
+    #     # unfreeze all layers
+    #     callbacks.remove(reduce_lr)
+    #     steps_per_epoch = max(1, num_train//args.batch_size)
+    #     decay_steps = steps_per_epoch * (args.total_epoch - args.init_epoch) #  - args.transfer_epoch
+    #     optimizer = get_optimizer(args.optimizer, args.learning_rate, decay_type=args.decay_type, decay_steps=decay_steps)
+    #
+    # # Unfreeze the whole network for further tuning
+    # # NOTE: more GPU memory is required after unfreezing the body
+    # print("Unfreeze the whole model to fine-tune.")
+    # if args.gpu_num >= 2:
+    #     with strategy.scope():
+    #         for i in range(len(model.layers)):
+    #             model.layers[i].trainable = True
+    #         model.compile(optimizer=optimizer, loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
+    # else:
+    #     for i in range(len(model.layers)):
+    #         model.layers[i].trainable = True
+    #     model.compile(optimizer=optimizer, loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
 
-    model.summary()
 
-    # # Transfer training some epochs with frozen layers first if needed, to get a stable loss.
-    # initial_epoch = args.init_epoch
-    # epochs = initial_epoch + args.transfer_epoch
-    # print("Transfer training stage")
+
+
+
+
+
+    #### Custom model pipeline  ##############################
+    # TODO: update yolo3/data.py _parse_train_data2 returns
+    # TODO: update yolo4/models/yolo4_darknet yolo4_body output
+
+    def build_optimizer(optimizer_type, learning_rate, decay_type, num_train, batch_size, total_epoch, init_epoch):
+        optimizer = get_optimizer(optimizer_type, learning_rate, decay_type=None)
+        if decay_type:
+            # rebuild optimizer to apply learning rate decay, only after
+            # unfreeze all layers
+            # callbacks.remove(reduce_lr)
+            steps_per_epoch = max(1, num_train//batch_size)
+            decay_steps = steps_per_epoch * (total_epoch - init_epoch) #  - args.transfer_epoch
+            optimizer = get_optimizer(optimizer_type, learning_rate, decay_type=decay_type, decay_steps=decay_steps)
+        return optimizer
+
+    def create_train_step_fn(strategy, model, loss_fn, optimizer):
+        """Creates a distributed training step"""
+
+        def _train_step_fn(inputs):
+            inputs, labels = inputs
+            with tf.GradientTape() as tape:
+                outputs = model(inputs, training=True)
+                all_losses = loss_fn(labels, outputs)
+                losses = {}
+                for k, v in all_losses.items():
+                    losses[k] = tf.reduce_mean(v)
+                per_replica_loss = losses['total_loss'] / strategy.num_replicas_in_sync
+
+            grads = tape.gradient(per_replica_loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            return losses
+
+        @tf.function
+        def train_step(dataset_inputs):
+            per_replica_losses = strategy.run(_train_step_fn, args=(dataset_inputs,))
+            losses = tf.nest.map_structure(lambda x: strategy.reduce(tf.distribute.ReduceOp.MEAN, x, axis=None),
+                                           per_replica_losses)
+            return losses
+
+        return train_step
+
+    def train(train_step, train_dist_dataset, initial_epoch, initial_step,
+              epochs, steps_per_epoch, checkpoint_manager, optimizer, print_freq):
+
+        # train_summary_writer = SummaryWriter(log_dir, 'train')
+        # validation_summary_writer = SummaryWriter(log_dir, 'validation')
+        # compression_summary_writer = SummaryWriter(log_dir, 'compression')
+
+        timer = Timer()
+        timer.tic()
+
+        logger.info('Training...')
+        for epoch in range(initial_epoch, epochs):
+            logger.info('Epoch: {}/{}'.format(epoch, epochs))
+            # compression_ctrl.scheduler.epoch_step(epoch)
+
+            for step, x in enumerate(train_dist_dataset):
+                if epoch == initial_epoch and step < initial_step % steps_per_epoch:
+                    continue
+                # if step == steps_per_epoch:
+                #     save_path = checkpoint_manager.save()
+                #     logger.info('Saved checkpoint for epoch={}: {}'.format(epoch, save_path))
+                #     break
+
+                # compression_ctrl.scheduler.step()
+                train_loss = train_step(x)
+                train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
+
+                if np.isnan(train_metric_result['total_loss']):
+                    raise ValueError('total loss is NaN')
+
+                train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
+
+                # train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
+
+                if step % print_freq == 0:
+                    time = timer.toc(average=False)
+                    logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
+                    logger.info('Training metric = {}'.format(train_metric_result))
+                    timer.tic()
+
+            # test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
+            # validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
+            # eval_metric.reset_states()
+            # logger.info('Validation metric = {}'.format(test_metric_result))
+
+            # statistics = compression_ctrl.statistics()
+            # print_statistics(statistics)
+            # statistics = {'compression/statistics/' + key: value
+            #               for key, value in statistics.items()
+            #               if isinstance(value, (int, float))}
+            # compression_summary_writer(metrics=statistics,
+            #                            step=optimizer.iterations.numpy())
+
+        # train_summary_writer.close()
+        # validation_summary_writer.close()
+        # compression_summary_writer.close()
+
+    # Training parameters
+    epochs = args.total_epoch
+    steps_per_epoch = train_builder.steps_per_epoch
+
+    with strategy.scope():
+        model = get_yolo3_train_model_custom(anchors, num_classes, weights_path=args.weights_path,
+                                             label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense)
+        optimizer = build_optimizer(args.optimizer, args.learning_rate, args.decay_type, num_train, args.batch_size,
+                                    args.total_epoch, args.init_epoch)
+
+        loss_fn = build_loss_fn(anchors, num_classes, label_smoothing=args.label_smoothing, elim_grid_sense=args.elim_grid_sense)
+
+        checkpoint = tf.train.Checkpoint(model=model, optimizer=optimizer)
+        checkpoint_manager = tf.train.CheckpointManager(checkpoint, config['checkpoint_save_dir'], max_to_keep=None)
+
+        initial_epoch = initial_step = 0
+
+    train_step = create_train_step_fn(strategy, model, loss_fn, optimizer)
+
+    train(train_step, train_dist_dataset, initial_epoch, initial_step,
+          epochs, steps_per_epoch, checkpoint_manager, optimizer, config['print_freq'])
+
+
+
+
+
+    print('!!! Test train on {} samples, val on {} samples, with batch size {}, input_shape {}.'.format(train_builder.num_examples, test_builder.num_examples, args.batch_size, input_shape))
+    # TODO: update yolo3/data.py _parse_train_data2 returns
+    # TODO: update yolo4/models/yolo4_darknet yolo4_body output
+    model.fit(
+        train_dataset,
+        steps_per_epoch=max(1, train_builder.num_examples // args.batch_size),
+        validation_data=test_dataset,
+        validation_steps=max(1, test_builder.num_examples // args.batch_size),
+        epochs=args.total_epoch,
+        initial_epoch=args.init_epoch,
+        workers=10,
+        use_multiprocessing=False,
+        max_queue_size=10,
+        callbacks=callbacks
+    )
+
+
+
+
     # print('Train on {} samples, val on {} samples, with batch size {}, input_shape {}.'.format(num_train, num_val, args.batch_size, input_shape))
     # #model.fit_generator(train_data_generator,
     # model.fit_generator(data_generator(dataset[:num_train], args.batch_size, input_shape, anchors, num_classes, args.enhance_augment, rescale_interval, multi_anchor_assign=args.multi_anchor_assign),
-    #         steps_per_epoch=max(1, num_train//args.batch_size),
-    #         #validation_data=val_data_generator,
-    #         validation_data=data_generator(dataset[num_train:], args.batch_size, input_shape, anchors, num_classes, multi_anchor_assign=args.multi_anchor_assign),
-    #         validation_steps=max(1, num_val//args.batch_size),
-    #         epochs=epochs,
-    #         initial_epoch=initial_epoch,
-    #         #verbose=1,
-    #         workers=1,
-    #         use_multiprocessing=False,
-    #         max_queue_size=10,
-    #         callbacks=callbacks)
-    #
-    # # Wait 2 seconds for next stage
-    # time.sleep(2)
-
-    if args.decay_type:
-        # rebuild optimizer to apply learning rate decay, only after
-        # unfreeze all layers
-        callbacks.remove(reduce_lr)
-        steps_per_epoch = max(1, num_train//args.batch_size)
-        decay_steps = steps_per_epoch * (args.total_epoch - args.init_epoch) #  - args.transfer_epoch
-        optimizer = get_optimizer(args.optimizer, args.learning_rate, decay_type=args.decay_type, decay_steps=decay_steps)
-
-    # Unfreeze the whole network for further tuning
-    # NOTE: more GPU memory is required after unfreezing the body
-    print("Unfreeze the whole model to fine-tune.")
-    if args.gpu_num >= 2:
-        with strategy.scope():
-            for i in range(len(model.layers)):
-                model.layers[i].trainable = True
-            model.compile(optimizer=optimizer, loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
-
-    else:
-        for i in range(len(model.layers)):
-            model.layers[i].trainable = True
-        model.compile(optimizer=optimizer, loss={'yolo_loss': lambda y_true, y_pred: y_pred}) # recompile to apply the change
-
-    # initial_epoch = args.init_epoch
-    # epochs = initial_epoch
-
-    print('Train on {} samples, val on {} samples, with batch size {}, input_shape {}.'.format(num_train, num_val, args.batch_size, input_shape))
-    #model.fit_generator(train_data_generator,
-    model.fit_generator(data_generator(dataset[:num_train], args.batch_size, input_shape, anchors, num_classes, args.enhance_augment, rescale_interval, multi_anchor_assign=args.multi_anchor_assign),
-        steps_per_epoch=max(1, num_train//args.batch_size),
-        #validation_data=val_data_generator,
-        validation_data=data_generator(dataset[num_train:], args.batch_size, input_shape, anchors, num_classes, multi_anchor_assign=args.multi_anchor_assign),
-        validation_steps=max(1, num_val//args.batch_size),
-        epochs=args.total_epoch,
-        initial_epoch=args.init_epoch,
-        #verbose=1,
-        workers=1,
-        use_multiprocessing=False,
-        max_queue_size=10,
-        callbacks=callbacks)
+    #     steps_per_epoch=max(1, num_train//args.batch_size),
+    #     #validation_data=val_data_generator,
+    #     validation_data=data_generator(dataset[num_train:], args.batch_size, input_shape, anchors, num_classes, multi_anchor_assign=args.multi_anchor_assign),
+    #     validation_steps=max(1, num_val//args.batch_size),
+    #     epochs=args.total_epoch,
+    #     initial_epoch=args.init_epoch,
+    #     #verbose=1,
+    #     workers=1,
+    #     use_multiprocessing=False,
+    #     max_queue_size=10,
+    #     callbacks=callbacks)
 
     # Finally store model
-    if args.model_pruning:
-        model = sparsity.strip_pruning(model)
     model.save(os.path.join(log_dir, 'trained_final.h5'))
 
 
