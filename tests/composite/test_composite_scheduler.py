@@ -12,7 +12,7 @@
 """
 
 from nncf.api.compression import CompressionScheduler
-from nncf.composite_compression import PTCompositeCompressionScheduler
+from nncf.api.composite_compression import CompositeCompressionScheduler
 
 
 class DummyScheduler(CompressionScheduler):
@@ -29,7 +29,7 @@ class DummyScheduler(CompressionScheduler):
 def test_can_restore_from_state():
     def _create_composite_scheduler(deltas):
         schedulers = [DummyScheduler(delta) for delta in deltas]
-        composite_scheduler = PTCompositeCompressionScheduler()
+        composite_scheduler = CompositeCompressionScheduler()
         for scheduler in schedulers:
             composite_scheduler.add(scheduler)
         return composite_scheduler

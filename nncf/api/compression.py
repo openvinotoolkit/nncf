@@ -127,7 +127,7 @@ class CompressionScheduler:
         Loads the compression scheduler state, but does not update the state of the
         compression method.
 
-        :param state: Output of `get_state()`.
+        :param state: Output of `get_state()` method.
         """
         self.__dict__.update(state)
 

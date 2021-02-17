@@ -16,7 +16,6 @@ from typing import TypeVar
 import torch.nn
 from copy import deepcopy
 
-from nncf.api.compression import CompressionScheduler
 from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
 from nncf.api.composite_compression import CompositeCompressionLoss
@@ -39,18 +38,6 @@ class PTCompositeCompressionLoss(CompositeCompressionLoss, PTCompressionLoss):
     @property
     def child_losses(self) -> torch.nn.ModuleList:
         return self._child_losses
-
-
-class PTCompositeCompressionScheduler(CompositeCompressionScheduler, CompressionScheduler):
-    def get_state(self):
-        result = []
-        for child_scheduler in self._child_schedulers:
-            result.append(child_scheduler.get_state())
-        return result
-
-    def load_state(self, state):
-        for child_scheduler, child_state in zip(self._child_schedulers, state):
-            child_scheduler.load_state(child_state)
 
 
 class PTCompositeCompressionAlgorithmBuilder(
@@ -103,7 +90,7 @@ class PTCompositeCompressionAlgorithmController(
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)
         self._loss = PTCompositeCompressionLoss()
-        self._scheduler = PTCompositeCompressionScheduler()
+        self._scheduler = CompositeCompressionScheduler()
 
     def distributed(self):
         for ctrl in self.child_ctrls:

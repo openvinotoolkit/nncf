@@ -120,6 +120,27 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for scheduler in self._child_schedulers:
             scheduler.epoch_step(next_epoch)
 
+    def load_state(self, state: List[dict]) -> None:
+        """
+        Calls `load_state()` method for all children.
+
+        :param state: Output of `get_state()` method.
+        """
+        for child_scheduler, child_state in zip(self._child_schedulers, state):
+            child_scheduler.load_state(child_state)
+
+    def get_state(self) -> List[dict]:
+        """
+        Returns the composite compression scheduler state. This state contains
+        the state of all children.
+
+        :return: The composite compression scheduler state.
+        """
+        composite_state = []
+        for child_scheduler in self._child_schedulers:
+            composite_state.append(child_scheduler.get_state())
+        return composite_state
+
 
 class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     """
