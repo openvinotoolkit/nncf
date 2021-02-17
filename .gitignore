@@ -109,3 +109,8 @@ ENV/
 
 # object detection eval results
 examples/object_detection/eval/
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/logs/
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/result/
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/data/
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/weights/
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/yolo4-init-dumped.h5
