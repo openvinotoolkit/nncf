@@ -106,7 +106,7 @@ def configure_logging(sample_logger, config):
     nncf_logger.addHandler(nncf_log_file_handler)
 
 
-def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu")):
+def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu", "h", ".cuh")):
     """Creates tarball with the source code"""
     with tarfile.open(str(dst_path), "w:gz") as tar:
         for path in Path(root).rglob("*"):
