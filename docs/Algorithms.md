@@ -11,6 +11,7 @@ Each compression method receives its own hyperparameters that are organized as a
   - Mixed-bitwidth quantization
   - Automatic bitwidth assignment based on HAWQ
   - Automatic quantization parameter selection and activation quantizer setup based on HW config preset
+  - Automatic bitwidth assignment based on AutoQ, a Deep Reinforcement Learning algorithm to select best mixed precision given quality metric and HW type.
 - [Binarization](./compression_algorithms/Binarization.md)
   - XNOR, DoReFa weight binarization
   - Scale/threshold based per-channel activation binarization
