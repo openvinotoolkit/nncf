@@ -14,19 +14,16 @@
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from beta.nncf.api.compression import CompressionAlgorithmBuilder
-from beta.nncf.api.compression import CompressionAlgorithmController
-from beta.nncf.api.compression import CompressionScheduler
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
-from beta.nncf.tensorflow.graph.transformations.commands import InsertionCommand
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeightOperation
-from beta.nncf.tensorflow.graph.transformations.commands import RemovalCommand
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationPriority
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.transformations.commands import InsertionCommand
+from nncf.common.graph.transformations.commands import LayerWeight
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
@@ -38,6 +35,7 @@ from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
 from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 
 PRUNING_LAYERS = {
@@ -57,7 +55,7 @@ PRUNING_LAYERS = {
 
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
-class RBSparsityBuilder(CompressionAlgorithmBuilder):
+class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
@@ -87,14 +85,14 @@ class RBSparsityBuilder(CompressionAlgorithmBuilder):
 
         return transformations
 
-    def build_controller(self, model) -> CompressionAlgorithmController:
+    def build_controller(self, model) -> TFCompressionAlgorithmController:
         """
         Should be called once the compressed model target_model is fully constructed
         """
         return RBSparsityController(model, self.config.get('params', {}))
 
 
-class RBSparsityController(CompressionAlgorithmController):
+class RBSparsityController(TFCompressionAlgorithmController):
     def __init__(self, target_model,
                  params):
         super().__init__(target_model)
@@ -106,7 +104,7 @@ class RBSparsityController(CompressionAlgorithmController):
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsifyed_layers)
-            self._scheduler = CompressionScheduler()
+            self._scheduler = TFCompressionScheduler()
         else:
             self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
             schedule_type = params.get("schedule", "exponential")

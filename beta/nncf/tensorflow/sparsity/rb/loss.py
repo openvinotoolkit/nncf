@@ -25,8 +25,8 @@ class SparseLoss(CompressionLoss):
         self.target = target
         self.p = p
         self.disabled = False
-        self.current_sparsity = tf.constant(0)
-        self.mean_sparse_prob = tf.constant(0)
+        self.current_sparsity = tf.constant(0.)
+        self.mean_sparse_prob = tf.constant(0.)
 
     def set_layers(self, sparse_layers: [NNCFWrapper]):
         self._sparse_layers = sparse_layers
@@ -47,7 +47,7 @@ class SparseLoss(CompressionLoss):
         loss = tf.zeros((1, ))
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
-            if not self.disabled and not sparse_layer.trainable:
+            if not self.disabled and not sparse_layer.get_op_by_name(OP_NAME).trainable:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if sparse_layer.trainable:

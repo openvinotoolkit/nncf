@@ -14,70 +14,65 @@
 import pytest
 from pathlib import Path
 import tensorflow as tf
+from addict import Dict
 
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.helpers.model_creation import create_compressed_model
 from beta.nncf import NNCFConfig
-from beta.tests.tensorflow.helpers import get_basic_conv_test_model
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model, \
+    create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name
 
 CONF = Path(__file__).parent.parent.parent / 'data' / 'configs' / 'sequential_model_cifar10_rb_sparsity.json'
 
-class TestModel(tf.keras.Model):
-    def __init__(self, layer, trainable=None, size=1):
-        super().__init__()
-        self.size = size
-        self.layer = layer
-        if trainable is None:
-            sparsifier = RBSparsifyingWeight()
-        else:
-            sparsifier = RBSparsifyingWeight(trainable=trainable)
 
-    def call(self, x):
-        return self.layer(x)
+def get_basic_rb_sparse_model(config=CONF, freeze=False):
+    model = get_basic_conv_test_model()
+    if isinstance(config, Path):
+        config = NNCFConfig.from_json(config)
+    compress_model, algo = create_compressed_model_and_algo_for_test(model, config)
+    if freeze:
+       algo.freeze()
+    return compress_model, algo, config
 
 
-
-#@pytest.mark.parametrize('layer',
-#                         [tf.keras.layers.Dense,
-#                          tf.keras.layers.Conv2D,
-#                          tf.keras.layers.Conv2DTranspose])
 class TestSparseModules:
     def test_create_loss__with_defaults(self):
-        model = get_basic_conv_test_model()
-        config = NNCFConfig.from_json(CONF)
-        ctl, compr_model = create_compressed_model(model, config)
-        loss = ctl.loss
+        compr_model, algo, config = get_basic_rb_sparse_model()
+        loss = algo.loss
         assert not loss.disabled
         tf.debugging.assert_near(loss.target_sparsity_rate,
                                         config['compression']['params']['multistep_sparsity_levels'][0])
         assert loss.p == 0.05
-'''
-@pytest.mark.parametrize(('mask_value', 'ref_loss'),
-                             ((None, 1),
-                              (0, 0),
-                              (0.3, 1),
+
+    @pytest.mark.parametrize(('mask_value', 'ref_loss'),
+                             ((None, 4),
+                              (0., 0),
+                              (0.3, 4),
                               (-0.3, 0)), ids=('default', 'zero', 'positive', 'negative'))
-    def test_can_forward_sparse_module__with_frozen_mask(self, module, mask_value, ref_loss):
-        model = sparse_model(module, True)
-        sm = model.layer
-        sm.weight.data.fill_(1)
-        sm.bias.data.fill_(0)
-        sw = model.sparsifier
+    def test_can_forward_sparse_module__with_frozen_mask(self, mask_value, ref_loss):
+        model, algo, conf = get_basic_rb_sparse_model(freeze=True)
+        sm = model.layers[1]
+        # Set weights
+        kernel = get_weight_by_name(sm, 'kernel')
+        kernel.assign(tf.ones_like(kernel))
+        # Set bias
+        bias = get_weight_by_name(sm, 'bias')
+        bias.assign(tf.zeros_like(bias))
         if mask_value is not None:
-            new_mask = torch.zeros_like(sw.mask)
-            new_mask.fill_(mask_value)
-            sw.mask = new_mask
-        input_ = torch.ones([1, 1, 1, 1])
-        assert model(input_).item() == ref_loss
-        
-    @pytest.mark.parametrize(('frozen', 'raising'), ((None, True), (True, True), (False, False)),
-                             ids=('default', 'frozen', 'not_frozen'))
+            # Set mask
+            mask = get_weight_by_name(sm, 'mask')
+            mask.assign(tf.fill(mask.shape, mask_value))
+        input_ = tf.ones([4, 4, 4, 1])
+        assert tf.reduce_all(model(input_) == ref_loss)
+
+    @pytest.mark.parametrize(('frozen', 'raising'), ((True, True), (False, False)),
+                             ids=('frozen', 'not_frozen'))
     def test_calc_loss(self, frozen, raising):
-        model = get_basic_conv_test_model()
-        sw = model.sparsifier
-        assert sw.frozen is (True if frozen is None else frozen)
-        loss = SparseLoss([model.sparsifier])
+        model, algo, conf = get_basic_rb_sparse_model(freeze=frozen)
+        rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
+        assert rb_weight.trainable is not frozen
+        loss = SparseLoss(algo.loss._sparse_layers)
         try:
             assert loss() == 0
         except ZeroDivisionError:
@@ -86,23 +81,26 @@ class TestSparseModules:
             if not raising:
                 pytest.fail("Exception is not expected")
 
+
     @pytest.mark.parametrize('frozen', (None, False, True), ids=('default', 'sparsify', 'frozen'))
     class TestWithSparsify:
-        def test_can_freeze_mask(self, module, frozen):
-            model = sparse_model(module, frozen)
-            sw = model.sparsifier
+        def test_can_freeze_mask(self, frozen):
+            model, algo, conf = get_basic_rb_sparse_model(freeze=frozen)
+            rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
             if frozen is None:
-                frozen = True
-            assert sw.frozen is frozen
-            assert sw.mask.numel() == 1
+                frozen = False
+            assert rb_weight.trainable is not frozen
+            trainable = get_weight_by_name(model.layers[1], 'trainable')
+            val = tf.constant(int(not frozen), shape=(), dtype=tf.int8)
+            assert trainable == val
 
-        def test_disable_loss(self, module, frozen):
-            model = sparse_model(module, frozen)
-            sw = model.sparsifier
-            assert sw.frozen is (True if frozen is None else frozen)
-            loss = SparseLoss([model.sparsifier])
+        def test_disable_loss(self, frozen):
+            model, algo, conf = get_basic_rb_sparse_model(freeze=frozen)
+            rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
+            assert rb_weight.trainable is (True if frozen is None else not frozen)
+            loss = algo.loss
             loss.disable()
-            assert sw.frozen
+            assert not rb_weight.trainable
 
     @pytest.mark.parametrize(('target', 'expected_rate'),
                              ((None, 0),
@@ -112,9 +110,11 @@ class TestSparseModules:
                               (1.5, None),
                               (-0.5, None)),
                              ids=('default', 'min', 'middle', 'max', 'more_than_max', 'less_then_min'))
-    def test_get_target_sparsity_rate(self, module, target, expected_rate):
-        model = sparse_model(module, None)
-        loss = SparseLoss([model.sparsifier])
+    def test_get_target_sparsity_rate(self, target, expected_rate):
+        config = get_empty_config()
+        config['compression'] = Dict({'algorithm': 'rb_sparsity', 'params': {'schedule': 'exponential'}})
+        model, algo, conf = get_basic_rb_sparse_model(config=config)
+        loss = algo.loss
         if target is not None:
             loss.target = target
         actual_rate = None
@@ -127,4 +127,3 @@ class TestSparseModules:
                 pytest.fail("Exception is not expected")
         if expected_rate is not None:
             assert actual_rate == expected_rate
-'''

@@ -57,6 +57,13 @@ def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
+def get_basic_two_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.):
+    inputs = tf.keras.Input(shape=input_shape)
+    outputs = create_conv(input_shape[-1], input_shape[-1], kernel_size, weight_init, bias_init)(inputs)
+    outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init)(outputs)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
 def create_compressed_model_and_algo_for_test(model, config):
     assert isinstance(config, NNCFConfig)
     tf.keras.backend.clear_session()
@@ -110,3 +117,7 @@ def get_coco_dataset_builders(config, num_devices, **kwargs):
         builders = builders[0]
 
     return builders
+
+
+def get_weight_by_name(layer, name):
+    return next(x for x in layer.weights if x.name[:-2].endswith(name))
