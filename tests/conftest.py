@@ -144,7 +144,7 @@ def ov_config_dir(request):
     return request.config.getoption("--ov-config-dir")
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function")
 def create_venv(install_type, tmp_path, package_type, venv_type):
     if install_type is None:
         pytest.skip("Please specify type of installation")
