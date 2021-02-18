@@ -30,7 +30,6 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.utils import should_consider_scope
 
 
 class PruningNodeSelector:
@@ -226,7 +225,7 @@ class PruningNodeSelector:
         output_non_pruned_nodes = get_last_pruned_nodes(graph, self._prune_operations + ['linear'])
         module_identifier = self._get_module_identifier(node)
 
-        if not should_consider_scope(module_identifier, self._target_scopes, self._ignored_scopes):
+        if not self._should_consider_scope(module_identifier, self._target_scopes, self._ignored_scopes):
             msg = 'Ignored adding Weight Pruner in: {}'.format(module_identifier)
             prune = False
         elif not self._prune_first and node in input_non_pruned_nodes:
@@ -254,4 +253,7 @@ class PruningNodeSelector:
         raise NotImplementedError
 
     def _is_conv_with_downsampling(self, node: NNCFNode) -> bool:
+        raise NotImplementedError
+
+    def _should_consider_scope(self, scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
         raise NotImplementedError

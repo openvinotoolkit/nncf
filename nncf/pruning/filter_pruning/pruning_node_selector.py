@@ -10,11 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
 
 from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.pruning.utils import pt_is_conv_with_downsampling
 from nncf.pruning.utils import pt_is_depthwise_conv
+from nncf.utils import pt_should_consider_scope
 
 
 class PTPruningNodeSelector(PruningNodeSelector):
@@ -27,3 +29,6 @@ class PTPruningNodeSelector(PruningNodeSelector):
 
     def _is_conv_with_downsampling(self, node: PTNNCFNode) -> bool:
         return pt_is_conv_with_downsampling(node)
+
+    def _should_consider_scope(self, scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
+        return pt_should_consider_scope(scope_str, target_scopes, ignored_scopes)

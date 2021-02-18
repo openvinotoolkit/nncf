@@ -349,7 +349,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     return obj
 
 
-def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
+def pt_should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
                and not in_scope_list(scope_str, ignored_scopes)
 

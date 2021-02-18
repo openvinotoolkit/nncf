@@ -33,7 +33,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.nncf_network import PTModelTransformer
 from nncf.structures import BNAdaptationInitArgs
-from nncf.utils import should_consider_scope
+from nncf.utils import pt_should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLevel
@@ -249,7 +249,7 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
 
     def _should_consider_scope(self, scope_str: str) -> bool:
-        return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
+        return pt_should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
 
     def _nncf_module_types_to_compress(self) -> List[str]:
         """

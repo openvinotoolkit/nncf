@@ -10,11 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
 
 from beta.nncf.tensorflow.graph.graph import TFNNCFNode
 from beta.nncf.tensorflow.graph.graph import tf_get_layer_identifier
 from beta.nncf.tensorflow.pruning.utils import tf_is_conv_with_downsampling
 from beta.nncf.tensorflow.pruning.utils import tf_is_depthwise_conv
+from beta.nncf.tensorflow.utils.scopes_handle import tf_should_consider_scope
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 
 
@@ -28,3 +30,6 @@ class TFPruningNodeSelector(PruningNodeSelector):
 
     def _is_conv_with_downsampling(self, node: TFNNCFNode) -> bool:
         return tf_is_conv_with_downsampling(node)
+
+    def _should_consider_scope(self, scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
+        return tf_should_consider_scope(scope_str, target_scopes, ignored_scopes)
