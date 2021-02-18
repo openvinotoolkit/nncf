@@ -14,6 +14,8 @@
 from .version import __version__
 from .common.utils.backend import __nncf_backend__
 
+from .config import NNCFConfig
+
 if __nncf_backend__ == 'Torch':
     # NNCF builds extensions based on torch load() function
     # This function has a bug inside which patch_extension_build_function() solves
