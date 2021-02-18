@@ -115,12 +115,26 @@ def load_checkpoint(model, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch):
+def get_scheduler_state(num_steps, steps_per_epoch, config):
+    current_step = num_steps - 1
+    current_epoch = current_step // steps_per_epoch
+    scheduler_state = {'current_step': current_step, 'current_epoch': current_epoch}
+
+    if isinstance(config.compression, list) and len(config.compression) > 1:
+        scheduler_state = [scheduler_state for _ in config.compression]
+
+    return scheduler_state
+
+
+def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(model, ckpt_path) == 0:
         return 0
     initial_step = model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d', initial_epoch)
     return initial_epoch
 
@@ -177,7 +191,8 @@ def run(config):
                 initial_epoch = resume_from_checkpoint(model=compress_model,
                                                        compression_ctrl=compression_ctrl,
                                                        ckpt_path=config.ckpt_path,
-                                                       steps_per_epoch=train_steps)
+                                                       steps_per_epoch=train_steps,
+                                                       config=config)
             else:
                 logger.info('initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
