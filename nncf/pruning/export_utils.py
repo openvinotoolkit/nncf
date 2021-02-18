@@ -11,9 +11,9 @@
  limitations under the License.
 """
 import torch
-
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.common.utils.registry import Registry
+
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
 def get_input_masks(nx_node, nx_graph):
@@ -50,34 +50,7 @@ def fill_input_masks(nx_node, nx_graph):
     return input_masks, filled_input_masks
 
 
-class PruningOperationsMetatypeRegistry(Registry):
-    def __init__(self, name):
-        super().__init__(name)
-        self._op_name_to_op_class = {}
-
-    def register(self, name=None):
-        name_ = name
-        super_register = super()._register
-
-        def wrap(obj):
-            cls_name = name_
-            if cls_name is None:
-                cls_name = obj.__name__
-
-            super_register(obj, cls_name)
-            op_names = obj.get_all_op_aliases()
-            for name in op_names:
-                name = get_version_agnostic_name(name)
-                if name not in self._op_name_to_op_class:
-                    self._op_name_to_op_class[name] = obj
-                else:
-                    assert self._op_name_to_op_class[name] == obj, \
-                        "Inconsistent operator type registry - single patched op name maps to multiple metatypes!"
-            return obj
-
-        return wrap
-
-    def get_operator_metatype_by_op_name(self, op_name: str):
-        if op_name in self._op_name_to_op_class:
-            return self._op_name_to_op_class[op_name]
-        return None
+class PTPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):
+    @staticmethod
+    def get_version_agnostic_name(name):
+        return get_version_agnostic_name(name)

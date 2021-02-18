@@ -21,6 +21,7 @@ from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
 def tf_is_depthwise_conv(node: TFNNCFNode) -> bool:
@@ -90,3 +91,9 @@ def prepare_for_tensorboard(raw_pruning_statistics: dict) -> dict:
             pruning_statistics[base_prefix + key] = value
 
     return pruning_statistics
+
+
+class TFPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):
+    @staticmethod
+    def get_version_agnostic_name(name):
+        return name

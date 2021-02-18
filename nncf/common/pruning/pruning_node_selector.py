@@ -24,7 +24,7 @@ from nncf.common.pruning.utils import get_first_pruned_nodes
 from nncf.common.pruning.utils import get_last_pruned_nodes
 from nncf.common.pruning.utils import get_previous_conv
 from nncf.common.pruning.utils import is_grouped_conv
-from nncf.pruning.export_helpers import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.model_analysis import ModelAnalyzer
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
