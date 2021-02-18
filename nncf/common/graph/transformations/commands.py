@@ -36,24 +36,28 @@ class TargetType(OrderedEnum):
     AFTER_LAYER = 2
     PRE_LAYER_OPERATION = 3
     POST_LAYER_OPERATION = 4
-    LAYER_WEIGHT_OPERATION = 5
+    OPERATION_WITH_WEIGHTS = 5
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
 
 
 class TargetPoint:
     """
-    The base class for all TargetPoints.
+    The base class for all target points.
 
-    TargetPoint specifies the object in the model graph to which the
-    transformation command will be applied. It can be layer, weight and etc.
+    A target point is an object or spot in the model graph. It can be a layer,
+    weights, position before or after layer and etc.
+
+    For example, the transformation commands use `TargetPoint` to specify
+    the target point in the model graph to which the transformation command
+    will be applied.
     """
 
     def __init__(self, target_type: TargetType):
         """
         Constructor
 
-        :param target_type: target point type
+        :param target_type: Type of the target point
         """
         self._target_type = target_type
 
@@ -82,8 +86,8 @@ class TransformationCommand:
         """
         Constructor
 
-        :param command_type: transformation command type
-        :param target_point: target point, the object in the model
+        :param command_type: Type of the transformation command
+        :param target_point: Target point, the object or spot in the model graph
             to which the transformation command will be applied.
         """
         self._command_type = command_type

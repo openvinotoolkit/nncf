@@ -21,6 +21,13 @@ from nncf.common.graph.transformations.commands import TransformationType
 
 
 class TFLayerPoint(TargetPoint):
+    """
+    `TFLayerPoint` defines an object or spot relative to the layer in the
+    TensorFlow model graph. It can be the layer itself, layer weights, specific
+    spots in the model graph, for example, insertion spots before/after layer
+    and etc.
+    """
+
     def __init__(self, target_type: TargetType, layer_name: str):
         super().__init__(target_type)
         self._layer_name = layer_name
@@ -39,11 +46,25 @@ class TFLayerPoint(TargetPoint):
 
 
 class TFLayer(TFLayerPoint):
+    """
+    `TFLayer` defines a layer in the TensorFlow model graph.
+
+    For example, `TFLayer` is used to specify the layer in the removal command
+    to remove from the model.
+    """
+
     def __init__(self, layer_name: str):
         super().__init__(TargetType.LAYER, layer_name)
 
 
 class TFBeforeLayer(TFLayerPoint):
+    """
+    `TFBeforeLayer` defines a spot before the layer in the TensorFlow model graph.
+
+    For example, `TFBeforeLayer` is used in the insertion commands to specify
+    where the new object should be inserted.
+    """
+
     def __init__(self, layer_name: str, instance_index: int = 0, in_port: int = 0):
         super().__init__(TargetType.BEFORE_LAYER, layer_name)
         self._instance_index = instance_index
@@ -72,6 +93,13 @@ class TFBeforeLayer(TFLayerPoint):
 
 
 class TFAfterLayer(TFLayerPoint):
+    """
+    `TFAfterLayer` defines a spot after the layer in the TensorFlow model graph.
+
+    For example, `TFAfterLayer` is used in the insertion commands to specify
+    where the new object should be inserted.
+    """
+
     def __init__(self, layer_name: str, instance_index: int = 0, out_port: int = 0):
         super().__init__(TargetType.AFTER_LAYER, layer_name)
         self._instance_index = instance_index
@@ -100,8 +128,15 @@ class TFAfterLayer(TFLayerPoint):
 
 
 class TFLayerWeight(TFLayerPoint):
+    """
+    `TFLayerWeight` defines the layer weights.
+
+    For example, `TFLayerWeight` is used in the insertion command to specify
+    the layer weights for which an operation with weights should be inserted.
+    """
+
     def __init__(self, layer_name: str, weights_attr_name: str):
-        super().__init__(TargetType.LAYER_WEIGHT_OPERATION, layer_name)
+        super().__init__(TargetType.OPERATION_WITH_WEIGHTS, layer_name)
         self._weights_attr_name = weights_attr_name
 
     @property
@@ -119,7 +154,14 @@ class TFLayerWeight(TFLayerPoint):
         return super().__str__() + ' ' + self.weights_attr_name
 
 
-class TFLayerWeightOperation(TFLayerWeight):
+class TFOperationWithWeights(TFLayerWeight):
+    """
+    `TFOperationWithWeights` defines an operation with weights.
+
+    For example, `TFOperationWithWeights` is used to specify the operation with
+    weights in the removal command to remove from the model.
+    """
+
     def __init__(self, layer_name: str, weights_attr_name: str, operation_name: str):
         super().__init__(layer_name, weights_attr_name)
         self._operation_name = operation_name
@@ -141,6 +183,10 @@ class TFLayerWeightOperation(TFLayerWeight):
 
 
 class TFInsertionCommand(TransformationCommand):
+    """
+    Inserts objects at the target point in the TensorFlow model graph.
+    """
+
     def __init__(self,
                  target_point: TargetPoint,
                  callable_object: Optional[Callable] = None,
@@ -168,6 +214,10 @@ class TFInsertionCommand(TransformationCommand):
 
 
 class TFRemovalCommand(TransformationCommand):
+    """
+    Removes the target object.
+    """
+
     def __init__(self, target_point: TargetPoint):
         super().__init__(TransformationType.REMOVE, target_point)
 
@@ -177,6 +227,15 @@ class TFRemovalCommand(TransformationCommand):
 
 
 class TFMultipleInsertionCommands(TransformationCommand):
+    """
+    A list of insertion commands combined by a common global target point but
+    with different target points in between.
+
+    For example, If a layer has multiple weight variables you can use this
+    transformation command to insert operations with weights for each layer
+    weights variable at one multiple insertion command.
+    """
+
     def __init__(self,
                  target_point: TargetPoint,
                  check_target_point_fn: Optional[Callable] = None,

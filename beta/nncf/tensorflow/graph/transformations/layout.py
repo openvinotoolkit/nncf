@@ -23,7 +23,7 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFLayer
 
 GRAPH_NODE_TYPES = [
     TargetType.LAYER,
-    TargetType.LAYER_WEIGHT_OPERATION
+    TargetType.OPERATION_WITH_WEIGHTS
 ]
 
 

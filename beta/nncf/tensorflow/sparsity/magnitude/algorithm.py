@@ -23,7 +23,7 @@ from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeightOperation
+from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
@@ -139,7 +139,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
 
                         transformations.register(
                             TFRemovalCommand(
-                                target_point=TFLayerWeightOperation(
+                                target_point=TFOperationWithWeights(
                                     layer.name,
                                     weights_attr_name=weight_attr,
                                     operation_name=op_name)
