@@ -25,15 +25,12 @@ DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompositeCompressionScheduler(CompositeCompressionScheduler):
-    pass
-
 class TFCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, TFCompressionAlgorithmController):
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)
         self._initializer = None
-        self._scheduler = TFCompositeCompressionScheduler()
+        self._scheduler = CompositeCompressionScheduler()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
