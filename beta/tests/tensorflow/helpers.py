@@ -51,9 +51,16 @@ def get_mock_model(input_shape=(1,)):
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.):
+def get_basic_fc_test_model(input_shape=(4, ), out_shape=10):
     inputs = tf.keras.Input(shape=input_shape)
-    outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init)(inputs)
+    outputs = tf.keras.layers.Dense(out_shape)(inputs)
+    return tf.keras.Model(inputs=inputs, outputs=outputs)
+
+
+def get_basic_conv_test_model(input_shape=(4, 4, 1), out_channels=2, kernel_size=2, weight_init=-1., bias_init=-2.,
+                              transpose=False):
+    inputs = tf.keras.Input(shape=input_shape)
+    outputs = create_conv(input_shape[-1], out_channels, kernel_size, weight_init, bias_init, transpose)(inputs)
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
@@ -71,13 +78,17 @@ def create_compressed_model_and_algo_for_test(model, config):
     return model, algo
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init):
+def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, transpose=False):
     weight_init = get_conv_init_value((kernel_size, kernel_size, in_channels, out_channels), weight_init)
-    conv = tf.keras.layers.Conv2D(out_channels,
-                                  kernel_size,
-                                  kernel_initializer=Constant(weight_init),
-                                  bias_initializer=Constant(bias_init))
-    return conv
+    args = {'filters': out_channels,
+            'kernel_size': kernel_size,
+            'kernel_initializer': Constant(weight_init),
+            'bias_initializer': Constant(bias_init)}
+    if not transpose:
+        conv_cls = tf.keras.layers.Conv2D
+    else:
+        conv_cls = tf.keras.layers.Conv2DTranspose
+    return conv_cls(**args)
 
 
 def check_equal(test, reference, rtol=1e-4):
