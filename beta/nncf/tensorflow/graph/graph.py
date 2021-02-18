@@ -76,7 +76,8 @@ class TFNNCFGraph(NNCFGraph):
                     module = layer
                     break
 
-            nx_node = self.get_node_by_id(node.node_id)
+            nx_node = node.data
+
             channel_axis = -1 if nx_node['data_format'] == 'channels_last' else 1
             nx_node[self.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.trainable,
                                                                           module.input_shape[channel_axis],

@@ -66,8 +66,8 @@ class NNCFGraph:
         self._node_id_to_key_dict = dict()
         self._input_nncf_nodes = []
 
-    def get_node_by_id(self, node_id):
-        return self._nx_graph.nodes[self._node_id_to_key_dict[node_id]]
+    def get_node_by_id(self, node_id) -> NNCFNode:
+        return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
 
     def get_input_nodes(self) -> List[NNCFNode]:
         return self._input_nncf_nodes
