@@ -13,13 +13,13 @@
 
 import numpy as np
 
-from beta.nncf.api.compression import CompressionScheduler
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 from nncf.common.utils.registry import Registry
 
 PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 
 
-class PruningScheduler(CompressionScheduler):
+class PruningScheduler(TFCompressionScheduler):
     def __init__(self, pruning_algo, params: dict = None):
         super().__init__()
         if params is None:
