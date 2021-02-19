@@ -16,9 +16,7 @@ from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.graph.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
-from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.export_helpers import DefaultMetaOp
-from nncf.pruning.export_utils import get_input_masks
 
 TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -89,36 +87,6 @@ class TFConcat(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
-
-    @classmethod
-    def all_inputs_from_convs(cls, nx_node, nx_graph, graph):
-        """
-        Return whether all input sources of nx_node is convolutions or not
-        :param nx_node: node to determine it's sources
-        :param nx_graph:  networkx graph to work with
-        :param graph:  NNCF graph to work with
-        """
-        inputs = [u for u, _ in nx_graph.in_edges(nx_node['key'])]
-        input_masks = get_input_masks(nx_node, nx_graph)
-
-        for i, inp in enumerate(inputs):
-            # If input has mask ->  it went from convolution (source of this node is a convolution)
-            if input_masks[i] is not None:
-                continue
-            nncf_input_node = graph._nx_node_to_nncf_node(nx_graph.nodes[inp])
-            source_nodes = get_sources_of_node(nncf_input_node, graph, TFConvolution.get_all_op_aliases() +
-                                               TFStopMaskForwardOps.get_all_op_aliases() +
-                                               TFInput.get_all_op_aliases())
-            sources_types = [node.node_type for node in source_nodes]
-            if any([t in sources_types for t in TFStopMaskForwardOps.get_all_op_aliases()]):
-                return False
-        return True
-
-    @classmethod
-    def check_concat(cls, nx_node, nx_graph, graph):
-        if cls.all_inputs_from_convs(nx_node, nx_graph, graph):
-            return True
-        return False
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('elementwise')
