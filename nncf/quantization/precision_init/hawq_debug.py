@@ -178,7 +178,7 @@ class HAWQDebugger:
                 module = model.get_module_by_scope(scope)
                 if isinstance(module, NNCFConv2d):
                     color = 'lightblue'
-                    if module.groups == module.in_channels:
+                    if module.groups == module.in_channels and module.in_channels > 1:
                         operator_name = 'DW_Conv2d'
                         color = 'purple'
                 operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
