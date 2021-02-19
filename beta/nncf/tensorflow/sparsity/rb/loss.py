@@ -43,8 +43,8 @@ class SparseLoss(CompressionLoss):
         if self.disabled:
             return 0
 
-        params = tf.zeros((1, ), dtype=tf.int32)
-        loss = tf.zeros((1, ))
+        params = tf.constant(0, dtype=tf.int32)
+        loss = tf.constant(0.)
         sparse_prob_sum = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.get_op_by_name(OP_NAME).trainable:
@@ -80,23 +80,6 @@ class SparseLoss(CompressionLoss):
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
 
-    def as_metric(self, name='rb_sparse_loss', **kwargs):
-        class SparseLossMetric(tf.keras.metrics.Metric):
-            def __init__(self, loss):
-                super().__init__(name=name, **kwargs)
-                self.loss = loss
-                self.val = self.add_weight(name='val', initializer='zeros',
-                                           shape=[1])
-
-            def update_state(self, *args, **kwargs):
-                self.val.assign(self.loss)
-
-            def result(self):
-                return self.val
-
-        return SparseLossMetric(self)
-
-
 
 class SparseLossForPerLayerSparsity(SparseLoss):
     def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
@@ -109,8 +92,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         if self.disabled:
             return 0
 
-        params = tf.zeros((1, ), dtype=tf.int32)
-        sparse_prob_sum = tf.zeros((1, ))
+        params = tf.constant(0, dtype=tf.int32)
+        sparse_prob_sum = tf.constant(0.)
         sparse_layers_loss = 0
         for sparse_layer in self._sparse_layers:
             if not self.disabled: #and not sparse_layer.sparsify:
