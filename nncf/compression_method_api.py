@@ -76,16 +76,23 @@ class KDLossCalculator(CompressionLoss):
     def forward(self, input_=None, target=None):
         # input_ is compressed model output
         # target is input
+        if input_ is None or target is None:
+            return 0
+
         def is_loss(obj):
             if not isinstance(obj, torch.Tensor):
                 return False
             if obj.requires_grad:
                 return True
             return False
+
+        def tensors_to_list(obj):
+            if isinstance(obj, torch.Tensor):
+                return [obj]
+            else:
+                return list(obj.values() if isinstance(obj, dict) else obj)
         ref_outputs = self.original_model(target)
-        tensors_to_list = lambda obj: [obj] if isinstance(obj, torch.Tensor)\
-            else list(obj.values() if isinstance(obj, dict) else obj)
-        a = objwalk(ref_outputs, is_loss, lambda x: x)
+
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
         return reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),

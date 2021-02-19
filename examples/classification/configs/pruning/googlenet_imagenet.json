@@ -1,7 +1,7 @@
 {
     "model": "googlenet",
     "pretrained": true,
-    "batch_size": 512,
+    "batch_size": 64,
     "input_info": {
         "sample_size": [
             1,

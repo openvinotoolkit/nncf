@@ -292,7 +292,7 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
         out = net(images)
         # backprop
         loss_l, loss_c = criterion(out, targets)
-        loss_comp = compression_ctrl.loss()
+        loss_comp = compression_ctrl.loss(out, images)
         loss = loss_l + loss_c + loss_comp
         batch_loss += loss
         loss.backward()

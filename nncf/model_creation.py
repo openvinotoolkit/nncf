@@ -17,14 +17,13 @@ from typing import Callable, Any, Tuple, List, Dict
 from nncf.checkpoint_loading import load_state
 from nncf.hw_config import HWConfigType
 from torch.nn import Module
-from torch import load
 
 from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
 from nncf.config import NNCFConfig
 from nncf.debug import is_debug, set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
-from nncf.utils import is_main_process, objwalk, is_tensor
+from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.quantization.structs import QuantizerSetupType
 from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP

@@ -17,6 +17,8 @@
 import sys
 from copy import deepcopy
 from os import path as osp
+import time
+from shutil import copyfile
 
 import functools
 import numpy as np
@@ -329,23 +331,22 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
 
         if config.distributed:
             train_loader.sampler.set_epoch(epoch)
-
-        epoch_loss, (iou, miou) = train_obj.run_epoch(config.print_step)
+        start = time.time()
+        (epoch_loss, epoch_comp_loss), (iou, miou) = train_obj.run_epoch(config.print_step)
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
-
+        logger.info(f'Epoch took f{start - time.time()} seconds')
         if is_main_process():
             print_statistics(compression_ctrl.statistics())
-
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".
-                    format(epoch, epoch_loss, miou))
+        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f} | Avg. Comp Loss: {3:.4f} | Lr: {4:.7f}".
+                    format(epoch, epoch_loss, miou, epoch_comp_loss, optimizer.param_groups[0]['lr']))
 
         if is_main_process():
             config.tb.add_scalar("train/loss", epoch_loss, epoch)
             config.tb.add_scalar("train/mIoU", miou, epoch)
             config.tb.add_scalar("train/learning_rate", optimizer.param_groups[0]['lr'], epoch)
-            config.tb.add_scalar("train/compression_loss", compression_ctrl.loss(), epoch)
+            config.tb.add_scalar("train/compression_loss", epoch_comp_loss, epoch)
 
             for key, value in compression_ctrl.statistics(quickly_collected_only=True).items():
                 if isinstance(value, (int, float)):
@@ -557,6 +558,7 @@ def main(argv):
 
     config.log_dir = str(config.log_dir)
     configure_paths(config)
+    copyfile(arguments.config, osp.join(config.log_dir, 'config.json'))
     logger.info("Save directory: {}".format(config.log_dir))
 
     config.execution_mode = get_execution_mode(config)

@@ -13,6 +13,7 @@
 
 import torch
 
+
 def clamp(x, low, high):
     return torch.max(torch.min(x, high), low)
 

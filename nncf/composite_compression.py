@@ -37,8 +37,7 @@ class CompositeCompressionLoss(CompressionLoss):
     def forward(self, input_=None, target=None):
         result_loss = 0
         for loss in self._child_losses:
-            a = loss(input_, target)
-            result_loss += a
+            result_loss += loss(input_, target)
         return result_loss
 
     def statistics(self, quickly_collected_only=False):
