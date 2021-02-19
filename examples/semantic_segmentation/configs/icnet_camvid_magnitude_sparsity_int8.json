@@ -32,7 +32,7 @@
             "weight_decay": 2.0e-4
         },
         "schedule_type": "step",
-        "step": 150
+        "step": 100
     },
 
     "model_params": {
@@ -74,9 +74,11 @@
         {
             "algorithm": "quantization",
             "ignored_scopes": ["ICNet/interpolate_0"]
-    }
+        },
+        {
+          "algorithm": "knowledge_distillation"
+        }
     ],
-    "distillation": false,
     "epochs": 120,
     "batch_size": 9
 }

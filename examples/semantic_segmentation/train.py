@@ -64,6 +64,7 @@ class Train:
             # Get the inputs and labels
             inputs = batch_data[0].to(self.device)
             labels = batch_data[1].to(self.device)
+
             # Forward propagation
             outputs = self.model(inputs)
 
@@ -90,7 +91,7 @@ class Train:
 
             if iteration_loss:
                 logger.info("[Step: {}] Iteration loss: {:.4f}".format(step, loss.item()))
-                logger.info(f'Time: {time.time() - start} seconds')
+                logger.info(f'Epoch time: {time.time() - start} seconds')
                 start = time.time()
 
         return (epoch_loss / len(self.data_loader), epoch_comp_loss / len(self.data_loader)), self.metric.value()

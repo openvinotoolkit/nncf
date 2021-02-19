@@ -72,7 +72,6 @@ class SparseLoss(CompressionLoss):
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
 
-
 class SparseLossForPerLayerSparsity(SparseLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
         super().__init__(sparse_layers, target, p)

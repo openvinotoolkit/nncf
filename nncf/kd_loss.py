@@ -1,5 +1,3 @@
-from abc import ABC
-
 from copy import deepcopy
 import torch
 from functools import reduce
@@ -7,13 +5,13 @@ from functools import reduce
 from nncf.nncf_network import NNCFNetwork
 from nncf.compression_method_api import CompressionAlgorithmBuilder
 from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.compression_method_api import CompressionLevel
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import CompressionLoss
 from nncf.utils import objwalk
 
 
 class KDLossCalculator(CompressionLoss):
-
     def __init__(self, original_model):
         super().__init__()
         self.original_model = original_model
@@ -50,13 +48,22 @@ class KDLossCalculator(CompressionLoss):
 
 
 @COMPRESSION_ALGORITHMS.register('knowledge_distillation')
-class KDBuilder(CompressionAlgorithmBuilder):
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        self.original_model = deepcopy(target_model)
-        return target_model
+class KnowledgeDistillationBuilder(CompressionAlgorithmBuilder):
+    def _apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+        self.original_model = deepcopy(target_model.nncf_module)
+        return []
+
+    def build_controller(self, target_model):
+        return KnowledgeDistillationController(target_model, self.original_model)
 
 
-class KDController(CompressionAlgorithmController):
-    def __init__(self, original_model):
-        super().__init__(original_model)
+class KnowledgeDistillationController(CompressionAlgorithmController):
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL
+
+    def __init__(self, target_model, original_model):
+        super().__init__(target_model)
         self._loss = KDLossCalculator(original_model)
+
+    def distributed(self):
+        pass

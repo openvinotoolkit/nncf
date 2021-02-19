@@ -34,7 +34,6 @@ from torch.nn.modules.loss import _Loss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
-from torch_lr_finder import LRFinder
 
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
@@ -57,7 +56,6 @@ from examples.classification.common import set_seed, load_resuming_checkpoint
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
-
 
 def get_argument_parser():
     parser = get_common_argument_parser()
@@ -207,6 +205,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
+        start_epoch = time.time()
         # update compression scheduler state at the begin of the epoch
         compression_ctrl.scheduler.epoch_step()
 
@@ -242,6 +241,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
         if is_main_process():
+            logger.info(f'Epoch took {time.time() - start_epoch} seconds')
             print_statistics(stats)
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
@@ -392,6 +392,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         # compute output
         output = model(input_)
         criterion_loss = criterion_fn(output, target, criterion)
+
         # compute compression loss
         compression_loss = compression_ctrl.loss(output, input_)
         loss = criterion_loss + compression_loss

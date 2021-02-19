@@ -22,7 +22,6 @@
             "mode": "asymmetric"
         }
     },
-    "distillation": true,
     "epochs": 5,
     "dataset": "CIFAR100"
 }

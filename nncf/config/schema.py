@@ -367,7 +367,7 @@ COMMON_COMPRESSION_ALGORITHM_PROPERTIES = {
     "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_string_or_array_of_strings_schema(),
-                                     description=TARGET_SCOPES_DESCRIPTION)
+                                     description=TARGET_SCOPES_DESCRIPTION),
 }
 
 BASIC_COMPRESSION_ALGO_SCHEMA = {
@@ -676,19 +676,32 @@ FILTER_PRUNING_SCHEMA = {
     "additionalProperties": False
 }
 
+KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = 'knowledge_distillation'
+KNOWLEDGE_DISTILLATION_SCHEMA = {
+    **BASIC_COMPRESSION_ALGO_SCHEMA,
+    "properties": {
+        "algorithm": {
+            "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
+        },
+    },
+    "additionalProperties": False
+}
+
 ALL_SUPPORTED_ALGO_SCHEMA = [BINARIZATION_SCHEMA,
                              QUANTIZATION_SCHEMA,
                              CONST_SPARSITY_SCHEMA,
                              MAGNITUDE_SPARSITY_SCHEMA,
                              RB_SPARSITY_SCHEMA,
-                             FILTER_PRUNING_SCHEMA]
+                             FILTER_PRUNING_SCHEMA,
+                             KNOWLEDGE_DISTILLATION_SCHEMA]
 
 REF_VS_ALGO_SCHEMA = {BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
                       QUANTIZATION_ALGO_NAME_IN_CONFIG: QUANTIZATION_SCHEMA,
                       CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
                       MAGNITUDE_SPARSITY_ALGO_NAME_IN_CONFIG: MAGNITUDE_SPARSITY_SCHEMA,
                       RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
-                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA}
+                      FILTER_PRUNING_ALGO_NAME_IN_CONFIG: FILTER_PRUNING_SCHEMA,
+                      KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA}
 
 TARGET_DEVICE_SCHEMA = {
     "type": "string",
@@ -741,7 +754,6 @@ ROOT_NNCF_CONFIG_SCHEMA = {
                                                             "on all possible quantized layers and then the algorithm "
                                                             "their propagation is run from the bottom up. Also in "
                                                             "this mode it is possible to use hw config."),
-        "distillation": with_attributes(_BOOLEAN, description="Knowledge distillation on/off")
     },
     "required": ["input_info"],
     "definitions": REF_VS_ALGO_SCHEMA,

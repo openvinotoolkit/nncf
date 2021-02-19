@@ -20,7 +20,7 @@ import functools
 import numpy
 from copy import copy
 from enum import Enum
-from functools import partial, reduce
+from functools import partial
 from typing import List
 
 import torch
@@ -33,7 +33,7 @@ from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.structures import BNAdaptationInitArgs
-from nncf.utils import should_consider_scope, objwalk
+from nncf.utils import should_consider_scope
 
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
@@ -62,43 +62,6 @@ class CompressionLoss(nn.Module):
             quickly_collected_only: enables collection the statistics that don't take too much time to compute.
             Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
         """
-        return {}
-
-
-class KDLossCalculator(CompressionLoss):
-
-    def __init__(self, original_model):
-        super().__init__()
-        self.original_model = original_model
-        self.original_model.train()
-        self.mse = torch.nn.MSELoss()
-
-    def forward(self, input_=None, target=None):
-        # input_ is compressed model output
-        # target is input
-        if input_ is None or target is None:
-            return 0
-
-        def is_loss(obj):
-            if not isinstance(obj, torch.Tensor):
-                return False
-            if obj.requires_grad:
-                return True
-            return False
-
-        def tensors_to_list(obj):
-            if isinstance(obj, torch.Tensor):
-                return [obj]
-            else:
-                return list(obj.values() if isinstance(obj, dict) else obj)
-        ref_outputs = self.original_model(target)
-
-        ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
-        compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
-        return reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
-                      zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
-
-    def statistics(self, quickly_collected_only=False):
         return {}
 
 
@@ -149,7 +112,6 @@ class CompressionScheduler:
     @property
     def current_epoch(self):
         return 0 if self._current_epoch == -1 else self._current_epoch
-
 
 @functools.total_ordering
 class CompressionLevel(Enum):
@@ -263,13 +225,6 @@ class CompressionAlgorithmController:
 
     def prepare_for_export(self):
         pass
-
-    def add_kd_loss(self, original_model):
-        from nncf.composite_compression import CompositeCompressionLoss
-        loss = self._loss
-        self._loss = CompositeCompressionLoss()
-        self._loss.add(loss)
-        self._loss.add(KDLossCalculator(original_model))
 
     # pylint: disable=keyword-arg-before-vararg
     def export_model(self, filename, input_names: List[str] = None, output_names: List[str] = None, *args, **kwargs):

@@ -129,9 +129,6 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     ignored_scopes = config.get('ignored_scopes')
     target_scopes = config.get('target_scopes')
 
-    if config.get('distillation', False):
-        original_model = deepcopy(model)
-
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
@@ -145,9 +142,6 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     for builder in compression_algo_builder_list:
         compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
-
-    if config.get('distillation', False):
-        compression_ctrl.add_kd_loss(original_model)
 
     try:
         if resuming_state_dict is not None:

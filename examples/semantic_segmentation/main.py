@@ -441,7 +441,6 @@ def test(model, test_loader, criterion, class_encoding, config):
 
     return miou
 
-
 def predict(model, images, class_encoding, config):
     images = images.to(config.device)
 
@@ -501,11 +500,13 @@ def main_worker(current_gpu, config):
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, criterion_fn,
             autoq_test_fn, val_loader, config.device)
+
     model = load_model(config.model,
                        pretrained=pretrained,
                        num_classes=num_classes,
                        model_params=config.get('model_params', {}),
                        weights_path=config.get('weights'))
+
     model.to(config.device)
 
     resuming_model_sd = None
@@ -513,7 +514,6 @@ def main_worker(current_gpu, config):
     if resuming_checkpoint_path is not None:
         resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
             resuming_checkpoint_path)
-
     compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
     model, model_without_dp = prepare_model_for_execution(model, config)
 

@@ -40,8 +40,5 @@
     "model_params": {
          "in_channels": 3,
          "input_size_hw": [768, 960]
-    },
-    "distillation": false,
-    "epochs": 20,
-    "batch_size": 16
+    }
 }
