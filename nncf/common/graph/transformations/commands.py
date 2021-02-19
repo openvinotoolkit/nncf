@@ -19,9 +19,9 @@ from nncf.common.utils.ordered_enum import OrderedEnum
 class TransformationPriority(OrderedEnum):
     DEFAULT_PRIORITY = 0
     FP32_TENSOR_STATISTICS_OBSERVATION = 1
-    SPARSIFICATION_PRIORITY = 2
+    PRUNING_PRIORITY = 2
+    SPARSIFICATION_PRIORITY = 3
     QUANTIZATION_PRIORITY = 11
-    PRUNING_PRIORITY = 3
 
 
 class TransformationType(OrderedEnum):

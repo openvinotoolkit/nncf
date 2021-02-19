@@ -238,14 +238,16 @@ class TFMultipleInsertionCommands(TransformationCommand):
 
     def __init__(self,
                  target_point: TargetPoint,
-                 check_target_point_fn: Optional[Callable] = None,
+                 check_target_points_fn: Optional[Callable] = None,
                  commands: Optional[List[TransformationCommand]] = None):
         super().__init__(TransformationType.MULTI_INSERT, target_point)
-        self.check_target_point_fn = lambda tp0, tp1: tp0 == tp1 \
-            if check_target_point_fn is None else check_target_point_fn
+        self.check_target_points_fn = check_target_points_fn
+        if check_target_points_fn is None:
+            self.check_target_points_fn = lambda tp0, tp1: tp0 == tp1
         self._commands = []
-        for cmd in commands:
-            self.add_insertion_command(cmd)
+        if commands is not None:
+            for cmd in commands:
+                self.add_insertion_command(cmd)
 
     @property
     def commands(self) -> List[TransformationCommand]:
@@ -254,7 +256,7 @@ class TFMultipleInsertionCommands(TransformationCommand):
     def check_insertion_command(self, command: TransformationCommand) -> bool:
         if isinstance(command, TransformationCommand) and \
                 command.type == TransformationType.INSERT and \
-                self.check_target_point_fn(self.target_point, command.target_point):
+                self.check_target_points_fn(self.target_point, command.target_point):
             return True
         return False
 
@@ -275,18 +277,18 @@ class TFMultipleInsertionCommands(TransformationCommand):
             raise ValueError('{} and {} commands could not be united'.format(
                 type(self).__name__, type(other).__name__))
 
-        def make_check_target_point_fn(fn1, fn2):
-            def check_target_point(tp0, tp1):
+        def make_check_target_points_fn(fn1, fn2):
+            def check_target_points(tp0, tp1):
                 return fn1(tp0, tp1) or fn2(tp0, tp1)
-            return check_target_point
+            return check_target_points
 
-        check_target_point_fn = self.check_target_point_fn \
-            if self.check_target_point_fn == other.check_target_point_fn else \
-            make_check_target_point_fn(self.check_target_point_fn, other.check_target_point_fn)
+        check_target_points_fn = self.check_target_points_fn \
+            if self.check_target_points_fn == other.check_target_points_fn else \
+            make_check_target_points_fn(self.check_target_points_fn, other.check_target_points_fn)
 
         multi_cmd = TFMultipleInsertionCommands(
             self.target_point,
-            check_target_point_fn,
+            check_target_points_fn,
             self.commands
         )
         for cmd in other.commands:
