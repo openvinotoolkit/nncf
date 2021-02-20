@@ -34,7 +34,7 @@ from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
-from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
+from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 
@@ -177,8 +177,8 @@ class RBSparsityController(TFCompressionAlgorithmController):
         for wrapped_layer in wrapped_layers:
             for ops in wrapped_layer.weights_attr_ops.values():
                 for op_name, op in ops.items():
-                    mask = st_binary_mask(wrapped_layer.ops_weights[op_name]['mask'])
-                    mask_names.append(mask.name)
+                    mask = binary_mask(wrapped_layer.ops_weights[op_name]['mask'])
+                    mask_names.append(wrapped_layer.name + 'rb_mask')
                     weights_shapes.append(list(mask.shape))
                     weights_number = tf.size(mask)
                     weights_numbers.append(weights_number)

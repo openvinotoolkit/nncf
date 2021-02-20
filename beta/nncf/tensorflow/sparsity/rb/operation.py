@@ -18,7 +18,7 @@ from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
-from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask
+from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
 from beta.nncf.tensorflow.functions import logit
 
 OP_NAME = 'rb_sparsity_mask_apply'
@@ -66,7 +66,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param _:'''
         if tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)):
             return apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps))
-        return tf.stop_gradient(apply_mask(layer_weights, st_binary_mask(op_weights['mask'])))
+        return tf.stop_gradient(apply_mask(layer_weights, binary_mask(op_weights['mask'])))
 
     def freeze(self, op_weights):
         op_weights['trainable'].assign(0)
@@ -75,4 +75,4 @@ class RBSparsifyingWeight(NNCFOperation):
     @staticmethod
     def loss(mask):
         '''Return count of non zero weight in mask'''
-        return tf.reduce_sum(st_binary_mask(mask))
+        return tf.reduce_sum(binary_mask(mask))

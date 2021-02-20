@@ -16,11 +16,15 @@ import tensorflow as tf
 from beta.nncf.tensorflow.functions import logit
 
 
+def binary_mask(mask):
+    return tf.round(tf.math.sigmoid(mask))
+
+
 @tf.custom_gradient
 def st_binary_mask(mask):
     def grad(upstream):
         return upstream
-    return tf.round(tf.math.sigmoid(mask)), grad
+    return binary_mask(mask), grad
 
 
 def calc_rb_binary_mask(mask, eps=0.01):
