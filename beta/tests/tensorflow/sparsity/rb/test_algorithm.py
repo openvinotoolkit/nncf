@@ -175,10 +175,10 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     config['input_info'] = [{"sample_size": [1, 4, 4, 1]}]
     config['compression'] = {
         'algorithm': 'rb_sparsity',
+        'sparsity_init': 0.2,
         "params": {
             'schedule': 'polynomial',
             'power': 1,
-            'sparsity_init': 0.2,
             'sparsity_target_epoch': 3,
             'sparsity_target': 0.6,
             'sparsity_freeze_epoch': 4

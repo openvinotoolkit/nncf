@@ -89,7 +89,11 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        return RBSparsityController(model, self.config.get('params', {}))
+        params = self.config.get('params', {})
+        if 'sparsity_init' not in params:
+            params['sparsity_init'] = self.config.get("sparsity_init", 0)
+
+        return RBSparsityController(model, params)
 
 
 class RBSparsityController(TFCompressionAlgorithmController):
