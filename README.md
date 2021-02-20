@@ -110,7 +110,7 @@ Use one of the Dockerfiles in the [docker](./docker) directory to build an image
 
 **NOTE**: If you want to use sample training scripts provided in the NNCF repository under `examples`, you should install the corresponding Python package dependencies:
 ```
-pip install -r examples/requirements.txt
+pip install examples/requirements.txt
 ```
 
 ## Contributing
