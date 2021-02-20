@@ -129,12 +129,10 @@ _ORIG_JIT_SCRIPT = None
 
 
 def patch_torch_jit_script():
-
-    # These two import statements are required, otherwise we get a
+    # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
     # pylint:disable=unused-import,redefined-outer-name,reimported
     import torch
-    import torchvision
 
     orig = getattr(torch.jit, "script")
     global _ORIG_JIT_SCRIPT
@@ -204,3 +202,23 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
+
+
+def patch_extension_build_function():
+    """
+    The function patches CUDA extensions building inside JIT;
+    PyTorch < 1.8.0 has the bug inside ninja file creating that influences on extensions building
+    Therefore we introduces this decoration to resolve the bug
+    It will be fixed with a new PyTorch 1.8.0
+    """
+    import torch.utils.cpp_extension
+
+    def sort_arch_flags(func):
+        def wrapped(*args, **kwargs):
+            flags = func(*args, **kwargs)
+            return sorted(flags)
+
+        return wrapped
+
+    torch.utils.cpp_extension._get_cuda_arch_flags = \
+        sort_arch_flags(torch.utils.cpp_extension._get_cuda_arch_flags)

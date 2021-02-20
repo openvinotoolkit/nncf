@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+import pathlib
+import os
 import os.path
 import torch
 from torch.utils.cpp_extension import load
@@ -55,8 +57,32 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
 
     @staticmethod
     def load():
-        return load('binarized_functions_cuda', CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
-                    verbose=False)
+        name = 'binarized_functions_cuda'
+        cuda_arch_build_dir = torch.utils.cpp_extension._get_build_directory(name, verbose=False)
+        cuda_arch_list_file = os.path.join(cuda_arch_build_dir, 'cuda_arch_list.txt')
+        p = pathlib.Path(cuda_arch_list_file)
+        if not p.exists():
+            arch_list = os.getenv('TORCH_CUDA_ARCH_LIST')
+            if arch_list:
+                with open(p, 'w') as f:
+                    print('The "TORCH_CUDA_ARCH_LIST" environment variable has been saving in a file. '
+                          'This environment variable will be set every time before loading cpp extensions. '
+                          f'The filepath is {cuda_arch_list_file}'
+                          'If you want to build extensions locally and according to your CUDA version, '
+                          'please remove this file and set enviroment variable "TORCH_CUDA_ARCH_LIST"'
+                          ' to an empty string')
+                    f.write(arch_list)
+        else:
+            print('The file containing "TORCH_CUDA_ARCH_LIST" environment variable was detected. '
+                  'The "TORCH_CUDA_ARCH_LIST" environment variable will be set according to the file. '
+                  'A process of loading/building CUDA extensions will be with according to "TORCH_CUDA_ARCH_LIST"'
+                  f'The filepath is {cuda_arch_list_file}')
+            with open(p, 'r') as f:
+                arch_list = f.readline()
+            os.environ['TORCH_CUDA_ARCH_LIST'] = arch_list
+
+        return load(name, CUDA_EXT_SRC_LIST, extra_include_paths=EXT_INCLUDE_DIRS,
+                    verbose=True)
 
 
 BinarizedFunctionsCPU = BinarizedFunctionsCPULoader.load()
