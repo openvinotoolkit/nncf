@@ -9,14 +9,6 @@ This sample demonstrates DL model compression capabilities for semantic segmenta
 - DataParallel and DistributedDataParallel modes
 - Tensorboard output
 
-## Installation
-
-To work with the sample you should install the corresponding Python package dependencies
-
-```
-pip install -r examples/requirements.txt
-```
-
 ## Quantize FP32 pretrained model
 This scenario demonstrates quantization with fine-tuning of UNet on Mapillary Vistas dataset.
 
