@@ -866,8 +866,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
         for node in self._original_graph.get_nodes_by_types(general_conv_types):
             scope = node.op_exec_context.scope_in_model
+            input_agnostic = node.op_exec_context.input_agnostic
             module = self.get_module_by_scope(scope)
-            nx_node = self._original_graph.find_node_in_nx_graph_by_scope(scope)
+            nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
             nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
                                                                                module.in_channels,
                                                                                module.out_channels,

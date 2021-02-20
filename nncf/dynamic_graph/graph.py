@@ -807,6 +807,19 @@ class NNCFGraph:
                 return nodes[node_key]
         return None
 
+    def find_node_in_nx_graph_by_input_agnostic(self, input_agnostic: 'InputAgnosticOperationExecutionContext') -> Optional[dict]:
+        """
+        Looking for node with input_agnostic == input_agnostic in networkx graph.
+        :param self: graphs to work on
+        :param input_agnostic: Input agnostic to find in graph
+        :return: node from networkx graph for graph (or None if such scope is not found)
+        """
+        nodes = self._nx_graph.nodes
+        for node_key in nodes:
+            if nodes[node_key][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == input_agnostic:
+                return nodes[node_key]
+        return None
+
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
         matching_graph_op_nodes = []
         for _, node in self._nx_graph.nodes.items():

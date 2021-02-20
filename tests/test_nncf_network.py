@@ -687,3 +687,29 @@ def test_temporary_clean_view():
     sparse_quantized_model.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
     assert graph_after_tmp_clean_view == old_graph
+
+
+class TestModelMultipleForward(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(1, 1, 1, 1)
+        self.conv1 = nn.Conv2d(1, 1, 1, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x1 = self.conv1(x)
+        x2 = self.conv1(x)
+        return x1, x2
+
+
+def test_multiple_forward():
+    # Check that all convolution nodes in model have op_exec_context and module_attributes
+    # for case with multiple forward of one module
+    model = TestModelMultipleForward()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    graph = sparse_quantized_model.get_original_graph()
+    for node_key in list(graph.get_all_node_keys())[1:]:
+        node = graph.get_nx_node_by_key(node_key)
+        assert node.get(NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
+        assert node.get(NNCFGraph.MODULE_ATTRIBUTES)

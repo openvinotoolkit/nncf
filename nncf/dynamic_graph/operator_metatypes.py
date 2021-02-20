@@ -280,6 +280,11 @@ class LayerNormMetatype(OperatorMetatype):
     torch_nn_functional_patch_spec = PatchSpec([name])
     hw_config_names = [HWConfigOpName.MVN]
 
+@OPERATOR_METATYPES.register()
+class GroupNormMetatype(OperatorMetatype):
+    name = "group_norm"
+    torch_nn_functional_patch_spec = PatchSpec([name])
+
 
 @OPERATOR_METATYPES.register()
 class GELUMetatype(OperatorMetatype):

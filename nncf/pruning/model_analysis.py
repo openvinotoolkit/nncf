@@ -70,7 +70,9 @@ class Clusterization:
 
         for node in self.clusters[cluster_id].nodes:
             node_id = getattr(node, self._id_attr)
-            self._node_to_cluster.pop(node_id)
+            if node_id in self._node_to_cluster:
+                #TODO:
+                self._node_to_cluster.pop(node_id)
         self.clusters.pop(cluster_id)
 
     def get_all_clusters(self) -> List[NodesCluster]:
