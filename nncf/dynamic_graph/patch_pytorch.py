@@ -22,6 +22,8 @@ from torch.nn.parallel import DistributedDataParallel
 from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
 
+from nncf.common.utils.logger import logger
+
 
 class CustomTraceFunction:
     def __call__(self, operator: Callable, *args, **kwargs):
@@ -206,12 +208,18 @@ def unpatch_torch_operators():
 
 def patch_extension_build_function():
     """
-    The function patches CUDA extensions building inside JIT;
-    PyTorch < 1.8.0 has the bug inside ninja file creating that influences on extensions building
-    Therefore we introduces this decoration to resolve the bug
-    It will be fixed with a new PyTorch 1.8.0
+    The function patches PyTorch and fix a bug inside CUDA extensions building;
+    The bug must be fixed with a new PyTorch 1.8.0
     """
     import torch.utils.cpp_extension
+
+    if torch.__version__ == '1.8.0':
+        return
+
+    if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
+        logger.warning('Skip apply a patch to building extension with a reason: '
+                       'PyTorch version is not supported for this')
+        return
 
     def sort_arch_flags(func):
         def wrapped(*args, **kwargs):
@@ -220,5 +228,6 @@ def patch_extension_build_function():
 
         return wrapped
 
+    # pylint:disable=protected-access
     torch.utils.cpp_extension._get_cuda_arch_flags = \
         sort_arch_flags(torch.utils.cpp_extension._get_cuda_arch_flags)

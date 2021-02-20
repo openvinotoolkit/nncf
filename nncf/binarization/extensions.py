@@ -58,6 +58,7 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
     @staticmethod
     def load():
         name = 'binarized_functions_cuda'
+        # pylint:disable=protected-access
         cuda_arch_build_dir = torch.utils.cpp_extension._get_build_directory(name, verbose=False)
         cuda_arch_list_file = os.path.join(cuda_arch_build_dir, 'cuda_arch_list.txt')
         p = pathlib.Path(cuda_arch_list_file)
