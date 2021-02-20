@@ -47,6 +47,7 @@ def test_install(install_type, tmp_path, package_type, venv_type):
     elif venv_type == 'venv':
         subprocess.call("python{} -m venv {}".format(version_string, venv_path), shell=True)
         subprocess.call("{} install --upgrade pip".format(pip_with_venv), shell=True)
+        subprocess.call("{} install wheel".format(pip_with_venv), shell=True)
 
     run_path = tmp_path / 'run'
     run_path.mkdir()
