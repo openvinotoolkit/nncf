@@ -8,23 +8,8 @@ from tests.conftest import TEST_ROOT
 EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'
 
 
-@pytest.fixture(name="venv_type",
-                params=["venv"])
-def venv_type_(request):
-    return request.param
-
-
-@pytest.fixture(name="package_type",
-                params=["develop"])
-def package_type_(request):
-    return request.param
-
-@pytest.fixture(name="install_type",
-                params=["cuda"])
-def install_type_(request):
-    return request.param
-
-
+@pytest.mark.parametrize("venv_type, package_type,install_type",
+                         [('venv', 'develop', 'GPU')])
 def test_force_cuda_build(create_venv, install_type, tmp_path, package_type):
     '''
     Check that CUDA Extensions weren't initially built and \
