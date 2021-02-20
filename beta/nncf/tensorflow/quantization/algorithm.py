@@ -13,10 +13,6 @@
 
 import networkx as nx
 
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.transformations.commands import InsertionCommand
-from nncf.common.graph.transformations.commands import AfterLayer
-from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -25,6 +21,10 @@ from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmControlle
 from beta.nncf.tensorflow.graph import patterns as p
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import TFAfterLayer
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
@@ -104,7 +104,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 logger.warning('The layer {} is not supported by the quantization algorithm'
                                .format(get_original_name_and_instance_index(node_name)[0]))
 
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[WEIGHTS])
         shared_nodes = set()
         for node_name, node in nxmodel.nodes.items():
@@ -121,8 +121,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = QUANTIZATION_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
-                InsertionCommand(
-                    target_point=LayerWeight(original_node_name, weight_attr_name),
+                TFInsertionCommand(
+                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
                     callable_object=operation,
                     priority=TransformationPriority.QUANTIZATION_PRIORITY
                 ))
@@ -133,8 +133,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
             fake_quantize_layer = FakeQuantize(qconfig, name=fake_quantize_name)
             transformations.register(
-                InsertionCommand(
-                    target_point=AfterLayer(original_node_name, instance_index),
+                TFInsertionCommand(
+                    target_point=TFAfterLayer(original_node_name, instance_index),
                     callable_object=fake_quantize_layer,
                     priority=TransformationPriority.QUANTIZATION_PRIORITY
                 ))

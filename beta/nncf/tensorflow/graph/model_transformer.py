@@ -144,7 +144,7 @@ class TFModelTransformer(ModelTransformer):
     def _insert(self, target_point, insertion_objects):
         target_layer_name = self._get_target_layer_name(target_point)
 
-        if target_point.type == TargetType.WEIGHT_OPERATION:
+        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
             self._insert_weight_operations(target_layer_name, weight_operations)
@@ -165,7 +165,7 @@ class TFModelTransformer(ModelTransformer):
         weight_operations = []
         for cmd in commands:
             if cmd.type != TransformationType.INSERT or \
-                    cmd.target_point.type != TargetType.WEIGHT_OPERATION:
+                    cmd.target_point.type != TargetType.OPERATION_WITH_WEIGHTS:
                 raise TypeError('Multiple insertion transform does not support command: '
                                 'command type - {}; target point type - {}'
                                 .format(cmd.type, cmd.target_point.type))
@@ -180,7 +180,7 @@ class TFModelTransformer(ModelTransformer):
     def _remove(self, target_point):
         target_layer_name = self._get_target_layer_name(target_point)
 
-        if target_point.type == TargetType.WEIGHT_OPERATION:
+        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             self._remove_weight_operation(
                 target_layer_name,
                 target_point.weights_attr_name,
