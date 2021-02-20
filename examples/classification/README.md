@@ -2,14 +2,21 @@
 
 This sample demonstrates a DL model compression in case of an image-classification problem. The sample consists of basic steps such as DL model initialization, dataset preparation, training loop over epochs, training and validation steps. The sample receives a configuration file where the training schedule, hyper-parameters, and compression settings are defined.
 
-## Features
-
+## Features:
 - Torchvision models (ResNets, VGG, Inception, etc.) and datasets (ImageNet, CIFAR 10, CIFAR 100) support
 - Custom models support
 - Configuration file examples for sparsity, quantization, and quantization with sparsity
 - Export to ONNX that is supported by the OpenVINO™ toolkit
 - DataParallel and DistributedDataParallel modes
 - Tensorboard-compatible output
+
+## Installation
+
+To work with the sample you should install the corresponding Python package dependencies
+
+```
+pip install -r examples/requirements.txt
+```
 
 ## Quantize FP32 Pretrained Model
 
