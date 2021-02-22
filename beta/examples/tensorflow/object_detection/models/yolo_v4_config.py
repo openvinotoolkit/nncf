@@ -14,6 +14,7 @@
 from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 YOLOV4_CONFIG = SampleConfig({
+<<<<<<< HEAD
     "num_feature_layers": 3,
     "num_classes": 80,
     "model_params": {
@@ -24,3 +25,8 @@ YOLOV4_CONFIG = SampleConfig({
         }
     }
 })
+=======
+    'num_feature_layers': 3,
+    'num_classes': 80
+})
+>>>>>>> 3d9f38f... test passed, before integration
