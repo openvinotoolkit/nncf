@@ -25,6 +25,10 @@ class DummyScheduler(CompressionScheduler):
         state['delta'] = self.delta
         return state
 
+    def load_state(self, state):
+        super().load_state(state)
+        self.delta = state['delta']
+
 
 def test_can_restore_from_state():
     def _create_composite_scheduler(deltas):
