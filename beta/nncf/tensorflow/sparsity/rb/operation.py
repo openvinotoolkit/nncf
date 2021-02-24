@@ -75,4 +75,4 @@ class RBSparsifyingWeight(NNCFOperation):
     @staticmethod
     def loss(mask):
         '''Return count of non zero weight in mask'''
-        return tf.reduce_sum(binary_mask(mask))
+        return tf.cast(tf.reduce_sum(binary_mask(mask)), tf.int32)
