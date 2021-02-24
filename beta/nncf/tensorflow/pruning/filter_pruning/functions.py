@@ -27,7 +27,7 @@ def l2_filter_norm(weight_tensor, dim=0):
     Calculates L2 for weight_tensor for the selected dimension.
     """
     transformed_tensor = _pull_tensor(weight_tensor, dim)
-    return tf.norm(transformed_tensor, ord=1, axis=2)
+    return tf.norm(transformed_tensor, ord=2, axis=1)
 
 
 def _pull_tensor(weight_tensor, dim=0):
