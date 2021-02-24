@@ -122,7 +122,7 @@ class CompressionScheduler:
             next_epoch = self.current_epoch + 1
         self.current_epoch = next_epoch
 
-    def load_state(self, state: Dict[str, int]) -> None:
+    def load_state(self, state: Dict[str, object]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
         compression method.
