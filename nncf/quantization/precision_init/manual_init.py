@@ -55,12 +55,12 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                     if self._hw_precision_constraints:
                         q_id = self._algo.setup_to_module_id_translation_dict[qp_id]
                         q_configs = self._hw_precision_constraints.get(q_id)
-                        matched_q_configs = list(filter(lambda x: x.bits == bitwidth, q_configs))
+                        matched_q_configs = list(filter(lambda x: x.num_bits == bitwidth, q_configs))
                         if not matched_q_configs:
                             raise ValueError(msg.format(bitwidth, scope_name, q_configs))
                         qp.qconfig = matched_q_configs[0]
                     else:
-                        qp.qconfig.bits = bitwidth
+                        qp.qconfig.num_bits = bitwidth
                     is_matched = True
                     break
             if not is_matched:
