@@ -67,12 +67,9 @@ class Clusterization:
     def delete_cluster(self, cluster_id: int):
         if cluster_id not in self.clusters:
             raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
-
         for node in self.clusters[cluster_id].nodes:
             node_id = getattr(node, self._id_attr)
-            if node_id in self._node_to_cluster:
-                #TODO:
-                self._node_to_cluster.pop(node_id)
+            self._node_to_cluster.pop(node_id)
         self.clusters.pop(cluster_id)
 
     def get_all_clusters(self) -> List[NodesCluster]:
@@ -97,6 +94,10 @@ class Clusterization:
             for node in cluster_1.nodes:
                 self._node_to_cluster[getattr(node, self._id_attr)] = second_id
             self.clusters.pop(first_id)
+
+    def merge_list_of_cluster(self, clusters: List[int]):
+        for cluster_id in clusters[:-1]:
+            self.merge_clusters(clusters[-1], cluster_id)
 
 
 def get_position(nx_nodes_list, idx):
