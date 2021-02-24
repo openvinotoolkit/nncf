@@ -331,16 +331,17 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
 
         if config.distributed:
             train_loader.sampler.set_epoch(epoch)
-        start = time.time()
+        start_time = time.time()
         (epoch_loss, epoch_comp_loss), (iou, miou) = train_obj.run_epoch(config.print_step)
         if not isinstance(lr_scheduler, ReduceLROnPlateau):
             # Learning rate scheduling should be applied after optimizer’s update
             lr_scheduler.step(epoch)
-        logger.info(f'Epoch took f{start - time.time()} seconds')
         if is_main_process():
             print_statistics(compression_ctrl.statistics())
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f} | Avg. Comp Loss: {3:.4f} | Lr: {4:.7f}".
-                    format(epoch, epoch_loss, miou, epoch_comp_loss, optimizer.param_groups[0]['lr']))
+        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f} | Avg. Comp Loss: {3:.4f} | Lr: {4:.7f}"
+                    "| Time: {5:.2f} sec".
+                    format(epoch, epoch_loss, miou, epoch_comp_loss, optimizer.param_groups[0]['lr'],
+                           time.time() - start_time))
 
         if is_main_process():
             config.tb.add_scalar("train/loss", epoch_loss, epoch)

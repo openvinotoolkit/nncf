@@ -219,6 +219,8 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
 
+        if is_main_process():
+            logger.info(f'Epoch took {time.time() - start_epoch} seconds')
         # compute compression algo statistics
         stats = compression_ctrl.statistics()
 
@@ -241,7 +243,6 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
         if is_main_process():
-            logger.info(f'Epoch took {time.time() - start_epoch} seconds')
             print_statistics(stats)
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
