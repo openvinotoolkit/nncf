@@ -91,7 +91,6 @@ class Train:
 
             if iteration_loss:
                 logger.info("[Step: {}] Iteration loss: {:.4f}".format(step, loss.item()))
-                logger.info(f'Epoch time: {time.time() - start} seconds')
                 start = time.time()
 
         return (epoch_loss / len(self.data_loader), epoch_comp_loss / len(self.data_loader)), self.metric.value()
