@@ -36,6 +36,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 
 
 def get_argument_parser():
@@ -113,17 +114,6 @@ def load_checkpoint(model, ckpt_path):
     model.load_weights(checkpoint).expect_partial()
     logger.info('Completed loading from checkpoint.')
     return None
-
-
-def get_scheduler_state(num_steps, steps_per_epoch, config):
-    current_step = num_steps - 1
-    current_epoch = current_step // steps_per_epoch
-    scheduler_state = {'current_step': current_step, 'current_epoch': current_epoch}
-
-    if isinstance(config.compression, list) and len(config.compression) > 1:
-        scheduler_state = [scheduler_state for _ in config.compression]
-
-    return scheduler_state
 
 
 def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, config):

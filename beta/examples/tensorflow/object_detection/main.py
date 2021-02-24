@@ -36,6 +36,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
@@ -104,17 +105,6 @@ def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Completed loading from checkpoint')
 
     return None
-
-
-def get_scheduler_state(num_steps, steps_per_epoch, config):
-    current_step = num_steps - 1
-    current_epoch = current_step // steps_per_epoch
-    scheduler_state = {'current_step': current_step, 'current_epoch': current_epoch}
-
-    if isinstance(config.compression, list) and len(config.compression) > 1:
-        scheduler_state = [scheduler_state for _ in config.compression]
-
-    return scheduler_state
 
 
 def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch, config):
