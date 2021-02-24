@@ -60,13 +60,13 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return torch.zeros([])
 
-    def forward(self) -> torch.Tensor:
+    def forward(self, input_=None, target=None) -> torch.Tensor:
         """
         Overriding  forward function of the base nn.Module class
 
         :return: The compression loss value.
         """
-        return self.calculate()
+        return self.calculate(input_, target)
 
 
 class PTCompressionScheduler(CompressionScheduler):

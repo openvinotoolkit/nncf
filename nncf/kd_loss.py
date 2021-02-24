@@ -1,17 +1,19 @@
+from typing import List
+
 from copy import deepcopy
 import torch
 from functools import reduce
 
-from nncf.nncf_network import NNCFNetwork
-from nncf.compression_method_api import CompressionAlgorithmBuilder
-from nncf.compression_method_api import CompressionAlgorithmController
+from nncf.nncf_network import NNCFNetwork, InsertionCommand
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import CompressionLevel
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionLoss
+from nncf.compression_method_api import PTCompressionLoss
 from nncf.utils import objwalk
 
 
-class KDLossCalculator(CompressionLoss):
+class KDLossCalculator(PTCompressionLoss):
     def __init__(self, original_model):
         super().__init__()
         self.original_model = original_model
@@ -22,7 +24,7 @@ class KDLossCalculator(CompressionLoss):
         # input_ is compressed model output
         # target is input
         if input_ is None or target is None:
-            return 0
+            raise ValueError('KDLoss entries cannot be None. Check compression loss arguments.')
 
         def is_loss(obj):
             if not isinstance(obj, torch.Tensor):
@@ -48,8 +50,8 @@ class KDLossCalculator(CompressionLoss):
 
 
 @COMPRESSION_ALGORITHMS.register('knowledge_distillation')
-class KnowledgeDistillationBuilder(CompressionAlgorithmBuilder):
-    def _apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
+    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         self.original_model = deepcopy(target_model.nncf_module)
         return []
 
@@ -57,7 +59,7 @@ class KnowledgeDistillationBuilder(CompressionAlgorithmBuilder):
         return KnowledgeDistillationController(target_model, self.original_model)
 
 
-class KnowledgeDistillationController(CompressionAlgorithmController):
+class KnowledgeDistillationController(PTCompressionAlgorithmController):
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
 

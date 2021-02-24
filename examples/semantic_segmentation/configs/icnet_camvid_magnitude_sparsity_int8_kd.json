@@ -32,7 +32,7 @@
             "weight_decay": 2.0e-4
         },
         "schedule_type": "step",
-        "step": 100
+        "step": 150
     },
 
     "model_params": {
@@ -41,6 +41,9 @@
     },
 
     "compression": [
+        {
+          "algorithm": "knowledge_distillation"
+        },
         {
             "algorithm": "magnitude_sparsity",
             "sparsity_init": 0.1,
@@ -76,6 +79,7 @@
             "ignored_scopes": ["ICNet/interpolate_0"]
         }
     ],
+    "distillation": false,
     "epochs": 120,
     "batch_size": 9
 }
