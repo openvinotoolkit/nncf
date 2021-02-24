@@ -16,17 +16,19 @@ from typing import List
 
 from texttable import Texttable
 
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
 
 
-class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
+class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self._sparsified_module_info = []
@@ -56,14 +58,14 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
 
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BaseSparsityAlgoController(target_model, self._sparsified_module_info)
 
     def create_weight_sparsifying_operation(self, target_module):
         raise NotImplementedError
 
 
-class BaseSparsityAlgoController(CompressionAlgorithmController):
+class BaseSparsityAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)

@@ -10,15 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Dict
+from typing import List
 
-from typing import List, Dict
-
-from nncf.quantization.precision_init.base_init import BasePrecisionInitParams, BasePrecisionInitializer
+from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
+from nncf.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-
-from ..precision_constraints import HardwareQuantizationConstraints
-from ...structures import QuantizationPrecisionInitArgs
-from ...utils import in_scope_list
+from nncf.structures import QuantizationPrecisionInitArgs
 
 
 class ManualPrecisionInitParams(BasePrecisionInitParams):
@@ -32,30 +31,39 @@ class ManualPrecisionInitParams(BasePrecisionInitParams):
     def from_config(cls,
                     manual_init_params_dict: Dict):
         return cls(user_init_args=None,
-                   bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", [[]]))
+                   bitwidth_per_scope=manual_init_params_dict.get("bitwidth_per_scope", []))
 
 
 class ManualPrecisionInitializer(BasePrecisionInitializer):
     def __init__(self,
                  algo: 'ExperimentalQuantizationController',
                  params: ManualPrecisionInitParams,
-                 init_args: QuantizationPrecisionInitArgs = None,
                  hw_precision_constraints: HardwareQuantizationConstraints = None):
-        super().__init__(algo, params, init_args)
+        super().__init__(algo, params, hw_precision_constraints)
         self._bitwidth_per_scope = params.bitwidth_per_scope
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
+        quantizer_setup = self._algo.get_quantizer_setup_for_current_state()
         for pair in self._bitwidth_per_scope:
-            if len(pair) != 2:
-                raise ValueError('Invalid format of bitwidth per scope: [int, str] is expected')
-            bitwidth = pair[0]
-            scope_name = pair[1]
+            bitwidth, scope_name = pair
             is_matched = False
-            for scope, quantizer in self._all_quantizers_per_scope.items():
-                if in_scope_list(str(scope), scope_name):
-                    quantizer.num_bits = bitwidth
+            msg = 'Failed to assign bitwidth={} to `{}`,\n' \
+                  'because it is incompatible for the specified target hardware\n' \
+                  'Supported quantization configs: {}'
+            for qp_id, qp in quantizer_setup.quantization_points.items():
+                if str(qp.insertion_point) == scope_name:
+                    if self._hw_precision_constraints:
+                        q_id = self._algo.setup_to_module_id_translation_dict[qp_id]
+                        q_configs = self._hw_precision_constraints.get(q_id)
+                        matched_q_configs = list(filter(lambda x: x.bits == bitwidth, q_configs))
+                        if not matched_q_configs:
+                            raise ValueError(msg.format(bitwidth, scope_name, q_configs))
+                        qp.qconfig = matched_q_configs[0]
+                    else:
+                        qp.qconfig.bits = bitwidth
                     is_matched = True
+                    break
             if not is_matched:
                 raise ValueError(
                     'Invalid scope name `{}`, failed to assign bitwidth {} to it'.format(scope_name, bitwidth))
-        return self._algo.get_quantizer_setup_for_current_state()
+        return quantizer_setup

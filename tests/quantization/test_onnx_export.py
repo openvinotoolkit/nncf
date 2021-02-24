@@ -48,7 +48,7 @@ def test_onnx_export_to_fake_quantize(tmp_path):
             num_model_nodes += 1
         else:
             num_other_nodes += 1
-    assert num_fq > 0
+    assert num_fq == 4
     assert num_other_nodes == 0
 
 
@@ -75,7 +75,7 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
             num_model_nodes += 1
         else:
             num_other_nodes += 1
-    assert num_q > 0
+    assert num_q == 4
     assert num_q == num_dq
     assert num_other_nodes == 0
 

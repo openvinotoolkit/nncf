@@ -16,7 +16,7 @@ from nncf.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.helpers import create_conv, create_transpose_conv
+from tests.helpers import create_conv, create_transpose_conv, create_depthwise_conv
 
 
 class PruningTestModel(nn.Module):
@@ -39,16 +39,16 @@ class TestModelDiffConvs(nn.Module):
     def __init__(self):
         super().__init__()
         # Usual conv
-        self.conv1 = create_conv(1, 3, 2, 9, -2)
+        self.conv1 = create_conv(1, 32, 2, 9, -2)
         self.relu = nn.ReLU()
         # Depthwise conv
-        self.conv2 = nn.Conv2d(3, 3, 1, groups=3)
+        self.conv2 = nn.Conv2d(32, 32, 1, groups=32)
 
         # Downsample conv
-        self.conv3 = create_conv(3, 8, 3, -10, 0, stride=2)
+        self.conv3 = create_conv(32, 32, 3, -10, 0, stride=2)
 
         # Group conv
-        self.conv4 = nn.Conv2d(8, 4, 1, groups=4)
+        self.conv4 = nn.Conv2d(32, 16, 1, groups=8)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -196,6 +196,69 @@ class BigPruningTestModel(nn.Module):
         x = x.view(1, -1)
         return x
 
+
+class TestShuffleUnit(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 downsample):
+        super().__init__()
+        self.downsample = downsample
+        mid_channels = out_channels // 2
+
+        self.compress_conv1 = create_conv((in_channels if self.downsample else mid_channels), mid_channels, 1, 1, -2)
+        self.dw_conv2 = create_depthwise_conv(mid_channels, 3, 2, -2, padding=1, stride=(2 if self.downsample else 1))
+        self.expand_conv3 = create_conv(mid_channels, mid_channels, 1, 1, -2)
+
+        if downsample:
+            self.dw_conv4 = create_depthwise_conv(in_channels, 3, 2, -2, padding=1, stride=2)
+            self.expand_conv5 = create_conv(in_channels, mid_channels, 1, 1, -2)
+
+        self.activ = nn.ReLU(inplace=True)
+
+
+    def forward(self, x):
+        if self.downsample:
+            y1 = self.dw_conv4(x)
+            y1 = self.expand_conv5(y1)
+            y1 = self.activ(y1)
+            x2 = x
+        else:
+            y1, x2 = torch.chunk(x, chunks=2, dim=1)
+
+        y2 = self.compress_conv1(x2)
+        y2 = self.activ(y2)
+        y2 = self.dw_conv2(y2)
+        y2 = self.expand_conv3(y2)
+
+        y2 = self.activ(y2)
+        if not self.downsample:
+            y2 = y2 + x2
+        x = torch.cat((y1, y2), dim=1)
+        return x
+
+
+class TestModelShuffleNetUnit(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 16, 1, 1, -2)
+        self.unit1 = TestShuffleUnit(16, 16, False)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.unit1(x)
+        return x
+
+class TestModelShuffleNetUnitDW(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 16, 1, 1, -2)
+        self.unit1 = TestShuffleUnit(16, 32, True)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.unit1(x)
+        return x
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:

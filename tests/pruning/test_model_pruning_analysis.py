@@ -24,7 +24,8 @@ from nncf.pruning.model_analysis import NodesCluster, Clusterization, cluster_sp
 from nncf.pruning.pruning_node_selector import PruningNodeSelector
 from tests.helpers import create_compressed_model_and_algo_for_test, create_nncf_model_and_algo_builder
 from tests.pruning.helpers import PruningTestModelEltwise, get_basic_pruning_config, TestModelBranching, \
-    TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs
+    TestModelResidualConnection, TestModelEltwiseCombination, TestModelDiffConvs, \
+    TestModelShuffleNetUnit, TestModelShuffleNetUnitDW
 
 
 # pylint: disable=protected-access
@@ -33,10 +34,10 @@ def create_nncf_model_and_builder(model, config_params):
     nncf_config['compression']['algorithm'] = 'filter_pruning'
     for key, value in config_params.items():
         nncf_config['compression']['params'][key] = value
-    nncf_model, algo_builders_list = create_nncf_model_and_algo_builder(model, nncf_config)
+    nncf_model, composite_builder = create_nncf_model_and_algo_builder(model, nncf_config)
 
-    assert len(algo_builders_list) == 1
-    algo_builder = algo_builders_list[0]
+    assert len(composite_builder.child_builders) == 1
+    algo_builder = composite_builder.child_builders[0]
     return nncf_model, algo_builder
 
 
@@ -160,13 +161,11 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     grouping_operations = Elementwise.get_all_op_aliases()
-    ignore_frozen_layers = True
     pruning_node_selector = PruningNodeSelector(PRUNING_OPERATOR_METATYPES,
                                                 pruning_operations,
                                                 grouping_operations,
                                                 None,
                                                 None,
-                                                ignore_frozen_layers,
                                                 prune_first,
                                                 prune_last,
                                                 prune_downsample)
@@ -311,6 +310,24 @@ IS_MODULE_PRUNABLE_TEST_CASES = [
                             'TestModelBranching/NNCFConv2d[conv3]': True,
                             'TestModelBranching/NNCFConv2d[conv4]': True,
                             'TestModelBranching/NNCFConv2d[conv5]': True},
+    ),
+    ModulePrunableTestStruct(
+        model=TestModelShuffleNetUnitDW,
+        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        is_module_prunable={'TestModelShuffleNetUnitDW/NNCFConv2d[conv]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv4]': False,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv5]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]': True,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]': False,
+                            'TestModelShuffleNetUnitDW/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv3]': True},
+    ),
+    ModulePrunableTestStruct(
+        model=TestModelShuffleNetUnit,
+        config_params={'prune_first_conv': True, 'prune_last_conv': True, },
+        is_module_prunable={'TestModelShuffleNetUnit/NNCFConv2d[conv]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[compress_conv1]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[dw_conv2]': True,
+                            'TestModelShuffleNetUnit/TestShuffleUnit[unit1]/NNCFConv2d[expand_conv3]': True},
     )
 ]
 

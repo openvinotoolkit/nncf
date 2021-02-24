@@ -14,13 +14,13 @@
 from bisect import bisect_right
 import numpy as np
 
-from beta.nncf.api.compression import CompressionScheduler
 from nncf.common.utils.registry import Registry
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(CompressionScheduler):
+class SparsityScheduler(TFCompressionScheduler):
     def __init__(self, sparsity_algo, params: dict = None):
         super().__init__()
         if params is None:
@@ -164,14 +164,11 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     def __init__(self, sparsity_algo, params):
         super().__init__(sparsity_algo, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
-        self.steps = self._params.get('multistep_steps', [90])
+        self.steps = sorted(self._params.get('multistep_steps', [90]))
         if len(self.steps) + 1 != len(self.sparsity_levels):
             raise AttributeError('number of sparsity levels must equal to number of steps + 1')
 
         self.initial_sparsity = self.sparsity_level = self.sparsity_levels[0]
-        self.max_sparsity = max(self.sparsity_levels)
-        self.steps = sorted(self.steps)
-        self.max_step = self.steps[-1]
         self.prev_ind = 0
         self.algo.set_sparsity_level(self.current_sparsity_level)
 

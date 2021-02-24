@@ -222,7 +222,7 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_models_path, enable_i
     }
 
 
-@pytest.mark.dependency(name=["train"])
+@pytest.mark.dependency(name="train")
 def test_compression_train(_params, tmp_path):
     p = _params
     args = p['args']

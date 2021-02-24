@@ -10,25 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from copy import deepcopy
 from os import path as osp
-from typing import Callable, Any, Tuple, List, Dict
+from typing import Callable, Any, Tuple, Dict
 
-from nncf.checkpoint_loading import load_state
-from nncf.hw_config import HWConfigType
 from torch.nn import Module
 
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
+from nncf.checkpoint_loading import load_state
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.debug import is_debug, set_debug_log_dir
+from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.quantization.structs import QuantizerSetupType
-from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 
 
 def get_compression_algorithm(config):
@@ -37,41 +34,12 @@ def get_compression_algorithm(config):
     return COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 
-def create_compression_algorithm_builders(config: NNCFConfig,
-                                          should_init: bool = True) -> List[CompressionAlgorithmBuilder]:
-    compression_config_json_section = config.get('compression', {})
-    compression_config_json_section = deepcopy(compression_config_json_section)
-
-    hw_config_type = None
-    quantizer_setup_type_str = config.get("quantizer_setup_type", "propagation_based")
-    quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
-    if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
-        target_device = config.get("target_device", "ANY")
-        if target_device != 'TRIAL':
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
-
-    if isinstance(compression_config_json_section, dict):
-        compression_config = NNCFConfig(compression_config_json_section)
-        compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        compression_config["hw_config_type"] = hw_config_type
-        compression_config['quantizer_setup_type'] = quantizer_setup_type
-        return [get_compression_algorithm(compression_config)(compression_config, should_init=should_init), ]
-    retval = []
-    for algo_config in compression_config_json_section:
-        algo_config = NNCFConfig(algo_config)
-        algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        algo_config["hw_config_type"] = hw_config_type
-        algo_config['quantizer_setup_type'] = quantizer_setup_type
-        retval.append(get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
-    return retval
-
-
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            dump_graphs=True,) \
-    -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+                            dump_graphs=True, ) \
+    -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -121,8 +89,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             graph = graph_builder.build_graph(model)
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "original_graph.dot"))
 
-    if is_debug():
-        set_debug_log_dir(config.get("log_dir", "."))
+    set_debug_log_dir(config.get("log_dir", "."))
 
     input_info_list = create_input_infos(config)
     scopes_without_shape_matching = config.get('scopes_without_shape_matching', [])
@@ -137,17 +104,16 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
     should_init = resuming_state_dict is None
-    compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    composite_builder.apply_to(compressed_model)
 
-    for builder in compression_algo_builder_list:
-        compressed_model = builder.apply_to(compressed_model)
     compression_ctrl = compressed_model.commit_compression_changes()
 
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
     finally:
-        if dump_graphs and is_main_process() and compression_algo_builder_list:
+        if dump_graphs and is_main_process() and composite_builder:
             if dummy_forward_fn is None:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=
                                                         create_dummy_forward_fn(input_info_list,

@@ -25,7 +25,7 @@ from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
 from nncf.layers import ITERATION_MODULES
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 # pylint: disable=too-many-public-methods
@@ -298,15 +298,6 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         super().__init__(node_id_to_key_dict, nx_graph, nx_node_to_nncf_node)
         self._first_iteration_nodes = {}  # type: {str: {str: NNCFNode}}
 
-    @staticmethod
-    def _get_iteration_scopes(scope: 'Scope') -> List[str]:
-        results = []
-        scope_name = str(scope)
-        for iter_scope in ITERATION_MODULES.registry_dict:
-            if iter_scope in scope_name:
-                results.append(iter_scope)
-        return results
-
     def save_first_iteration_node(self, inputs, node: NNCFNode):
         """
         It finds and saves "starting" points of iteration for further matching with them on next iteration,
@@ -316,7 +307,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         """
         op_exec_context = node.op_exec_context
         name = node
-        iter_scopes = self._get_iteration_scopes(op_exec_context.scope_in_model)
+        iter_scopes = op_exec_context.scope_in_model.get_iteration_scopes()
         if iter_scopes:
             for iter_scope in iter_scopes:
                 if iter_scope not in self._first_iteration_nodes:
@@ -334,7 +325,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     creator_id = i.tensor_meta.creator_id
                     creator_node = self.get_node_by_id(creator_id)
                     creator_node_op_exec_ctx = creator_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
-                    within_scopes = self._get_iteration_scopes(creator_node_op_exec_ctx.scope_in_model)
+                    within_scopes = creator_node_op_exec_ctx.scope_in_model.get_iteration_scopes()
                     if iter_scope not in within_scopes:
                         has_input_outside_iteration = True
                 if not_traced_count == len(inputs):
@@ -354,7 +345,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                   tensor_metas: List[TensorMeta],
                   tm_comparators: List[TensorMetaComparator]) -> NNCFNode:
         nncf_node_candidates = []
-        iter_scopes = self._get_iteration_scopes(ia_op_exec_context.scope_in_model)
+        iter_scopes = ia_op_exec_context.scope_in_model.get_iteration_scopes()
         # compare meta information about first input nodes during the matching. During the iteration some nodes may
         # change number of inputs, e.g. on concat of hidden outputs
         input_matcher = FirstInputsMatcher()

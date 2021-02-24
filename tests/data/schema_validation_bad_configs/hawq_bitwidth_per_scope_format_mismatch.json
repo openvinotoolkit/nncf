@@ -38,8 +38,8 @@
         "initializer": {
             "precision": {
                 "bitwidth_per_scope": [
-                    ["MobileNetV2/Sequential[features]/InvertedResidual[10]/Sequential[conv]/NNCFConv2d[3]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", 8],
-                    ["MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/NNCFConv2d[3]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", 8]
+                    ["InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[10]/Sequential[conv]/NNCFConv2d[2]", 8],
+                    ["InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[11]/Sequential[conv]/ConvBNReLU[0]/NNCFConv2d[0]", 8],
                 ]
             }
         }

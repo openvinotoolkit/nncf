@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from beta.nncf.api.compression import CompressionAlgorithmInitializer
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmInitializer
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -62,7 +62,7 @@ class MinMaxStatisticsCollector:
         self.call(*args, **kwargs)
 
 
-class MinMaxInitializer(CompressionAlgorithmInitializer):
+class MinMaxInitializer(TFCompressionAlgorithmInitializer):
     def __init__(self, num_steps=100):
         self.num_steps = num_steps
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()

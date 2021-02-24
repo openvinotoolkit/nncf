@@ -18,7 +18,7 @@ from nncf.pruning.utils import get_sources_of_node, is_depthwise_conv, get_previ
 from nncf.pruning.export_helpers import PruningOperationsMetatypeRegistry
 from nncf.pruning.model_analysis import ModelAnalyzer, Clusterization, cluster_special_ops, NodesCluster
 from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.utils import should_consider_scope
 
 
@@ -33,7 +33,6 @@ class PruningNodeSelector:
                  grouping_operations: List[str],
                  ignored_scopes: Optional[List[str]],
                  target_scopes: Optional[List[str]],
-                 ignore_frozen_layers: bool,
                  prune_first: bool,
                  prune_last: bool,
                  prune_downsample_convs: bool):
@@ -47,7 +46,6 @@ class PruningNodeSelector:
         :param grouping_operations: names of operations causing the need to prune connected to them operations together
         :param ignored_scopes: ignored scopes
         :param target_scopes: target scopes
-        :param ignore_frozen_layers: whether to ignore frozen layers or not
         :param prune_first: whether to prune first convolution or not
         :param prune_last: whether to prune last convolution or not
         :param prune_downsample_convs: whether to prune downsample Convolutional layers (with stride > 1) or not
@@ -62,7 +60,6 @@ class PruningNodeSelector:
         self._ignored_scopes = ignored_scopes
         self._target_scopes = target_scopes
 
-        self._ignore_frozen_layers = ignore_frozen_layers
         self._prune_first = prune_first
         self._prune_last = prune_last
         self._prune_downsample_convs = prune_downsample_convs
@@ -180,11 +177,7 @@ class PruningNodeSelector:
         output_non_pruned_nodes = get_last_pruned_nodes(graph, self._prune_operations + ['linear'])
         node_scope_str = str(node.op_exec_context.scope_in_model)
 
-        if self._ignore_frozen_layers and not node.module_attributes.weight_requires_grad:
-            msg = "Ignored adding Weight Pruner in scope: {} because"\
-                    " the layer appears to be frozen (requires_grad=False)".format(node_scope_str)
-            prune = False
-        elif not should_consider_scope(node_scope_str, self._target_scopes, self._ignored_scopes):
+        if not should_consider_scope(node_scope_str, self._target_scopes, self._ignored_scopes):
             msg = "Ignored adding Weight Pruner in scope: {}".format(node_scope_str)
             prune = False
         elif not self._prune_first and node in input_non_pruned_nodes:
@@ -195,11 +188,10 @@ class PruningNodeSelector:
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                              " this scope is one of the last convolutions".format(node_scope_str)
             prune = False
-        elif is_grouped_conv(node):
-            if not is_depthwise_conv(node):
-                msg = "Ignored adding Weight Pruner in scope: {} because" \
-                      " this scope is grouped convolution".format(node_scope_str)
-                prune = False
+        elif is_grouped_conv(node) and not is_depthwise_conv(node):
+            msg = "Ignored adding Weight Pruner in scope: {} because" \
+                  " this scope is grouped convolution".format(node_scope_str)
+            prune = False
         elif not self._prune_downsample_convs and is_conv_with_downsampling(node):
             msg = "Ignored adding Weight Pruner in scope: {} because"\
                              " this scope is convolution with downsample".format(node_scope_str)

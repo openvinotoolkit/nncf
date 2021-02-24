@@ -16,7 +16,9 @@ import torch
 import torch.distributed as dist
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel, StubCompressionScheduler
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
@@ -34,7 +36,7 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, module):
         return RBSparsifyingWeight(module.weight.size(), frozen=False)
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         params = self.config.get("params", {})
         sparsity_init = self.config.get("sparsity_init", 0)
         return RBSparsityController(target_model, self._sparsified_module_info,
@@ -54,7 +56,7 @@ class RBSparsityController(BaseSparsityAlgoController):
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsify_operations)
-            self._scheduler = StubCompressionScheduler()
+            self._scheduler = PTStubCompressionScheduler()
         else:
             self._loss = SparseLoss(sparsify_operations)  # type: SparseLoss
             schedule_type = params.get("schedule", "exponential")
@@ -126,7 +128,7 @@ class RBSparsityController(BaseSparsityAlgoController):
     def set_sparsity_level_for_module(self, sparsity_level: float,
                                       target_sparsified_module_info: List[SparseModuleInfo]):
         sparse_op = target_sparsified_module_info[0].operand
-        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op)
+        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op) # pylint: disable=E1101
 
     def get_sparsity_init(self):
         return self.sparsity_init

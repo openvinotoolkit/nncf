@@ -21,7 +21,7 @@ from torch import distributed
 
 from nncf.debug import is_debug
 from nncf.functions import clamp
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
     get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from ..layer_utils import COMPRESSION_MODULES

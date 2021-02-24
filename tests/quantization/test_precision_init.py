@@ -12,11 +12,15 @@
 """
 import itertools
 import json
-from collections import namedtuple, OrderedDict
-from pathlib import Path
-from typing import Callable, NamedTuple, List, Dict
-
 import math
+from collections import OrderedDict
+from collections import namedtuple
+from pathlib import Path
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import NamedTuple
+
 import os
 import pytest
 import torch
@@ -25,40 +29,57 @@ import torch.utils.data
 from functools import partial
 from random import random
 from torch.utils import model_zoo
-from torchvision.models import MobileNetV2, mobilenet_v2, resnet50, inception_v3
+from torchvision.models import MobileNetV2
+from torchvision.models import inception_v3
+from torchvision.models import mobilenet_v2
+from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
 from examples.classification.main import create_cifar
 from examples.common.model_loader import load_model
 from examples.common.sample_config import SampleConfig
 from examples.object_detection.models.ssd_vgg import SSD_VGG
-from nncf import register_default_init_args, NNCFConfig
+from nncf import NNCFConfig
+from nncf import register_default_init_args
 from nncf.checkpoint_loading import load_state
 from nncf.debug import set_debug_log_dir
-from nncf.dynamic_graph.context import Scope, ScopeElement
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.context import ScopeElement
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
-from nncf.quantization.structs import QuantizerSetupType
 from nncf.quantization.hessian_trace import HessianTraceEstimator
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.layers import QuantizersSwitcher
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.quantization.layers import QUANTIZATION_MODULES, QuantizersSwitcher, QuantizerConfig
+from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
-from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode, HAWQPrecisionInitializer, \
-    TraceOrderBitwidthMatcher
-from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
-from nncf.quantization.precision_init.perturbations import PerturbationObserver, Perturbations
-from nncf.quantization.precision_init.traces_order import TracesOrder, TracesPerLayer
+from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
+from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
+from nncf.quantization.precision_init.hawq_init import TraceOrderBitwidthMatcher
+from nncf.quantization.precision_init.perturbations import PerturbationObserver
+from nncf.quantization.precision_init.perturbations import Perturbations
+from nncf.quantization.precision_init.traces_order import TracesOrder
+from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.quantization.quantizer_id import WeightQuantizerId
+from nncf.quantization.structs import QuantizerSetupType
 from nncf.structures import QuantizationPrecisionInitArgs
-from nncf.utils import get_all_modules_by_type, safe_thread_call
-from tests.conftest import TEST_ROOT, EXAMPLES_DIR
-from tests.helpers import create_compressed_model_and_algo_for_test, create_conv, \
-    create_mock_dataloader, BasicConvTestModel
-from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
-    get_quantization_config_without_range_init, distributed_init_test_default, post_compression_test_distr_init, \
-    get_squeezenet_quantization_config, create_rank_dataloader
+from nncf.utils import get_all_modules_by_type
+from nncf.utils import safe_thread_call
+from tests.conftest import EXAMPLES_DIR
+from tests.conftest import TEST_ROOT
+from tests.helpers import BasicConvTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_conv
+from tests.helpers import create_mock_dataloader
+from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump
+from tests.quantization.test_quantization_helpers import create_rank_dataloader
+from tests.quantization.test_quantization_helpers import distributed_init_test_default
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.quantization.test_quantization_helpers import get_squeezenet_quantization_config
+from tests.quantization.test_quantization_helpers import post_compression_test_distr_init
 from tests.test_compressed_graph import check_graph
 
 # pylint:disable=unused-import
@@ -305,7 +326,7 @@ HAWQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator()
+    model = params.model_creator().cuda()
 
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
@@ -319,7 +340,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     # There may be less traces required to be calculated during HAWQ than there are weightable layers.
     def side_effect_fn(self, max_iter=500, tolerance=1e-5):
-        #pylint:disable=protected-access
+        # pylint:disable=protected-access
         return pregen_traces_for_all_layers[:len(self._parameter_handler.parameters)]
 
     mocked_trace.side_effect = side_effect_fn
@@ -424,7 +445,7 @@ AUTOQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', AUTOQ_TEST_PARAMS, ids=[str(p) for p in AUTOQ_TEST_PARAMS])
 def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator()
+    model = params.model_creator().cuda()
     config['log_dir'] = str(tmp_path)
 
     if not dataset_dir:
@@ -681,39 +702,117 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(config_builder
     assert not compare_multi_gpu_dump(config, tmp_path, get_path_to_bitwidth_dump)
 
 
-ManualConfigTestParams = namedtuple('ManualConfigTestParams', ('config_name', 'bit_stats'))
+class ManualConfigTestParamsBase:
+    def __init__(self, name: str, bit_stats: List[List[str]]):
+        self.name = name
+        self.nncf_config = self._get_nncf_config()
+        self.bit_stats = bit_stats
+        self.model = load_model(self.nncf_config['model'], pretrained=False)
+
+    def _get_config_path(self):
+        raise NotImplementedError
+
+    def _get_nncf_config(self):
+        config_path = self._get_config_path()
+        return NNCFConfig.from_json(str(config_path))
+
+
+class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
+    def _get_config_path(self):
+        return EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / self.name
+
+
+class ManualTestConfigTestParams(ManualConfigTestParamsBase):
+    def _get_config_path(self):
+        return TEST_ROOT.joinpath('data', 'configs', 'hawq') / self.name
+
+
 MANUAL_CONFIG_TEST_PARAMS = [
-    ManualConfigTestParams(config_name="mobilenet_v2_imagenet_mixed_int_manual.json",
-                           bit_stats=[['8', '23.077', '23.932', '47.009'],
-                                      ['4', '22.222', '30.769', '52.991']]),
-    ManualConfigTestParams(config_name="resnet50_imagenet_mixed_int_manual.json",
-                           bit_stats=[['8', '21.600', '23.200', '44.800'],
-                                      ['4', '21.600', '33.600', '55.200']]),
-    ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual.json",
-                           bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                      ['4', '24.528', '20.755', '45.283']]),
-    ManualConfigTestParams(config_name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
-                           bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                      ['4', '24.528', '20.755', '45.283']])
+    ManualSampleConfigTestParams(name="mobilenet_v2_imagenet_mixed_int_manual.json",
+                                 bit_stats=[['8', '23.077', '23.932', '47.009'],
+                                            ['4', '22.222', '30.769', '52.991']]),
+    ManualSampleConfigTestParams(name="mobilenet_v2_imagenet_mixed_int_manual_staged.json",
+                                 bit_stats=[['8', '23.077', '24.786', '47.863'],
+                                            ['4', '22.222', '29.915', '52.137']]),
+    ManualSampleConfigTestParams(name="resnet50_imagenet_mixed_int_manual.json",
+                                 bit_stats=[['8', '21.600', '23.200', '44.800'],
+                                            ['4', '21.600', '33.600', '55.200']]),
+    ManualSampleConfigTestParams(name="resnet50_imagenet_mixed_int_manual_staged.json",
+                                 bit_stats=[['8', '21.600', '28.000', '49.600'],
+                                            ['4', '21.600', '28.800', '50.400']]),
+    ManualSampleConfigTestParams(name="squeezenet1_1_imagenet_mixed_int_manual.json",
+                                 bit_stats=[['8', '24.528', '30.189', '54.717'],
+                                            ['4', '24.528', '20.755', '45.283']]),
+    ManualSampleConfigTestParams(name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
+                                 bit_stats=[['8', '24.528', '30.189', '54.717'],
+                                            ['4', '24.528', '20.755', '45.283']]),
+    ManualTestConfigTestParams(name='resnet18_cifar10_mixed_int_manual.json',
+                               bit_stats=[['8', '27.907', '25.581', '53.488'],
+                                          ['2', '18.605', '0', '18.605'],
+                                          ['4', '2.326', '25.581', '27.907']])
 ]
 
 
 @pytest.mark.parametrize('manual_config_params', MANUAL_CONFIG_TEST_PARAMS,
-                         ids=[pair[0] for pair in MANUAL_CONFIG_TEST_PARAMS])
+                         ids=[p.name for p in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
-    config_name, bit_stats = manual_config_params
-    config_path = EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / config_name
-    config = NNCFConfig.from_json(str(config_path))
-    config['quantizer_setup_type'] = 'pattern_based'
+    config = manual_config_params.nncf_config
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
-    model = load_model(config['model'], pretrained=False)
-    model.eval()
+    model = manual_config_params.model
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
     # pylint: disable=protected-access
-    assert table._rows == bit_stats
+    assert table._rows == manual_config_params.bit_stats
+
+
+class ManualSingleConvTestParams:
+    ACTIVATION_SCOPE = 'InsertionType.OPERATOR_POST_HOOK /nncf_model_input_0'
+
+    def __init__(self, name: str):
+        self.name = name
+        self.nncf_config = get_quantization_config_without_range_init()
+        self.expects_error = False
+        self.model = BasicConvTestModel()
+
+    def for_device(self, target_device):
+        self.nncf_config['target_device'] = target_device
+        return self
+
+    def raises_error(self):
+        self.expects_error = True
+        return self
+
+    def num_bits_for_activation(self, num_bits):
+        self.nncf_config['compression']['initializer'].update(
+            {"precision": {"bitwidth_per_scope": [[num_bits, self.ACTIVATION_SCOPE]]}}
+        )
+        return self
+
+
+MANUAL_SINGLE_CONV_TEST_PARAMS = [
+    ManualSingleConvTestParams(name='manual_init_multiple_int8_qconfigs').for_device('CPU').num_bits_for_activation(8),
+    ManualSingleConvTestParams(name='manual_init_int4_sym_int8_asym').for_device('VPU').num_bits_for_activation(4),
+    ManualSingleConvTestParams(name='manual_init_trial').for_device('TRIAL').num_bits_for_activation(4),
+    ManualSingleConvTestParams(name='incompatible_bitwidth').for_device('VPU').num_bits_for_activation(2).raises_error()
+]
+
+
+@pytest.mark.parametrize('params', MANUAL_SINGLE_CONV_TEST_PARAMS,
+                         ids=[p.name for p in MANUAL_SINGLE_CONV_TEST_PARAMS])
+def test_manual_single_conv(params):
+    config = params.nncf_config
+    model = params.model
+
+    if params.expects_error:
+        with pytest.raises(ValueError):
+            create_compressed_model_and_algo_for_test(model, config)
+    else:
+        model, ctrl = create_compressed_model_and_algo_for_test(model, config)
+        path_to_dot = '{}.dot'.format(params.name)
+        graph_dir = os.path.join('quantized', 'hawq')
+        check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir)
 
 
 @pytest.mark.parametrize(('method_name', 'expected_behavior'),
@@ -814,8 +913,8 @@ def test_quantization_configs__with_precisions_list():
     config['compression']['initializer'].update({
         "precision": {
             "bitwidth_per_scope":
-                [[2, 'ModelForTest/NNCFConv2d[conv1]'],
-                 [4, 'ModelForTest/NNCFConv2d[conv2]']]
+                [[2, 'InsertionType.NNCF_MODULE_PRE_OP ModelForTest/NNCFConv2d[conv1]'],
+                 [4, 'InsertionType.NNCF_MODULE_PRE_OP ModelForTest/NNCFConv2d[conv2]']]
         }})
     config['compression']["activations"] = {"bits": 6}
     config['quantizer_setup_type'] = 'pattern_based'

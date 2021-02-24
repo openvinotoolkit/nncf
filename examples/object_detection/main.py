@@ -20,6 +20,7 @@ from pathlib import Path
 import torch
 import torch.utils.data as data
 
+from examples.common import restricted_pickle_module
 from examples.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -260,7 +261,8 @@ def create_model(config: SampleConfig, resuming_model_sd: dict = None):
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get('weights')
     if weights:
-        sd = torch.load(weights, map_location='cpu')
+        sd = torch.load(weights, map_location='cpu',
+                        pickle_module=restricted_pickle_module)
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)

@@ -10,13 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Set, List, Dict
+from typing import Dict
+from typing import List
+from typing import Set
 
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_network import InsertionPoint, NNCFNetwork, InsertionCommand, OperationPriority, InsertionType
-from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape
+from nncf.nncf_network import InsertionCommand
+from nncf.nncf_network import InsertionPoint
+from nncf.nncf_network import InsertionType
+from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import OperationPriority
+from nncf.tensor_statistics.collectors import ReductionShape
+from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
 class TensorStatisticObservationPoint:
@@ -32,7 +41,7 @@ class TensorStatisticObservationPoint:
         return self.insertion_point == other.insertion_point
 
 
-class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
+class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig,
                  observation_points_vs_collectors: Dict[TensorStatisticObservationPoint,
                                                         TensorStatisticCollectorBase]):
@@ -60,8 +69,11 @@ class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
                                                     {k.insertion_point: v
                                                      for k, v in self._observation_points_vs_collectors.items()})
 
+    def _handle_frozen_layers(self):
+        pass
 
-class TensorStatisticsCollectionController(CompressionAlgorithmController):
+
+class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  ip_vs_collector_dict: Dict[InsertionPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)

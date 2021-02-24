@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from beta.nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from nncf.api.composite_compression import CompositeCompressionAlgorithmController
 from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatistics
 from beta.nncf.tensorflow.sparsity.callbacks import UpdateMask
 from beta.nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController

@@ -13,6 +13,7 @@
 
 from collections import OrderedDict
 from enum import Enum
+from pathlib import Path
 from typing import Type, List, Dict, Set, Optional
 
 import addict as ad
@@ -24,6 +25,7 @@ from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config_op_names import HWConfigOpName
 from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
+from nncf.common.os import safe_open
 
 
 class HWConfigType(Enum):
@@ -124,7 +126,8 @@ class HWConfig(list):
 
     @classmethod
     def from_json(cls, path):
-        with open(path) as f:
+        file_path = Path(path).resolve()
+        with safe_open(file_path) as f:
             json_config = json.load(f, object_pairs_hook=OrderedDict)
             return HWConfig.from_dict(json_config)
 

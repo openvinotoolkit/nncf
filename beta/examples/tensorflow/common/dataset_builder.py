@@ -95,7 +95,7 @@ class BaseDatasetBuilder(ABC):
         return dataset
 
     def _load_tfds(self):
-        logger.info('Using TFDS to load data.')
+        logger.info('Using TFDS to load {} data.'.format(self._split))
 
         set_hard_limit_num_open_files()
 
@@ -121,7 +121,7 @@ class BaseDatasetBuilder(ABC):
         return dataset
 
     def _load_tfrecords(self):
-        logger.info('Using TFRecords to load data')
+        logger.info('Using TFRecords to load {} data.'.format(self._split))
 
         dataset_key = self._dataset_name.replace('/', '')
         if dataset_key in self._tfrecord_datasets:

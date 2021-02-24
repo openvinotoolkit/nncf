@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -16,9 +16,8 @@ import sys
 
 NNCF_LOGGER_NAME = "nncf"
 
-root = logging.RootLogger(logging.WARNING)
-manager = logging.Manager(root)
-logger = manager.getLogger(NNCF_LOGGER_NAME)
+logger = logging.getLogger(NNCF_LOGGER_NAME)
+logger.propagate = False
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 fmt = logging.Formatter("%(levelname)s:%(name)s:%(message)s")

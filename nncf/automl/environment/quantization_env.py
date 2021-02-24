@@ -33,7 +33,7 @@ from collections import OrderedDict
 from natsort import natsorted
 
 from nncf.debug import is_debug, DEBUG_LOG_DIR
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer
@@ -46,6 +46,7 @@ from nncf.quantization.layers import QuantizerConfig
 from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.os import safe_open
 
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
@@ -170,7 +171,22 @@ class QuantizationEnv:
                 self.qconfig_space_map[qid] = conf_list_to_set
         else:
             for qid in self.qconfig_space_map:
-                self.qconfig_space_map[qid] = self._hw_precision_constraints.get(qid)
+                conf_list_to_set = []
+                bw_vs_qconfigs_dict = self._hw_precision_constraints.get_bitwidth_vs_qconfigs_dict(qid)
+                for bitwidth, qconf_list in bw_vs_qconfigs_dict.items():
+                    target_qconf = qconf_list[0]
+                    if len(qconf_list) > 1:
+                        logger.warning("Received multiple quantizer configurations {qc_lst} for same bitwidth {bw} "
+                                       "for quantizer {q} - AutoQ can currently only choose among bitwidths, but not "
+                                       "within quantizer configuration space with the same bitwidths. Selecting {qc} "
+                                       "as the target configuration for bitwidth {bw}".format(
+                            qc_lst=";".join([str(qconf) for qconf in qconf_list]),
+                            bw=bitwidth,
+                            q=str(qid),
+                            qc=str(target_qconf)))
+                    conf_list_to_set.append(target_qconf)
+
+                self.qconfig_space_map[qid] = conf_list_to_set
 
         # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
@@ -604,6 +620,5 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with open(osp.join(self.dump_dir,
-                           self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
+        with safe_open(self.dump_dir / self.model_name / "_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)

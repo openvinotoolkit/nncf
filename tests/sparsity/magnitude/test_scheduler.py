@@ -40,22 +40,18 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.1)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.219, 0.01)
-    assert scheduler.prev_ind == 0
 
     scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.5)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.243, 0.01)
-    assert scheduler.prev_ind == 1
 
     scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.5)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.243, 0.01)
-    assert scheduler.prev_ind == 1
 
     scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.9)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
-    assert scheduler.prev_ind == 2
 
 
 def test_magnitude_scheduler_can_do_epoch_step__with_last():
@@ -65,12 +61,10 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
     scheduler = compression_ctrl.scheduler
 
     scheduler.epoch_step(3)
-    assert scheduler.prev_ind == 2
     assert scheduler.current_sparsity_level == 0.9
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
 
     scheduler.epoch_step()
-    assert scheduler.prev_ind == 2
     assert scheduler.current_sparsity_level == 0.9
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
 

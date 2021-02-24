@@ -16,7 +16,10 @@
                     "symmetric",
                     "asymmetric"
                 ],
-                "granularity": "perchannel"
+                "granularity": [
+                    "perchannel",
+                    "pertensor"
+                ]
             },
             "q8_w_sym": {
                 "bits": 8,

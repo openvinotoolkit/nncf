@@ -14,18 +14,18 @@
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from beta.nncf.api.compression import CompressionAlgorithmBuilder
-from beta.nncf.api.compression import CompressionAlgorithmController
+from nncf.common.graph.transformations.commands import TransformationPriority
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
-from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
-from beta.nncf.tensorflow.graph.transformations.commands import InsertionCommand
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import LayerWeightOperation
-from beta.nncf.tensorflow.graph.transformations.commands import RemovalCommand
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationPriority
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
+from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
@@ -37,7 +37,7 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.utils.utils import is_ignored
+from beta.nncf.tensorflow.utils.node import is_ignored
 
 
 PRUNING_LAYERS = {
@@ -57,14 +57,14 @@ PRUNING_LAYERS = {
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
-class MagnitudeSparsityBuilder(CompressionAlgorithmBuilder):
+class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
         shared_nodes = set()
 
         for node_name, node in nxmodel.nodes.items():
@@ -79,8 +79,8 @@ class MagnitudeSparsityBuilder(CompressionAlgorithmBuilder):
 
             weight_attr_name = PRUNING_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
-                InsertionCommand(
-                    target_point=LayerWeight(original_node_name, weight_attr_name),
+                TFInsertionCommand(
+                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
                     callable_object=BinaryMask(),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
@@ -92,22 +92,22 @@ class MagnitudeSparsityBuilder(CompressionAlgorithmBuilder):
                         and not is_ignored(node_name, self.ignored_scopes):
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     transformations.register(
-                        InsertionCommand(
-                            target_point=LayerWeight(layer.name, weight_attr_name),
+                        TFInsertionCommand(
+                            target_point=TFLayerWeight(layer.name, weight_attr_name),
                             callable_object=BinaryMaskWithWeightsBackup(weight_attr_name),
                             priority=TransformationPriority.SPARSIFICATION_PRIORITY
                         ))
 
         return transformations
 
-    def build_controller(self, model) -> CompressionAlgorithmController:
+    def build_controller(self, model) -> TFCompressionAlgorithmController:
         """
         Should be called once the compressed model target_model is fully constructed
         """
         return MagnitudeSparsityController(model, self.config.get('params', {}))
 
 
-class MagnitudeSparsityController(CompressionAlgorithmController):
+class MagnitudeSparsityController(TFCompressionAlgorithmController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
@@ -127,7 +127,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
             raise ValueError(
                 'Expected model to be a `tf.keras.Model` instance but got: ', model)
 
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
 
         for layer in model.layers:
             if isinstance(layer, NNCFWrapper):
@@ -138,14 +138,14 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
                         self._apply_mask(layer, weight_attr, op_name)
 
                         transformations.register(
-                            RemovalCommand(
-                                target_point=LayerWeightOperation(
+                            TFRemovalCommand(
+                                target_point=TFOperationWithWeights(
                                     layer.name,
                                     weights_attr_name=weight_attr,
                                     operation_name=op_name)
                             ))
 
-        return ModelTransformer(model, transformations).transform()
+        return TFModelTransformer(model, transformations).transform()
 
     def freeze(self):
         self.frozen = True
@@ -187,7 +187,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
 
                 for op_name, op in ops.items():
                     if isinstance(op, BinaryMask):
-                        wrapped_layer.ops_weights[op_name].assign(
+                        wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
                                                        self.weight_importance,
                                                        threshold_val)
@@ -204,7 +204,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
                             [-1]))
         return all_weights
 
-    def statistics(self):
+    def statistics(self, quickly_collected_only=False):
         raw_sparsity_statistics = self.raw_statistics()
         return convert_raw_to_printable(raw_sparsity_statistics)
 
@@ -224,7 +224,7 @@ class MagnitudeSparsityController(CompressionAlgorithmController):
                     if isinstance(op, BinaryMaskWithWeightsBackup):
                         total_bkup_weights_number += tf.size(op.bkup_var)
                     if isinstance(op, BinaryMask):
-                        mask = wrapped_layer.ops_weights[op_name]
+                        mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))
                         weights_number = tf.size(mask)

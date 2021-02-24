@@ -393,7 +393,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 55
+    assert onnx_num == 54
 
 
 class TestNumberOfNodes:
@@ -430,19 +430,25 @@ class TestNumberOfNodes:
 
         counters = {}
         counter_for_input_quantizer = None
+        inter_layer_reset_point_post_aq_counters = {}
         for name, quantizer in algo.all_quantizations.items():
             counter = Counter()
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
             if str(name) == '/nncf_model_input_0|OUTPUT':
                 counter_for_input_quantizer = counter
                 continue
+            if 'RNNResetPoint' in str(name):
+                inter_layer_reset_point_post_aq_counters[name] = counter
+                continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 112  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 1 == 55 # 8 WQ + 46 AQ + 1 input AQ
+        assert model.get_graph().get_nodes_count() == 111  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1
+        for counter in inter_layer_reset_point_post_aq_counters.values():
+            assert counter.count == 1
 
 
     def test_number_of_calling_fq_for_gnmt(self):

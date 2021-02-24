@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,133 +11,74 @@
  limitations under the License.
 """
 
-from beta.nncf.utils.ordered_enum import OrderedEnum
+from typing import Any, Callable, List, Optional
+
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.commands import TransformationType
 
 
-class TransformationPriority(OrderedEnum):
-    DEFAULT_PRIORITY = 0
-    SPARSIFICATION_PRIORITY = 2
-    QUANTIZATION_PRIORITY = 11
-    PRUNING_PRIORITY = 1
-
-
-class TransformationType(OrderedEnum):
-    INSERT = 0
-    MULTI_INSERT = 1
-    REMOVE = 2
-
-
-class TargetType(OrderedEnum):
-    LAYER = 0
-    BEFORE_LAYER = 1
-    AFTER_LAYER = 2
-    WEIGHT_OPERATION = 3
-
-
-class TargetPoint:
+class TFLayerPoint(TargetPoint):
     """
-    The base class for all TargetPoints
-
-    TargetPoint specifies the object in the model graph to which the
-    transformation command will be applied. It can be layer, weight and etc.
+    `TFLayerPoint` defines an object or spot relative to the layer in the
+    TensorFlow model graph. It can be the layer itself, layer weights, specific
+    spots in the model graph, for example, insertion spots before/after layer
+    and etc.
     """
-    def __init__(self, target_type):
-        """
-        Constructor
 
-        :param target_type: target point type
-        """
-        self._target_type = target_type
-
-    @property
-    def type(self):
-        return self._target_type
-
-    def __eq__(self, other):
-        if self.__class__ is other.__class__:
-            return self.type == other.type
-        return False
-
-    def __str__(self):
-        return str(self.type)
-
-    def __hash__(self):
-        return hash(str(self))
-
-
-class TransformationCommand:
-    """
-    The base class for all transformation commands
-    """
-    def __init__(self, command_type, target_point):
-        """
-        Constructor
-
-        :param command_type: transformation command type
-        :param target_point: target point, the object in the model
-        to which the transformation command will be applied.
-        """
-        self._command_type = command_type
-        self._target_point = target_point
-
-    @property
-    def type(self):
-        return self._command_type
-
-    @property
-    def target_point(self):
-        return self._target_point
-
-    def check_command_compatibility(self, command):
-        return self.__class__ == command.__class__ and \
-               self.type == command.type and \
-               self.target_point == command.target_point
-
-    def union(self, other):
-        pass
-
-    def __add__(self, other):
-        return self.union(other)
-
-
-class LayerPoint(TargetPoint):
-    def __init__(self, target_type, layer_name):
+    def __init__(self, target_type: TargetType, layer_name: str):
         super().__init__(target_type)
         self._layer_name = layer_name
 
     @property
-    def layer_name(self):
+    def layer_name(self) -> str:
         return self._layer_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if self.__class__ is other.__class__:
             return self.type == other.type and self.layer_name == other.layer_name
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return super().__str__() + ' ' + self.layer_name
 
 
-class Layer(LayerPoint):
-    def __init__(self, layer_name):
+class TFLayer(TFLayerPoint):
+    """
+    `TFLayer` defines a layer in the TensorFlow model graph.
+
+    For example, `TFLayer` is used to specify the layer in the removal command
+    to remove from the model.
+    """
+
+    def __init__(self, layer_name: str):
         super().__init__(TargetType.LAYER, layer_name)
 
 
-class BeforeLayer(LayerPoint):
-    def __init__(self, layer_name, instance_index=0, in_port=0):
+class TFBeforeLayer(TFLayerPoint):
+    """
+    `TFBeforeLayer` defines a spot before the layer in the TensorFlow model graph.
+
+    For example, `TFBeforeLayer` is used in the insertion commands to specify
+    where the new object should be inserted.
+    """
+
+    def __init__(self, layer_name: str, instance_index: int = 0, in_port: int = 0):
         super().__init__(TargetType.BEFORE_LAYER, layer_name)
         self._instance_index = instance_index
         self._in_port = in_port
 
     @property
-    def instance_index(self):
+    def instance_index(self) -> int:
         return self._instance_index
 
     @property
-    def in_port(self):
+    def in_port(self) -> int:
         return self._in_port
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if self.__class__ is other.__class__:
             return self.type == other.type \
                    and self.layer_name == other.layer_name \
@@ -145,27 +86,34 @@ class BeforeLayer(LayerPoint):
                    and self.in_port == other.in_port
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ' '.join([super().__str__(),
                          self.instance_index,
                          self.in_port])
 
 
-class AfterLayer(LayerPoint):
-    def __init__(self, layer_name, instance_index=0, out_port=0):
+class TFAfterLayer(TFLayerPoint):
+    """
+    `TFAfterLayer` defines a spot after the layer in the TensorFlow model graph.
+
+    For example, `TFAfterLayer` is used in the insertion commands to specify
+    where the new object should be inserted.
+    """
+
+    def __init__(self, layer_name: str, instance_index: int = 0, out_port: int = 0):
         super().__init__(TargetType.AFTER_LAYER, layer_name)
         self._instance_index = instance_index
         self._out_port = out_port
 
     @property
-    def instance_index(self):
+    def instance_index(self) -> int:
         return self._instance_index
 
     @property
-    def out_port(self):
+    def out_port(self) -> int:
         return self._out_port
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if self.__class__ is other.__class__:
             return self.type == other.type \
                    and self.layer_name == other.layer_name \
@@ -173,42 +121,56 @@ class AfterLayer(LayerPoint):
                    and self._out_port == other.out_port
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ' '.join([super().__str__(),
                          self.instance_index,
                          self.out_port])
 
 
-class LayerWeight(LayerPoint):
-    def __init__(self, layer_name, weights_attr_name):
-        super().__init__(TargetType.WEIGHT_OPERATION, layer_name)
+class TFLayerWeight(TFLayerPoint):
+    """
+    `TFLayerWeight` defines the layer weights.
+
+    For example, `TFLayerWeight` is used in the insertion command to specify
+    the layer weights for which an operation with weights should be inserted.
+    """
+
+    def __init__(self, layer_name: str, weights_attr_name: str):
+        super().__init__(TargetType.OPERATION_WITH_WEIGHTS, layer_name)
         self._weights_attr_name = weights_attr_name
 
     @property
-    def weights_attr_name(self):
+    def weights_attr_name(self) -> str:
         return self._weights_attr_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if self.__class__ is other.__class__:
             return self.type == other.type and \
                    self.layer_name == other.layer_name and \
                    self.weights_attr_name == other.weights_attr_name
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return super().__str__() + ' ' + self.weights_attr_name
 
 
-class LayerWeightOperation(LayerWeight):
-    def __init__(self, layer_name, weights_attr_name, operation_name):
+class TFOperationWithWeights(TFLayerWeight):
+    """
+    `TFOperationWithWeights` defines an operation with weights.
+
+    For example, `TFOperationWithWeights` is used to specify the operation with
+    weights in the removal command to remove from the model.
+    """
+
+    def __init__(self, layer_name: str, weights_attr_name: str, operation_name: str):
         super().__init__(layer_name, weights_attr_name)
         self._operation_name = operation_name
 
     @property
-    def operation_name(self):
+    def operation_name(self) -> str:
         return self._operation_name
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if self.__class__ is other.__class__:
             return self.type == other.type and \
                    self.layer_name == other.layer_name and \
@@ -216,12 +178,19 @@ class LayerWeightOperation(LayerWeight):
                    self.operation_name == other.operation_name
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return super().__str__() + ' ' + self.operation_name
 
 
-class InsertionCommand(TransformationCommand):
-    def __init__(self, target_point, callable_object=None, priority=None):
+class TFInsertionCommand(TransformationCommand):
+    """
+    Inserts objects at the target point in the TensorFlow model graph.
+    """
+
+    def __init__(self,
+                 target_point: TargetPoint,
+                 callable_object: Optional[Callable] = None,
+                 priority: Optional[TransformationPriority] = None):
         super().__init__(TransformationType.INSERT, target_point)
         self.callable_objects = []
         if callable_object is not None:
@@ -230,85 +199,98 @@ class InsertionCommand(TransformationCommand):
             self.callable_objects.append((callable_object, _priority))
 
     @property
-    def insertion_objects(self):
+    def insertion_objects(self) -> List[Callable]:
         return [x for x, _ in self.callable_objects]
 
-    def union(self, other):
+    def union(self, other: TransformationCommand) -> 'TFInsertionCommand':
         if not self.check_command_compatibility(other):
             raise ValueError('{} and {} commands could not be united'.format(
                 type(self).__name__, type(other).__name__))
 
-        com = InsertionCommand(self.target_point)
+        com = TFInsertionCommand(self.target_point)
         com.callable_objects = self.callable_objects + other.callable_objects
         com.callable_objects = sorted(com.callable_objects, key=lambda x: x[1])
         return com
 
 
-class RemovalCommand(TransformationCommand):
-    def __init__(self, target_point):
+class TFRemovalCommand(TransformationCommand):
+    """
+    Removes the target object.
+    """
+
+    def __init__(self, target_point: TargetPoint):
         super().__init__(TransformationType.REMOVE, target_point)
 
+    def union(self, other: TransformationCommand) -> 'TFRemovalCommand':
+        raise NotImplementedError('A command of TFRemovalCommand type '
+                                  'could not be united with another command')
 
-class MultipleInsertionCommands(TransformationCommand):
-    def __init__(self, target_point, check_target_point_fn=None, commands=None):
+
+class TFMultipleInsertionCommands(TransformationCommand):
+    """
+    A list of insertion commands combined by a common global target point but
+    with different target points in between.
+
+    For example, If a layer has multiple weight variables you can use this
+    transformation command to insert operations with weights for each layer
+    weights variable at one multiple insertion command.
+    """
+
+    def __init__(self,
+                 target_point: TargetPoint,
+                 check_target_points_fn: Optional[Callable] = None,
+                 commands: Optional[List[TransformationCommand]] = None):
         super().__init__(TransformationType.MULTI_INSERT, target_point)
-        self.check_target_point_fn = self.check_target_point \
-            if check_target_point_fn is None else check_target_point_fn
+        self.check_target_points_fn = check_target_points_fn
+        if check_target_points_fn is None:
+            self.check_target_points_fn = lambda tp0, tp1: tp0 == tp1
         self._commands = []
-        for cmd in commands:
-            self.add_insertion_command(cmd)
+        if commands is not None:
+            for cmd in commands:
+                self.add_insertion_command(cmd)
 
     @property
-    def commands(self):
+    def commands(self) -> List[TransformationCommand]:
         return self._commands
 
-    def check_insertion_command(self, command):
+    def check_insertion_command(self, command: TransformationCommand) -> bool:
         if isinstance(command, TransformationCommand) and \
                 command.type == TransformationType.INSERT and \
-                self.check_target_point_fn(self.target_point, command.target_point):
+                self.check_target_points_fn(self.target_point, command.target_point):
             return True
         return False
 
-    def add_insertion_command(self, command):
+    def add_insertion_command(self, command: TransformationCommand) -> None:
         if not self.check_insertion_command(command):
             raise ValueError('{} command could not be added'.format(
                 type(command).__name__))
 
-        def find_command(target_point):
-            for idx, cmd in enumerate(self.commands):
-                if cmd.target_point == target_point:
-                    return idx
-            return None
-
-        idx = find_command(command.target_point)
-        if idx is None:
-            self.commands.append(command)
+        for idx, cmd in enumerate(self.commands):
+            if cmd.target_point == command.target_point:
+                self.commands[idx] = cmd + command
+                break
         else:
-            self.commands[idx] = self.commands[idx] + command
+            self.commands.append(command)
 
-    def union(self, other):
+    def union(self, other: TransformationCommand) -> 'TFMultipleInsertionCommands':
         if not self.check_command_compatibility(other):
             raise ValueError('{} and {} commands could not be united'.format(
                 type(self).__name__, type(other).__name__))
 
-        def make_check_target_point_fn(fn1, fn2):
-            def check_target_point(tp0, tp1):
-                return fn1(tp0, tp1) and fn2(tp0, tp1)
-            return check_target_point
+        def make_check_target_points_fn(fn1, fn2):
+            def check_target_points(tp0, tp1):
+                return fn1(tp0, tp1) or fn2(tp0, tp1)
+            return check_target_points
 
-        check_target_point_fn = self.check_target_point_fn \
-            if self.check_target_point_fn == other.check_target_point_fn else \
-            make_check_target_point_fn(self.check_target_point_fn, other.check_target_point_fn)
+        check_target_points_fn = self.check_target_points_fn \
+            if self.check_target_points_fn == other.check_target_points_fn else \
+            make_check_target_points_fn(self.check_target_points_fn, other.check_target_points_fn)
 
-        multi_cmd = MultipleInsertionCommands(
+        multi_cmd = TFMultipleInsertionCommands(
             self.target_point,
-            check_target_point_fn,
+            check_target_points_fn,
             self.commands
         )
         for cmd in other.commands:
             multi_cmd.add_insertion_command(cmd)
         return multi_cmd
-
-    @staticmethod
-    def check_target_point(tp0, tp1):
-        return tp0 == tp1

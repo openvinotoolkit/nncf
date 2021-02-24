@@ -35,7 +35,7 @@ from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
 
@@ -533,8 +533,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if len(self._builders) == 1:
             return self._builders[0].build_controller(self)
 
-        from nncf.composite_compression import CompositeCompressionAlgorithmController
-        composite_controller = CompositeCompressionAlgorithmController(self)
+        from nncf.composite_compression import PTCompositeCompressionAlgorithmController
+        composite_controller = PTCompositeCompressionAlgorithmController(self)
         for algo_builder in self._builders:
             composite_controller.add(algo_builder.build_controller(self))
         return composite_controller

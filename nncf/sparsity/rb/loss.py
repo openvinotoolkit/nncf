@@ -13,12 +13,12 @@
 
 import torch
 
-from ...compression_method_api import CompressionLoss
+from nncf.compression_method_api import PTCompressionLoss
 
 
 
 # Actually in responsible to lean density to target value
-class SparseLoss(CompressionLoss):
+class SparseLoss(PTCompressionLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
         super().__init__()
         self._sparse_layers = sparse_layers

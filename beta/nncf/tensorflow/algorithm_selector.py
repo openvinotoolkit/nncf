@@ -11,23 +11,23 @@
  limitations under the License.
 """
 
-from beta.nncf.api.compression import CompressionAlgorithmBuilder
-from beta.nncf.api.compression import CompressionAlgorithmController
-from beta.nncf.tensorflow.graph.transformations.layout import TransformationLayout
-from beta.nncf.utils.logger import logger
+from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 
 
 TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm')
 
 
 @TF_COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithm')
-class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
+class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, _):
         return TransformationLayout()
 
 
-class NoCompressionAlgorithmController(CompressionAlgorithmController):
+class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
     pass
 
 

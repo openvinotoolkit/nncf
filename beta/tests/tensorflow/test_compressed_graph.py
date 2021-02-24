@@ -71,7 +71,7 @@ def check_graph_def(graph_def, graph_path: str):
     with open(graph_path, 'rb') as f:
         expected_graph.ParseFromString(f.read())
 
-    tf.test.assert_equal_graph_def(graph_def, expected_graph)
+    tf.test.assert_equal_graph_def(expected_graph, graph_def)
 
 
 def check_nx_graph(nx_graph: nx.DiGraph, graph_path: str):
@@ -102,6 +102,8 @@ def check_graph(tf_graph: tf.Graph, ref_graph_dir: str, ref_graph_filename: str)
 
     if ref_graph_ext == '.pb':
         graph_def = tf_graph.as_graph_def(add_shapes=True)
+        # remove control edges for a human-readable graph visualization
+        # remove_control_edges(graph_def)
 
         if ref_graph_not_exist:
             tf.io.write_graph(graph_def, graph_dir, ref_graph_filename, as_text=False)
@@ -207,6 +209,17 @@ def keras_model_to_tf_graph(model):
         input_signature.append(tf.TensorSpec(item.shape, item.dtype))
     concrete_function = tf.function(model).get_concrete_function(input_signature)
     return concrete_function.graph
+
+
+def remove_control_edges(graph_def):
+    for node in graph_def.node:
+        inp_names = []
+        for inp in node.input:
+            if '^' not in inp:
+                inp_names.append(inp)
+
+        del node.input[:]
+        node.input.extend(inp_names)
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir):

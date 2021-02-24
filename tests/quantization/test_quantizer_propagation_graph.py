@@ -234,7 +234,7 @@ class TestQuantizerPropagationStateGraph:
     def start_target_accepting_nodes(request):
         return request.param
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_backtrack_propagation_until_accepting_location(self, start_target_accepting_nodes, mock_qp_graph):
         start_ip_node_key = start_target_accepting_nodes[0]
         target_ip_node_key = start_target_accepting_nodes[1]
@@ -266,7 +266,7 @@ class TestQuantizerPropagationStateGraph:
             assert target_ip_node_key not in prop_quant.affected_ip_nodes
         assert accepting_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] == prop_quant
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_clone_propagating_quantizer(self, mock_qp_graph, start_target_nodes):
         start_ip_node_key = start_target_nodes[0]
         target_ip_node_key = start_target_nodes[1]
@@ -320,7 +320,7 @@ class TestQuantizerPropagationStateGraph:
     def start_target_nodes_for_two_quantizers(request):
         return request.param
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_remove_propagating_quantizer(self, mock_qp_graph, start_target_nodes_for_two_quantizers):
         start_ip_node_key_remove = start_target_nodes_for_two_quantizers[0]
         target_ip_node_key_remove = start_target_nodes_for_two_quantizers[1]
