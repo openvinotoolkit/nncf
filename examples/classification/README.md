@@ -11,6 +11,14 @@ This sample demonstrates a DL model compression in case of an image-classificati
 - DataParallel and DistributedDataParallel modes
 - Tensorboard-compatible output
 
+## Installation
+
+To work with the sample you should install the corresponding Python package dependencies
+
+```
+pip install -r examples/requirements.txt
+```
+
 ## Quantize FP32 Pretrained Model
 
 This scenario demonstrates quantization with fine-tuning of MobileNet v2 on the ImageNet dataset.
@@ -30,6 +38,7 @@ To prepare the ImageNet dataset, refer to the following [tutorial](https://githu
     It may take a few epochs to get the baseline accuracy results.
 - Use the `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use the `--resume` flag with the path to a previously saved model to resume training.
+- For Torchvision-supported image classification models, set `"pretrained": true` inside the NNCF config JSON file supplied via `--config` to initialize the model to be compressed with Torchvision-supplied pretrained weights, or, alternatively:
 - Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch.
 
 #### Validate Your Model Checkpoint
