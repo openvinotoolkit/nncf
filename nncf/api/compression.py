@@ -129,7 +129,8 @@ class CompressionScheduler:
 
         :param state: Output of `get_state()` method.
         """
-        self.__dict__.update(state)
+        self.current_step = state['current_step']
+        self.current_epoch = state['current_epoch']
 
     def get_state(self) -> Dict[str, object]:
         """
