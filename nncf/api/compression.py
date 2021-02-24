@@ -131,7 +131,7 @@ class CompressionScheduler:
         """
         self.__dict__.update(state)
 
-    def get_state(self) -> Dict[str, int]:
+    def get_state(self) -> Dict[str, object]:
         """
         Returns the compression scheduler state.
 
