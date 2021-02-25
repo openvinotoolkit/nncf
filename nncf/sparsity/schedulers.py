@@ -15,14 +15,14 @@ import numpy as np
 from bisect import bisect_right
 
 from nncf.common.utils.logger import logger
-from ..algo_selector import Registry
+from nncf.common.utils.registry import Registry
 from nncf.api.compression import CompressionLevel
-from nncf.compression_method_api import PTCompressionScheduler
+from nncf.api.compression import CompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(PTCompressionScheduler):
+class SparsityScheduler(CompressionScheduler):
     def __init__(self, sparsity_algo, params: dict = None):
         super().__init__()
         if params is None:
@@ -88,7 +88,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
                 self._steps_per_epoch = self._steps_in_current_epoch
 
                 # Reset step and epoch step counters
-                next_epoch = -1
+                next_epoch = 0
             if self._steps_in_current_epoch != self._steps_per_epoch and self._steps_in_current_epoch > 0:
                 self._steps_per_epoch = self._steps_in_current_epoch
                 logger.warning("Actual optimizer steps per epoch is different than what is "
@@ -101,8 +101,8 @@ class PolynomialSparseScheduler(SparsityScheduler):
         super().epoch_step(next_epoch)
         self._set_sparsity_level()
 
-    def state_dict(self):
-        sd = super().state_dict()
+    def get_state(self):
+        sd = super().get_state()
         if self._update_per_optimizer_step:
             sd['_steps_per_epoch'] = self._steps_per_epoch
         return sd
@@ -150,6 +150,10 @@ class ExponentialSparsityScheduler(SparsityScheduler):
     def current_sparsity_level(self):
         if self.sparsity_target_epoch == 0:
             return self.sparsity_target
+
+        if self.current_epoch == -1:
+            return self.initial_sparsity
+
         curr_sparsity = 1 - self.a * np.exp(-self.k * self.current_epoch)
         return curr_sparsity if curr_sparsity <= self.sparsity_target else self.sparsity_target
 
@@ -187,8 +191,8 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
             self.current_sparsity_target = min(self.current_sparsity_target + self.decay_step, self.sparsity_target)
         self._set_sparsity_level()
 
-    def state_dict(self):
-        sd = super().state_dict()
+    def get_state(self):
+        sd = super().get_state()
         sd['num_bad_epochs'] = self.num_bad_epochs
         sd['current_sparsity_level'] = self.current_sparsity_level
         return sd

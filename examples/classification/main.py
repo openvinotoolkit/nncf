@@ -178,7 +178,7 @@ def main_worker(current_gpu, config: SampleConfig):
         if config.mode.lower() == 'train' and config.to_onnx is None:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
-            compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
+            compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
@@ -251,7 +251,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
                 'compression_level': compression_level,
                 'acc1': acc1,
                 'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.state_dict()
+                'scheduler': compression_ctrl.scheduler.get_state()
             }
 
             torch.save(checkpoint, checkpoint_path)

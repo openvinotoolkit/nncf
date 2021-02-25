@@ -36,6 +36,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import SummaryWriter
 from beta.examples.tensorflow.common.utils import Timer
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
@@ -114,13 +115,16 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch):
+def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(checkpoint_manager.checkpoint, ckpt_path) == 0:
         return 0
     optimizer = checkpoint_manager.checkpoint.optimizer
     initial_step = optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d (global step %d)', initial_epoch, initial_step)
     return initial_epoch, initial_step
 
@@ -254,7 +258,8 @@ def run_train(config):
                 initial_epoch, initial_step = resume_from_checkpoint(checkpoint_manager,
                                                                      compression_ctrl,
                                                                      config.ckpt_path,
-                                                                     steps_per_epoch)
+                                                                     steps_per_epoch,
+                                                                     config)
             else:
                 logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=calibration_dataset)

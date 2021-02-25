@@ -69,41 +69,6 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         return self.calculate()
 
 
-class PTCompressionScheduler(CompressionScheduler):
-    """
-    Implements the logic of compression method control during the training process.
-    May change the method hyperparameters in regards to the current training step or
-    epoch. For example, the sparsity method can smoothly increase the sparsity rate
-    over several epochs.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._current_epoch = -1
-
-    def epoch_step(self, next_epoch=None):
-        """
-        Should be called before each training epoch.
-        Arguments:
-            `next` - specifies the initial "next" epoch which should be set now
-        """
-        if next_epoch is None:
-            self._current_epoch += 1
-        else:
-            self._current_epoch = next_epoch
-
-    def load_state_dict(self, state_dict):
-        self.__dict__.update(state_dict)
-
-    def state_dict(self):
-        default_keys = {'current_step', '_current_epoch'}
-        return {key: val for key, val in self.__dict__.items() if key in default_keys}
-
-    def __getattribute__(self, name):
-        if name == 'current_epoch':
-            return 0 if self._current_epoch == -1 else self._current_epoch
-        return object.__getattribute__(self, name)
-
 class PTCompressionAlgorithmController(CompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
@@ -120,7 +85,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         """
         super().__init__(target_model)
         self._loss = PTCompressionLoss()
-        self._scheduler = PTCompressionScheduler()
+        self._scheduler = CompressionScheduler()
 
     def distributed(self):
         """

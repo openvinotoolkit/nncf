@@ -21,9 +21,10 @@ from copy import deepcopy
 
 from torchvision.models import resnet50, squeezenet1_1
 
+from nncf.api.compression import CompressionScheduler
 from nncf.checkpoint_loading import load_state
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.compression_method_api import PTCompressionLoss, PTCompressionScheduler
+from nncf.compression_method_api import PTCompressionLoss
 from nncf.dynamic_graph.context import ScopeElement, Scope
 from nncf.hw_config import HWConfigType
 from nncf.layers import NNCFConv2d
@@ -269,7 +270,7 @@ def test_can_create_quant_loss_and_scheduler():
     assert isinstance(loss, PTCompressionLoss)
 
     scheduler = compression_ctrl.scheduler
-    assert isinstance(scheduler, PTCompressionScheduler)
+    assert isinstance(scheduler, CompressionScheduler)
 
 
 def get_path_to_keys(tmp_path, rank):
