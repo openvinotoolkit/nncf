@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from functools import wraps, reduce
 import functools
 import tensorflow as tf
 
@@ -110,12 +109,12 @@ def compose(*funcs):
     Reference: https://mathieularose.com/function-composition-in-python/
     """
     if funcs:
-        return reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
+        return functools.reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
     else:
         raise ValueError('Composition of empty sequence not supported.')
 
 
-@wraps(tf.keras.layers.Conv2D)
+@functools.wraps(tf.keras.layers.Conv2D)
 def YoloConv2D(*args, **kwargs):
     """Wrapper to set Yolo parameters for Conv2D."""
     L2_FACTOR = 1e-5
@@ -125,7 +124,7 @@ def YoloConv2D(*args, **kwargs):
     return tf.keras.layers.Conv2D(*args, **yolo_conv_kwargs)
 
 
-@wraps(YoloConv2D)
+@functools.wraps(YoloConv2D)
 def DarknetConv2D(*args, **kwargs):
     """Wrapper to set Darknet parameters for YoloConv2D."""
     darknet_conv_kwargs = {'padding': 'valid' if kwargs.get('strides')==(2,2) else 'same'}
