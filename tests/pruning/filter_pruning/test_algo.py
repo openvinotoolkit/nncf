@@ -21,7 +21,8 @@ from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_
 from nncf.pruning.schedulers import BaselinePruningScheduler
 from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
     create_mock_dataloader
-from tests.pruning.helpers import gen_ref_masks, get_basic_pruning_config, PruningTestModel, BigPruningTestModel
+from tests.pruning.helpers import gen_ref_masks, get_basic_pruning_config, PruningTestModel, BigPruningTestModel, \
+    TestModelMultipleForward
 
 
 def create_pruning_algo_with_config(config):
@@ -295,3 +296,21 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     assert pruning_algo.current_flops == ref_flops
     # pylint:disable=protected-access
     assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
+
+
+def test_clasters_for_multiple_forward():
+    config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
+    config['compression']['params']['all_weights'] = False
+    config['compression']['params']['prune_first_conv'] = True
+    config['compression']['params']['prune_last_conv'] = True
+    config['compression']['pruning_init'] = 0.5
+    config['compression']['algorithm'] = 'filter_pruning'
+    model = TestModelMultipleForward()
+    _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
+
+    clusters = pruning_algo.pruned_module_groups_info.clusters
+    assert len(clusters) == 2
+    # Convolutions before one node that forwards several times should be in one cluster
+    assert sorted([n.nncf_node_id for n in clusters[0].nodes]) == [1, 2, 3]
+    # Nodes that associate with one module should be in one cluster
+    assert sorted([n.nncf_node_id for n in clusters[1].nodes]) == [4, 5, 6]

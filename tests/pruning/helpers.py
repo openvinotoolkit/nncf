@@ -260,6 +260,33 @@ class TestModelShuffleNetUnitDW(nn.Module):
         x = self.unit1(x)
         return x
 
+
+class TestModelMultipleForward(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(2, 16, 1, 1, -2)
+        # Wights of conv3 is initialized to check difference masks
+        self.conv4 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        x3 = self.conv3(x)
+        x1 = self.conv4(x1)
+        x2 = self.conv4(x2)
+        x3 = self.conv4(x3)
+
+        return x1, x2, x3
+
+
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
