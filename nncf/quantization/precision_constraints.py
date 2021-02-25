@@ -13,7 +13,7 @@
 from copy import deepcopy
 from typing import Dict, List
 
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from .quantizer_id import QuantizerId
 
 
@@ -32,10 +32,10 @@ class HardwareQuantizationConstraints:
     def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> Dict[int, List[QuantizerConfig]]:
         bitwidths_vs_qconfigs = {}  # type: Dict[int, List[QuantizerConfig]]
         for qc in self.get(quantizer_id):
-            if qc.bits not in bitwidths_vs_qconfigs:
-                bitwidths_vs_qconfigs[qc.bits] = [qc]
+            if qc.num_bits not in bitwidths_vs_qconfigs:
+                bitwidths_vs_qconfigs[qc.num_bits] = [qc]
             else:
-                bitwidths_vs_qconfigs[qc.bits].append(qc)
+                bitwidths_vs_qconfigs[qc.num_bits].append(qc)
         return bitwidths_vs_qconfigs
 
     def replace(self, quantizer_id: QuantizerId, qconfig_set: List[QuantizerConfig]):
@@ -47,11 +47,11 @@ class HardwareQuantizationConstraints:
         if qid is None:
             for qconfig_set in self._constraints.values():
                 for qconfig in qconfig_set:
-                    result.add(qconfig.bits)
+                    result.add(qconfig.num_bits)
         else:
             qconfs = self.get(qid)
             for qconfig in qconfs:
-                result.add(qconfig.bits)
+                result.add(qconfig.num_bits)
         return list(result)
 
     def __bool__(self):

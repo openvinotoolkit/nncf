@@ -75,6 +75,8 @@ class BasicConvTestModel(nn.Module):
         self.weight_init = weight_init
         self.bias_init = bias_init
         self.conv = create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init)
+        self.wq_scale_shape_per_channel = (out_channels, 1, 1, 1)
+        self.aq_scale_shape_per_channel = (1, in_channels, 1, 1)
 
     @staticmethod
     def default_weight():

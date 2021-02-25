@@ -18,8 +18,9 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
-from nncf.quantization.structs import QuantizerSetupType
-from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.common.quantization.structs import QuantizerSetupType
+from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.common.quantization.structs import QuantizationMode
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
@@ -59,7 +60,7 @@ class TestHWConfigRules:
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
         default_qconfig = QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG
         is_ok = True
-        is_ok &= (quantizer.num_bits == default_qconfig.bits)
+        is_ok &= (quantizer.num_bits == default_qconfig.num_bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
         if default_qconfig.signedness_to_force is not None:
             is_ok &= (quantizer.signed == default_qconfig.signedness_to_force)

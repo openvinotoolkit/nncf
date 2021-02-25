@@ -148,11 +148,10 @@ def test_staged_scheduler_with_empty_quantization():
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
@@ -193,11 +192,11 @@ def test_staged_scheduler_with_range_init():
         assert not module.is_enabled_quantization()
 
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
@@ -259,11 +258,10 @@ def test_staged_scheduler_with_hawq():
         assert not module.is_enabled_quantization()
 
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():

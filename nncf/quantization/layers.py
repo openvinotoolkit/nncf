@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import torch
@@ -22,80 +22,15 @@ from torch import distributed
 from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.common.utils.logger import logger as nncf_logger
-from .quantize_functions import symmetric_quantize, asymmetric_quantize, ExportQuantizeToFakeQuantize, \
-    get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
-from ..layer_utils import COMPRESSION_MODULES
+from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
+from nncf.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
+    ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
+from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.registry import Registry
-from ..utils import get_per_channel_scale_shape, get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
+from nncf.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
-
-
-class QuantizationMode:
-    SYMMETRIC = "symmetric"
-    ASYMMETRIC = "asymmetric"
-
-
-class QuantizerConfig:
-    def __init__(self, bits=8,
-                 mode=QuantizationMode.SYMMETRIC,
-                 signedness_to_force=None,
-                 per_channel=False,
-                 input_shape=None,
-                 is_weights=False,
-                 logarithm_scale=False):
-        self.bits = bits
-        self.mode = mode
-        self.signedness_to_force = signedness_to_force
-        self.per_channel = per_channel
-        self.is_weights = is_weights
-        self.input_shape = input_shape
-        self.logarithm_scale = logarithm_scale
-
-    def __eq__(self, other):
-        return self.__dict__ == other.__dict__
-
-    def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} W:{is_weights} PC:{per_channel}".format(
-            bits=self.bits,
-            mode='S' if self.mode == QuantizationMode.SYMMETRIC else 'A',
-            signedness='ANY' if self.signedness_to_force is None else ('S' if self.signedness_to_force else 'U'),
-            is_weights='Y' if self.is_weights else 'N',
-            per_channel='Y' if self.per_channel else 'N')
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def is_valid_requantization_for(self, other: 'QuantizerConfig') -> bool:
-        #pylint:disable=too-many-return-statements
-        """Quantizer config A is a valid requantization for quantizer config B if A is more strict -
-        specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
-        the requantization will further constrain the input tensor data w.r.t. values it can take, but
-        putting quantizer A after quantizer B would be unreasonable."""
-        if self.bits > other.bits:
-            return False
-        if self.mode is QuantizationMode.ASYMMETRIC and other.mode is \
-                QuantizationMode.SYMMETRIC:
-            return False
-        if self.signedness_to_force is None and other.signedness_to_force is not None:
-            return False
-        if self.signedness_to_force is True and other.signedness_to_force is False:
-            return False
-
-        return True
-
-    def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: 'QuantizerConfig'):
-        return self.bits == linked_qconfig.bits and \
-               self.mode == linked_qconfig.mode and \
-               self.signedness_to_force == linked_qconfig.signedness_to_force and \
-               self.per_channel == linked_qconfig.per_channel
-
-    def is_a_bitwidth_variant(self, other_qconfig: 'QuantizerConfig') -> bool:
-        return self.per_channel == other_qconfig.per_channel and \
-               self.signedness_to_force == other_qconfig.signedness_to_force and \
-               self.is_weights == other_qconfig.is_weights and \
-               self.mode == other_qconfig.mode
 
 
 class QuantizerExportMode(Enum):
@@ -111,15 +46,32 @@ class QuantizerExportMode(Enum):
         raise RuntimeError("Unknown quantizer ONNX export mode string")
 
 
+class PTQuantizerSpec(QuantizerSpec):
+    def __init__(self, num_bits: int,
+                 mode: QuantizationMode,
+                 signedness_to_force: Optional[bool],
+                 narrow_range: bool,
+                 scale_shape: Tuple[int, ...],
+                 logarithm_scale: bool):
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range)
+        self.scale_shape = scale_shape
+        self.logarithm_scale = logarithm_scale
+
+    @classmethod
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
+                    scale_shape: Tuple[int], logarithm_scale: bool):
+        return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
+                   narrow_range, scale_shape, logarithm_scale)
+
+
 class BaseQuantizer(nn.Module):
-    def __init__(self, config: QuantizerConfig):
+    #pylint:disable=too-many-public-methods
+    def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
-        self.input_shape = config.input_shape
-        self.per_channel = config.per_channel
-        self.is_weights = config.is_weights
-        self.signedness_to_force = config.signedness_to_force
-        self._is_using_log_scale_storage = config.logarithm_scale
-        self._num_bits = nn.Parameter(torch.IntTensor([config.bits]), requires_grad=False)
+        self._narrow_range = qspec.narrow_range
+        self._signedness_to_force = qspec.signedness_to_force
+        self._is_using_log_scale_storage = qspec.logarithm_scale
+        self._num_bits = nn.Parameter(torch.IntTensor([qspec.num_bits]), requires_grad=False)
         self.level_high = None
         self.level_low = None
 
@@ -129,7 +81,7 @@ class BaseQuantizer(nn.Module):
         self.initialized = False
         self.state_dict_name = None
         self.call_count = 0
-        self.scale_shape = [1]
+        self._scale_shape = qspec.scale_shape
         self._export_mode = QuantizerExportMode.FAKE_QUANTIZE
 
         class LoadStateListener:
@@ -226,6 +178,14 @@ class BaseQuantizer(nn.Module):
     def num_bits(self, num_bits: int):
         self._num_bits.fill_(num_bits)
 
+    @property
+    def narrow_range(self) -> bool:
+        return self._narrow_range
+
+    @property
+    def scale_shape(self) -> Tuple[int, ...]:
+        return self._scale_shape
+
     def broadcast_initialized_params(self, src: int = 0):
         distributed.broadcast(self._num_bits, src=src)
 
@@ -236,11 +196,18 @@ class BaseQuantizer(nn.Module):
         raise NotImplementedError
 
     def extra_repr(self):
-        return 'bit={}, ch={}, wt={}'.format(
-            self.num_bits, self.per_channel, self.is_weights)
+        return 'bit={}, ch={}'.format(
+            self.num_bits, self.per_channel)
 
-    def get_current_config(self) -> QuantizerConfig:
+    def get_quantizer_config(self) -> QuantizerConfig:
         raise NotImplementedError
+
+    @property
+    def per_channel(self) -> bool:
+        numel = 1
+        for el in self.scale_shape:
+            numel *= el
+        return numel > 1
 
 
 class QuantizersSwitcher:
@@ -307,12 +274,10 @@ class SymmetricQuantizer(BaseQuantizer):
     SCALE_PARAM_NAME = 'scale'
     _SCALE_PARAM_STORAGE_ATTR = '_scale_param_storage'
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, qspec: PTQuantizerSpec):
+        super().__init__(qspec)
         self.signed_tensor = nn.Parameter(torch.IntTensor([0]), requires_grad=False)
         self.collect_scale_statistics = False
-        if self.per_channel:
-            self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
 
         setattr(self, self._SCALE_PARAM_STORAGE_ATTR, nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
         if self._is_using_log_scale_storage:
@@ -320,8 +285,8 @@ class SymmetricQuantizer(BaseQuantizer):
             self.eps = 0
         else:
             self.eps = 1e-16
-        if config.signedness_to_force is not None:
-            self.signed = int(config.signedness_to_force)
+        if qspec.signedness_to_force is not None:
+            self.signed = int(qspec.signedness_to_force)
         self.set_level_ranges()
 
         self._register_load_state_dict_pre_hook(StorageRedirectingLoadStateDictHook(
@@ -394,9 +359,9 @@ class SymmetricQuantizer(BaseQuantizer):
         if torch.any(torch.eq(min_values, np.inf)) or torch.any(torch.eq(max_values, -np.inf)):
             raise AttributeError('Statistics is not collected for {}'.format(log_module_name))
         sign = torch.any(torch.lt(min_values, 0))
-        if self.signedness_to_force is not None and sign != self.signedness_to_force:
-            nncf_logger.warning("Forcing signed to {} for module {}".format(self.signedness_to_force, log_module_name))
-            sign = self.signedness_to_force
+        if self._signedness_to_force is not None and sign != self._signedness_to_force:
+            nncf_logger.warning("Forcing signed to {} for module {}".format(self._signedness_to_force, log_module_name))
+            sign = self._signedness_to_force
         self.signed = int(sign)
 
         abs_max = torch.max(torch.abs(max_values), torch.abs(min_values))
@@ -442,14 +407,11 @@ class SymmetricQuantizer(BaseQuantizer):
             return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low, input_high)
         raise RuntimeError
 
-    def get_current_config(self) -> QuantizerConfig:
-        return QuantizerConfig(bits=self.num_bits,
+    def get_quantizer_config(self) -> QuantizerConfig:
+        return QuantizerConfig(num_bits=self.num_bits,
                                mode=QuantizationMode.SYMMETRIC,
                                signedness_to_force=self.signed,
-                               per_channel=self.per_channel,
-                               input_shape=self.input_shape,
-                               is_weights=self.is_weights,
-                               logarithm_scale=self.is_using_log_scale_storage)
+                               per_channel=self.per_channel)
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
@@ -458,11 +420,8 @@ class AsymmetricQuantizer(BaseQuantizer):
     INPUT_RANGE_PARAM_NAME = 'input_range'
     _INPUT_RANGE_PARAM_STORAGE_ATTR = '_input_range_param_storage'
 
-    def __init__(self, config):
-        super().__init__(config)
-        if self.per_channel:
-            self.scale_shape = get_per_channel_scale_shape(self.input_shape, self.is_weights)
-
+    def __init__(self, qspec: PTQuantizerSpec):
+        super().__init__(qspec)
         self.input_low = nn.Parameter(torch.zeros(self.scale_shape), requires_grad=True)
         setattr(self, self._INPUT_RANGE_PARAM_STORAGE_ATTR,
                 nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
@@ -584,11 +543,8 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                       input_low_tuned, input_high_tuned)
         raise RuntimeError
 
-    def get_current_config(self) -> QuantizerConfig:
-        return QuantizerConfig(bits=self.num_bits,
+    def get_quantizer_config(self) -> QuantizerConfig:
+        return QuantizerConfig(num_bits=self.num_bits,
                                mode=QuantizationMode.ASYMMETRIC,
                                signedness_to_force=self.signed,
-                               per_channel=self.per_channel,
-                               input_shape=self.input_shape,
-                               is_weights=self.is_weights,
-                               logarithm_scale=self.is_using_log_scale_storage)
+                               per_channel=self.per_channel)

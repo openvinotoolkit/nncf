@@ -11,7 +11,7 @@
  limitations under the License.
 """
 import inspect
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 from typing import List, Callable, Tuple, Dict, Optional
 
 import functools
@@ -23,7 +23,7 @@ from torch import nn
 
 from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext, \
+from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, \
     ConvolutionModuleAttributes
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
@@ -35,7 +35,6 @@ from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
 
@@ -70,48 +69,6 @@ class InsertionType(Enum):
         if isinstance(other, InsertionType):
             return self.value == other.value
         return self.value == other
-
-
-class InsertionInfo:
-    def __init__(self, op_exec_context: OperationExecutionContext,
-                 in_port_id: Optional[int] = None,
-                 is_input=False,
-                 is_output=False,
-                 shape_to_operate_on=None):
-        self.op_exec_context = op_exec_context  # type: OperationExecutionContext
-        self.in_port_id = in_port_id  # None for post-hook quantization, otherwise - pre-hook
-        self.is_input = is_input
-        self.is_output = is_output
-        self.shape_to_operate_on = shape_to_operate_on
-        self._linked_insertion_infos = []  # type: List[InsertionInfo]
-
-    def get_linked_insertion_infos(self) -> List['InsertionInfo']:
-        return self._linked_insertion_infos
-
-    def link_insertion_infos(self, linked_insertion_infos: List['InsertionInfo']):
-        self._linked_insertion_infos += linked_insertion_infos
-
-    def __eq__(self, other: 'InsertionInfo'):
-        # TODO: ensure no circular refs via self._linked_insertion_infos?
-        return self.op_exec_context == other.op_exec_context and Counter(self._linked_insertion_infos) == Counter(
-            other.get_linked_insertion_infos()) and self.in_port_id == other.in_port_id
-
-    def __str__(self):
-        postfix = ''
-        if self.in_port_id is not None:
-            postfix = "|INPUT{}".format(self.in_port_id)
-        return str(self.op_exec_context.input_agnostic) + postfix
-
-    def __hash__(self):
-        return hash(str(self))
-
-    @classmethod
-    def from_insertion_point(cls, ip: 'InsertionPoint') -> 'InsertionInfo':
-        return cls(OperationExecutionContext(
-            operator_name=ip.ia_op_exec_context.operator_name,
-            scope_in_model=ip.ia_op_exec_context.scope_in_model,
-            call_order=ip.ia_op_exec_context.call_order,
-            tensor_metas=[None]), in_port_id=ip.input_port_id)
 
 
 class InsertionPoint:
@@ -612,57 +569,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         for module in all_quantizations.values():
             module.initialized = False
 
-    def get_post_pattern_insertion_infos(self, pattern: 'NNCFNodeExpression',
-                                         omit_nodes_in_nncf_modules=False) -> List[InsertionInfo]:
-        io_infos = self._original_graph.get_matching_nncf_graph_pattern_io_list(pattern)
-
-        insertion_infos = []
-        for io_info in io_infos:
-            # The input/output is given in terms of edges, but the post-hooks are currently applied to
-            # nodes. Multiple output edges in a pattern I/O info may originate from one and the same
-            # node, and we have to ensure that these resolve into just one insertion point - thus the usage of "set".
-            pattern_insertion_info_set = set()
-            if len(io_info.output_edges) > 1:
-                nncf_logger.debug("WARNING: pattern has more than one activation output")
-
-            for nncf_node in io_info.output_nodes:
-                pattern_insertion_info_set.add(InsertionInfo(nncf_node.op_exec_context,
-                                                             is_output=True,
-                                                             shape_to_operate_on=None))
-                # TODO: determine output shapes for output nodes to enable per-channel quantization
-
-            # Ignore input nodes in the pattern for now, rely on the _quantize_inputs functions.
-            # TODO: handle input quantization here as well
-
-            # Since this function is currently only used for activation quantization purposes via operator
-            # post-hook mechanism, we may take any edge and it will point from the same node where we will have to
-            # insert a quantizer later. However, in the future the output edges may refer to activation tensors
-            # with different sizes, in which case we have to insert different per-channel quantizers to
-            # accomodate different trainable params if there is a difference in the channel dimension.
-            # Furthermore, currently there is no distinction for single tensor output to multiple nodes and
-            # multiple tensor output to multiple nodes ("chunk" operation is an example of the latter).
-            # The pattern may also have unexpected outputs from a node in the middle of the pattern (see
-            # "densenet121.dot" for an example of this) - need to decide what to do with that in terms
-            # of quantization.
-            # TODO: address the issues above.
-
-            for nncf_edge in io_info.output_edges:
-                pattern_insertion_info_set.add(InsertionInfo(nncf_edge.from_node.op_exec_context,
-                                                             is_output=False,
-                                                             shape_to_operate_on=nncf_edge.tensor_shape))
-            insertion_infos += list(pattern_insertion_info_set)
-
-        insertion_infos = list(
-            set(insertion_infos))  # Filter the overlapping insertion points from different matches (happens for GNMT)
-        insertion_infos_filtered = []
-
-        for info in insertion_infos:
-            if omit_nodes_in_nncf_modules and self.is_scope_in_nncf_module_scope(info.op_exec_context.scope_in_model):
-                continue
-            insertion_infos_filtered.append(info)
-
-        return insertion_infos_filtered
-
     def is_scope_in_nncf_module_scope(self, scope: 'Scope'):
         # TODO: optimize
         norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
@@ -684,7 +590,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
-        self.__getattr__(attr_name)[module_key] = module
+        storage = self.__getattr__(attr_name)
+        if module_key in storage:
+            raise RuntimeError("Module {} is already registered under {}".format(module_key, attr_name))
+        storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
@@ -733,6 +642,17 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if force_eval:
             if train_mode:
                 self.train()
+
+    def get_input_shape_for_insertion_point(self, insertion_point: InsertionPoint) -> Tuple[int]:
+        ia_op_exec_context = insertion_point.ia_op_exec_context
+        if insertion_point.input_port_id is not None:
+            quantizer_input_shape = self._original_graph.get_input_shapes_for_ia_op_exec_context(
+                ia_op_exec_context)[insertion_point.input_port_id]
+        else:
+            # Tailored for post-hook quantization and first output quantization only
+            quantizer_input_shape = self._original_graph.get_output_shapes_for_ia_op_exec_context(
+                ia_op_exec_context)[0]
+        return quantizer_input_shape
 
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph.get_nx_graph_copy())

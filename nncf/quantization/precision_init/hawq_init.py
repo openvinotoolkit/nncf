@@ -27,7 +27,8 @@ from torch.nn.modules.loss import _Loss
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.quantization.layers import QuantizersSwitcher, QuantizerConfig
+from nncf.quantization.layers import QuantizersSwitcher
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
@@ -129,7 +130,7 @@ class TraceOrderBitwidthMatcher:
     @staticmethod
     def _select_first_closest_bitwidth_qconf(qconf_list: List[QuantizerConfig],
                                              target_bitwidth: int) -> QuantizerConfig:
-        bw_diffs = [abs(qc.bits - target_bitwidth) for qc in qconf_list]
+        bw_diffs = [abs(qc.num_bits - target_bitwidth) for qc in qconf_list]
         _, min_idx = min((val, idx) for (idx, val) in enumerate(bw_diffs))
         return qconf_list[min_idx]
 
@@ -184,7 +185,7 @@ class TraceOrderBitwidthMatcher:
 
                 if trace_idx in indices_for_bitwidth_adjustment_only:
                     bit_adjusted_default_qconfig = deepcopy(configuration_space_in_trace_order[trace_idx][0])
-                    bit_adjusted_default_qconfig.bits = bitwidth
+                    bit_adjusted_default_qconfig.num_bits = bitwidth
                     qconfig = bit_adjusted_default_qconfig
                 else:
                     # TODO: do a selection based on strategy ("exhaustive" = add all available configurations,
@@ -280,7 +281,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         config_index = self.choose_configuration(configuration_metric, flops_bits_per_config)
         chosen_config_in_traces_order = weight_qconfigs_in_trace_order[config_index]
         chosen_config_in_execution_order = traces_order.get_execution_order_config(chosen_config_in_traces_order)
-        biwidth_per_weightable_layer = [qconfig.bits for qconfig in chosen_config_in_execution_order]
+        biwidth_per_weightable_layer = [qconfig.num_bits for qconfig in chosen_config_in_execution_order]
         nncf_logger.info('Chosen HAWQ configuration with ratio={:.2f}, config per weightable layer={}'.format(
             flops_bits_per_config[config_index], biwidth_per_weightable_layer))
         nncf_logger.debug('Order of the weightable layers in the HAWQ configuration (in descending order of average '
@@ -332,7 +333,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 qconfigs = retval.get(quantizer_id)
                 filtered_qconfigs = []
                 for qconf in qconfigs:
-                    if qconf.bits in minimal_set_bits:
+                    if qconf.num_bits in minimal_set_bits:
                         filtered_qconfigs.append(qconf)
                 retval.replace(quantizer_id, filtered_qconfigs)
         return retval
@@ -343,7 +344,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         flops_bits_per_config = []
         for configuration in configurations_in_trace_order:
             execution_order_config = traces_order.get_execution_order_config(configuration)
-            bit_sequence = [qc.bits for qc in execution_order_config]
+            bit_sequence = [qc.num_bits for qc in execution_order_config]
             flops_bits_per_config.append(
                 self.flops_counter.ratio_for_bits_configuration(bit_sequence, skipped))
         return flops_bits_per_config
@@ -351,7 +352,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def get_bitwidth_per_scope(self, quantizer_setup: SingleConfigQuantizerSetup) -> List[List[Union[int, str]]]:
         scope_vs_bitwidth = {}
         for qp in quantizer_setup.quantization_points.values():
-            scope_vs_bitwidth[str(qp.insertion_point)] = qp.qconfig.bits
+            scope_vs_bitwidth[str(qp.insertion_point)] = qp.qconfig.num_bits
         sorted_scope_vs_bitwidth = OrderedDict(sorted(scope_vs_bitwidth.items(), key=lambda x: x[0]))
         full_bitwidth_per_scope = []
         for scope, bitwidth in sorted_scope_vs_bitwidth.items():
@@ -481,7 +482,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         for trace_idx in range(len(traces_order)):
             exec_idx = traces_order.get_execution_index_by_traces_index(trace_idx)
             qid = quantizer_ids_in_exec_order[exec_idx]
-            default_qconfig = self._weight_quantizations_by_execution_order[qid].get_current_config()
+            default_qconfig = self._weight_quantizations_by_execution_order[qid].get_quantizer_config()
             qconfig_constraints = []
             if self._hw_precision_constraints:
                 qconfig_constraints = self._hw_precision_constraints.get(qid)
@@ -622,7 +623,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                     elif qp.is_activation_quantization_point():
                         act_qp_ids.append(qp_id)
                 weight_qps = [quantizer_setup_to_set.quantization_points[qp_id] for qp_id in weight_qp_ids]
-                weight_bitwidth_set = {weight_qp.qconfig.bits for weight_qp in weight_qps}
+                weight_bitwidth_set = {weight_qp.qconfig.num_bits for weight_qp in weight_qps}
 
                 if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
                     quantizer_setup_to_set = self._set_activations_bitwidth_strictly(quantizer_setup_to_set,
@@ -643,9 +644,10 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                     wq_qp_id_set = ctrl.module_id_to_qp_id_translation_dict[wq_id]
                     wq_qp_ids.update(list(wq_qp_id_set))
 
-                wq_bits = [quantizer_setup_to_set.quantization_points[wq_qp_id].qconfig.bits for wq_qp_id in wq_qp_ids]
+                wq_bits = [quantizer_setup_to_set.quantization_points[wq_qp_id].qconfig.num_bits
+                           for wq_qp_id in wq_qp_ids]
                 for aq_qp_id in aq_qp_ids:
-                    quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.bits = max(wq_bits)
+                    quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.num_bits = max(wq_bits)
 
         return quantizer_setup_to_set
 
@@ -675,7 +677,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             else:
                 # The activation has no constraints, so the config in the setup was defaulted
                 # and we can simply adjust the bitwidth
-                target_qp.qconfig.bits = target_bits
+                target_qp.qconfig.num_bits = target_bits
 
         return quantizer_setup_to_set
 
@@ -740,7 +742,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
         for qconf_configuration in trace_ordered_configurations:
             execution_ordered_configuration = traces_order.get_execution_order_config(qconf_configuration)
-            bit_sequence = [qc.bits for qc in execution_ordered_configuration]
+            bit_sequence = [qc.num_bits for qc in execution_ordered_configuration]
             keep_config = True
             for indexes_of_grouped_wq in all_grouped_indexes:
                 grouped_bits = [bit_sequence[index] for index in indexes_of_grouped_wq]

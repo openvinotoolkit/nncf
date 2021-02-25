@@ -30,12 +30,13 @@ from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
-from beta.nncf.tensorflow.quantization.config import QuantizerConfig
-from beta.nncf.tensorflow.quantization.config import QuantizationMode
-from beta.nncf.tensorflow.quantization.config import QuantizationConstraints
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
+from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from beta.nncf.tensorflow.utils.node import is_ignored
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationConstraints
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -75,9 +76,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints(
             num_bits=params_dict.get('bits'),
             mode=params_dict.get('mode'),
-            signed=params_dict.get('signed'),
-            per_channel=params_dict.get('per_channel'),
-            narrow_range=(quantizer_group == WEIGHTS)
+            signedness_to_force=params_dict.get('signed'),
+            per_channel=params_dict.get('per_channel')
         )
         self.ignored_scopes_per_group[quantizer_group] = config.get('ignored_scopes', []) \
                                                          + params_dict.get('ignored_scopes', [])
@@ -86,9 +86,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = QuantizerConfig(num_bits=8,
                                   mode=QuantizationMode.SYMMETRIC,
-                                  signed=None,
-                                  per_channel=False,
-                                  narrow_range=False)
+                                  signedness_to_force=None,
+                                  per_channel=False)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -117,7 +116,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            operation = self._create_quantizer(qconfig)
+            operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
+                                                                           narrow_range=True))
 
             weight_attr_name = QUANTIZATION_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
@@ -131,7 +131,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            fake_quantize_layer = FakeQuantize(qconfig, name=fake_quantize_name)
+            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
+                                                                           narrow_range=False),
+                                               name=fake_quantize_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),

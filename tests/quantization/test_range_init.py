@@ -27,7 +27,7 @@ from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.nncf_network import InsertionPoint, InsertionType
 from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector, \
     MedianMADStatisticCollector
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -40,7 +40,8 @@ from nncf.initialization import DefaultInitializingDataLoader
 from nncf.quantization.init_range import RangeInitParams, PerLayerRangeInitConfig, \
     RangeInitConfig
 from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
-    BaseQuantizer, QuantizerConfig, QuantizationMode, QUANTIZATION_MODULES
+    BaseQuantizer, QUANTIZATION_MODULES, PTQuantizerSpec
+from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type, safe_thread_call
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
@@ -258,9 +259,9 @@ class TestRangeInit:
                    ]
         group_2 = [quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
-                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0]"],
+                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0|OUTPUT]"],
                    quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
-                                      "[/nncf_model_input_0]"],
+                                      "[/nncf_model_input_0|OUTPUT]"],
                    ]
 
         for quantizer in group_1:
@@ -663,7 +664,7 @@ QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percen
 
 class QuantizeRangeInitScaleShapeTestStruct:
     def __init__(self, per_channel: bool, is_weights: bool,
-                 input_shape: List[int], ref_scale_shape: List[int]):
+                 input_shape: List[int], ref_scale_shape: Tuple[int, ...]):
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
@@ -675,19 +676,19 @@ QUANTIZER_RANGE_INIT_TEST_CASES = [
     QRISSTS(per_channel=False,
             is_weights=False,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1]),
+            ref_scale_shape=(1, )),
     QRISSTS(per_channel=True,
             is_weights=False,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1, 42, 1, 1]),
+            ref_scale_shape=(1, 42, 1, 1)),
     QRISSTS(per_channel=False,
             is_weights=True,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1]),
+            ref_scale_shape=(1, )),
     QRISSTS(per_channel=True,
             is_weights=True,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[41, 1, 1, 1]),
+            ref_scale_shape=(41, 1, 1, 1)),
 ]
 
 def quantizer_range_init_scale_shape_idfn(fixture_value):
@@ -715,9 +716,12 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
     test_struct = quantizer_range_init_test_struct[0]
     initializer_type = quantizer_range_init_test_struct[1]
     for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:
-        qconfig = QuantizerConfig(mode=quantization_mode, per_channel=test_struct.per_channel,
-                                  is_weights=test_struct.is_weights,
-                                  input_shape=test_struct.input_shape)
+        qconfig = PTQuantizerSpec(num_bits=8,
+                                  mode=quantization_mode,
+                                  signedness_to_force=None,
+                                  scale_shape=tuple(test_struct.ref_scale_shape),
+                                  narrow_range=test_struct.is_weights,
+                                  logarithm_scale=False)
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
@@ -730,10 +734,10 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
         if quantization_mode == QuantizationMode.SYMMETRIC:
-            assert list(quantizer.scale.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.scale.shape) == test_struct.ref_scale_shape
         elif quantization_mode == QuantizationMode.ASYMMETRIC:
-            assert list(quantizer.input_low.shape) == test_struct.ref_scale_shape
-            assert list(quantizer.input_range.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.input_low.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.input_range.shape) == test_struct.ref_scale_shape
         else:
             assert False  # options above should be exhaustive
 
