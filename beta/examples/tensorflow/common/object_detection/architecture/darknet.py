@@ -42,7 +42,7 @@ class Darknet:
         res_connection = self.DarknetConv2D_BN_Mish(num_filters//2 if all_narrow else num_filters, (1,1))(x)
         x = self.DarknetConv2D_BN_Mish(num_filters//2 if all_narrow else num_filters, (1,1))(x)
 
-        for i in range(num_blocks):
+        for _ in range(num_blocks):
             y = nn_ops.compose(
                     self.DarknetConv2D_BN_Mish(num_filters//2, (1,1)),
                     self.DarknetConv2D_BN_Mish(num_filters//2 if all_narrow else num_filters, (3,3)))(x)

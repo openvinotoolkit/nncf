@@ -67,3 +67,11 @@ class YOLOv4Model(base_model.Model):
             keras_model.load_weights(weights, by_name=True)
 
         return keras_model
+
+
+    def build_loss_fn(self):
+        pass
+
+
+    def eval_metrics(self):
+        pass

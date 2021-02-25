@@ -108,10 +108,7 @@ def compose(*funcs):
 
     Reference: https://mathieularose.com/function-composition-in-python/
     """
-    if funcs:
-        return functools.reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
-    else:
-        raise ValueError('Composition of empty sequence not supported.')
+    return functools.reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
 
 
 @functools.wraps(tf.keras.layers.Conv2D)

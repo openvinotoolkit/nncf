@@ -29,4 +29,3 @@ from beta.tests.tensorflow.test_models.mobilenet_v3 import MobileNetV3Small
 from beta.tests.tensorflow.test_models.shared_layers_model import SharedLayersModel
 from beta.tests.tensorflow.test_models.maskrcnn import MaskRCNN
 from beta.tests.tensorflow.test_models.yolo_v4 import YOLOv4
-
