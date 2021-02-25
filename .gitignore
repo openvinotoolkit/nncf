@@ -118,3 +118,4 @@ beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/results/
 beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/test.py
 beta/examples/tensorflow/object_detection/runs/
 beta/examples/results/
+beta/examples/tensorflow/object_detection/retinanet/

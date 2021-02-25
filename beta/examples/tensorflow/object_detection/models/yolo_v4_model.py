@@ -15,9 +15,6 @@ import tensorflow as tf
 
 from beta.examples.tensorflow.common.object_detection import base_model
 from beta.examples.tensorflow.common.object_detection.architecture import factory
-from beta.examples.tensorflow.common.object_detection.architecture import keras_utils
-from beta.examples.tensorflow.common.object_detection.ops import postprocess_ops
-from beta.examples.tensorflow.common.object_detection.evaluation import coco_evaluator
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.object_detection import losses
 
@@ -28,19 +25,16 @@ class YOLOv4Model(base_model.Model):
         super().__init__(params)
 
         self._params = params
+        self._input_layer = tf.keras.layers.Input(shape=(None, None, 3), name='image_input')
+        self._loss_fn = losses.YOLOv4Loss()
 
         # Architecture generators.
         self._backbone_fn = factory.backbone_generator(params)
-        self._yolo4_predictions_fn = factory.yolo_v4_head_generator(params)
-
-        self._input_layer = tf.keras.layers.Input(shape=(None, None, 3), name='image_input')
-
-        self._loss_fn = losses.YOLOv4Loss()
+        self._yolo4_predictions_fn = factory.yolo_v4_head_generator()
 
 
     def build_outputs(self, inputs, is_training):
         """Create YOLO_V4 model CNN body in Keras."""
-        # darknet = tf.keras.models.Model(inputs, csp_darknet53_body(inputs))
         darknet = tf.keras.models.Model(inputs, self._backbone_fn(inputs))
 
         # f1: 13 x 13 x 1024
@@ -54,8 +48,6 @@ class YOLOv4Model(base_model.Model):
         f2_channel_num = 512
         f3_channel_num = 256
 
-        # y1, y2, y3 = yolo4_predictions((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num),
-        #                                self._params['num_feature_layers'], self._params['num_classes'])
         y1, y2, y3 = self._yolo4_predictions_fn((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num),
                                        self._params['num_feature_layers'], self._params['num_classes'])
 
@@ -105,14 +97,8 @@ class YOLOv4Model(base_model.Model):
 
 
     def build_model(self, weights=None, is_training=None):
-        # with keras_utils.maybe_enter_backend_graph():
         outputs = self.model_outputs(self._input_layer, is_training)
         keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='yolo_v4')
-
-        if self._checkpoint_path:
-            logger.info('Init backbone')
-            init_checkpoint_fn = self.make_restore_checkpoint_fn()
-            init_checkpoint_fn(keras_model)
 
         if weights:
             logger.info('Loaded pretrained weights from {}'.format(weights))
