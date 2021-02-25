@@ -1,0 +1,12 @@
+{
+    "model": "YOLOv4",
+    "input_info": {
+        "sample_size": [1, 608, 608, 3]
+    },
+
+    "epochs": 1,
+    "batch_size": 20,
+
+    "dataset": "coco/2017",
+    "dataset_type": "tfds"
+}

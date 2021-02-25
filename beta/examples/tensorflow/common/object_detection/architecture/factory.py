@@ -15,6 +15,7 @@ from beta.examples.tensorflow.common.object_detection.architecture import fpn
 from beta.examples.tensorflow.common.object_detection.architecture import heads
 from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
 from beta.examples.tensorflow.common.object_detection.architecture import resnet
+from beta.examples.tensorflow.common.object_detection.architecture import darknet
 
 
 def norm_activation_generator(params):
@@ -26,12 +27,17 @@ def norm_activation_generator(params):
 
 def backbone_generator(params):
     """Generator function for various backbone models."""
-    assert params.model_params.architecture.backbone.name == 'resnet'
-    resnet_params = params.model_params.architecture.backbone.params
-    backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
-                                activation=params.model_params.norm_activation.activation,
-                                norm_activation=norm_activation_generator(
-                                  params.model_params.norm_activation))
+    backbone_name = params.model_params.architecture.backbone.name
+    if backbone_name == 'resnet':
+        resnet_params = params.model_params.architecture.backbone.params
+        backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
+                                    activation=params.model_params.norm_activation.activation,
+                                    norm_activation=norm_activation_generator(
+                                      params.model_params.norm_activation))
+    elif backbone_name == 'darknet':
+        backbone_fn = darknet.Darknet()
+    else:
+        raise ValueError('Backbone {} is not supported.'.format(backbone_name))
 
     return backbone_fn
 
@@ -110,3 +116,8 @@ def mask_rcnn_head_generator(params):
         params.model_params.norm_activation.activation,
         head_params.use_batch_norm,
         norm_activation=norm_activation_generator(params.model_params.norm_activation))
+
+
+def yolo_v4_head_generator():
+    """Generator function for YOLOv4 neck and head architecture"""
+    return heads.YOLOv4()
