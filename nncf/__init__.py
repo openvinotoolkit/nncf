@@ -47,7 +47,7 @@ if __nncf_backend__ == 'Torch':
     # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
     # so this call is moved to package __init__ to ensure this.
-    from .dynamic_graph.patch_pytorch import patch_torch_operators, patch_extension_build_function
+    from .dynamic_graph.patch_pytorch import patch_torch_operators
 
     from .extensions import force_build_cpu_extensions, force_build_cuda_extensions
 

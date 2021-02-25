@@ -66,12 +66,8 @@ def test_force_cuda_build(create_venv, install_type, tmp_path, package_type):
     assert cuda_ext_dir.exists()
     cuda_ext_so = (cuda_ext_dir / 'quantized_functions_cuda.so')
     assert cuda_ext_so.exists()
-    cuda_ext_arch_file = (cuda_ext_dir / 'cuda_arch_list.txt')
-    assert cuda_ext_arch_file.exists()
 
     cuda_ext_dir = (torch_ext_dir / 'binarized_functions_cuda')
     assert cuda_ext_dir.exists()
     cuda_ext_so = (cuda_ext_dir / 'binarized_functions_cuda.so')
     assert cuda_ext_so.exists()
-    cuda_ext_arch_file = (cuda_ext_dir / 'cuda_arch_list.txt')
-    assert cuda_ext_arch_file.exists()
