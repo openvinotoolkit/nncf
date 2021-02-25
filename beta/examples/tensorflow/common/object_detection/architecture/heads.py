@@ -18,7 +18,7 @@ import tensorflow as tf
 
 from beta.examples.tensorflow.common.object_detection.architecture import keras_utils
 from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
-from beta.examples.tensorflow.common.object_detection.architecture.darknet import compose, DarknetConv2D, CustomBatchNormalization
+from beta.examples.tensorflow.common.object_detection.architecture.darknet import compose, DarknetConv2D
 
 
 class RetinanetHead:
@@ -588,12 +588,12 @@ class YOLOv4:
     """YOLOv4 neck and head"""
 
     def DarknetConv2D_BN_Leaky(self, *args, **kwargs):
-        """Darknet Convolution2D followed by CustomBatchNormalization and LeakyReLU."""
+        """Darknet Convolution2D followed by SyncBatchNormalization and LeakyReLU."""
         no_bias_kwargs = {'use_bias': False}
         no_bias_kwargs.update(kwargs)
         return compose(
             DarknetConv2D(*args, **no_bias_kwargs),
-            CustomBatchNormalization(),
+            tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.LeakyReLU(alpha=0.1))
 
 

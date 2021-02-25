@@ -52,13 +52,13 @@ def DarknetConv2D(*args, **kwargs):
     return YoloConv2D(*args, **darknet_conv_kwargs)
 
 
-def CustomBatchNormalization(*args, **kwargs):
-    if tf.__version__ >= '2.2':
-        BatchNorm = tf.keras.layers.experimental.SyncBatchNormalization
-    else:
-        BatchNorm = tf.keras.layers.BatchNormalization
-
-    return BatchNorm(*args, **kwargs)
+# def CustomBatchNormalization(*args, **kwargs):
+#     if tf.__version__ >= '2.2':
+#         BatchNorm = tf.keras.layers.experimental.SyncBatchNormalization
+#     else:
+#         BatchNorm = tf.keras.layers.BatchNormalization
+#
+#     return BatchNorm(*args, **kwargs)
 
 
 class Darknet:
@@ -69,12 +69,12 @@ class Darknet:
 
 
     def DarknetConv2D_BN_Mish(self, *args, **kwargs):
-        """Darknet Convolution2D followed by CustomBatchNormalization and Mish."""
+        """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
         no_bias_kwargs = {'use_bias': False}
         no_bias_kwargs.update(kwargs)
         return compose(
             DarknetConv2D(*args, **no_bias_kwargs),
-            CustomBatchNormalization(),
+            tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.Activation(self.mish))
 
 
