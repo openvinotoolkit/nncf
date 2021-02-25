@@ -807,7 +807,9 @@ class NNCFGraph:
                 return nodes[node_key]
         return None
 
-    def find_node_in_nx_graph_by_input_agnostic(self, input_agnostic: 'InputAgnosticOperationExecutionContext') -> Optional[dict]:
+    def find_node_in_nx_graph_by_input_agnostic(
+        self, input_agnostic: InputAgnosticOperationExecutionContext
+    ) -> Optional[dict]:
         """
         Looking for node with input_agnostic == input_agnostic in networkx graph.
         :param self: graphs to work on
