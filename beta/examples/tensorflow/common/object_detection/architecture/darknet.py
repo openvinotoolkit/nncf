@@ -11,46 +11,10 @@
  limitations under the License.
 """
 
-from functools import wraps, reduce
-
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.regularizers import l2
 
-
-def compose(*funcs):
-    """Compose arbitrarily many functions, evaluated left to right.
-
-    Reference: https://mathieularose.com/function-composition-in-python/
-    """
-    # return lambda x: reduce(lambda v, f: f(v), funcs, x)
-    if funcs:
-        return reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
-    else:
-        raise ValueError('Composition of empty sequence not supported.')
-
-
-L2_FACTOR = 1e-5
-
-@wraps(tf.keras.layers.Conv2D)
-def YoloConv2D(*args, **kwargs):
-    """Wrapper to set Yolo parameters for Conv2D."""
-    yolo_conv_kwargs = {'kernel_regularizer': l2(L2_FACTOR)}
-    yolo_conv_kwargs['bias_regularizer'] = l2(L2_FACTOR)
-    yolo_conv_kwargs.update(kwargs)
-    #yolo_conv_kwargs = kwargs
-    return tf.keras.layers.Conv2D(*args, **yolo_conv_kwargs)
-
-
-@wraps(YoloConv2D)
-def DarknetConv2D(*args, **kwargs):
-    """Wrapper to set Darknet parameters for YoloConv2D."""
-    #darknet_conv_kwargs = {'kernel_regularizer': l2(5e-4)}
-    #darknet_conv_kwargs['padding'] = 'valid' if kwargs.get('strides')==(2,2) else 'same'
-    darknet_conv_kwargs = {'padding': 'valid' if kwargs.get('strides')==(2,2) else 'same'}
-    darknet_conv_kwargs.update(kwargs)
-    return YoloConv2D(*args, **darknet_conv_kwargs)
-
+from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
 
 class Darknet:
     """Class to build CSPDarknet53"""
@@ -63,8 +27,8 @@ class Darknet:
         """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
         no_bias_kwargs = {'use_bias': False}
         no_bias_kwargs.update(kwargs)
-        return compose(
-            DarknetConv2D(*args, **no_bias_kwargs),
+        return nn_ops.compose(
+            nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
             tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.Activation(self.mish))
 
@@ -79,7 +43,7 @@ class Darknet:
         x = self.DarknetConv2D_BN_Mish(num_filters//2 if all_narrow else num_filters, (1,1))(x)
 
         for i in range(num_blocks):
-            y = compose(
+            y = nn_ops.compose(
                     self.DarknetConv2D_BN_Mish(num_filters//2, (1,1)),
                     self.DarknetConv2D_BN_Mish(num_filters//2 if all_narrow else num_filters, (3,3)))(x)
             x = tf.keras.layers.Add()([x,y])
