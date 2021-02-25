@@ -30,7 +30,7 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
@@ -179,8 +179,10 @@ class RBSparsityController(TFCompressionAlgorithmController):
         total_sparsified_weights_number = tf.constant(0)
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
-            sw_loss, weights_number, mask = self.loss.get_params_from_sparse_layer(wrapped_layer)
-            sparsified_weights_number = weights_number - sw_loss
+            mask = wrapped_layer.ops_weights[OP_NAME]['mask']
+            sw_loss = tf.reduce_sum(binary_mask(mask))
+            weights_number = tf.size(mask)
+            sparsified_weights_number = weights_number - tf.cast(sw_loss, tf.int32)
             mask_names.append(wrapped_layer.name + '_rb_mask')
             weights_shapes.append(list(mask.shape))
             weights_numbers.append(weights_number)

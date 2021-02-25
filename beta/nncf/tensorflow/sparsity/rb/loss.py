@@ -40,10 +40,10 @@ class SparseLoss(CompressionLoss):
 
     def call(self, *args, **kwargs):
         if self.disabled:
-            return 0
+            return tf.constant(0.)
 
         params = tf.constant(0)
-        loss = tf.constant(0)
+        loss = tf.constant(0.)
         for sparse_layer in self._sparse_layers:
             if not self.disabled and not sparse_layer.get_op_by_name(OP_NAME).trainable:
                 raise AssertionError(
@@ -53,6 +53,7 @@ class SparseLoss(CompressionLoss):
                 params = params + params_layer
                 loss = loss + sw_loss
 
+        params = tf.cast(params, tf.float32)
         self.current_sparsity = 1 - loss / params
         return tf.reshape(tf.math.pow(((loss / params - self.target) / self.p), 2), shape=[])
 
@@ -82,9 +83,8 @@ class SparseLossForPerLayerSparsity(SparseLoss):
 
     def call(self):
         if self.disabled:
-            return 0
+            return tf.constant(0.)
 
-        params = tf.constant(0)
         sparse_layers_loss = tf.constant(0.)
         for sparse_layer in self._sparse_layers:
             if not self.disabled: #and not sparse_layer.sparsify:
@@ -93,8 +93,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
             # TODO: find out how it works
             if True:#sparse_layer.sparsify:
                 sw_loss, params_layer, mask = self.get_params_from_sparse_layer(sparse_layer)
-                params = params + params_layer
-                sparse_layers_loss += tf.math.abs(sw_loss / params_layer - self.per_layer_target[sparse_layer])
+                sparse_layers_loss += tf.math.abs(sw_loss / tf.cast(params_layer, tf.float32) - self.per_layer_target[sparse_layer])
 
         return tf.reshape(tf.math.pow((sparse_layers_loss / self.p), 2), shape=[])
 
