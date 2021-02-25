@@ -52,15 +52,6 @@ def DarknetConv2D(*args, **kwargs):
     return YoloConv2D(*args, **darknet_conv_kwargs)
 
 
-# def CustomBatchNormalization(*args, **kwargs):
-#     if tf.__version__ >= '2.2':
-#         BatchNorm = tf.keras.layers.experimental.SyncBatchNormalization
-#     else:
-#         BatchNorm = tf.keras.layers.BatchNormalization
-#
-#     return BatchNorm(*args, **kwargs)
-
-
 class Darknet:
     """Class to build CSPDarknet53"""
 
