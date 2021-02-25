@@ -22,53 +22,26 @@ from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.object_detection import losses
 
 
-from beta.examples.tensorflow.object_detection.yolo_v4_architecture.darknet_backbone import csp_darknet53_body
-from beta.examples.tensorflow.object_detection.yolo_v4_architecture.yolo_v4_head import yolo4_predictions
-
-
 class YOLOv4Model(base_model.Model):
     """YOLOv4 model function."""
-
     def __init__(self, params):
         super().__init__(params)
 
         self._params = params
 
-        # self._checkpoint_prefix = 'resnet50/'
+        # Architecture generators.
+        self._backbone_fn = factory.backbone_generator(params)
+        self._yolo4_predictions_fn = factory.yolo_v4_head_generator(params)
 
-        # # Architecture generators.
-        # self._backbone_fn = factory.backbone_generator(params)
-        # self._fpn_fn = factory.multilevel_features_generator(params)
-        # self._head_fn = factory.retinanet_head_generator(params)
-
-        # # Loss function.
-        # self._cls_loss_fn = losses.RetinanetClassLoss(params.model_params.loss_params,
-        #                                               params.model_params.architecture.num_classes)
-        # self._box_loss_fn = losses.RetinanetBoxLoss(params.model_params.loss_params)
-        # self._box_loss_weight = params.model_params.loss_params.box_loss_weight
-
-        # # Predict function.
-        # self._generate_detections_fn = postprocess_ops.MultilevelDetectionGenerator(
-        #     params.model_params.architecture.min_level,
-        #     params.model_params.architecture.max_level,
-        #     params.model_params.postprocessing)
-
-        # Input layer.
-        # self._input_layer = tf.keras.layers.Input(
-        #     shape=(None, None, params.input_info.sample_size[-1]),
-        #     name='',
-        #     dtype=tf.float32)
         self._input_layer = tf.keras.layers.Input(shape=(None, None, 3), name='image_input')
+
+        self._loss_fn = losses.YOLOv4Loss()
 
 
     def build_outputs(self, inputs, is_training):
         """Create YOLO_V4 model CNN body in Keras."""
-        darknet = tf.keras.models.Model(inputs, csp_darknet53_body(inputs))
-        print('Backbone layers number: {}'.format(len(darknet.layers)))
-        # weights_path = 'weights/cspdarknet53.h5'
-        # if weights_path is not None:
-        #     darknet.load_weights(weights_path, by_name=True)
-        #     print('Load backbone weights {}.'.format(weights_path))
+        # darknet = tf.keras.models.Model(inputs, csp_darknet53_body(inputs))
+        darknet = tf.keras.models.Model(inputs, self._backbone_fn(inputs))
 
         # f1: 13 x 13 x 1024
         f1 = darknet.output
@@ -81,7 +54,9 @@ class YOLOv4Model(base_model.Model):
         f2_channel_num = 512
         f3_channel_num = 256
 
-        y1, y2, y3 = yolo4_predictions((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num),
+        # y1, y2, y3 = yolo4_predictions((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num),
+        #                                self._params['num_feature_layers'], self._params['num_classes'])
+        y1, y2, y3 = self._yolo4_predictions_fn((f1, f2, f3), (f1_channel_num, f2_channel_num, f3_channel_num),
                                        self._params['num_feature_layers'], self._params['num_classes'])
 
         model_outputs = {
@@ -103,32 +78,31 @@ class YOLOv4Model(base_model.Model):
         #
         # return model_outputs
 
-
-    def build_loss_fn(self, keras_model):
-        filter_fn = self.make_filter_trainable_variables_fn()
-        trainable_variables = filter_fn(keras_model.trainable_variables)
+    def build_loss_fn(self, compress_model):
 
         def _total_loss_fn(labels, outputs):
-            cls_loss = self._cls_loss_fn(outputs['cls_outputs'],
-                                         labels['cls_targets'],
-                                         labels['num_positives'])
-            box_loss = self._box_loss_fn(outputs['box_outputs'],
-                                         labels['box_targets'],
-                                         labels['num_positives'])
+            anchors_path = self._params['anchors_path']
+            num_classes = self._params['num_classes']
 
-            model_loss = cls_loss + self._box_loss_weight * box_loss
-            l2_regularization_loss = self.weight_decay_loss(trainable_variables)
-            total_loss = model_loss + l2_regularization_loss
-
+            loss, total_location_loss, total_confidence_loss, total_class_loss = self._loss_fn(labels, outputs,
+                                                                                                   anchors_path, num_classes,
+                                                                                                   ignore_thresh=.5,
+                                                                                                   label_smoothing=0,
+                                                                                                   elim_grid_sense=True,
+                                                                                                   use_focal_loss=False,
+                                                                                                   use_focal_obj_loss=False,
+                                                                                                   use_softmax_loss=False,
+                                                                                                   use_giou_loss=False,
+                                                                                                   use_diou_loss=True)
             return {
-                'total_loss': total_loss,
-                'cls_loss': cls_loss,
-                'box_loss': box_loss,
-                'model_loss': model_loss,
-                'l2_regularization_loss': l2_regularization_loss,
+                'total_loss': loss,
+                'total_location_loss': total_location_loss,
+                'total_confidence_loss': total_confidence_loss,
+                'total_class_loss': total_class_loss
             }
 
         return _total_loss_fn
+
 
     def build_model(self, weights=None, is_training=None):
         # with keras_utils.maybe_enter_backend_graph():
@@ -145,33 +119,3 @@ class YOLOv4Model(base_model.Model):
             keras_model.load_weights(weights, by_name=True)
 
         return keras_model
-
-    def post_processing(self, labels, outputs):
-        required_output_fields = ['cls_outputs', 'box_outputs']
-
-        for field in required_output_fields:
-            if field not in outputs:
-                raise ValueError('"{}" is missing in outputs, requried {} found {}'.format(
-                                 field, required_output_fields, outputs.keys()))
-
-        boxes, scores, classes, valid_detections = self._generate_detections_fn(
-            outputs['box_outputs'], outputs['cls_outputs'], labels['anchor_boxes'],
-            labels['image_info'][:, 1:2, :])
-        # Discards the old output tensors to save memory. The `cls_outputs` and
-        # `box_outputs` are pretty big and could potentiall lead to memory issue.
-        outputs = {
-            'source_id': labels['source_id'],
-            'image_info': labels['image_info'],
-            'num_detections': valid_detections,
-            'detection_boxes': boxes,
-            'detection_classes': classes,
-            'detection_scores': scores,
-        }
-
-        return labels, outputs
-
-    def eval_metrics(self):
-        annotation_file = self._params.get('val_json_file', None)
-        evaluator = coco_evaluator.COCOEvaluator(annotation_file=annotation_file,
-                                                 include_mask=False)
-        return coco_evaluator.MetricWrapper(evaluator)

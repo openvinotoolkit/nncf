@@ -13,7 +13,7 @@
 
 from beta.examples.tensorflow.object_detection.preprocessing.retinanet_preprocessing import RetinaNetPreprocessor
 from beta.examples.tensorflow.segmentation.preprocessing.maskrcnn_preprocessing import MaskRCNNPreprocessor
-
+from beta.examples.tensorflow.object_detection.preprocessing.yolo_v4_preprocessing import YOLOv4Preprocessor
 
 def get_preprocess_input_fn(config, is_train):
     model_name = config.model
@@ -21,6 +21,8 @@ def get_preprocess_input_fn(config, is_train):
         preprocess_input_fn = RetinaNetPreprocessor(config, is_train).create_preprocess_input_fn()
     elif model_name == 'MaskRCNN':
         preprocess_input_fn = MaskRCNNPreprocessor(config, is_train).create_preprocess_input_fn()
+    elif model_name == 'YOLOv4':
+        preprocess_input_fn = YOLOv4Preprocessor(config, is_train).create_preprocess_input_fn()
     else:
         raise ValueError('Unknown model name {}'.format(model_name))
 

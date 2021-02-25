@@ -18,6 +18,7 @@ import tensorflow as tf
 
 from beta.examples.tensorflow.common.object_detection.architecture import keras_utils
 from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
+from beta.examples.tensorflow.common.object_detection.architecture.darknet import compose, DarknetConv2D, CustomBatchNormalization
 
 
 class RetinanetHead:
