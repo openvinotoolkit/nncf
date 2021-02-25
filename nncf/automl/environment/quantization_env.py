@@ -620,5 +620,5 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with safe_open(self.dump_dir / self.model_name / "_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
+        with safe_open(self.dump_dir / "{}_groups_of_adjacent_quantizers.json".format(self.model_name), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
