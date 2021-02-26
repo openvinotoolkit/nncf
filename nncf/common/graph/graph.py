@@ -127,7 +127,7 @@ class NNCFGraph:
 
     def traverse_graph(self,
                        curr_node: NNCFNode,
-                       traverse_function: Callable[[NNCFNode], Tuple[bool, List[Any]]],
+                       traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
                        traverse_forward: bool = True):
         output = []
         return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
