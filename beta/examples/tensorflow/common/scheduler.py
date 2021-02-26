@@ -61,10 +61,10 @@ def build_scheduler(config, epoch_size, batch_size, steps):
         decay_steps = decay_epochs * steps if decay_epochs is not None else 0
 
         logger.info('Using exponential learning rate with: '
-                    'initial_learning_rate: {initial_lr}, decay_steps: {decay_steps}, '
-                    'decay_rate: {decay_rate}'.format(initial_lr=initial_lr,
-                                                      decay_steps=decay_steps,
-                                                      decay_rate=decay_rate))
+                    'initial_learning_rate: %f, decay_steps: %d, '
+                    'decay_rate: %f'.format(initial_lr=initial_lr,
+                                            decay_steps=decay_steps,
+                                            decay_rate=decay_rate))
         lr = tf.keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=initial_lr,
             decay_steps=decay_steps,
@@ -72,26 +72,26 @@ def build_scheduler(config, epoch_size, batch_size, steps):
     elif schedule_type == 'piecewise_constant':
         boundaries = schedule_params.get('boundaries', None)
         if boundaries is None:
-            raise ValueError('boundaries parameter must be specified '
+            raise ValueError('Boundaries parameter must be specified '
                              'for the piecewise_constant scheduler')
 
         values = schedule_params.get('values', None)
         if values is None:
-            raise ValueError('values parameter must be specified '
+            raise ValueError('Values parameter must be specified '
                              'for the piecewise_constant')
 
         logger.info('Using Piecewise constant decay with warmup. '
-                    'Parameters: batch_size: {batch_size}, epoch_size: {epoch_size}, '
-                    'boundaries: {boundaries}, values: {values}'.format(batch_size=batch_size,
-                                                                        epoch_size=epoch_size,
-                                                                        boundaries=boundaries,
-                                                                        values=values))
+                    'Parameters: batch_size: %d, epoch_size: %d, '
+                    'boundaries: %s, values: %s'.format(batch_size=batch_size,
+                                                        epoch_size=epoch_size,
+                                                        boundaries=boundaries,
+                                                        values=values))
         steps_per_epoch = epoch_size // batch_size
         boundaries = [steps_per_epoch * x for x in boundaries]
         lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
     elif schedule_type == 'step' or 'multistep':
         lr = StepLearningRateWithLinearWarmup(steps, schedule_params)
     else:
-        raise KeyError("Unknown scheduler type: {}".format(schedule_type))
+        raise KeyError('Unknown scheduler type: {}'.format(schedule_type))
 
     return lr

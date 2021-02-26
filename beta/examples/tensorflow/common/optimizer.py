@@ -27,7 +27,7 @@ def build_optimizer(config, scheduler):
 
     if optimizer_type in ['sgd', 'momentum']:
         printable_names = {'sgd': 'SGD', 'momentum': 'momentum'}
-        logger.info('Using {} optimizer'.format(printable_names[optimizer_type]))
+        logger.info('Using %s optimizer', printable_names[optimizer_type])
 
         default_momentum_value = 0.9 if optimizer_type == 'momentum' else 0.0
         momentum = optimizer_params.get('momentum', default_momentum_value)
@@ -52,7 +52,7 @@ def build_optimizer(config, scheduler):
                                                 epsilon=epsilon)
     elif optimizer_type in ['adam', 'adamw']:
         printable_names = {'adam': 'Adam', 'adamw': 'AdamW'}
-        logger.info('Using {} optimizer'.format(printable_names[optimizer_type]))
+        logger.info('Using %s optimizer', printable_names[optimizer_type])
 
         beta_1, beta_2 = optimizer_params.get('betas', [0.9, 0.999])
         epsilon = optimizer_params.get('eps', 1e-07)
