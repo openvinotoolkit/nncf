@@ -47,17 +47,14 @@ class StepLearningRateWithLinearWarmup(tf.keras.optimizers.schedules.LearningRat
 def build_scheduler(config, epoch_size, batch_size, steps):
     optimizer_config = config.get('optimizer', {})
     schedule_type = optimizer_config.get('schedule_type', 'exponential').lower()
-    schedule_params = optimizer_config.get("schedule_params", {})
+    schedule_params = optimizer_config.get('scheduler_params', {})
+    decay_rate = optimizer_config.get('gamma', optimizer_config.get('decay_rate', 0.1))
 
     if schedule_type == 'exponential':
-        decay_rate = schedule_params.get('decay_rate', None)
-        if decay_rate is None:
-            raise ValueError('decay_rate parameter must be specified '
-                             'for the exponential scheduler')
 
-        initial_lr = schedule_params.get('initial_lr', None)
+        initial_lr = schedule_params.get('base_lr', schedule_params.get('initial_lr', None))
         if initial_lr is None:
-            raise ValueError('initial_lr parameter must be specified '
+            raise ValueError('base_lr parameter must be specified '
                              'for the exponential scheduler')
 
         decay_epochs = schedule_params.get('decay_epochs', None)
@@ -92,7 +89,9 @@ def build_scheduler(config, epoch_size, batch_size, steps):
         steps_per_epoch = epoch_size // batch_size
         boundaries = [steps_per_epoch * x for x in boundaries]
         lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
-    elif schedule_type == 'step':
+    elif schedule_type == 'step' or 'multistep':
         lr = StepLearningRateWithLinearWarmup(steps, schedule_params)
+    else:
+        raise KeyError("Unknown scheduler type: {}".format(schedule_type))
 
     return lr
