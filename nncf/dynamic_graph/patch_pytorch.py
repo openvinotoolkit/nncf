@@ -213,7 +213,8 @@ def patch_extension_build_function():
     """
     import torch.utils.cpp_extension
 
-    if torch.__version__ == '1.8.0':
+    split_torch_version = list(map(int, torch.__version__.split('.')))
+    if split_torch_version >= [1, 8, 0]:
         return
 
     if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
