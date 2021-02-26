@@ -14,10 +14,6 @@
         "type": "SGD",
         "base_lr": 1e-04,
         "weight_decay": 1e-4,
-        "schedule_type": "multistep",
-        "steps": [
-            50
-        ],
         "optimizer_params":
         {
             "momentum": 0.9,
