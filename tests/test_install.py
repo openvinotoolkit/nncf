@@ -31,7 +31,7 @@ def package_type_(request):
     return request.param
 
 
-def test_install(create_venv, install_type, tmp_path, package_type):
+def test_install(create_tmp_venv_with_nncf, install_type, tmp_path, package_type):
     venv_path = tmp_path / 'venv'
 
     python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
