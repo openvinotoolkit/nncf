@@ -11,13 +11,18 @@
  limitations under the License.
 """
 
-from typing import Dict, List
+from typing import Dict
+from typing import List
+from typing import Tuple
 
 import tensorflow as tf
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
+from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
+from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import InsertionCommand
@@ -114,21 +119,22 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
                 related_layers = {}
                 if self._prune_batch_norms:
-                    for out_node in graph.get_next_nodes(node):
-                        if out_node.node_type == 'BatchNormalization':
-                            bn_layer_name = tf_get_layer_identifier(out_node)
-                            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[out_node.node_type][attr_name_key]
-                                transformations.register(
-                                    InsertionCommand(
-                                        target_point=LayerWeight(bn_layer_name, attr_name),
-                                        callable_object=BinaryMask(),
-                                        priority=TransformationPriority.PRUNING_PRIORITY
-                                    ))
-                            if PrunedLayerInfo.BN_LAYER_NAME in related_layers:
-                                related_layers[PrunedLayerInfo.BN_LAYER_NAME].append(bn_layer_name)
-                            else:
-                                related_layers[PrunedLayerInfo.BN_LAYER_NAME] = [bn_layer_name]
+                    bn_nodes = [bn_node for s_node in graph.get_next_nodes(node)
+                                for bn_node in graph.traverse_graph(s_node, self._get_bn_for_node)]
+                    for out_node in bn_nodes:
+                        bn_layer_name = tf_get_layer_identifier(out_node)
+                        for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
+                            attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[out_node.node_type][attr_name_key]
+                            transformations.register(
+                                InsertionCommand(
+                                    target_point=LayerWeight(bn_layer_name, attr_name),
+                                    callable_object=BinaryMask(),
+                                    priority=TransformationPriority.PRUNING_PRIORITY
+                                ))
+                        if PrunedLayerInfo.BN_LAYER_NAME in related_layers:
+                            related_layers[PrunedLayerInfo.BN_LAYER_NAME].append(bn_layer_name)
+                        else:
+                            related_layers[PrunedLayerInfo.BN_LAYER_NAME] = [bn_layer_name]
 
                 minfo = PrunedLayerInfo(layer_name, related_layers)
                 group_minfos.append(minfo)
@@ -136,6 +142,18 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             self._pruned_layer_groups_info.add_cluster(cluster)
 
         return transformations
+
+    @staticmethod
+    def _get_bn_for_node(node: NNCFNode, bn_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
+        is_finished = False
+        propagating_ops = [op_name for meta_op in [TFIdentityMaskForwardOps, TFElementwise]
+                           for op_name in meta_op.get_all_op_aliases()]
+        if node.node_type == 'BatchNormalization':
+            is_finished = True
+            bn_nodes.append(node)
+        elif node.node_type not in propagating_ops:
+            is_finished = True
+        return is_finished, bn_nodes
 
     def _is_pruned_layer(self, layer: tf.keras.layers.Layer) -> bool:
         """

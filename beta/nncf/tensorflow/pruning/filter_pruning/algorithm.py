@@ -35,6 +35,7 @@ from beta.nncf.tensorflow.pruning.utils import broadcast_filter_mask
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 
@@ -116,10 +117,7 @@ class FilterPruningController(BasePruningAlgoController):
             threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num - 1)]
             filter_mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
-            for minfo in group.nodes:
-                bn_layers = [layer for layer in wrapped_layers
-                             if layer.layer.name in minfo.related_layers[PrunedLayerInfo.BN_LAYER_NAME]]
-                layers += bn_layers
+            layers = self._update_with_bn_layers(group, layers, wrapped_layers)
 
             # 3. Set binary masks for filter
             self._set_operation_masks(layers, filter_mask)
@@ -176,9 +174,17 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Set binary masks for filters in grops
         for i, group in enumerate(self._pruned_layer_groups_info.get_all_clusters()):
-            for minfo in group.nodes:
-                bn_layers = [layer for layer in wrapped_layers
-                             if layer.layer.name in minfo.related_layers[PrunedLayerInfo.BN_LAYER_NAME]]
-                layers[i] += bn_layers
+            layers[i] = self._update_with_bn_layers(group, layers[i], wrapped_layers)
             filter_mask = calculate_binary_mask(filter_importances[i], threshold)
             self._set_operation_masks(layers[i], filter_mask)
+
+    @staticmethod
+    def _update_with_bn_layers(group: NodesCluster,
+                               layers_to_prune: List[NNCFWrapper],
+                               wrapped_layers: List[NNCFWrapper]) -> List[NNCFWrapper]:
+        for minfo in group.nodes:
+            bn_layers = list({layer for layer in wrapped_layers
+                              if PrunedLayerInfo.BN_LAYER_NAME in minfo.related_layers
+                              and layer.layer.name in minfo.related_layers[PrunedLayerInfo.BN_LAYER_NAME]})
+            layers_to_prune += bn_layers
+        return layers_to_prune
