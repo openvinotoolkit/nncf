@@ -30,6 +30,7 @@ def _get_types(expression):
             types.extend(_get_types(expr))
         return types
 
+
 @TF_PRUNING_OPERATOR_METATYPES.register('model_input')
 class TFInput(DefaultMetaOp):
     additional_types = ['InputLayer']
@@ -42,7 +43,9 @@ class TFInput(DefaultMetaOp):
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
     additional_types = _get_types(KERAS_ACTIVATIONS) \
-                       + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D']
+                       + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
+                       + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
+                       + ['Dropout', 'Reshape', 'ZeroPadding2D']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -100,7 +103,7 @@ class TFElementwise(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardOps(DefaultMetaOp):
-    additional_types = ['Average', 'Maximum', 'Minimum', 'Dense']
+    additional_types = ['Average', 'Maximum', 'Minimum', 'Dense', 'MatMul']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
