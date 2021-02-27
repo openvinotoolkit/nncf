@@ -22,6 +22,8 @@ from torch.nn.parallel import DistributedDataParallel
 from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
 
+from nncf.common.utils.logger import logger
+
 
 class CustomTraceFunction:
     def __call__(self, operator: Callable, *args, **kwargs):
@@ -129,12 +131,10 @@ _ORIG_JIT_SCRIPT = None
 
 
 def patch_torch_jit_script():
-
-    # These two import statements are required, otherwise we get a
+    # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
     # pylint:disable=unused-import,redefined-outer-name,reimported
     import torch
-    import torchvision
 
     orig = getattr(torch.jit, "script")
     global _ORIG_JIT_SCRIPT
@@ -204,3 +204,31 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
+
+
+def patch_extension_build_function():
+    """
+    The function patches PyTorch and fix a bug inside CUDA extensions building;
+    The bug must be fixed with a new PyTorch 1.8.0
+    """
+    import torch.utils.cpp_extension
+
+    split_torch_version = list(map(int, torch.__version__.split('.')))
+    if split_torch_version >= [1, 8, 0]:
+        return
+
+    if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
+        logger.warning('Skip apply a patch to building extension with a reason: '
+                       'PyTorch version is not supported for this')
+        return
+
+    def sort_arch_flags(func):
+        def wrapped(*args, **kwargs):
+            flags = func(*args, **kwargs)
+            return sorted(flags)
+
+        return wrapped
+
+    # pylint:disable=protected-access
+    torch.utils.cpp_extension._get_cuda_arch_flags = \
+        sort_arch_flags(torch.utils.cpp_extension._get_cuda_arch_flags)
