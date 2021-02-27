@@ -139,13 +139,24 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
-            return top5
+        def autoq_eval_fn(model, epoch, log_epoch):
+            top1, top5 = validate(val_loader, model, criterion, config, epoch, log_epoch)
+            return top1
+
+        def train_epoch_fn_aa(config, compression_ctrl, model, criterion_fn, epoch, log_epoch):
+            return train_epoch_fn(train_loader, model, criterion, criterion_fn,
+                                  optimizer, compression_ctrl, epoch, config,
+                                  lr_scheduler, train_sampler, val_loader, log_epoch)
+
+            #return train_epoch(train_loader, model, criterion, criterion_fn,
+            #                   optimizer, compression_ctrl, epoch, config)
+
+        uncompressed_model_accuracy = 65.65
 
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            autoq_eval_fn, train_epoch_fn_aa, val_loader, config.device,
+            uncompressed_model_accuracy, config)
 
     # create model
     model = load_model(model_name,
@@ -195,50 +206,68 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
+        return
 
-    if config.mode.lower() == 'train':
-        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
-              train_loader, train_sampler, val_loader, best_acc1)
+    compression_ctrl.run_accuracy_aware_training()
+
+    # if config.mode.lower() == 'train':
+    #     train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
+    #           train_loader, train_sampler, val_loader, best_acc1)
+
+
+def train_epoch_fn(train_loader, model, criterion, criterion_fn,
+                   optimizer, compression_ctrl, epoch, config,
+                   lr_scheduler, train_sampler, val_loader, log_epoch):
+    # update compression scheduler state at the begin of the epoch
+    compression_ctrl.scheduler.epoch_step()
+
+    config.cur_epoch = epoch
+    if config.distributed:
+        train_sampler.set_epoch(epoch)
+
+    # train for one epoch
+    train_epoch(train_loader, model, criterion, criterion_fn,
+                optimizer, compression_ctrl, epoch, config, log_epoch)
+
+    # Learning rate scheduling should be applied after optimizer’s update
+    lr_scheduler.step(epoch)
+    #if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
+
+    # compute compression algo statistics
+    stats = compression_ctrl.statistics()
+
+    print_statistics(stats)
+
+    # acc1 = best_acc1
+    # if epoch % config.test_every_n_epochs == 0:
+    #     # evaluate on validation set
+    #     acc1, _ = validate(val_loader, model, criterion, config)
+
+    # compression_level = compression_ctrl.compression_level()
+    # # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
+    # # still can be best if current compression level is bigger then best one. Compression levels in ascending
+    # # order: NONE, PARTIAL, FULL.
+    # is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
+    # is_best = is_best_by_accuracy or compression_level > best_compression_level
+    # if is_best:
+    #     best_acc1 = acc1
+    # config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
+    # best_compression_level = max(compression_level, best_compression_level)
+    # acc = best_acc1 / 100
+    # if config.metrics_dump is not None:
+    #     write_metrics(acc, config.metrics_dump)
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
     best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
-        # update compression scheduler state at the begin of the epoch
-        compression_ctrl.scheduler.epoch_step()
 
-        config.cur_epoch = epoch
-        if config.distributed:
-            train_sampler.set_epoch(epoch)
+        stats = train_epoch_fn(train_loader, model, criterion, criterion_fn,
+                               optimizer, compression_ctrl, epoch, config,
+                               lr_scheduler, train_sampler, best_acc1, best_compression_level,
+                               val_loader)
 
-        # train for one epoch
-        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
-
-        # Learning rate scheduling should be applied after optimizer’s update
-        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
-
-        # compute compression algo statistics
-        stats = compression_ctrl.statistics()
-
-        acc1 = best_acc1
-        if epoch % config.test_every_n_epochs == 0:
-            # evaluate on validation set
-            acc1, _ = validate(val_loader, model, criterion, config)
-
-        compression_level = compression_ctrl.compression_level()
-        # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
-        # still can be best if current compression level is bigger then best one. Compression levels in ascending
-        # order: NONE, PARTIAL, FULL.
-        is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
-        is_best = is_best_by_accuracy or compression_level > best_compression_level
-        if is_best:
-            best_acc1 = acc1
-        config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
-        best_compression_level = max(compression_level, best_compression_level)
-        acc = best_acc1 / 100
-        if config.metrics_dump is not None:
-            write_metrics(acc, config.metrics_dump)
         if is_main_process():
             print_statistics(stats)
 
@@ -363,7 +392,8 @@ def create_data_loaders(config, train_dataset, val_dataset):
     return train_loader, train_sampler, val_loader, init_loader
 
 
-def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
+def train_epoch(train_loader, model, criterion, criterion_fn,
+                optimizer, compression_ctrl, epoch, config, log_epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -434,7 +464,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                 ))
 
         if is_main_process():
-            global_step = len(train_loader) * epoch
+            global_step = len(train_loader) * log_epoch
             config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
             config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
             config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
@@ -447,7 +477,9 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
-def validate(val_loader, model, criterion, config):
+def validate(val_loader, model, criterion, config, epoch=0, log_epoch=0):
+    config.cur_epoch = log_epoch
+
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()

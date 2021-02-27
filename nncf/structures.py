@@ -117,3 +117,23 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return "autoq_precision_init_args"
+
+
+class TrainEpochArgs(NNCFExtraConfigStruct):
+    def __init__(self,
+                 train_epoch_fn,
+                 eval_fn,
+                 config,
+                 criterion_fn,
+                 device,
+                 uncompressed_model_accuracy):
+        self.train_epoch_fn = train_epoch_fn
+        self.eval_fn = eval_fn
+        self.config = config
+        self.criterion_fn = criterion_fn
+        self.device = device
+        self.uncompressed_model_accuracy = uncompressed_model_accuracy
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "train_epoch_args"

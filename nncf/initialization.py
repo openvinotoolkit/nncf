@@ -10,7 +10,7 @@ from torch.nn.modules.loss import _Loss
 
 from nncf.progress_bar import ProgressBar
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
-    BNAdaptationInitArgs, AutoQPrecisionInitArgs
+    BNAdaptationInitArgs, AutoQPrecisionInitArgs, TrainEpochArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
 
 
@@ -216,8 +216,12 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
+                               train_epoch_fn = None,
                                autoq_eval_loader: torch.utils.data.DataLoader = None,
-                               device: str = None) -> 'NNCFConfig':
+                               device: str = None,
+                               uncompressed_model_accuracy = None,
+                               config = None,
+                               ) -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                   device=device),
@@ -238,5 +242,13 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
+
+    if train_epoch_fn:
+        nncf_config.register_extra_structs([TrainEpochArgs(train_epoch_fn=train_epoch_fn,
+                                                           eval_fn=autoq_eval_fn,
+                                                           config=config,
+                                                           criterion_fn=criterion_fn,
+                                                           device=device,
+                                                           uncompressed_model_accuracy=uncompressed_model_accuracy)])
 
     return nncf_config
