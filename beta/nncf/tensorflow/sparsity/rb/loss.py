@@ -22,10 +22,9 @@ class SparseLoss(CompressionLoss):
     def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
         super().__init__()
         self._sparse_layers = sparse_layers
-        self.target = target
+        self.target = tf.Variable(target)
         self.p = p
         self.disabled = False
-        self.current_sparsity = tf.constant(0.)
 
     def set_layers(self, sparse_layers: [NNCFWrapper]):
         self._sparse_layers = sparse_layers
@@ -54,12 +53,12 @@ class SparseLoss(CompressionLoss):
                 loss = loss + sw_loss
 
         params = tf.cast(params, tf.float32)
-        self.current_sparsity = 1 - loss / params
         return tf.reshape(tf.math.pow(((loss / params - self.target) / self.p), 2), shape=[])
 
     @property
     def target_sparsity_rate(self):
-        rate = 1 - self.target
+        eager_target = tf.keras.backend.eval(self.target)
+        rate = 1 - eager_target
         if rate < 0 or rate > 1:
             raise IndexError("Target is not within range(0,1)")
         return rate
@@ -71,7 +70,7 @@ class SparseLoss(CompressionLoss):
         return op.loss(mask), tf.size(mask), mask
 
     def set_target_sparsity_loss(self, sparsity_level):
-        self.target = 1 - sparsity_level
+        self.target.assign(1 - sparsity_level)
 
 
 class SparseLossForPerLayerSparsity(SparseLoss):
