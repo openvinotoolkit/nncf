@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 
-from nncf.nncf_network import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from nncf.quantization.layers import BaseQuantizer
 
 

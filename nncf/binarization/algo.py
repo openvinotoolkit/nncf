@@ -27,7 +27,10 @@ from nncf.config import NNCFConfig
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateWeight, UpdateInputs
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import OperationPriority
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import QuantizationControllerBase
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -39,13 +42,13 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self.mode = self.config.get('mode', BinarizationMode.XNOR)
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         return self._binarize_weights_and_module_inputs(target_model)
 
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()
 
-    def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
         modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
 
@@ -68,9 +71,9 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
 
                 ip = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
                                     module_scope=scope)
-                insertion_commands.append(InsertionCommand(ip, op_weights, OperationPriority.QUANTIZATION_PRIORITY))
+                insertion_commands.append(PTInsertionCommand(ip, op_weights, OperationPriority.QUANTIZATION_PRIORITY))
 
-                insertion_commands.append(InsertionCommand(ip, op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
+                insertion_commands.append(PTInsertionCommand(ip, op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:

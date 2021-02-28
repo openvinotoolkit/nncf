@@ -19,11 +19,11 @@ from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
-from nncf.nncf_network import InsertionCommand
-from nncf.nncf_network import InsertionPoint
-from nncf.nncf_network import InsertionType
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import InsertionType
 from nncf.nncf_network import NNCFNetwork
-from nncf.nncf_network import OperationPriority
+from nncf.dynamic_graph.transformations.commands import OperationPriority
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
@@ -48,19 +48,19 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         # Will it really suffice to use a single collector for all threads? After all, each of the threads
         # receives its own data, and should we use a thread-local collector, there would have to be a
         # separate thread reduction step involved. Still, is there a better option here than to rely on GIL?
-        retval = []  # type: List[InsertionCommand]
+        retval = []  # type: List[PTInsertionCommand]
         for op, collector in self._observation_points_vs_collectors.items():
             hook_obj = collector.register_input
             is_weights = op.insertion_point.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP,
                                                                InsertionType.NNCF_MODULE_POST_OP]
             if is_weights:
                 hook_obj = UpdateWeight(hook_obj)
-            command = InsertionCommand(op.insertion_point, hook_obj,
-                                       OperationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
+            command = PTInsertionCommand(op.insertion_point, hook_obj,
+                                         OperationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
             retval.append(command)
         return retval
 

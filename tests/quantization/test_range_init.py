@@ -22,6 +22,8 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 

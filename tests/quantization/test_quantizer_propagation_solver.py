@@ -23,8 +23,9 @@ from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType, InsertionPoint, \
-    InsertionType
+from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait, OPERATOR_METATYPES, DEFAULT_QUANT_TRAIT_TO_OP_DICT, \

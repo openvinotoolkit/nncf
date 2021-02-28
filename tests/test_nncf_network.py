@@ -30,8 +30,11 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
-from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
-    InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import OperationPriority
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
 from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement, \
@@ -223,7 +226,7 @@ class TestInsertionCommands:
         else:
             hook = BaseOp(lambda x: x)
 
-        command = InsertionCommand(insertion_point, hook)
+        command = PTInsertionCommand(insertion_point, hook)
         self.compressed_model.register_insertion_command(command)
         self.compressed_model.commit_compression_changes()
 
@@ -278,14 +281,14 @@ class TestInsertionCommands:
 
         if priority_type == "same":
             # Same-priority commands will be executed in registration order
-            command1 = InsertionCommand(point, hook1, OperationPriority.DEFAULT_PRIORITY)
-            command2 = InsertionCommand(point, hook2, OperationPriority.DEFAULT_PRIORITY)
-            command3 = InsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
+            command1 = PTInsertionCommand(point, hook1, OperationPriority.DEFAULT_PRIORITY)
+            command2 = PTInsertionCommand(point, hook2, OperationPriority.DEFAULT_PRIORITY)
+            command3 = PTInsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
         else:
             # Prioritized commands will be executed in ascending priority order
-            command1 = InsertionCommand(point, hook1, OperationPriority.SPARSIFICATION_PRIORITY)
-            command2 = InsertionCommand(point, hook2, OperationPriority.QUANTIZATION_PRIORITY)
-            command3 = InsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
+            command1 = PTInsertionCommand(point, hook1, OperationPriority.SPARSIFICATION_PRIORITY)
+            command2 = PTInsertionCommand(point, hook2, OperationPriority.QUANTIZATION_PRIORITY)
+            command3 = PTInsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
 
         self.compressed_model.register_insertion_command(command1)
         self.compressed_model.register_insertion_command(command2)

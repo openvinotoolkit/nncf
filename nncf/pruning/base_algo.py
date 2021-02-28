@@ -22,7 +22,11 @@ from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFNode
 from nncf.module_operations import UpdateWeight
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, InsertionPoint, InsertionCommand, InsertionType, OperationPriority
+from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import OperationPriority
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.model_analysis import NodesCluster, Clusterization
 from nncf.pruning.pruning_node_selector import PruningNodeSelector
@@ -78,7 +82,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         self.pruned_module_groups_info = []
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         return self._prune_weights(target_model)
 
     def _prune_weights(self, target_model: NNCFNetwork):
@@ -103,7 +107,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 operation = self.create_weight_pruning_operation(module)
                 hook = UpdateWeight(operation).to(device)
                 insertion_commands.append(
-                    InsertionCommand(
+                    PTInsertionCommand(
                         InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
                                        module_scope=module_scope),
                         hook,

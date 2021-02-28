@@ -31,8 +31,8 @@ from functools import partial
 
 from nncf import nncf_model_input
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.context import get_version_agnostic_name
+from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.transformations.commands import InsertionType
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph_builder import GraphBuilder

@@ -59,13 +59,13 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
 from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.nncf_network import InsertionCommand
-from nncf.nncf_network import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
-from nncf.nncf_network import InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionType
 from nncf.nncf_network import NNCFNetwork
-from nncf.nncf_network import OperationPriority
+from nncf.dynamic_graph.transformations.commands import OperationPriority
 from nncf.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -884,7 +884,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         return precision_init_type, precision_init_params
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         target_model.register_compression_module_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
@@ -984,7 +984,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def _add_single_weight_quantizer(self, target_model: NNCFNetwork, insertion_point: InsertionPoint,
                                      qconfig: QuantizerConfig,
                                      range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> Tuple[
-        WeightQuantizerId, InsertionCommand]:
+        WeightQuantizerId, PTInsertionCommand]:
         device = next(target_model.parameters()).device
         quantizer_id = WeightQuantizerId(insertion_point.module_scope)
         module = target_model.get_module_by_scope(insertion_point.module_scope)
@@ -1002,7 +1002,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                                     target_model.get_module_by_scope(
                                                                         insertion_point.module_scope
                                                                     ))
-        command = InsertionCommand(insertion_point, op, OperationPriority.QUANTIZATION_PRIORITY)
+        command = PTInsertionCommand(insertion_point, op, OperationPriority.QUANTIZATION_PRIORITY)
         return quantizer_id, command
 
     @staticmethod
@@ -1059,7 +1059,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                            target_model: NNCFNetwork,
                                                            minmax_values_for_range_init: Dict[
                                                                QuantizationPointId, MinMaxTensorStatistic]) -> \
-            Tuple[List[InsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
+            Tuple[List[PTInsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
         insertion_commands = []
         qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
 
@@ -1165,7 +1165,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                        unified_scales_group: Set[QuantizationPointId],
                                                        minmax_values_for_range_init: Dict[QuantizationPointId,
                                                                                           MinMaxTensorStatistic]) -> \
-            Tuple[QuantizerId, List[InsertionCommand]]:
+            Tuple[QuantizerId, List[PTInsertionCommand]]:
         qp_ids_list_for_current_group = list(unified_scales_group)
 
         # The primary insertion point (to be associated with the actual quantizer module, not just hooks to it)
@@ -1229,7 +1229,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                          insertion_points: List[InsertionPoint],
                                          qconfig: QuantizerConfig,
                                          range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
-            Tuple[NonWeightQuantizerId, List[InsertionCommand]]:
+            Tuple[NonWeightQuantizerId, List[PTInsertionCommand]]:
         """Will return one or more insertion commands - depending on whether insertion_points has one or
         more entries. The first insertion point in the list will be associated with the actual quantizer
         module, while the rest will still have quantization enabled, but the quantization at these points
@@ -1296,7 +1296,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                                    self._debug_interface)
 
             insertion_commands.append(
-                InsertionCommand(curr_insertion_point, hook, OperationPriority.QUANTIZATION_PRIORITY))
+                PTInsertionCommand(curr_insertion_point, hook, OperationPriority.QUANTIZATION_PRIORITY))
         return quantizer_id, insertion_commands
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:

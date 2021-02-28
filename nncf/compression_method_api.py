@@ -29,7 +29,8 @@ from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, InsertionCommand
+from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
@@ -238,7 +239,7 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
                                    f'Frozen Layers:\n'
                                    f'{scopes_to_print}')
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         return []
 
     def _should_consider_scope(self, scope_str: str) -> bool:

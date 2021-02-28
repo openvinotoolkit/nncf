@@ -6,9 +6,9 @@ from typing import Tuple
 from copy import deepcopy
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import InsertionPoint
-from nncf.nncf_network import InsertionType
 from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic

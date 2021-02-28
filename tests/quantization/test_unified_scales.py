@@ -21,7 +21,8 @@ from onnx import numpy_helper
 
 from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.nncf_network import InsertionPoint, InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionType
+from nncf.dynamic_graph.transformations.commands import InsertionPoint
 from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
