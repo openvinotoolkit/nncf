@@ -10,13 +10,13 @@ EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'
 
 @pytest.mark.parametrize("venv_type, package_type,install_type",
                          [('venv', 'develop', 'GPU')])
-def test_force_cuda_build(create_tmp_venv_with_nncf, install_type, tmp_path, package_type):
+def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_type):
     '''
     Check that CUDA Extensions weren't initially built and \
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     '''
 
-    venv_path = tmp_path / 'venv'
+    venv_path = tmp_venv_with_nncf
 
     torch_build_dir = tmp_path / 'extensions'
     export_env_variables = "export CUDA_VISIBLE_DEVICES='' export TORCH_EXTENSIONS_DIR={}".format(torch_build_dir)
