@@ -89,8 +89,11 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
         """
+
         transformation_layout = self.get_transformation_layout(model)
-        return TFModelTransformer(model, transformation_layout).transform()
+        transformer = TFModelTransformer(model, transformation_layout)
+        transformed_model = transformer.transform()
+        return transformed_model
 
     def build_controller(self, model: ModelType) -> TFCompressionAlgorithmController:
         """

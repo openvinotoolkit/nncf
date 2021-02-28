@@ -17,14 +17,14 @@ from typing import List
 from texttable import Texttable
 
 from nncf.api.compression import CompressionLevel
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
-from nncf.module_operations import UpdateWeight
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import InsertionType
-from nncf.dynamic_graph.transformations.commands import OperationPriority
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 
@@ -36,8 +36,12 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
         super().__init__(config, should_init)
         self._sparsified_module_info = []
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
-        return self._sparsify_weights(target_model)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        layout = PTTransformationLayout()
+        commands = self._sparsify_weights(target_model)
+        for command in commands:
+            layout.register(command)
+        return layout
 
     def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
@@ -52,12 +56,12 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
             operation = self.create_weight_sparsifying_operation(module)
-            hook = UpdateWeight(operation).to(device)
-            insertion_commands.append(PTInsertionCommand(InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
-                                                                        module_scope=module_scope),
-                                                         hook, OperationPriority.SPARSIFICATION_PRIORITY))
+            hook = operation.to(device)
+            insertion_commands.append(PTInsertionCommand(PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                          module_scope=module_scope),
+                                                         hook, TransformationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
-                SparseModuleInfo(scope_str, module, hook.operand))
+                SparseModuleInfo(scope_str, module, hook))
 
         return insertion_commands
 

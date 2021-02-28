@@ -5,10 +5,10 @@ from typing import Tuple
 
 from copy import deepcopy
 
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import InsertionType
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -19,17 +19,17 @@ QuantizationPointId = int
 
 
 class QuantizationPointBase:
-    def __init__(self, insertion_point: InsertionPoint,
+    def __init__(self, insertion_point: PTInsertionPoint,
                  scopes_of_directly_quantized_operators: List['Scope']):
         self.insertion_point = insertion_point
         self.scopes_of_directly_quantized_operators = scopes_of_directly_quantized_operators
 
     def is_activation_quantization_point(self) -> bool:
-        return self.insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK or \
-               self.insertion_point.insertion_type == InsertionType.OPERATOR_POST_HOOK
+        return self.insertion_point.target_type == TargetType.OPERATOR_PRE_HOOK or \
+               self.insertion_point.target_type == TargetType.OPERATOR_POST_HOOK
 
     def is_weight_quantization_point(self) -> bool:
-        return self.insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP
+        return self.insertion_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
 
     def assign_input_shape(self, input_shape):
         raise NotImplementedError
@@ -42,7 +42,7 @@ class QuantizationPointBase:
 
 
 class SingleConfigQuantizationPoint(QuantizationPointBase):
-    def __init__(self, insertion_point: InsertionPoint, qconfig: QuantizerConfig,
+    def __init__(self, insertion_point: PTInsertionPoint, qconfig: QuantizerConfig,
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
         self.qconfig = deepcopy(qconfig)
@@ -60,7 +60,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
-    def __init__(self, insertion_point: InsertionPoint, possible_qconfigs: List[QuantizerConfig],
+    def __init__(self, insertion_point: PTInsertionPoint, possible_qconfigs: List[QuantizerConfig],
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
         self.possible_qconfigs = deepcopy(possible_qconfigs)
@@ -140,7 +140,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, SingleConfigQuantizationPoint]
 
     def get_minmax_values(self,
-                          tensor_statistics: Dict[InsertionPoint, Dict[ReductionShape, TensorStatistic]],
+                          tensor_statistics: Dict[PTInsertionPoint, Dict[ReductionShape, TensorStatistic]],
                           target_model: NNCFNetwork) -> \
             Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}

@@ -105,9 +105,3 @@ class TransformationCommand:
         return self.__class__ == command.__class__ and \
                self.type == command.type and \
                self.target_point == command.target_point
-
-    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        raise NotImplementedError()
-
-    def __add__(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        return self.union(other)

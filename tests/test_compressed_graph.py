@@ -29,10 +29,10 @@ from abc import abstractmethod
 from copy import deepcopy
 from functools import partial
 
+from nncf.common.graph.transformations.commands import TargetType
 from nncf import nncf_model_input
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import InsertionType
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -400,7 +400,6 @@ def test_gnmt_quantization(_case_config):
     composite_builder = PTCompositeCompressionAlgorithmBuilder(config)
     composite_builder.apply_to(compressed_model)
 
-    _ = compressed_model.commit_compression_changes()
     check_model_graph(compressed_model, 'gnmt_variable.dot', _case_config.graph_dir)
 
 
@@ -848,10 +847,10 @@ def prepare_potential_quantizer_graph(graph: NNCFGraph,
             ia_op_exec_context = qp.insertion_point.ia_op_exec_context
             qconfig = qp.qconfig
             str_qconfig = str(qconfig)
-            if qp.insertion_point.insertion_type is InsertionType.OPERATOR_PRE_HOOK:
+            if qp.insertion_point.target_type is TargetType.OPERATOR_PRE_HOOK:
                 pre_hooked_quantizers_activations_attr[ia_op_exec_context] = \
                     (qp.insertion_point.input_port_id, str_qconfig)
-            elif qp.insertion_point.insertion_type is InsertionType.OPERATOR_POST_HOOK:
+            elif qp.insertion_point.target_type is TargetType.OPERATOR_POST_HOOK:
                 post_hooked_quantizers_activations_attr[ia_op_exec_context] = str_qconfig
 
     nx_graph = graph._nx_graph

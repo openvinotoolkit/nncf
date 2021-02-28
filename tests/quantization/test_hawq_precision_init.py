@@ -522,6 +522,7 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path):
     assert not compare_multi_gpu_dump(config, tmp_path, get_path_to_bitwidth_dump)
 
 
+    ACTIVATION_SCOPE = 'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0'
 @pytest.mark.parametrize(('method_name', 'expected_behavior'),
                          [('_calc_traces', pytest.raises(RuntimeError))]
                          )

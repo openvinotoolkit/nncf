@@ -18,14 +18,15 @@ from typing import Dict, List, Tuple
 
 import networkx as nx
 import pytest
+
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import OperationExecutionContext, NNCFGraph, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType
-from nncf.dynamic_graph.transformations.commands import InsertionType
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait, OPERATOR_METATYPES, DEFAULT_QUANT_TRAIT_TO_OP_DICT, \
@@ -1496,8 +1497,8 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             base_graph=get_sequentially_connected_model_graph(['conv2d', 'batch_norm']),
             retval_qps={1: MultiConfigQuantizationPoint(
-                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
+                                 ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
                 [QuantizerConfig()],
                 [Scope()])},
             retval_unified_scale_qp_groups=[],
@@ -1509,13 +1510,13 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             base_graph=get_sequentially_connected_model_graph(['conv2d', 'gelu', 'conv2d']),
             retval_qps={1: MultiConfigQuantizationPoint(
-                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
+                                 ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
                 [QuantizerConfig()],
                 [Scope()]),
                         2: MultiConfigQuantizationPoint(
-                            InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
+                            PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
+                                             ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
                                                "/gelu_0")),
                             [QuantizerConfig()],
                             [Scope()])},
@@ -1528,8 +1529,8 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul', 'gelu', 'softmax']),
             retval_qps={1: MultiConfigQuantizationPoint(
-                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
+                                 ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
                 [QuantizerConfig()],
                 [Scope()])},
             retval_unified_scale_qp_groups=[],
@@ -1541,8 +1542,8 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             base_graph=get_sequentially_connected_model_graph(['conv2d', 'matmul']),
             retval_qps={1: MultiConfigQuantizationPoint(
-                InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
+                PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
+                                 ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
                 [QuantizerConfig()],
                 [Scope()])},
             retval_unified_scale_qp_groups=[],
@@ -1563,9 +1564,9 @@ class TestQuantizerPropagationSolver:
         RunOnIpGraphTestStruct(
             base_graph=TwoFcAfterDropout.get_graph(),
             retval_qps={1: MultiConfigQuantizationPoint(
-                InsertionPoint(InsertionType.OPERATOR_PRE_HOOK,
-                               ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic,
-                               input_port_id=0),
+                PTInsertionPoint(TargetType.OPERATOR_PRE_HOOK,
+                                 ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic,
+                                 input_port_id=0),
                 [QuantizerConfig()],
                 [TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.scope_in_model])},
             retval_unified_scale_qp_groups=[],

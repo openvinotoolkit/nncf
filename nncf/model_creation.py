@@ -107,7 +107,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     composite_builder.apply_to(compressed_model)
 
-    compression_ctrl = compressed_model.commit_compression_changes()
+    compression_ctrl = composite_builder.build_controller(compressed_model)
 
     try:
         if resuming_state_dict is not None:

@@ -312,7 +312,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
                 ], // A tuple of a bitwidth and a scope
                 [
                     4,
-                    "InsertionType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
+                    "TargetType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
                 ]
             ]
         }

@@ -633,11 +633,11 @@ class AutoQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_autoq' + sr
 
     def setup_spy(self, mocker):
-        from nncf.nncf_network import NNCFNetwork
-        self.commit_compression_changes_spy = mocker.spy(NNCFNetwork, 'commit_compression_changes')
+        from nncf.quantization.algo import QuantizationBuilder
+        self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
 
     def validate_spy(self):
-        ctrl = self.commit_compression_changes_spy.spy_return
+        ctrl = self.builder_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
         assert set(final_bits) != {QuantizerConfig().num_bits}
         assert all([bit in AutoQDescriptor.BITS for bit in final_bits])

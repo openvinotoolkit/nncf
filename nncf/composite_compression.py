@@ -23,8 +23,10 @@ from nncf.api.composite_compression import CompositeCompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import PTCompressionLoss
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.hw_config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import PTModelTransformer
 from nncf.pruning.base_algo import BasePruningAlgoController
 
 ModelType = TypeVar('ModelType')
@@ -80,9 +82,44 @@ class PTCompositeCompressionAlgorithmBuilder(
         return bool(self.child_builders)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        for builder in self._child_builders:
-            target_model = builder.apply_to(target_model)
-        return target_model
+        layout = self.get_transformation_layout(target_model)
+        transformer = PTModelTransformer(target_model, layout)
+        transformed_model = transformer.transform()
+        return transformed_model
+
+    def build_controller(self, model: ModelType) -> 'PTCompositeCompressionAlgorithmController':
+        """
+        Builds `PTCompositeCompressionAlgorithmController` to handle the additional
+        modules, parameters, and hooks inserted into the model to enable
+        algorithm-specific compression.
+
+        :param model: The model with additional modifications necessary to enable
+         algorithm-specific compression during fine-tuning.
+        :return: The instance of the `PTCompositeCompressionAlgorithmController`.
+        """
+        if len(self._child_builders) == 1:
+            return self._child_builders[0].build_controller(model)
+        composite_ctrl = PTCompositeCompressionAlgorithmController(model)
+        for builder in self.child_builders:
+            composite_ctrl.add(builder.build_controller(model))
+        return composite_ctrl
+
+    def get_transformation_layout(self, model: ModelType) -> PTTransformationLayout:
+        """
+        Computes necessary model transformations to enable algorithm-specific
+        compression.
+
+        :param model: The original uncompressed model.
+        :return: The instance of the `PTTransformationLayout` class containing
+            a list of algorithm-specific modifications.
+        """
+        transformations = PTTransformationLayout()
+        for builder in self.child_builders:
+            transformations.update(builder.get_transformation_layout(model))
+        return transformations
+
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        pass  # Higher-level get_transformation_layout is overridden, no need to define this
 
 
 class PTCompositeCompressionAlgorithmController(

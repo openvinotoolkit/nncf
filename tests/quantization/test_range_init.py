@@ -22,8 +22,8 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
-from nncf.dynamic_graph.transformations.commands import InsertionType
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
@@ -160,15 +160,14 @@ def create_config():
 
 def generate_qp(scope_str: str, target: QuantizerGroup, in_port_id: int = None) -> SingleConfigQuantizationPoint:
     if target is QuantizerGroup.WEIGHTS:
-        scope = Scope.from_str(scope_str)
-        ip = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP, module_scope=scope)
+        ip = PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str(scope_str))
         scopes_of_directly_quantized_operators = [scope]
     elif target is QuantizerGroup.ACTIVATIONS:
         ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
         scopes_of_directly_quantized_operators = [ia_op_exec_context.scope_in_model]
-        ip = InsertionPoint(InsertionType.OPERATOR_POST_HOOK if in_port_id is None else InsertionType.OPERATOR_PRE_HOOK,
-                            ia_op_exec_context=ia_op_exec_context,
-                            input_port_id=in_port_id)
+        ip = PTInsertionPoint(InsertionType.OPERATOR_POST_HOOK if in_port_id is None else InsertionType.OPERATOR_PRE_HOOK,
+                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(scope_str),
+                              input_port_id=in_port_id)
     else:
         raise RuntimeError()
     return SingleConfigQuantizationPoint(ip, QuantizerConfig(), scopes_of_directly_quantized_operators)

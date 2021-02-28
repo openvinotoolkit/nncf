@@ -2,13 +2,13 @@ from typing import List
 
 import torch
 
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from nncf.quantization.layers import BaseQuantizer
 
 
 class NonWeightQuantizerInfo:
     def __init__(self, quantizer_module_ref: BaseQuantizer,
-                 affected_insertions: List[InsertionPoint]):
+                 affected_insertions: List[PTInsertionPoint]):
         self.quantizer_module_ref = quantizer_module_ref
         self.affected_insertions = affected_insertions
 

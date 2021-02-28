@@ -10,22 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict, List
+from typing import Dict
 
 from functools import partial, update_wrapper
 from texttable import Texttable
 from torch import nn
 
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import NNCFNode
-from nncf.module_operations import UpdateWeight
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import InsertionType
-from nncf.dynamic_graph.transformations.commands import OperationPriority
-from nncf.dynamic_graph.transformations.commands import InsertionPoint
+from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.model_analysis import NodesCluster, Clusterization
@@ -82,8 +82,12 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         self.pruned_module_groups_info = []
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
-        return self._prune_weights(target_model)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        layout = PTTransformationLayout()
+        commands = self._prune_weights(target_model)
+        for command in commands:
+            layout.register(command)
+        return layout
 
     def _prune_weights(self, target_model: NNCFNetwork):
         graph = target_model.get_original_graph()
@@ -105,13 +109,13 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
                 nncf_logger.info("Adding Weight Pruner in scope: {}".format(module_scope_str))
                 operation = self.create_weight_pruning_operation(module)
-                hook = UpdateWeight(operation).to(device)
+                hook = operation.to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
-                        InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
-                                       module_scope=module_scope),
+                        PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                         module_scope=module_scope),
                         hook,
-                        OperationPriority.PRUNING_PRIORITY
+                        TransformationPriority.PRUNING_PRIORITY
                     )
                 )
 
@@ -121,7 +125,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                     related_modules[PrunedModuleInfo.BN_MODULE_NAME] = BatchNormInfo(module_scope,
                                                                                      bn_module, bn_scope)
 
-                minfo = PrunedModuleInfo(module_scope, module, hook.operand, related_modules, node.node_id)
+                minfo = PrunedModuleInfo(module_scope, module, hook, related_modules, node.node_id)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self.pruned_module_groups_info.add_cluster(cluster)

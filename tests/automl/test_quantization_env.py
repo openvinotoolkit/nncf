@@ -36,7 +36,7 @@ def create_test_quantization_env() -> QuantizationEnv:
     experimental_builder = ExperimentalQuantizationBuilder(setup, {}, hw_config)
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
-    experimental_ctrl = nncf_network.commit_compression_changes()  # type: ExperimentalQuantizationController
+    experimental_ctrl = experimental_builder.build_controller(nncf_network)
     data_loader = create_mock_dataloader(
             {
                 "sample_size": [1, 1, 4, 4],

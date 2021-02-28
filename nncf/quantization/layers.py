@@ -60,7 +60,7 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool):
+                    scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
                    narrow_range, scale_shape, logarithm_scale)
 
