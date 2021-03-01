@@ -169,7 +169,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
     return train_step
 
 
-def train(train_step, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
+def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
     epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq): # train_step, test_step, eval_metric...
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
@@ -288,7 +288,7 @@ def run(config):
                 scheduler=scheduler)
 
             eval_metric = model_builder.eval_metrics()
-            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
+            loss_fn = model_builder.build_loss_fn(compress_model)
             predict_post_process_fn = model_builder.post_processing
 
             checkpoint = tf.train.Checkpoint(model=compress_model, optimizer=optimizer)
@@ -306,16 +306,16 @@ def run(config):
                 compression_ctrl.initialize(dataset=train_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
-    # test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
+    test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        train(train_step, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
+        train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq) # train_step, test_step, eval_metric, ...
 
     print_statistics(compression_ctrl.statistics())
-    # metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
-    # logger.info('Validation metric = {}'.format(metric_result))
+    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
+    logger.info('Validation metric = {}'.format(metric_result))
 
     # if config.metrics_dump is not None:
     #     write_metrics(metric_result['AP'], config.metrics_dump)
@@ -328,6 +328,7 @@ def run(config):
     compression_ctrl.export_model(save_path, save_format)
     logger.info("Saved to {}".format(save_path))
 
+    compress_model.save(os.path.join(config.log_dir, 'dumped.h5'))
 
 def export(config):
     model_builder = get_model_builder(config)

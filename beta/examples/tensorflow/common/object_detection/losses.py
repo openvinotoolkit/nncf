@@ -478,6 +478,7 @@ class RetinanetBoxLoss:
 
 
 class YOLOv4Loss:
+    """YOLOv4 loss."""
 
     def softmax_focal_loss(self, y_true, y_pred, gamma=2.0, alpha=0.25):
         """
@@ -710,7 +711,6 @@ class YOLOv4Loss:
         diou = K.expand_dims(diou, -1)
         return diou
 
-
     def _smooth_labels(self, y_true, label_smoothing):
         label_smoothing = K.constant(label_smoothing, dtype=K.floatx())
         return y_true * (1.0 - label_smoothing) + 0.5 * label_smoothing
@@ -753,14 +753,12 @@ class YOLOv4Loss:
             return grid, feats, box_xy, box_wh
         return box_xy, box_wh, box_confidence, box_class_probs
 
-
     def get_anchors(self, anchors_path):
         '''loads the anchors from a file'''
         with open(anchors_path) as f:
             anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
-
 
     def __call__(self, labels, outputs, anchors_path, num_classes, ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True, use_focal_loss=False, use_focal_obj_loss=False, use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
         '''
@@ -853,7 +851,6 @@ class YOLOv4Loss:
                 else:
                     # use sigmoid style classification output
                     class_loss = object_mask * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
-
 
             if use_giou_loss:
                 # Calculate GIoU loss as location loss

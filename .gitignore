@@ -107,15 +107,8 @@ ENV/
 # snapshots
 *.tar
 
-# object detection eval results
 examples/object_detection/eval/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/logs/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/result/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/data/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/weights/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/yolo4-init-dumped.h5
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/results/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/test.py
+beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/
 beta/examples/tensorflow/object_detection/runs/
 beta/examples/results/
 beta/examples/tensorflow/object_detection/retinanet/

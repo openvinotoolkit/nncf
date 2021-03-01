@@ -13,6 +13,7 @@
 
 import numpy as np
 from PIL import Image
+from functools import partial
 
 import tensorflow as tf
 from beta.examples.tensorflow.common.object_detection.utils import box_utils
@@ -26,139 +27,25 @@ class YOLOv4Preprocessor:
         """
 
         self._is_training = is_train
+        self._global_batch_size = config.batch_size
+        self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
 
-        # Data is parsed depending on the `is_training` flag
-        if self._is_training:
-            self._parse_fn = self._parse_train_data
-            # self._annotation_file = 'train2017.txt'
-        else:
-            self._parse_fn = self._parse_train_data # self._parse_predict_data
-            # self._annotation_file = 'val2017.txt'
-
+        self._parse_fn = self._parse_train_data
         self._parse_fn2 = self._parse_train_data2
 
-        # self._annotation_lines = self._get_annotation_lines()
-        self.input_shape = config['input_shape']
-        self.enhance_augment = config['enhance_augment']
-        self.anchors = self.get_anchors(config['anchors_path'])
-        self.num_classes = config['num_classes']
-        self.multi_anchor_assign = config['multi_anchor_assign']
-        # self.batch_size = config['global_batch_size']
-
-    # def _get_annotation_lines(self):
-    #     with open(self._annotation_file) as f:
-    #         lines = f.readlines()
-    #         lines = [line.strip() for line in lines]
-    #
-    #     lines_dict = {}
-    #     for line in lines:
-    #         line_data = line.split()
-    #         if self._is_training:
-    #             _, img_name = line_data[0].split('train2017/')
-    #         else:
-    #             _, img_name = line_data[0].split('val2017/')
-    #         # lines_dict['image_name.jpg'] = boxes
-    #         lines_dict[img_name] = np.array([np.array(list(map(int, box.split(',')))) for box in line_data[1:]])
-    #
-    #     # # KeyError: '000000015830.jpg'
-    #     # print('len dict', len(lines_dict))
-    #     # for i, key in enumerate(lines_dict):
-    #     #     print(key, lines_dict[key])
-    #     #     if i == 10:
-    #     #         break
-    #
-    #     return lines_dict
-
-    def get_anchors(self, anchors_path):
-        '''loads the anchors from a file'''
-        with open(anchors_path) as f:
-            anchors = f.readline()
-        anchors = [float(x) for x in anchors.split(',')]
-        return np.array(anchors).reshape(-1, 2)
+        self.input_shape = config.input_shape
+        self.enhance_augment = config.enhance_augment
+        self.anchors_path = config.anchors_path
+        self.num_classes = config.num_classes
+        self.multi_anchor_assign = config.multi_anchor_assign
 
     def create_preprocess_input_fn(self):
         """Parses data to an image and associated training labels.
         """
-        return self._parse_fn
-
-    def create_preprocess_input_fn2(self):
-        """Parses data to an image and associated training labels.
-        """
-        return self._parse_fn2
-
-    def _parse_train_data(self, data):
-        """Parses data for training and evaluation."""
-        image = data['image'] # <dtype: 'uint8'> <class 'tensorflow.python.framework.ops.Tensor'> (None, None, 3)
-        filename = data['source_filename']
-        # print(data['source_id'])
-        groundtruth_classes = data['groundtruth_classes']
-        groundtruth_boxes = data['groundtruth_boxes']
-
-        image, box = tf.py_function(self.preprocess, [image, filename, groundtruth_classes, groundtruth_boxes, self.input_shape], [tf.float64, tf.float64])
-        image.set_shape([None, None, 3])
-        box.set_shape([None, 5])
-
-        out = {}
-        out['image'] = image
-        out['box'] = box
-        out['filename'] = filename
-
-        return out
+        return self._tfds_decoder, self._pipeline_fn
 
 
-    def preprocess(self, image, filename, groundtruth_classes, groundtruth_boxes, input_shape):
-
-        image_np = image.numpy()
-        # print('From inside TFDS:')
-        # print('\nfilename', filename)
-        # print('image init np\n', filename, image_np[100, 100, :])
-        image_pil = Image.fromarray(image_np)
-        # filename = filename.numpy().decode("utf-8")
-        # print('\nfilename', filename)
-        # boxes = self._annotation_lines[filename]
-        # print('boxes', boxes)
-        # print('groundtruth_classes', groundtruth_classes.numpy())
-        # print('groundtruth_boxes', groundtruth_boxes.numpy())
-        # print('image_np shape', image_np.shape)
-        # filename 000000008010.jpg
-        # boxes[[451 253 585 293 37]
-        # [115 234 272 269 37]
-        # [191 212 243 312 0]
-        # [497 211 545 337 0]]
-        # groundtruth_classes [37 37 0 0]
-        # groundtruth_boxes [[0.5729345  0.7058125  0.66336346 0.9161875]
-        # [0.52835214  0.18032813  0.60884875  0.42585936]
-        # [0.48013544 0.2993906  0.7059368  0.38214064]
-        # [0.47713318 0.77720314  0.7617833 0.85235935]]
-
-        image_shape = tf.shape(input=image)[0:2]
-        denormalized_boxes = box_utils.denormalize_boxes(groundtruth_boxes, image_shape)
-
-        boxes = []
-        for denormalized_box, category_id in zip(denormalized_boxes.numpy(), groundtruth_classes.numpy()):
-            x_min = int(denormalized_box[1])
-            y_min = int(denormalized_box[0])
-            x_max = int(denormalized_box[3])
-            y_max = int(denormalized_box[2])
-            boxes.append([x_min, y_min, x_max, y_max, int(category_id)])
-        boxes = np.array(boxes)
-        # print('boxes_final', boxes)
-
-        input_shape = input_shape.numpy()
-
-        # print('data type in', type(image_pil))
-        # print('\nimage init np(pil)\n', filename, np.array(image_pil)[100:102,100:102,:])
-
-        image, box = self.get_ground_truth_data(image_pil, boxes, input_shape, filename)
-
-        # print('\nimage preprocessed first stage\n', filename, image[100:102,100:102,:])
-
-        image = tf.convert_to_tensor(image, dtype=tf.float64)
-        box = tf.convert_to_tensor(box, dtype=tf.float64)
-
-        return image, box
-
-    def get_ground_truth_data(self, image, boxes, input_shape, filename, max_boxes=100):
+    def _get_ground_truth_data(self, image, boxes, input_shape, filename, max_boxes=100):
         '''random preprocessing for real-time data augmentation'''
         # line = annotation_line.split()
         # image = Image.open(line[0]) # PIL Image object containing image data
@@ -166,51 +53,55 @@ class YOLOv4Preprocessor:
         model_input_size = tuple(reversed(input_shape))
         # boxes = np.array([np.array(list(map(int,box.split(',')))) for box in line[1:]])
 
-        # random resize image and crop|padding to target size
-        image, padding_size, padding_offset = random_resize_crop_pad(image, target_size=model_input_size)
+        if self._is_training:
 
-        # print('\nafter random_resize_crop_pad\n', filename, np.array(image)[100:102,100:102,:])
+            # random resize image and crop|padding to target size
+            image, padding_size, padding_offset = random_resize_crop_pad(image, target_size=model_input_size)
 
-        # random horizontal flip image
-        image, horizontal_flip = random_horizontal_flip(image)
+            # print('\nafter random_resize_crop_pad\n', filename, np.array(image)[100:102,100:102,:])
 
-        # random adjust brightness
-        image = random_brightness(image)
+            # random horizontal flip image
+            image, horizontal_flip = random_horizontal_flip(image)
 
-        # random adjust color level
-        image = random_chroma(image)
+            # random adjust brightness
+            image = random_brightness(image)
 
-        # random adjust contrast
-        image = random_contrast(image)
+            # random adjust color level
+            image = random_chroma(image)
 
-        # random adjust sharpness
-        image = random_sharpness(image)
+            # random adjust contrast
+            image = random_contrast(image)
 
-        # random convert image to grayscale
-        image = random_grayscale(image)
+            # random adjust sharpness
+            image = random_sharpness(image)
 
-        # random do normal blur to image
-        # image = random_blur(image)
+            # random convert image to grayscale
+            image = random_grayscale(image)
 
-        # random do motion blur to image
-        # image = random_motion_blur(image, prob=0.2)
+            # random do normal blur to image
+            # image = random_blur(image)
 
-        # random vertical flip image
-        image, vertical_flip = random_vertical_flip(image)
+            # random do motion blur to image
+            # image = random_motion_blur(image, prob=0.2)
 
-        # random distort image in HSV color space
-        # NOTE: will cost more time for preprocess
-        #       and slow down training speed
-        # image = random_hsv_distort(image)
+            # random vertical flip image
+            image, vertical_flip = random_vertical_flip(image)
 
-        # reshape boxes based on augment
-        boxes = reshape_boxes(boxes, src_shape=image_size, target_shape=model_input_size,
-                              padding_shape=padding_size, offset=padding_offset,
-                              horizontal_flip=horizontal_flip,
-                              vertical_flip=vertical_flip)
+            # random distort image in HSV color space
+            # NOTE: will cost more time for preprocess
+            #       and slow down training speed
+            # image = random_hsv_distort(image)
 
-        # random rotate image and boxes
-        image, boxes = random_rotate(image, boxes)
+            # reshape boxes based on augment
+            boxes = reshape_boxes(boxes, src_shape=image_size, target_shape=model_input_size,
+                                  padding_shape=padding_size, offset=padding_offset,
+                                  horizontal_flip=horizontal_flip,
+                                  vertical_flip=vertical_flip)
+
+            # random rotate image and boxes
+            image, boxes = random_rotate(image, boxes)
+        else:
+            image = letterbox_resize(image, tuple(reversed(model_input_size)))
 
         if len(boxes) > max_boxes:
             boxes = boxes[:max_boxes]
@@ -224,60 +115,54 @@ class YOLOv4Preprocessor:
 
         return image_data, box_data
 
+    def _preprocess(self, image, filename, groundtruth_classes, groundtruth_boxes, input_shape):
 
-    def _parse_train_data2(self, data):
+        image_np = image.numpy()
+        image_pil = Image.fromarray(image_np)
 
-        image_data = data['image']
-        box_data = data['box']
-        filename = data['filename']
+        image_shape = tf.shape(input=image)[0:2]
+        denormalized_boxes = box_utils.denormalize_boxes(groundtruth_boxes, image_shape)
 
-        im_shape = image_data.shape
-        image_data, out0, out1, out2 = tf.py_function(self.preprocess2, [image_data, box_data, filename], [tf.float64, tf.float32, tf.float32, tf.float32]) # , tf.float32
-        image_data.set_shape(im_shape)
-        out0.set_shape([im_shape[0], 19, 19, 3, 85])
-        out1.set_shape([im_shape[0], 38, 38, 3, 85])
-        out2.set_shape([im_shape[0], 76, 76, 3, 85])
+        boxes = []
+        for denormalized_box, category_id in zip(denormalized_boxes.numpy(), groundtruth_classes.numpy()):
+            x_min = int(denormalized_box[1])
+            y_min = int(denormalized_box[0])
+            x_max = int(denormalized_box[3])
+            y_max = int(denormalized_box[2])
+            boxes.append([x_min, y_min, x_max, y_max, int(category_id)])
+        boxes = np.array(boxes)
+
+        input_shape = input_shape.numpy()
+        image, box = self._get_ground_truth_data(image_pil, boxes, input_shape, filename)
+
+        image = tf.convert_to_tensor(image, dtype=tf.float64)
+        box = tf.convert_to_tensor(box, dtype=tf.float64)
+
+        return image, box
+
+    def _parse_train_data(self, data):
+        """Parses data for training"""
+        image = data['image']
+        filename = data['source_filename']
+        groundtruth_classes = data['groundtruth_classes']
+        groundtruth_boxes = data['groundtruth_boxes']
+
+        image, box = tf.py_function(self._preprocess, [image, filename, groundtruth_classes, groundtruth_boxes, self.input_shape], [tf.float64, tf.float64])
+        image.set_shape([None, None, 3])
+        box.set_shape([None, 5])
 
         out = {}
-        out['image_input'] = image_data
-        out['y_true_0'] = out0
-        out['y_true_1'] = out1
-        out['y_true_2'] = out2
+        out['image'] = image
+        out['box'] = box
         out['filename'] = filename
+        out['source_id'] = data['source_id']
 
-        # return out, tf.zeros(64, dtype=tf.dtypes.float32)
-
-        labels = {
-            'y_true_0': out0,
-            'y_true_1': out1,
-            'y_true_2': out2
-        }
-        return image_data, labels
+        return out
 
 
-    def preprocess2(self, image_data, box_data, filename):
-        image_data = image_data.numpy()
-        box_data = box_data.numpy()
 
-        # print('box_data[0] after batching', box_data[0])
 
-        if self.enhance_augment == 'mosaic':
-            # add random mosaic augment on batch ground truth data
-            image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
-
-        y_true1, y_true2, y_true3 = self.preprocess_true_boxes(box_data, self.input_shape, self.anchors, self.num_classes, self.multi_anchor_assign)
-
-        image_data = tf.convert_to_tensor(image_data, dtype=tf.float64)
-        y_true1 = tf.convert_to_tensor(y_true1, dtype=tf.float32)
-        y_true2 = tf.convert_to_tensor(y_true2, dtype=tf.float32)
-        y_true3 = tf.convert_to_tensor(y_true3, dtype=tf.float32)
-
-        # zeros = np.zeros(self.batch_size)
-        # zeros = tf.convert_to_tensor(zeros, dtype=tf.float32)
-
-        return image_data, y_true1, y_true2, y_true3
-
-    def preprocess_true_boxes(self, true_boxes, input_shape, anchors, num_classes, multi_anchor_assign, iou_thresh=0.2):
+    def _preprocess_true_boxes(self, true_boxes, input_shape, anchors, num_classes, multi_anchor_assign, iou_thresh=0.2):
         '''Preprocess true boxes to training input format
 
         Parameters
@@ -366,3 +251,173 @@ class YOLOv4Preprocessor:
                             y_true[l][b, j, i, k, 5+c] = 1
 
         return y_true
+
+    def _get_anchors(self, anchors_path):
+        '''loads the anchors from a file'''
+        with open(anchors_path) as f:
+            anchors = f.readline()
+        anchors = [float(x) for x in anchors.split(',')]
+        return np.array(anchors).reshape(-1, 2)
+
+    def _preprocess2(self, image_data, box_data, filename):
+        image_data = image_data.numpy()
+        box_data = box_data.numpy()
+
+        if self._is_training:
+            if self.enhance_augment == 'mosaic':
+                # add random mosaic augment on batch ground truth data
+                image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
+
+        anchors = self._get_anchors(self.anchors_path)
+
+        y_true1, y_true2, y_true3 = self._preprocess_true_boxes(box_data, self.input_shape, anchors, self.num_classes, self.multi_anchor_assign)
+
+        image_data = tf.convert_to_tensor(image_data, dtype=tf.float64)
+        y_true1 = tf.convert_to_tensor(y_true1, dtype=tf.float32)
+        y_true2 = tf.convert_to_tensor(y_true2, dtype=tf.float32)
+        y_true3 = tf.convert_to_tensor(y_true3, dtype=tf.float32)
+
+        return image_data, y_true1, y_true2, y_true3
+
+    def _parse_train_data2(self, data):
+
+        image_data = data['image']
+        box_data = data['box']
+        filename = data['filename']
+
+
+        im_shape = image_data.shape
+        image_data, out0, out1, out2 = tf.py_function(self._preprocess2, [image_data, box_data, filename], [tf.float64, tf.float32, tf.float32, tf.float32]) # , tf.float32
+        image_data.set_shape(im_shape)
+        out0.set_shape([im_shape[0], 19, 19, 3, 85])
+        out1.set_shape([im_shape[0], 38, 38, 3, 85])
+        out2.set_shape([im_shape[0], 76, 76, 3, 85])
+
+        # out = {}
+        # out['image_input'] = image_data
+        # out['y_true_0'] = out0
+        # out['y_true_1'] = out1
+        # out['y_true_2'] = out2
+        # out['filename'] = filename
+        # return out, tf.zeros(64, dtype=tf.dtypes.float32)
+
+        labels = {
+            'y_true_0': out0,
+            'y_true_1': out1,
+            'y_true_2': out2,
+        }
+        return image_data, labels
+
+
+
+
+
+
+    def get_image_info(self, image):
+
+        desired_size = tf.convert_to_tensor(self.input_shape, dtype=tf.float32)
+
+        image_size = tf.cast(tf.shape(input=image)[0:2], tf.float32)
+        scaled_size = desired_size
+
+        scale = tf.minimum(scaled_size[0] / image_size[0],
+                          scaled_size[1] / image_size[1])
+        scaled_size = tf.round(image_size * scale)
+
+        # Computes 2D image_scale.
+        image_scale = scaled_size / image_size
+
+        offset = tf.zeros((2,), tf.int32)
+
+        image_info = tf.stack([
+            image_size,
+            tf.cast(desired_size, tf.float32), image_scale,
+            tf.cast(offset, tf.float32)
+        ])
+        return image_info
+
+    def _preprocess_predict_image(self, image):
+        image = image.numpy()
+        model_image_size = self.input_shape
+        image_pil = Image.fromarray(image)
+        if image_pil.mode != 'RGB':
+            image_pil = image_pil.convert('RGB')
+        resized_image = letterbox_resize(image_pil, tuple(reversed(model_image_size)))
+        image_data = np.asarray(resized_image).astype('float32')
+        image_data = normalize_image(image_data)
+        image_data = tf.convert_to_tensor(image_data, dtype=tf.float32)
+        return image_data
+
+    def _parse_predict_data(self, data):
+        """Parses data for prediction"""
+        image_data = data['image']
+
+        # filename = data['source_filename']
+        # groundtruth_classes = data['groundtruth_classes']
+        # groundtruth_boxes = data['groundtruth_boxes']
+
+        # needed only for eval
+        image_info = self.get_image_info(image_data)
+
+        # image preprocessing
+        # print('image_data', image_data.shape, type(image_data))
+        image_data = tf.py_function(self._preprocess_predict_image, [image_data], Tout=tf.float32)
+        # print('image_data', type(image_data))
+        image_data.set_shape([None, None, 3])
+
+
+
+        labels = {
+            'image_info': image_info,
+            'source_id': data['source_id']
+        }
+
+        return image_data, labels
+
+
+
+
+
+    def _tfds_decoder(self, features_dict):
+
+        def _decode_image(features):
+            image = tf.image.decode_jpeg(features['image'], channels=3, dct_method='INTEGER_ACCURATE')
+            image.set_shape([None, None, 3])
+            return image
+
+        image = _decode_image(features_dict)
+
+        decoded_tensors = {
+            'image': image,
+            'source_filename': features_dict['image/filename'],
+            'source_id': tf.cast(features_dict['image/id'], tf.int32), # Really needed? not sure..
+            'groundtruth_classes': features_dict['objects']['label'],
+            'groundtruth_boxes': features_dict['objects']['bbox'],
+        }
+
+        return decoded_tensors
+
+    def _pipeline_fn(self, dataset, decoder_fn):
+
+        if self._is_training:
+
+            preprocess_input_fn = self._parse_fn
+            preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
+            dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers) # self._num_preprocess_workers
+            dataset = dataset.batch(self._global_batch_size, drop_remainder=True)
+
+            # part of preprocessing which requires batches
+            preprocess_input_fn2 = self._parse_fn2
+            preprocess_pipeline2 = lambda record: preprocess_input_fn2(record)
+            dataset = dataset.map(preprocess_pipeline2, num_parallel_calls=self._num_preprocess_workers) # self._num_preprocess_workers
+
+        else:
+            preprocess_input_fn = self._parse_predict_data
+            preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
+            dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers) # self._num_preprocess_workers
+            dataset = dataset.batch(self._global_batch_size, drop_remainder=True)
+
+
+
+
+        return dataset

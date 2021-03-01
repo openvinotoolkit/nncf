@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from functools import wraps, reduce
 import functools
 import tensorflow as tf
 

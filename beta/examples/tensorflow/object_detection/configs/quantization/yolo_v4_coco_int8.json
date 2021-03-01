@@ -21,5 +21,9 @@
         "schedule_params": {
             "initial_lr": 1e-6
         }
+    },
+
+    "compression": {
+        "algorithm": "quantization"
     }
 }

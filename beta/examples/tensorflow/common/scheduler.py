@@ -143,8 +143,23 @@ def build_scheduler(config, steps_per_epoch):
             decay_rate=gamma,
             staircase=True
         )
+
     elif schedule_type == 'step_warmup':
         lr = StepLearningRateWithLinearWarmup(schedule_params)
+
+    elif schedule_type == 'cosine':
+        initial_lr = schedule_params.get('initial_lr', None)
+        if initial_lr is None:
+            raise ValueError('initial_lr parameter must be specified '
+                             'for the cosine scheduler')
+
+        decay_steps = steps * config.epochs
+        logger.info('Using cosine learning rate with: '
+                    'initial_learning_rate: {initial_lr}, '
+                    'decay_steps: {decay_steps}'.format(initial_lr=initial_lr,
+                                                      decay_steps=decay_steps))
+        lr = tf.keras.experimental.CosineDecay(initial_learning_rate=initial_lr, decay_steps=decay_steps)
+
     else:
         raise KeyError(f'Unknown learning rate scheduler type: {schedule_type}')
 

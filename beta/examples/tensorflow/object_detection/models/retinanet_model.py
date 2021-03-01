@@ -124,7 +124,7 @@ class RetinanetModel(base_model.Model):
             outputs['box_outputs'], outputs['cls_outputs'], labels['anchor_boxes'],
             labels['image_info'][:, 1:2, :])
         # Discards the old output tensors to save memory. The `cls_outputs` and
-        # `box_outputs` are pretty big and could potentiall lead to memory issue.
+        # `box_outputs` are pretty big and could potentially lead to memory issue.
         outputs = {
             'source_id': labels['source_id'],
             'image_info': labels['image_info'],
