@@ -36,8 +36,6 @@ from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.initialization import DefaultInitializingDataLoader
-from nncf.nncf_network import InsertionPoint
-from nncf.nncf_network import InsertionType
 from nncf.quantization.init_range import PerLayerRangeInitConfig
 from nncf.quantization.init_range import RangeInitConfig
 from nncf.quantization.init_range import RangeInitParams
@@ -160,12 +158,13 @@ def create_config():
 
 def generate_qp(scope_str: str, target: QuantizerGroup, in_port_id: int = None) -> SingleConfigQuantizationPoint:
     if target is QuantizerGroup.WEIGHTS:
-        ip = PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str(scope_str))
+        scope = Scope.from_str(scope_str)
+        ip = PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=scope)
         scopes_of_directly_quantized_operators = [scope]
     elif target is QuantizerGroup.ACTIVATIONS:
         ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
         scopes_of_directly_quantized_operators = [ia_op_exec_context.scope_in_model]
-        ip = PTInsertionPoint(InsertionType.OPERATOR_POST_HOOK if in_port_id is None else InsertionType.OPERATOR_PRE_HOOK,
+        ip = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK if in_port_id is None else TargetType.OPERATOR_PRE_HOOK,
                               ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(scope_str),
                               input_port_id=in_port_id)
     else:

@@ -1044,10 +1044,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 ap = CalculatePaddingAdjustment(args.activation_quantizer)
                 device = next(target_model.parameters()).device
                 op = UpdatePaddingValue(ap).to(device)
-                insertion_point = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
-                                                 module_scope=module_scope)
+                insertion_point = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                                   module_scope=module_scope)
                 nncf_logger.warning('Padding will be adjusted for {}'.format(module_scope))
-                commands.append(InsertionCommand(insertion_point, op, OperationPriority.DEFAULT_PRIORITY))
+                commands.append(PTInsertionCommand(insertion_point, op, TransformationPriority.DEFAULT_PRIORITY))
         return commands
 
     class ActivationQuantizationHook:

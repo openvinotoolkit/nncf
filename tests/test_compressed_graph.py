@@ -29,10 +29,12 @@ from abc import abstractmethod
 from copy import deepcopy
 from functools import partial
 
+from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+
 from nncf.common.graph.transformations.commands import TargetType
 from nncf import nncf_model_input
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.nncf_network import NNCFNetwork
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -43,7 +45,6 @@ from nncf.dynamic_graph.graph_builder import create_mock_tensor
 from nncf.hw_config import HWConfigType
 from nncf.layers import LSTMCellNNCF
 from nncf.layers import NNCF_RNN
-from nncf.nncf_network import InsertionType
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.utils import get_all_modules_by_type

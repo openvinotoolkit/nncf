@@ -82,8 +82,6 @@ class LoadStateListener:
     """
 
     def __init__(self, model, all_quantizations):
-        for prefix, module in all_quantizations.items():
-            module.state_dict_name = prefix
         # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=all_quantizations.values()))
@@ -416,7 +414,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context, point.input_port_id)
         elif point.target_type == TargetType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
-        elif point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.BEFORE_LAYER, TargetType.AFTER_LAYER]:
+        elif point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.PRE_LAYER_OPERATION,
+                                   TargetType.POST_LAYER_OPERATION]:
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
@@ -424,10 +423,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if point.target_type == TargetType.OPERATION_WITH_WEIGHTS:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(UpdateWeight(fn))
-            elif point.target_type == TargetType.BEFORE_LAYER:
+            elif point.target_type == TargetType.PRE_LAYER_OPERATION:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
-            elif point.target_type == TargetType.AFTER_LAYER:
+            elif point.target_type == TargetType.POST_LAYER_OPERATION:
                 for fn in fn_list:
                     nncf_module.register_post_forward_operation(fn)
         else:

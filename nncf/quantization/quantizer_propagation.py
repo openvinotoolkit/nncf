@@ -39,9 +39,9 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
-from nncf.nncf_network import InsertionPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint

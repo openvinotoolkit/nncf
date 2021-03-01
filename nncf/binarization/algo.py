@@ -68,7 +68,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
 
             if isinstance(module, torch.nn.modules.Conv2d):
                 nncf_logger.info("Adding Weight binarizer in scope: {}".format(scope_str))
-                op_weights = self.__create_binarize_module()
+                op_weights = self.__create_binarize_module().to(device)
 
                 nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
                 op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(module.weight.shape)).to(device)
@@ -78,7 +78,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
                 insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
                                                              TransformationPriority.QUANTIZATION_PRIORITY))
 
-                ip_i = PTInsertionPoint(TargetType.BEFORE_LAYER, module_scope=scope)
+                ip_i = PTInsertionPoint(TargetType.PRE_LAYER_OPERATION, module_scope=scope)
                 insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
                                                              TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands

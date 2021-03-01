@@ -15,7 +15,7 @@ class PTInsertionPoint(TargetPoint):
                  input_port_id: int = None):
         super().__init__(target_type)
         self.target_type = target_type
-        if self.target_type in [TargetType.BEFORE_LAYER, TargetType.AFTER_LAYER, TargetType.LAYER,
+        if self.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION,
                                 TargetType.OPERATION_WITH_WEIGHTS]:
             if module_scope is None:
                 raise ValueError("Should specify module scope for module pre- and post-op insertion points!")
@@ -38,7 +38,7 @@ class PTInsertionPoint(TargetPoint):
     def __str__(self):
         prefix = str(self.target_type)
         retval = prefix
-        if self.target_type in [TargetType.BEFORE_LAYER, TargetType.AFTER_LAYER, TargetType.LAYER,
+        if self.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION,
                                 TargetType.OPERATION_WITH_WEIGHTS]:
             retval += " {}".format(self.module_scope)
         elif self.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]:
@@ -56,3 +56,7 @@ class PTInsertionCommand(TransformationCommand):
         super().__init__(TransformationType.INSERT, point)
         self.fn = fn  # type: Callable
         self.priority = priority  # type: TransformationPriority
+
+    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
+        # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
+        raise NotImplementedError()

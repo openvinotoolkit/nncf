@@ -181,7 +181,7 @@ class TestInsertionCommands:
                                                module_scope=conv1_module_scope)
     point_for_conv1_inputs = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
                                               module_scope=conv1_module_scope)
-    point_for_conv1_activations = PTInsertionPoint(target_type=TargetType.AFTER_LAYER,
+    point_for_conv1_activations = PTInsertionPoint(target_type=TargetType.POST_LAYER_OPERATION,
                                                    module_scope=conv1_module_scope)
 
     conv2_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv2]')
@@ -189,7 +189,7 @@ class TestInsertionCommands:
                                                module_scope=conv2_module_scope)
     point_for_conv2_inputs = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
                                               module_scope=conv2_module_scope)
-    point_for_conv2_activations = PTInsertionPoint(target_type=TargetType.AFTER_LAYER,
+    point_for_conv2_activations = PTInsertionPoint(target_type=TargetType.POST_LAYER_OPERATION,
                                                    module_scope=conv2_module_scope)
 
     linear_op_scope = Scope.from_str('InsertionPointTestModel/linear_0')
@@ -242,7 +242,7 @@ class TestInsertionCommands:
             module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
             assert module.pre_ops["0"].operand is hook
 
-        if insertion_point.target_type == TargetType.AFTER_LAYER:
+        if insertion_point.target_type == TargetType.POST_LAYER_OPERATION:
             module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
@@ -261,7 +261,7 @@ class TestInsertionCommands:
         # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
-        if insertion_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.AFTER_LAYER]:
+        if insertion_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.POST_LAYER_OPERATION]:
             hook1 = BaseOp(lambda x: x)
             hook2 = BaseOp(lambda x: 2 * x)
             hook3 = BaseOp(lambda x: 3 * x)
@@ -272,7 +272,7 @@ class TestInsertionCommands:
 
         if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             point = self.point_for_conv2_weights
-        elif insertion_type == TargetType.AFTER_LAYER:
+        elif insertion_type == TargetType.POST_LAYER_OPERATION:
             point = self.point_for_conv1_activations
         elif insertion_type == TargetType.OPERATOR_PRE_HOOK:
             point = self.point_for_linear_weight_input
@@ -319,7 +319,7 @@ class TestInsertionCommands:
             # Works because Pytorch ModuleDict is ordered
             self.check_order([x.operand for x in module.pre_ops.values()], hook_list, order)
 
-        if insertion_type == TargetType.AFTER_LAYER:
+        if insertion_type == TargetType.POST_LAYER_OPERATION:
             module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
