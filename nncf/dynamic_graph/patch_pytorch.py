@@ -212,8 +212,13 @@ def patch_extension_build_function():
     The bug must be fixed with a new PyTorch 1.8.0
     """
     import torch.utils.cpp_extension
-
-    split_torch_version = list(map(int, torch.__version__.split('.')))
+    try:
+        torch_version_numbers = torch.__version__.split('+')[0]
+        split_torch_version = list(map(int, torch_version_numbers.split('.')))
+    except ValueError as e:
+        logger.warning('Skip apply a patch to building extension with a reason: '
+                       f'Cannot parse a PyTorch version with the error = {e} ')
+        return
     if split_torch_version >= [1, 8, 0]:
         return
 
