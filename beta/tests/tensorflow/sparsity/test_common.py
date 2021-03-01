@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import List, Optional
-
 import pytest
 from addict import Dict
 

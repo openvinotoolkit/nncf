@@ -104,7 +104,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
     def current_sparsity_level(self):
         if self.target_epoch == 0 and not self._update_per_optimizer_step:
             return self.target_sparsity
-        if self.current_epoch == -1 or self.current_step == -1:
+        if self.current_epoch == -1 and self.current_step == -1:
             return self.initial_sparsity
         if self._update_per_optimizer_step:
             if self._steps_per_epoch is None:

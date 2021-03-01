@@ -44,6 +44,7 @@ def test_can_create_rb_algo__with_adaptive_scheduler():
     assert isinstance(compression_ctrl.scheduler, AdaptiveSparsityScheduler)
 
 
+@pytest.mark.skip()
 def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'magnitude_sparsity', "params": {"schedule": 'adaptive'}}
