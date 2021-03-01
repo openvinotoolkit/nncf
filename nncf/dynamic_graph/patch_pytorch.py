@@ -216,14 +216,15 @@ def patch_extension_build_function():
         torch_version_numbers = torch.__version__.split('+')[0]
         split_torch_version = list(map(int, torch_version_numbers.split('.')))
     except ValueError as e:
-        logger.warning('Skip apply a patch to building extension with a reason: '
-                       f'Cannot parse a PyTorch version with the error = {e} ')
+        logger.warning('Skip applying a patch to building extension with a reason: '
+                       'Cannot parse a PyTorch version with the error {}'.format(e))
         return
+
     if split_torch_version >= [1, 8, 0]:
         return
 
     if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
-        logger.warning('Skip apply a patch to building extension with a reason: '
+        logger.warning('Skip applying a patch to building extension with a reason: '
                        'PyTorch version is not supported for this')
         return
 
