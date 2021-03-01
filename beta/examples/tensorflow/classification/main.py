@@ -164,7 +164,7 @@ def run(config):
 
             metrics = [
                tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
-               # tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
+               tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
             ]
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
@@ -224,7 +224,7 @@ def run(config):
 
     logger.info('evaluation...')
     print_statistics(compression_ctrl.statistics())
-    compression_ctrl.freeze()
+    #compression_ctrl.freeze()
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
@@ -276,6 +276,7 @@ def main(argv):
     #config['eager_mode'] = True
     #physical_devices = tf.config.list_physical_devices('GPU')
     #tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
     serialize_config(config, config.log_dir)
 
     nncf_root = Path(__file__).absolute().parents[3]

@@ -208,7 +208,7 @@ def train_lenet():
     model.save('LeNet.h5')
 
 
-def test_rb_sparse_lenet():
+def test_rb_sparse_target_lenet():
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
@@ -224,7 +224,14 @@ def test_rb_sparse_lenet():
     config = get_basic_sparsity_config(sparsity_init=0.05, sparsity_target=0.3,
                                        sparsity_target_epoch=10, sparsity_freeze_epoch=15)
     compress_model, compress_algo = create_compressed_model_and_algo_for_test(model, config)
-    compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=False)
+    compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
+
+    class SparsityRateTestCallback(tf.keras.callbacks.Callback):
+        def on_epoch_end(self, epoch, logs=None):
+            target = compress_algo.loss.target_sparsity_rate
+            actual = compress_algo.raw_statistics()['sparsity_rate_for_sparsified_modules']
+            print(f'target {target}, actual {actual}')
+            assert abs(actual - target) < 0.09
 
     loss_obj = tf.keras.losses.SparseCategoricalCrossentropy()
 
@@ -243,7 +250,8 @@ def test_rb_sparse_lenet():
 
     compress_model.fit(x_train, y_train, batch_size=64, epochs=30, validation_split=0.2,
               callbacks=[tf.keras.callbacks.ReduceLROnPlateau(),
-                         compression_callbacks])
+                         compression_callbacks,
+                         SparsityRateTestCallback()])
 
     test_scores = compress_model.evaluate(x_test, y_test, verbose=2)
     print("Test loss:", test_scores[0])
