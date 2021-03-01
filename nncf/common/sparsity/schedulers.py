@@ -104,6 +104,8 @@ class PolynomialSparseScheduler(SparsityScheduler):
     def current_sparsity_level(self):
         if self.target_epoch == 0 and not self._update_per_optimizer_step:
             return self.target_sparsity
+        if self.current_epoch == -1 or self.current_step == -1:
+            return self.initial_sparsity
         if self._update_per_optimizer_step:
             if self._steps_per_epoch is None:
                 return self.initial_sparsity  # Cannot do proper sparsity update until the steps in an epoch are counted
@@ -164,10 +166,6 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
     def __init__(self, controller, params=None):
         super().__init__(controller, params)
         self.sparsity_loss = controller.loss
-        from .rb.loss import SparseLoss
-        if not isinstance(self.sparsity_loss, SparseLoss):
-            raise TypeError('AdaptiveSparseScheduler expects SparseLoss, but {} is given'.format(
-                self.sparsity_loss.__class__.__name__))
         self.decay_step = params.get('step', 0.05)
         self.eps = params.get('eps', 0.03)
         self.patience = params.get('patience', 1)
