@@ -51,4 +51,3 @@ YOLOV4_CONFIG = SampleConfig({
     'postprocessing': {
         'conf_threshold': 0.001,
     }
-})

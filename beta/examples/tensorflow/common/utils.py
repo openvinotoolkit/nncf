@@ -23,7 +23,7 @@ from pathlib import Path
 
 import tensorflow as tf
 
-#from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 from beta.nncf.tensorflow.utils.save import FROZEN_GRAPH_FORMAT
 from beta.nncf.tensorflow.utils.save import KERAS_H5_FORMAT
 from beta.nncf.tensorflow.utils.save import SAVEDMODEL_FORMAT

@@ -18,7 +18,6 @@ from beta.examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
 from beta.examples.tensorflow.common.object_detection.datasets import tfrecords as records_dataset
 from beta.examples.tensorflow.common.object_detection.datasets.preprocessing_selector import get_preprocess_input_fn
 
-from beta.examples.tensorflow.object_detection.preprocessing.yolo_v4_preprocessing import YOLOv4Preprocessor
 
 class COCODatasetBuilder(BaseDatasetBuilder):
     """COCO2017 dataset loader and input processing."""
@@ -27,7 +26,7 @@ class COCODatasetBuilder(BaseDatasetBuilder):
 
         # Pipeline params
         self._shuffle_buffer_size = 1000
-        # self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
+        self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
         self._cache = False
         self._include_mask = config.get('include_mask', False)
 

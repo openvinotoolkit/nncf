@@ -107,8 +107,5 @@ ENV/
 # snapshots
 *.tar
 
+# object detection eval results
 examples/object_detection/eval/
-beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/
-beta/examples/tensorflow/object_detection/runs/
-beta/examples/results/
-beta/examples/tensorflow/object_detection/retinanet/

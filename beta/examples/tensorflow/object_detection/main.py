@@ -170,7 +170,7 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq): # train_step, test_step, eval_metric...
+    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
@@ -311,7 +311,7 @@ def run(config):
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
-            config.print_freq) # train_step, test_step, eval_metric, ...
+            config.print_freq)
 
     print_statistics(compression_ctrl.statistics())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
@@ -322,11 +322,10 @@ def run(config):
 
     # checkpoint_manager.save()
 
-    # if 'export' in config.mode:
-    # config.to_saved_model = os.path.join(config.log_dir, 'frozen_model')
-    save_path, save_format = get_saving_parameters(config)
-    compression_ctrl.export_model(save_path, save_format)
-    logger.info("Saved to {}".format(save_path))
+    if 'export' in config.mode:
+        save_path, save_format = get_saving_parameters(config)
+        compression_ctrl.export_model(save_path, save_format)
+        logger.info("Saved to {}".format(save_path))
 
     compress_model.save(os.path.join(config.log_dir, 'dumped.h5'))
 
