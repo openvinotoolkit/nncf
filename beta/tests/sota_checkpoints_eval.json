@@ -87,7 +87,7 @@
                 },
                 "tf1_mobilenet_v2_1.0_224_sparsity_35": {
                     "config": "examples/tensorflow/classification/configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json",
-                    "target": 71.83,
+                    "target": 71.90,
                     "resume": "tf1_mobilenet_v2_1.0_224_sparsity_35",
                     "metric_type": "Acc@1",
                     "model_description": "tf1 mobilenet_v2_sparsity_35",
