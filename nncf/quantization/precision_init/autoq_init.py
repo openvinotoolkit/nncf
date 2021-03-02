@@ -113,7 +113,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             dump_dir = self._init_args.config.get('log_dir', None)
             if dump_dir is None:
                 dump_dir = DEBUG_LOG_DIR
-            self.dump_dir = Path(dump_dir) / Path("autoq_agent_dump")
+            self.dump_dir = Path(dump_dir) / Path("autoq") / Path("autoq_agent_dump")
             self.dump_dir.mkdir(parents=True, exist_ok=True)
 
             self.policy_dict = OrderedDict() #key: episode
