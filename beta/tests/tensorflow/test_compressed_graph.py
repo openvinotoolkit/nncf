@@ -202,7 +202,6 @@ SKIP_MAP = {
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'retinanet': pytest.mark.skip(reason='not ready yet'),
-        'shared_layers_model': pytest.mark.skip(reason='shared layers are not supported'),
         'mask_rcnn': pytest.mark.skip(reason='not ready yet'),
         'mobilenet_v3_small': pytest.mark.skip(reason='problem with clusterization'),
         'yolo_v4': pytest.mark.skip(reason='not ready yet'),

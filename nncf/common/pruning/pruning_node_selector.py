@@ -133,12 +133,12 @@ class PruningNodeSelector:
 
                 last_cluster_idx += 1
 
+        stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
         # 4. Merge clusters for Conv + Depthwise conv (should be pruned together too)
         for node in all_nodes_to_prune:
             cluster_id = pruned_nodes_clusterization.get_cluster_by_node_id(node.node_id).id
 
             if self._is_depthwise_conv(node):
-                stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
                 previous_conv = get_previous_conv(graph, node, self._prune_operations, stop_propagation_ops)
                 if previous_conv:
                     previous_conv_cluster_id = pruned_nodes_clusterization.get_cluster_by_node_id(
@@ -152,7 +152,11 @@ class PruningNodeSelector:
             pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
-            previous_convs = [get_previous_conv(graph, graph.get_node_by_id(id)) for id in list_of_nodes]
+            previous_convs = []
+            for id in list_of_nodes:
+                nncf_node = graph.get_node_by_id(id)
+                previous_conv = get_previous_conv(graph, nncf_node, self._prune_operations, stop_propagation_ops)
+                previous_convs.append(previous_conv)
             previous_clusters = [
                 pruned_nodes_clusterization.get_cluster_by_node_id(node.node_id).id
                 for node in previous_convs

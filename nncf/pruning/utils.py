@@ -52,7 +52,9 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
 
 def pt_is_depthwise_conv(node: PTNNCFNode) -> bool:
     return node.module_attributes.groups == node.module_attributes.in_channels \
-           and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0)
+           and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
+           and node.module_attributes.in_channels > 1
+
 
 def pt_is_conv_with_downsampling(node: PTNNCFNode) -> bool:
     return not np.all(np.array(node.module_attributes.stride) == 1) \

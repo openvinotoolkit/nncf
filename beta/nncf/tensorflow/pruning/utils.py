@@ -27,6 +27,7 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 def tf_is_depthwise_conv(node: TFNNCFNode) -> bool:
     return node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
+           and node.module_attributes.in_channels > 1 \
            or node.node_type == 'DepthwiseConv2D'
 
 
