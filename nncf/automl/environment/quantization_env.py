@@ -148,7 +148,7 @@ class QuantizationEnv:
         self.skip_constraint = params.skip_constraint
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
-        self.finetune = params.skip_constraint
+        self.finetune = False
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
