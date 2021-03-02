@@ -28,7 +28,7 @@ def norm_activation_generator(params):
 def backbone_generator(params):
     """Generator function for various backbone models."""
     backbone_name = params.model_params.architecture.backbone.name
-    if params.model == 'RetinaNet':
+    if params.model == 'RetinaNet' or params.model == 'MaskRCNN':
         if backbone_name == 'resnet':
             resnet_params = params.model_params.architecture.backbone.params
             backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
@@ -36,12 +36,12 @@ def backbone_generator(params):
                                         norm_activation=norm_activation_generator(
                                           params.model_params.norm_activation))
         else:
-            raise ValueError('Backbone {} is not supported for RetinaNet model.'.format(backbone_name))
+            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
     elif params.model == 'YOLOv4':
         if backbone_name == 'darknet':
             backbone_fn = darknet.CSPDarknet53()
         else:
-            raise ValueError('Backbone {} is not supported for YOLOv4 model.'.format(backbone_name))
+            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
     else:
         raise ValueError('Model {} is not supported.'.format(params.model))
 
