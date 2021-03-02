@@ -10,16 +10,22 @@
     },
 
     "epochs": 1,
-    "batch_size": 40,
+    "batch_size": 60,
 
     "dataset": "coco/2017",
     "dataset_type": "tfds",
 
     "optimizer": {
         "type": "Adam",
-        "schedule_type": "cosine",
+        "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "initial_lr": 1e-6
+            "boundaries": [
+                1
+            ],
+            "values": [
+                1e-5,
+                1e-5
+            ]
         }
     },
 

@@ -17,7 +17,7 @@ from functools import partial
 
 import tensorflow as tf
 from beta.examples.tensorflow.common.object_detection.utils import box_utils
-from beta.examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, letterbox_resize, random_resize_crop_pad, reshape_boxes, random_hsv_distort, random_horizontal_flip, random_vertical_flip, random_grayscale, random_brightness, random_chroma, random_contrast, random_sharpness, random_blur, random_rotate, random_mosaic_augment # random_motion_blur
+from beta.examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, letterbox_resize, random_resize_crop_pad, reshape_boxes, random_hsv_distort, random_horizontal_flip, random_vertical_flip, random_grayscale, random_brightness, random_chroma, random_contrast, random_sharpness, random_blur, random_rotate, random_mosaic_augment, random_cutmix_augment, rand # random_motion_blur
 
 
 class YOLOv4Preprocessor:
@@ -53,55 +53,51 @@ class YOLOv4Preprocessor:
         model_input_size = tuple(reversed(input_shape))
         # boxes = np.array([np.array(list(map(int,box.split(',')))) for box in line[1:]])
 
-        if self._is_training:
+        # random resize image and crop|padding to target size
+        image, padding_size, padding_offset = random_resize_crop_pad(image, target_size=model_input_size)
 
-            # random resize image and crop|padding to target size
-            image, padding_size, padding_offset = random_resize_crop_pad(image, target_size=model_input_size)
+        # print('\nafter random_resize_crop_pad\n', filename, np.array(image)[100:102,100:102,:])
 
-            # print('\nafter random_resize_crop_pad\n', filename, np.array(image)[100:102,100:102,:])
+        # random horizontal flip image
+        image, horizontal_flip = random_horizontal_flip(image)
 
-            # random horizontal flip image
-            image, horizontal_flip = random_horizontal_flip(image)
+        # random adjust brightness
+        image = random_brightness(image)
 
-            # random adjust brightness
-            image = random_brightness(image)
+        # random adjust color level
+        image = random_chroma(image)
 
-            # random adjust color level
-            image = random_chroma(image)
+        # random adjust contrast
+        image = random_contrast(image)
 
-            # random adjust contrast
-            image = random_contrast(image)
+        # random adjust sharpness
+        image = random_sharpness(image)
 
-            # random adjust sharpness
-            image = random_sharpness(image)
+        # random convert image to grayscale
+        image = random_grayscale(image)
 
-            # random convert image to grayscale
-            image = random_grayscale(image)
+        # random do normal blur to image
+        # image = random_blur(image)
 
-            # random do normal blur to image
-            # image = random_blur(image)
+        # random do motion blur to image
+        # image = random_motion_blur(image, prob=0.2)
 
-            # random do motion blur to image
-            # image = random_motion_blur(image, prob=0.2)
+        # random vertical flip image
+        image, vertical_flip = random_vertical_flip(image)
 
-            # random vertical flip image
-            image, vertical_flip = random_vertical_flip(image)
+        # random distort image in HSV color space
+        # NOTE: will cost more time for preprocess
+        #       and slow down training speed
+        # image = random_hsv_distort(image)
 
-            # random distort image in HSV color space
-            # NOTE: will cost more time for preprocess
-            #       and slow down training speed
-            # image = random_hsv_distort(image)
+        # reshape boxes based on augment
+        boxes = reshape_boxes(boxes, src_shape=image_size, target_shape=model_input_size,
+                              padding_shape=padding_size, offset=padding_offset,
+                              horizontal_flip=horizontal_flip,
+                              vertical_flip=vertical_flip)
 
-            # reshape boxes based on augment
-            boxes = reshape_boxes(boxes, src_shape=image_size, target_shape=model_input_size,
-                                  padding_shape=padding_size, offset=padding_offset,
-                                  horizontal_flip=horizontal_flip,
-                                  vertical_flip=vertical_flip)
-
-            # random rotate image and boxes
-            image, boxes = random_rotate(image, boxes)
-        else:
-            image = letterbox_resize(image, tuple(reversed(model_input_size)))
+        # random rotate image and boxes
+        image, boxes = random_rotate(image, boxes)
 
         if len(boxes) > max_boxes:
             boxes = boxes[:max_boxes]
@@ -263,10 +259,15 @@ class YOLOv4Preprocessor:
         image_data = image_data.numpy()
         box_data = box_data.numpy()
 
-        if self._is_training:
-            if self.enhance_augment == 'mosaic':
-                # add random mosaic augment on batch ground truth data
-                image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
+        if self.enhance_augment == 'mosaic':
+            # add random mosaic augment on batch ground truth data
+            image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
+
+            # random_val = rand()
+            # if random_val < 0.2:
+            #     image_data, box_data = random_mosaic_augment(image_data, box_data, prob=1.0)
+            # elif 0.2 < random_val < 0.3:
+            #     image_data, box_data = random_cutmix_augment(image_data, box_data, prob=1.0)
 
         anchors = self._get_anchors(self.anchors_path)
 

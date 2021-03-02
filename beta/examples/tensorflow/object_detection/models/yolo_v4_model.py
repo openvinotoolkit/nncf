@@ -90,7 +90,7 @@ class YOLOv4Model(base_model.Model):
             loss, total_location_loss, total_confidence_loss, total_class_loss = self._loss_fn(labels, outputs,
                                                                                                    anchors_path, num_classes,
                                                                                                    ignore_thresh=.5,
-                                                                                                   label_smoothing=0,
+                                                                                                   label_smoothing=0.1,
                                                                                                    elim_grid_sense=True,
                                                                                                    use_focal_loss=False,
                                                                                                    use_focal_obj_loss=False,

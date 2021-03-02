@@ -313,14 +313,15 @@ def run(config):
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq)
 
-    print_statistics(compression_ctrl.statistics())
-    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
-    logger.info('Validation metric = {}'.format(metric_result))
+    # print_statistics(compression_ctrl.statistics())
+    # metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
+    # logger.info('Validation metric = {}'.format(metric_result))
 
     # if config.metrics_dump is not None:
     #     write_metrics(metric_result['AP'], config.metrics_dump)
 
     # checkpoint_manager.save()
+    compress_model.save(os.path.join(config['log_dir'], 'dumped.h5'))
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)
