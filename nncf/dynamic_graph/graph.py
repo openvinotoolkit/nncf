@@ -753,7 +753,7 @@ class PTNNCFGraph(NNCFGraph):
         """
         nodes = self._nx_graph.nodes
         for node_key in nodes:
-            if nodes[node_key][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == input_agnostic:
+            if nodes[node_key][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == input_agnostic:
                 return nodes[node_key]
         return None
 

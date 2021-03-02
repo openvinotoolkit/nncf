@@ -13,13 +13,13 @@
 
 import numpy as np
 
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
+from nncf.api.compression import CompressionScheduler
 from nncf.common.utils.registry import Registry
 
 PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 
 
-class PruningScheduler(TFCompressionScheduler):
+class PruningScheduler(CompressionScheduler):
     def __init__(self, pruning_algo, params: dict = None):
         super().__init__()
         if params is None:
@@ -37,7 +37,7 @@ class PruningScheduler(TFCompressionScheduler):
         return 1 - self.current_pruning_level
 
     def _maybe_freeze(self):
-        if self.last_epoch + 1 >= self.pruning_freeze_epoch:
+        if self.current_epoch + 1 >= self.pruning_freeze_epoch:
             self.algo.freeze()
 
     @property
@@ -47,6 +47,10 @@ class PruningScheduler(TFCompressionScheduler):
     @property
     def target_pruning_level(self):
         return self.pruning_target
+
+    def load_state(self, state):
+        super().load_state(state)
+        self._maybe_freeze()
 
 
 @PRUNING_SCHEDULERS.register("polynomial")
@@ -63,13 +67,6 @@ class PolynomialSparseScheduler(PruningScheduler):
 
         self.algo.set_pruning_rate(self.current_pruning_level)
 
-    def load_state(self, initial_step, steps_per_epoch):
-        if steps_per_epoch != self._steps_per_epoch:
-            raise RuntimeError('Parameter steps_per_epoch {} doesn\'t equal to the one '
-                               'provided in configuration file {}'.format(steps_per_epoch, self._steps_per_epoch))
-        super().load_state(initial_step, steps_per_epoch)
-        self._maybe_freeze()
-
     def step(self, last=None):
         super().step(last)
         if self._update_per_optimizer_step:
@@ -84,28 +81,28 @@ class PolynomialSparseScheduler(PruningScheduler):
 
     def _maybe_freeze(self):
         if self._update_per_optimizer_step:
-            if (self.last_epoch + 1 == self.pruning_freeze_epoch
+            if (self.current_epoch + 1 == self.pruning_freeze_epoch
                     and self._last_local_step + 1 == self._steps_per_epoch) \
-                    or self.last_epoch >= self.pruning_freeze_epoch:
+                    or self.current_epoch >= self.pruning_freeze_epoch:
                 self.algo.freeze()
         else:
             super()._maybe_freeze()
 
     @property
     def current_pruning_level(self):
-        if self.last_epoch == self.last_step == -1:
+        if self.current_epoch == self.current_step == -1:
             return self.initial_pruning_rate
 
         sparsity_target_epoch_index = self.pruning_steps - 1
         if self._update_per_optimizer_step:
             sparsity_target_epoch_frac = sparsity_target_epoch_index \
                                          + (self._steps_per_epoch - 1) / self._steps_per_epoch
-            fractional_epoch = self.last_epoch + self._last_local_step / self._steps_per_epoch
+            fractional_epoch = self.current_epoch + self._last_local_step / self._steps_per_epoch
             progress = (min(sparsity_target_epoch_frac, fractional_epoch) / sparsity_target_epoch_frac)
         elif sparsity_target_epoch_index == 0:
             progress = 1
         else:
-            progress = (min(sparsity_target_epoch_index, self.last_epoch) / sparsity_target_epoch_index)
+            progress = (min(sparsity_target_epoch_index, self.current_epoch) / sparsity_target_epoch_index)
 
         if self.concave:
             current_sparsity = self.initial_pruning_rate + (self.pruning_target - self.initial_pruning_rate) * (
@@ -117,8 +114,8 @@ class PolynomialSparseScheduler(PruningScheduler):
 
     @property
     def _last_local_step(self):
-        return -1 if self.last_step == -1 \
-            else self.last_step % self._steps_per_epoch
+        return -1 if self.current_step == -1 \
+            else self.current_step % self._steps_per_epoch
 
 
 @PRUNING_SCHEDULERS.register("exponential")
@@ -129,10 +126,6 @@ class ExponentialSparsityScheduler(PruningScheduler):
                                         pruning_steps=self.pruning_steps - 1)
         self.algo.set_pruning_rate(self.initial_pruning_rate)
 
-    def load_state(self, last_epoch, last_step):
-        super().load_state(last_epoch, last_step)
-        self._maybe_freeze()
-
     def epoch_step(self, epoch=None):
         super().epoch_step(epoch)
         self.algo.set_pruning_rate(self.current_pruning_level)
@@ -140,9 +133,9 @@ class ExponentialSparsityScheduler(PruningScheduler):
 
     @property
     def current_pruning_level(self):
-        if self.last_epoch == -1:
+        if self.current_epoch == -1:
             return self.initial_pruning_rate
-        curr_sparsity = 1 - self.a * np.exp(-self.k * self.last_epoch)
+        curr_sparsity = 1 - self.a * np.exp(-self.k * self.current_epoch)
         return min(curr_sparsity, self.pruning_target)
 
     @staticmethod

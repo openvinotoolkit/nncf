@@ -240,9 +240,8 @@ def get_test_models_desc(algorithm):
         ),
         ModelDesc('sequential_model.pb', test_models.SequentialModel, [1, 224, 224, 3]),
         ModelDesc('sequential_no_input_model.pb', test_models.SequentialModelNoInput, [1, 224, 224, 3]),
-        ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
         pytest.param(
-            ModelDesc('mobilenet_v3_small.pb', test_models.SharedLayersModel, [1, 32, 32, 3]),
+            ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
         ),
         pytest.param(

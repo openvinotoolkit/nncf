@@ -23,10 +23,10 @@ from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.commands import InsertionCommand
-from nncf.common.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.graph import TFNNCFGraph
 from beta.nncf.tensorflow.graph.graph import tf_get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
@@ -85,11 +85,11 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         transformation_layout = self.get_transformation_layout(model)
         return TFModelTransformer(model, transformation_layout).transform()
 
-    def get_transformation_layout(self, model: tf.keras.Model) -> TransformationLayout:
+    def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         graph = TFNNCFGraph(model)
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
 
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
         shared_nodes = set()
 
         self._pruned_layer_groups_info = Clusterization('layer_name')
@@ -111,8 +111,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
                     if getattr(layer, attr_name) is not None:
                         transformations.register(
-                            InsertionCommand(
-                                target_point=LayerWeight(layer_name, attr_name),
+                            TFInsertionCommand(
+                                target_point=TFLayerWeight(layer_name, attr_name),
                                 callable_object=BinaryMask(),
                                 priority=TransformationPriority.PRUNING_PRIORITY
                             ))
@@ -126,8 +126,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                             attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[out_node.node_type][attr_name_key]
                             transformations.register(
-                                InsertionCommand(
-                                    target_point=LayerWeight(bn_layer_name, attr_name),
+                                TFInsertionCommand(
+                                    target_point=TFLayerWeight(bn_layer_name, attr_name),
                                     callable_object=BinaryMask(),
                                     priority=TransformationPriority.PRUNING_PRIORITY
                                 ))

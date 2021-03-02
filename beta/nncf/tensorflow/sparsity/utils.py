@@ -16,9 +16,9 @@ from texttable import Texttable
 import tensorflow as tf
 
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from nncf.common.graph.transformations.commands import LayerWeightOperation
-from nncf.common.graph.transformations.commands import RemovalCommand
-from nncf.common.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
+from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
@@ -58,7 +58,7 @@ def strip_model_from_masks(model: tf.keras.Model) -> tf.keras.Model:
         raise ValueError(
             'Expected model to be a `tf.keras.Model` instance but got: ', model)
 
-    transformations = TransformationLayout()
+    transformations = TFTransformationLayout()
 
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
@@ -69,8 +69,8 @@ def strip_model_from_masks(model: tf.keras.Model) -> tf.keras.Model:
                     apply_mask(layer, weight_attr, op_name)
 
                     transformations.register(
-                        RemovalCommand(
-                            target_point=LayerWeightOperation(
+                        TFRemovalCommand(
+                            target_point=TFOperationWithWeights(
                                 layer.name,
                                 weights_attr_name=weight_attr,
                                 operation_name=op_name)

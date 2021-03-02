@@ -720,5 +720,5 @@ def test_multiple_forward():
     graph = sparse_quantized_model.get_original_graph()
     for node_key in list(graph.get_all_node_keys())[1:]:
         node = graph.get_nx_node_by_key(node_key)
-        assert node.get(NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
-        assert node.get(NNCFGraph.MODULE_ATTRIBUTES)
+        assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
+        assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
