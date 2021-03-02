@@ -125,10 +125,5 @@ class RBSparsityController(BaseSparsityAlgoController):
             stats["masks_consistents"] = self.check_distributed_masks()
         return stats
 
-    def set_sparsity_level_for_module(self, sparsity_level: float,
-                                      target_sparsified_module_info: List[SparseModuleInfo]):
-        sparse_op = target_sparsified_module_info[0].operand
-        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op) # pylint: disable=E1101
-
     def get_sparsity_init(self):
         return self.sparsity_init
