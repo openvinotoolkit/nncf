@@ -22,8 +22,6 @@ from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.transformations.commands import TransformationPriority
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
@@ -34,7 +32,6 @@ from beta.nncf.tensorflow.layers.common import BIAS_ATTR_NAME
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import SPECIAL_LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
-from beta.nncf.tensorflow.pruning.puning_node_selector import TFPruningNodeSelector
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
@@ -42,6 +39,9 @@ from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.utils.logger import logger as nncf_logger
@@ -70,14 +70,14 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
         self._prunable_types = self._get_op_types_of_pruned_layers()
         types_of_grouping_ops = self._get_types_of_grouping_ops()
-        self._pruning_node_selector = TFPruningNodeSelector(TF_PRUNING_OPERATOR_METATYPES,
-                                                            self._prunable_types,
-                                                            types_of_grouping_ops,
-                                                            None, # self.ignored_scopes,
-                                                            None, # self.target_scopes,
-                                                            self._prune_first,
-                                                            self._prune_last,
-                                                            self._prune_downsample_convs)
+        self._pruning_node_selector = PruningNodeSelector(TF_PRUNING_OPERATOR_METATYPES,
+                                                          self._prunable_types,
+                                                          types_of_grouping_ops,
+                                                          None, # self.ignored_scopes,
+                                                          None, # self.target_scopes,
+                                                          self._prune_first,
+                                                          self._prune_last,
+                                                          self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
 

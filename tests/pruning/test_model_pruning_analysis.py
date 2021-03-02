@@ -13,17 +13,16 @@
 from typing import Callable
 
 import pytest
+
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
-
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
-
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_helpers import PTIdentityMaskForwardOps
 from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.pruning.export_helpers import PTElementwise
-from nncf.pruning.filter_pruning.pruning_node_selector import PTPruningNodeSelector
 from nncf.pruning.utils import pt_is_depthwise_conv
+from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import cluster_special_ops
@@ -167,14 +166,14 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     pruning_operations = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     grouping_operations = PTElementwise.get_all_op_aliases()
-    pruning_node_selector = PTPruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
-                                                  pruning_operations,
-                                                  grouping_operations,
-                                                  None,
-                                                  None,
-                                                  prune_first,
-                                                  prune_last,
-                                                  prune_downsample)
+    pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
+                                                pruning_operations,
+                                                grouping_operations,
+                                                None,
+                                                None,
+                                                prune_first,
+                                                prune_last,
+                                                prune_downsample)
     model = model()
     model.eval()
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 8, 8])])
