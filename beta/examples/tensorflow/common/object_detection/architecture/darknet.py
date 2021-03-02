@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -13,15 +13,14 @@
 
 import tensorflow as tf
 import tensorflow.keras.backend as K
-
 from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
 
-class Darknet:
+
+class CSPDarknet53:
     """Class to build CSPDarknet53"""
 
     def mish(self, x):
         return x * K.tanh(K.softplus(x))
-
 
     def DarknetConv2D_BN_Mish(self, *args, **kwargs):
         """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
@@ -32,9 +31,8 @@ class Darknet:
             tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.Activation(self.mish))
 
-
     def csp_resblock_body(self, x, num_filters, num_blocks, all_narrow=True):
-        '''A series of resblocks starting with a downsampling Convolution2D'''
+        """A series of resblocks starting with a downsampling Convolution2D"""
         # Darknet uses left and top padding instead of 'same' mode
         x = tf.keras.layers.ZeroPadding2D(((1,0),(1,0)))(x)
         x = self.DarknetConv2D_BN_Mish(num_filters, (3,3), strides=(2,2))(x)
@@ -53,9 +51,8 @@ class Darknet:
 
         return self.DarknetConv2D_BN_Mish(num_filters, (1,1))(x)
 
-
     def __call__(self, x):
-        '''CSPDarknet53 body having 52 Convolution2D layers'''
+        """CSPDarknet53 body having 52 Convolution2D layers"""
         x = self.DarknetConv2D_BN_Mish(32, (3,3))(x)
         x = self.csp_resblock_body(x, 64, 1, False)
         x = self.csp_resblock_body(x, 128, 2)

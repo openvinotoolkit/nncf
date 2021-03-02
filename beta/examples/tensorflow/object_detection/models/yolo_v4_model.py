@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from beta.examples.tensorflow.common.logger import logger
 
 class YOLOv4Model(base_model.Model):
     """YOLOv4 model function."""
+
     def __init__(self, params):
         super().__init__(params)
 
@@ -29,7 +30,6 @@ class YOLOv4Model(base_model.Model):
         # Architecture generators.
         self._backbone_fn = factory.backbone_generator(params)
         self._yolo4_predictions_fn = factory.yolo_v4_head_generator()
-
 
     def build_outputs(self, inputs, is_training):
         """Create YOLO_V4 model CNN body in Keras."""
@@ -57,7 +57,6 @@ class YOLOv4Model(base_model.Model):
 
         return model_outputs
 
-
     def build_model(self, weights=None, is_training=None):
         outputs = self.model_outputs(self._input_layer, is_training)
         keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='yolo_v4')
@@ -68,10 +67,8 @@ class YOLOv4Model(base_model.Model):
 
         return keras_model
 
-
     def build_loss_fn(self):
         pass
-
 
     def eval_metrics(self):
         pass

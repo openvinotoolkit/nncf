@@ -595,7 +595,6 @@ class YOLOv4:
             tf.keras.layers.experimental.SyncBatchNormalization(),
             tf.keras.layers.LeakyReLU(alpha=0.1))
 
-
     def Spp_Conv2D_BN_Leaky(self, x, num_filters):
         y1 = tf.keras.layers.MaxPooling2D(pool_size=(5,5), strides=(1,1), padding='same')(x)
         y2 = tf.keras.layers.MaxPooling2D(pool_size=(9,9), strides=(1,1), padding='same')(x)
@@ -606,9 +605,8 @@ class YOLOv4:
                 self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))([y3, y2, y1, x])
         return y
 
-
     def make_yolo_head(self, x, num_filters):
-        '''6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer'''
+        """6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer"""
         x = nn_ops.compose(
                 self.DarknetConv2D_BN_Leaky(num_filters, (1,1)),
                 self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
@@ -618,9 +616,8 @@ class YOLOv4:
 
         return x
 
-
     def make_yolo_spp_head(self, x, num_filters):
-        '''6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer'''
+        """6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer"""
         x = nn_ops.compose(
                 self.DarknetConv2D_BN_Leaky(num_filters, (1,1)),
                 self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
@@ -633,7 +630,6 @@ class YOLOv4:
                 self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))(x)
 
         return x
-
 
     def __call__(self, feature_maps, feature_channel_nums, num_anchors, num_classes):
         f1, f2, f3 = feature_maps
