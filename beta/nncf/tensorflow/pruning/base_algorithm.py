@@ -90,7 +90,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
 
         transformations = TFTransformationLayout()
-        shared_nodes = set()
+        shared_layers = set()
 
         self._pruned_layer_groups_info = Clusterization('layer_name')
 
@@ -98,10 +98,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             group_minfos = []
             for node in group.nodes:
                 layer_name = tf_get_layer_identifier(node)
-                if layer_name in shared_nodes:
+                if layer_name in shared_layers:
                     continue
                 if is_shared(node):
-                    shared_nodes.add(layer_name)
+                    shared_layers.add(layer_name)
                 layer = model.get_layer(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
@@ -119,12 +119,11 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
                 related_layers = {}
                 if self._prune_batch_norms:
-                    bn_nodes = [bn_node for s_node in graph.get_next_nodes(node)
-                                for bn_node in graph.traverse_graph(s_node, self._get_bn_for_node)]
-                    for out_node in bn_nodes:
-                        bn_layer_name = tf_get_layer_identifier(out_node)
+                    bn_nodes = self._get_related_batchnorms(layer_name, group, graph)
+                    for bn_node in bn_nodes:
+                        bn_layer_name = tf_get_layer_identifier(bn_node)
                         for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                            attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[out_node.node_type][attr_name_key]
+                            attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[bn_node.node_type][attr_name_key]
                             transformations.register(
                                 TFInsertionCommand(
                                     target_point=TFLayerWeight(bn_layer_name, attr_name),
@@ -154,6 +153,24 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         elif node.node_type not in propagating_ops:
             is_finished = True
         return is_finished, bn_nodes
+
+    def _get_related_batchnorms(self, layer_name: str, group: NodesCluster, graph: TFNNCFGraph) -> List[NNCFNode]:
+        """
+        Returns List of batchnorm nodes related to the layer.
+        Note: Single node per layer for shared bactchnorm layers
+        """
+        layer_nodes = [node_ for node_ in group.nodes
+                       if tf_get_layer_identifier(node_) == layer_name]
+        bn_nodes = []
+        bn_layer_names = []
+        for layer_node in layer_nodes:
+            for next_node in graph.get_next_nodes(layer_node):
+                for bn_node in graph.traverse_graph(next_node, self._get_bn_for_node):
+                    bn_layer_name = tf_get_layer_identifier(bn_node)
+                    if bn_layer_name not in bn_layer_names:
+                        bn_layer_names.append(bn_layer_name)
+                        bn_nodes.append(bn_node)
+        return bn_nodes
 
     def _is_pruned_layer(self, layer: tf.keras.layers.Layer) -> bool:
         """
