@@ -13,13 +13,12 @@
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.utils import get_weight_by_name
+from beta.nncf.tensorflow.functions import logit
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
-from beta.nncf.tensorflow.functions import logit
 
 OP_NAME = 'rb_sparsity_mask_apply'
 
@@ -27,13 +26,22 @@ OP_NAME = 'rb_sparsity_mask_apply'
 class RBSparsifyingWeight(NNCFOperation):
 
     def __init__(self, eps=1e-6):
-        '''Setup trainable param'''
+        '''
+        :param eps: minimum value and the gap from the maximum value in
+            distributed mask
+        '''
         super().__init__(name=OP_NAME,
                          trainable=True)
         self.eps = eps
 
     # TODO: make it static
     def build(self, input_shape, input_type, name, layer):
+        '''
+        :param input_shape: shape of weights which needs to be sparsifyed
+        :param input_type: type of operation input, must be InputType.WEIGHTS
+        :param name: name of layer which needs to be sparsifyed
+        :param layer: layer which needs to be sparsifyed
+        '''
         if input_type is not InputType.WEIGHTS:
             raise ValueError(
                 'RB Sparsity mask operation could not be applied to input of the layer: {}'.
@@ -58,20 +66,32 @@ class RBSparsifyingWeight(NNCFOperation):
         }
 
     def call(self, layer_weights, op_weights, _):
-        '''Apply rb sparsity mask to given weights
+        '''
+        Apply rb sparsity mask to given weights
+
         :param layer_weights: target weights to sparsify
         :param op_weights: operation weights contains
-           mask and param trainable
-        :param _:'''
+           mask and param `trainable`
+        :param _:
+        '''
         if tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)):
             return apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps))
         return apply_mask(layer_weights, binary_mask(op_weights['mask']))
 
     def freeze(self, op_weights):
+        '''
+        Freeze rb mask from operation weights
+
+        :param op_weights: weight of rb operation
+        '''
         op_weights['trainable'].assign(0)
         self._trainable = False
 
     @staticmethod
     def loss(mask):
-        '''Return count of non zero weight in mask'''
+        '''
+        Return count of non zero weight in mask
+
+        :param mask: given mask
+        '''
         return tf.reduce_sum(st_binary_mask(mask))

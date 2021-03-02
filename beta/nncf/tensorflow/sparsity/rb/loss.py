@@ -48,7 +48,7 @@ class SparseLoss(CompressionLoss):
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             if sparse_layer.trainable:
-                sw_loss, params_layer, mask = self.get_params_from_sparse_layer(sparse_layer)
+                sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
                 params = params + params_layer
                 loss = loss + sw_loss
 
@@ -58,13 +58,13 @@ class SparseLoss(CompressionLoss):
     @property
     def target_sparsity_rate(self):
         eager_target = tf.keras.backend.eval(self.target)
-        rate = 1 - eager_target
+        rate = 1. - eager_target
         if rate < 0 or rate > 1:
             raise IndexError("Target is not within range(0,1)")
         return rate
 
     @staticmethod
-    def get_params_from_sparse_layer(sparse_layer):
+    def _get_params_from_sparse_layer(sparse_layer):
         op = sparse_layer.get_op_by_name(OP_NAME)
         mask = sparse_layer.ops_weights[OP_NAME]['mask']
         return op.loss(mask), tf.size(mask), mask
@@ -86,13 +86,12 @@ class SparseLossForPerLayerSparsity(SparseLoss):
 
         sparse_layers_loss = tf.constant(0.)
         for sparse_layer in self._sparse_layers:
-            if not self.disabled: #and not sparse_layer.sparsify:
+            if not self.disabled:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
-            # TODO: find out how it works
-            if True:#sparse_layer.sparsify:
-                sw_loss, params_layer, mask = self.get_params_from_sparse_layer(sparse_layer)
-                sparse_layers_loss += tf.math.abs(sw_loss / tf.cast(params_layer, tf.float32) - self.per_layer_target[sparse_layer])
+            sw_loss, params_layer, mask = self._get_params_from_sparse_layer(sparse_layer)
+            sparse_layers_loss += tf.math.abs(sw_loss /
+                                              tf.cast(params_layer, tf.float32) - self.per_layer_target[sparse_layer])
 
         return tf.reshape(tf.math.pow((sparse_layers_loss / self.p), 2), shape=[])
 

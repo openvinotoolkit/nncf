@@ -13,20 +13,18 @@
 
 import pytest
 import tensorflow as tf
-import tensorflow_addons as tfa
 from copy import deepcopy
 from pytest import approx
 
-from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
-from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler
+from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
+from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler
+from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
+from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
+from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import logit
-from beta.nncf import NNCFConfig
-from beta.nncf.helpers.callback_creation import create_compression_callbacks
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, \
     create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name, get_basic_two_conv_test_model, \
     get_mock_model
@@ -133,22 +131,6 @@ def test_can_create_sparse_loss_and_scheduler():
     assert scheduler.sparsity_freeze_epoch == 3
 
 
-'''
-def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
-    model = get_basic_conv_test_model()
-
-    config = get_basic_sparsity_config()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
-            1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
-    )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
-    assert len(compression_ctrl.loss._sparse_layers) == 1
-'''
-
-
 def test_sparse_algo_can_collect_sparse_layers():
     model = get_basic_two_conv_test_model()
 
@@ -157,107 +139,6 @@ def test_sparse_algo_can_collect_sparse_layers():
 
     assert len(compression_ctrl.loss._sparse_layers) == 2
 
-'''
-def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
-    model = get_basic_two_conv_test_model()
-
-    config = get_basic_sparsity_config()
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    assert compression_ctrl.sparsified_weights_count == model.weights_num
-    assert compression_ctrl.sparsity_rate_for_model == (
-            1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
-    )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
-'''
-
-def train_lenet():
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-
-    x_train = tf.transpose(tf.reshape(x_train, (-1, 1, 28, 28)), (0, 2, 3, 1))
-    x_test = tf.transpose(tf.reshape(x_test, (-1, 1, 28, 28)), (0, 2, 3, 1))
-
-    x_train = x_train / 255
-    x_test = x_test / 255
-
-    inp = tf.keras.Input((28, 28, 1))
-    x = tf.keras.layers.Conv2D(32, 5)(inp)
-    x = tf.keras.layers.MaxPool2D()(x)
-    x = tf.keras.layers.Conv2D(48, 5)(x)
-    x = tf.keras.layers.MaxPool2D()(x)
-    x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(256)(x)
-    x = tf.keras.layers.Dense(84)(x)
-    y = tf.keras.layers.Dense(10, activation='softmax')(x)
-
-    model = tf.keras.Model(inputs=inp, outputs=y)
-
-    model.compile(
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-    optimizer=tf.keras.optimizers.Adam(5e-4),
-    metrics=["accuracy"],
-    )
-
-    model.fit(x_train, y_train, batch_size=64, epochs=16, validation_split=0.2,
-    callbacks=tf.keras.callbacks.ReduceLROnPlateau())
-
-    test_scores = model.evaluate(x_test, y_test, verbose=2)
-    print("Test loss:", test_scores[0])
-    print("Test accuracy:", test_scores[1])
-
-    model.save('LeNet.h5')
-
-
-def test_rb_sparse_target_lenet():
-    physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
-
-    x_train = tf.transpose(tf.reshape(x_train, (-1, 1, 28, 28)), (0, 2, 3, 1))
-    x_test = tf.transpose(tf.reshape(x_test, (-1, 1, 28, 28)), (0, 2, 3, 1))
-
-    x_train = x_train / 255
-    x_test = x_test / 255
-
-    model = tf.keras.models.load_model('LeNet.h5')
-
-    config = get_basic_sparsity_config(sparsity_init=0.05, sparsity_target=0.3,
-                                       sparsity_target_epoch=10, sparsity_freeze_epoch=15)
-    compress_model, compress_algo = create_compressed_model_and_algo_for_test(model, config)
-    compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
-
-    class SparsityRateTestCallback(tf.keras.callbacks.Callback):
-        def on_epoch_end(self, epoch, logs=None):
-            target = compress_algo.loss.target_sparsity_rate
-            actual = compress_algo.raw_statistics()['sparsity_rate_for_sparsified_modules']
-            print(f'target {target}, actual {actual}')
-            assert abs(actual - target) < 0.09
-
-    loss_obj = tf.keras.losses.SparseCategoricalCrossentropy()
-
-    metrics = [loss_obj,
-                tfa.metrics.MeanMetricWrapper(compress_algo.loss,
-                                              name='rb_loss')]
-
-    compress_model.add_loss(compress_algo.loss)
-
-    compress_model.compile(
-        loss=loss_obj,
-        optimizer=tf.keras.optimizers.Adam(5e-3),
-        metrics=metrics,
-        #run_eagerly=True
-    )
-
-    compress_model.fit(x_train, y_train, batch_size=64, epochs=30, validation_split=0.2,
-              callbacks=[tf.keras.callbacks.ReduceLROnPlateau(),
-                         compression_callbacks,
-                         SparsityRateTestCallback()])
-
-    test_scores = compress_model.evaluate(x_test, y_test, verbose=2)
-    print("Test loss:", test_scores[0])
-    print("Test accuracy:", test_scores[1])
-
-    compress_model.save('LeNet_rb_sparse.h5')
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():
     config = NNCFConfig()
@@ -301,7 +182,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
 
     scheduler.epoch_step()
     assert loss.disabled
-    assert loss.target_sparsity_rate == 0.6
+    assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.6
     assert loss() == 0
 
     for wrapper in loss._sparse_layers:

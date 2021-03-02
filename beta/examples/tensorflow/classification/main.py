@@ -16,7 +16,6 @@ import os.path as osp
 from pathlib import Path
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
@@ -169,12 +168,9 @@ def run(config):
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
 
-            metrics += [loss_obj,
-                        tfa.metrics.MeanMetricWrapper(compression_ctrl.loss,
-                                                      name='rb_loss')]
+            metrics += compression_ctrl.get_compression_metrics(loss_obj)
 
             compress_model.add_loss(compression_ctrl.loss)
-
             compress_model.compile(optimizer=optimizer,
                                    loss=loss_obj,
                                    metrics=metrics,
@@ -224,7 +220,6 @@ def run(config):
 
     logger.info('evaluation...')
     print_statistics(compression_ctrl.statistics())
-    #compression_ctrl.freeze()
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,

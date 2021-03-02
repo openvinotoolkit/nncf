@@ -12,30 +12,27 @@
 """
 
 import tensorflow as tf
+import tensorflow_addons as tfa
 from tensorflow.python.keras.utils.layer_utils import count_params
 
+from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
-from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
-from beta.nncf.tensorflow.graph.model_transformer import ModelTransformer
+from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 from nncf.common.graph.transformations.commands import InsertionCommand
 from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
-from beta.nncf.tensorflow.graph.utils import get_weight_node_name
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
+from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
-from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 
 PRUNING_LAYERS = {
@@ -57,6 +54,8 @@ PRUNING_LAYERS = {
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
+        if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
+            raise Exception("RB sparsity algorithm don not support running in distributed mode")
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
 
@@ -89,6 +88,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
+        # TODO: unify for TF and PyTorch
         params = self.config.get('params', {})
         if 'sparsity_init' not in params:
             params['sparsity_init'] = self.config.get("sparsity_init", 0)
@@ -105,6 +105,7 @@ class RBSparsityController(TFCompressionAlgorithmController):
         self.sparsity_init = params.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
         sparsifyed_layers = collect_wrapped_layers(target_model)
+        # TODO: find out purpose of this attribute
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsifyed_layers)
@@ -124,46 +125,7 @@ class RBSparsityController(TFCompressionAlgorithmController):
 
     def freeze(self):
         self._loss.disable()
-    '''
-    def distributed(self):
-        if not dist.is_initialized():
-            raise KeyError('Could not set distributed mode for the compression algorithm '
-                           'because the default process group has not been initialized.')
 
-        if next(self._model.parameters()).is_cuda:
-            state = torch.cuda.get_rng_state()
-            if dist.get_backend() == dist.Backend.NCCL:
-                state = state.cuda()
-            torch.distributed.broadcast(state, src=0)
-            torch.cuda.set_rng_state(state.cpu())
-        else:
-            state = torch.get_rng_state()
-            torch.distributed.broadcast(state, src=0)
-            torch.set_rng_state(state)
-
-        self._distributed = True
-
-    def check_distributed_masks(self):
-        if not self._distributed or get_world_size() == 1:
-            return 1
-
-        nvalues = 0
-        ncor_values = 0
-        eps = 1e-4
-        for minfo in self.sparsified_module_info:
-            mask = minfo.operand.mask
-
-            mask_list = [torch.empty_like(mask) for _ in range(get_world_size())]
-            # nccl does not support gather, send, recv operations
-            dist.all_gather(mask_list, mask)
-
-            for i in range(1, len(mask_list)):
-                rel_error = (mask_list[0] - mask_list[i]) / mask_list[0]
-                ncor_values = ncor_values + (rel_error.abs() < eps).sum(dtype=mask.dtype)
-                nvalues = nvalues + mask_list[i].numel()
-
-        return ncor_values / nvalues
-    '''
     def statistics(self):
         raw_sparsity_statistics = self.raw_statistics()
         return convert_raw_to_printable(raw_sparsity_statistics)
@@ -219,17 +181,12 @@ class RBSparsityController(TFCompressionAlgorithmController):
 
         return raw_sparsity_statistics
 
-    def add_algo_specific_stats(self, stats):
-        stats["target_sparsity_rate"] = self.loss.target_sparsity_rate
-        #if self._distributed and self._check_sparsity_masks:
-        #    stats["masks_consistents"] = self.check_distributed_masks()
-        return stats
-    # TODO: Ask about this piece of code
-    #def set_sparsity_level_for_module(self, sparsity_level: float,
-    #                                  target_sparsified_module_info: List[SparseModuleInfo]):
-    #    # ???
-    #    sparse_op = target_sparsified_module_info[0].operand
-    #    self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op)
+    def get_compression_metrics(self, model_loss):
+        return [
+            model_loss,
+            tfa.metrics.MeanMetricWrapper(self.loss,
+                                          name='rb_loss')
+            ]
 
     def get_sparsity_init(self):
         return self.sparsity_init

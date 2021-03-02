@@ -14,13 +14,13 @@
 import pytest
 import tensorflow as tf
 
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
-from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
-from beta.tests.tensorflow.helpers import get_weight_by_name
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
+from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
 from beta.tests.tensorflow.sparsity.rb.utils import default_rb_mask_value
+from beta.tests.tensorflow.helpers import get_weight_by_name
 
 
 def get_RBSParsityWeigth_and_layer(frozen=False):
