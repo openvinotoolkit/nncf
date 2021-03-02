@@ -91,7 +91,7 @@ class PruningNodeSelector:
         for i, cluster in enumerate(special_ops_clusterization.get_all_clusters()):
             all_pruned_inputs = []
             pruned_inputs_idxs = set()
-            clusters_to_merge = set()
+            clusters_to_merge = list()
 
             for node in cluster.nodes:
                 sources = get_sources_of_node(node, graph, self._prune_operations)
@@ -99,18 +99,18 @@ class PruningNodeSelector:
                     if pruned_nodes_clusterization.is_node_in_clusterization(source_node.node_id):
                         # Merge clusters if some node already added in another cluster
                         cluster = pruned_nodes_clusterization.get_cluster_by_node_id(source_node.node_id)
-                        clusters_to_merge.add(cluster.id)
+                        clusters_to_merge.append(cluster.id)
                     elif source_node.node_id not in pruned_inputs_idxs:
                         all_pruned_inputs.append(source_node)
                         pruned_inputs_idxs.add(source_node.node_id)
 
             if all_pruned_inputs:
                 cluster = NodesCluster(i, all_pruned_inputs, [n.node_id for n in all_pruned_inputs])
-                clusters_to_merge.add(cluster.id)
+                clusters_to_merge.append(cluster.id)
                 pruned_nodes_clusterization.add_cluster(cluster)
 
             # Merge clusters if one source node in several special ops clusters
-            pruned_nodes_clusterization.merge_list_of_cluster(list(clusters_to_merge))
+            pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
         last_cluster_idx = len(special_ops_clusterization.get_all_clusters())
 
@@ -137,7 +137,7 @@ class PruningNodeSelector:
         multiforward_nodes = self._get_multiforward_nodes(graph)
         for list_of_nodes in multiforward_nodes:
             clusters_to_merge = [pruned_nodes_clusterization.get_cluster_by_node_id(id).id for id in list_of_nodes]
-            pruned_nodes_clusterization.merge_list_of_cluster(clusters_to_merge)
+            pruned_nodes_clusterization.merge_list_of_clusters(clusters_to_merge)
 
             # Merge previous convolutions into one cluster
             previous_convs = [get_previous_conv(graph, graph.get_node_by_id(id)) for id in list_of_nodes]
@@ -145,7 +145,7 @@ class PruningNodeSelector:
                 pruned_nodes_clusterization.get_cluster_by_node_id(node.node_id).id
                 for node in previous_convs
             ]
-            pruned_nodes_clusterization.merge_list_of_cluster(previous_clusters)
+            pruned_nodes_clusterization.merge_list_of_clusters(previous_clusters)
 
         # 6. Checks for groups (all nodes in group can be pruned or all group can't be pruned).
         model_analyser = ModelAnalyzer(graph, self._pruning_operator_metatypes)
