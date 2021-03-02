@@ -22,6 +22,7 @@ from beta.examples.tensorflow.common.object_detection.evaluation import coco_eva
 
 class YOLOv4Model(base_model.Model):
     """YOLOv4 model function."""
+
     def __init__(self, params):
         super().__init__(params)
 
@@ -32,7 +33,6 @@ class YOLOv4Model(base_model.Model):
         # Architecture generators.
         self._backbone_fn = factory.backbone_generator(params)
         self._yolo4_predictions_fn = factory.yolo_v4_head_generator()
-
 
     def build_outputs(self, inputs, is_training):
         """Create YOLO_V4 model CNN body in Keras."""
@@ -105,8 +105,6 @@ class YOLOv4Model(base_model.Model):
             }
 
         return _total_loss_fn
-
-
 
     def post_processing(self, labels, outputs):
 
