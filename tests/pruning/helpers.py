@@ -287,6 +287,26 @@ class TestModelMultipleForward(nn.Module):
         return x1, x2, x3
 
 
+class TestModelGroupNorm(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.gn1 = nn.GroupNorm(16, 16)  # Instance Normalization
+        self.conv2 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.gn2 = nn.GroupNorm(2, 16)  # Group Normalization
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.gn1(x)
+        x = self.conv2(x)
+        x = self.gn2(x)
+        return x
+
+
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]

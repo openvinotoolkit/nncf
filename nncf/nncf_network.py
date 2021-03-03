@@ -29,7 +29,7 @@ from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import MODEL_ATTRIBUTES_MAP
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
@@ -44,7 +44,6 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.quantization.layers import QUANTIZATION_MODULES
@@ -800,14 +799,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return result
 
     def _mark_original_graph_nodes_with_module_attributes(self):
-        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
-        for node in self._original_graph.get_nodes_by_types(general_conv_types):
+        for node in self._original_graph.get_nodes_by_types(MODEL_ATTRIBUTES_MAP):
             scope = node.op_exec_context.scope_in_model
             input_agnostic = node.op_exec_context.input_agnostic
             module = self.get_module_by_scope(scope)
             nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
-            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
-                                                                               module.in_channels,
-                                                                               module.out_channels,
-                                                                               module.stride,
-                                                                               module.groups)
+            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = MODEL_ATTRIBUTES_MAP[
+                node.op_exec_context.operator_name
+            ].from_module(module)
+

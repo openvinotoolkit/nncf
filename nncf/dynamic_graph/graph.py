@@ -23,8 +23,7 @@ from torch import Tensor
 
 from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search_all, get_edge_boundaries
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
-from nncf.layers import ITERATION_MODULES
-
+from nncf.layers import ITERATION_MODULES, NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -172,6 +171,10 @@ class BaseModuleAttributes:
     def __init__(self, weight_requires_grad: bool):
         self.weight_requires_grad = weight_requires_grad
 
+    @staticmethod
+    def from_module(module):
+        return BaseModuleAttributes(module.weight.requires_grad)
+
 
 class ConvolutionModuleAttributes(BaseModuleAttributes):
     def __init__(self,
@@ -185,6 +188,36 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
         self.out_channels = out_channels
         self.stride = stride
         self.groups = groups
+
+    @staticmethod
+    def from_module(module):
+        return ConvolutionModuleAttributes(module.weight.requires_grad,
+                                           module.in_channels,
+                                           module.out_channels,
+                                           module.stride,
+                                           module.groups)
+
+
+class GroupNormModuleAttributes(BaseModuleAttributes):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 num_channels: int,
+                 num_groups: int):
+        super().__init__(weight_requires_grad)
+        self.num_channels = num_channels
+        self.num_groups = num_groups
+
+    @staticmethod
+    def from_module(module):
+        return GroupNormModuleAttributes(module.weight.requires_grad,
+                                         module.num_channels,
+                                         module.num_groups)
+
+
+MODEL_ATTRIBUTES_MAP = {
+    v.op_func_name : ConvolutionModuleAttributes for v in NNCF_GENERAL_CONV_MODULES_DICT
+}
+MODEL_ATTRIBUTES_MAP["group_norm"] = GroupNormModuleAttributes
 
 
 class NNCFNode:
