@@ -38,7 +38,8 @@ class KDLossCalculator(PTCompressionLoss):
                 return [obj]
             else:
                 return list(obj.values() if isinstance(obj, dict) else obj)
-        ref_outputs = self.original_model(target)
+        with torch.no_grad():
+            ref_outputs = self.original_model(target)
 
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
