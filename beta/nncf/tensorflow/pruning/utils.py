@@ -15,28 +15,28 @@ import numpy as np
 import tensorflow as tf
 from texttable import Texttable
 
-from beta.nncf.tensorflow.graph.graph import TFNNCFNode
 from beta.nncf.tensorflow.layers.common import DECONV_LAYERS
 from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.graph.graph import NNCFNode
 
 
-def tf_is_depthwise_conv(node: TFNNCFNode) -> bool:
+def tf_is_depthwise_conv(node: NNCFNode) -> bool:
     return node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
            and node.module_attributes.in_channels > 1 \
            or node.node_type == 'DepthwiseConv2D'
 
 
-def tf_is_conv_with_downsampling(node: TFNNCFNode) -> bool:
+def tf_is_conv_with_downsampling(node: NNCFNode) -> bool:
     return not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in DECONV_LAYERS
 
 
-def is_shared(node: TFNNCFNode) -> bool:
+def is_shared(node: NNCFNode) -> bool:
     return node.data['is_shared']
 
 

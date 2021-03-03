@@ -15,7 +15,7 @@ from beta.nncf.tensorflow.pruning.utils import tf_is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
-from beta.nncf.tensorflow.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 

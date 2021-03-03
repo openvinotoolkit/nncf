@@ -19,14 +19,14 @@ import tensorflow as tf
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from beta.nncf.tensorflow.graph.graph import TFNNCFGraph
-from beta.nncf.tensorflow.graph.graph import tf_get_layer_identifier
+from beta.nncf.tensorflow.graph.utils import tf_get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.common import BIAS_ATTR_NAME
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
@@ -40,6 +40,7 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
@@ -86,7 +87,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return TFModelTransformer(model, transformation_layout).transform()
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
-        graph = TFNNCFGraph(model)
+        graph = convert_keras_model_to_nncf_graph(model)
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
 
         transformations = TFTransformationLayout()
@@ -154,7 +155,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             is_finished = True
         return is_finished, bn_nodes
 
-    def _get_related_batchnorms(self, layer_name: str, group: NodesCluster, graph: TFNNCFGraph) -> List[NNCFNode]:
+    def _get_related_batchnorms(self, layer_name: str, group: NodesCluster, graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns List of batchnorm nodes related to the layer.
         Note: Single node per layer for shared bactchnorm layers

@@ -32,14 +32,14 @@ class NNCFNode:
 
     @property
     def node_type(self):
-        raise NotImplementedError
+        return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property
     def module_attributes(self):
         return self.data.get(NNCFGraph.MODULE_ATTRIBUTES)
 
     def __str__(self):
-        raise NotImplementedError
+        return ' '.join([self.node_id, self.data[NNCFGraph.KEY_NODE_ATTR], self.node_type])
 
     def __hash__(self):
         return hash(str(self))
@@ -59,18 +59,22 @@ class NNCFGraph:
     """
     ID_NODE_ATTR = 'id'
     KEY_NODE_ATTR = 'key'
+    NODE_TYPE_ATTR = 'type'
     MODULE_ATTRIBUTES = 'module_attributes'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = dict()
-        self._input_nncf_nodes = []
 
     def get_node_by_id(self, node_id) -> NNCFNode:
         return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
 
     def get_input_nodes(self) -> List[NNCFNode]:
-        return self._input_nncf_nodes
+        inputs = []
+        for nx_node_key, deg in self._nx_graph.in_degree():
+            if deg == 0:
+                inputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
+        return inputs
 
     def get_graph_outputs(self) -> List[NNCFNode]:
         outputs = []
@@ -105,11 +109,11 @@ class NNCFGraph:
 
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
-        raise NotImplementedError
+        return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR], nx_node)
 
     @staticmethod
     def node_type_fn(node: dict) -> str:
-        raise NotImplementedError
+        return node[NNCFGraph.NODE_TYPE_ATTR]
 
     def get_node_key_by_id(self, node_id):
         return self._node_id_to_key_dict[node_id]
@@ -141,3 +145,13 @@ class NNCFGraph:
             for node in get_nodes_fn(curr_node):
                 self._traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
         return output
+
+    def add_node(self, label, **attrs):
+        node_id = len(self._node_id_to_key_dict)
+        self._node_id_to_key_dict[node_id] = label
+        attrs[NNCFGraph.KEY_NODE_ATTR] = label
+        attrs[NNCFGraph.ID_NODE_ATTR] = node_id
+        self._nx_graph.add_node(label, **attrs)
+
+    def add_edge(self, u_of_edge, v_of_edge, **attrs):
+        self._nx_graph.add_edge(u_of_edge, v_of_edge, **attrs)

@@ -17,6 +17,8 @@ import inspect
 import tensorflow as tf
 
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 
 SHARED_OPERATION_MARK = '^'
 
@@ -124,3 +126,9 @@ def get_weight_node_name(nxgraph, node_name):
     while list(nxgraph.predecessors(node_name)):
         node_name = list(nxgraph.predecessors(node_name))[-1]
     return node_name
+
+
+def tf_get_layer_identifier(node: NNCFNode):
+    node_key = node.data[NNCFGraph.KEY_NODE_ATTR]
+    layer_name, _ = get_original_name_and_instance_index(node_key)
+    return layer_name
