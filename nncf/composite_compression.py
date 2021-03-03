@@ -80,8 +80,8 @@ class PTCompositeCompressionAlgorithmBuilder(
         return bool(self.child_builders)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        for ctrl in self._child_builders:
-            target_model = ctrl.apply_to(target_model)
+        for builder in self._child_builders:
+            target_model = builder.apply_to(target_model)
         return target_model
 
 

@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2020-2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,22 +12,26 @@
 """
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
+import networkx as nx
 import os
 import torch
-
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
-from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.layers import NNCFConv2d
+from nncf.nncf_network import ExtraCompressionModuleType
+from nncf.nncf_network import NNCFNetwork
+from nncf.quantization.adjust_padding import add_adjust_padding_nodes
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_init.perturbations import PerturbationObserver
+from nncf.quantization.precision_init.perturbations import Perturbations
+from nncf.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.utils import get_all_modules_by_type
 
 
@@ -85,18 +89,16 @@ class HAWQDebugger:
                                          quantizer_info: 'NonWeightQuantizerInfo',
                                          bits_color_map: Dict[int, str],
                                          groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[InsertionPoint]
 
         for insertion_point in affected_insertion_points_list:
             input_agnostic_op_exec_context = insertion_point.ia_op_exec_context
             affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
             affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
-            operator_name = affected_nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
             node_id = affected_nx_node[NNCFGraph.ID_NODE_ATTR]
 
             affected_nncf_node = nncf_graph.get_node_by_id(node_id)
-            affected_nx_node['label'] = '_#'.join([operator_name, str(node_id)])
 
             in_port_id = insertion_point.input_port_id
 
@@ -146,7 +148,7 @@ class HAWQDebugger:
         # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
         # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
         # of the quantizer's bitwidth.
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -161,6 +163,12 @@ class HAWQDebugger:
                     if module.groups == module.in_channels and module.in_channels > 1:
                         operator_name = 'DW_Conv2d'
                         color = 'purple'
+                    kernel_size = 'x'.join(map(str, module.kernel_size))
+                    operator_name += f'_k{kernel_size}'
+                    padding_values = set(module.padding)
+                    padding_enabled = len(padding_values) >= 1 and padding_values.pop()
+                    if padding_enabled:
+                        operator_name += '_PAD'
                 operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'
@@ -173,7 +181,6 @@ class HAWQDebugger:
             HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_id,
                                                           quantizer_info, bits_color_map,
                                                           groups_of_adjacent_quantizers)
-
         for wq_id, wq_info in algo_ctrl.weight_quantizers.items():
             quantized_module_scope = wq_id.get_scope()
             quantizer = wq_info.quantizer_module_ref
@@ -308,7 +315,8 @@ class HAWQDebugger:
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Quantization_noise_vs_Average_Trace'))
 
-    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: 'NNCFNetwork',
+    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
                             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        graph = self.get_bitwidth_graph(algo_ctrl, model, groups_of_adjacent_quantizers)
-        graph.dump_graph(self._dump_dir / Path('bitwidth_graph.dot'))
+        nncf_graph = self.get_bitwidth_graph(algo_ctrl, model, groups_of_adjacent_quantizers)
+        nx_graph = add_adjust_padding_nodes(nncf_graph, model)
+        nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

@@ -24,6 +24,8 @@ from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.checkpoint_loading import ProcessedKeyStatus
 from nncf.checkpoint_loading import ProcessedKeys
 from nncf.checkpoint_loading import load_state
+from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.layers import NNCF_PADDING_VALUE_ATTR_NAME
 from tests.helpers import BasicConvTestModel
 from tests.quantization.test_functions import check_equal
 
@@ -49,6 +51,34 @@ def test_load_state_skips_not_matched_params__from_larger_to_smaller():
     assert num_loaded == 0
     check_equal(act_bias, ref_bias)
     check_equal(act_weights, ref_weights)
+
+
+def test_can_skip_padding_value():
+    model = BasicConvTestModel(out_channels=2)
+    state_dict = ({'conv.weight': model.default_weight(),
+                   'conv.bias': model.default_bias()})
+    model, _ = replace_modules_by_nncf_modules(model)
+
+    num_loaded = load_state(model, state_dict, is_resume=True)
+
+    assert num_loaded == 2
+
+
+def test_can_load_padding_value():
+    VALUE_TO_SET = 5
+    model = BasicConvTestModel()
+    state_dict = ({
+        'conv.weight': model.default_weight(),
+        'conv.bias': model.default_bias(),
+        '.'.join(['conv', NNCF_PADDING_VALUE_ATTR_NAME]): torch.Tensor([VALUE_TO_SET])
+    })
+    model, _ = replace_modules_by_nncf_modules(model)
+    assert model.conv.get_padding_value_ref().item() == 0
+
+    num_loaded = load_state(model, state_dict, is_resume=True)
+
+    assert num_loaded == 3
+    assert model.conv.get_padding_value_ref().item() == VALUE_TO_SET
 
 
 def test_load_state_skips_not_matched_params__from_smaller_to_larger():

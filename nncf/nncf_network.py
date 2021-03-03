@@ -12,31 +12,45 @@
 """
 import inspect
 from collections import OrderedDict
-from typing import List, Callable, Tuple, Dict, Optional
+from enum import Enum
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import functools
 import networkx as nx
 import torch
 from copy import deepcopy
-from enum import Enum
 from torch import nn
 
-from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
+from nncf.debug import CombinedDebugInterface
+from nncf.debug import debuggable_forward
+from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, \
-    ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
-from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
-    ModelInputInfo
+from nncf.dynamic_graph.graph_builder import GraphBuilder
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_builder import PostGraphBuildActing
+from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.layers import NNCF_MODULES
+from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
+from nncf.utils import compute_FLOPs_hook
+from nncf.utils import get_all_modules_by_type
+from nncf.utils import get_state_dict_names_with_modules
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
@@ -184,7 +198,6 @@ class InsertionPointGraph(nx.DiGraph):
             attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
             self.add_edge(from_node, to_node, **attrs)
 
-
         # TODO: Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
         # separate NNCF module (via scope analysis), then for each subset find input/output
@@ -258,7 +271,7 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config)
         from nncf.dynamic_graph.graph_matching import search_all
@@ -339,7 +352,7 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS |\
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
                   p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         return pattern
 
@@ -356,7 +369,6 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_insertion_points(self) -> List[InsertionPoint]:
         return self._input_ips
-
 
 
 # pylint: disable=too-many-public-methods
@@ -672,17 +684,21 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             ip_graph_node_type = ip_graph_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
             if ip_graph_node_type == InsertionPointGraphNodeType.OPERATOR:
                 nncf_graph_node_ref = ip_graph_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
-                op_name = op_exec_context.operator_name
-                scope = op_exec_context.scope_in_model
-                op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                module = self.get_module_by_scope(scope)
-                if module is not None:
-                    subtype = op_arch.determine_subtype(containing_module=module)
-                    if subtype is not None:
-                        op_arch = subtype
+                op_arch = self.get_op_arch_by_graph_node(nncf_graph_node_ref)
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch
         return ip_graph
+
+    def get_op_arch_by_graph_node(self, nncf_graph_node_ref: dict) -> 'OperatorMetatype':
+        op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        op_name = op_exec_context.operator_name
+        scope = op_exec_context.scope_in_model
+        op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
+        module = self.get_module_by_scope(scope)
+        if module is not None:
+            subtype = op_arch.determine_subtype(containing_module=module)
+            if subtype is not None:
+                op_arch = subtype
+        return op_arch
 
     def get_module_by_scope(self, scope: 'Scope') -> torch.nn.Module:
         curr_module = self.get_nncf_wrapped_model()
@@ -766,6 +782,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 self.model.load_nncf_module_additions(self.storage_dict)
+
         return Mgr(self)
 
     @staticmethod

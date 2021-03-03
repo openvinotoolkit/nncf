@@ -1497,7 +1497,8 @@ class TestQuantizerPropagationSolver:
             retval_qps={1: MultiConfigQuantizationPoint(
                 InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
                                ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()])},
+                [QuantizerConfig()],
+                [Scope()])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
@@ -1509,12 +1510,14 @@ class TestQuantizerPropagationSolver:
             retval_qps={1: MultiConfigQuantizationPoint(
                 InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
                                ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()]),
+                [QuantizerConfig()],
+                [Scope()]),
                         2: MultiConfigQuantizationPoint(
                             InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
                                            ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(
                                                "/gelu_0")),
-                            [QuantizerConfig()])},
+                            [QuantizerConfig()],
+                            [Scope()])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}, {2}],
             expected_count_finished_quant=2,
@@ -1526,7 +1529,8 @@ class TestQuantizerPropagationSolver:
             retval_qps={1: MultiConfigQuantizationPoint(
                 InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
                                ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()])},
+                [QuantizerConfig()],
+                [Scope()])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
@@ -1538,7 +1542,8 @@ class TestQuantizerPropagationSolver:
             retval_qps={1: MultiConfigQuantizationPoint(
                 InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
                                ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str("/conv2d_0")),
-                [QuantizerConfig()])},
+                [QuantizerConfig()],
+                [Scope()])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,
@@ -1560,7 +1565,8 @@ class TestQuantizerPropagationSolver:
                 InsertionPoint(InsertionType.OPERATOR_PRE_HOOK,
                                ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic,
                                input_port_id=0),
-                [QuantizerConfig()])},
+                [QuantizerConfig()],
+                [TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.scope_in_model])},
             retval_unified_scale_qp_groups=[],
             retval_shared_input_operation_set_groups=[{1}],
             expected_count_finished_quant=1,

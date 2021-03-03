@@ -13,6 +13,8 @@
 
 import torch.nn as nn
 
+from nncf.layers import NNCF_PADDING_VALUE_ATTR_NAME
+
 
 class BaseOp(nn.Module):
     def __init__(self, op):
@@ -49,3 +51,8 @@ class UpdateParameter(BaseOp):
 class UpdateWeight(UpdateParameter):
     def __init__(self, op):
         super().__init__("weight", op)
+
+
+class UpdatePaddingValue(UpdateParameter):
+    def __init__(self, op):
+        super().__init__(NNCF_PADDING_VALUE_ATTR_NAME, op)
