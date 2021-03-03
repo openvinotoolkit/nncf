@@ -13,6 +13,7 @@
 from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
 from beta.nncf.tensorflow.pruning.utils import tf_is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
+from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.graph.graph import NNCFNode
 from nncf.common.pruning.utils import is_grouped_conv
@@ -42,10 +43,10 @@ class TFInput(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
-    additional_types = _get_types(KERAS_ACTIVATIONS) \
+    additional_types = _get_types(KERAS_ACTIVATIONS | TF_ACTIVATIONS) \
                        + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
                        + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
-                       + ['Dropout', 'Reshape', 'ZeroPadding2D']
+                       + ['Dropout', 'Reshape', 'ZeroPadding2D', 'Identity', 'Pad', 'UpSampling2D']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
