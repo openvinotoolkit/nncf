@@ -29,20 +29,16 @@ import operator
 import shutil
 import torch
 from copy import deepcopy
-
-from nncf.utils import get_scale_shape
-
-from nncf.common.quantization.structs import QuantizerSetupType
-from nncf.dynamic_graph.graph import NNCFNodeExpression
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.api.compression import CompressionLevel
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.quantization.structs import QuantizerSetupType
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
@@ -53,6 +49,7 @@ from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import NNCFNodeExpression
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
@@ -112,9 +109,11 @@ from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor_statistics.statistics import TensorStatistic
+from nncf.utils import get_scale_shape
 from nncf.utils import in_scope_list
 from nncf.utils import is_main_process
 from nncf.utils import should_consider_scope
+
 
 class QuantizerSetupGeneratorBase:
     DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(num_bits=8,
@@ -437,7 +436,7 @@ class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         """Accepts a list of InsertionPoints and groups these according to linked_scope_groups_list.
         Each entry in linked_scope_groups_list must be a valid string representation of a single
         InputAgnosticOperationExecutionContext object."""
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         if linked_scopes_groups_list is None:
             return [[ip, ] for ip in target_insertion_points]
         ia_op_exec_context_list = [x.ia_op_exec_context for x in target_insertion_points]
@@ -513,7 +512,7 @@ class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                                                                            self._range_init_params)
             intermediate_builder = ExperimentalQuantizationBuilder(quantizer_setup, stats)
             intermediate_builder.apply_to(intermediate_model)
-            #pylint:disable=line-too-long
+            # pylint:disable=line-too-long
             intermediate_ctrl = intermediate_model.commit_compression_changes()  # type: ExperimentalQuantizationController
 
             # intermediate_ctrl.init_range()
@@ -545,6 +544,7 @@ class PatternBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def get_build_time_metric_infos(self):
         return NetworkQuantizationShareMetricBuildTimeInfo(self._num_potential_quantized_activations,
                                                            self._num_potential_quantized_weights)
+
 
 class IQuantizerSetupDisambiguator:
     def select_final_quantizer_setup(self, multi_config_setup: MultiConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
@@ -587,7 +587,7 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
                 init_setup = bitwidth_varying_only_multi_setup.select_first_qconfig_for_each_point()
                 intermediate_builder = ExperimentalQuantizationBuilder(init_setup, stats)
                 intermediate_builder.apply_to(intermediate_model)
-                #pylint:disable=line-too-long
+                # pylint:disable=line-too-long
                 intermediate_ctrl = intermediate_model.commit_compression_changes()  # type: ExperimentalQuantizationController
 
                 # intermediate_ctrl.init_range()
@@ -1130,7 +1130,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # in the HW config, where they are sorted by descending order of priority
         return quantizer_config_list[0]
 
-
     def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
                                          insertion_points: List[InsertionPoint],
                                          qconfig: QuantizerConfig,
@@ -1486,15 +1485,14 @@ class QuantizationController(QuantizationControllerBase):
                 target_scopes = range_init_subconfig.get("target_scopes", None)
                 ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
                 target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
-                if quantizer_group == target_quantizer_group and\
-                     should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                if quantizer_group == target_quantizer_group and \
+                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
                     matched_init_range_config.append(range_init_subconfig)
 
             if len(matched_init_range_config) > 1:
                 raise AssertionError("The range initialization configs conflict with each other. "
                                      "Conflicting configs: {} for scope {}.".format(matched_init_range_config,
                                                                                     str(scope)))
-
 
             if len(matched_init_range_config) == 1:
                 module_init_range_config = matched_init_range_config[0]
