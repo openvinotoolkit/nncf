@@ -298,7 +298,9 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             hawq_debugger.dump_avg_traces()
             hawq_debugger.dump_density_of_quantization_noise()
             hawq_debugger.dump_perturbations_ratio()
-            hawq_debugger.dump_bitwidth_graph(self._algo, self._model, self._groups_of_adjacent_quantizers)
+            new_ctrl, new_model = self._algo.apply_new_quantizer_setup(final_quantizer_setup)
+            groups_of_adjacent_quantizers = new_ctrl.groups_of_adjacent_quantizers
+            hawq_debugger.dump_bitwidth_graph(new_ctrl, new_model, groups_of_adjacent_quantizers)
         str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
         nncf_logger.info('\n'.join(['\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
 
