@@ -79,7 +79,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
-    assert scheduler.sparsity_levels == [0.1, 0.5]
+    assert scheduler._schedule.values == [0.1, 0.5]
     scheduler.epoch_step()
     assert pytest.approx(compression_ctrl.sparsity_level) == 0.1
 

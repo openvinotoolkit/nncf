@@ -79,7 +79,7 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     scheduler.epoch_step()
     assert isinstance(scheduler, MultiStepSparsityScheduler)
     assert pytest.approx(scheduler.current_sparsity_level) == 0.1
-    assert scheduler.sparsity_levels == [0.1, 0.5]
+    assert scheduler._schedule.values == [0.1, 0.5]
     scheduler.epoch_step()
     assert scheduler.current_sparsity_level == 0.5
     scheduler.epoch_step()

@@ -16,6 +16,8 @@ from bisect import bisect_right
 
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
+from nncf.common.schedulers import ExponentialDecaySchedule
+from nncf.common.schedulers import MultiStepSchedule
 from nncf.api.compression import CompressionLevel
 from nncf.api.compression import CompressionScheduler
 
@@ -35,6 +37,10 @@ class SparsityScheduler(CompressionScheduler):
         self.target_sparsity = self._params.get('sparsity_target', 0.5)
         self.target_epoch = self._params.get('sparsity_target_epoch', 90)
         self.freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
+
+    def _maybe_freeze(self):
+        if self.current_epoch >= self.freeze_epoch:
+            self.controller.freeze()
 
     def _set_sparsity_level(self):
         if self.current_epoch >= self.freeze_epoch:
@@ -132,33 +138,41 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
+    """
+    Sparsity schedule with a exponential decay function.
+    """
     def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
-        self.a, self.k = self._init_exp(self.initial_sparsity, self.target_sparsity,
-                                        sparsity_steps=self.target_epoch)
+
+        initial_density = 1.0 - self.initial_sparsity
+        target_density = 1.0 - self.target_sparsity
+        self._schedule = ExponentialDecaySchedule(initial_density, target_density, self.target_epoch)
+
+        self.current_sparsity = self.initial_sparsity
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
-        self._set_sparsity_level()
+        self.current_sparsity = self._calculate_sparsity_level()
+        self._maybe_freeze()
+        self.controller.set_sparsity_level(self.current_sparsity)
 
-    @property
-    def current_sparsity_level(self):
+    def _calculate_sparsity_level(self):
+        """
+        Calculates a sparsity level that should be applied to the weights for the
+        `current_epoch` or (and) `current_step`.
+
+        :return: The current sparsity level that should be applied.
+        """
         if self.target_epoch == 0:
             return self.target_sparsity
 
-        if self.current_epoch == -1:
-            return self.initial_sparsity
+        current_density = self._schedule(self.current_epoch)
+        current_sparsity = 1.0 - current_density
+        return min(current_sparsity, self.target_sparsity)
 
-        curr_sparsity = 1 - self.a * np.exp(-self.k * self.current_epoch)
-        return curr_sparsity if curr_sparsity <= self.target_sparsity else self.target_sparsity
-
-    @staticmethod
-    def _init_exp(initial_sparsity, max_sparsity, sparsity_steps=20):
-        p1 = (0, 1 - initial_sparsity)
-        p2 = (sparsity_steps, 1 - max_sparsity)
-        k = np.log(p2[1] / p1[1]) / (p1[0] - p2[0])
-        a = p1[1] / np.exp(-k * p1[0])
-        return a, k
+    @property
+    def current_sparsity_level(self):
+        return self.current_sparsity
 
 
 @SPARSITY_SCHEDULERS.register("adaptive")
@@ -195,24 +209,35 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("multistep")
 class MultiStepSparsityScheduler(SparsityScheduler):
+    """
+    Sparsity schedule with a piecewise constant function.
+    """
     def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
-        self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
-        self.steps = sorted(self._params.get('multistep_steps', [90]))
-        self.target_sparsity = self.sparsity_levels[-1]
 
-        if len(self.steps) + 1 != len(self.sparsity_levels):
-            raise ValueError('number of sparsity levels must equal to number of steps + 1')
+        self._schedule = MultiStepSchedule(
+            sorted(self._params.get('multistep_steps', [90])),
+            self._params.get('multistep_sparsity_levels', [0.1, 0.5])
+        )
 
-        self.sparsity_level = self.sparsity_levels[0]
-        self.target_sparsity = self.sparsity_levels[-1]
+        self.target_sparsity = self._schedule.values[-1]
+        self.current_sparsity = self._schedule.values[0]
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
-        ind = bisect_right(self.steps, self.current_epoch)
-        self.sparsity_level = self.sparsity_levels[ind]
-        self._set_sparsity_level()
+        self.current_sparsity = self._calculate_sparsity_level()
+        self._maybe_freeze()
+        self.controller.set_sparsity_level(self.current_sparsity)
+
+    def _calculate_sparsity_level(self):
+        """
+        Calculates a sparsity level that should be applied to the weights for the
+        `current_epoch` or (and) `current_step`.
+
+        :return: The current sparsity level that should be applied.
+        """
+        return self._schedule(self.current_epoch)
 
     @property
     def current_sparsity_level(self):
-        return self.sparsity_level
+        return self.current_sparsity
