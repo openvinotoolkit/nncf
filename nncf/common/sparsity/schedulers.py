@@ -199,6 +199,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         super().__init__(controller, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
         self.steps = sorted(self._params.get('multistep_steps', [90]))
+        self.target_sparsity = self.sparsity_levels[-1]
 
         if len(self.steps) + 1 != len(self.sparsity_levels):
             raise ValueError('number of sparsity levels must equal to number of steps + 1')
