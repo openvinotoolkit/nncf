@@ -33,7 +33,7 @@ def create_test_quantization_env() -> QuantizationEnv:
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
                                                     nncf_network,
                                                     hw_config=hw_config).generate_setup()
-    experimental_builder = ExperimentalQuantizationBuilder(setup, {})
+    experimental_builder = ExperimentalQuantizationBuilder(setup, {}, hw_config)
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
     experimental_ctrl = nncf_network.commit_compression_changes()  # type: ExperimentalQuantizationController
