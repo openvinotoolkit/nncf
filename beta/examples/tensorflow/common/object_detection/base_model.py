@@ -66,7 +66,7 @@ class Model:
         """Build the model object."""
 
     @abc.abstractmethod
-    def build_loss_fn(self):
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         """Build the model object."""
 
     def post_processing(self, labels, outputs):

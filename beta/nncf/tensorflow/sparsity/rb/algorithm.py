@@ -55,7 +55,7 @@ PRUNING_LAYERS = {
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            raise Exception("RB sparsity algorithm don not support running in distributed mode")
+            raise Exception("RB sparsity algorithm do not support running in distributed mode")
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
 
