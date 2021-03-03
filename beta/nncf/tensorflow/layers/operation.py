@@ -12,7 +12,6 @@
 """
 
 from collections import OrderedDict
-import tensorflow as tf
 
 from beta.nncf.tensorflow.utils.hook_handle import HookHandle
 

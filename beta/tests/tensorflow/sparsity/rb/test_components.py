@@ -54,7 +54,7 @@ def get_basic_rb_sparse_model(model_name, config=CONF, freeze=False):
         config = NNCFConfig.from_json(config)
     compress_model, algo = create_compressed_model_and_algo_for_test(model, config)
     if freeze:
-       algo.freeze()
+        algo.freeze()
     return compress_model, algo, config
 
 
@@ -62,7 +62,7 @@ def get_basic_rb_sparse_model(model_name, config=CONF, freeze=False):
                          list(TEST_MODELS.keys()), ids=list(TEST_MODELS.keys()))
 class TestSparseModules:
     def test_create_loss__with_defaults(self, model_name):
-        compr_model, algo, config = get_basic_rb_sparse_model(model_name)
+        _, algo, config = get_basic_rb_sparse_model(model_name)
         loss = algo.loss
         assert not loss.disabled
         tf.debugging.assert_near(loss.target_sparsity_rate,
@@ -90,7 +90,7 @@ class TestSparseModules:
                               (0.3, False),
                               (-0.3, True)), ids=('default', 'zero', 'positive', 'negative'))
     def test_can_forward_sparse_module__with_frozen_mask(self, model_name, mask_value, zero_mask):
-        model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=True)
+        model, _, _ = get_basic_rb_sparse_model(model_name, freeze=True)
         sm = model.layers[1]
         # Set weights
         kernel = get_weight_by_name(sm, 'kernel')
@@ -112,9 +112,10 @@ class TestSparseModules:
     @pytest.mark.parametrize(('frozen', 'raising'), ((True, True), (False, False)),
                              ids=('frozen', 'not_frozen'))
     def test_calc_loss(self, model_name, frozen, raising):
-        model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+        model, algo, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
         rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
         assert rb_weight.trainable is not frozen
+        # pylint: disable=protected-access
         loss = SparseLoss(algo.loss._sparse_layers)
         try:
             assert loss() == 0
@@ -128,7 +129,7 @@ class TestSparseModules:
     @pytest.mark.parametrize('frozen', (False, True), ids=('sparsify', 'frozen'))
     class TestWithSparsify:
         def test_can_freeze_mask(self, model_name, frozen):
-            model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+            model, _, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
             rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
             assert rb_weight.trainable is not frozen
             trainable = get_weight_by_name(model.layers[1], 'trainable')
@@ -136,7 +137,7 @@ class TestSparseModules:
             assert trainable == val
 
         def test_disable_loss(self, model_name, frozen):
-            model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+            model, algo, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
             rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
             assert rb_weight.trainable is not frozen
             loss = algo.loss
@@ -144,7 +145,7 @@ class TestSparseModules:
             assert not rb_weight.trainable
 
         def test_check_gradient_existing(self, model_name, frozen):
-            model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+            model, algo, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
 
             algo.loss.set_target_sparsity_loss(1.0)
             dataset_len = (1, )
@@ -163,12 +164,12 @@ class TestSparseModules:
             assert all([g is None if frozen else not None for g, w in grads_weights_paris if 'mask' in w.name])
 
         def test_masks_gradients(self, model_name, frozen):
-            model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+            model, algo, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
 
             algo.loss.set_target_sparsity_loss(1.0)
 
             optimizer_fn = tf.keras.optimizers.SGD(10)
-            for step in range(1):
+            for step in range(1): # pylint: disable=unused-variable
                 with tf.GradientTape() as tape:
                     loss = algo.loss()
                 grads = tape.gradient(loss, model.trainable_weights)
@@ -180,6 +181,7 @@ class TestSparseModules:
                               if 'mask' in weight.name]
                 optimizer_fn.apply_gradients(grad_pairs)
 
+            # pylint: disable=protected-access
             for layer in algo.loss._sparse_layers:
                 for weight in layer.weights:
                     if 'mask' in weight.name:
@@ -189,7 +191,7 @@ class TestSparseModules:
                             tf.debugging.assert_near(weight, tf.fill(weight.shape, default_rb_mask_value))
 
         def test_keras_train_loop(self, model_name, frozen):
-            model, algo, conf = get_basic_rb_sparse_model(model_name, freeze=frozen)
+            model, algo, _ = get_basic_rb_sparse_model(model_name, freeze=frozen)
 
             model.add_loss(algo.loss)
 
@@ -206,6 +208,7 @@ class TestSparseModules:
                       batch_size=1,
                       epochs=1)
 
+            # pylint: disable=protected-access
             for layer in algo.loss._sparse_layers:
                 for weight in layer.weights:
                     if 'mask' in weight.name:
@@ -226,7 +229,7 @@ class TestSparseModules:
     def test_get_target_sparsity_rate(self, model_name, target, expected_rate):
         config = get_empty_config()
         config['compression'] = Dict({'algorithm': 'rb_sparsity', 'params': {'schedule': 'exponential'}})
-        model, algo, conf = get_basic_rb_sparse_model(model_name, config=config)
+        _, algo, _ = get_basic_rb_sparse_model(model_name, config=config)
         loss = algo.loss
         if target is not None:
             loss.target = target

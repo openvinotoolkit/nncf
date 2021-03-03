@@ -5,7 +5,7 @@
         "sample_size": [1, 224, 224, 3]
     },
 
-    "batch_size": 128,
+    "batch_size": 256,
     "epochs": 40,
 
     "optimizer": {
@@ -22,23 +22,11 @@
 
     "compression": {
         "algorithm": "rb_sparsity",
+        "sparsity_init": 0.01,
         "params": {
-            "schedule": "multistep",
-            "multistep_steps": [
-                2,
-                4,
-                5,
-                7,
-                8
-            ],
-            "multistep_sparsity_levels": [
-                0.1,
-                0.15,
-                0.20,
-                0.35,
-                0.40,
-                0.50
-            ]
+            "sparsity_target": 0.61,
+            "sparsity_target_epoch": 6,
+            "sparsity_freeze_epoch": 11
         }
     }
 }

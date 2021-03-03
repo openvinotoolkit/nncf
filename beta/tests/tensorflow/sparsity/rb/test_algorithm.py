@@ -16,9 +16,9 @@ import tensorflow as tf
 from copy import deepcopy
 from pytest import approx
 
+from nncf.api.compression import CompressionScheduler
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler
 from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
 from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
@@ -75,7 +75,7 @@ def test_can_load_sparse_algo__with_defaults():
     assert len(conv_names) == len(wrappers)
     assert len(conv_names) == len(correct_wrappers)
 
-    for i, wrapper in enumerate(wrappers):
+    for wrapper in wrappers:
         mask = get_weight_by_name(wrapper, 'mask')
         op = wrapper.get_op_by_name(OP_NAME)
         ref_mask = tf.fill(mask.shape, logit(0.99))
@@ -105,6 +105,7 @@ def test_sparse_algo_does_not_replace_not_conv_layer():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
+    # pylint: disable=protected-access
     sparse_layers = compression_ctrl.loss._sparse_layers
     assert len(sparse_layers) == 1
     assert isinstance(sparse_layers[0].get_op_by_name(OP_NAME), RBSparsifyingWeight)
@@ -137,6 +138,7 @@ def test_sparse_algo_can_collect_sparse_layers():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
+    # pylint: disable=protected-access
     assert len(compression_ctrl.loss._sparse_layers) == 2
 
 
@@ -162,6 +164,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert pytest.approx(loss.target_sparsity_rate) == 0.2
     assert not loss.disabled
 
+    # pylint: disable=protected-access
     for wrapper in loss._sparse_layers:
         assert wrapper.get_op_by_name(OP_NAME).trainable
 
@@ -216,4 +219,4 @@ def test_create_rb_algo_with_stub_scheduler():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
     # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, TFCompressionScheduler)
+    assert isinstance(compression_ctrl.scheduler, CompressionScheduler)

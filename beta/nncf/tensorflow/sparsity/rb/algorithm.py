@@ -15,14 +15,14 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.python.keras.utils.layer_utils import count_params
 
+from nncf.api.compression import CompressionScheduler
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
-from nncf.common.graph.transformations.commands import InsertionCommand
-from nncf.common.graph.transformations.commands import LayerWeight
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
@@ -76,8 +76,8 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = PRUNING_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
-                InsertionCommand(
-                    target_point=LayerWeight(original_node_name, weight_attr_name),
+                TFInsertionCommand(
+                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
                     callable_object=RBSparsifyingWeight(),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
@@ -109,7 +109,7 @@ class RBSparsityController(TFCompressionAlgorithmController):
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             self._loss = SparseLossForPerLayerSparsity(sparsifyed_layers)
-            self._scheduler = TFCompressionScheduler()
+            self._scheduler = CompressionScheduler()
         else:
             self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
             schedule_type = params.get("schedule", "exponential")

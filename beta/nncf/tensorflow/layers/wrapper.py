@@ -15,7 +15,6 @@ from collections import OrderedDict
 from inspect import getfullargspec
 
 import tensorflow as tf
-from tensorflow.python.training.tracking.data_structures import _DictWrapper
 
 from beta.nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
@@ -140,13 +139,16 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         return op_name
 
     def get_op_by_name(self, name):
-        '''Return op by name if exist
-        else None'''
+        '''
+        :param name: op name
+        :return: op by name if it exist
+        else None
+        '''
         for _, ops in self.weights_attr_ops.items():
             for op_name, op in ops.items():
                 if op_name == name:
                     return op
-
+        return None
 
     def get_operation_weights(self, operation_name):
         return self._ops_weights[operation_name]

@@ -162,8 +162,8 @@ def run(config):
                 scheduler=scheduler)
 
             metrics = [
-               tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
-               tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
+                tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
+                tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
             ]
 
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
@@ -265,12 +265,8 @@ def export(config):
 
 
 def main(argv):
-    #tf.executing_eagerly()
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
-    #config['eager_mode'] = True
-    #physical_devices = tf.config.list_physical_devices('GPU')
-    #tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     serialize_config(config, config.log_dir)
 
