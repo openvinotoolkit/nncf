@@ -55,7 +55,7 @@ class SparsityScheduler(CompressionScheduler):
 
 @SPARSITY_SCHEDULERS.register("polynomial")
 class PolynomialSparseScheduler(SparsityScheduler):
-    def __init__(self, controller, params=None):
+    def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
         self._steps_in_current_epoch = 0
         self.power = self._params.get('power', 0.9)
@@ -132,7 +132,7 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
-    def __init__(self, controller, params=None):
+    def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
         self.a, self.k = self._init_exp(self.initial_sparsity, self.target_sparsity,
                                         sparsity_steps=self.target_epoch)
@@ -163,7 +163,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("adaptive")
 class AdaptiveSparsityScheduler(SparsityScheduler):
-    def __init__(self, controller, params=None):
+    def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
         self.sparsity_loss = controller.loss
         self.decay_step = params.get('step', 0.05)
@@ -195,7 +195,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("multistep")
 class MultiStepSparsityScheduler(SparsityScheduler):
-    def __init__(self, controller, params):
+    def __init__(self, controller, params: dict = None):
         super().__init__(controller, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
         self.steps = sorted(self._params.get('multistep_steps', [90]))
