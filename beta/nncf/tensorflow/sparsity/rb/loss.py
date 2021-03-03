@@ -78,7 +78,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         super().__init__(sparse_layers, target, p)
         self.per_layer_target = {}
         for sparse_layer in self._sparse_layers:
-            self.per_layer_target[sparse_layer] = self.target
+            self.per_layer_target[sparse_layer] = tf.Variable(self.target)
 
     def call(self):
         if self.disabled:
@@ -86,7 +86,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
 
         sparse_layers_loss = tf.constant(0.)
         for sparse_layer in self._sparse_layers:
-            if not self.disabled:
+            if not self.disabled and not sparse_layer.get_op_by_name(OP_NAME).trainable:
                 raise AssertionError(
                     "Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss")
             sw_loss, params_layer = self._get_params_from_sparse_layer(sparse_layer)
@@ -96,4 +96,4 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         return tf.reshape(tf.math.pow((sparse_layers_loss / self.p), 2), shape=[])
 
     def set_target_sparsity_loss(self, target, sparse_layer):
-        self.per_layer_target[sparse_layer] = 1 - target
+        self.per_layer_target[sparse_layer].assign(1 - target)
