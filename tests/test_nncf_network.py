@@ -34,8 +34,10 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.nncf_network import PTInsertionPoint
+from nncf.nncf_network import PTInsertionType
 from nncf.nncf_network import PTModelTransformer
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
@@ -177,38 +179,38 @@ class TestInsertionCommands:
                                             [ModelInputInfo([1, 1, 10, 10])])  # type: NNCFNetwork
 
     conv1_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv1]')
-    point_for_conv1_weights = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
-                                               module_scope=conv1_module_scope)
-    point_for_conv1_inputs = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
-                                              module_scope=conv1_module_scope)
-    point_for_conv1_activations = PTInsertionPoint(target_type=TargetType.POST_LAYER_OPERATION,
-                                                   module_scope=conv1_module_scope)
+    point_for_conv1_weights = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                            module_scope=conv1_module_scope)
+    point_for_conv1_inputs = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                           module_scope=conv1_module_scope)
+    point_for_conv1_activations = PTTargetPoint(target_type=TargetType.POST_LAYER_OPERATION,
+                                                module_scope=conv1_module_scope)
 
     conv2_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv2]')
-    point_for_conv2_weights = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
-                                               module_scope=conv2_module_scope)
-    point_for_conv2_inputs = PTInsertionPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
-                                              module_scope=conv2_module_scope)
-    point_for_conv2_activations = PTInsertionPoint(target_type=TargetType.POST_LAYER_OPERATION,
-                                                   module_scope=conv2_module_scope)
+    point_for_conv2_weights = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                            module_scope=conv2_module_scope)
+    point_for_conv2_inputs = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                           module_scope=conv2_module_scope)
+    point_for_conv2_activations = PTTargetPoint(target_type=TargetType.POST_LAYER_OPERATION,
+                                                module_scope=conv2_module_scope)
 
     linear_op_scope = Scope.from_str('InsertionPointTestModel/linear_0')
     linear_op_context = InputAgnosticOperationExecutionContext('linear',
                                                                linear_op_scope,
                                                                0)
-    point_for_linear_weight_input = PTInsertionPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
-                                                     ia_op_exec_context=linear_op_context, input_port_id=0)
-    point_for_linear_activation = PTInsertionPoint(target_type=TargetType.OPERATOR_POST_HOOK,
-                                                   ia_op_exec_context=linear_op_context)
+    point_for_linear_weight_input = PTTargetPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
+                                                  ia_op_exec_context=linear_op_context, input_port_id=0)
+    point_for_linear_activation = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
+                                                ia_op_exec_context=linear_op_context)
 
     relu_op_scope = Scope.from_str('InsertionPointTestModel/ReLU[relu]/relu')
     relu_op_context = InputAgnosticOperationExecutionContext('relu',
                                                              relu_op_scope,
                                                              0)
-    point_for_relu_inputs = PTInsertionPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
-                                             ia_op_exec_context=relu_op_context, input_port_id=0)
-    point_for_relu_activations = PTInsertionPoint(target_type=TargetType.OPERATOR_POST_HOOK,
-                                                  ia_op_exec_context=relu_op_context)
+    point_for_relu_inputs = PTTargetPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
+                                          ia_op_exec_context=relu_op_context, input_port_id=0)
+    point_for_relu_activations = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
+                                               ia_op_exec_context=relu_op_context)
 
     available_points = [point_for_conv1_weights,
                         point_for_conv2_weights,
@@ -221,29 +223,30 @@ class TestInsertionCommands:
                         point_for_relu_activations,
                         point_for_relu_inputs]
 
-    @pytest.mark.parametrize("insertion_point", available_points)
-    def test_single_insertions(self, setup, insertion_point):
-        if insertion_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]:
+    @pytest.mark.parametrize("target_point", available_points)
+    def test_single_insertions(self, setup, target_point):
+        if target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]:
             hook = lambda x: x
         else:
             hook = BaseOp(lambda x: x)
 
-        self.compressed_model.insert_at_point(insertion_point, [hook])
+        pt_ip = PTInsertionPoint(target_point)
+        self.compressed_model.insert_at_point(pt_ip, [hook])
 
         # pylint:disable=protected-access
-        if insertion_point.target_type == TargetType.OPERATOR_PRE_HOOK:
+        if pt_ip.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            pre_hook_id = PreHookId(insertion_point.ia_op_exec_context, input_port_id=insertion_point.input_port_id)
+            pre_hook_id = PreHookId(target_point.ia_op_exec_context, input_port_id=target_point.input_port_id)
             assert ctx._pre_hooks[pre_hook_id][0] is hook
-        if insertion_point.target_type == TargetType.OPERATOR_POST_HOOK:
+        if pt_ip.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            assert ctx._post_hooks[insertion_point.ia_op_exec_context][0] is hook
-        if insertion_point.target_type == TargetType.OPERATION_WITH_WEIGHTS:
-            module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
-            assert module.pre_ops["0"].operand is hook
+            assert ctx._post_hooks[target_point.ia_op_exec_context][0] is hook
+        if pt_ip.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
+            module = self.compressed_model.get_module_by_scope(target_point.module_scope)
+            assert module.pre_ops["0"] is hook
 
-        if insertion_point.target_type == TargetType.POST_LAYER_OPERATION:
-            module = self.compressed_model.get_module_by_scope(insertion_point.module_scope)
+        if pt_ip.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
+            module = self.compressed_model.get_module_by_scope(target_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]

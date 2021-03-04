@@ -22,7 +22,7 @@ from onnx import numpy_helper
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
@@ -41,11 +41,11 @@ def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecuti
 
 def make_insertion_point_for_coalescing_test(scope_str: str,
                                              input_port_id: int = None)\
-        -> PTInsertionPoint:
+        -> PTTargetPoint:
     op_exec_context = make_op_exec_context_for_coalescing_test(scope_str)
-    retval = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
-                              ia_op_exec_context=op_exec_context.input_agnostic,
-                              input_port_id=input_port_id)
+    retval = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                           ia_op_exec_context=op_exec_context.input_agnostic,
+                           input_port_id=input_port_id)
     return retval
 
 
@@ -390,9 +390,9 @@ def make_insertion_point_for_coalescing_test(scope_str: str,
                                  None
                              ),
                          ])
-def test_insertion_point_coalescing(input_insertion_points: List[PTInsertionPoint],
+def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
                                     linked_scopes_groups_list: List[List[str]],
-                                    ref_coalesced_ip_lists: List[List[PTInsertionPoint]]):
+                                    ref_coalesced_ip_lists: List[List[PTTargetPoint]]):
     if ref_coalesced_ip_lists is None:
         with pytest.raises(RuntimeError):
             _ = PatternBasedQuantizerSetupGenerator.coalesce_insertion_points(input_insertion_points,

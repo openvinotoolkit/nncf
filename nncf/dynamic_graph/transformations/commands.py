@@ -8,7 +8,7 @@ from nncf.common.graph.transformations.commands import TransformationType
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 
 
-class PTInsertionPoint(TargetPoint):
+class PTTargetPoint(TargetPoint):
     def __init__(self, target_type: TargetType, *,
                  ia_op_exec_context: InputAgnosticOperationExecutionContext = None,
                  module_scope: 'Scope' = None,
@@ -31,7 +31,7 @@ class PTInsertionPoint(TargetPoint):
         self.ia_op_exec_context = ia_op_exec_context
         self.input_port_id = input_port_id
 
-    def __eq__(self, other: 'PTInsertionPoint'):
+    def __eq__(self, other: 'PTTargetPoint'):
         return self.target_type == other.target_type and self.ia_op_exec_context == other.ia_op_exec_context \
                and self.input_port_id == other.input_port_id and self.module_scope == other.module_scope
 
@@ -50,8 +50,9 @@ class PTInsertionPoint(TargetPoint):
     def __hash__(self):
         return hash(str(self))
 
+
 class PTInsertionCommand(TransformationCommand):
-    def __init__(self, point: PTInsertionPoint, fn: Callable,
+    def __init__(self, point: PTTargetPoint, fn: Callable,
                  priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY):
         super().__init__(TransformationType.INSERT, point)
         self.fn = fn  # type: Callable

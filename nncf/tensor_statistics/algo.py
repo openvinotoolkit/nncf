@@ -19,7 +19,7 @@ from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import NNCFNetwork
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.tensor_statistics.collectors import ReductionShape
@@ -27,7 +27,7 @@ from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, insertion_point: PTInsertionPoint,
+    def __init__(self, insertion_point: PTTargetPoint,
                  reduction_shapes: Set[ReductionShape] = None):
         self.insertion_point = insertion_point
         self.reduction_shapes = reduction_shapes
@@ -69,7 +69,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
 
 class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
-                 ip_vs_collector_dict: Dict[PTInsertionPoint, TensorStatisticCollectorBase]):
+                 ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
 

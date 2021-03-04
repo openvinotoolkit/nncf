@@ -30,7 +30,7 @@ from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateInputs
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import QuantizationControllerBase
@@ -73,12 +73,12 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
                 nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
                 op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(module.weight.shape)).to(device)
 
-                ip_w = PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                        module_scope=scope)
+                ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                     module_scope=scope)
                 insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
                                                              TransformationPriority.QUANTIZATION_PRIORITY))
 
-                ip_i = PTInsertionPoint(TargetType.PRE_LAYER_OPERATION, module_scope=scope)
+                ip_i = PTTargetPoint(TargetType.PRE_LAYER_OPERATION, module_scope=scope)
                 insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
                                                              TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands

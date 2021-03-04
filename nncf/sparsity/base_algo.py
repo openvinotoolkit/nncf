@@ -24,7 +24,7 @@ from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 
@@ -57,8 +57,8 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
             operation = self.create_weight_sparsifying_operation(module)
             hook = operation.to(device)
-            insertion_commands.append(PTInsertionCommand(PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                                                          module_scope=module_scope),
+            insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                       module_scope=module_scope),
                                                          hook, TransformationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
                 SparseModuleInfo(scope_str, module, hook))

@@ -52,16 +52,16 @@ class MultiBranchesModelDesc(GeneralModelDesc):
     @staticmethod
     def _get_scopes():
         w_scopes = [
-            'InsertionType.NNCF_MODULE_PRE_OP MultiBranchesModel/NNCFConv2d[conv_a]',
-            'InsertionType.NNCF_MODULE_PRE_OP MultiBranchesModel/NNCFConv2d[conv_b]',
-            'InsertionType.NNCF_MODULE_PRE_OP MultiBranchesModel/NNCFConv2d[conv_c]',
-            'InsertionType.NNCF_MODULE_PRE_OP MultiBranchesModel/NNCFConv2d[conv_d]',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_a]',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_b]',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_c]',
+            'TargetType.OPERATION_WITH_WEIGHTS MultiBranchesModel/NNCFConv2d[conv_d]',
         ]
         a_scopes = [
-            'InsertionType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',
-            'InsertionType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/MaxPool2d[max_pool_b]/max_pool2d_0',
-            'InsertionType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0',
-            'InsertionType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0'
+            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d_0',
+            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/MaxPool2d[max_pool_b]/max_pool2d_0',
+            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_c]/conv2d_0',
+            'TargetType.OPERATOR_PRE_HOOK 0 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d_0'
         ]
         return w_scopes, a_scopes
 

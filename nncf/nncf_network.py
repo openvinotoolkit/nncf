@@ -25,6 +25,7 @@ import networkx as nx
 import torch
 from copy import deepcopy
 
+from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.module_operations import UpdateWeight
 from torch import nn
 
@@ -32,14 +33,12 @@ from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import BaseModuleAttributes
 from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
 from nncf.dynamic_graph.graph import GroupNormModuleAttributes
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -53,7 +52,7 @@ from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
@@ -122,7 +121,7 @@ class InsertionPointGraph(nx.DiGraph):
     def __init__(self, model_nx_graph: nx.DiGraph):
         super().__init__()
         self._base_nx_graph = deepcopy(model_nx_graph)
-        self._input_ips = []  # type: List[PTInsertionPoint]
+        self._input_ips = []  # type: List[PTTargetPoint]
 
         for node_key, node in self._base_nx_graph.nodes.items():
             attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: node,
@@ -160,9 +159,9 @@ class InsertionPointGraph(nx.DiGraph):
                 from_node_key, to_node_key = edge
                 ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
 
-                pre_hook_insertion_point = PTInsertionPoint(TargetType.OPERATOR_PRE_HOOK,
-                                                            ia_op_exec_context=ia_op_exec_context,
-                                                            input_port_id=port_id)
+                pre_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
+                                                         ia_op_exec_context=ia_op_exec_context,
+                                                         input_port_id=port_id)
                 pre_hook_ip_attrs = {
                     InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                     InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
@@ -176,8 +175,8 @@ class InsertionPointGraph(nx.DiGraph):
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             # Post-hook insertion point nodes
-            post_hook_insertion_point = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK,
-                                                         ia_op_exec_context=ia_op_exec_context)
+            post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                                                      ia_op_exec_context=ia_op_exec_context)
             post_hook_ip_attrs = {
                 InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                 InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: post_hook_insertion_point
@@ -307,8 +306,49 @@ class InsertionPointGraph(nx.DiGraph):
                     matching_ip_graph_op_nodes_list.append(node)
         return matching_ip_graph_op_nodes_list
 
-    def get_input_insertion_points(self) -> List[PTInsertionPoint]:
+    def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
+
+
+
+class PTInsertionType(OrderedEnum):
+    NNCF_MODULE_PRE_OP = 0
+    NNCF_MODULE_POST_OP = 1
+    OPERATOR_PRE_HOOK = 2
+    OPERATOR_POST_HOOK = 3
+
+
+class PTInsertionPoint:
+    TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT = {
+        TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
+        TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
+        TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
+        TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK
+    }
+
+    def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
+        if target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
+            raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
+        return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
+
+    def __init__(self, target_point: PTTargetPoint):
+        self.insertion_type = self._get_pt_insertion_type(target_point.target_type)
+        self.ia_op_exec_context = target_point.ia_op_exec_context
+        self.module_scope = target_point.module_scope
+        self.input_port_id = target_point.input_port_id
+
+    def __eq__(self, other: 'PTInsertionPoint'):
+        return self.insertion_type == other.insertion_type and \
+               self.ia_op_exec_context == other.ia_op_exec_context and \
+               self.module_scope == other.module_scope and \
+               self.input_port_id == other.input_port_id
+
+    def __str__(self):
+        return ' '.join([str(v) for v in self.__dict__.values()])
+
+    def __hash__(self):
+        return hash(str(self))
 
 
 # pylint: disable=too-many-public-methods
@@ -343,7 +383,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
         # pylint:disable=line-too-long
-        self._insertions_into_original_graph = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
+        self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
         self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
@@ -410,28 +450,24 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return retval
 
     def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
-        if point.target_type == TargetType.OPERATOR_PRE_HOOK:
+        if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context, point.input_port_id)
-        elif point.target_type == TargetType.OPERATOR_POST_HOOK:
+        elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
-        elif point.target_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.PRE_LAYER_OPERATION,
-                                   TargetType.POST_LAYER_OPERATION]:
+        elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP,
+                                      PTInsertionType.NNCF_MODULE_POST_OP]:
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             nncf_module = self.get_module_by_scope(point.module_scope)
-            if point.target_type == TargetType.OPERATION_WITH_WEIGHTS:
-                for fn in fn_list:
-                    nncf_module.register_pre_forward_operation(UpdateWeight(fn))
-            elif point.target_type == TargetType.PRE_LAYER_OPERATION:
+            if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
-            elif point.target_type == TargetType.POST_LAYER_OPERATION:
+            elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
                 for fn in fn_list:
                     nncf_module.register_post_forward_operation(fn)
         else:
-            raise RuntimeError("Unsupported insertion type: {}".format(point.target_type))
-
+            raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
 
     def __getattr__(self, name):
         wrapped_module = super().__getattr__(MODEL_WRAPPED_BY_NNCF_ATTR_NAME)
@@ -563,7 +599,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
-    def get_input_shape_for_insertion_point(self, insertion_point: PTInsertionPoint) -> Tuple[int]:
+    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> Tuple[int]:
         ia_op_exec_context = insertion_point.ia_op_exec_context
         if insertion_point.input_port_id is not None:
             quantizer_input_shape = self._original_graph.get_input_shapes_for_ia_op_exec_context(
@@ -735,16 +771,20 @@ def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttribut
 
 class PTModelTransformer(ModelTransformer):
     def transform(self) -> NNCFNetwork:
-        fns_grouped_by_points = {}  # type: Dict[TargetPoint, List[Tuple[Callable, TransformationPriority]]]
+        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
         for transformation_command in self._transformations:  # type: PTInsertionCommand
             target_point = transformation_command.target_point
-            tup = (transformation_command.fn, transformation_command.priority)
-            if target_point not in fns_grouped_by_points:
-                fns_grouped_by_points[target_point] = [tup]
+            pt_ip = PTInsertionPoint(target_point)
+            fn = transformation_command.fn
+            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
+                fn = UpdateWeight(fn)
+            tup = (fn, transformation_command.priority)
+            if pt_ip not in fns_grouped_by_points:
+                fns_grouped_by_points[pt_ip] = [tup]
             else:
-                fns_grouped_by_points[target_point].append(tup)
+                fns_grouped_by_points[pt_ip].append(tup)
 
-        for target_point, fn_list_with_priority in fns_grouped_by_points.items():
+        for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            self._model.insert_at_point(target_point, [x[0] for x in fn_list_with_priority])
+            self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
         return self._model

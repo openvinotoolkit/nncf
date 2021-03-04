@@ -65,5 +65,6 @@ class ManualPrecisionInitializer(BasePrecisionInitializer):
                     break
             if not is_matched:
                 raise ValueError(
-                    'Invalid scope name `{}`, failed to assign bitwidth {} to it'.format(scope_name, bitwidth))
+                    'Could not find a quantization point at scope name `{}`, failed to assign bitwidth {} '
+                    'to it'.format(scope_name, bitwidth))
         return quantizer_setup

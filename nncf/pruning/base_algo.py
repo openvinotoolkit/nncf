@@ -25,7 +25,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.pruning.model_analysis import NodesCluster, Clusterization
@@ -112,8 +112,8 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                 hook = operation.to(device)
                 insertion_commands.append(
                     PTInsertionCommand(
-                        PTInsertionPoint(TargetType.OPERATION_WITH_WEIGHTS,
-                                         module_scope=module_scope),
+                        PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                      module_scope=module_scope),
                         hook,
                         TransformationPriority.PRUNING_PRIORITY
                     )

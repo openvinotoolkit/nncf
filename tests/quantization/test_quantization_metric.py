@@ -259,8 +259,8 @@ MEMORY_COST_METRIC_TEST_CASES = [
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[6]']]
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
         }},
         activations={},
         weights={"bits": 8},

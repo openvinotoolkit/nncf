@@ -8,7 +8,7 @@ from copy import deepcopy
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import PTInsertionPoint
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -19,7 +19,7 @@ QuantizationPointId = int
 
 
 class QuantizationPointBase:
-    def __init__(self, insertion_point: PTInsertionPoint,
+    def __init__(self, insertion_point: PTTargetPoint,
                  scopes_of_directly_quantized_operators: List['Scope']):
         self.insertion_point = insertion_point
         self.scopes_of_directly_quantized_operators = scopes_of_directly_quantized_operators
@@ -42,7 +42,7 @@ class QuantizationPointBase:
 
 
 class SingleConfigQuantizationPoint(QuantizationPointBase):
-    def __init__(self, insertion_point: PTInsertionPoint, qconfig: QuantizerConfig,
+    def __init__(self, insertion_point: PTTargetPoint, qconfig: QuantizerConfig,
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
         self.qconfig = deepcopy(qconfig)
@@ -60,7 +60,7 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
 
 
 class MultiConfigQuantizationPoint(QuantizationPointBase):
-    def __init__(self, insertion_point: PTInsertionPoint, possible_qconfigs: List[QuantizerConfig],
+    def __init__(self, insertion_point: PTTargetPoint, possible_qconfigs: List[QuantizerConfig],
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
         self.possible_qconfigs = deepcopy(possible_qconfigs)
@@ -140,7 +140,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, SingleConfigQuantizationPoint]
 
     def get_minmax_values(self,
-                          tensor_statistics: Dict[PTInsertionPoint, Dict[ReductionShape, TensorStatistic]],
+                          tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
                           target_model: NNCFNetwork) -> \
             Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}

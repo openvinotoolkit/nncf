@@ -29,7 +29,7 @@ class TransformationPriority(OrderedEnum):
     Rationales:
     * quantization should occur after sparsification/pruning, otherwise the dependency
     of sparsity level on the value threshold becomes discontinuous which impacts the
-    corresponding algos.
+    corresponding algorithms.
     """
     DEFAULT_PRIORITY = 0
     FP32_TENSOR_STATISTICS_OBSERVATION = 1
@@ -40,20 +40,26 @@ class TransformationPriority(OrderedEnum):
 
 class TargetType(OrderedEnum):
     """
-    Describes the types of actions that can be applied to the NNCF internal graph representation
-    of the compressed model.
+    Describes the types of locations in the model's control flow graph (as represented by `NNCFGraph`)
+    that can be modified using NNCF in order to create a compressed model.
 
     Definitions used below: TF-nodes - visible in TF-graph, TF-operations - invisible in TF-graph
     Both TF-nodes and TF-operations may be used for hooking in TF.
 
-    `LAYER` - add or remove a TF-node in a TF-graph
-    `BEFORE_LAYER` - additional TF-node in TF-graph before TF-layer op
-    `AFTER_LAYER` - additional TF-node in TF-graph after TF-layer op
-    `PRE_LAYER_OPERATION` - A pre-operation that can access attrs of the associated PT-module or TF-layer
-    `POST_LAYER_OPERATION` - A post-operation that can access attrs of the associated PT-module or TF-layer
+    `LAYER` - a location corresponding directly to an existing layer in the model
+    `BEFORE_LAYER` - a location before the associated TF layer,
+                     implemented by inserting additional TF-nodes in TF-graph before TF-layer op
+    `AFTER_LAYER` - a location after the associated TF layer,
+                    implemented by inserting additional TF-nodes in TF-graph before TF-layer op
+    `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer execution,
+                            for which the local attributes of said PT-module or TF-layer are accessible
+    `POST_LAYER_OPERATION` - a location before the associated PT-module or TF-layer execution,
+                            for which the local attributes of said PT-module or TF-layer are accessible
     `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights of the layer/module specifically
-    `OPERATOR_PRE_HOOK` - A pre-operation in PT that does not in general access module attrs - N/A in TF
-    `OPERATOR_POST_HOOK` - A post-operation in PT that does not in general access module attrs - N/A in TF
+    `OPERATOR_PRE_HOOK` - a location before a function call in PT without access to specific
+                          module attributes - N/A in TF
+    `OPERATOR_POST_HOOK` - a location after a function call in PT without access to specific
+                           module attributes - N/A in TF
 
     Notes: `PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and `OPERATION_WITH_WEIGHTS` add a TF-operation in TF, not a
             TF-node. In PT, these map to module pre- and post-ops.
@@ -70,7 +76,8 @@ class TargetType(OrderedEnum):
 
 class TransformationType(OrderedEnum):
     """
-    Defines the sub-types of transformations w.r.t. `TargetType`.
+    Defines the types of transformations that can be applied to a location in the control
+     flow graph of the model.
     `TransformationType` defines *what* to do, while `TargetType` more concerns itself with
     *where* to do it.
     """
