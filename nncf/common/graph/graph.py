@@ -31,6 +31,10 @@ class NNCFNode:
         self.data = data if data else {}
 
     @property
+    def node_name(self):
+        return self.data.get(NNCFGraph.KEY_NODE_ATTR)
+
+    @property
     def node_type(self):
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
@@ -39,7 +43,7 @@ class NNCFNode:
         return self.data.get(NNCFGraph.MODULE_ATTRIBUTES)
 
     def __str__(self):
-        return ' '.join([self.node_id, self.data[NNCFGraph.KEY_NODE_ATTR], self.node_type])
+        return ' '.join([self.node_id, self.node_name, self.node_type])
 
     def __hash__(self):
         return hash(str(self))

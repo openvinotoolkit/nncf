@@ -41,6 +41,7 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
     """
     graph = target_model.get_original_graph()
     module_graph_node = graph.find_node_in_nx_graph_by_scope(module_scope)
+    # pylint:disable=protected-access
     bn_graph_node = get_bn_node_for_conv(graph._nx_graph, module_graph_node)
     bn_module = None
     if bn_graph_node:
