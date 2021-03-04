@@ -13,7 +13,6 @@
 from typing import Tuple
 from typing import Optional
 
-import networkx as nx
 import torch
 import numpy as np
 
@@ -24,12 +23,11 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
-def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict) -> Optional[dict]:
-    out_edges = graph.out_edges(conv_node['key'])
-    for _, out_node_key in out_edges:
-        out_node = graph.nodes[out_node_key]
-        if out_node['op_exec_context'].operator_name == 'batch_norm':
-            return out_node
+def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
+    successors = graph.get_successor_nncf_nodes(conv_node.node_id)
+    for succ in successors:
+        if succ.op_exec_context.operator_name == 'batch_norm':
+            return succ
     return None
 
 
@@ -42,14 +40,12 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
     """
     graph = target_model.get_original_graph()
     module_graph_node = graph.find_node_in_nx_graph_by_scope(module_scope)
-    # pylint:disable=protected-access
-    bn_graph_node = get_bn_node_for_conv(graph._nx_graph, module_graph_node)
-    bn_module = None
+    bn_graph_node = get_bn_node_for_conv(graph, module_graph_node)
     if bn_graph_node:
-        bn_scope = bn_graph_node['op_exec_context'].scope_in_model
-        bn_module = target_model.get_module_by_scope(bn_graph_node['op_exec_context'].scope_in_model)
+        bn_scope = bn_graph_node.op_exec_context.scope_in_model
+        bn_module = target_model.get_module_by_scope(bn_scope)
         return bn_module, bn_scope
-    return bn_module, bn_graph_node
+    return None, None
 
 
 def is_depthwise_conv(node: PTNNCFNode) -> bool:

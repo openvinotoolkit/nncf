@@ -143,8 +143,7 @@ class TestQuantizerPropagationSolver:
         ip_graph = InsertionPointGraph(mock_graph)
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
@@ -172,8 +171,7 @@ class TestQuantizerPropagationSolver:
         ip_graph = InsertionPointGraph(mock_graph)
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
@@ -1592,8 +1590,7 @@ class TestQuantizerPropagationSolver:
 
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
                 op_name = op_exec_context.operator_name
                 ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
                 node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta

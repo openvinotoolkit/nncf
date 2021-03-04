@@ -25,6 +25,7 @@ from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import Scope, PreHookId
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, PTNNCFGraph, OperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFNode
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, GraphBuilder
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
@@ -137,12 +138,12 @@ def test_find_node_in_nx_graph_by_scope():
 
     # Valid scopes should be successfully found
     valid_nncf_modules = nncf_model.get_nncf_modules()
-    nodes_list = list(nncf_graph._nx_graph.nodes)
+    nodes_list = list(nncf_graph.get_all_node_idxs())
     for module_scope, _ in valid_nncf_modules.items():
         graph_node = nncf_graph.find_node_in_nx_graph_by_scope(module_scope)
         assert graph_node is not None
-        assert isinstance(graph_node, dict)
-        assert graph_node['key'] in nodes_list
+        assert isinstance(graph_node, NNCFNode)
+        assert graph_node.node_id in nodes_list
 
     fake_model = BasicConvTestModel()
     fake_nncf_model = NNCFNetwork(deepcopy(fake_model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
@@ -604,8 +605,8 @@ class TestInsertionPointGraph:
 
         for node in ip_graph.nodes().values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                scope_str = str(nncf_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR]
+                scope_str = str(nncf_node_ref.op_exec_context.input_agnostic)
                 assert scope_str in ref_scope_vs_metatype_dict
                 ref_metatype = ref_scope_vs_metatype_dict[scope_str]
                 assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
