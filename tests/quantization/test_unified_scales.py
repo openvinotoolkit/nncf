@@ -23,7 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
+from nncf.quantization.algo import QuantizerSetupGeneratorBase
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -395,10 +395,10 @@ def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
                                     ref_coalesced_ip_lists: List[List[PTTargetPoint]]):
     if ref_coalesced_ip_lists is None:
         with pytest.raises(RuntimeError):
-            _ = PatternBasedQuantizerSetupGenerator.coalesce_insertion_points(input_insertion_points,
+            _ = QuantizerSetupGeneratorBase.coalesce_insertion_points(input_insertion_points,
                                                                               linked_scopes_groups_list)
     else:
-        test_coalesced_ip_lists = PatternBasedQuantizerSetupGenerator.coalesce_insertion_points(
+        test_coalesced_ip_lists = QuantizerSetupGeneratorBase.coalesce_insertion_points(
             input_insertion_points,
             linked_scopes_groups_list)
         assert len(test_coalesced_ip_lists) == len(ref_coalesced_ip_lists)
@@ -430,7 +430,6 @@ class QuantizerLinkingTestModel(torch.nn.Module):
 
 def test_quantizer_scale_linking():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config['quantizer_setup_type'] = 'pattern_based'
     nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["compression"]["quantize_inputs"] = False
     nncf_config["input_info"] = [

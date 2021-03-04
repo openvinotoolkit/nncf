@@ -473,7 +473,6 @@ class TestNumberOfNodes:
         sequence_size = 50
         input_sample_size = [batch_size, sequence_size] if batch_first else [sequence_size, batch_size]
         config = get_empty_config(input_sample_sizes=input_sample_size)
-        config['quantizer_setup_type'] = 'pattern_based'
         config['compression'] = \
             {'algorithm': 'quantization',
              'quantize_inputs': True,

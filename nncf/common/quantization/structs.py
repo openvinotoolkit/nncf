@@ -121,19 +121,6 @@ class QuantizerSpec:
                    narrow_range)
 
 
-class QuantizerSetupType(Enum):
-    PATTERN_BASED = "pattern_based"
-    PROPAGATION_BASED = "propagation_based"
-
-    @staticmethod
-    def from_str(quantizer_setup_type: str) -> 'QuantizerSetupType':
-        if quantizer_setup_type == QuantizerSetupType.PATTERN_BASED.value:
-            return QuantizerSetupType.PATTERN_BASED
-        if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED.value:
-            return QuantizerSetupType.PROPAGATION_BASED
-        raise RuntimeError("Unknown quantizer setup type. Please select 'pattern_based' or 'propagation_based'.")
-
-
 class QuantizationConstraints:
     REF_QCONF_OBJ = QuantizerConfig()
 

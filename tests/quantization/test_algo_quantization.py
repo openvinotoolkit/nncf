@@ -223,7 +223,6 @@ def test_get_weight_activation_pairs__with_extra_module():
     model_cls = DoubleWeightsPerActivationWithExtraModule
     model_name = model_cls.__name__
     config = get_quantization_config_without_range_init()
-    config['quantizer_setup_type'] = 'pattern_based'
     config["compression"].update({
         "quantizable_subgraph_patterns": [["sigmoid", "conv2d"]],
         "quantize_inputs": False})

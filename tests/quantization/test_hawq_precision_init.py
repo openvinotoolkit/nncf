@@ -39,7 +39,6 @@ from examples.common.sample_config import SampleConfig
 from examples.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args
 from nncf.checkpoint_loading import load_state
-from nncf.common.quantization.structs import QuantizerSetupType
 from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
@@ -133,17 +132,6 @@ class BaseConfigBuilder:
         self._options['ratio'] = str(ratio)
         return self
 
-    def _with_quantizer_setup_type(self, setup_type: QuantizerSetupType):
-        self._config['quantizer_setup_type'] = setup_type.value
-        self._options['setup_type'] = setup_type.value
-        return self
-
-    def prop_based(self):
-        return self._with_quantizer_setup_type(QuantizerSetupType.PROPAGATION_BASED)
-
-    def pattern_based(self):
-        return self._with_quantizer_setup_type(QuantizerSetupType.PATTERN_BASED)
-
     def with_sample_size(self, sample_size: List[int]):
         self._config['input_info']['sample_size'] = sample_size
         return self
@@ -162,13 +150,13 @@ class BaseConfigBuilder:
         return self
 
     def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value).prop_based()
+        return self._set_target_device(HWConfigType.VPU.value)
 
     def for_cpu(self):
-        return self._set_target_device(HWConfigType.CPU.value).prop_based()
+        return self._set_target_device(HWConfigType.CPU.value)
 
     def for_trial(self):
-        return self._set_target_device('TRIAL').prop_based()
+        return self._set_target_device('TRIAL')
 
     def build(self):
         return self._config
@@ -279,7 +267,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
 
 class HAWQTestStruct(NamedTuple):
     model_creator: Callable[[], nn.Module] = mobilenet_v2
-    config_builder: HAWQConfigBuilder = HAWQConfigBuilder().prop_based().for_vpu()
+    config_builder: HAWQConfigBuilder = HAWQConfigBuilder().for_vpu()
     filename_suffix: str = 'hw_config_vpu'
     avg_traces_creator: Callable[[nn.Module, str], torch.Tensor] = get_avg_traces
 
@@ -288,8 +276,8 @@ class HAWQTestStruct(NamedTuple):
 
 
 HAWQ_TEST_PARAMS = (
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().pattern_based()),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().staged().pattern_based()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().staged()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5)),
@@ -470,7 +458,6 @@ def disable_quantizer_gradients():
     config['input_info'] = {
         "sample_size": [2, 3, 10, 10],
     }
-    config['quantizer_setup_type'] = 'pattern_based'
     model = MobileNetV2(num_classes=10)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     original_requires_grad_per_param = get_requires_grad_per_param(model)
@@ -531,7 +518,6 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
     config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).build()
     config['compression']['initializer']['range']['num_init_samples'] = 0
-    config['quantizer_setup_type'] = 'pattern_based'
     model = BasicConvTestModel()
     mock_train_loader = mocker.stub()
     mock_train_loader.batch_size = 1

@@ -635,7 +635,6 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                                                                                      act_qp_ids,
                                                                                      weight_bitwidth_set)
         else:
-            # TODO: delete not-consistent pairs of activation and weights for pattern-based approach
             pairs = self._algo.get_weights_activation_quantizers_pairs()
             for pair in pairs:
                 wq_ids, aq_id = pair

@@ -28,7 +28,7 @@ from tests.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, creat
     check_correct_nncf_modules_replacement, get_empty_config
 
 
-def get_basic_sparsity_config(model_size=4, input_sample_size=None,
+def get_basic_sparsity_config(input_sample_size=None,
                               sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2,
                               sparsity_freeze_epoch=3):
     if input_sample_size is None:
