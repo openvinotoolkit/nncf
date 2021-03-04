@@ -23,23 +23,23 @@ SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
 class SparsityScheduler(CompressionScheduler):
-    def __init__(self, sparsity_algo, params: dict = None):
+    def __init__(self, controller, params: dict = None):
         super().__init__()
         if params is None:
             self._params = dict()
         else:
             self._params = params
 
-        self.algo = sparsity_algo
-        self.initial_sparsity = self.algo.get_sparsity_init()
-        self.sparsity_target = self._params.get('sparsity_target', 0.5)
-        self.sparsity_target_epoch = self._params.get('sparsity_target_epoch', 90)
-        self.sparsity_freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
+        self.controller = controller
+        self.initial_sparsity = self.controller.get_sparsity_init()
+        self.target_sparsity = self._params.get('sparsity_target', 0.5)
+        self.target_epoch = self._params.get('sparsity_target_epoch', 90)
+        self.freeze_epoch = self._params.get('sparsity_freeze_epoch', 100)
 
     def _set_sparsity_level(self):
-        if self.current_epoch >= self.sparsity_freeze_epoch:
-            self.algo.freeze()
-        self.algo.set_sparsity_level(self.current_sparsity_level)
+        if self.current_epoch >= self.freeze_epoch:
+            self.controller.freeze()
+        self.controller.set_sparsity_level(self.current_sparsity_level)
 
     def _calc_density_level(self):
         return 1 - self.current_sparsity_level
@@ -50,7 +50,7 @@ class SparsityScheduler(CompressionScheduler):
 
     @property
     def target_sparsity_level(self) -> float:
-        return self.sparsity_target
+        return self.target_sparsity
 
     def compression_level(self) -> CompressionLevel:
         if self.current_sparsity_level == 0:
@@ -62,8 +62,8 @@ class SparsityScheduler(CompressionScheduler):
 
 @SPARSITY_SCHEDULERS.register("polynomial")
 class PolynomialSparseScheduler(SparsityScheduler):
-    def __init__(self, sparsity_algo, params=None):
-        super().__init__(sparsity_algo, params)
+    def __init__(self, controller, params=None):
+        super().__init__(controller, params)
         self._steps_in_current_epoch = 0
         self.power = self._params.get('power', 0.9)
         self.concave = self._params.get('concave', True)
@@ -109,24 +109,24 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
     @property
     def current_sparsity_level(self):
-        if self.sparsity_target_epoch == 0 and not self._update_per_optimizer_step:
-            return self.sparsity_target
+        if self.target_epoch == 0 and not self._update_per_optimizer_step:
+            return self.target_sparsity
         if self._update_per_optimizer_step:
             if self._steps_per_epoch is None:
                 return self.initial_sparsity  # Cannot do proper sparsity update until the steps in an epoch are counted
             fractional_epoch = self.current_epoch + self.current_step_in_current_epoch / self._steps_per_epoch
-            if self.sparsity_target_epoch != 0:
-                progress = (min(self.sparsity_target_epoch, fractional_epoch) / self.sparsity_target_epoch)
+            if self.target_epoch != 0:
+                progress = (min(self.target_epoch, fractional_epoch) / self.target_epoch)
             else:
                 progress = fractional_epoch
         else:
-            progress = (min(self.sparsity_target_epoch, self.current_epoch) / self.sparsity_target_epoch)
+            progress = (min(self.target_epoch, self.current_epoch) / self.target_epoch)
 
         if not self.concave:
-            current_sparsity = self.initial_sparsity + (self.sparsity_target - self.initial_sparsity) * (
+            current_sparsity = self.initial_sparsity + (self.target_sparsity - self.initial_sparsity) * (
                 progress ** self.power)
         else:
-            current_sparsity = self.sparsity_target - (self.sparsity_target - self.initial_sparsity) * (
+            current_sparsity = self.target_sparsity - (self.target_sparsity - self.initial_sparsity) * (
                 (1 - progress) ** self.power)
         return current_sparsity
 
@@ -137,10 +137,10 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("exponential")
 class ExponentialSparsityScheduler(SparsityScheduler):
-    def __init__(self, sparsity_algo, params=None):
-        super().__init__(sparsity_algo, params)
-        self.a, self.k = self._init_exp(self.initial_sparsity, self.sparsity_target,
-                                        sparsity_steps=self.sparsity_target_epoch)
+    def __init__(self, controller, params=None):
+        super().__init__(controller, params)
+        self.a, self.k = self._init_exp(self.initial_sparsity, self.target_sparsity,
+                                        sparsity_steps=self.target_epoch)
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
@@ -148,14 +148,14 @@ class ExponentialSparsityScheduler(SparsityScheduler):
 
     @property
     def current_sparsity_level(self):
-        if self.sparsity_target_epoch == 0:
-            return self.sparsity_target
+        if self.target_epoch == 0:
+            return self.target_sparsity
 
         if self.current_epoch == -1:
             return self.initial_sparsity
 
         curr_sparsity = 1 - self.a * np.exp(-self.k * self.current_epoch)
-        return curr_sparsity if curr_sparsity <= self.sparsity_target else self.sparsity_target
+        return curr_sparsity if curr_sparsity <= self.target_sparsity else self.target_sparsity
 
     @staticmethod
     def _init_exp(initial_sparsity, max_sparsity, sparsity_steps=20):
@@ -168,9 +168,9 @@ class ExponentialSparsityScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("adaptive")
 class AdaptiveSparsityScheduler(SparsityScheduler):
-    def __init__(self, sparsity_algo, params=None):
-        super().__init__(sparsity_algo, params)
-        self.sparsity_loss = sparsity_algo.loss
+    def __init__(self, controller, params=None):
+        super().__init__(controller, params)
+        self.sparsity_loss = controller.loss
         from .rb.loss import SparseLoss
         if not isinstance(self.sparsity_loss, SparseLoss):
             raise TypeError('AdaptiveSparseScheduler expects SparseLoss, but {} is given'.format(
@@ -188,7 +188,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
         if self.num_bad_epochs >= self.patience:
             self.num_bad_epochs = 0
-            self.current_sparsity_target = min(self.current_sparsity_target + self.decay_step, self.sparsity_target)
+            self.current_sparsity_target = min(self.current_sparsity_target + self.decay_step, self.target_sparsity)
         self._set_sparsity_level()
 
     def get_state(self):
@@ -204,8 +204,8 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
 @SPARSITY_SCHEDULERS.register("multistep")
 class MultiStepSparsityScheduler(SparsityScheduler):
-    def __init__(self, sparsity_algo, params):
-        super().__init__(sparsity_algo, params)
+    def __init__(self, controller, params):
+        super().__init__(controller, params)
         self.sparsity_levels = self._params.get('multistep_sparsity_levels', [0.1, 0.5])
         self.steps = sorted(self._params.get('multistep_steps', [90]))
 
