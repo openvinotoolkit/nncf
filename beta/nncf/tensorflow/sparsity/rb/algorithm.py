@@ -20,13 +20,17 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
+from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
@@ -84,7 +88,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def build_controller(self, model) -> TFCompressionAlgorithmController:
+    def build_controller(self, model) -> BaseSparsityController:
         """
         Should be called once the compressed model target_model is fully constructed
         """
@@ -96,7 +100,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         return RBSparsityController(model, params)
 
 
-class RBSparsityController(TFCompressionAlgorithmController):
+class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model,
                  params):
         super().__init__(target_model)
@@ -122,6 +126,32 @@ class RBSparsityController(TFCompressionAlgorithmController):
             self._loss.set_target_sparsity_loss(sparsity_level)
         else:
             self._loss.set_target_sparsity_loss(sparsity_level, target_layer)
+
+    def strip_model(self, model):
+        if not isinstance(model, tf.keras.Model):
+            raise ValueError(
+                'Expected model to be a `tf.keras.Model` instance but got: ', model)
+
+        self.freeze()
+        transformations = TFTransformationLayout()
+
+        for layer in model.layers:
+            if isinstance(layer, NNCFWrapper):
+                for weight_attr, ops in layer.weights_attr_ops.items():
+                    for op_name, _ in ops.items():
+                        if op_name == OP_NAME:
+
+                            self._apply_mask(layer, weight_attr, OP_NAME)
+
+                            transformations.register(
+                                TFRemovalCommand(
+                                    target_point=TFOperationWithWeights(
+                                        layer.name,
+                                        weights_attr_name=weight_attr,
+                                        operation_name=OP_NAME)
+                                ))
+
+        return TFModelTransformer(model, transformations).transform()
 
     def freeze(self):
         self._loss.disable()

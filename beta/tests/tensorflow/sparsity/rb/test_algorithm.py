@@ -13,7 +13,6 @@
 
 import pytest
 import tensorflow as tf
-from copy import deepcopy
 from pytest import approx
 
 from nncf.api.compression import CompressionScheduler
@@ -63,7 +62,7 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
 def test_can_load_sparse_algo__with_defaults():
     model = get_basic_two_conv_test_model()
     config = get_basic_sparsity_config(sparsity_init=0.1)
-    sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(deepcopy(model), config)
+    sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
     assert compression_ctrl.get_sparsity_init() == approx(0.1)
     assert compression_ctrl.loss.target_sparsity_rate == approx(0.1)
@@ -207,10 +206,10 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(), config)
 
     # pylint: disable=protected-access
-    assert list(compression_ctrl._loss.per_layer_target.values())[0] == 1
+    assert list(compression_ctrl._loss.per_layer_target.values())[0].numpy() == 1
 
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.loss._sparse_layers[0])
-    assert list(compression_ctrl._loss.per_layer_target.values())[0] == pytest.approx(0.3)
+    assert list(compression_ctrl._loss.per_layer_target.values())[0].numpy() == pytest.approx(0.3)
 
 
 def test_create_rb_algo_with_stub_scheduler():

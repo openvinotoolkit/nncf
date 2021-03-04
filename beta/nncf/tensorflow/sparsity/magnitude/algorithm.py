@@ -16,10 +16,8 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -30,6 +28,7 @@ from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
+from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
@@ -103,14 +102,14 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def build_controller(self, model) -> TFCompressionAlgorithmController:
+    def build_controller(self, model) -> BaseSparsityController:
         """
         Should be called once the compressed model target_model is fully constructed
         """
         return MagnitudeSparsityController(model, self.config)
 
 
-class MagnitudeSparsityController(TFCompressionAlgorithmController, SparsityController):
+class MagnitudeSparsityController(BaseSparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.

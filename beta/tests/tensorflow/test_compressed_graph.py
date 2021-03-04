@@ -21,7 +21,7 @@ import networkx as nx
 from beta.tests.tensorflow import test_models
 from beta.tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
-from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
+from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
 
 def get_basic_quantization_config(qconfig, input_sample_sizes=None):
@@ -113,16 +113,21 @@ class SparsityTestCaseConfiguration:
         self.graph_dir = graph_dir
 
 
-SPARSITY_ALGORITHMS = [
-    'magnitude_sparsity',
-]
+class SparsityAlgo:
+    magnitude = 'magnitude_sparsity'
+    rb = 'rb_sparsity'
 
 
-@pytest.fixture(
-    scope='function', params=SPARSITY_ALGORITHMS, ids=SPARSITY_ALGORITHMS
-)
-def _sparsity_case_config(request):
-    sparsity_algorithm = request.param
+@pytest.fixture(scope='function')
+def _magnitude_sparsity_case_config():
+    sparsity_algorithm = SparsityAlgo.magnitude
+    graph_dir = os.path.join('sparsity', sparsity_algorithm)
+    return SparsityTestCaseConfiguration(graph_dir)
+
+
+@pytest.fixture(scope='function')
+def _rb_sparsity_case_config():
+    sparsity_algorithm = SparsityAlgo.rb
     graph_dir = os.path.join('sparsity', sparsity_algorithm)
     return SparsityTestCaseConfiguration(graph_dir)
 
@@ -177,7 +182,10 @@ SKIP_MAP = {
         'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
         'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
-    }
+    },
+    'rb_sparsity': {
+
+    },
 }
 
 
@@ -232,6 +240,12 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mobilenet_v2_slim', ())
         )
     ]
+
+
+def get_model_name(desc):
+    if isinstance(desc, ModelDesc):
+        return desc.model_name
+    return desc.values[0].model_name
 
 
 def keras_model_to_tf_graph(model):
@@ -330,8 +344,7 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
 class TestModelsGraph:
     @pytest.mark.parametrize(
         'desc', get_test_models_desc('quantization'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('quantization')
+            get_model_name(m) for m in get_test_models_desc('quantization')
         ]
     )
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
@@ -343,27 +356,29 @@ class TestModelsGraph:
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('magnitude_sparsity'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('magnitude_sparsity')
-        ]
-    )
-    def test_sparsity_network(self, desc: ModelDesc, _sparsity_case_config):
+    @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.magnitude), ids=[
+        get_model_name(m) for m in get_test_models_desc(SparsityAlgo.magnitude)])
+    def test_magnitude_sparsity_network(self, desc: ModelDesc, _magnitude_sparsity_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-        config = get_basic_magnitude_sparsity_config(desc.input_sample_sizes)
+        config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.magnitude)
         config['compression']['params'] = {'schedule': 'multistep'}
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _sparsity_case_config.graph_dir,
+        check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir)
+
+    @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.rb), ids=[
+        get_model_name(m) for m in get_test_models_desc(SparsityAlgo.rb)])
+    def test_rb_sparsity_network(self, desc: ModelDesc, _rb_sparsity_case_config):
+        model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+        config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.rb)
+        config['compression']['params'] = {'schedule': 'multistep'}
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+        check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('filter_pruning'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('filter_pruning')
-        ]
-    )
+    @pytest.mark.parametrize('desc', get_test_models_desc('filter_pruning'), ids=[
+        get_model_name(m) for m in get_test_models_desc('filter_pruning')])
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
