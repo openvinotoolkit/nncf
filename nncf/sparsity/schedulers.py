@@ -41,21 +41,14 @@ class SparsityScheduler(CompressionScheduler):
             self.controller.freeze()
         self.controller.set_sparsity_level(self.current_sparsity_level)
 
-    def _calc_density_level(self):
-        return 1 - self.current_sparsity_level
-
     @property
     def current_sparsity_level(self):
         raise NotImplementedError
 
-    @property
-    def target_sparsity_level(self) -> float:
-        return self.target_sparsity
-
     def compression_level(self) -> CompressionLevel:
         if self.current_sparsity_level == 0:
             return CompressionLevel.NONE
-        if self.current_sparsity_level >= self.target_sparsity_level:
+        if self.current_sparsity_level >= self.target_sparsity:
             return CompressionLevel.FULL
         return CompressionLevel.PARTIAL
 
@@ -213,6 +206,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
             raise AttributeError('number of sparsity levels must equal to number of steps + 1')
 
         self.sparsity_level = self.sparsity_levels[0]
+        self.target_sparsity = self.sparsity_levels[-1]
 
     def epoch_step(self, next_epoch=None):
         super().epoch_step(next_epoch)
@@ -223,7 +217,3 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     @property
     def current_sparsity_level(self):
         return self.sparsity_level
-
-    @property
-    def target_sparsity_level(self):
-        return self.sparsity_levels[-1]
