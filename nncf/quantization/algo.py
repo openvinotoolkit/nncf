@@ -375,6 +375,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                  range_init_params: RangeInitParams = None,
                  debug_interface: 'QuantizationDebugInterface' = None):
         super().__init__(quant_config, target_model, precision_init_type, precision_init_params, range_init_params)
+        self._quantizable_subgraph_patterns = quant_config.get('quantizable_subgraph_patterns', None)
 
         self.hw_config = hw_config
 
@@ -400,7 +401,9 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints)
 
-        merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(self.hw_config)
+        merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
+            self.hw_config,
+            additional_patterns=self._quantizable_subgraph_patterns)
         quantization_proposal = prop_graph_solver.run_on_ip_graph(merged_ip_graph)
         self._num_potential_quantized_activations = prop_graph_solver.get_num_potential_quantized_activations()
 

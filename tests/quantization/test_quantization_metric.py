@@ -92,7 +92,7 @@ def test_network_quantization_share_metric(network_quantization_share_metric_tes
         assert qmetric_stat[key] == approx(value, rel=1e-2)
 
 
-MEMORY_COST_METRIC_TEST_CASES = []
+MEMORY_COST_METRIC_TEST_CASES = [
     TestStruct(
         initializers={},
         activations={},
@@ -107,8 +107,8 @@ MEMORY_COST_METRIC_TEST_CASES = []
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
         }},
         activations={},
         weights={"bits": 8},
@@ -130,6 +130,7 @@ MEMORY_COST_METRIC_TEST_CASES = []
                MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 22.19,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
+]
 
 @pytest.fixture(params=MEMORY_COST_METRIC_TEST_CASES)
 def memory_cost_metric_test_struct(request):
@@ -142,7 +143,6 @@ def test_memory_cost_metric(memory_cost_metric_test_struct):
     config['compression']["weights"] = memory_cost_metric_test_struct.weights
     config['compression']["ignored_scopes"] = memory_cost_metric_test_struct.ignored_scopes
     config['target_device'] = memory_cost_metric_test_struct.target_device
-    config['quantizer_setup_type'] = memory_cost_metric_test_struct.quantizer_setup_type
     ctrl, compressed_model = create_compressed_model(test_models.AlexNet(), config)
     qmetric = MemoryCostMetric(compressed_model, ctrl.weight_quantizers, ctrl.non_weight_quantizers)
     qmetric.collect()

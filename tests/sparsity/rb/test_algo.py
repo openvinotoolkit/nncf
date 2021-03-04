@@ -37,7 +37,6 @@ def get_basic_sparsity_config(input_sample_size=None,
     config = NNCFConfig()
     config.update({
         "model": "basic_sparse_conv",
-        "model_size": model_size,
         "input_info":
             {
                 "sample_size": input_sample_size,

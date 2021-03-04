@@ -475,12 +475,7 @@ class TestNumberOfNodes:
         config = get_empty_config(input_sample_sizes=input_sample_size)
         config['compression'] = \
             {'algorithm': 'quantization',
-             'quantize_inputs': True,
-             'quantizable_subgraph_patterns': [["linear", "__add__"],
-                                               ["sigmoid", "__mul__", "__add__"],
-                                               ["__add__", "tanh", "__mul__"],
-                                               ["sigmoid", "__mul__"]],
-             'disable_function_quantization_hooks': True}
+             'quantize_inputs': True}
         config['scopes_without_shape_matching'] = \
             ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/BahdanauAttention[attn]', ]
 
@@ -532,8 +527,8 @@ class TestNumberOfNodes:
             counters[str(name)] = counter
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
-        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 57
+        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size, name
@@ -541,8 +536,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 57
+        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name

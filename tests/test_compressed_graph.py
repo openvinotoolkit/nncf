@@ -382,11 +382,6 @@ def test_gnmt_quantization(_case_config):
         }
     ]
     config["compression"].update({
-        "quantizable_subgraph_patterns": [["linear", "__add__"],
-                                          ["sigmoid", "__mul__", "__add__"],
-                                          ["__add__", "tanh", "__mul__"],
-                                          ["sigmoid", "__mul__"]],
-        "disable_function_quantization_hooks": True,
         "ignored_scopes": ["GNMT/ResidualRecurrentEncoder[encoder]/Embedding[embedder]",
                            "GNMT/ResidualRecurrentDecoder[decoder]/Embedding[embedder]"]})
 
