@@ -165,8 +165,8 @@ class PruningNodeSelector:
 
             # Merge previous convolutions into one cluster
             previous_convs = []
-            for id in list_of_nodes:
-                nncf_node = graph.get_node_by_id(id)
+            for id_ in list_of_nodes:
+                nncf_node = graph.get_node_by_id(id_)
                 previous_conv = get_previous_conv(graph, nncf_node, self._prune_operations, stop_propagation_ops)
                 previous_convs.append(previous_conv)
             previous_clusters = [
@@ -208,7 +208,7 @@ class PruningNodeSelector:
 
             # Check whether this node can be potentially pruned from architecture point of view
             can_prune_nodes = [can_prune[node.node_id] for node in cluster.nodes]
-            if not all([can_prune[0] for can_prune in should_prune_nodes]):
+            if not all(can_prune[0] for can_prune in should_prune_nodes):
                 shouldnt_prune_msgs = [should_prune[1] for should_prune in should_prune_nodes if not should_prune[0]]
                 nncf_logger.info("Group of nodes [{}] can't be pruned, because some nodes should't be pruned, "
                                  "error messages for this nodes: {}".format(", ".join(cluster_nodes_names),

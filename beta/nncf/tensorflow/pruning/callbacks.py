@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import Callable
-
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
 from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.pruning.utils import prepare_for_tensorboard

@@ -70,4 +70,3 @@ FILTER_IMPORTANCE_FUNCTIONS = {
 
 def calculate_binary_mask(weight_importance, threshold):
     return tf.cast(weight_importance >= threshold, tf.float32)
-

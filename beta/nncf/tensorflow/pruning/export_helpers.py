@@ -25,7 +25,7 @@ TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_me
 def _get_types(expression):
     try:
         return [expression.node_type]
-    except:
+    except AttributeError:
         types = []
         for expr in expression.expressions:
             types.extend(_get_types(expr))

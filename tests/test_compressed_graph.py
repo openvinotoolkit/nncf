@@ -857,8 +857,12 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
         if ia_op_exec_context_for_node in pre_hooked_quantizers_activations_attr:
             in_port_id, qconf_str = pre_hooked_quantizers_activations_attr[ia_op_exec_context_for_node]
             label = "Quantizer: {}".format(qconf_str)
-            additional_node_attrs = dict(label=label, color="purple", id=node[PTNNCFGraph.ID_NODE_ATTR],
-                                         op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+            additional_node_attrs = dict(
+                label=label,
+                color="purple",
+                id=node[PTNNCFGraph.ID_NODE_ATTR],
+                op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+            )
 
             node_scope_for_input = node_scope + '|IN' + str(in_port_id)
             nx_graph.add_node(node_scope_for_input, **additional_node_attrs)
@@ -880,8 +884,12 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
         if ia_op_exec_context_for_node in post_hooked_quantizers_activations_attr:
             qconf_str = post_hooked_quantizers_activations_attr[ia_op_exec_context_for_node]
             label = "Quantizer: {}".format(qconf_str)
-            additional_node_attrs = dict(label=label, color="purple", id=node[PTNNCFGraph.ID_NODE_ATTR],
-                                         op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+            additional_node_attrs = dict(
+                label=label,
+                color="purple",
+                id=node[PTNNCFGraph.ID_NODE_ATTR],
+                op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+            )
 
             # Adding a post-hook quantizer for the op
             nx_graph.add_node(node_scope, **additional_node_attrs)

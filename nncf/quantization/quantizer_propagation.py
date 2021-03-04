@@ -276,6 +276,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qpg_node[self.IS_IN_IGNORED_SCOPES] = False
 
+                # pylint:disable=line-too-long
                 node_ia_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
                     PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model

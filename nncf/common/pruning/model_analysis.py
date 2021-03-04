@@ -236,8 +236,8 @@ class ModelAnalyzer:
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
-            outputs_will_be_pruned = all([self.can_prune[node.node_id]
-                                          for node in out_nodes if self.node_propagate_can_prune_attr(node)])
+            outputs_will_be_pruned = all(self.can_prune[node.node_id]
+                                         for node in out_nodes if self.node_propagate_can_prune_attr(node))
             self.can_prune[node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
 
     def propagate_can_prune_attr_down(self):
@@ -250,8 +250,8 @@ class ModelAnalyzer:
             # Propagate attribute only in not conv case
             if self.node_propagate_can_prune_attr(node):
                 in_nodes = self.graph.get_previous_nodes(node)
-                can_prune = all([self.can_prune[node.node_id] for node in in_nodes])
-                can_prune_any = any([self.can_prune[node.node_id] for node in in_nodes])
+                can_prune = all(self.can_prune[node.node_id] for node in in_nodes)
+                can_prune_any = any(self.can_prune[node.node_id] for node in in_nodes)
 
                 if (not self.node_accept_different_inputs(node) and not can_prune) or \
                         (self.node_accept_different_inputs(node) and not can_prune_any):

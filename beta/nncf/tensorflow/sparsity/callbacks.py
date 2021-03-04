@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from typing import Callable
-
 import tensorflow as tf
 
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback

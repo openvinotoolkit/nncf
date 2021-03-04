@@ -350,7 +350,7 @@ class PTConcat(PTDefaultMetaOp):
                                                PTStopMaskForwardOps.get_all_op_aliases() +
                                                PTInput.get_all_op_aliases())
             sources_types = [node.op_exec_context.operator_name for node in source_nodes]
-            if any([t in sources_types for t in PTStopMaskForwardOps.get_all_op_aliases()]):
+            if any(t in sources_types for t in PTStopMaskForwardOps.get_all_op_aliases()):
                 return False
         return True
 
@@ -367,7 +367,7 @@ class PTConcat(PTDefaultMetaOp):
         if cls.check_concat(nx_node, nx_graph, graph):
             input_masks, filled_input_masks = fill_input_masks(nx_node, nx_graph)
 
-            if all([mask is None for mask in input_masks]):
+            if all(mask is None for mask in input_masks):
                 result_mask = None
             else:
                 result_mask = torch.cat(filled_input_masks)
@@ -390,7 +390,7 @@ class PTElementwise(PTDefaultMetaOp):
 
         nx_node['input_masks'] = input_masks
         if input_masks[0] is not None:
-            assert all([torch.allclose(input_masks[0], mask) for mask in input_masks])
+            assert all(torch.allclose(input_masks[0], mask) for mask in input_masks)
         nx_node['output_mask'] = input_masks[0]
 
     @classmethod
