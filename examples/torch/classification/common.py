@@ -1,14 +1,4 @@
-import torch.backends.cudnn as cudnn
-
 from examples.torch.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
-from nncf.torch.utils import manual_seed
-
-
-def set_seed(config):
-    if config.seed is not None:
-        manual_seed(config.seed)
-        cudnn.deterministic = True
-        cudnn.benchmark = False
 
 
 def load_resuming_checkpoint(resuming_checkpoint_path):

@@ -35,6 +35,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
+from examples.torch.common.execution import set_seed
 from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from examples.torch.common.argparser import get_common_argument_parser
 from examples.torch.common.example_logger import logger
@@ -52,7 +53,7 @@ from nncf.api.compression import CompressionStage
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
 from nncf.torch.utils import safe_thread_call, is_main_process
-from examples.torch.classification.common import set_seed, load_resuming_checkpoint
+from examples.torch.classification.common import load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
@@ -360,11 +361,16 @@ def create_data_loaders(config, train_dataset, val_dataset):
 
     train_sampler = None
     if config.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        sampler_seed = 0 if config.seed is None else config.seed
+        dist_sampler_shuffle = config.seed is None
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset,
+                                                                        seed=sampler_seed,
+                                                                        shuffle=dist_sampler_shuffle)
 
+    train_shuffle = train_sampler is None and config.seed is None
     def create_train_data_loader(batch_size_):
         return torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
+            train_dataset, batch_size=batch_size_, shuffle=train_shuffle,
             num_workers=workers, pin_memory=pin_memory, sampler=train_sampler, drop_last=True)
 
     train_loader = create_train_data_loader(batch_size)
@@ -557,8 +563,8 @@ def accuracy(output, target, topk=(1,)):
 
         res = []
         for k in topk:
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size).item())
+            correct_k = correct[:k].reshape(-1).sum(0, keepdim=True)
+            res.append(correct_k.float().mul_(100.0 / batch_size).item())
         return res
 
 

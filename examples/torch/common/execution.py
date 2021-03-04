@@ -13,7 +13,10 @@
 
 import torch
 import torch.multiprocessing as mp
+from torch.backends import cudnn
+
 from examples.torch.common.sample_config import SampleConfig
+from nncf.torch.utils import manual_seed
 
 
 class ExecutionMode:
@@ -111,3 +114,11 @@ def start_worker(main_worker, config: SampleConfig):
         # Use torch.multiprocessing.spawn to launch distributed processes: the
         # main_worker process function
         mp.spawn(main_worker, nprocs=config.ngpus_per_node, args=(config,))
+
+
+def set_seed(config):
+    if config.seed is not None:
+        manual_seed(config.seed)
+        cudnn.deterministic = True
+        cudnn.benchmark = False
+        torch.set_deterministic(True)
