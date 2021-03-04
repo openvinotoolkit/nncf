@@ -102,25 +102,26 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
     @property
     def current_sparsity_level(self):
-        if self.target_epoch == 0 and not self._update_per_optimizer_step:
+        if self.target_epoch == 0:
             return self.target_sparsity
+
         if self._update_per_optimizer_step:
             if self._steps_per_epoch is None:
                 return self.initial_sparsity  # Cannot do proper sparsity update until the steps in an epoch are counted
-            fractional_epoch = self.current_epoch + self.current_step_in_current_epoch / self._steps_per_epoch
-            if self.target_epoch != 0:
-                progress = (min(self.target_epoch, fractional_epoch) / self.target_epoch)
-            else:
-                progress = fractional_epoch
-        else:
-            progress = (min(self.target_epoch, self.current_epoch) / self.target_epoch)
 
-        if not self.concave:
-            current_sparsity = self.initial_sparsity + (self.target_sparsity - self.initial_sparsity) * (
-                progress ** self.power)
+            fractional_epoch = self.current_epoch + self.current_step_in_current_epoch / self._steps_per_epoch
+            progress = fractional_epoch / self.target_epoch
         else:
+            progress = self.current_epoch / self.target_epoch
+        progress = min(1.0, max(0.0, progress))
+
+        if self.concave:
             current_sparsity = self.target_sparsity - (self.target_sparsity - self.initial_sparsity) * (
                 (1 - progress) ** self.power)
+        else:
+            current_sparsity = self.initial_sparsity + (self.target_sparsity - self.initial_sparsity) * (
+                progress ** self.power)
+
         return current_sparsity
 
     @property
