@@ -203,7 +203,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
         self.steps = sorted(self._params.get('multistep_steps', [90]))
 
         if len(self.steps) + 1 != len(self.sparsity_levels):
-            raise AttributeError('number of sparsity levels must equal to number of steps + 1')
+            raise ValueError('number of sparsity levels must equal to number of steps + 1')
 
         self.sparsity_level = self.sparsity_levels[0]
         self.target_sparsity = self.sparsity_levels[-1]
