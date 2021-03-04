@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from functools import partial
 import tensorflow as tf
 from beta.examples.tensorflow.common.object_detection.utils import box_utils
 from beta.examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, letterbox_resize, random_resize_crop_pad, reshape_boxes, random_hsv_distort, random_horizontal_flip, random_vertical_flip, random_grayscale, random_brightness, random_chroma, random_contrast, random_sharpness, random_blur, random_rotate, random_mosaic_augment, random_cutmix_augment, rand # random_motion_blur
+from beta.examples.tensorflow.common.object_detection.utils import dataloader_utils
 
 
 class YOLOv4Preprocessor:
@@ -26,6 +27,7 @@ class YOLOv4Preprocessor:
         """Initializes parameters for parsing annotations in the dataset.
         """
 
+        self._max_num_instances = config.preprocessing.get('max_num_instances', 100)
         self._is_training = is_train
         self._global_batch_size = config.batch_size
         self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
@@ -34,10 +36,12 @@ class YOLOv4Preprocessor:
         self._parse_fn2 = self._parse_train_data2
 
         self.input_shape = config.input_shape
-        self.enhance_augment = config.enhance_augment
-        self.anchors_path = config.anchors_path
-        self.num_classes = config.num_classes
-        self.multi_anchor_assign = config.multi_anchor_assign
+        # self.enhance_augment = config.enhance_augment
+        self.enhance_mosaic_augment = config.preprocessing.enhance_mosaic_augment
+        self.enhance_cutmix_augment = config.preprocessing.enhance_cutmix_augment
+        self.anchors = config.anchors
+        self.num_classes = config.model_params.num_classes
+        self.multi_anchor_assign = config.preprocessing.multi_anchor_assign
 
     def create_preprocess_input_fn(self):
         """Parses data to an image and associated training labels.
@@ -155,9 +159,6 @@ class YOLOv4Preprocessor:
 
         return out
 
-
-
-
     def _preprocess_true_boxes(self, true_boxes, input_shape, anchors, num_classes, multi_anchor_assign, iou_thresh=0.2):
         '''Preprocess true boxes to training input format
 
@@ -248,28 +249,33 @@ class YOLOv4Preprocessor:
 
         return y_true
 
-    def _get_anchors(self, anchors_path):
-        '''loads the anchors from a file'''
-        with open(anchors_path) as f:
-            anchors = f.readline()
-        anchors = [float(x) for x in anchors.split(',')]
-        return np.array(anchors).reshape(-1, 2)
 
     def _preprocess2(self, image_data, box_data, filename):
         image_data = image_data.numpy()
         box_data = box_data.numpy()
 
-        if self.enhance_augment == 'mosaic':
-            # add random mosaic augment on batch ground truth data
+        # if self.enhance_augment == 'mosaic':
+        #     # add random mosaic augment on batch ground truth data
+        #     image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
+        #
+        #     random_val = rand()
+        #     if random_val < 0.2:
+        #         image_data, box_data = random_mosaic_augment(image_data, box_data, prob=1.0)
+        #     elif 0.2 < random_val < 0.3:
+        #         image_data, box_data = random_cutmix_augment(image_data, box_data, prob=1.0)
+
+        if self.enhance_mosaic_augment and not self.enhance_cutmix_augment:
             image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
+        elif self.enhance_cutmix_augment and not self.enhance_mosaic_augment:
+            image_data, box_data = random_cutmix_augment(image_data, box_data, prob=0.2)
+        elif self.enhance_mosaic_augment and self.enhance_cutmix_augment:
+            random_val = rand()
+            if random_val < 0.2:
+                image_data, box_data = random_mosaic_augment(image_data, box_data, prob=1.0)
+            elif 0.2 < random_val < 0.3:
+                image_data, box_data = random_cutmix_augment(image_data, box_data, prob=1.0)
 
-            # random_val = rand()
-            # if random_val < 0.2:
-            #     image_data, box_data = random_mosaic_augment(image_data, box_data, prob=1.0)
-            # elif 0.2 < random_val < 0.3:
-            #     image_data, box_data = random_cutmix_augment(image_data, box_data, prob=1.0)
-
-        anchors = self._get_anchors(self.anchors_path)
+        anchors = np.array(self.anchors).reshape(-1, 2)
 
         y_true1, y_true2, y_true3 = self._preprocess_true_boxes(box_data, self.input_shape, anchors, self.num_classes, self.multi_anchor_assign)
 
@@ -352,6 +358,7 @@ class YOLOv4Preprocessor:
     def _parse_predict_data(self, data):
         """Parses data for prediction"""
         image_data = data['image']
+        image_shape = tf.shape(input=image_data)[0:2]
 
         # filename = data['source_filename']
         # groundtruth_classes = data['groundtruth_classes']
@@ -366,12 +373,24 @@ class YOLOv4Preprocessor:
         # print('image_data', type(image_data))
         image_data.set_shape([None, None, 3])
 
-
-
         labels = {
             'image_info': image_info,
-            'source_id': data['source_id']
+            # 'source_id': data['source_id']
         }
+
+        # Converts boxes from normalized coordinates to pixel coordinates.
+        boxes = box_utils.denormalize_boxes(data['groundtruth_boxes'], image_shape)
+        groundtruths = {
+            'source_id': data['source_id'],
+            'num_detections': tf.squeeze(tf.shape(data['groundtruth_classes'])),
+            'boxes': boxes,
+            'classes': data['groundtruth_classes'],
+            'areas': data['groundtruth_area'],
+            'is_crowds': tf.cast(data['groundtruth_is_crowd'], tf.int32),
+        }
+        groundtruths['source_id'] = dataloader_utils.process_source_id(groundtruths['source_id'])
+        groundtruths = dataloader_utils.pad_groundtruths_to_fixed_size(groundtruths, self._max_num_instances)
+        labels.update(groundtruths)
 
         return image_data, labels
 
@@ -386,13 +405,36 @@ class YOLOv4Preprocessor:
             image.set_shape([None, None, 3])
             return image
 
+        def _convert_labels_to_91_classes(features):
+            # 0..79 --> 0..90
+            match = tf.constant([1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                 11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                                 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+                                 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+                                 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+                                 56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+                                 67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
+                                 80, 81, 82, 84, 85, 86, 87, 88, 89, 90], dtype=tf.int64)
+
+            labels = features['objects']['label']
+            labels = tf.gather(match, labels, axis=None)
+            return labels
+
         image = _decode_image(features_dict)
+        if self._is_training:
+            print('train mode, no labels converting')
+            labels = features_dict['objects']['label']
+        else:
+            print('test mode, labels converting')
+            labels = _convert_labels_to_91_classes(features_dict)
 
         decoded_tensors = {
             'image': image,
             'source_filename': features_dict['image/filename'],
-            'source_id': tf.cast(features_dict['image/id'], tf.int32), # Really needed? not sure..
-            'groundtruth_classes': features_dict['objects']['label'],
+            'source_id': tf.cast(features_dict['image/id'], tf.int32),
+            'groundtruth_classes': labels,
+            'groundtruth_is_crowd': features_dict['objects']['is_crowd'],
+            'groundtruth_area': features_dict['objects']['area'],
             'groundtruth_boxes': features_dict['objects']['bbox'],
         }
 

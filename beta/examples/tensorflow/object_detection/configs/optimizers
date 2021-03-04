@@ -1,0 +1,8 @@
+    "optimizer": {
+        "type": "Adam",
+        "schedule_type": "cosine",
+        "schedule_params": {
+            "initial_lr": 1e-6
+        }
+    }
+

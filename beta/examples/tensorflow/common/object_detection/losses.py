@@ -634,7 +634,7 @@ class YOLOv4Loss:
 
         return giou
 
-    def box_diou(self, b_true, b_pred, use_ciou=False):
+    def box_diou(self, b_true, b_pred, use_ciou=True):
         """
         Calculate DIoU/CIoU loss on anchor boxes
         Reference Paper:
@@ -760,7 +760,7 @@ class YOLOv4Loss:
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
 
-    def __call__(self, labels, outputs, anchors_path, num_classes, ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True, use_focal_loss=False, use_focal_obj_loss=False, use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
+    def __call__(self, labels, outputs, anchors, num_classes, ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True, use_focal_loss=False, use_focal_obj_loss=False, use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
         '''
         YOLOv3 loss function.
 
@@ -777,8 +777,7 @@ class YOLOv4Loss:
         loss: tensor, shape=(1,)
 
         '''
-        anchors = self.get_anchors(anchors_path)
-
+        anchors = np.array(anchors).reshape(-1, 2)
         num_layers = len(anchors)//3 # default setting
         yolo_outputs = list(outputs.values()) # args[:num_layers]
         y_true = list(labels.values()) # args[num_layers:]

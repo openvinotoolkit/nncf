@@ -9,7 +9,7 @@
         ]
     },
 
-    "epochs": 1,
+    "epochs": 0,
     "batch_size": 60,
 
     "dataset": "coco/2017",
@@ -23,8 +23,8 @@
                 1
             ],
             "values": [
-                1e-5,
-                1e-5
+                5e-5,
+                5e-5
             ]
         }
     },

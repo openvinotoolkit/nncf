@@ -209,10 +209,10 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Training metric = {}'.format(train_metric_result))
                 timer.tic()
 
-        # test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
-        # validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
-        # eval_metric.reset_states()
-        # logger.info('Validation metric = {}'.format(test_metric_result))
+        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
+        validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
+        eval_metric.reset_states()
+        logger.info('Validation metric = {}'.format(test_metric_result))
 
         statistics = compression_ctrl.statistics()
         print_statistics(statistics)
@@ -313,14 +313,15 @@ def run(config):
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq)
 
-    # print_statistics(compression_ctrl.statistics())
-    # metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
-    # logger.info('Validation metric = {}'.format(metric_result))
 
-    # if config.metrics_dump is not None:
-    #     write_metrics(metric_result['AP'], config.metrics_dump)
+    print_statistics(compression_ctrl.statistics())
+    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
+    logger.info('Validation metric = {}'.format(metric_result))
 
-    # checkpoint_manager.save()
+
+    if config.metrics_dump is not None:
+        write_metrics(metric_result['AP'], config.metrics_dump)
+
     compress_model.save(os.path.join(config['log_dir'], 'dumped.h5'))
 
     if 'export' in config.mode:
@@ -328,7 +329,6 @@ def run(config):
         compression_ctrl.export_model(save_path, save_format)
         logger.info("Saved to {}".format(save_path))
 
-    compress_model.save(os.path.join(config.log_dir, 'dumped.h5'))
 
 def export(config):
     model_builder = get_model_builder(config)
