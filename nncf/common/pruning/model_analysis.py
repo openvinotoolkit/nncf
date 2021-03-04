@@ -13,8 +13,6 @@
 from typing import Callable
 from typing import List
 
-import networkx as nx
-
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
@@ -22,7 +20,6 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
-# pylint: disable=protected-access
 class NodesCluster:
     def __init__(self, cluster_id: int, nodes: List, nodes_orders: List[int]):
         self.id = cluster_id
@@ -103,9 +100,9 @@ class Clusterization:
             self.merge_clusters(clusters[-1], cluster_id)
 
 
-def get_position(nx_nodes_list, idx):
-    for i, node in enumerate(nx_nodes_list):
-        if node['id'] == idx:
+def get_position(nodes_list: List[NNCFNode], idx: int):
+    for i, node in enumerate(nodes_list):
+        if node.node_id == idx:
             return i
     return None
 
@@ -144,29 +141,25 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_typ
     :param special_types: list of types that should be grouped to groups of dependent nodes
     :return: Clusterization of special_types nodes to the dependent groups
     """
-    nx_graph = graph._nx_graph
-    topologically_sorted_nodes = [nx_graph.nodes[node_name] for node_name in nx.topological_sort(nx_graph)]
-    all_special_nodes = [nx_graph.nodes[node_name] for node_name in nx_graph.nodes
-                         if graph.node_type_fn(nx_graph.nodes[node_name]) in special_types]
+    topologically_sorted_nodes = graph.topological_sort()
+    all_special_nodes = [node for node in graph.get_all_nodes()
+                         if node.node_type in special_types]
 
     # 0. Initially all nodes is a separate clusters
     clusterization = Clusterization("node_id")
     for i, node in enumerate(all_special_nodes):
-        nncf_node = graph._nx_node_to_nncf_node(node)
-        cluster = NodesCluster(i, [nncf_node], [get_position(topologically_sorted_nodes, node['id'])])
+        cluster = NodesCluster(i, [node], [get_position(topologically_sorted_nodes, node.node_id)])
         clusterization.add_cluster(cluster)
 
     for node in topologically_sorted_nodes:
-        if graph.node_type_fn(node) in identity_types:
+        if node.node_type in identity_types:
             continue
 
-        nncf_node = graph._nx_node_to_nncf_node(node)
-
-        all_outputs = find_next_nodes_not_of_types(graph, nncf_node, identity_types)
+        all_outputs = find_next_nodes_not_of_types(graph, node, identity_types)
         all_output_special_nodes = [node for node in all_outputs
                                     if node.node_type in special_types]
-        if graph.node_type_fn(node) in special_types:
-            all_output_special_nodes.append(nncf_node)
+        if node.node_type in special_types:
+            all_output_special_nodes.append(node)
         merge_clusters_for_nodes(all_output_special_nodes, clusterization)
 
     return clusterization
@@ -191,7 +184,6 @@ class ModelAnalyzer:
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
         self.graph = graph
-        self._nx_graph = self.graph._nx_graph
 
         self._pruning_operator_metatypes = pruning_operator_metatypes
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
@@ -217,7 +209,7 @@ class ModelAnalyzer:
 
     def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
         """
-        Return whether nx_node accept pruned and not pruned inputs as inputs at the same time.
+        Return whether node accept pruned and not pruned inputs as inputs at the same time.
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
@@ -237,36 +229,33 @@ class ModelAnalyzer:
         Node can_prune is True if all outputs accept_pruned_input is True and all outputs
         (except convs because conv can be pruned by input and output independently).
         """
-        reversed_sorted_nodes = reversed([self._nx_graph.nodes[name] for name in nx.topological_sort(self._nx_graph)])
-        for nx_node in reversed_sorted_nodes:
-            nncf_node = self.graph._nx_node_to_nncf_node(nx_node)
-
+        reversed_sorted_nodes = reversed(self.graph.topological_sort())
+        for node in reversed_sorted_nodes:
             # Check all output nodes accept_pruned_input attribute
-            out_nodes = self.graph.get_next_nodes(nncf_node)
+            out_nodes = self.graph.get_next_nodes(node)
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
             outputs_will_be_pruned = all([self.can_prune[node.node_id]
                                           for node in out_nodes if self.node_propagate_can_prune_attr(node)])
-            self.can_prune[nncf_node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
+            self.can_prune[node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
 
     def propagate_can_prune_attr_down(self):
         """
         Propagating can_prune attribute down to fix all branching cases with one pruned and one not pruned
         branches.
         """
-        sorted_nodes = [self._nx_graph.nodes[name] for name in nx.topological_sort(self._nx_graph)]
-        for nx_node in sorted_nodes:
-            nncf_node = self.graph._nx_node_to_nncf_node(nx_node)
+        sorted_nodes = self.graph.topological_sort()
+        for node in sorted_nodes:
             # Propagate attribute only in not conv case
-            if self.node_propagate_can_prune_attr(nncf_node):
-                in_nodes = self.graph.get_previous_nodes(nncf_node)
+            if self.node_propagate_can_prune_attr(node):
+                in_nodes = self.graph.get_previous_nodes(node)
                 can_prune = all([self.can_prune[node.node_id] for node in in_nodes])
                 can_prune_any = any([self.can_prune[node.node_id] for node in in_nodes])
 
-                if (not self.node_accept_different_inputs(nncf_node) and not can_prune) or \
-                        (self.node_accept_different_inputs(nncf_node) and not can_prune_any):
-                    self.can_prune[nncf_node.node_id] = can_prune
+                if (not self.node_accept_different_inputs(node) and not can_prune) or \
+                        (self.node_accept_different_inputs(node) and not can_prune_any):
+                    self.can_prune[node.node_id] = can_prune
 
     def set_accept_pruned_input_attr(self):
         for nncf_node in self.graph.get_all_nodes():

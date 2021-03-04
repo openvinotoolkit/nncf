@@ -90,9 +90,8 @@ class NNCFGraph:
         all_nodes_of_type = []
         for node_key in self.get_all_node_keys():
             nx_node = self._nx_graph.nodes[node_key]
-            node_type = self.node_type_fn(nx_node)
-            if node_type in type_list:
-                nncf_node = self._nx_node_to_nncf_node(nx_node)
+            nncf_node = self._nx_node_to_nncf_node(nx_node)
+            if nncf_node.node_type in type_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
@@ -110,10 +109,6 @@ class NNCFGraph:
     @staticmethod
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
         return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR], nx_node)
-
-    @staticmethod
-    def node_type_fn(node: dict) -> str:
-        return node[NNCFGraph.NODE_TYPE_ATTR]
 
     def get_node_key_by_id(self, node_id):
         return self._node_id_to_key_dict[node_id]
@@ -155,3 +150,10 @@ class NNCFGraph:
 
     def add_edge(self, u_of_edge, v_of_edge, **attrs):
         self._nx_graph.add_edge(u_of_edge, v_of_edge, **attrs)
+
+    def topological_sort(self):
+        return [self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
+                for node_name in nx.topological_sort(self._nx_graph)]
+
+    def dump_graph(self, path):
+        nx.drawing.nx_pydot.write_dot(self._nx_graph, path)

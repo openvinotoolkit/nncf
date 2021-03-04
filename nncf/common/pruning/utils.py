@@ -11,7 +11,6 @@
  limitations under the License.
 """
 import math
-from collections import deque
 from functools import partial
 from typing import List, Tuple, Optional
 
@@ -26,7 +25,7 @@ def is_grouped_conv(node: NNCFNode) -> bool:
 
 def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
     """
-    Source is a node of sourse such that there is path from this node to nx_node and on this path
+    Source is a node of source such that there is path from this node to nncf_node and on this path
     no node has one of sources_types type.
     :param sources_types: list of sources types
     :param nncf_node: NNCFNode to get sources
@@ -34,7 +33,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     :return: list of all sources nodes
     """
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type in sources_types:
@@ -59,7 +58,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     :return: list of next nodes for nncf_node of type not from types list
     """
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x not in types,
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x not in types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type not in types:
@@ -82,7 +81,7 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
     """
     sources_types = types
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph, type_check_fn=lambda x: x in sources_types,
+    partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type in sources_types:
@@ -94,7 +93,6 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
     return next_nodes
 
 
-# pylint: disable=protected-access
 def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple_of: int = 8) -> int:
     """
     Calculates number of sparsified elements (approximately sparsity rate) from total such as
@@ -109,51 +107,13 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     return max(total - remaining_elems, 0)
 
 
-def find_first_ops_with_type(nncf_graph: NNCFGraph, nodes, required_types, forward: bool = True) -> List[dict]:
-    """
-    Looking for first nodes with type from pruned_ops_types that are reachable from nodes.
-    :param nncf_graph: NNCFGraph to work with
-    :param nodes: nodes from which search begins
-    :param required_types: types of nodes for search
-    :param forward: whether the search will be forward or backward
-    :return:
-    """
-    graph = nncf_graph._nx_graph
-    get_edges_fn = graph.out_edges if forward else graph.in_edges
-
-    found_nodes = []
-    visited = {n: False for n in graph.nodes}
-    node_stack = deque(nodes)
-    while node_stack:
-        last_node = node_stack.pop()
-        last_node_type = nncf_graph.node_type_fn(last_node)
-
-        if not visited[last_node['key']]:
-            visited[last_node['key']] = True
-        else:
-            continue
-
-        if last_node_type not in required_types:
-            edges = get_edges_fn(last_node['key'])
-            for in_node_name, out_node_name in edges:
-                cur_node = graph.nodes[out_node_name] if forward else graph.nodes[in_node_name]
-
-                if not visited[cur_node['key']]:
-                    node_stack.append(cur_node)
-        else:
-            found_nodes.append(last_node)
-    return found_nodes
-
-
-def traverse_function(node: NNCFNode, output: List[NNCFNode], nncf_graph: NNCFGraph, type_check_fn, visited) \
+def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, visited) \
         -> Tuple[bool, List[NNCFNode]]:
-    nx_node = nncf_graph._nx_graph.nodes[nncf_graph.get_node_key_by_id(node.node_id)]
-    node_type = nncf_graph.node_type_fn(nx_node)
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
 
-    if not type_check_fn(node_type):
+    if not type_check_fn(node.node_type):
         return False, output
 
     output.append(node)
@@ -172,7 +132,7 @@ def get_first_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> Lis
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+    partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
 
@@ -194,7 +154,7 @@ def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List
     graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
-    partial_traverse_function = partial(traverse_function, nncf_graph=graph,
+    partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in pruned_ops_types,
                                         visited=visited)
     last_pruned_nodes = []
