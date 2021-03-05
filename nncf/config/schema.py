@@ -683,6 +683,8 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
         "algorithm": {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
+        "scale": with_attributes(_NUMBER,
+                                 description="Scale parameter for kdloss")
     },
     "additionalProperties": False
 }

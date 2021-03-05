@@ -3,6 +3,7 @@ from typing import List
 from copy import deepcopy
 import torch
 from functools import reduce
+from nncf import NNCFConfig
 
 from nncf.nncf_network import NNCFNetwork, InsertionCommand
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
@@ -14,10 +15,11 @@ from nncf.utils import objwalk
 
 
 class KDLossCalculator(PTCompressionLoss):
-    def __init__(self, original_model):
+    def __init__(self, original_model, scale):
         super().__init__()
         self.original_model = original_model
         self.original_model.train()
+        self.scale = scale
         self.mse = torch.nn.MSELoss()
 
     def forward(self, input_=None, target=None):
@@ -43,7 +45,7 @@ class KDLossCalculator(PTCompressionLoss):
 
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
-        return reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
+        return self.scale * reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
                       zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
 
     def statistics(self, quickly_collected_only=False):
@@ -52,21 +54,25 @@ class KDLossCalculator(PTCompressionLoss):
 
 @COMPRESSION_ALGORITHMS.register('knowledge_distillation')
 class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
+    def __init__(self, config: NNCFConfig, should_init: bool = True):
+        super().__init__(config, should_init)
+        self.scale = config.get('scale', 1)
+
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         self.original_model = deepcopy(target_model.nncf_module)
         return []
 
     def build_controller(self, target_model):
-        return KnowledgeDistillationController(target_model, self.original_model)
+        return KnowledgeDistillationController(target_model, self.original_model, self.scale)
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
 
-    def __init__(self, target_model, original_model):
+    def __init__(self, target_model, original_model, scale):
         super().__init__(target_model)
-        self._loss = KDLossCalculator(original_model)
+        self._loss = KDLossCalculator(original_model, scale)
 
     def distributed(self):
         pass
