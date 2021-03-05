@@ -840,8 +840,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if not graph_node:
                 raise RuntimeError(f'Internal error: failed to find node for by scope={module_scope}')
 
-            op_arch = target_model.get_op_arch_by_graph_node(graph_node)
-            is_adjust_padding_applicable = op_arch in adjust_padding_operation_set
+            op_type = graph_node[NNCFGraph.OP_TYPE_NODE_ATTR]
+            is_adjust_padding_applicable = op_type in adjust_padding_operation_set
             if self._should_setup_adjust_pad_ops and is_adjust_padding_applicable:
                 found_groups = filter(lambda group: wqp_id in group, quantizer_setup.shared_input_operation_set_groups)
                 for found_group in found_groups:

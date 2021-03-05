@@ -46,7 +46,17 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 ctx.in_operator = False
                 raise
         else:
+
             ia_op_exec_context = ctx.get_caller_context(operator_info.name)
+
+            from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
+            op_type = OPERATOR_METATYPES.get_operator_metatype_by_op_name(ia_op_exec_context.operator_name)
+            module = ctx.get_current_module()
+            if module is not None:
+                subtype = op_type.determine_subtype(containing_module=module)
+                if subtype is not None:
+                    op_type = subtype
+
             ctx.register_operator_call(ia_op_exec_context.operator_name, ia_op_exec_context.scope_in_model)
 
             op_input = OperatorInput(list(args), kwargs)

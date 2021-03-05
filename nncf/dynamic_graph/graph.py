@@ -222,6 +222,7 @@ class DefaultScopeNodeMatcher:
         return node_candidates
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs) -> PTNNCFNode:
+                 op_type: 'OperatorMetatype') -> NNCFNode:
         node_id = len(self._node_id_to_key_dict)
 
         name_parts = (str(op_exec_context.scope_in_model), op_exec_context.operator_name)
@@ -234,6 +235,7 @@ class DefaultScopeNodeMatcher:
             PTNNCFGraph.ID_NODE_ATTR: node_id,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
             PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
+            NNCFGraph.OP_TYPE_NODE_ATTR: op_type
         }
         self._nx_graph.add_node(node_key, **attrs)
 
@@ -322,7 +324,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs) -> PTNNCFNode:
-        node = super().add_node(op_exec_context, inputs)
+        node = super().add_node(op_exec_context, inputs, op_type)
         self.save_first_iteration_node(inputs, node)
         return node
 
@@ -439,7 +441,7 @@ class NodeManager:
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs)
+        return matcher.add_node(op_exec_context, inputs, op_type)
 
 
 class NNCFGraphEdge:
@@ -475,6 +477,7 @@ class PTNNCFGraph(NNCFGraph):
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
+    OP_TYPE_NODE_ATTR = "op_type"
 
     def __init__(self):
         super().__init__()
@@ -500,7 +503,8 @@ class PTNNCFGraph(NNCFGraph):
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs) -> PTNNCFNode:
-        node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs)
+        node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs,
+                                           op_type)
 
         from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:  # TODO: refactorable model input node name
@@ -742,6 +746,7 @@ class PTNNCFGraph(NNCFGraph):
         return PTNNCFNode(nx_node[PTNNCFGraph.ID_NODE_ATTR],
                           nx_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                           nx_node)
+                        op_type=nx_node[NNCFGraph.OP_TYPE_NODE_ATTR])
 
     def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[NNCFNode]:
         """

@@ -20,6 +20,7 @@ from typing import Callable, List, Dict, Tuple, Union
 from copy import deepcopy
 from itertools import islice
 from typing import Optional
+import torch
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
@@ -283,7 +284,7 @@ class TracingContext:
                 node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
                 if node is None:
                     node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
-                                               inputs)
+                                               inputs, op_type)
         return node
 
     def get_caller_context(self, operator_type: str) -> InputAgnosticOperationExecutionContext:
@@ -347,14 +348,14 @@ class TracingContext:
         _CURRENT_CONTEXT = self._save_context
         self._save_context = None
 
-    def push_scope(self, scope_module):
-        relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(scope_module)
-        self.scope_modules.append(scope_module)
+    def push_scope(self, called_module: torch.nn.Module):
+        relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(called_module)
+        self.module_call_stack.append(called_module)
         self.relative_scopes_stack.append(relative_scopes_list)
 
     def pop_scope(self):
         self.relative_scopes_stack.pop()
-        self.scope_modules.pop()
+        self.module_call_stack.pop()
 
     def register_pre_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext,
                            input_port_id: int):
@@ -433,9 +434,14 @@ class TracingContext:
         self._thread_local.in_operator = val
 
     @property
-    def scope_modules(self):
+    def module_call_stack(self) -> List[torch.nn.Module]:
         self._init_thread_local()
-        return self._thread_local.scope_modules
+        return self._thread_local.module_call_stack
+
+    def get_current_module(self) -> Optional[torch.nn.Module]:
+        if self.module_call_stack:
+            return self.module_call_stack[-1]
+        return None
 
     @property
     def relative_scopes_stack(self) -> List[Scope]:
@@ -449,7 +455,7 @@ class TracingContext:
             return
         tl.ready = True
         tl.scopes = []
-        tl.scope_modules = []
+        tl.module_call_stack = []
         tl.in_operator = False
         tl.num_nested_hooks = 0
         tl.base_module_replica = None
@@ -471,9 +477,9 @@ class TracingContext:
 
     def _get_scope_relative_to_last_registered_module_call(self, module) -> Scope:
         module_class = module.__class__.__name__
-        if not self.scope_modules:
+        if not self.module_call_stack:
             return Scope([ScopeElement(module_class), ])
-        q = deque([(tuple(), self.scope_modules[-1])])
+        q = deque([(tuple(), self.module_call_stack[-1])])
         while q:
             scope_parts, top = q.popleft()
             if module is top:
