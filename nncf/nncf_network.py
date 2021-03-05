@@ -18,6 +18,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 
 import functools
 import networkx as nx
@@ -29,7 +30,9 @@ from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.graph import BaseModuleAttributes
 from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import GroupNormModuleAttributes
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
@@ -54,6 +57,8 @@ from nncf.utils import get_state_dict_names_with_modules
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
+Module = TypeVar('Module', bound=nn.Module)
+ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseModuleAttributes)
 
 class ExtraCompressionModuleType(Enum):
     ACTIVATION_QUANTIZER = 0
@@ -800,14 +805,26 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return result
 
     def _mark_original_graph_nodes_with_module_attributes(self):
-        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
-        for node in self._original_graph.get_nodes_by_types(general_conv_types):
+        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["group_norm"]
+        for node in self._original_graph.get_nodes_by_types(node_types):
             scope = node.op_exec_context.scope_in_model
             input_agnostic = node.op_exec_context.input_agnostic
             module = self.get_module_by_scope(scope)
             nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
-            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
-                                                                               module.in_channels,
-                                                                               module.out_channels,
-                                                                               module.stride,
-                                                                               module.groups)
+            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
+
+
+def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:
+    if operator_name == "group_norm":
+        return GroupNormModuleAttributes(
+            module.weight.requires_grad,
+            module.num_channels,
+            module.num_groups
+        )
+    return ConvolutionModuleAttributes(
+        module.weight.requires_grad,
+        module.in_channels,
+        module.out_channels,
+        module.stride,
+        module.groups
+    )
