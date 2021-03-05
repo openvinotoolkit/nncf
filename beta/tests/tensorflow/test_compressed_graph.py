@@ -190,41 +190,49 @@ SKIP_MAP = {
 
 
 def get_test_models_desc(algorithm):
+    def ref_name(name):
+        # Reason: graph_def change cond_true and cond_false function names
+        # regardless tf.compat.v1.reset_default_graph and
+        #            tf.keras.backend.clear_session
+        ext = '.dot' if algorithm == SparsityAlgo.rb else '.pb'
+        return name + ext
+
+    # PLEASE USE .dot FORMAT FOR ALL NETS WHICH USE tf.cond OPERATION
     return [
         pytest.param(
-            ModelDesc('densenet121.pb', test_models.DenseNet121, [1, 32, 32, 3]),
+            ModelDesc(ref_name('densenet121.pb'), test_models.DenseNet121, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('densenet121', ())
         ),
         pytest.param(
-            ModelDesc('inception_resnet_v2.pb', test_models.InceptionResNetV2, [1, 75, 75, 3]),
+            ModelDesc(ref_name('inception_resnet_v2.pb'), test_models.InceptionResNetV2, [1, 75, 75, 3]),
             marks=SKIP_MAP[algorithm].get('inception_resnet_v2', ())
         ),
-        ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
-        ModelDesc('mobilenet_v1.pb', test_models.MobileNet, [1, 128, 128, 3]),
-        ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
+        ModelDesc(ref_name('inception_v3.pb'), test_models.InceptionV3, [1, 75, 75, 3]),
+        ModelDesc(ref_name('mobilenet_v1.pb'), test_models.MobileNet, [1, 128, 128, 3]),
+        ModelDesc(ref_name('mobilenet_v2.pb'), test_models.MobileNetV2, [1, 96, 96, 3]),
         pytest.param(
-            ModelDesc('nasnet_mobile.pb', test_models.NASNetMobile, [1, 32, 32, 3]),
+            ModelDesc(ref_name('nasnet_mobile.pb'), test_models.NASNetMobile, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('nasnet_mobile', ())
         ),
-        ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
-        ModelDesc('resnet50_v2.pb', test_models.ResNet50V2, [1, 32, 32, 3]),
-        ModelDesc('vgg16.pb', test_models.VGG16, [1, 32, 32, 3]),
+        ModelDesc(ref_name('resnet50.pb'), test_models.ResNet50, [1, 32, 32, 3]),
+        ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+        ModelDesc(ref_name('vgg16.pb'), test_models.VGG16, [1, 32, 32, 3]),
         pytest.param(
-            ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
+            ModelDesc(ref_name('xception.pb'), test_models.Xception, [1, 71, 71, 3]),
             marks=SKIP_MAP[algorithm].get('xception', ())
         ),
         pytest.param(
-            ModelDesc('retinanet.pb', test_models.RetinaNet, [1, None, None, 3]),
+            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, None, None, 3]),
             marks=SKIP_MAP[algorithm].get('retinanet', ())
         ),
-        ModelDesc('sequential_model.pb', test_models.SequentialModel, [1, 224, 224, 3]),
-        ModelDesc('sequential_no_input_model.pb', test_models.SequentialModelNoInput, [1, 224, 224, 3]),
+        ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
+        ModelDesc(ref_name('sequential_no_input_model.pb'), test_models.SequentialModelNoInput, [1, 224, 224, 3]),
         pytest.param(
-            ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
+            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
         ),
         pytest.param(
-            ModelDesc('shared_layers_model.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
+            ModelDesc(ref_name('shared_layers_model.pb'), test_models.SharedLayersModel, [1, 30, 30, 3]),
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
@@ -232,7 +240,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
-            ModelDesc('yolo_v4.pb', test_models.YOLOv4, [1, None, None, 3]),
+            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, None, None, 3]),
             marks=SKIP_MAP[algorithm].get('yolo_v4', ())
         ),
         pytest.param(

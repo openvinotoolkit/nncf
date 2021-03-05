@@ -74,9 +74,9 @@ class RBSparsifyingWeight(NNCFOperation):
            mask and param `trainable`
         :param _:
         '''
-        if tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)):
-            return apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps))
-        return apply_mask(layer_weights, binary_mask(op_weights['mask']))
+        return tf.cond(tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)),
+                       true_fn=lambda: apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
+                       false_fn=lambda: apply_mask(layer_weights, binary_mask(op_weights['mask'])))
 
     def freeze(self, op_weights):
         '''

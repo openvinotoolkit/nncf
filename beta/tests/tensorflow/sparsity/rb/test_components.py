@@ -204,7 +204,7 @@ class TestSparseModules:
             dummy_x = tf.random.normal(dataset_len + model.input_shape[1:])
             dummy_y = tf.random.normal(dataset_len + model.output_shape[1:])
 
-            model.compile(optimizer=tf.keras.optimizers.SGD(10),
+            model.compile(optimizer=tf.keras.optimizers.SGD(50),
                           loss=[tf.keras.losses.CategoricalCrossentropy()],
                           metrics=[tfa.metrics.MeanMetricWrapper(algo.loss, name='rb_loss')])
             model.fit(x=dummy_x,
