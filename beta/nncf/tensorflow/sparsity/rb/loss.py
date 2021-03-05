@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from beta.nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 
@@ -37,7 +37,7 @@ class SparseLoss(CompressionLoss):
                 op = sparse_layer.get_op_by_name(OP_NAME)
                 op.freeze(sparse_layer.ops_weights[OP_NAME])
 
-    def call(self, *args, **kwargs):
+    def calculate(self, *args, **kwargs):
         if self.disabled:
             return tf.constant(0.)
 
@@ -80,7 +80,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         for sparse_layer in self._sparse_layers:
             self.per_layer_target[sparse_layer] = tf.Variable(self.target)
 
-    def call(self):
+    def calculate(self, *args, **kwargs):
         if self.disabled:
             return tf.constant(0.)
 
