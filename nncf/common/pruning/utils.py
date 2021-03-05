@@ -16,11 +16,13 @@ from typing import List, Tuple, Optional
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.utils.registry import Registry
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
-    return node.module_attributes.groups != 1
+    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+           and node.module_attributes.groups != 1
 
 
 def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:

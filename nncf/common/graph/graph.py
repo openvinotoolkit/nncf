@@ -16,8 +16,11 @@ from typing import Optional
 from typing import Callable
 from typing import Tuple
 from typing import Any
+from typing import KeysView
+from typing import ValuesView
 
 import networkx as nx
+from nncf.common.graph.module_attributes import BaseModuleAttributes
 
 
 class NNCFNode:
@@ -31,15 +34,15 @@ class NNCFNode:
         self.data = data if data else {}
 
     @property
-    def node_name(self):
+    def node_name(self) -> str:
         return self.data.get(NNCFGraph.KEY_NODE_ATTR)
 
     @property
-    def node_type(self):
+    def node_type(self) -> str:
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property
-    def module_attributes(self):
+    def module_attributes(self) -> BaseModuleAttributes:
         return self.data.get(NNCFGraph.MODULE_ATTRIBUTES)
 
     def __str__(self):
@@ -70,7 +73,7 @@ class NNCFGraph:
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = dict()
 
-    def get_node_by_id(self, node_id) -> NNCFNode:
+    def get_node_by_id(self, node_id: int) -> NNCFNode:
         return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
 
     def get_input_nodes(self) -> List[NNCFNode]:
@@ -87,9 +90,6 @@ class NNCFGraph:
                 outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
         return outputs
 
-    def get_all_node_idxs(self):
-        return self._node_id_to_key_dict.keys()
-
     def get_nodes_by_types(self, type_list: List[str]) -> List[NNCFNode]:
         all_nodes_of_type = []
         for node_key in self.get_all_node_keys():
@@ -99,7 +99,10 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-    def get_all_node_keys(self):
+    def get_all_node_idxs(self) -> KeysView[int]:
+        return self._node_id_to_key_dict.keys()
+
+    def get_all_node_keys(self) -> ValuesView[str]:
         return self._node_id_to_key_dict.copy().values()
 
     def get_all_nodes(self) -> List[NNCFNode]:
@@ -114,11 +117,8 @@ class NNCFGraph:
     def _nx_node_to_nncf_node(nx_node: dict) -> NNCFNode:
         return NNCFNode(nx_node[NNCFGraph.ID_NODE_ATTR], nx_node)
 
-    def get_node_key_by_id(self, node_id):
+    def get_node_key_by_id(self, node_id: id) -> str:
         return self._node_id_to_key_dict[node_id]
-
-    def get_nx_node_by_key(self, key: str):
-        return self._nx_graph.nodes[key]
 
     def get_next_nodes(self, node: NNCFNode) -> Optional[List[NNCFNode]]:
         nx_node_keys = self._nx_graph.succ[self._node_id_to_key_dict[node.node_id]]
@@ -145,19 +145,19 @@ class NNCFGraph:
                 self._traverse_graph_recursive_helper(node, traverse_function, output, traverse_forward)
         return output
 
-    def add_node(self, label, **attrs):
+    def add_node(self, label: str, **attrs):
         node_id = len(self._node_id_to_key_dict)
         self._node_id_to_key_dict[node_id] = label
         attrs[NNCFGraph.KEY_NODE_ATTR] = label
         attrs[NNCFGraph.ID_NODE_ATTR] = node_id
         self._nx_graph.add_node(label, **attrs)
 
-    def add_edge(self, u_of_edge, v_of_edge, **attrs):
+    def add_edge(self, u_of_edge: str, v_of_edge: str, **attrs):
         self._nx_graph.add_edge(u_of_edge, v_of_edge, **attrs)
 
-    def topological_sort(self):
+    def topological_sort(self) -> List[NNCFNode]:
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
                 for node_name in nx.topological_sort(self._nx_graph)]
 
-    def dump_graph(self, path):
+    def dump_graph(self, path: str):
         nx.drawing.nx_pydot.write_dot(self._nx_graph, path)

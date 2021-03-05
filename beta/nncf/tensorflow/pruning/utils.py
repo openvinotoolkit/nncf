@@ -22,17 +22,20 @@ from beta.nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def tf_is_depthwise_conv(node: NNCFNode) -> bool:
-    return node.module_attributes.groups == node.module_attributes.in_channels \
+    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+           and node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
            and node.module_attributes.in_channels > 1 \
            or node.node_type == 'DepthwiseConv2D'
 
 
 def tf_is_conv_with_downsampling(node: NNCFNode) -> bool:
-    return not np.all(np.array(node.module_attributes.stride) == 1) \
+    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+           and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in DECONV_LAYERS
 
 

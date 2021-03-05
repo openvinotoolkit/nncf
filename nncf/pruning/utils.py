@@ -21,6 +21,7 @@ from nncf.layers import NNCF_DECONV_MODULES_DICT
 from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_network import NNCFNetwork
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def get_bn_node_for_conv(graph: nx.Graph, conv_node: dict) -> Optional[dict]:
@@ -52,11 +53,13 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
 
 
 def pt_is_depthwise_conv(node: PTNNCFNode) -> bool:
-    return node.module_attributes.groups == node.module_attributes.in_channels \
+    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+           and node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
            and node.module_attributes.in_channels > 1
 
 
 def pt_is_conv_with_downsampling(node: PTNNCFNode) -> bool:
-    return not np.all(np.array(node.module_attributes.stride) == 1) \
+    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+           and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]

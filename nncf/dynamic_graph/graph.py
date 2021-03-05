@@ -515,6 +515,9 @@ class PTNNCFGraph(NNCFGraph):
         nncf_node = self._nx_node_to_nncf_node(nx_node)
         return nncf_node
 
+    def get_nx_node_by_key(self, key: str):
+        return self._nx_graph.nodes[key]
+
     def get_node_key_by_iap_context(self, iap_ctx: InputAgnosticOperationExecutionContext) -> str:
         for node_key, node in self._nx_graph.nodes.items():
             if node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == iap_ctx:
