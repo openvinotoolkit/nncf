@@ -10,10 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from nncf.torch.dynamic_graph.scope import Scope
 
 
 class OperationAddress:
-    def __init__(self, operator_name: str, scope_in_model: 'Scope', call_order: int):
+    def __init__(self, operator_name: str, scope_in_model: Scope, call_order: int):
         self.operator_name = operator_name
         self.scope_in_model = scope_in_model
         self.call_order = call_order
@@ -35,8 +36,6 @@ class OperationAddress:
     def from_str(s: str):
         scope_and_op, _, call_order_str = s.rpartition('_')
         scope_str, _, op_name = scope_and_op.rpartition('/')
-
-        from nncf.torch.dynamic_graph.scope import Scope
         return OperationAddress(op_name,
                                 Scope.from_str(scope_str),
                                 int(call_order_str))
