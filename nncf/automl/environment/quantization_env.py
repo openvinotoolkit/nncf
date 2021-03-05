@@ -154,7 +154,7 @@ class QuantizationEnv:
         if self.hw_cfg_type is None:
             self.model_bitwidth_space = params.bits
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bitwidths()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs

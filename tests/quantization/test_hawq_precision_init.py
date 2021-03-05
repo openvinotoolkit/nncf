@@ -42,7 +42,6 @@ from nncf.checkpoint_loading import load_state
 from nncf.common.quantization.structs import QuantizerSetupType
 from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.context import ScopeElement
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
@@ -63,7 +62,6 @@ from nncf.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.quantization.precision_init.perturbations import Perturbations
 from nncf.quantization.precision_init.traces_order import TracesOrder
 from nncf.quantization.precision_init.traces_order import TracesPerLayer
-from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type
 from nncf.utils import safe_thread_call
@@ -364,56 +362,6 @@ def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
     create_compressed_model_and_algo_for_test(model, config)
 
 
-PrecisionConstraintsTestParams = namedtuple('PrecisionConstraintsTestParams',
-                                            ('bits_configurations', 'constraints', 'survived_configurations_id',
-                                             'order'))
-
-
-def get_mock_precision_constraints(constraints, ordered_weight_keys):
-    hw_precision_constraints = HardwareQuantizationConstraints()
-    for key, bits in zip(ordered_weight_keys, constraints):
-        hw_precision_constraints.add(key, set(bits))
-    return hw_precision_constraints
-
-
-def get_mock_quantizer_id(key: str) -> WeightQuantizerId:
-    scope_element = ScopeElement(key)
-    scope = Scope([scope_element])
-    return WeightQuantizerId(scope)
-
-
-@pytest.mark.parametrize("precision_constraints",
-                         (
-                             PrecisionConstraintsTestParams(
-                                 bits_configurations=[[4, 6, 8], [8, 8, 8], [8, 6, 8], [6, 8, 8]],
-                                 constraints=[[4, 8], [6], [8]],
-                                 survived_configurations_id=[0, 2],
-                                 order=[0, 1, 2]),
-                             PrecisionConstraintsTestParams(
-                                 bits_configurations=[[4, 6, 8], [8, 8, 6], [8, 8, 8]],
-                                 constraints=[[6, 8], [8], [6]],
-                                 survived_configurations_id=[],
-                                 order=[0, 2, 1]),
-                             PrecisionConstraintsTestParams(
-                                 bits_configurations=[[4, 6, 8], [8, 8, 6], [8, 8, 8]],
-                                 constraints=[],
-                                 survived_configurations_id=[0, 1, 2],
-                                 order=[0, 2, 1])
-                         ))
-def test_get_configs_constrained_by_precision(precision_constraints):
-    bits_configurations, constraints, survived_configurations_id, order = precision_constraints
-    traces_order = TracesOrder(order)
-    ref_configurations = [bits_configurations[config_id] for config_id in survived_configurations_id]
-    ordered_weight_keys = [get_mock_quantizer_id(str(i)) for i in range(len(constraints))]
-    hw_precision_constraints = get_mock_precision_constraints(constraints, ordered_weight_keys)
-
-    # pylint:disable=protected-access
-    actual_configs = HAWQPrecisionInitializer._filter_configs_by_precision_constraints(
-        bits_configurations, hw_precision_constraints, ordered_weight_keys, traces_order)
-
-    assert ref_configurations == actual_configs
-
-
 HAWQTestParams = namedtuple('HAWQTestParams', ('iter_number', 'batch_size', 'num_data_points', 'ref_trace'))
 
 
@@ -480,7 +428,7 @@ def test_get_non_decreasing_bit_sequences():
 
     order = TracesOrder(list(range(L)))
     matcher = TraceOrderBitwidthMatcher(bits, order)
-    actual_config = matcher.get_all_non_decreasing_bit_sequences()
+    actual_config = matcher.get_all_non_decreasing_bitwidth_sequences()
     ref_num = get_size_of_search_space(m, L)
     assert len(ref_configs) == ref_num
     assert len(actual_config) == ref_num
@@ -611,7 +559,7 @@ def test_check_hawq_dump(mocker, tmp_path):
     quantizer_configurations = [[qconf1, qconf1], [qconf2, qconf2]]
     flops_per_config = [tensor1.item(), tensor2.item()]
     choosen_config_index = id_
-    configuration_metric = [tensor1, tensor2]
+    metric_per_qconfig_sequence = [tensor1, tensor2]
     perturbations = Perturbations()
     perturbations.add(id_, qconf1, tensor1)
     perturbations.add(id_, qconf2, tensor2)
@@ -631,14 +579,14 @@ def test_check_hawq_dump(mocker, tmp_path):
     traces_per_layer = TracesPerLayer(torch.cat((tensor1, tensor2)))
 
     set_debug_log_dir(str(tmp_path))
-    hawq_debugger = HAWQDebugger(quantizer_configurations, perturbations,
-                                 quantizer_configurations,
+    hawq_debugger = HAWQDebugger(quantizer_configurations,
+                                 perturbations,
                                  [weight_observers, weight_observers],
                                  traces_per_layer,
                                  [qconf1.num_bits, qconf2.num_bits])
 
-    hawq_debugger.dump_metric_MB(configuration_metric)
-    hawq_debugger.dump_metric_flops(configuration_metric, flops_per_config, choosen_config_index)
+    hawq_debugger.dump_metric_MB(metric_per_qconfig_sequence)
+    hawq_debugger.dump_metric_flops(metric_per_qconfig_sequence, flops_per_config, choosen_config_index)
     hawq_debugger.dump_avg_traces()
     hawq_debugger.dump_density_of_quantization_noise()
     hawq_debugger.dump_perturbations_ratio()
@@ -654,14 +602,14 @@ def get_quantization_config_with_ignored_scope():
 
 
 @pytest.mark.parametrize(('config_creator', 'ref_values'), (
-    [
-        get_quantization_config_without_range_init,
-        (1.25, pytest.approx(1.42, abs=1e-2), (1, 2), (1, 4), (1, pytest.approx(1.8181, abs=1e-4)))
-    ],
-    [
-        get_quantization_config_with_ignored_scope,
-        (2, 1, (1, 2), (1, 4), (1, 1))
-    ]
+        [
+            get_quantization_config_without_range_init,
+            (1.25, pytest.approx(1.42, abs=1e-2), (1, 2), (1, 4), (1, pytest.approx(1.8181, abs=1e-4)))
+        ],
+        [
+            get_quantization_config_with_ignored_scope,
+            (2, 1, (1, 2), (1, 4), (1, 1))
+        ]
 ))
 def test_flops(config_creator, ref_values):
     class ConvLinear(nn.Module):
@@ -678,15 +626,15 @@ def test_flops(config_creator, ref_values):
     quantizers = compression_ctrl.weight_quantizers
 
     handler = WeightQuantizersHandler(model, quantizers, HardwareQuantizationConstraints())
-    flops_counter = CompressionRatioCalculator(model, handler)
+    ratio_calculator = CompressionRatioCalculator(model, handler)
 
-    assert flops_counter.ratio_for_bits_configuration([4, 8]) == ref_values[0]
-    assert flops_counter.ratio_for_bits_configuration([8, 4]) == ref_values[1]
-    assert flops_counter.ratio_limits([4, 8]) == ref_values[2]
-    assert flops_counter.ratio_limits([2, 4, 8]) == ref_values[3]
+    assert ratio_calculator.compression_ratio_for_bitwitdh_sequence([4, 8]) == ref_values[0]
+    assert ratio_calculator.compression_ratio_for_bitwitdh_sequence([8, 4]) == ref_values[1]
+    assert ratio_calculator.ratio_limits([4, 8]) == ref_values[2]
+    assert ratio_calculator.ratio_limits([2, 4, 8]) == ref_values[3]
     constraints = HardwareQuantizationConstraints()
     constraints.add(list(quantizers)[0], {8})
-    assert flops_counter.ratio_limits([2, 8], constraints) == ref_values[4]
+    assert ratio_calculator.ratio_limits([2, 8], constraints) == ref_values[4]
 
 
 def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
