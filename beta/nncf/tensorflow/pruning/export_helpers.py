@@ -104,7 +104,7 @@ class TFElementwise(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardOps(DefaultMetaOp):
-    additional_types = ['Average', 'Maximum', 'Minimum', 'Dense', 'MatMul']
+    additional_types = ['Dense', 'MatMul']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

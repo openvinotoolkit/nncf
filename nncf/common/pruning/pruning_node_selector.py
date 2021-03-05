@@ -20,8 +20,8 @@ from collections import defaultdict
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
-from nncf.common.pruning.utils import get_first_pruned_nodes
-from nncf.common.pruning.utils import get_last_pruned_nodes
+from nncf.common.pruning.utils import get_first_nodes_of_type
+from nncf.common.pruning.utils import get_last_nodes_of_type
 from nncf.common.pruning.utils import get_previous_conv
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -237,8 +237,10 @@ class PruningNodeSelector:
         prune = True
         msg = None
 
-        input_non_pruned_nodes = get_first_pruned_nodes(graph, self._prune_operations + ['linear'])
-        output_non_pruned_nodes = get_last_pruned_nodes(graph, self._prune_operations + ['linear'])
+        stop_propagation_ops = self._stop_propagation_op_metatype.get_all_op_aliases()
+        types_to_track = self._prune_operations + stop_propagation_ops
+        input_non_pruned_nodes = get_first_nodes_of_type(graph, types_to_track)
+        output_non_pruned_nodes = get_last_nodes_of_type(graph, types_to_track)
         module_identifier = get_module_identifier(node)
 
         if not should_consider_scope(module_identifier, self._target_scopes, self._ignored_scopes):

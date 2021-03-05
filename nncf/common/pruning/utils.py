@@ -122,34 +122,34 @@ def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, vis
     return True, output
 
 
-def get_first_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List[NNCFNode]:
+def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
     """
-    Looking for first pruned node in graph.
-    First == layer of pruned type, that there is a path from the input such that there are no other
-    pruned operations on it.
-    :param pruned_ops_types: types of modules that will be pruned
+    Looking for first node in graph with type in op_types.
+    First == layer with type in op_types, that there is a path from the input such that there are no other
+    operations with type in op_types on it.
+    :param op_types: types of modules to track
     :param graph: graph to work with
-    :return: list of all first pruned nodes
+    :return: list of all first nodes with type in op_types
     """
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
     partial_traverse_function = partial(traverse_function,
-                                        type_check_fn=lambda x: x in pruned_ops_types,
+                                        type_check_fn=lambda x: x in op_types,
                                         visited=visited)
 
-    first_pruned_nodes = []
+    first_nodes_of_type = []
     for root in graph_roots:
-        first_pruned_nodes.extend(graph.traverse_graph(root, partial_traverse_function))
-    return first_pruned_nodes
+        first_nodes_of_type.extend(graph.traverse_graph(root, partial_traverse_function))
+    return first_nodes_of_type
 
 
-def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List[NNCFNode]:
+def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
     """
-    Looking for last pruned nodes in graph.
-    Last == layer of pruned type, that there is a path from this layer to the model output
-    such that there are no other pruned operations on it.
-    :param pruned_ops_types: types of modules that will be pruned
+    Looking for last node in graph with type in op_types.
+    Last == layer with type in op_types, that there is a path from this layer to the model output
+    such that there are no other operations with type in op_types on it.
+    :param op_types: types of modules to track
     :param graph: graph to work with
     :return: list of all last pruned nodes
     """
@@ -157,13 +157,13 @@ def get_last_pruned_nodes(graph: NNCFGraph, pruned_ops_types: List[str]) -> List
 
     visited = {node_id: False for node_id in graph.get_all_node_idxs()}
     partial_traverse_function = partial(traverse_function,
-                                        type_check_fn=lambda x: x in pruned_ops_types,
+                                        type_check_fn=lambda x: x in op_types,
                                         visited=visited)
-    last_pruned_nodes = []
+    last_nodes_of_type = []
     for output in graph_outputs:
-        last_pruned_nodes.extend(graph.traverse_graph(output, partial_traverse_function, False))
+        last_nodes_of_type.extend(graph.traverse_graph(output, partial_traverse_function, False))
 
-    return last_pruned_nodes
+    return last_nodes_of_type
 
 
 def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
