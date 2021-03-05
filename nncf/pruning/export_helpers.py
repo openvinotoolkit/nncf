@@ -16,6 +16,7 @@ import torch
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node
+from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
@@ -286,21 +287,22 @@ class PTBatchNorm(PTDefaultMetaOp):
                          ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
 
 
-@PRUNING_OPERATOR_METATYPES.register('group_norm')
-class GroupNorm(DefaultMetaOp):
+@PT_PRUNING_OPERATOR_METATYPES.register('group_norm')
+class GroupNorm(PTDefaultMetaOp):
     subtypes = [GroupNormMetatype]
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: PTNNCFNode):
         # For Instance Normalization
-        return node.module_attributes.num_groups == node.module_attributes.num_channels
+        return isinstance(node.module_attributes, GroupNormModuleAttributes) \
+               and node.module_attributes.num_groups == node.module_attributes.num_channels
 
     @classmethod
-    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
 
     @classmethod
-    def input_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+    def input_prune(cls, model: NNCFNetwork, nx_node, graph: PTNNCFGraph, nx_graph: nx.DiGraph):
         input_mask = nx_node['input_masks'][0]
         if input_mask is None:
             return

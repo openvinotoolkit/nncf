@@ -42,3 +42,19 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
                and self.out_channels == other.out_channels \
                and self.stride == other.stride \
                and self.groups == other.groups
+
+
+class GroupNormModuleAttributes(BaseModuleAttributes):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 num_channels: int,
+                 num_groups: int):
+        super().__init__(weight_requires_grad)
+        self.num_channels = num_channels
+        self.num_groups = num_groups
+
+    def __eq__(self, other):
+        return isinstance(other, BaseModuleAttributes) \
+               and super().__eq__(other) \
+               and self.num_channels == other.num_channels \
+               and self.num_groups == other.num_groups
