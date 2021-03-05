@@ -197,13 +197,13 @@ SKIP_MAP = {
         'xception': pytest.mark.skip(reason='gitlab issue #28')
     },
     'filter_pruning': {
-        'densenet121': pytest.mark.skip(reason='Concat-Bn is not supported'),
+        'densenet121': pytest.mark.skip(reason='ticket #50604'),
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
-        'mask_rcnn': pytest.mark.skip(reason='not ready yet'),
-        'mobilenet_v3_small': pytest.mark.skip(reason='problem with clusterization'),
-        'yolo_v4': pytest.mark.skip(reason='not ready yet'),
+        'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
+        'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
+        'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
     }
 }
 
