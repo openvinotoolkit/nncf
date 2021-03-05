@@ -165,10 +165,6 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
     def __init__(self, controller, params=None):
         super().__init__(controller, params)
         self.sparsity_loss = controller.loss
-        from .rb.loss import SparseLoss
-        if not isinstance(self.sparsity_loss, SparseLoss):
-            raise TypeError('AdaptiveSparseScheduler expects SparseLoss, but {} is given'.format(
-                self.sparsity_loss.__class__.__name__))
         self.decay_step = params.get('step', 0.05)
         self.eps = params.get('eps', 0.03)
         self.patience = params.get('patience', 1)
