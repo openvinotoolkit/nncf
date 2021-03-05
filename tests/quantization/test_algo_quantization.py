@@ -10,36 +10,46 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import List, Tuple
+from copy import deepcopy
+from typing import List
+from typing import Tuple
 
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
-from copy import deepcopy
-
-from torchvision.models import resnet50, squeezenet1_1
+from torchvision.models import resnet50
+from torchvision.models import squeezenet1_1
 
 from nncf.api.compression import CompressionScheduler
 from nncf.checkpoint_loading import load_state
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionLoss
-from nncf.dynamic_graph.context import ScopeElement, Scope
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.context import ScopeElement
 from nncf.hw_config import HWConfigType
 from nncf.layers import NNCFConv2d
-from nncf.module_operations import UpdateWeight, UpdateInputs
+from nncf.module_operations import UpdateInputs
+from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.quantization.algo import QuantizationController, QuantizationBuilder
-from nncf.quantization.layers import SymmetricQuantizer, BaseQuantizer, \
-    QUANTIZATION_MODULES, PTQuantizerSpec
-from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
-from nncf.quantization.quantizer_id import WeightQuantizerId, NonWeightQuantizerId
+from nncf.quantization.algo import QuantizationBuilder
+from nncf.quantization.algo import QuantizationController
+from nncf.quantization.layers import BaseQuantizer
+from nncf.quantization.layers import PTQuantizerSpec
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.layers import SymmetricQuantizer
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type
-from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init, \
-    get_squeezenet_quantization_config
-from tests.helpers import BasicConvTestModel, TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_conv
+from tests.helpers import BasicConvTestModel
+from tests.helpers import TwoConvTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 
 
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
@@ -144,94 +154,6 @@ def compare_weights_activation_quantizers_pairs(actual_pairs: List[Tuple[List[We
         for weight_quantizer in wqs:
             assert weight_quantizer.narrow_range
             assert weight_quantizer in ref_weight_quantizers
-
-
-#
-#  fq           fq
-#   \            \
-# сonv0 - fq - conv1
-#   /
-# fq
-#
-def test_get_weight_activation_pairs():
-    model_cls = TwoConvTestModel
-    config = get_quantization_config_without_range_init()
-    _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
-
-    actual_pairs = algo.get_weights_activation_quantizers_pairs()
-    ref_pair_names = [(['Sequential[features]/Sequential[0]/NNCFConv2d[0]module_weight'],
-                       '/nncf_model_input_0',
-                       ),
-                      (['Sequential[features]/Sequential[1]/NNCFConv2d[0]module_weight'],
-                       'Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0',
-                       )]
-
-    compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_cls.__name__)
-
-
-class DoubleWeightsPerActivation(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.features = []
-        self.conv1 = create_conv(1, 2, 2, -1, -2)
-        self.conv2 = create_conv(1, 2, 2, -1, -2)
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x = self.relu(x)
-        return self.conv1(x), self.conv2(x)
-
-
-#              fq
-#             /
-#          conv2d
-#         /
-# relu - fq     fq
-#         \    /
-#         conv2d
-#
-def test_get_weight_activation_pairs__with_double_weights_per_activation():
-    model_cls = DoubleWeightsPerActivation
-    model_name = model_cls.__name__
-    config = get_quantization_config_without_range_init()
-
-    _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
-
-    actual_pairs = algo.get_weights_activation_quantizers_pairs()
-    ref_pair_names = [(['NNCFConv2d[conv1]module_weight', 'NNCFConv2d[conv2]module_weight'],
-                       '/nncf_model_input_0')]
-
-    compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name)
-
-
-class DoubleWeightsPerActivationWithExtraModule(DoubleWeightsPerActivation):
-    def forward(self, x):
-        x = self.relu(x)
-        return self.conv1(torch.sigmoid(x)), self.conv2(torch.sigmoid(x))
-
-
-#                     fq
-#                      \
-#         sigmoid - conv1d
-#         /
-# relu - fq           fq
-#         \            \
-#         sigmoid - conv2d
-#
-
-def test_get_weight_activation_pairs__with_extra_module():
-    model_cls = DoubleWeightsPerActivationWithExtraModule
-    model_name = model_cls.__name__
-    config = get_quantization_config_without_range_init()
-    config["compression"].update({
-        "quantizable_subgraph_patterns": [["sigmoid", "conv2d"]],
-        "quantize_inputs": False})
-    _, algo = create_compressed_model_and_algo_for_test(model_cls(), config)
-    actual_pairs = algo.get_weights_activation_quantizers_pairs()
-    ref_pair_names = [(['NNCFConv2d[conv1]module_weight', 'NNCFConv2d[conv2]module_weight'],
-                       'ReLU[relu]/RELU_0')]
-
-    compare_weights_activation_quantizers_pairs(actual_pairs, algo, ref_pair_names, model_name)
 
 
 def test_can_load_quant_algo__with_defaults():

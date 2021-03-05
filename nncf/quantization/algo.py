@@ -18,7 +18,6 @@ from pathlib import Path
 from string import Template
 from typing import Dict
 from typing import List
-from typing import Optional
 from typing import Set
 from typing import Tuple
 
@@ -53,7 +52,6 @@ from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
@@ -92,7 +90,6 @@ from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
 from nncf.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.quantization.precision_init.manual_init import ManualPrecisionInitParams
-from nncf.quantization.quantizer_id import InputQuantizerId
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_id import QuantizerId
 from nncf.quantization.quantizer_id import WeightQuantizerId
@@ -1263,54 +1260,6 @@ class QuantizationController(QuantizationControllerBase):
             raise AttributeError('Number of initialization samples must be >= 0')
         return global_init_range_config
 
-    def get_weights_activation_quantizers_pairs(self) -> List[Tuple[List[WeightQuantizerId], NonWeightQuantizerId]]:
-        """
-        finds all neighbour weight and input activation quantizers that share the same module (e.g. conv or linear).
-        Single activation quantizer can be in pair with multiple neighbour weight quantizers, e.g. like in SqueezeNet,
-        when two Convolutions share the same input activation.
-        :return: list of pairs - (list of weight quantizers, activation quantizer)
-        """
-        pairs = []
-
-        nncf_network = self._model
-        nncf_graph = nncf_network.get_original_graph()
-        non_weight_quantizers = {key: quantizer_info.quantizer_module_ref for key, quantizer_info \
-                                 in self.non_weight_quantizers.items() if not isinstance(key, InputQuantizerId)}
-
-        def traverse_graph(curr_nx_node_key: str, weight_quantizers: List[nn.Module]) -> Optional[List[nn.Module]]:
-            nx_node = nncf_graph.get_nx_node_by_key(curr_nx_node_key)
-            module_scope = nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
-            module = nncf_network.get_module_by_scope(module_scope)
-            if is_nncf_module(module):
-                if hasattr(module, 'pre_ops'):
-                    for ops in module.pre_ops.values():
-                        if isinstance(ops, UpdateWeight):
-                            weight_quantizers.append(ops.op)
-            else:
-                for succ_nx_node_key in nncf_graph.get_successors(curr_nx_node_key):
-                    return traverse_graph(succ_nx_node_key, weight_quantizers)
-            return weight_quantizers
-
-        for activation_quantizer_id in sorted(non_weight_quantizers, key=str):
-            activation_ctx = activation_quantizer_id.ia_op_exec_context
-            post_hooked_nx_node_key = nncf_graph.get_node_key_by_iap_context(activation_ctx)
-            weight_quantizers = []
-            weight_quantizer_ids = []
-            for next_nx_node_key in nncf_graph.get_successors(post_hooked_nx_node_key):
-                weight_quantizers = traverse_graph(next_nx_node_key, weight_quantizers)
-
-            for wt_quant_module in weight_quantizers:
-                for other_wt_quant_id, other_wt_quant_module_info in self.weight_quantizers.items():
-                    if other_wt_quant_module_info.quantizer_module_ref is wt_quant_module:
-                        weight_quantizer_ids.append(other_wt_quant_id)
-                        break
-                else:
-                    raise RuntimeError("Weight quantizer module obtained during graph traversal not found among "
-                                       "weight quantizer module references available in quantization controller!")
-
-            if weight_quantizer_ids:
-                pairs.append((weight_quantizer_ids, activation_quantizer_id))
-        return pairs
 
     def enable_activation_quantization(self):
         for m in self.non_weight_quantizers.values():
