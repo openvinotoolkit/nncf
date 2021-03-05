@@ -19,7 +19,7 @@ from addict import Dict
 
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
-from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.tests.tensorflow.sparsity.rb.utils import default_rb_mask_value
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_basic_fc_test_model, \
     create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name
@@ -60,7 +60,7 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
     return compress_model, algo, config
 
 
-@pytest.mark.parametrize('local_mode', [False, True], ids=['global_loss', 'per_layer_loss'])
+@pytest.mark.parametrize('local_mode', [False], ids=['global_loss'])
 @pytest.mark.parametrize('model_name',
                          list(TEST_MODELS.keys()), ids=list(TEST_MODELS.keys()))
 class TestSparseModules:
@@ -118,7 +118,7 @@ class TestSparseModules:
         model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
         rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
         assert rb_weight.trainable is not frozen
-        cls = SparseLossForPerLayerSparsity if local_mode else SparseLoss
+        cls = SparseLoss
         # pylint: disable=protected-access
         loss = cls(algo.loss._sparse_layers)
         try:

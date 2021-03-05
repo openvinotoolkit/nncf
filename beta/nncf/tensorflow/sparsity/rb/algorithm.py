@@ -15,7 +15,6 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 from tensorflow.python.keras.utils.layer_utils import count_params
 
-from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -31,7 +30,7 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
-from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
@@ -112,20 +111,14 @@ class RBSparsityController(BaseSparsityController):
         # TODO: find out purpose of this attribute
         self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
-            self._loss = SparseLossForPerLayerSparsity(sparsifyed_layers)
-            self._scheduler = CompressionScheduler()
-        else:
-            self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
-            schedule_type = params.get("schedule", "exponential")
-            scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
-            self._scheduler = scheduler_cls(self, params)
+            raise NotImplementedError
+        self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
+        schedule_type = params.get("schedule", "exponential")
+        scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
+        self._scheduler = scheduler_cls(self, params)
 
-    def set_sparsity_level(self, sparsity_level, target_layer: NNCFWrapper = None):
-        if target_layer is None:
-            #pylint:disable=no-value-for-parameter
-            self._loss.set_target_sparsity_loss(sparsity_level)
-        else:
-            self._loss.set_target_sparsity_loss(sparsity_level, target_layer)
+    def set_sparsity_level(self, sparsity_level):
+        self._loss.set_target_sparsity_loss(sparsity_level)
 
     def strip_model(self, model):
         if not isinstance(model, tf.keras.Model):

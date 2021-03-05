@@ -15,18 +15,16 @@ import pytest
 import tensorflow as tf
 from pytest import approx
 
-from nncf.api.compression import CompressionScheduler
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler
 from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
 from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
-from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import logit
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, \
-    create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name, get_basic_two_conv_test_model, \
-    get_mock_model
+    create_compressed_model_and_algo_for_test, get_weight_by_name, get_basic_two_conv_test_model
 
 
 def get_basic_sparsity_config(model_size=4, input_sample_size=None,
@@ -189,33 +187,3 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
 
     for wrapper in loss._sparse_layers:
         assert not wrapper.get_op_by_name(OP_NAME).trainable
-
-
-def test_create_rb_algo_with_per_layer_loss():
-    config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-
-    # pylint: disable=protected-access
-    assert isinstance(compression_ctrl._loss, SparseLossForPerLayerSparsity)
-
-
-def test_rb_sparsity__can_set_sparsity_level_for_module():
-    config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_basic_conv_test_model(), config)
-
-    # pylint: disable=protected-access
-    assert list(compression_ctrl._loss.per_layer_target.values())[0].numpy() == 1
-
-    compression_ctrl.set_sparsity_level(0.7, compression_ctrl.loss._sparse_layers[0])
-    assert list(compression_ctrl._loss.per_layer_target.values())[0].numpy() == pytest.approx(0.3)
-
-
-def test_create_rb_algo_with_stub_scheduler():
-    config = get_empty_config()
-    config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-
-    # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, CompressionScheduler)
