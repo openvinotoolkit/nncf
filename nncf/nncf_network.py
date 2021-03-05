@@ -821,11 +821,10 @@ def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttribut
             module.num_channels,
             module.num_groups
         )
-    else:
-        return ConvolutionModuleAttributes(
-            module.weight.requires_grad,
-            module.in_channels,
-            module.out_channels,
-            module.stride,
-            module.groups
-        )
+    return ConvolutionModuleAttributes(
+        module.weight.requires_grad,
+        module.in_channels,
+        module.out_channels,
+        module.stride,
+        module.groups
+    )

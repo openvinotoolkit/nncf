@@ -23,7 +23,7 @@ from torch import Tensor
 
 from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search_all, get_edge_boundaries
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
-from nncf.layers import ITERATION_MODULES, NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.layers import ITERATION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
 
 
