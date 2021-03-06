@@ -30,7 +30,8 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, module):
-        return BinaryMask(module.weight.size())
+        device = module.weight.device
+        return BinaryMask(module.weight.size()).to(device)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         params = self.config.get("params", {})

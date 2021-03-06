@@ -287,6 +287,8 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
 
 
 def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_subprocess_in_precommit):
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     config = get_empty_config(input_sample_sizes=[1, 3, 224, 224])
     config['compression'] = {'algorithm': 'quantization', "initializer": {"range": {"num_init_samples": 0}}}
     ngpus_per_node = torch.cuda.device_count()

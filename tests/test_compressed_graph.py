@@ -278,7 +278,8 @@ TEST_MODELS_DESC = [
 
 
 def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref_dot_file_directory: str):
-    compressed_model.to('cuda')
+    if torch.cuda.is_available():
+        compressed_model.to('cuda')
     compressed_model.do_dummy_forward()
     # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
     compressed_model.train()
