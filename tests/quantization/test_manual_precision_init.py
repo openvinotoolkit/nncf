@@ -172,6 +172,7 @@ def test_quantization_configs__with_precisions_list():
                 [[2, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv1]'],
                  [4, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv2]']]
         }})
+    config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
     config['quantizer_setup_type'] = 'pattern_based'
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)

@@ -276,7 +276,6 @@ class HAWQTestStruct(NamedTuple):
 
 
 HAWQ_TEST_PARAMS = (
-    HAWQTestStruct(config_builder=HAWQConfigBuilder()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu()),
@@ -516,7 +515,7 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs
                          [('_calc_traces', pytest.raises(RuntimeError))]
                          )
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
-    config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).build()
+    config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).for_trial().build()
     config['compression']['initializer']['range']['num_init_samples'] = 0
     model = BasicConvTestModel()
     mock_train_loader = mocker.stub()

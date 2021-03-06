@@ -132,7 +132,7 @@ WEIGHTS_GROUP_SCHEMA = {
     "additionalProperties": False
 }
 
-LINKED_ACTIVATION_SCOPES_SPECIFIER_SCHEMA = {
+UNIFIED_SCALE_OP_SCOPES_SPECIFIER_SCHEMA = {
     "type": "array",
     "items": _ARRAY_OF_STRINGS
 }
@@ -141,18 +141,18 @@ ACTIVATIONS_GROUP_SCHEMA = {
     "type": "object",
     "properties": {
         **QUANTIZER_GROUP_PROPERTIES,
-        "linked_quantizer_scopes": with_attributes(LINKED_ACTIVATION_SCOPES_SPECIFIER_SCHEMA,
-                                                   description="Specifies points in the model which will share the "
-                                                               "same quantizer module for activations. This is helpful "
-                                                               "in case one and the same quantizer scale is required "
-                                                               "for inputs to the same operation. Each sub-array will"
-                                                               "define a group of activation quantizer insertion "
-                                                               "points that have to share a single actual "
-                                                               "quantization module, each entry in this subarray "
-                                                               "should correspond to exactly one node in the NNCF "
-                                                               "graph and the groups should not overlap. The final"
-                                                               "quantizer for each sub-array will be associated with "
-                                                               "the first element of this sub-array.")
+        "unified_scale_ops": with_attributes(UNIFIED_SCALE_OP_SCOPES_SPECIFIER_SCHEMA,
+                                             description="Specifies operations in the model which will share "
+                                                         "the same quantizer module for activations. This "
+                                                         "is helpful in case one and the same quantizer scale "
+                                                         "is required for inputs to the same operation. Each "
+                                                         "sub-array will define a group of model operation "
+                                                         "inputs that have to share a single actual "
+                                                         "quantization module, each entry in this subarray "
+                                                         "should correspond to exactly one node in the NNCF "
+                                                         "graph and the groups should not overlap. The final "
+                                                         "quantizer for each sub-array will be associated "
+                                                         "with the first element of this sub-array.")
     },
     "additionalProperties": False
 }

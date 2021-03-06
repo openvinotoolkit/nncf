@@ -57,7 +57,6 @@ from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
-from nncf.module_operations import UpdateWeight
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
@@ -243,66 +242,6 @@ class QuantizerSetupGeneratorBase:
                                                                                   qconfig_list_copy))
         return quantized_modules_with_potential_qconfig
 
-    @staticmethod
-    def coalesce_insertion_points(target_insertion_points: List[PTTargetPoint],
-                                  linked_scopes_groups_list: List[List[str]]) -> List[List[PTTargetPoint]]:
-        """Accepts a list of InsertionPoints and groups these according to linked_scope_groups_list.
-        Each entry in linked_scope_groups_list must be a valid string representation of a single
-        InputAgnosticOperationExecutionContext object."""
-        # pylint:disable=too-many-branches
-        if linked_scopes_groups_list is None:
-            return [[ip, ] for ip in target_insertion_points]
-        ia_op_exec_context_list = [x.ia_op_exec_context for x in target_insertion_points]
-        retval = []
-        insertion_point_indices_vs_group_id = OrderedDict()
-
-        for group_idx, group_list in enumerate(linked_scopes_groups_list):
-            for group_member_scope_str in group_list:
-                ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(group_member_scope_str)
-                matching_indices = list(
-                    filter(lambda x: ia_op_exec_context_list[x] == ia_op_exec_context,
-                           range(len(ia_op_exec_context_list))))
-                if len(matching_indices) > 1:
-                    raise RuntimeError(
-                        "Linked activation quantizer entry {} specifies more than 1 activation quantizer:\n {}".format(
-                            group_member_scope_str,
-                            "\n".join([str(ia_op_exec_context_list[i]) for i in matching_indices])))
-                if len(matching_indices) == 0:
-                    raise RuntimeError("No match for linked quantizer entry {} among activation quantizers!".format(
-                        group_member_scope_str))
-
-                target_idx = matching_indices[0]
-                if target_idx in insertion_point_indices_vs_group_id:
-                    raise RuntimeError(
-                        "Linked activation quantizer groups {} and {} "
-                        "overlap!".format(group_idx,
-                                          insertion_point_indices_vs_group_id[target_idx])
-                    )
-                insertion_point_indices_vs_group_id[target_idx] = group_idx
-
-        for i in range(len(ia_op_exec_context_list)):
-            if i not in insertion_point_indices_vs_group_id:
-                insertion_point_indices_vs_group_id[i] = None
-
-        group_indices_list = [[] for _ in linked_scopes_groups_list]  # type: List[List[int]]
-        for insertion_point_idx, group_idx in insertion_point_indices_vs_group_id.items():
-            if group_idx is not None:
-                group_indices_list[group_idx].append(insertion_point_idx)
-
-        for intra_group_indices in group_indices_list:
-            main_ip_idx = intra_group_indices[0]
-            main_ip = target_insertion_points[main_ip_idx]
-            grouped_list = [main_ip, ]
-            for linked_ip_idx in intra_group_indices[1:]:
-                grouped_list.append(target_insertion_points[linked_ip_idx])
-            retval.append(grouped_list)
-
-        for insertion_point_idx, group_idx in insertion_point_indices_vs_group_id.items():
-            if group_idx is None:
-                retval.append([target_insertion_points[insertion_point_idx], ])
-
-        return retval
-
 
 
 class IQuantizerSetupDisambiguator:
@@ -380,6 +319,9 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         self._debug_interface = debug_interface
         self._num_potential_quantized_activations = 0
 
+        act_config = quant_config.get(QuantizerGroup.ACTIVATIONS.value, {})
+        self._unified_scale_ops = act_config.get('unified_scale_ops')
+
     def generate_setup(self) -> SingleConfigQuantizerSetup:
         quantizable_modules = self.get_quantizable_modules()
 
@@ -396,7 +338,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             input_infos=self._target_model.get_input_infos(),
             quantizable_modules=quantizable_modules,
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
-            global_constraints=self.global_quantizer_constraints)
+            global_constraints=self.global_quantizer_constraints,
+            additional_unified_scale_op_scopes=self._unified_scale_ops)
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
             self.hw_config,
