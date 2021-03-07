@@ -10,7 +10,7 @@
     },
 
     "epochs": 10,
-    "batch_size": 66,
+    "batch_size": 9,
 
     "dataset": "coco/2017",
     "dataset_type": "tfds",
@@ -23,9 +23,10 @@
                 1
             ],
             "values": [
-                1e-5,
-                1e-5
+                1e-3,
+                1e-3
             ]
         }
     }
+
 }

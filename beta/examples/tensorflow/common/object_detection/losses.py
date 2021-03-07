@@ -634,7 +634,7 @@ class YOLOv4Loss:
 
         return giou
 
-    def box_diou(self, b_true, b_pred, use_ciou=True):
+    def box_diou(self, b_true, b_pred, use_ciou=False):
         """
         Calculate DIoU/CIoU loss on anchor boxes
         Reference Paper:

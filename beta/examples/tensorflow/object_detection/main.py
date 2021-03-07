@@ -196,6 +196,17 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
+
+            if np.isnan(train_metric_result['total_confidence_loss']):
+                raise ValueError('total_confidence_loss loss is NaN')
+
+            if np.isnan(train_metric_result['total_class_loss']):
+                raise ValueError('total_class_loss loss is NaN')
+
+            if np.isnan(train_metric_result['total_location_loss']):
+                raise ValueError('location loss is NaN')
+
+            
             if np.isnan(train_metric_result['total_loss']):
                 raise ValueError('total loss is NaN')
 
