@@ -171,11 +171,12 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
 
 
-def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path):
+def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs_subprocess_in_precommit):
     config_builder = AutoQConfigBuilder(batch_size=2).for_trial()
     config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
     config.world_size = ngpus_per_node
+
     torch.multiprocessing.spawn(precision_init_dumping_worker,
                                 nprocs=ngpus_per_node,
                                 args=(ngpus_per_node, config, tmp_path),

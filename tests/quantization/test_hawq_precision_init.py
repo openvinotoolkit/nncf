@@ -509,7 +509,7 @@ def precision_init_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     torch.save(act_bitwidth_per_scope, str(out_file_path))
 
 
-def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path):
+def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs_subprocess_in_precommit):
     config_builder = HAWQConfigBuilder(batch_size=2, num_data_points=10).for_trial()
     config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
