@@ -330,6 +330,17 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     def get_barrier_node_key(node_key: str):
         return QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX + node_key
 
+    def get_node_key_for_insertion_point(self, ip: InsertionPoint) -> str:
+        matches = []
+        for node_key, node in self.nodes(data=True):
+            node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if node_type is QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
+                node_ip = node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]
+                if node_ip == ip:
+                    matches.append(node_key)
+        assert len(matches) == 1
+        return matches[0]
+
     # pylint:disable=too-many-branches
     def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: List[Tuple[str, str]]):
         curr_node = self.nodes[prop_quantizer.current_location_node_key]

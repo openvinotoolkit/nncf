@@ -14,7 +14,9 @@
 import random
 from collections import namedtuple
 from itertools import permutations
-from typing import Dict, List, Tuple
+from typing import Dict
+from typing import List
+from typing import Tuple
 
 import networkx as nx
 import pytest
@@ -22,17 +24,31 @@ import pytest
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import OperationExecutionContext, PTNNCFGraph, InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import OperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.nncf_network import InsertionPointGraph, InsertionPointGraphNodeType
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
-    QuantizerPropagationStateGraphNodeType, QuantizationTrait, OPERATOR_METATYPES, DEFAULT_QUANT_TRAIT_TO_OP_DICT, \
-    QuantizerPropagationSolver, TransitionStatus, PropagationStrategy, PropagatingQuantizer
+from nncf.nncf_network import InsertionPoint
+from nncf.nncf_network import InsertionPointGraph
+from nncf.nncf_network import InsertionPointGraphNodeType
+from nncf.nncf_network import InsertionType
+from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
+from nncf.quantization.quantizer_propagation import OPERATOR_METATYPES
+from nncf.quantization.quantizer_propagation import PropagatingQuantizer
+from nncf.quantization.quantizer_propagation import PropagationStrategy
+from nncf.quantization.quantizer_propagation import QuantizationTrait
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
+from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
+from nncf.quantization.quantizer_propagation import TransitionStatus
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from tests.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
-from tests.test_nncf_network import get_mock_nncf_node_attrs, mark_input_ports_lexicographically_based_on_input_node_key
+from tests.test_nncf_network import get_mock_nncf_node_attrs
+from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
+from tests.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
 
 
 def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> OperationExecutionContext:
@@ -116,6 +132,19 @@ class TwoFcAfterDropout:
         mark_input_ports_lexicographically_based_on_input_node_key(graph)
         return graph
 
+
+class BranchTransitionTestStruct:
+    def __init__(self, init_node_to_trait_and_configs_dict: Dict[str,
+                                                                 Tuple[QuantizationTrait, List[QuantizerConfig]]],
+                 starting_primary_quantizer_ip: InsertionPoint,
+                 target_branching_ip_for_primary_quantizer: InsertionPoint,
+                 expected_status: TransitionStatus):
+        # Unspecified nodes are marked as quantization agnostic
+        self.init_node_to_trait_and_configs_dict = init_node_to_trait_and_configs_dict,
+        self.starting_primary_quantizer_ip = starting_primary_quantizer_ip
+        self.target_branching_ip_for_primary_quantizer = target_branching_ip_for_primary_quantizer
+        self.expected_status = expected_status
+
 class TestQuantizerPropagationSolver:
     def test_quantization_traits_are_unambiguous_for_op_names(self):
         op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
@@ -140,7 +169,8 @@ class TestQuantizerPropagationSolver:
 
         # Edges should be irrelevant - using random graph
         mock_graph = get_randomly_connected_model_graph(tested_op_names)
-        ip_graph = InsertionPointGraph(mock_graph)
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
+        ip_graph = InsertionPointGraph(nncf_graph)
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
@@ -167,8 +197,9 @@ class TestQuantizerPropagationSolver:
         ops_not_to_quantize = ['max_pool2d', 'dropout', 'min', 'softmax']
         node_keys = ['nncf_model_input'] + ops_to_quantize + ops_not_to_quantize
         mock_graph = get_sequentially_connected_model_graph(node_keys)
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
+        ip_graph = InsertionPointGraph(nncf_graph)
 
-        ip_graph = InsertionPointGraph(mock_graph)
         for node in ip_graph.nodes.values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
@@ -773,7 +804,6 @@ class TestQuantizerPropagationSolver:
             assert ref_merge_qconfig_list == test_merge_qconfig_list
 
     def get_branching_model_graph(self):
-        mock_node_attrs = get_mock_nncf_node_attrs()
         mock_graph = nx.DiGraph()
 
         #     (O)  <-- treating this as an auxiliary "input" node
@@ -792,6 +822,7 @@ class TestQuantizerPropagationSolver:
 
         node_keys = ['O', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         for node_key in node_keys:
+            mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
             mock_graph.add_node(node_key, **mock_node_attrs)
 
         mock_graph.add_edges_from([('O', 'A'),
@@ -1030,7 +1061,8 @@ class TestQuantizerPropagationSolver:
 
         # Graph preparation
         mock_graph = self.get_branching_model_graph()
-        ip_graph = InsertionPointGraph(mock_graph)
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
+        ip_graph = InsertionPointGraph(nncf_graph)
         quant_prop_graph = QPSG(ip_graph)
         for node in quant_prop_graph.nodes.values():
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC

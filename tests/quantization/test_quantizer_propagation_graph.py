@@ -17,11 +17,13 @@ from collections import namedtuple, Counter
 
 import networkx as nx
 import pytest
+from nncf.dynamic_graph.graph import NNCFGraph
 
 from nncf.nncf_network import InsertionPointGraph
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait
+from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import get_two_branch_mock_model_graph, get_mock_nncf_node_attrs, \
     mark_input_ports_lexicographically_based_on_input_node_key
 
@@ -434,7 +436,7 @@ class TestQuantizerPropagationStateGraph:
                 assert set(dominated_quantizable_nodes_list) == ref_dominated_quantizable_nodes_set
 
     @staticmethod
-    def get_model_graph():
+    def get_model_graph() -> NNCFGraph:
         mock_node_attrs = get_mock_nncf_node_attrs()
         mock_graph = nx.DiGraph()
 
@@ -454,7 +456,7 @@ class TestQuantizerPropagationStateGraph:
 
         mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F')])
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
-        return mock_graph
+        return get_nncf_graph_from_mock_nx_graph(mock_graph)
 
 
     StateQuantizerTestStruct = namedtuple('StateQuantizerTestStruct',
@@ -925,7 +927,7 @@ class TestRedundantQuantizerMerge:
         return quant_prop_graph
 
     @staticmethod
-    def get_model_graph():
+    def get_model_graph() -> NNCFGraph:
         mock_node_attrs = get_mock_nncf_node_attrs()
         mock_graph = nx.DiGraph()
 
@@ -949,7 +951,7 @@ class TestRedundantQuantizerMerge:
         mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('D', 'E'), ('C', 'F'),
                                    ('F', 'G'), ('G', 'H'), ('H', 'I'), ('E', 'I')])
         mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
-        return mock_graph
+        return get_nncf_graph_from_mock_nx_graph(mock_graph)
 
     def test_merge_redundant_subsequent_quantizers_across_graph(self, model_graph_qpsg: QPSG,
                                                                 redundant_pq_merge_test_struct:
