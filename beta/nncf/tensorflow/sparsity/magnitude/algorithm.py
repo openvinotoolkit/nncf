@@ -15,6 +15,7 @@ import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -35,7 +36,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_bin
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
 
@@ -104,7 +104,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        return MagnitudeSparsityController(model, self.config.get('params', {}))
+        return MagnitudeSparsityController(model, self.config)
 
 
 class MagnitudeSparsityController(TFCompressionAlgorithmController):
@@ -114,13 +114,16 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss.
     """
-    def __init__(self, target_model, params):
+    def __init__(self, target_model, config):
         super().__init__(target_model)
+        params = config.get('params', {})
         self.sparsity_level = self.threshold = 0
         self.frozen = False
         self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+        self.sparsity_init = config.get('sparsity_init', 0)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
         self._scheduler = scheduler_cls(self, params)
+        self.set_sparsity_level(self.sparsity_init)
 
     def strip_model(self, model):
         if not isinstance(model, tf.keras.Model):
@@ -170,6 +173,9 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
 
             self.threshold = self._select_threshold()
             self._set_masks_for_threshold(self.threshold)
+
+    def get_sparsity_init(self):
+        return self.sparsity_init
 
     def _select_threshold(self):
         all_weights = self._collect_all_weights()
