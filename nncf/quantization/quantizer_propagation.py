@@ -32,7 +32,6 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
@@ -330,7 +329,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     def get_barrier_node_key(node_key: str):
         return QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX + node_key
 
-    def get_node_key_for_insertion_point(self, ip: InsertionPoint) -> str:
+    def get_node_key_for_insertion_point(self, ip: PTTargetPoint) -> str:
         matches = []
         for node_key, node in self.nodes(data=True):
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]

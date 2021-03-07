@@ -597,6 +597,7 @@ class PTNNCFGraph(NNCFGraph):
             retval[port_id] = edge_attr_dict[PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
         return retval
 
+
     def _get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
         """The graph to dump has certain node attributes omitted, compared to the graph stored
          inside NNCFGraph."""

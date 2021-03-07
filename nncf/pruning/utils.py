@@ -16,6 +16,8 @@ from typing import Optional
 import torch
 import numpy as np
 
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.layers import NNCF_DECONV_MODULES_DICT
 from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.context import Scope

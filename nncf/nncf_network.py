@@ -26,9 +26,10 @@ import networkx as nx
 import torch
 from copy import deepcopy
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.module_operations import UpdateWeight
-from nncf.dynamic_graph.graph import NNCFNode
 from nncf.dynamic_graph.graph import NNCFNodeExpression
 from torch import nn
 
@@ -51,7 +52,6 @@ from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
 from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
@@ -660,10 +660,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch
         return ip_graph
 
-    def get_op_arch_by_graph_node(self, nncf_graph_node: NNCFNode) -> 'OperatorMetatype':
+    def get_op_arch_by_graph_node(self, nncf_graph_node: PTNNCFNode) -> 'OperatorMetatype':
         op_exec_context = nncf_graph_node.op_exec_context
         op_name = op_exec_context.operator_name
         scope = op_exec_context.scope_in_model
+
+        from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
         op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
         module = self.get_module_by_scope(scope)
         if module is not None:

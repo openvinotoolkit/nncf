@@ -21,7 +21,7 @@ import networkx as nx
 import pytest
 import torch
 
-from nncf.dynamic_graph.graph import TensorMetaComparator
+from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
@@ -347,15 +347,15 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
             graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR] = idx
 
 
-def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> NNCFGraph:
-    mock_graph = NNCFGraph()
+def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
+    mock_graph = PTNNCFGraph()
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
-    from networkx.algorithms.dag import topological_sort
-    for curr_node_key in topological_sort(nx_graph):
+    from networkx.algorithms.dag import lexicographical_topological_sort
+    for curr_node_key in lexicographical_topological_sort(nx_graph):
         node = nx_graph.nodes[curr_node_key]
-        if NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR in node:
-            ia_op_exec_context = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+        if PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR in node:
+            ia_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
         else:
             ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
         tensor_metas = []
@@ -372,22 +372,22 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> NNCFGraph:
     return mock_graph
 
 
-def get_two_branch_mock_model_graph() -> NNCFGraph:
+def get_two_branch_mock_model_graph() -> PTNNCFGraph:
     mock_nx_graph = nx.DiGraph()
 
-    #   (A)
-    #    |
-    #   (B)
-    #  /   \
-    # (C)   (D)
-    # |     |
-    # (E)   |
-    #  \   /
-    #   (F)
-    #    |
-    #   (G)
-    #    |
-    #   (H)
+    #   (0 /A)
+    #      |
+    #   (1 /B)
+    #   /     \
+    # (2 /C) (3 /D)
+    #  |       |
+    # (4 /E)   |
+    #   \     /
+    #   (5 /F)
+    #     |
+    #   (6 /G)
+    #     |
+    #   (7 /H)
 
     node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
@@ -563,7 +563,9 @@ class TestInsertionPointGraph:
         # TODO: extend for modules
         mock_graph = nx.DiGraph()
 
+        mock_graph.add_node('bar')
         mock_graph.add_node('baz')
+        mock_graph.add_edge('bar', 'baz')
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
 
         ip_graph = InsertionPointGraph(nncf_graph)
@@ -577,13 +579,13 @@ class TestInsertionPointGraph:
             post_hook_ip_node = ip_graph.nodes[succs[0]]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
             assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
-            assert post_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
+            assert post_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
                 pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
                 assert pre_hook_ip.target_type == TargetType.OPERATOR_PRE_HOOK
-                assert pre_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
+                assert pre_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
 
     def test_operator_metatype_marking(self):
         from nncf.dynamic_graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
