@@ -279,6 +279,12 @@ def run(config):
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
 
+            # backbone_len = 250
+            # freeze_level = 1
+            # num = (backbone_len, len(compress_model.layers) - 3)[freeze_level - 1]
+            # for i in range(num): compress_model.layers[i].trainable = False
+            #     print('Freeze the first {} layers of total {} layers.'.format(num, len(compress_model.layers)))
+
             scheduler = build_scheduler(
                 config=config,
                 steps_per_epoch=steps_per_epoch)
@@ -334,7 +340,9 @@ def export(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model(weights=config.get('weights', None))
 
+    print('\n\ncompressing the model...')
     compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+    print('\nmodel is compressed!!!\n\n\n\n')
 
     if config.ckpt_path:
         checkpoint = tf.train.Checkpoint(model=compress_model)
@@ -343,6 +351,8 @@ def export(config):
     save_path, save_format = get_saving_parameters(config)
     compression_ctrl.export_model(save_path, save_format)
     logger.info("Saved to {}".format(save_path))
+
+    compress_model.save(os.path.join(config['log_dir'], 'dumped.h5'))
 
 
 def main(argv):

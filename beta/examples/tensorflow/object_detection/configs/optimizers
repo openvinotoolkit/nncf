@@ -6,3 +6,21 @@
         }
     }
 
+    "optimizer": {
+        "type": "Adam",
+
+        "schedule_type": "step",
+        "schedule_params": {
+            "warmup_learning_rate": 1e-10,
+            "warmup_steps": 500,
+            "init_learning_rate": 1e-6,
+            "learning_rate_levels": [
+                1e-7,
+                1e-8
+            ],
+            "learning_rate_steps": [
+                1000,
+                1500
+            ]
+        }
+    }

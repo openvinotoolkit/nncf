@@ -14,6 +14,15 @@
 import numpy as np
 import copy
 from scipy.special import expit, softmax
+# https://stackoverflow.com/questions/21106134/numpy-pure-functions-for-performance-caching
+
+
+# def expit(x):
+#     return 1/(1+np.exp(-x))
+#
+#
+# def softmax(x):
+#     return np.exp(x)/sum(np.exp(x))
 
 
 def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, use_softmax=False):

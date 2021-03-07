@@ -422,10 +422,8 @@ class YOLOv4Preprocessor:
 
         image = _decode_image(features_dict)
         if self._is_training:
-            print('train mode, no labels converting')
             labels = features_dict['objects']['label']
         else:
-            print('test mode, labels converting')
             labels = _convert_labels_to_91_classes(features_dict)
 
         decoded_tensors = {
