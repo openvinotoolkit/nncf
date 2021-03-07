@@ -62,6 +62,8 @@ from tests.quantization.test_quantization_helpers import distributed_init_test_d
 from tests.quantization.test_quantization_helpers import get_squeezenet_quantization_config
 from tests.quantization.test_quantization_helpers import post_compression_test_distr_init
 
+# pylint:disable=unused-import
+
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     distributed_init_test_default(gpu, ngpus_per_node, config)
@@ -127,7 +129,7 @@ def save_params(model, out_file_path):
         torch.save(gpu_scale_signed_params, out_file)
 
 
-def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path):
+def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path, runs_subprocess_in_precommit):
     num_init_samples = 10
 
     config = get_squeezenet_quantization_config()

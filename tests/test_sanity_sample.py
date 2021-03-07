@@ -65,6 +65,8 @@ class Command:
             print(err)
 
     def run(self, timeout=3600, assert_returncode_zero=True):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
 
         def target():
             start_time = time.time()

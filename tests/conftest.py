@@ -182,3 +182,20 @@ def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pyli
             cwd=PROJECT_ROOT)
 
     return venv_path
+
+
+@pytest.fixture
+def runs_subprocess_in_precommit():
+    # PyTorch caches its CUDA memory allocations, so during the
+    # pytest execution the total memory reserved on GPUs will only grow,
+    # but it is not necessarily completely occupied at the current moment.
+    # The sub-processes are separate to the pytest process and will only see the GPU
+    # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
+    # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
+    # each time a GPU-powered subprocess is executed during a test.
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass
