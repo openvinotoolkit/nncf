@@ -135,10 +135,8 @@ class TestPolynomialSparsityScheduler:
                                                set_sparsity_mock,
                                                ref_vals: List[Optional[float]]):
         assert len(ref_vals) == steps_per_epoch + 1
-        set_sparsity_mock.reset_mock()
         scheduler.epoch_step()
-        set_sparsity_mock.assert_called_once_with(pytest.approx(ref_vals[0]))
-        set_sparsity_mock.reset_mock()
+        set_sparsity_mock.assert_not_called()
         for i in range(steps_per_epoch):
             scheduler.step()
             ref_sparsity_level = ref_vals[i + 1]
