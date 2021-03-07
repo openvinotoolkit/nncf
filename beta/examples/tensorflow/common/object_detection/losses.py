@@ -581,7 +581,7 @@ class YOLOv4Loss:
         intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
         b1_area = b1_wh[..., 0] * b1_wh[..., 1]
         b2_area = b2_wh[..., 0] * b2_wh[..., 1]
-        iou = intersect_area / (b1_area + b2_area - intersect_area)
+        iou = intersect_area / (b1_area + b2_area - intersect_area + K.epsilon())
 
         return iou
 
@@ -705,7 +705,7 @@ class YOLOv4Loss:
             #          is still consistent with Eqn. (12).
             v = v * tf.stop_gradient(b_pred_wh[..., 0] * b_pred_wh[..., 0] + b_pred_wh[..., 1] * b_pred_wh[..., 1])
 
-            alpha = v / (1.0 - iou + v)
+            alpha = v / (1.0 - iou + v + K.epsilon())
             diou = diou - alpha * v
 
         diou = K.expand_dims(diou, -1)
@@ -742,10 +742,10 @@ class YOLOv4Loss:
             #     https://github.com/opencv/opencv/issues/17148
             #
             box_xy_tmp = K.sigmoid(feats[..., :2]) * scale_x_y - (scale_x_y - 1) / 2
-            box_xy = (box_xy_tmp + grid) / K.cast(grid_shape[..., ::-1], K.dtype(feats))
+            box_xy = (box_xy_tmp + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
         else:
-            box_xy = (K.sigmoid(feats[..., :2]) + grid) / K.cast(grid_shape[..., ::-1], K.dtype(feats))
-        box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / K.cast(input_shape[..., ::-1], K.dtype(feats))
+            box_xy = (K.sigmoid(feats[..., :2]) + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
+        box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / (K.cast(input_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
         box_confidence = K.sigmoid(feats[..., 4:5])
         box_class_probs = K.sigmoid(feats[..., 5:])
 
@@ -813,7 +813,7 @@ class YOLOv4Loss:
 
             # Darknet raw box to calculate loss.
             raw_true_xy = y_true[i][..., :2]*grid_shapes[i][::-1] - grid
-            raw_true_wh = K.log(y_true[i][..., 2:4] / anchors[anchor_mask[i]] * input_shape[::-1])
+            raw_true_wh = K.log(y_true[i][..., 2:4] / (anchors[anchor_mask[i]] * input_shape[::-1]) + K.epsilon())
             raw_true_wh = K.switch(object_mask, raw_true_wh, K.zeros_like(raw_true_wh)) # avoid log(0)=-inf
             box_loss_scale = 2 - y_true[i][...,2:3]*y_true[i][...,3:4]
 

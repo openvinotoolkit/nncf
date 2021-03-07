@@ -218,7 +218,7 @@ class YOLOv4Preprocessor:
             intersect_area = intersect_wh[..., 0] * intersect_wh[..., 1]
             box_area = wh[..., 0] * wh[..., 1]
             anchor_area = anchors[..., 0] * anchors[..., 1]
-            iou = intersect_area / (box_area + anchor_area - intersect_area)
+            iou = intersect_area / (box_area + anchor_area - intersect_area + 0.0000001)
 
             # Sort anchors according to IoU score
             # to find out best assignment
