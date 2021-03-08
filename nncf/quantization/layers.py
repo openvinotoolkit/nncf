@@ -56,7 +56,7 @@ class PTQuantizerSpec(QuantizerSpec):
                  narrow_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
-                 apply_saturation_fix: bool):
+                 apply_saturation_fix: bool = False):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
@@ -246,6 +246,7 @@ class BaseQuantizer(nn.Module):
 
     def get_quantizer_config(self) -> QuantizerConfig:
         raise NotImplementedError
+
 
     @property
     def per_channel(self) -> bool:
@@ -455,8 +456,8 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                        self.eps)
         return x, level_high, level_low, input_low, input_high
 
-    def get_current_config(self) -> QuantizerConfig:
-        return QuantizerConfig(bits=self.num_bits,
+    def get_quantizer_config(self) -> QuantizerConfig:
+        return QuantizerConfig(num_bits=self.num_bits,
                                mode=QuantizationMode.SYMMETRIC,
                                signedness_to_force=self.signed,
                                per_channel=self.per_channel)
