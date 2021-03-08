@@ -4,103 +4,38 @@ import onnxruntime as rt
 import torch
 import torch.nn as nn
 
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
+from nncf.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, get_nodes_by_type, \
     get_all_inputs_for_graph_node
 from tests.quantization.test_onnx_export import get_config_for_export_mode
 
+import pytest
 
-def test_is_correct_saturation_issue_levels():
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
+
+@pytest.mark.parametrize('num_bits, mode, scale_shape, apply_saturation_fix, assert_vals',
+                         [(8, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
+                          (8, QuantizationMode.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),
+                          (7, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (64, -32, 31)),
+                          (4, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (8, -4, 3)),
+                          (8, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (128, -64, 63)),
+                          (8, QuantizationMode.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127))
+                          ])
+def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, apply_saturation_fix, assert_vals):
+    qspec = PTQuantizerSpec(
+        num_bits=num_bits,
+        mode=mode,
         signedness_to_force=True,
-        per_channel=False,
-        is_weights=True,
-        is_saturation_fix=True)
+        narrow_range=False,
+        scale_shape=scale_shape,
+        logarithm_scale=False,
+        apply_saturation_fix=apply_saturation_fix)
 
-    quantizer = SymmetricQuantizer(q_config)
+    quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
 
-    assert quantizer.is_saturation_fix
-    assert quantizer.levels == 128
-    assert quantizer.level_low == -64
-    assert quantizer.level_high == 63
-
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=True,
-        per_channel=False,
-        is_weights=True,
-        is_saturation_fix=True)
-
-    quantizer = AsymmetricQuantizer(q_config)
-
-    assert quantizer.is_saturation_fix
-    assert quantizer.levels == 128
-    assert quantizer.level_low == 0
-    assert quantizer.level_high == 127
-
-    q_config = QuantizerConfig(
-        bits=7,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=True,
-        per_channel=True,
-        is_weights=True,
-        input_shape=[3, 32, 32],
-        is_saturation_fix=True)
-
-    quantizer = SymmetricQuantizer(q_config)
-
-    assert quantizer.is_saturation_fix
-    assert quantizer.levels == 64
-    assert quantizer.level_low == -32
-    assert quantizer.level_high == 31
-
-    q_config = QuantizerConfig(
-        bits=4,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=True,
-        per_channel=False,
-        is_weights=True,
-        is_saturation_fix=True)
-
-    quantizer = SymmetricQuantizer(q_config)
-
-    assert quantizer.is_saturation_fix
-    assert quantizer.levels == 8
-    assert quantizer.level_low == -4
-    assert quantizer.level_high == 3
-
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=True,
-        per_channel=False,
-        is_weights=False,
-        is_saturation_fix=True)
-
-    quantizer = SymmetricQuantizer(q_config)
-
-    assert quantizer.is_saturation_fix
-    assert quantizer.levels == 128
-    assert quantizer.level_low == -64
-    assert quantizer.level_high == 63
-
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=True,
-        per_channel=False,
-        is_weights=True,
-        is_saturation_fix=False)
-
-    quantizer = SymmetricQuantizer(q_config)
-
-    assert not quantizer.is_saturation_fix
-    assert quantizer.levels == 256
-    assert quantizer.level_low == -128
-    assert quantizer.level_high == 127
+    assert quantizer._is_applied_saturation_fix == apply_saturation_fix
+    assert quantizer.levels == assert_vals[0]
+    assert quantizer.level_low == assert_vals[1]
+    assert quantizer.level_high == assert_vals[2]
 
 
 def test_hw_config_saturation_fix_applied():
@@ -114,13 +49,13 @@ def test_hw_config_saturation_fix_applied():
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
         for quantizer in compression_ctrl.weight_quantizers.values():
-            assert quantizer.quantizer_module_ref.is_saturation_fix
+            assert quantizer.quantizer_module_ref._is_applied_saturation_fix
             assert quantizer.quantizer_module_ref.levels == 128
             assert quantizer.quantizer_module_ref.level_low == -64
             assert quantizer.quantizer_module_ref.level_high == 63
 
         for quantizer in compression_ctrl.non_weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref.is_saturation_fix
+            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix
 
     # Test other devices in which we don't use saturation issue
     def test_without_saturation_helper(target_device):
@@ -130,9 +65,9 @@ def test_hw_config_saturation_fix_applied():
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
         for quantizer in compression_ctrl.weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref.is_saturation_fix
+            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix
         for quantizer in compression_ctrl.non_weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref.is_saturation_fix
+            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix
 
     for device in ['CPU', 'ANY']:
         test_with_saturation_helper(device)
@@ -181,7 +116,7 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref.is_saturation_fix
+            assert quantizer.quantizer_module_ref._is_applied_saturation_fix
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
@@ -234,7 +169,7 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, c
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref.is_saturation_fix
+            assert quantizer.quantizer_module_ref._is_applied_saturation_fix
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
@@ -353,7 +288,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert quantizer.quantizer_module_ref.levels == 128
         assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
-        assert quantizer.quantizer_module_ref.is_saturation_fix
+        assert quantizer.quantizer_module_ref._is_applied_saturation_fix
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])

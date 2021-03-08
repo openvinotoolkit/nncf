@@ -56,17 +56,17 @@ class PTQuantizerSpec(QuantizerSpec):
                  narrow_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
-                 saturation_fix: bool):
+                 apply_saturation_fix: bool):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
-        self.saturation_fix = saturation_fix
+        self.apply_saturation_fix = apply_saturation_fix
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
                     scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
-                   narrow_range, scale_shape, logarithm_scale)
+                   narrow_range, scale_shape, logarithm_scale, qconfig.apply_saturation_fix)
 
 
 class BaseQuantizer(nn.Module):
@@ -76,7 +76,7 @@ class BaseQuantizer(nn.Module):
         self._narrow_range = qspec.narrow_range
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
-        self.is_saturation_fix = qspec.saturation_fix
+        self._is_applied_saturation_fix = qspec.apply_saturation_fix
         self._num_bits = nn.Parameter(torch.IntTensor([qspec.num_bits]), requires_grad=False)
         OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
         self.level_high = None
@@ -372,7 +372,7 @@ class SymmetricQuantizer(BaseQuantizer):
         self._scale_param_storage.requires_grad = False
 
     def set_level_ranges(self):
-        scaled_num_bits = 1 if self.is_saturation_fix else 0
+        scaled_num_bits = 1 if self._is_applied_saturation_fix else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits,
                                                                                    self.signed)
 
@@ -433,7 +433,7 @@ class SymmetricQuantizer(BaseQuantizer):
         input_high = input_range
         return input_low, input_high
 
-   def _prepare_export_quantization(self, x: torch.Tensor):
+    def _prepare_export_quantization(self, x: torch.Tensor):
         with no_jit_trace():
             input_low, input_high = self._get_input_low_input_high(self.scale,
                                                                    self.level_low,
@@ -441,7 +441,7 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
-            if self.is_saturation_fix:
+            if self._is_applied_saturation_fix:
                 if self.scale_shape[0] > 1:
                     for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
@@ -527,7 +527,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         return True
 
     def set_level_ranges(self):
-        scaled_num_bits = 1 if self.is_saturation_fix else 0
+        scaled_num_bits = 1 if self._is_applied_saturation_fix else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits)
 
     @staticmethod
@@ -579,7 +579,7 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
-            if self.is_saturation_fix:
+            if self._is_applied_saturation_fix:
                 if self.scale_shape[0] > 1:
                     for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())

@@ -18,7 +18,8 @@ class QuantizerConfig:
     def __init__(self, num_bits: int = 8,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
-                 per_channel: bool = False):
+                 per_channel: bool = False,
+                 apply_saturation_fix: bool = False):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -26,11 +27,13 @@ class QuantizerConfig:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param per_channel: True for per-channel quantization, False for per-tensor.
+        :param apply_saturation_fix: True if saturation issue fix *must* be applied, False - otherwise.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
+        self.apply_saturation_fix = apply_saturation_fix
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
