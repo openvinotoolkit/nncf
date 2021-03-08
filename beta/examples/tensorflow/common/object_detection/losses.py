@@ -830,6 +830,8 @@ class YOLOv4Loss:
             ignore_mask = ignore_mask.stack()
             ignore_mask = K.expand_dims(ignore_mask, -1)
 
+            raw_pred = raw_pred + K.epsilon()
+
             if use_focal_obj_loss:
                 # Focal loss for objectness confidence
                 confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[...,4:5])
