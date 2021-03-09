@@ -13,7 +13,8 @@ from nncf.quantization.quantizer_setup import QuantizationPointBase, QuantizerSe
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, MinMaxStatisticCollector, ReductionShape, \
-    MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, MeanPercentileStatisticCollector
+    MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
+    MeanPercentileStatisticCollector
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.utils import should_consider_scope
 
