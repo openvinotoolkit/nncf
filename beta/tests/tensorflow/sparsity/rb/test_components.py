@@ -14,13 +14,10 @@
 import pytest
 from pathlib import Path
 import tensorflow as tf
-import tensorflow_addons as tfa
 from addict import Dict
 
 from beta.nncf import NNCFConfig
-from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
-from beta.tests.tensorflow.sparsity.rb.utils import default_rb_mask_value
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_basic_fc_test_model, \
     create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name
 
@@ -172,55 +169,15 @@ class TestSparseModules:
 
             algo.loss.set_target_sparsity_loss(1.0)
 
-            optimizer_fn = tf.keras.optimizers.SGD(10)
-            for step in range(1): # pylint: disable=unused-variable
-                with tf.GradientTape() as tape:
-                    loss = algo.loss()
-                grads = tape.gradient(loss, model.trainable_weights)
-                if frozen:
-                    assert all([x is None for x in grads])
-                    continue
-                # Keep only masks
-                grad_pairs = [(grad, weight) for grad, weight in zip(grads, model.trainable_weights)
-                              if 'mask' in weight.name]
-                optimizer_fn.apply_gradients(grad_pairs)
-
-            # pylint: disable=protected-access
-            for layer in algo.loss._sparse_layers:
-                for weight in layer.weights:
+            with tf.GradientTape() as tape:
+                loss = algo.loss()
+            grads = tape.gradient(loss, model.trainable_weights)
+            if frozen:
+                assert all([x is None for x in grads])
+            else:
+                for grad, weight in zip(grads, model.trainable_weights):
                     if 'mask' in weight.name:
-                        if not frozen:
-                            assert tf.reduce_all(binary_mask(weight) == 0.)
-                        else:
-                            tf.debugging.assert_near(weight, tf.fill(weight.shape, default_rb_mask_value))
-
-        def test_keras_train_loop(self, model_name, local_mode, frozen):
-            model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-
-            model.add_loss(algo.loss)
-
-            algo.loss.set_target_sparsity_loss(1.0)
-            dataset_len = (1, )
-            dummy_x = tf.random.normal(dataset_len + model.input_shape[1:])
-            dummy_y = tf.random.normal(dataset_len + model.output_shape[1:])
-
-            model.compile(optimizer=tf.keras.optimizers.SGD(50),
-                          loss=[tf.keras.losses.CategoricalCrossentropy()],
-                          metrics=[tfa.metrics.MeanMetricWrapper(algo.loss, name='rb_loss')])
-            model.fit(x=dummy_x,
-                      y=dummy_y,
-                      batch_size=1,
-                      epochs=1)
-
-            # pylint: disable=protected-access
-            for layer in algo.loss._sparse_layers:
-                for weight in layer.weights:
-                    if 'mask' in weight.name:
-                        if not frozen:
-                            assert tf.reduce_all(binary_mask(weight) == 0.)
-                        else:
-                            tf.debugging.assert_near(weight, tf.fill(weight.shape, default_rb_mask_value))
-
+                        assert tf.reduce_all(grad > 0)
 
     @pytest.mark.parametrize(('target', 'expected_rate'),
                              ((None, 0),

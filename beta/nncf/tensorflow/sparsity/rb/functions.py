@@ -13,18 +13,15 @@
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.functions import logit
+from beta.nncf.tensorflow.functions import logit, st_threshold
 
 
 def binary_mask(mask):
     return tf.round(tf.math.sigmoid(mask))
 
 
-@tf.custom_gradient
 def st_binary_mask(mask):
-    def grad(upstream):
-        return upstream
-    return binary_mask(mask), grad
+    return st_threshold(tf.math.sigmoid(mask))
 
 
 def calc_rb_binary_mask(mask, eps=0.01):
