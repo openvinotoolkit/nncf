@@ -156,6 +156,8 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
             per_replica_loss = losses['total_loss'] / strategy.num_replicas_in_sync
 
         grads = tape.gradient(per_replica_loss, model.trainable_variables)
+        # test:
+        # grads, _ = tf.clip_by_global_norm(grads, 5.0)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return losses
 
@@ -197,29 +199,15 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
             
-            conf_loss_nan = False
-            class_loss_nan = False
-            loc_loss_nan = False
             if np.isnan(train_metric_result['total_confidence_loss']):
-                #raise ValueError('total_confidence_loss loss is NaN')
-                conf_loss_nan = True
                 print('total_confidence_loss loss is NaN')
-
             if np.isnan(train_metric_result['total_class_loss']):
-                #raise ValueError('total_class_loss loss is NaN')
-                class_loss_nan = True
                 print('total_class_loss loss is NaN')
-
             if np.isnan(train_metric_result['total_location_loss']):
-                #raise ValueError('location loss is NaN')
-                loc_loss_nan = True
                 print('location loss is NaN')
-            
-            if conf_loss_nan or class_loss_nan or loc_loss_nan:
-                raise ValueError('loss is NaN')
 
-            #if np.isnan(train_metric_result['total_loss']):
-            #    raise ValueError('total loss is NaN')
+            if np.isnan(train_metric_result['total_loss']):
+               raise ValueError('total loss is NaN')
 
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
