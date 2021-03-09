@@ -1,7 +1,7 @@
 {
     "model": "googlenet",
     "pretrained": true,
-    "batch_size": 270,
+    "batch_size": 420,
     "input_info": {
         "sample_size": [
             1,
@@ -25,7 +25,7 @@
 
     "compression": [
         {
-          "algorithm": "knowledge_distillation"
+            "algorithm": "knowledge_distillation"
         },
         {
             "algorithm": "magnitude_sparsity",
@@ -36,7 +36,7 @@
                     2,
                     4,
                     8,
-                    16
+                    15
                 ],
                 "multistep_sparsity_levels": [
                     0.2,
@@ -49,6 +49,6 @@
         },
         {
             "algorithm": "quantization"
-    }
+        }
     ]
 }

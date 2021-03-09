@@ -1,6 +1,7 @@
 from typing import List
 
 from copy import deepcopy
+from torch import nn
 import torch
 from functools import reduce
 from nncf import NNCFConfig
@@ -15,12 +16,21 @@ from nncf.utils import objwalk
 
 
 class KDLossCalculator(PTCompressionLoss):
-    def __init__(self, original_model, scale):
+    def __init__(self, original_model, scale, is_softmax):
         super().__init__()
         self.original_model = original_model
         self.original_model.train()
         self.scale = scale
-        self.mse = torch.nn.MSELoss()
+        self.is_softmax = is_softmax
+        if is_softmax:
+            def kdloss_fn(ref_outputs, compressed_model_outputs):
+                return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
+                       nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
+        else:
+            def kdloss_fn(ref_outputs, compressed_model_outputs):
+                mse = torch.nn.MSELoss()
+                return mse(ref_outputs, compressed_model_outputs)
+        self.kdloss_fn = kdloss_fn
 
     def forward(self, input_=None, target=None):
         # input_ is compressed model output
@@ -42,11 +52,10 @@ class KDLossCalculator(PTCompressionLoss):
                 return list(obj.values() if isinstance(obj, dict) else obj)
         with torch.no_grad():
             ref_outputs = self.original_model(target)
-
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
-        return self.scale * reduce(lambda kd_loss, loss_tensors: kd_loss + self.mse(loss_tensors[0], loss_tensors[1]),
-                      zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
+        return self.scale * reduce(lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
+                       zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
 
     def statistics(self, quickly_collected_only=False):
         return {}
@@ -57,22 +66,23 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig, should_init: bool = True):
         super().__init__(config, should_init)
         self.scale = config.get('scale', 1)
+        self.is_softmax = config.get('is_softmax', False)
 
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         self.original_model = deepcopy(target_model.nncf_module)
         return []
 
     def build_controller(self, target_model):
-        return KnowledgeDistillationController(target_model, self.original_model, self.scale)
+        return KnowledgeDistillationController(target_model, self.original_model, self.scale, self.is_softmax)
 
 
 class KnowledgeDistillationController(PTCompressionAlgorithmController):
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
 
-    def __init__(self, target_model, original_model, scale):
+    def __init__(self, target_model, original_model, scale, is_softmax):
         super().__init__(target_model)
-        self._loss = KDLossCalculator(original_model, scale)
+        self._loss = KDLossCalculator(original_model, scale, is_softmax)
 
     def distributed(self):
         pass

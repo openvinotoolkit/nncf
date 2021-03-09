@@ -1,8 +1,8 @@
 {
     "model": "googlenet",
-    "batch_size" : 150,
+    "batch_size" : 420,
     "pretrained": true,
-    "epochs": 110,
+    "epochs": 100,
     "input_info": {
         "sample_size": [
             1,
@@ -17,10 +17,10 @@
         "weight_decay": 1e-4,
         "schedule_type": "multistep",
         "steps": [
-            30,
-            50,
-            70,
-            90
+            20,
+            40,
+            60,
+            80
         ],
         "optimizer_params":
         {
@@ -34,8 +34,8 @@
             "pruning_init": 0.1,
             "params": {
                 "schedule": "exponential",
-                "pruning_target": 0.5,
-                "pruning_steps": 25,
+                "pruning_target": 0.4,
+                "pruning_steps": 15,
                 "weight_importance": "geometric_median"
             }
        }

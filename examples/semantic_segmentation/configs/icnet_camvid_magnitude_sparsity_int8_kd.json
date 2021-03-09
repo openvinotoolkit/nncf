@@ -42,7 +42,8 @@
 
     "compression": [
         {
-          "algorithm": "knowledge_distillation"
+            "algorithm": "knowledge_distillation",
+            "is_softmax": true
         },
         {
             "algorithm": "magnitude_sparsity",

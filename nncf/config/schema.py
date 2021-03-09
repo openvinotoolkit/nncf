@@ -684,7 +684,8 @@ KNOWLEDGE_DISTILLATION_SCHEMA = {
             "const": KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
         },
         "scale": with_attributes(_NUMBER,
-                                 description="Scale parameter for kdloss")
+                                 description="Scale parameter for kdloss"),
+        "is_softmax": with_attributes(_BOOLEAN, description="Is KDLoss computed via SoftMax")
     },
     "additionalProperties": False
 }
