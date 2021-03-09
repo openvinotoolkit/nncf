@@ -1,17 +1,26 @@
 import math
-
-
-from functools import partial
-from typing import Dict, Tuple, Any, Callable, Optional
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import torch
-from torch.utils.data import DataLoader
+from functools import partial
 from torch.nn.modules.loss import _Loss
+from torch.utils.data import DataLoader
 
 from nncf.progress_bar import ProgressBar
 from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
     BNAdaptationInitArgs, AutoQPrecisionInitArgs, TrainEpochArgs
 from nncf.utils import objwalk, is_tensor, training_mode_switcher
+from nncf.structures import AutoQPrecisionInitArgs
+from nncf.structures import BNAdaptationInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs
+from nncf.structures import QuantizationRangeInitArgs
+from nncf.utils import is_tensor
+from nncf.utils import objwalk
+from nncf.utils import training_mode_switcher
 
 
 class InitializingDataLoader:
@@ -79,7 +88,7 @@ class PartialDataLoader:
             raise ValueError("iter_ratio must be within 0 to 1 range")
         self.data_loader = regular_data_loader
         self.batch_size = regular_data_loader.batch_size
-        self._stop_id = math.ceil(len(self.data_loader)*iter_ratio)
+        self._stop_id = math.ceil(len(self.data_loader) * iter_ratio)
         self._batch_id = 0
 
     def __iter__(self):
@@ -146,6 +155,7 @@ class DataLoaderBaseRunner:
 class SimpleDataLoaderRunner(DataLoaderBaseRunner):
     def _prepare_initialization(self):
         pass
+
     def _apply_initializers(self):
         pass
 
@@ -163,6 +173,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         def func_apply_to_bns(module):
             if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
                 func(module)
+
         return func_apply_to_bns
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
@@ -216,13 +227,9 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
-                               train_epoch_fn = None,
                                autoq_eval_loader: torch.utils.data.DataLoader = None,
                                device: str = None,
-                               uncompressed_model_accuracy = None,
-                               config = None,
                                ) -> 'NNCFConfig':
-
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=train_loader,
@@ -243,12 +250,19 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
 
-    if train_epoch_fn:
-        nncf_config.register_extra_structs([TrainEpochArgs(train_epoch_fn=train_epoch_fn,
-                                                           eval_fn=autoq_eval_fn,
-                                                           config=config,
-                                                           criterion_fn=criterion_fn,
-                                                           device=device,
-                                                           uncompressed_model_accuracy=uncompressed_model_accuracy)])
+    return nncf_config
 
+
+def register_training_loop_args(nncf_config: 'NNCFConfig',
+                                train_epoch_fn=None,
+                                eval_fn=None,
+                                configure_optimizers_fn=None,
+                                on_training_end_fn=None,
+                                config=None):
+
+    nncf_config.register_extra_structs([TrainEpochArgs(train_epoch_fn=train_epoch_fn,
+                                                       eval_fn=eval_fn,
+                                                       configure_optimizers_fn=configure_optimizers_fn,
+                                                       on_training_end_fn=on_training_end_fn,
+                                                       config=config)])
     return nncf_config

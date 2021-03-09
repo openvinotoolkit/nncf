@@ -11,36 +11,55 @@
  limitations under the License.
 """
 import inspect
-from collections import OrderedDict, Counter
-from typing import List, Callable, Tuple, Dict, Optional
+from collections import OrderedDict
+from enum import Enum
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import functools
 import networkx as nx
 import torch
 from copy import deepcopy
-from enum import Enum
 from torch import nn
 
-from nncf.debug import CombinedDebugInterface, debuggable_forward, is_debug
+from nncf.debug import CombinedDebugInterface
+from nncf.debug import debuggable_forward
+from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext, OperationExecutionContext, \
-    ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import BaseModuleAttributes
+from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import GroupNormModuleAttributes
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
-from nncf.dynamic_graph.graph_builder import GraphBuilder, PostGraphBuildActing, create_dummy_forward_fn, \
-    ModelInputInfo
+from nncf.dynamic_graph.graph_builder import GraphBuilder
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_builder import PostGraphBuildActing
+from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager, MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_MODULES, NNCF_WRAPPED_USER_MODULES_DICT, NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.common.utils.logger import logger as nncf_logger
+from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.layers import NNCF_MODULES
+from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.utils import get_all_modules_by_type, get_state_dict_names_with_modules, compute_FLOPs_hook
+from nncf.utils import compute_FLOPs_hook
+from nncf.utils import get_all_modules_by_type
+from nncf.utils import get_state_dict_names_with_modules
+from nncf.initialization import TrainEpochArgs
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
+Module = TypeVar('Module', bound=nn.Module)
+ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseModuleAttributes)
 
 class ExtraCompressionModuleType(Enum):
     ACTIVATION_QUANTIZER = 0
@@ -70,48 +89,6 @@ class InsertionType(Enum):
         if isinstance(other, InsertionType):
             return self.value == other.value
         return self.value == other
-
-
-class InsertionInfo:
-    def __init__(self, op_exec_context: OperationExecutionContext,
-                 in_port_id: Optional[int] = None,
-                 is_input=False,
-                 is_output=False,
-                 shape_to_operate_on=None):
-        self.op_exec_context = op_exec_context  # type: OperationExecutionContext
-        self.in_port_id = in_port_id  # None for post-hook quantization, otherwise - pre-hook
-        self.is_input = is_input
-        self.is_output = is_output
-        self.shape_to_operate_on = shape_to_operate_on
-        self._linked_insertion_infos = []  # type: List[InsertionInfo]
-
-    def get_linked_insertion_infos(self) -> List['InsertionInfo']:
-        return self._linked_insertion_infos
-
-    def link_insertion_infos(self, linked_insertion_infos: List['InsertionInfo']):
-        self._linked_insertion_infos += linked_insertion_infos
-
-    def __eq__(self, other: 'InsertionInfo'):
-        # TODO: ensure no circular refs via self._linked_insertion_infos?
-        return self.op_exec_context == other.op_exec_context and Counter(self._linked_insertion_infos) == Counter(
-            other.get_linked_insertion_infos()) and self.in_port_id == other.in_port_id
-
-    def __str__(self):
-        postfix = ''
-        if self.in_port_id is not None:
-            postfix = "|INPUT{}".format(self.in_port_id)
-        return str(self.op_exec_context.input_agnostic) + postfix
-
-    def __hash__(self):
-        return hash(str(self))
-
-    @classmethod
-    def from_insertion_point(cls, ip: 'InsertionPoint') -> 'InsertionInfo':
-        return cls(OperationExecutionContext(
-            operator_name=ip.ia_op_exec_context.operator_name,
-            scope_in_model=ip.ia_op_exec_context.scope_in_model,
-            call_order=ip.ia_op_exec_context.call_order,
-            tensor_metas=[None]), in_port_id=ip.input_port_id)
 
 
 class InsertionPoint:
@@ -227,7 +204,6 @@ class InsertionPointGraph(nx.DiGraph):
             attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
             self.add_edge(from_node, to_node, **attrs)
 
-
         # TODO: Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
         # separate NNCF module (via scope analysis), then for each subset find input/output
@@ -301,7 +277,7 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
                                                          hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config)
         from nncf.dynamic_graph.graph_matching import search_all
@@ -382,7 +358,7 @@ class InsertionPointGraph(nx.DiGraph):
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS |\
+        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
                   p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         return pattern
 
@@ -399,7 +375,6 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_insertion_points(self) -> List[InsertionPoint]:
         return self._input_ips
-
 
 
 # pylint: disable=too-many-public-methods
@@ -513,7 +488,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         else:
             self._insertions_into_original_graph[point].append((command.fn, command.priority))
 
-    def commit_compression_changes(self) -> 'CompressionAlgorithmController':
+    def commit_compression_changes(self, accuracy_aware_config=None) -> 'CompressionAlgorithmController':
         for insertion_point, fn_list_with_priority in self._insertions_into_original_graph.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
             self._insertions_into_original_graph[insertion_point] = fn_list_with_priority
@@ -530,10 +505,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             from nncf.algo_selector import NoCompressionAlgorithmController
             return NoCompressionAlgorithmController(self)
 
-        ACC_AWARE = True
-        if ACC_AWARE:
+        if accuracy_aware_config:
             from nncf.accuracy_aware_compression import PTAccuracyAwareCompressionAlgorithmController
-            accuracy_aware_controller = PTAccuracyAwareCompressionAlgorithmController(self, self._builders[0].config)
+            accuracy_aware_controller = PTAccuracyAwareCompressionAlgorithmController(self, accuracy_aware_config)
             for algo_builder in self._builders:
                 accuracy_aware_controller.add(algo_builder.build_controller(self))
             return accuracy_aware_controller
@@ -620,57 +594,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         for module in all_quantizations.values():
             module.initialized = False
 
-    def get_post_pattern_insertion_infos(self, pattern: 'NNCFNodeExpression',
-                                         omit_nodes_in_nncf_modules=False) -> List[InsertionInfo]:
-        io_infos = self._original_graph.get_matching_nncf_graph_pattern_io_list(pattern)
-
-        insertion_infos = []
-        for io_info in io_infos:
-            # The input/output is given in terms of edges, but the post-hooks are currently applied to
-            # nodes. Multiple output edges in a pattern I/O info may originate from one and the same
-            # node, and we have to ensure that these resolve into just one insertion point - thus the usage of "set".
-            pattern_insertion_info_set = set()
-            if len(io_info.output_edges) > 1:
-                nncf_logger.debug("WARNING: pattern has more than one activation output")
-
-            for nncf_node in io_info.output_nodes:
-                pattern_insertion_info_set.add(InsertionInfo(nncf_node.op_exec_context,
-                                                             is_output=True,
-                                                             shape_to_operate_on=None))
-                # TODO: determine output shapes for output nodes to enable per-channel quantization
-
-            # Ignore input nodes in the pattern for now, rely on the _quantize_inputs functions.
-            # TODO: handle input quantization here as well
-
-            # Since this function is currently only used for activation quantization purposes via operator
-            # post-hook mechanism, we may take any edge and it will point from the same node where we will have to
-            # insert a quantizer later. However, in the future the output edges may refer to activation tensors
-            # with different sizes, in which case we have to insert different per-channel quantizers to
-            # accomodate different trainable params if there is a difference in the channel dimension.
-            # Furthermore, currently there is no distinction for single tensor output to multiple nodes and
-            # multiple tensor output to multiple nodes ("chunk" operation is an example of the latter).
-            # The pattern may also have unexpected outputs from a node in the middle of the pattern (see
-            # "densenet121.dot" for an example of this) - need to decide what to do with that in terms
-            # of quantization.
-            # TODO: address the issues above.
-
-            for nncf_edge in io_info.output_edges:
-                pattern_insertion_info_set.add(InsertionInfo(nncf_edge.from_node.op_exec_context,
-                                                             is_output=False,
-                                                             shape_to_operate_on=nncf_edge.tensor_shape))
-            insertion_infos += list(pattern_insertion_info_set)
-
-        insertion_infos = list(
-            set(insertion_infos))  # Filter the overlapping insertion points from different matches (happens for GNMT)
-        insertion_infos_filtered = []
-
-        for info in insertion_infos:
-            if omit_nodes_in_nncf_modules and self.is_scope_in_nncf_module_scope(info.op_exec_context.scope_in_model):
-                continue
-            insertion_infos_filtered.append(info)
-
-        return insertion_infos_filtered
-
     def is_scope_in_nncf_module_scope(self, scope: 'Scope'):
         # TODO: optimize
         norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
@@ -692,7 +615,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
-        self.__getattr__(attr_name)[module_key] = module
+        storage = self.__getattr__(attr_name)
+        if module_key in storage:
+            raise RuntimeError("Module {} is already registered under {}".format(module_key, attr_name))
+        storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
@@ -742,6 +668,17 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
+    def get_input_shape_for_insertion_point(self, insertion_point: InsertionPoint) -> Tuple[int]:
+        ia_op_exec_context = insertion_point.ia_op_exec_context
+        if insertion_point.input_port_id is not None:
+            quantizer_input_shape = self._original_graph.get_input_shapes_for_ia_op_exec_context(
+                ia_op_exec_context)[insertion_point.input_port_id]
+        else:
+            # Tailored for post-hook quantization and first output quantization only
+            quantizer_input_shape = self._original_graph.get_output_shapes_for_ia_op_exec_context(
+                ia_op_exec_context)[0]
+        return quantizer_input_shape
+
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         ip_graph = InsertionPointGraph(self._original_graph.get_nx_graph_copy())
 
@@ -760,17 +697,21 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             ip_graph_node_type = ip_graph_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
             if ip_graph_node_type == InsertionPointGraphNodeType.OPERATOR:
                 nncf_graph_node_ref = ip_graph_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
-                op_name = op_exec_context.operator_name
-                scope = op_exec_context.scope_in_model
-                op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                module = self.get_module_by_scope(scope)
-                if module is not None:
-                    subtype = op_arch.determine_subtype(containing_module=module)
-                    if subtype is not None:
-                        op_arch = subtype
+                op_arch = self.get_op_arch_by_graph_node(nncf_graph_node_ref)
                 ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch
         return ip_graph
+
+    def get_op_arch_by_graph_node(self, nncf_graph_node_ref: dict) -> 'OperatorMetatype':
+        op_exec_context = nncf_graph_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        op_name = op_exec_context.operator_name
+        scope = op_exec_context.scope_in_model
+        op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
+        module = self.get_module_by_scope(scope)
+        if module is not None:
+            subtype = op_arch.determine_subtype(containing_module=module)
+            if subtype is not None:
+                op_arch = subtype
+        return op_arch
 
     def get_module_by_scope(self, scope: 'Scope') -> torch.nn.Module:
         curr_module = self.get_nncf_wrapped_model()
@@ -854,6 +795,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 self.model.load_nncf_module_additions(self.storage_dict)
+
         return Mgr(self)
 
     @staticmethod
@@ -871,13 +813,26 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return result
 
     def _mark_original_graph_nodes_with_module_attributes(self):
-        general_conv_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT]
-        for node in self._original_graph.get_nodes_by_types(general_conv_types):
+        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["group_norm"]
+        for node in self._original_graph.get_nodes_by_types(node_types):
             scope = node.op_exec_context.scope_in_model
+            input_agnostic = node.op_exec_context.input_agnostic
             module = self.get_module_by_scope(scope)
-            nx_node = self._original_graph.find_node_in_nx_graph_by_scope(scope)
-            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = ConvolutionModuleAttributes(module.weight.requires_grad,
-                                                                               module.in_channels,
-                                                                               module.out_channels,
-                                                                               module.stride,
-                                                                               module.groups)
+            nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
+            nx_node[NNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
+
+
+def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:
+    if operator_name == "group_norm":
+        return GroupNormModuleAttributes(
+            module.weight.requires_grad,
+            module.num_channels,
+            module.num_groups
+        )
+    return ConvolutionModuleAttributes(
+        module.weight.requires_grad,
+        module.in_channels,
+        module.out_channels,
+        module.stride,
+        module.groups
+    )

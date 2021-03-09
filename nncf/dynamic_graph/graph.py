@@ -24,7 +24,6 @@ from torch import Tensor
 from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search_all, get_edge_boundaries
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
 from nncf.layers import ITERATION_MODULES
-
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -185,6 +184,16 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
         self.out_channels = out_channels
         self.stride = stride
         self.groups = groups
+
+
+class GroupNormModuleAttributes(BaseModuleAttributes):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 num_channels: int,
+                 num_groups: int):
+        super().__init__(weight_requires_grad)
+        self.num_channels = num_channels
+        self.num_groups = num_groups
 
 
 class NNCFNode:
@@ -804,6 +813,21 @@ class NNCFGraph:
         nodes = self._nx_graph.nodes
         for node_key in nodes:
             if nodes[node_key][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model == scope:
+                return nodes[node_key]
+        return None
+
+    def find_node_in_nx_graph_by_input_agnostic(
+        self, input_agnostic: InputAgnosticOperationExecutionContext
+    ) -> Optional[dict]:
+        """
+        Looking for node with input_agnostic == input_agnostic in networkx graph.
+        :param self: graphs to work on
+        :param input_agnostic: Input agnostic to find in graph
+        :return: node from networkx graph for graph (or None if such scope is not found)
+        """
+        nodes = self._nx_graph.nodes
+        for node_key in nodes:
+            if nodes[node_key][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic == input_agnostic:
                 return nodes[node_key]
         return None
 

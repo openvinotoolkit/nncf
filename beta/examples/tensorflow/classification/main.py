@@ -36,6 +36,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 
 
 def get_argument_parser():
@@ -115,12 +116,15 @@ def load_checkpoint(model, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch):
+def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(model, ckpt_path) == 0:
         return 0
     initial_step = model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d', initial_epoch)
     return initial_epoch
 
@@ -177,7 +181,8 @@ def run(config):
                 initial_epoch = resume_from_checkpoint(model=compress_model,
                                                        compression_ctrl=compression_ctrl,
                                                        ckpt_path=config.ckpt_path,
-                                                       steps_per_epoch=train_steps)
+                                                       steps_per_epoch=train_steps,
+                                                       config=config)
             else:
                 logger.info('initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)

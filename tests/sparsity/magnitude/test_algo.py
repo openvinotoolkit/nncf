@@ -91,7 +91,7 @@ def test_can_not_set_sparsity_more_than_one_for_magnitude_sparse_algo():
 def test_can_not_create_magnitude_algo__without_steps():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1]}
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(MockModel(), config)
 
 
@@ -106,7 +106,7 @@ def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1],
                                        'multistep_steps': [1, 2]}
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(MockModel(), config)
 
 

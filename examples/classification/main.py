@@ -49,7 +49,7 @@ from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import register_default_init_args, default_criterion_fn
+from nncf.initialization import register_default_init_args, default_criterion_fn, register_training_loop_args
 from nncf.utils import safe_thread_call, is_main_process
 from examples.classification.common import set_seed, load_resuming_checkpoint
 
@@ -139,24 +139,23 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, epoch, log_epoch):
-            top1, top5 = validate(val_loader, model, criterion, config, epoch, log_epoch)
+        def autoq_eval_fn(model, config):
+            top1, _ = validate(val_loader, model, criterion, config)
             return top1
 
-        def train_epoch_fn_aa(config, compression_ctrl, model, criterion_fn, epoch, log_epoch):
-            return train_epoch_fn(train_loader, model, criterion, criterion_fn,
-                                  optimizer, compression_ctrl, epoch, config,
-                                  lr_scheduler, train_sampler, val_loader, log_epoch)
+        def train_epoch_function(config, compression_ctrl, model, epoch, optimizers, lr_schedulers):
+            return train_step(epoch, config, compression_ctrl, model, criterion,
+                              train_criterion_fn, lr_schedulers[0], model_name, optimizers[0],
+                              train_loader, train_sampler, val_loader)
 
-            #return train_epoch(train_loader, model, criterion, criterion_fn,
-            #                   optimizer, compression_ctrl, epoch, config)
-
-        uncompressed_model_accuracy = 65.65
+        def configure_optimizers():
+            params_to_optimize = get_parameter_groups(model, config)
+            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+            return (optimizer, ), (lr_scheduler, )
 
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, train_epoch_fn_aa, val_loader, config.device,
-            uncompressed_model_accuracy, config)
+            autoq_eval_fn, val_loader, config.device)
 
     # create model
     model = load_model(model_name,
@@ -189,7 +188,7 @@ def main_worker(current_gpu, config: SampleConfig):
         if config.mode.lower() == 'train' and config.to_onnx is None:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
-            compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
+            compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
@@ -208,16 +207,48 @@ def main_worker(current_gpu, config: SampleConfig):
         validate(val_loader, model, criterion, config)
         return
 
-    compression_ctrl.run_accuracy_aware_training()
+    config.best_compression_level = CompressionLevel.NONE
+    config.best_acc1 = 0
+    config.log_epoch = None
 
-    # if config.mode.lower() == 'train':
-    #     train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
-    #           train_loader, train_sampler, val_loader, best_acc1)
+    if config.mode.lower() == 'train':
+        if config.accuracy_aware_training_config:
+
+            def validate_fn(model, config):
+                top1, _ = validate(val_loader, model, criterion, config)
+                return top1
+
+            def train_epoch_function(config, compression_ctrl, model, epoch, optimizers, lr_schedulers):
+                return train_step(epoch, config, compression_ctrl, model, criterion,
+                                train_criterion_fn, lr_schedulers[0], model_name, optimizers[0],
+                                train_loader, train_sampler, val_loader)
+
+            def configure_optimizers():
+                params_to_optimize = get_parameter_groups(model, config)
+                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+                return (optimizer, ), (lr_scheduler, )
+
+            def on_training_end_fn():
+                pass
+
+            nncf_config = register_training_loop_args(nncf_config, train_epoch_function, validate_fn,
+                                                      configure_optimizers, on_training_end_fn, config)
+            compression_ctrl.run_accuracy_aware_training(nncf_config)
+        else:
+            train(config, compression_ctrl, model, criterion, train_criterion_fn,
+                  lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader, best_acc1)
 
 
-def train_epoch_fn(train_loader, model, criterion, criterion_fn,
-                   optimizer, compression_ctrl, epoch, config,
-                   lr_scheduler, train_sampler, val_loader, log_epoch):
+def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
+          train_loader, train_sampler, val_loader, best_acc1=0):
+    for epoch in range(config.start_epoch, config.epochs):
+        train_step(epoch, config, compression_ctrl, model, criterion, criterion_fn,
+                   lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader)
+
+
+def train_step(epoch, config, compression_ctrl, model, criterion, criterion_fn,
+               lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader):
+
     # update compression scheduler state at the begin of the epoch
     compression_ctrl.scheduler.epoch_step()
 
@@ -226,70 +257,142 @@ def train_epoch_fn(train_loader, model, criterion, criterion_fn,
         train_sampler.set_epoch(epoch)
 
     # train for one epoch
-    train_epoch(train_loader, model, criterion, criterion_fn,
-                optimizer, compression_ctrl, epoch, config, log_epoch)
+    train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
 
     # Learning rate scheduling should be applied after optimizer’s update
-    lr_scheduler.step(epoch)
-    #if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
+    lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else config.best_acc1)
 
     # compute compression algo statistics
     stats = compression_ctrl.statistics()
 
-    print_statistics(stats)
+    acc1 = config.best_acc1
+    if epoch % config.test_every_n_epochs == 0:
+        # evaluate on validation set
+        acc1, _ = validate(val_loader, model, criterion, config)
 
-    # acc1 = best_acc1
-    # if epoch % config.test_every_n_epochs == 0:
-    #     # evaluate on validation set
-    #     acc1, _ = validate(val_loader, model, criterion, config)
+    compression_level = compression_ctrl.compression_level()
+    # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
+    # still can be best if current compression level is bigger then best one. Compression levels in ascending
+    # order: NONE, PARTIAL, FULL.
+    is_best_by_accuracy = acc1 > config.best_acc1 and compression_level == config.best_compression_level
+    is_best = is_best_by_accuracy or compression_level > config.best_compression_level
+    if is_best:
+        config.best_acc1 = acc1
+    config.mlflow.safe_call('log_metric', "best_acc1", config.best_acc1)
+    config.best_compression_level = max(compression_level, config.best_compression_level)
+    acc = config.best_acc1 / 100
+    if config.metrics_dump is not None:
+        write_metrics(acc, config.metrics_dump)
+    if config.log_epoch is not None:
+        epoch = config.log_epoch
+    if is_main_process():
+        print_statistics(stats)
 
-    # compression_level = compression_ctrl.compression_level()
-    # # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
-    # # still can be best if current compression level is bigger then best one. Compression levels in ascending
-    # # order: NONE, PARTIAL, FULL.
-    # is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
-    # is_best = is_best_by_accuracy or compression_level > best_compression_level
-    # if is_best:
-    #     best_acc1 = acc1
-    # config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
-    # best_compression_level = max(compression_level, best_compression_level)
-    # acc = best_acc1 / 100
-    # if config.metrics_dump is not None:
-    #     write_metrics(acc, config.metrics_dump)
+        checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
+        checkpoint = {
+            'epoch': epoch + 1,
+            'arch': model_name,
+            'state_dict': model.state_dict(),
+            'best_acc1': config.best_acc1,
+            'compression_level': compression_level,
+            'acc1': acc1,
+            'optimizer': optimizer.state_dict(),
+            'scheduler': compression_ctrl.scheduler.get_state()
+        }
 
+        torch.save(checkpoint, checkpoint_path)
+        make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
-          train_loader, train_sampler, val_loader, best_acc1=0):
-    best_compression_level = CompressionLevel.NONE
-    for epoch in range(config.start_epoch, config.epochs):
+        for key, value in stats.items():
+            if isinstance(value, (int, float)):
+                config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
-        stats = train_epoch_fn(train_loader, model, criterion, criterion_fn,
-                               optimizer, compression_ctrl, epoch, config,
-                               lr_scheduler, train_sampler, best_acc1, best_compression_level,
-                               val_loader)
+def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    compression_losses = AverageMeter()
+    criterion_losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    compression_scheduler = compression_ctrl.scheduler
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+    for i, (input_, target) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        compression_scheduler.step()
+
+        input_ = input_.to(config.device)
+        target = target.to(config.device)
+
+        # compute output
+        output = model(input_)
+        criterion_loss = criterion_fn(output, target, criterion)
+
+        # compute compression loss
+        compression_loss = compression_ctrl.loss()
+        loss = criterion_loss + compression_loss
+
+        if isinstance(output, InceptionOutputs):
+            output = output.logits
+        # measure accuracy and record loss
+        acc1, acc5 = accuracy(output, target, topk=(1, 5))
+        losses.update(loss.item(), input_.size(0))
+        comp_loss_val = compression_loss.item() if isinstance(compression_loss, torch.Tensor) else compression_loss
+        compression_losses.update(comp_loss_val, input_.size(0))
+        criterion_losses.update(criterion_loss.item(), input_.size(0))
+        top1.update(acc1, input_.size(0))
+        top5.update(acc5, input_.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if config.log_epoch is not None:
+            epoch = config.log_epoch
+
+        if i % config.print_freq == 0:
+            logger.info(
+                '{rank}: '
+                'Epoch: [{0}][{1}/{2}] '
+                'Lr: {3:.3} '
+                'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                'Data: {data_time.val:.3f} ({data_time.avg:.3f}) '
+                'CE_loss: {ce_loss.val:.4f} ({ce_loss.avg:.4f}) '
+                'CR_loss: {cr_loss.val:.4f} ({cr_loss.avg:.4f}) '
+                'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
+                'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
+                'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
+                    epoch, i, len(train_loader), get_lr(optimizer), batch_time=batch_time,
+                    data_time=data_time, ce_loss=criterion_losses, cr_loss=compression_losses,
+                    loss=losses, top1=top1, top5=top5,
+                    rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
+                ))
 
         if is_main_process():
-            print_statistics(stats)
+            global_step = len(train_loader) * epoch
+            config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
+            config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
+            config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
+            config.tb.add_scalar("train/loss", losses.avg, i + global_step)
+            config.tb.add_scalar("train/top1", top1.avg, i + global_step)
+            config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
-            checkpoint = {
-                'epoch': epoch + 1,
-                'arch': model_name,
-                'state_dict': model.state_dict(),
-                'best_acc1': best_acc1,
-                'compression_level': compression_level,
-                'acc1': acc1,
-                'optimizer': optimizer.state_dict(),
-                'scheduler': compression_ctrl.scheduler.state_dict()
-            }
-
-            torch.save(checkpoint, checkpoint_path)
-            make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
-
-            for key, value in stats.items():
-                if isinstance(value, (int, float)):
-                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
-                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
+                if isinstance(stat_value, (int, float)):
+                    config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
 def get_dataset(dataset_config, config, transform, is_train):
@@ -392,94 +495,7 @@ def create_data_loaders(config, train_dataset, val_dataset):
     return train_loader, train_sampler, val_loader, init_loader
 
 
-def train_epoch(train_loader, model, criterion, criterion_fn,
-                optimizer, compression_ctrl, epoch, config, log_epoch):
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    losses = AverageMeter()
-    compression_losses = AverageMeter()
-    criterion_losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
-
-    compression_scheduler = compression_ctrl.scheduler
-
-    # switch to train mode
-    model.train()
-
-    end = time.time()
-    for i, (input_, target) in enumerate(train_loader):
-        # measure data loading time
-        data_time.update(time.time() - end)
-
-        compression_scheduler.step()
-
-        input_ = input_.to(config.device)
-        target = target.to(config.device)
-
-        # compute output
-        output = model(input_)
-        criterion_loss = criterion_fn(output, target, criterion)
-
-        # compute compression loss
-        compression_loss = compression_ctrl.loss()
-        loss = criterion_loss + compression_loss
-
-        if isinstance(output, InceptionOutputs):
-            output = output.logits
-        # measure accuracy and record loss
-        acc1, acc5 = accuracy(output, target, topk=(1, 5))
-        losses.update(loss.item(), input_.size(0))
-        comp_loss_val = compression_loss.item() if isinstance(compression_loss, torch.Tensor) else compression_loss
-        compression_losses.update(comp_loss_val, input_.size(0))
-        criterion_losses.update(criterion_loss.item(), input_.size(0))
-        top1.update(acc1, input_.size(0))
-        top5.update(acc5, input_.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if i % config.print_freq == 0:
-            logger.info(
-                '{rank}: '
-                'Epoch: [{0}][{1}/{2}] '
-                'Lr: {3:.3} '
-                'Time: {batch_time.val:.3f} ({batch_time.avg:.3f}) '
-                'Data: {data_time.val:.3f} ({data_time.avg:.3f}) '
-                'CE_loss: {ce_loss.val:.4f} ({ce_loss.avg:.4f}) '
-                'CR_loss: {cr_loss.val:.4f} ({cr_loss.avg:.4f}) '
-                'Loss: {loss.val:.4f} ({loss.avg:.4f}) '
-                'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
-                'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
-                    epoch, i, len(train_loader), get_lr(optimizer), batch_time=batch_time,
-                    data_time=data_time, ce_loss=criterion_losses, cr_loss=compression_losses,
-                    loss=losses, top1=top1, top5=top5,
-                    rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
-                ))
-
-        if is_main_process():
-            global_step = len(train_loader) * log_epoch
-            config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
-            config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
-            config.tb.add_scalar("train/compression_loss", compression_losses.avg, i + global_step)
-            config.tb.add_scalar("train/loss", losses.avg, i + global_step)
-            config.tb.add_scalar("train/top1", top1.avg, i + global_step)
-            config.tb.add_scalar("train/top5", top5.avg, i + global_step)
-
-            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
-                if isinstance(stat_value, (int, float)):
-                    config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
-
-
-def validate(val_loader, model, criterion, config, epoch=0, log_epoch=0):
-    config.cur_epoch = log_epoch
-
+def validate(val_loader, model, criterion, config):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -487,6 +503,8 @@ def validate(val_loader, model, criterion, config, epoch=0, log_epoch=0):
 
     # switch to evaluate mode
     model.eval()
+
+    config.cur_epoch = config.log_epoch
 
     with torch.no_grad():
         end = time.time()

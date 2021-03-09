@@ -33,7 +33,7 @@ from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
 from nncf.compression_method_api import CompressionLevel
 from nncf.config import NNCFConfig
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
 
 
@@ -65,6 +65,8 @@ class Command:
             print(err)
 
     def run(self, timeout=3600, assert_returncode_zero=True):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
 
         def target():
             start_time = time.time()
@@ -574,7 +576,7 @@ class TestCaseDescriptor:
 
 class HAWQDescriptor(TestCaseDescriptor):
     batch_size_init: int = 0
-    set_chosen_config_spy = None
+    get_qsetup_spy = None
     hessian_trace_estimator_spy = None
 
     def batch_for_init(self, batch_size_init: int):
@@ -597,15 +599,16 @@ class HAWQDescriptor(TestCaseDescriptor):
 
     def setup_spy(self, mocker):
         from nncf.quantization.init_precision import HAWQPrecisionInitializer
-        self.set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
+        self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
         from nncf.quantization.hessian_trace import HessianTraceEstimator
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
-        bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
-        assert len(bitwidth_list) == self.n_weight_quantizers
+        qconfig_sequence = self.get_qsetup_spy.call_args[0][1]
+        assert len(qconfig_sequence) == self.n_weight_quantizers
+        all_precisions = {qc.num_bits for qc in qconfig_sequence}
         # with default compression ratio = 1.5 all precisions should be different from the default one
-        assert set(bitwidth_list) != {QuantizerConfig().bits}
+        assert all_precisions != {QuantizerConfig().num_bits}
 
         init_data_loader = self.hessian_trace_estimator_spy.call_args[0][5]
         expected_batch_size = self.batch_size_init if self.batch_size_init else self.batch_size
@@ -638,7 +641,7 @@ class AutoQDescriptor(TestCaseDescriptor):
     def validate_spy(self):
         ctrl = self.commit_compression_changes_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
-        assert set(final_bits) != {QuantizerConfig().bits}
+        assert set(final_bits) != {QuantizerConfig().num_bits}
         assert all([bit in AutoQDescriptor.BITS for bit in final_bits])
 
 

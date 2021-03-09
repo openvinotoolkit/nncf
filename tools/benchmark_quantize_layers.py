@@ -10,13 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from typing import Optional, Tuple
 
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 
-from nncf.quantization.layers import QuantizerConfig, AsymmetricQuantizer, SymmetricQuantizer
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.quantization.layers import AsymmetricQuantizer, SymmetricQuantizer, PTQuantizerSpec
 from nncf.utils import sum_like, get_per_channel_scale_shape
 
 from tools.benchmark import run_profile, run_wall, run_worker
@@ -31,6 +32,15 @@ HIGH_BATCH_INPUT_SIZE = [128, 96, 112, 112]
 TEST_PARAMS_STRUCT = [("low batch", LOW_BATCH_INPUT_SIZE, GPU_RUNS_LOW_BATCH),
                       ("high batch", HIGH_BATCH_INPUT_SIZE, GPU_RUNS_HIGH_BATCH)]
 
+class DefaultedPTQuantizerSpec(PTQuantizerSpec):
+    def __init__(self,
+                 scale_shape: Tuple[int, ...],
+                 num_bits: int = 8,
+                 mode: QuantizationMode = QuantizationMode.SYMMETRIC,
+                 signedness_to_force: Optional[bool] = None,
+                 narrow_range: bool = False,
+                 logarithm_scale: bool = None):
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, scale_shape, logarithm_scale)
 
 # reference impl
 class ReferenceQuantizeSymmetric(torch.autograd.Function):
@@ -97,7 +107,11 @@ class ReferenceQuantize(nn.Module):
 
 
 if __name__ == '__main__':
+    per_tensor_scale_shape = (1,)
     for input_name, input_size, gpu_runs in TEST_PARAMS_STRUCT:
+        weight_per_channel_scale_shape = get_per_channel_scale_shape(input_size, is_weights=True)
+        act_per_channel_scale_shape = get_per_channel_scale_shape(input_size, is_weights=False)
+
         print("CUDA " + input_name)
         print("------------------------------------------------")
         print("Pytorch Symmetric (cuda 0) impl:")
@@ -112,7 +126,8 @@ if __name__ == '__main__':
         print("Custom Symmetric (cuda 0 ) impl:")
         print("input size: {0}".format(input_size))
         run_profile(
-            SymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+            SymmetricQuantizer(DefaultedPTQuantizerSpec(scale_shape=per_tensor_scale_shape,
+                                                        num_bits=NBITS)).cuda(),
             input_size,
             'cuda',
             gpu_runs)
@@ -133,10 +148,10 @@ if __name__ == '__main__':
         print("Custom Symmetric Per Weight Channel  (cuda 0 ) impl")
         print("input size: {0}".format(input_size))
         run_profile(
-            SymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                               input_shape=input_size,
-                                               per_channel=True,
-                                               is_weights=True)).cuda(),
+            SymmetricQuantizer(DefaultedPTQuantizerSpec(
+                scale_shape=weight_per_channel_scale_shape,
+                num_bits=NBITS,
+                narrow_range=True)).cuda(),
             input_size,
             'cuda',
             gpu_runs)
@@ -157,10 +172,9 @@ if __name__ == '__main__':
         print("Custom Symmetric Per Activation Channel  (cuda 0 ) impl")
         print("input size: {0}".format(input_size))
         run_profile(
-            SymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                               input_shape=input_size,
-                                               per_channel=True,
-                                               is_weights=False)).cuda(),
+            SymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                        scale_shape=act_per_channel_scale_shape,
+                                                        narrow_range=False)).cuda(),
             input_size,
             'cuda',
             gpu_runs)
@@ -169,7 +183,8 @@ if __name__ == '__main__':
         print("Custom Asymmetric (cuda 0 ) impl:")
         print("input size: {0}".format(input_size))
         run_profile(
-            AsymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+            AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                         scale_shape=(1, ))).cuda(),
             input_size,
             'cuda',
             gpu_runs)
@@ -178,10 +193,9 @@ if __name__ == '__main__':
         print("Custom Asymmetric Per Weight Channel  (cuda 0 ) impl")
         print("input size: {0}".format(input_size))
         run_profile(
-            AsymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                                input_shape=input_size,
-                                                per_channel=True,
-                                                is_weights=True)).cuda(),
+            AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                         scale_shape=weight_per_channel_scale_shape,
+                                                         narrow_range=True)).cuda(),
             input_size,
             'cuda',
             gpu_runs)
@@ -190,15 +204,15 @@ if __name__ == '__main__':
         print("Custom Asymmetric Per Activation Channel  (cuda 0 ) impl")
         print("input size: {0}".format(input_size))
         run_profile(
-            AsymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                                input_shape=input_size,
-                                                per_channel=True,
-                                                is_weights=False)).cuda(),
+            AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                         scale_shape=act_per_channel_scale_shape,
+                                                         narrow_range=False)).cuda(),
             input_size,
             'cuda',
             gpu_runs)
 
-
+    weight_per_channel_scale_shape = get_per_channel_scale_shape(LOW_BATCH_INPUT_SIZE, is_weights=True)
+    act_per_channel_scale_shape = get_per_channel_scale_shape(LOW_BATCH_INPUT_SIZE, is_weights=False)
     # CPU low batch
     print()
     print("CPU low batch")
@@ -215,7 +229,7 @@ if __name__ == '__main__':
     print("Custom Symmetric (cpu) impl:")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        SymmetricQuantizer(QuantizerConfig(bits=NBITS)),
+        SymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS, scale_shape=per_tensor_scale_shape)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
@@ -236,10 +250,9 @@ if __name__ == '__main__':
     print("Custom Symmetric Per Weight Channel  (cpu) impl")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        SymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                           input_shape=LOW_BATCH_INPUT_SIZE,
-                                           per_channel=True,
-                                           is_weights=True)),
+        SymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                    scale_shape=weight_per_channel_scale_shape,
+                                                    narrow_range=True)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
@@ -260,10 +273,9 @@ if __name__ == '__main__':
     print("Custom Symmetric Per Activation Channel  (cpu) impl")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        SymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                           input_shape=LOW_BATCH_INPUT_SIZE,
-                                           per_channel=True,
-                                           is_weights=False)),
+        SymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                    scale_shape=act_per_channel_scale_shape,
+                                                    narrow_range=False)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
@@ -272,7 +284,8 @@ if __name__ == '__main__':
     print("Custom Asymmetric (cpu) impl:")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        AsymmetricQuantizer(QuantizerConfig(bits=NBITS)),
+        AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                     scale_shape=per_tensor_scale_shape)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
@@ -281,10 +294,9 @@ if __name__ == '__main__':
     print("Custom Asymmetric Per Weight Channel  (cpu) impl")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        AsymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                            input_shape=LOW_BATCH_INPUT_SIZE,
-                                            per_channel=True,
-                                            is_weights=True)),
+        AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                     scale_shape=weight_per_channel_scale_shape,
+                                                     narrow_range=True)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
@@ -293,16 +305,17 @@ if __name__ == '__main__':
     print("Custom Asymmetric Per Activation Channel  (cpu) impl")
     print("input size: {0}".format(LOW_BATCH_INPUT_SIZE))
     run_profile(
-        AsymmetricQuantizer(QuantizerConfig(bits=NBITS,
-                                            input_shape=LOW_BATCH_INPUT_SIZE,
-                                            per_channel=True,
-                                            is_weights=False)),
+        AsymmetricQuantizer(DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                                     scale_shape=act_per_channel_scale_shape,
+                                                     narrow_range=False)),
         LOW_BATCH_INPUT_SIZE,
         'cpu',
         CPU_RUNS)
 
 
     # CUDA DataParallel high batch
+    weight_per_channel_scale_shape = get_per_channel_scale_shape(HIGH_BATCH_INPUT_SIZE, is_weights=True)
+    act_per_channel_scale_shape = get_per_channel_scale_shape(HIGH_BATCH_INPUT_SIZE, is_weights=False)
     device_ids = range(torch.cuda.device_count())
     print()
     print("CUDA DataParallel high batch")
@@ -319,7 +332,9 @@ if __name__ == '__main__':
     print("Custom Symmetric (cuda {0}) DataParallel impl:".format(device_ids))
     print("input size: {0}".format(HIGH_BATCH_INPUT_SIZE))
     run_profile(
-        nn.parallel.DataParallel(SymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+        nn.parallel.DataParallel(SymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)).cuda(),
                                  device_ids=device_ids),
         HIGH_BATCH_INPUT_SIZE,
         'cuda',
@@ -329,7 +344,9 @@ if __name__ == '__main__':
     print("Custom Asymmetric (cuda {0}) DataParallel impl:".format(device_ids))
     print("input size: {0}".format(HIGH_BATCH_INPUT_SIZE))
     run_profile(
-        nn.parallel.DataParallel(AsymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+        nn.parallel.DataParallel(AsymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)).cuda(),
                                  device_ids=device_ids),
         HIGH_BATCH_INPUT_SIZE,
         'cuda',
@@ -352,17 +369,21 @@ if __name__ == '__main__':
     print("Custom Symmetric (cuda {0}) DataParallel impl:".format(device_ids))
     print("input size: {0}".format(HIGH_BATCH_INPUT_SIZE))
     run_wall(
-        nn.parallel.DataParallel(SymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+        nn.parallel.DataParallel(SymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)).cuda(),
                                  device_ids=device_ids),
         HIGH_BATCH_INPUT_SIZE,
         'cuda',
         GPU_RUNS_HIGH_BATCH)
 
     print()
-    print("Custom Assymetric (cuda {0}) DataParallel impl:".format(device_ids))
+    print("Custom Asymmetric (cuda {0}) DataParallel impl:".format(device_ids))
     print("input size: {0}".format(HIGH_BATCH_INPUT_SIZE))
     run_wall(
-        nn.parallel.DataParallel(AsymmetricQuantizer(QuantizerConfig(bits=NBITS)).cuda(),
+        nn.parallel.DataParallel(AsymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)).cuda(),
                                  device_ids=device_ids),
         HIGH_BATCH_INPUT_SIZE,
         'cuda',
@@ -388,7 +409,9 @@ if __name__ == '__main__':
     mp.spawn(
         run_worker,
         nprocs=NGPUS_PER_NODE,
-        args=(WORLD_SIZE, SymmetricQuantizer(QuantizerConfig(bits=NBITS)), TEST_PARAMS_STRUCT[1],
+        args=(WORLD_SIZE, SymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)), TEST_PARAMS_STRUCT[1],
               GPU_RUNS_HIGH_BATCH))
 
     print()
@@ -397,5 +420,7 @@ if __name__ == '__main__':
     mp.spawn(
         run_worker,
         nprocs=NGPUS_PER_NODE,
-        args=(WORLD_SIZE, SymmetricQuantizer(QuantizerConfig(bits=NBITS)), TEST_PARAMS_STRUCT[1],
+        args=(WORLD_SIZE, SymmetricQuantizer(
+            DefaultedPTQuantizerSpec(num_bits=NBITS,
+                                     scale_shape=per_tensor_scale_shape)), TEST_PARAMS_STRUCT[1],
               GPU_RUNS_HIGH_BATCH))

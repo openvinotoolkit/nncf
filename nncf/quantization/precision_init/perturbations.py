@@ -15,7 +15,7 @@ from typing import Dict
 import torch
 from torch import Tensor
 
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from ...dynamic_graph.context import no_nncf_trace
 
 

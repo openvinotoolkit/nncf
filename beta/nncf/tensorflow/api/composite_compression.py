@@ -19,22 +19,18 @@ from nncf.api.composite_compression import CompositeCompressionAlgorithmControll
 from nncf.api.composite_compression import CompositeCompressionScheduler
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.api.compression import TFCompressionScheduler
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompositeCompressionScheduler(CompositeCompressionScheduler, TFCompressionScheduler):
-    pass
-
 class TFCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, TFCompressionAlgorithmController):
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)
         self._initializer = None
-        self._scheduler = TFCompositeCompressionScheduler()
+        self._scheduler = CompositeCompressionScheduler()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,

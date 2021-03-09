@@ -200,6 +200,7 @@ def get_test_models_desc(algorithm):
         ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
         ModelDesc('shared_layers_model.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
         ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
+        ModelDesc('yolo_v4.pb', test_models.YOLOv4, [1, None, None, 3]),
     ]
 
 

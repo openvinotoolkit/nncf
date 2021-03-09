@@ -122,18 +122,17 @@ class CompressionScheduler:
             next_epoch = self.current_epoch + 1
         self.current_epoch = next_epoch
 
-    def load_state(self, step: int, epoch: int) -> None:
+    def load_state(self, state: Dict[str, object]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
         compression method.
 
-        :param step: The index of the global training step.
-        :param epoch: The training epoch index.
+        :param state: Output of `get_state()` method.
         """
-        self.current_step = step
-        self.current_epoch = epoch
+        self.current_step = state['current_step']
+        self.current_epoch = state['current_epoch']
 
-    def get_state(self) -> Dict[str, int]:
+    def get_state(self) -> Dict[str, object]:
         """
         Returns the compression scheduler state.
 

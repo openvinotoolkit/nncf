@@ -101,9 +101,6 @@ QUANTIZER_CONFIG_PROPERTIES = {
                               description="Whether to use signed or unsigned input/output values for quantization."
                                           " If specified as unsigned and the input values during initialization have "
                                           "differing signs, will reset to performing signed quantization instead."),
-    "logarithm_scale": with_attributes(_BOOLEAN,
-                                       description="Whether to use log of scale as optimized parameter"
-                                                   " instead of scale itself."),
     "per_channel": with_attributes(_BOOLEAN,
                                    description="Whether to quantize inputs per channel (i.e. per 0-th dimension for "
                                                "weight quantization, and per 1-st dimension for activation "
@@ -115,12 +112,16 @@ IGNORED_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to 
 TARGET_SCOPES_DESCRIPTION = "A list of model control flow graph node scopes to be considered for this operation" \
                             " - functions as a 'denylist'. Optional."
 
+
 QUANTIZER_GROUP_PROPERTIES = {
     **QUANTIZER_CONFIG_PROPERTIES,
     "ignored_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
                                       description=IGNORED_SCOPES_DESCRIPTION),
     "target_scopes": with_attributes(make_object_or_array_of_objects_schema(_STRING),
-                                     description=TARGET_SCOPES_DESCRIPTION)
+                                     description=TARGET_SCOPES_DESCRIPTION),
+    "logarithm_scale": with_attributes(_BOOLEAN,
+                                       description="Whether to use log of scale as optimized parameter"
+                                                   " instead of scale itself."),
 }
 
 WEIGHTS_GROUP_SCHEMA = {
@@ -695,6 +696,23 @@ TARGET_DEVICE_SCHEMA = {
     "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL"]
 }
 
+ACCURACY_AWARE_SCHEMA = {
+    "minimal_tolerable_accuracy": with_attributes(_NUMBER,
+                                                  description="Minimal tolerable accuracy value"),
+    "initial_training_phase_epochs": with_attributes(_NUMBER,
+                                                     description="Number of epochs to tune during the initial"
+                                                                 "training phase"),
+    "initial_compression_level_step": with_attributes(_NUMBER,
+                                                      description="initial_compression_level_step"),
+    "compression_level_step_reduction_factor":  with_attributes(_NUMBER,
+                                                      description="compression_level_step_reduction_factor"),
+    "minimal_compression_level_step":  with_attributes(_NUMBER,
+                                                      description="minimal_compression_level_step"),
+    "patience_epochs":  with_attributes(_NUMBER,
+                                        description="patience epochs"),
+}
+
+
 ROOT_NNCF_CONFIG_SCHEMA = {
     "$schema": "http://json-schema.org/draft-07/schema",
     "type": "object",
@@ -721,6 +739,8 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
+        "accuracy_aware_training_config": with_attributes(ACCURACY_AWARE_SCHEMA,
+                                   description="Accuracy aware training config"),
         "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
                                          description="The target device, the specificity of which will be taken into "
                                                      "account while compressing in order to obtain the best "

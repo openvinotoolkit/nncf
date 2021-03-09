@@ -24,7 +24,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
-from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')

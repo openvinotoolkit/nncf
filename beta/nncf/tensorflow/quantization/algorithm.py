@@ -13,10 +13,6 @@
 
 import networkx as nx
 
-from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.transformations.commands import InsertionCommand
-from nncf.common.graph.transformations.commands import AfterLayer
-from nncf.common.graph.transformations.commands import LayerWeight
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -25,17 +21,22 @@ from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmControlle
 from beta.nncf.tensorflow.graph import patterns as p
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
+from beta.nncf.tensorflow.graph.transformations.commands import TFAfterLayer
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_AGNOSTIC_TO_DATA_PRECISION
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
-from beta.nncf.tensorflow.quantization.config import QuantizerConfig
-from beta.nncf.tensorflow.quantization.config import QuantizationMode
-from beta.nncf.tensorflow.quantization.config import QuantizationConstraints
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
+from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 from beta.nncf.tensorflow.utils.node import is_ignored
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationConstraints
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -75,9 +76,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.global_quantizer_constraints[quantizer_group] = QuantizationConstraints(
             num_bits=params_dict.get('bits'),
             mode=params_dict.get('mode'),
-            signed=params_dict.get('signed'),
-            per_channel=params_dict.get('per_channel'),
-            narrow_range=(quantizer_group == WEIGHTS)
+            signedness_to_force=params_dict.get('signed'),
+            per_channel=params_dict.get('per_channel')
         )
         self.ignored_scopes_per_group[quantizer_group] = config.get('ignored_scopes', []) \
                                                          + params_dict.get('ignored_scopes', [])
@@ -86,9 +86,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     def _get_default_qconfig(self, constraints: QuantizationConstraints = None):
         qconfig = QuantizerConfig(num_bits=8,
                                   mode=QuantizationMode.SYMMETRIC,
-                                  signed=None,
-                                  per_channel=False,
-                                  narrow_range=False)
+                                  signedness_to_force=None,
+                                  per_channel=False)
         if constraints is not None:
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
@@ -104,7 +103,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 logger.warning('The layer {} is not supported by the quantization algorithm'
                                .format(get_original_name_and_instance_index(node_name)[0]))
 
-        transformations = TransformationLayout()
+        transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[WEIGHTS])
         shared_nodes = set()
         for node_name, node in nxmodel.nodes.items():
@@ -117,12 +116,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            operation = self._create_quantizer(qconfig)
+            operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
+                                                                           narrow_range=True))
 
             weight_attr_name = QUANTIZATION_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
-                InsertionCommand(
-                    target_point=LayerWeight(original_node_name, weight_attr_name),
+                TFInsertionCommand(
+                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
                     callable_object=operation,
                     priority=TransformationPriority.QUANTIZATION_PRIORITY
                 ))
@@ -131,10 +131,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            fake_quantize_layer = FakeQuantize(qconfig, name=fake_quantize_name)
+            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
+                                                                           narrow_range=False),
+                                               name=fake_quantize_name)
             transformations.register(
-                InsertionCommand(
-                    target_point=AfterLayer(original_node_name, instance_index),
+                TFInsertionCommand(
+                    target_point=TFAfterLayer(original_node_name, instance_index),
                     callable_object=fake_quantize_layer,
                     priority=TransformationPriority.QUANTIZATION_PRIORITY
                 ))

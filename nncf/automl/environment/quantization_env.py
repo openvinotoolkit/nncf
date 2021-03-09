@@ -41,7 +41,7 @@ from nncf.quantization.algo import QuantizationController, NNCFNetwork, Experime
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -62,7 +62,7 @@ class ModelSizeCalculator:
         self._nparam_map = OrderedDict()
         for qid, qconfig_space in per_quantizer_config_space.items():
             if isinstance(qid, WeightQuantizerId):
-                self._bw_space_map[qid] = [qconf.bits for qconf in qconfig_space]
+                self._bw_space_map[qid] = [qconf.num_bits for qconf in qconfig_space]
                 m = qmodel.get_module_by_scope(qid.scope)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
@@ -154,7 +154,7 @@ class QuantizationEnv:
         if self.hw_cfg_type is None:
             self.model_bitwidth_space = params.bits
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bitwidths()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
@@ -162,11 +162,11 @@ class QuantizationEnv:
         self.qconfig_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())  # type: Dict[QuantizerId, List[QuantizerConfig]]
         if self.hw_cfg_type is None:
             for qid in self.qconfig_space_map.keys():
-                conf = self.qctrl.all_quantizations[qid].get_current_config()
+                conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
                 conf_list_to_set = []
                 for bit in self.model_bitwidth_space:
                     bit_adjusted_conf = deepcopy(conf)
-                    bit_adjusted_conf.bits = bit
+                    bit_adjusted_conf.num_bits = bit
                     conf_list_to_set.append(bit_adjusted_conf)
                 self.qconfig_space_map[qid] = conf_list_to_set
         else:
@@ -288,7 +288,7 @@ class QuantizationEnv:
         df = pd.DataFrame.from_dict(d, orient='index')
         df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
         df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
-        df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
+        df['is_wt_quantizer'] = df['qid_obj'].apply(lambda x: x in self.qctrl.weight_quantizers)
         df['state_module'] = df['state_scope'].apply(self.qmodel.get_module_by_scope)
 
         quantizer_table = df.loc[natsorted(df.index)]
@@ -421,7 +421,7 @@ class QuantizationEnv:
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:
         def lower_bitwidth(bw: int, qconf_space: List[QuantizerConfig]) -> int:
-            bw_space = [qconf.bits for qconf in qconf_space]
+            bw_space = [qconf.num_bits for qconf in qconf_space]
             assert bw in bw_space
             sorted_bw_space = sorted(bw_space)
             return sorted_bw_space[sorted_bw_space.index(bw)-1] if sorted_bw_space.index(bw) > 0 else bw
@@ -460,7 +460,7 @@ class QuantizationEnv:
 
         # Ensure action is in the quantizer's bitwidth space
         current_qconf_space = self.master_df.qconf_space[currently_processed_qconf_idx]
-        current_bw_space = [qconf.bits for qconf in current_qconf_space]
+        current_bw_space = [qconf.num_bits for qconf in current_qconf_space]
         if action not in current_bw_space:
             closest_bw_idx = np.argmin(np.abs(action - np.array(current_bw_space)))
             action = current_bw_space[closest_bw_idx]
@@ -485,7 +485,7 @@ class QuantizationEnv:
                                             self.master_df['qconf_space']):
             matches = []
             for qconf in qconf_space:
-                if qconf.bits == action:
+                if qconf.num_bits == action:
                     matches.append(qconf)
             assert len(matches) == 1
             for qp_id in qp_id_set:

@@ -107,7 +107,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     composite_builder.apply_to(compressed_model)
 
-    compression_ctrl = compressed_model.commit_compression_changes()
+    accuracy_aware_config = config.get("accuracy_aware_training_config", {})
+    compression_ctrl = compressed_model.commit_compression_changes(accuracy_aware_config)
 
     try:
         if resuming_state_dict is not None:

@@ -123,16 +123,14 @@ class TrainEpochArgs(NNCFExtraConfigStruct):
     def __init__(self,
                  train_epoch_fn,
                  eval_fn,
-                 config,
-                 criterion_fn,
-                 device,
-                 uncompressed_model_accuracy):
+                 configure_optimizers_fn,
+                 on_training_end_fn,
+                 config):
         self.train_epoch_fn = train_epoch_fn
         self.eval_fn = eval_fn
+        self.configure_optimizers_fn = configure_optimizers_fn
+        self.on_training_end_fn = on_training_end_fn
         self.config = config
-        self.criterion_fn = criterion_fn
-        self.device = device
-        self.uncompressed_model_accuracy = uncompressed_model_accuracy
 
     @classmethod
     def get_id(cls) -> str:

@@ -10,8 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from abc import abstractmethod, ABC
-from typing import List, Tuple, Dict, Callable, Union
+
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
 import networkx as nx
 import os
@@ -20,26 +24,42 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from functools import partial
+from abc import ABC
+from abc import abstractmethod
 from copy import deepcopy
+from functools import partial
 
-from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.dynamic_graph.context import get_version_agnostic_name, TracingContext
-from nncf.dynamic_graph.graph import NNCFGraph, InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph_builder import create_input_infos, create_mock_tensor, GraphBuilder, \
-    create_dummy_forward_fn, ModelInputInfo
 from nncf import nncf_model_input
-from nncf.layers import LSTMCellNNCF, NNCF_RNN
-from nncf.nncf_network import NNCFNetwork, InsertionType
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.context import get_version_agnostic_name
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph_builder import GraphBuilder
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
+from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_builder import create_mock_tensor
+from nncf.hw_config import HWConfigType
+from nncf.layers import LSTMCellNNCF
+from nncf.layers import NNCF_RNN
+from nncf.nncf_network import InsertionType
+from nncf.nncf_network import NNCFNetwork
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.utils import get_all_modules_by_type
 from tests import test_models
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
-from tests.helpers import get_empty_config, create_compressed_model_and_algo_for_test
-from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.hw_config import HWConfigType
-from tests.test_models.synthetic import ManyNonEvalModules, PoolUnPool, ArangeModel, TransposeModel, \
-    GatherModel, MaskedFillModel, ReshapeModel, ModelWithDummyParameter
+from tests.test_models.synthetic import ArangeModel
+from tests.test_models.synthetic import GatherModel
+from tests.test_models.synthetic import ManyNonEvalModules
+from tests.test_models.synthetic import MaskedFillModel
+from tests.test_models.synthetic import ModelWithDummyParameter
+from tests.test_models.synthetic import PoolUnPool
+from tests.test_models.synthetic import ReshapeModel
+from tests.test_models.synthetic import TransposeModel
 
 
 def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info=None):
@@ -108,7 +128,10 @@ def sort_dot(path):
 def check_graph(graph: NNCFGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     # pylint:disable=protected-access
     nx_graph = graph._get_graph_for_structure_analysis()
+    check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=sort_dot_graph)
 
+
+def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=True):
     data_dir = os.path.join(os.path.dirname(__file__), 'data/reference_graphs')
     dot_dir = os.path.join(data_dir, graph_dir)
     path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
@@ -670,8 +693,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
                          input_info=[{"sample_size": [1, 1]},
-                                     {"sample_size": [1], "type": "long", "filler":"zeros"},
-                                     {"sample_size": [1], "type": "long", "filler":"zeros"}]),
+                                     {"sample_size": [1], "type": "long", "filler": "zeros"},
+                                     {"sample_size": [1], "type": "long", "filler": "zeros"}]),
 
     SingleLayerModelDesc(model_name='softmax', layer=F.softmax),
 

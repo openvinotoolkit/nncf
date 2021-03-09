@@ -35,6 +35,9 @@
     "operations": [
         {
             "type": "Convolution",
+            "attributes": {
+                "adjust_padding": true
+            },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
                 "weights": ["q8_ch","q4_ch", "q2_ch"]
