@@ -230,7 +230,7 @@ class BaseQuantizer(nn.Module):
                                                       input_high)
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
             x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
-            if self.per_channel and self.scale_shape[0] > 1:
+            if self.per_channel:
                 if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
                         torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                     y_scale, y_zero_point = y_scale[0], y_zero_point[0]
