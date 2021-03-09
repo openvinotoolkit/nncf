@@ -92,7 +92,8 @@ class PolynomialSparseScheduler(SparsityScheduler):
 
         self._steps_in_current_epoch = 0
         super().epoch_step(next_epoch)
-        self._set_sparsity_level()
+        if not self._update_per_optimizer_step:
+            self._set_sparsity_level()
 
     def get_state(self):
         sd = super().get_state()
