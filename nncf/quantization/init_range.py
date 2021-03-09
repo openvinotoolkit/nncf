@@ -50,12 +50,12 @@ class RangeInitConfig:
         if self.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shapes, num_samples)
         if self.init_type == "percentile":
-            min_percentile = self.init_type_specific_params.get("min_percentile", 10)
-            max_percentile = self.init_type_specific_params.get("max_percentile", 90)
+            min_percentile = self.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.init_type_specific_params.get("max_percentile", 99.9)
             return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shapes, num_samples)
         if self.init_type == "mean_percentile":
-            min_percentile = self.init_type_specific_params.get("min_percentile", 10)
-            max_percentile = self.init_type_specific_params.get("max_percentile", 90)
+            min_percentile = self.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.init_type_specific_params.get("max_percentile", 99.9)
             return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shapes, num_samples)
         raise RuntimeError("Unknown range init type: {}".format(self.init_type))
 
