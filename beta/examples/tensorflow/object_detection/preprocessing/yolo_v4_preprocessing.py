@@ -275,7 +275,7 @@ class YOLOv4Preprocessor:
             elif 0.2 < random_val < 0.3:
                 image_data, box_data = random_cutmix_augment(image_data, box_data, prob=1.0)
 
-        anchors = np.array(self.anchors).reshape(-1, 2)
+        anchors = np.array(self.anchors).astype(float).reshape(-1, 2)
 
         y_true1, y_true2, y_true3 = self._preprocess_true_boxes(box_data, self.input_shape, anchors, self.num_classes, self.multi_anchor_assign)
 

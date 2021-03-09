@@ -777,7 +777,7 @@ class YOLOv4Loss:
         loss: tensor, shape=(1,)
 
         '''
-        anchors = np.array(anchors).reshape(-1, 2)
+        anchors = np.array(anchors).astype(float).reshape(-1, 2)
         num_layers = len(anchors)//3 # default setting
         yolo_outputs = list(outputs.values()) # args[:num_layers]
         y_true = list(labels.values()) # args[num_layers:]
