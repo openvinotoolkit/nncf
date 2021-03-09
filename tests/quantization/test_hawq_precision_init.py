@@ -510,6 +510,8 @@ def precision_init_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
 
 
 def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs_subprocess_in_precommit):
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     config_builder = HAWQConfigBuilder(batch_size=2, num_data_points=10).for_trial()
     config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()
@@ -532,10 +534,11 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
     model = BasicConvTestModel()
     mock_train_loader = mocker.stub()
     mock_train_loader.batch_size = 1
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=mocker.stub(),
                                                                  criterion=mocker.stub(),
                                                                  data_loader=mock_train_loader,
-                                                                 device='cuda')])
+                                                                 device=device)])
     mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
     mocked_calc_traces = mocker.patch(
         'nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')

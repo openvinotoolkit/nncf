@@ -130,6 +130,8 @@ def save_params(model, out_file_path):
 
 
 def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path, runs_subprocess_in_precommit):
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     num_init_samples = 10
 
     config = get_squeezenet_quantization_config()
