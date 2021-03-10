@@ -263,7 +263,8 @@ def get_avg_traces(model, init_device: str):
 
 
 def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
-    model = model.cuda()
+    if torch.cuda.is_available():
+        model = model.cuda()
     all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
     quantizer_switcher = QuantizersSwitcher(list(all_quantizers_per_full_scope.values()))
     # graph may not contain some quantizers (e.g. in staged scenario)

@@ -439,7 +439,7 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
         "--cpu-only": True
@@ -736,7 +736,8 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     if not torch.cuda.is_available():
         args["--cpu-only"] = True
 
-    command_line = " ".join(f'{key} {val}' for key, val in args.items())
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
     # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
     # SafeMLFLow, which happens with a mocked train function
     if desc.sample_type == SampleType.CLASSIFICATION:
