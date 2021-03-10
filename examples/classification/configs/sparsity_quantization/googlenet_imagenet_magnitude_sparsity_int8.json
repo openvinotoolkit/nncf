@@ -26,10 +26,8 @@
     },
     "num_classes": 1000,
     "epochs": 24,
+
     "compression": [
-        {
-            "algorithm": "knowledge_distillation"
-        },
         {
             "algorithm": "magnitude_sparsity",
             "sparsity_init": 0.2,
@@ -52,6 +50,6 @@
         },
         {
             "algorithm": "quantization"
-        }
+    }
     ]
 }
