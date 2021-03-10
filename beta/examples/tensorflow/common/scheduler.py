@@ -94,5 +94,7 @@ def build_scheduler(config, epoch_size, batch_size, steps):
         lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
     elif schedule_type == 'step':
         lr = StepLearningRateWithLinearWarmup(steps, schedule_params)
+    else:
+        raise NameError(f"unsupported type of learning rate scheduler: {schedule_type}")
 
     return lr
