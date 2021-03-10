@@ -35,7 +35,7 @@
                     0.4,
                     0.5
                 ],
-                "sparsity_freeze_epoch": 29
+                "sparsity_freeze_epoch": 30
             }
         },
         {
