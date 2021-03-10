@@ -88,7 +88,9 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         MeanMetatype,
         RoundMetatype,
         PixelShuffleMetatype,
-        BatchNormMetatype
+        BatchNormMetatype,
+        AvgPool2dMetatype,
+        AvgPool3dMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
         EmbeddingMetatype,
