@@ -869,8 +869,7 @@ class YOLOv4Loss:
 
             # test:
             with tf.control_dependencies([
-                tf.Assert(tf.debugging.is_numeric_tensor(pred_box), [pred_box]),
-                tf.Assert(tf.debugging.is_numeric_tensor(diou_loss), [diou_loss]),
+                tf.Assert(tf.debugging.is_numeric_tensor(pred_box), [pred_box])
             ]):
 
                 # if use_giou_loss:
@@ -885,7 +884,10 @@ class YOLOv4Loss:
                 raw_true_box = y_true[i][...,0:4]
                 diou = self.box_diou(raw_true_box, pred_box)
                 diou_loss = object_mask * box_loss_scale * (1 - diou)
-                diou_loss = K.sum(diou_loss) / batch_size_f
+                with tf.control_dependencies([
+                    tf.Assert(tf.debugging.is_numeric_tensor(diou_loss), [diou_loss])
+                ]):
+                    diou_loss = K.sum(diou_loss) / batch_size_f
                 location_loss = diou_loss
                 # else:
                 #     # Standard YOLOv3 location loss
@@ -896,6 +898,11 @@ class YOLOv4Loss:
                 #     wh_loss = K.sum(wh_loss) / batch_size_f
                 #     location_loss = xy_loss + wh_loss
 
+            # test:
+            # with tf.control_dependencies([
+            #     tf.Assert(tf.debugging.is_numeric_tensor(confidence_loss), [confidence_loss]),
+            #     tf.Assert(tf.debugging.is_numeric_tensor(class_loss), [class_loss]),
+            # ]):
 
             confidence_loss = K.sum(confidence_loss) / batch_size_f
             class_loss = K.sum(class_loss) / batch_size_f

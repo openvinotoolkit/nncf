@@ -159,24 +159,29 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
         # test:
         # grads, _ = tf.clip_by_global_norm(grads, 5.0)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        #return losses, grads
         return losses
 
     @tf.function
     def train_step(dataset_inputs):
+        #per_replica_losses, per_replica_grads = strategy.run(_train_step_fn, args=(dataset_inputs,))
         per_replica_losses = strategy.run(_train_step_fn, args=(dataset_inputs,))
+        #grads = tf.nest.map_structure(lambda x: strategy.reduce(tf.distribute.ReduceOp.MEAN, x, axis=None),
+        #                               per_replica_grads)
         losses = tf.nest.map_structure(lambda x: strategy.reduce(tf.distribute.ReduceOp.MEAN, x, axis=None),
                                        per_replica_losses)
-        return losses
+        return losses #, grads
 
     return train_step
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
+    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq): # , model
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
+    # train_grads_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'train_grads'))
 
     timer = Timer()
     timer.tic()
@@ -195,8 +200,19 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 break
 
             compression_ctrl.scheduler.step()
-            train_loss = train_step(x)
+            train_loss = train_step(x) # grads
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
+
+
+
+            #grads = tf.nest.map_structure(lambda s: s.numpy().astype(float), grads)
+            #grads = list(zip(grads, model.trainable_variables))
+            #with train_grads_writer.as_default():
+            #    for grad, var in grads:
+            #        tf.summary.histogram(var.name, var, step=optimizer.iterations.numpy())
+            #        tf.summary.histogram(var.name + '/gradient', grad, step=optimizer.iterations.numpy())
+            #train_grads_writer.flush()
+
 
             
             if np.isnan(train_metric_result['total_confidence_loss']):
@@ -327,7 +343,7 @@ def run(config):
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
-            config.print_freq)
+            config.print_freq) # , compress_model
 
 
     print_statistics(compression_ctrl.statistics())
