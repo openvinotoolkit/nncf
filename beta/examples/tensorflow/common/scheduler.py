@@ -112,7 +112,7 @@ def build_scheduler(config, steps_per_epoch):
                              'for the exponential scheduler')
 
         decay_epochs = schedule_params.get('decay_epochs', optimizer_config.get('decay_epochs', None))
-        decay_steps = decay_epochs * steps_per_epoch if decay_epochs is not None else 0
+        decay_steps = decay_epochs * steps_per_epoch if decay_epochs is not None else steps_per_epoch
 
         logger.info('Using exponential learning rate with: '
                     'base_lr: %f, decay_steps: %d, '
@@ -162,7 +162,7 @@ def build_scheduler(config, steps_per_epoch):
         step = step * steps_per_epoch
         lr = StepLearningRate(initial_lr, step, gamma=0.1)
     elif schedule_type == 'step_warmup':
-        lr = StepLearningRateWithLinearWarmup(steps_per_epoch, schedule_params)
+        lr = StepLearningRateWithLinearWarmup(schedule_params)
     else:
         raise KeyError(f'Unknown learning rate scheduler type: {schedule_type}')
 
