@@ -945,6 +945,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             stat_builder.apply_to(intermediate_model)
             stat_ctrl = stat_builder.build_controller(intermediate_model)
             runner = SimpleDataLoaderRunner(intermediate_model, range_init_params.device)
+            runner.progressbar_description = 'Collecting tensor statistics'
             runner.run(range_init_params.init_range_data_loader,
                        range_init_params.get_max_num_init_steps())
 
