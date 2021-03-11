@@ -14,6 +14,11 @@ from typing import Tuple
 
 
 class BaseModuleAttributes:
+    """
+    This class stores base useful for some algorithms attributes
+    of modules/layers
+    """
+
     def __init__(self, weight_requires_grad: bool):
         self.weight_requires_grad = weight_requires_grad
 
@@ -23,6 +28,11 @@ class BaseModuleAttributes:
 
 
 class ConvolutionModuleAttributes(BaseModuleAttributes):
+    """
+    This class stores attributes of convolution modules/layers
+    that are useful for some algorithms
+    """
+
     def __init__(self,
                  weight_requires_grad: bool,
                  in_channels: int,
@@ -45,6 +55,11 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
 
 
 class GroupNormModuleAttributes(BaseModuleAttributes):
+    """
+    This class stores attributes of group normalization modules/layers
+    that are useful for some algorithms
+    """
+
     def __init__(self,
                  weight_requires_grad: bool,
                  num_channels: int,

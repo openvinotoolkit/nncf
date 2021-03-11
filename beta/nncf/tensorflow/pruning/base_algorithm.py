@@ -57,6 +57,10 @@ class PrunedLayerInfo:
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
+    """
+    Determines which modifications should be made to the original model in
+    order to enable pruning during fine-tuning.
+    """
 
     def __init__(self, config):
         super().__init__(config)
@@ -83,10 +87,23 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         self._pruned_layer_groups_info = None
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
+        """
+        Adds pruning masks to the model.
+
+        :param model: The original uncompressed model.
+        :return: The model with pruning masks.
+        """
         transformation_layout = self.get_transformation_layout(model)
         return TFModelTransformer(model, transformation_layout).transform()
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
+        """
+        Computes necessary model transformations (pruning mask insertions) to enable pruning.
+
+        :param model: The original uncompressed model.
+        :return: The instance of the `TransformationLayout` class containing
+            a list of pruning mask insertions.
+        """
         graph = convert_keras_model_to_nncf_graph(model)
         groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
 
@@ -190,6 +207,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
 
 class BasePruningAlgoController(TFCompressionAlgorithmController):
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
+    into the original uncompressed model to enable pruning.
+    """
 
     def __init__(self,
                  target_model: tf.keras.Model,

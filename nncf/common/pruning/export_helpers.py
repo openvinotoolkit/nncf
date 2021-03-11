@@ -15,6 +15,11 @@ from nncf.common.graph.graph import NNCFNode
 
 
 class DefaultMetaOp:
+    """
+    Determines meta operations which aggregate operations having common
+    properties of interaction with pruning masks
+    """
+
     subtypes = []
     additional_types = []
 

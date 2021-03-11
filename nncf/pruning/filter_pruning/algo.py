@@ -40,7 +40,6 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_next_nodes_of_types, get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
-from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')

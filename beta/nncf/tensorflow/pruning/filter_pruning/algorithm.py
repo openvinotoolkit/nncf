@@ -42,6 +42,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
+    """
+    Determines which modifications should be made to the original model in
+    order to enable filter pruning during fine-tuning.
+    """
 
     def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
         return FilterPruningController(target_model,
@@ -62,6 +66,10 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 
 
 class FilterPruningController(BasePruningAlgoController):
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
+    into the original uncompressed model to enable filter pruning.
+    """
 
     def __init__(self,
                  target_model: tf.keras.Model,
@@ -82,6 +90,11 @@ class FilterPruningController(BasePruningAlgoController):
         self.frozen = True
 
     def set_pruning_rate(self, pruning_rate: float):
+        """
+        Setup pruning masks in accordance to provided pruning rate
+        :param pruning_rate: pruning ration
+        :return:
+        """
         # Pruning rate from scheduler can be percentage of params that should be pruned
         self.pruning_rate = pruning_rate
         if not self.frozen:

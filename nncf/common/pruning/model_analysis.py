@@ -21,6 +21,10 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
 class NodesCluster:
+    """
+    Represents element of Сlusterization. Groups together nodes.
+    """
+
     def __init__(self, cluster_id: int, nodes: List, nodes_orders: List[int]):
         self.id = cluster_id
         self.nodes = list(nodes)
@@ -36,25 +40,50 @@ class NodesCluster:
 
 
 class Clusterization:
+    """
+    Handles group of node clusters allowing to add new cluster,
+    delete existing one or merge existing clusters.
+    """
+
     def __init__(self, id_attr_name="id"):
         self.clusters = {}
         self._node_to_cluster = {}
         self._id_attr = id_attr_name
 
     def get_cluster_by_id(self, cluster_id: int) -> NodesCluster:
+        """
+        Returns cluster according to provided cluster_id
+        :param cluster_id: id of the cluster
+        :return: cluster according to provided cluster_id
+        """
         if cluster_id not in self.clusters:
             raise IndexError('No cluster with id = {}'.format(cluster_id))
         return self.clusters[cluster_id]
 
     def get_cluster_by_node_id(self, node_id: int) -> NodesCluster:
+        """
+        Returns cluster containing node with provided node_id
+        :param node_id: id of the node which is in cluster
+        :return: cluster containing node with provided node_id
+        """
         if node_id not in self._node_to_cluster:
             raise IndexError('No cluster for node with id = {}'.format(node_id))
         return self.get_cluster_by_id(self._node_to_cluster[node_id])
 
     def is_node_in_clusterization(self, node_id: int) -> bool:
+        """
+        Returns whether node with provided node_id is in clusterization
+        :param node_id: id of the node to test
+        :return: whether node with provided node_id is in clusterization
+        """
         return node_id in self._node_to_cluster
 
     def add_cluster(self, cluster: NodesCluster):
+        """
+        Adds provided cluster to clusterization
+        :param cluster: cluster to add
+        :return:
+        """
         cluster_id = cluster.id
         if cluster_id in self.clusters:
             raise IndexError('Cluster with index = {} already exist'.format(cluster_id))
@@ -63,6 +92,11 @@ class Clusterization:
             self._node_to_cluster[getattr(node, self._id_attr)] = cluster_id
 
     def delete_cluster(self, cluster_id: int):
+        """
+        Removes cluster with `cluster_id` from clusterization
+        :param cluster_id: id of a cluster to delete
+        :return:
+        """
         if cluster_id not in self.clusters:
             raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
         for node in self.clusters[cluster_id].nodes:
@@ -71,15 +105,27 @@ class Clusterization:
         self.clusters.pop(cluster_id)
 
     def get_all_clusters(self) -> List[NodesCluster]:
+        """
+        Returns list of all clusters in clusterization
+        """
         return list(self.clusters.values())
 
     def get_all_nodes(self) -> List:
+        """
+        Returns list all nodes of all clusters in clusterization
+        """
         all_nodes = []
         for cluster in self.clusters.values():
             all_nodes.extend(cluster.nodes)
         return all_nodes
 
     def merge_clusters(self, first_id: int, second_id: int):
+        """
+        Merges two clusters with provided ids
+        :param first_id: id of the first cluster to merge
+        :param second_id: id of the second cluster to merge
+        :return:
+        """
         cluster_1 = self.get_cluster_by_id(first_id)
         cluster_2 = self.get_cluster_by_id(second_id)
         if cluster_1.importance > cluster_2.importance:
@@ -94,6 +140,11 @@ class Clusterization:
             self.clusters.pop(first_id)
 
     def merge_list_of_clusters(self, clusters: List[int]):
+        """
+        Merges provided clusters
+        :param clusters: list of clusters to merge
+        :return:
+        """
         clusters = list(set(clusters))
         clusters.sort(key=lambda cluster_id: self.get_cluster_by_id(cluster_id).importance)
         for cluster_id in clusters[:-1]:
