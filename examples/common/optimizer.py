@@ -73,7 +73,7 @@ def make_optimizer(params_to_optimize, config):
         power = scheduler_params.power
         poly_lambda = lambda epoch: (1 - epoch / config.epochs) ** power
         scheduler = LambdaLR(optim, poly_lambda)
-    elif scheduler_type == 'exp':
+    elif scheduler_type == 'exponential':
         scheduler = ExponentialLR(optim, gamma)
     else:
         raise KeyError("Unknown scheduler type: {}".format(scheduler_type))
