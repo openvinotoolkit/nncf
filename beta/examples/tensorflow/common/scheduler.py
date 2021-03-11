@@ -98,13 +98,8 @@ def build_scheduler(config, steps_per_epoch):
     optimizer_config = config.get('optimizer', {})
     schedule_type = optimizer_config.get('schedule_type', 'step').lower()
     schedule_params = optimizer_config.get('scheduler_params', {})
-    decay_rate = schedule_params.get('gamma', schedule_params.get('decay_rate', None))
-    if decay_rate is None:
-        decay_rate = optimizer_config.get('gamma', optimizer_config.get('decay_rate', 0.1))
-
-    initial_lr = schedule_params.get('base_lr', schedule_params.get('initial_lr', None))
-    if initial_lr is None:
-        initial_lr = optimizer_config.get('base_lr', None)
+    decay_rate = schedule_params.get('gamma', optimizer_config.get('gamma', 0.1))
+    initial_lr = schedule_params.get('base_lr', optimizer_config.get('base_lr', None))
 
     if schedule_type == 'exponential':
         if initial_lr is None:
