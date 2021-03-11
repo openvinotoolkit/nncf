@@ -90,7 +90,7 @@ class HAWQDebugger:
                                          bitwidth_color_map: Dict[int, str],
                                          groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
         # pylint:disable=too-many-branches
-        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[InsertionPoint]
+        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[PTInsertionPoint]
 
         for insertion_point in affected_insertion_points_list:
             input_agnostic_op_exec_context = insertion_point.ia_op_exec_context

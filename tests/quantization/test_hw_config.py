@@ -53,7 +53,7 @@ class TestHWConfigRules:
         qbuilder.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
         qbuilder.hw_config = hw_config
         net = qbuilder.apply_to(net)
-        ctrl = net.commit_compression_changes()
+        ctrl = qbuilder.build_controller(net)
         return net, ctrl
 
     @staticmethod

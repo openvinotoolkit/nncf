@@ -24,16 +24,21 @@ import functools
 import networkx as nx
 import torch
 from copy import deepcopy
+
+from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.module_operations import UpdateWeight
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import BaseModuleAttributes
 from nncf.dynamic_graph.graph import ConvolutionModuleAttributes
 from nncf.dynamic_graph.graph import GroupNormModuleAttributes
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -46,6 +51,8 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
@@ -64,77 +71,6 @@ class ExtraCompressionModuleType(Enum):
     ACTIVATION_QUANTIZER = 0
 
 
-@functools.total_ordering
-class OperationPriority(Enum):
-    DEFAULT_PRIORITY = 0
-    FP32_TENSOR_STATISTICS_OBSERVATION = 1
-    SPARSIFICATION_PRIORITY = 2
-    QUANTIZATION_PRIORITY = 11
-    PRUNING_PRIORITY = 1
-
-    def __lt__(self, other):
-        # pylint: disable=comparison-with-callable
-        return self.value < other.value
-
-
-class InsertionType(Enum):
-    OPERATOR_PRE_HOOK = 0
-    OPERATOR_POST_HOOK = 1
-    NNCF_MODULE_PRE_OP = 2
-    NNCF_MODULE_POST_OP = 3
-
-    def __eq__(self, other):
-        # pylint: disable=comparison-with-callable
-        if isinstance(other, InsertionType):
-            return self.value == other.value
-        return self.value == other
-
-
-class InsertionPoint:
-    def __init__(self, insertion_type: InsertionType, *,
-                 ia_op_exec_context: InputAgnosticOperationExecutionContext = None,
-                 module_scope: 'Scope' = None,
-                 input_port_id: int = None):
-        self.insertion_type = insertion_type
-        if self.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
-            if module_scope is None:
-                raise ValueError("Should specify module scope for module pre- and post-op insertion points!")
-
-        if self.insertion_type in [InsertionType.OPERATOR_PRE_HOOK, InsertionType.OPERATOR_POST_HOOK]:
-            if ia_op_exec_context is None:
-                raise ValueError("Should specify an operator's InputAgnosticOperationExecutionContext "
-                                 "for operator pre- and post-hook insertion points!")
-        self.module_scope = module_scope
-        self.ia_op_exec_context = ia_op_exec_context
-        self.input_port_id = input_port_id
-
-    def __eq__(self, other: 'InsertionPoint'):
-        return self.insertion_type == other.insertion_type and self.ia_op_exec_context == other.ia_op_exec_context \
-               and self.input_port_id == other.input_port_id and self.module_scope == other.module_scope
-
-    def __str__(self):
-        prefix = str(self.insertion_type)
-        retval = prefix
-        if self.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
-            retval += " {}".format(self.module_scope)
-        elif self.insertion_type in [InsertionType.OPERATOR_PRE_HOOK, InsertionType.OPERATOR_POST_HOOK]:
-            if self.input_port_id is not None:
-                retval += " {}".format(self.input_port_id)
-            retval += " " + str(self.ia_op_exec_context)
-        return retval
-
-    def __hash__(self):
-        return hash(str(self))
-
-
-class InsertionCommand:
-    def __init__(self, point: InsertionPoint, fn: Callable,
-                 priority: OperationPriority = OperationPriority.DEFAULT_PRIORITY):
-        self.insertion_point = point  # type: InsertionPoint
-        self.fn = fn  # type: Callable
-        self.priority = priority  # type: OperationPriority
-
-
 class LoadStateListener:
     """
         Resets the initialization flags (`initialized`) for all quantization modules on `load_state_dict` call.
@@ -145,8 +81,6 @@ class LoadStateListener:
     """
 
     def __init__(self, model, all_quantizations):
-        for prefix, module in all_quantizations.items():
-            module.state_dict_name = prefix
         # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=all_quantizations.values()))
@@ -187,7 +121,7 @@ class InsertionPointGraph(nx.DiGraph):
     def __init__(self, model_nx_graph: nx.DiGraph):
         super().__init__()
         self._base_nx_graph = deepcopy(model_nx_graph)
-        self._input_ips = []  # type: List[InsertionPoint]
+        self._input_ips = []  # type: List[PTTargetPoint]
 
         for node_key, node in self._base_nx_graph.nodes.items():
             attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: node,
@@ -225,9 +159,9 @@ class InsertionPointGraph(nx.DiGraph):
                 from_node_key, to_node_key = edge
                 ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
 
-                pre_hook_insertion_point = InsertionPoint(InsertionType.OPERATOR_PRE_HOOK,
-                                                          ia_op_exec_context=ia_op_exec_context,
-                                                          input_port_id=port_id)
+                pre_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
+                                                         ia_op_exec_context=ia_op_exec_context,
+                                                         input_port_id=port_id)
                 pre_hook_ip_attrs = {
                     InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                     InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
@@ -241,8 +175,8 @@ class InsertionPointGraph(nx.DiGraph):
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             # Post-hook insertion point nodes
-            post_hook_insertion_point = InsertionPoint(InsertionType.OPERATOR_POST_HOOK,
-                                                       ia_op_exec_context=ia_op_exec_context)
+            post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                                                      ia_op_exec_context=ia_op_exec_context)
             post_hook_ip_attrs = {
                 InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                 InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: post_hook_insertion_point
@@ -372,8 +306,49 @@ class InsertionPointGraph(nx.DiGraph):
                     matching_ip_graph_op_nodes_list.append(node)
         return matching_ip_graph_op_nodes_list
 
-    def get_input_insertion_points(self) -> List[InsertionPoint]:
+    def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
+
+
+
+class PTInsertionType(OrderedEnum):
+    NNCF_MODULE_PRE_OP = 0
+    NNCF_MODULE_POST_OP = 1
+    OPERATOR_PRE_HOOK = 2
+    OPERATOR_POST_HOOK = 3
+
+
+class PTInsertionPoint:
+    TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT = {
+        TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
+        TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
+        TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
+        TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK
+    }
+
+    def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
+        if target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT:
+            raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
+        return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
+
+    def __init__(self, target_point: PTTargetPoint):
+        self.insertion_type = self._get_pt_insertion_type(target_point.target_type)
+        self.ia_op_exec_context = target_point.ia_op_exec_context
+        self.module_scope = target_point.module_scope
+        self.input_port_id = target_point.input_port_id
+
+    def __eq__(self, other: 'PTInsertionPoint'):
+        return self.insertion_type == other.insertion_type and \
+               self.ia_op_exec_context == other.ia_op_exec_context and \
+               self.module_scope == other.module_scope and \
+               self.input_port_id == other.input_port_id
+
+    def __str__(self):
+        return ' '.join([str(v) for v in self.__dict__.values()])
+
+    def __hash__(self):
+        return hash(str(self))
 
 
 # pylint: disable=too-many-public-methods
@@ -408,7 +383,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
         self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
         # pylint:disable=line-too-long
-        self._insertions_into_original_graph = {}  # type: Dict[InsertionPoint, List[Tuple[Callable, OperationPriority]]]
+        self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
         self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
@@ -440,8 +415,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                           ShapeIgnoringTensorMetaComparator())
         self._load_listener = None
 
-        self._builders = []  # type: List['CompressionAlgorithmBuilder']
-
     @debuggable_forward
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
@@ -450,10 +423,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
 
-    def register_algorithm(self, builder: 'CompressionAlgorithmBuilder'):
-        """Should be called during *builder*'s *apply_to* method, otherwise there will be no corresponding
-        controller returned by the network on the *commit_compression_changes* stage"""
-        self._builders.append(builder)
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -480,55 +449,25 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 retval[nncf_module_scope + relative_scope] = target_module
         return retval
 
-    def register_insertion_command(self, command: InsertionCommand):
-        point = command.insertion_point
-        if point not in self._insertions_into_original_graph:
-            self._insertions_into_original_graph[point] = [(command.fn, command.priority)]
-        else:
-            self._insertions_into_original_graph[point].append((command.fn, command.priority))
-
-    def commit_compression_changes(self) -> 'CompressionAlgorithmController':
-        for insertion_point, fn_list_with_priority in self._insertions_into_original_graph.items():
-            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            self._insertions_into_original_graph[insertion_point] = fn_list_with_priority
-            self._insert_at_point(insertion_point, [x[0] for x in fn_list_with_priority])
-
-        if self.debug_interface is not None:
-            self.debug_interface.init_actual(self)
-
-        quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        all_quantizations = get_state_dict_names_with_modules(self, quantization_types)
-        self._load_listener = LoadStateListener(self, all_quantizations)
-
-        if not self._builders:
-            from nncf.algo_selector import NoCompressionAlgorithmController
-            return NoCompressionAlgorithmController(self)
-
-        if len(self._builders) == 1:
-            return self._builders[0].build_controller(self)
-
-        from nncf.composite_compression import PTCompositeCompressionAlgorithmController
-        composite_controller = PTCompositeCompressionAlgorithmController(self)
-        for algo_builder in self._builders:
-            composite_controller.add(algo_builder.build_controller(self))
-        return composite_controller
-
-    def _insert_at_point(self, point: InsertionPoint, fn_list: List[Callable]):
-        if point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
+    def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
+        if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             self._compressed_context.register_pre_hooks(fn_list, point.ia_op_exec_context, point.input_port_id)
-        elif point.insertion_type == InsertionType.OPERATOR_POST_HOOK:
+        elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             self._compressed_context.register_post_hooks(fn_list, point.ia_op_exec_context)
-        else:
+        elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP,
+                                      PTInsertionType.NNCF_MODULE_POST_OP]:
             norm_target_scope = self._normalize_variable_recurrent_scope(point.module_scope)
             norm_nncf_scopes = [self._normalize_variable_recurrent_scope(x) for x in self._nncf_module_scopes]
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             nncf_module = self.get_module_by_scope(point.module_scope)
-            if point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
+            if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
                     nncf_module.register_pre_forward_operation(fn)
-            elif point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
+            elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
                 for fn in fn_list:
                     nncf_module.register_post_forward_operation(fn)
+        else:
+            raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
 
     def __getattr__(self, name):
         wrapped_module = super().__getattr__(MODEL_WRAPPED_BY_NNCF_ATTR_NAME)
@@ -660,7 +599,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             if train_mode:
                 self.train()
 
-    def get_input_shape_for_insertion_point(self, insertion_point: InsertionPoint) -> Tuple[int]:
+    def get_input_shape_for_insertion_point(self, insertion_point: PTTargetPoint) -> Tuple[int]:
         ia_op_exec_context = insertion_point.ia_op_exec_context
         if insertion_point.input_port_id is not None:
             quantizer_input_shape = self._original_graph.get_input_shapes_for_ia_op_exec_context(
@@ -828,3 +767,24 @@ def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttribut
         module.stride,
         module.groups
     )
+
+
+class PTModelTransformer(ModelTransformer):
+    def transform(self) -> NNCFNetwork:
+        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
+        for transformation_command in self._transformations:  # type: PTInsertionCommand
+            target_point = transformation_command.target_point
+            pt_ip = PTInsertionPoint(target_point)
+            fn = transformation_command.fn
+            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
+                fn = UpdateWeight(fn)
+            tup = (fn, transformation_command.priority)
+            if pt_ip not in fns_grouped_by_points:
+                fns_grouped_by_points[pt_ip] = [tup]
+            else:
+                fns_grouped_by_points[pt_ip].append(tup)
+
+        for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
+            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
+            self._model.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
+        return self._model

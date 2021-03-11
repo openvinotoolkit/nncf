@@ -26,6 +26,7 @@ import warnings
 from copy import deepcopy
 
 from nncf.common.quantization.structs import QuantizableModule
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
@@ -38,10 +39,9 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
-from nncf.nncf_network import InsertionPoint
 from nncf.nncf_network import InsertionPointGraph
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraphNodeType
-from nncf.nncf_network import InsertionType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
@@ -504,8 +504,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                                   unified_scale: bool = False,
                                   unified_scale_group_id_override: Optional[int] = None) -> PropagatingQuantizer:
         ip_node = self.nodes[ip_node_key]
-        ip_type = ip_node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR].insertion_type
-        if ip_type != InsertionType.OPERATOR_PRE_HOOK:
+        ip_type = ip_node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR].target_type
+        if ip_type != TargetType.OPERATOR_PRE_HOOK:
             # The insertion point key should immediately precede a quantizable op,
             # otherwise it is hard to determine affected node here (although possible)
             raise RuntimeError("Can only add propagating quantizers into pre-hook spots!")
@@ -747,9 +747,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
                 insertion_point_data = node[
-                    QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
+                    QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: PTTargetPoint
                 ip_input_port = insertion_point_data.input_port_id
-                label = "IP: {}{}".format(insertion_point_data.insertion_type,
+                label = "IP: {}{}".format(insertion_point_data.target_type,
                                           (' ' + str(ip_input_port)) if ip_input_port is not None else '')
                 out_graph.add_node(node_key, label=label, color="red")
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
@@ -973,11 +973,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         return retval
 
-    def get_insertion_point_for_propagating_quantizer(self, prop_quant: PropagatingQuantizer) -> InsertionPoint:
+    def get_insertion_point_for_propagating_quantizer(self, prop_quant: PropagatingQuantizer) -> PTTargetPoint:
         final_node_key = prop_quant.current_location_node_key
         final_node = self.nodes[final_node_key]
         insertion_point = final_node[
-            QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: InsertionPoint
+            QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]  # type: PTTargetPoint
         return insertion_point
 
     def _get_all_quantizers_grouped_by_affecting_op_set(self) -> List[SharedAffectedOpsPropagatingQuantizerGroup]:
@@ -1076,8 +1076,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             max_aq_id = 0
         next_wq_id = max_aq_id + 1
         for module_scope, qconfig_list in quantizable_module_scope_vs_qconfigs.items():
-            insertion_point = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
-                                             module_scope=module_scope)
+            insertion_point = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                            module_scope=module_scope)
             quant_point = MultiConfigQuantizationPoint(insertion_point, qconfig_list, [module_scope])
             setup.quantization_points[next_wq_id] = quant_point
             if module_scope not in qm_scope_vs_same_op_group_idx_in_list:

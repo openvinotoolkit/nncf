@@ -60,7 +60,7 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool):
+                    scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
                    narrow_range, scale_shape, logarithm_scale)
 
@@ -82,7 +82,6 @@ class BaseQuantizer(nn.Module):
         self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
         OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
         self.initialized = False
-        self.state_dict_name = None
         self.call_count = 0
         self._scale_shape = qspec.scale_shape
         self._export_mode = QuantizerExportMode.FAKE_QUANTIZE
@@ -98,11 +97,10 @@ class BaseQuantizer(nn.Module):
 
             def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
                         module):
-                if module.state_dict_name:
-                    for module_key in module.state_dict().keys():
-                        candidate = module.state_dict_name + '.' + module_key
-                        if candidate in state_dict:
-                            module.initialized = True
+                for module_key in module.state_dict().keys():
+                    candidate = prefix + module_key
+                    if candidate in state_dict:
+                        module.initialized = True
 
             def close(self):
                 self.hook.remove()
