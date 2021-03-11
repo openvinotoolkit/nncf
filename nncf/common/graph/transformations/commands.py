@@ -40,29 +40,32 @@ class TransformationPriority(OrderedEnum):
 
 class TargetType(OrderedEnum):
     """
-    Describes the types of locations in the model's control flow graph (as represented by `NNCFGraph`)
-    that can be modified using NNCF in order to create a compressed model.
-
-    Definitions used below: TF-nodes - visible in TF-graph, TF-operations - invisible in TF-graph
-    Both TF-nodes and TF-operations may be used for hooking in TF.
+    Describes the types of locations in the model that can be modified using NNCF
+    in order to create a compressed model.
 
     `LAYER` - a location corresponding directly to an existing layer in the model
-    `BEFORE_LAYER` - a location before the associated TF layer,
-                     implemented by inserting additional TF-nodes in TF-graph before TF-layer op
-    `AFTER_LAYER` - a location after the associated TF layer,
-                    implemented by inserting additional TF-nodes in TF-graph before TF-layer op
-    `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer execution,
-                            for which the local attributes of said PT-module or TF-layer are accessible
-    `POST_LAYER_OPERATION` - a location before the associated PT-module or TF-layer execution,
-                            for which the local attributes of said PT-module or TF-layer are accessible
-    `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights of the layer/module specifically
-    `OPERATOR_PRE_HOOK` - a location before a function call in PT without access to specific
-                          module attributes - N/A in TF
-    `OPERATOR_POST_HOOK` - a location after a function call in PT without access to specific
-                           module attributes - N/A in TF
+    `BEFORE_LAYER` - a location before the associated model layer,
+                     implemented by inserting an additional layer in the TF model
+    `AFTER_LAYER` - a location after the associated model layer,
+                    implemented by inserting an additional layer in the TF model
+    `PRE_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+                            execution, for which the local attributes of said
+                            PT-module or TF-layer are accessible
+    `POST_LAYER_OPERATION` - a location before the associated PT-module or TF-layer
+                             execution, for which the local attributes of said
+                             PT-module or TF-layer are accessible
+    `OPERATION_WITH_WEIGHTS` - same as PRE_LAYER_OPERATION, but targets weights
+                               of the layer/module specifically
+    `OPERATOR_PRE_HOOK` - a location before a function call in PT without access to
+                          specific module attributes - N/A in TF
+    `OPERATOR_POST_HOOK` - a location after a function call in PT without access to
+                           specific module attributes - N/A in TF
 
-    Notes: `PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and `OPERATION_WITH_WEIGHTS` add a TF-operation in TF, not a
-            TF-node. In PT, these map to module pre- and post-ops.
+    Notes: Adding operations to a PT-module or TF-layer implemented by wrapping
+    the original PT-module or TF-layer and registering operations that are executed
+    before/after calling the original PT-module or TF-layer according to the
+    registration location:`PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and
+    `OPERATION_WITH_WEIGHTS`.
     """
     LAYER = 0
     BEFORE_LAYER = 1
