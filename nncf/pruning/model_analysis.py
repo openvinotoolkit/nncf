@@ -95,7 +95,9 @@ class Clusterization:
                 self._node_to_cluster[getattr(node, self._id_attr)] = second_id
             self.clusters.pop(first_id)
 
-    def merge_list_of_cluster(self, clusters: List[int]):
+    def merge_list_of_clusters(self, clusters: List[int]):
+        clusters = list(set(clusters))
+        clusters.sort(key=lambda cluster_id: self.get_cluster_by_id(cluster_id).importance)
         for cluster_id in clusters[:-1]:
             self.merge_clusters(clusters[-1], cluster_id)
 

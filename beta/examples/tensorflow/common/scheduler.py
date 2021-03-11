@@ -162,8 +162,8 @@ def build_scheduler(config, steps_per_epoch):
         step = step * steps_per_epoch
         lr = StepLearningRate(initial_lr, step, gamma=0.1)
     elif schedule_type == 'step_warmup':
-        lr = StepLearningRateWithLinearWarmup(steps, schedule_params)
+        lr = StepLearningRateWithLinearWarmup(steps_per_epoch, schedule_params)
     else:
-        raise KeyError('Unknown scheduler type: {}'.format(schedule_type))
+        raise KeyError(f'Unknown learning rate scheduler type: {schedule_type}')
 
     return lr

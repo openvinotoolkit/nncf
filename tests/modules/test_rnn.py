@@ -240,6 +240,8 @@ def test_export_lstm_cell(tmp_path):
 class TestLSTM:
     def test_forward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                           empty_initial, dropout, _seed):
+        if not torch.cuda.is_available() and is_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
         p = sizes
 
@@ -285,7 +287,8 @@ class TestLSTM:
 
     def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                            empty_initial, dropout, _seed):
-
+        if not torch.cuda.is_available() and is_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
 
         p = sizes
@@ -452,8 +455,11 @@ class TestNumberOfNodes:
 
 
     def test_number_of_calling_fq_for_gnmt(self):
-        torch.cuda.set_device(0)
-        device = torch.device('cuda')
+        if torch.cuda.is_available():
+            torch.cuda.set_device(0)
+            device = torch.device('cuda')
+        else:
+            device = torch.device('cpu')
         batch_first = False
         vocab_size = 32000
         model_config = {'hidden_size': 100,

@@ -18,7 +18,7 @@ from nncf.module_operations import UpdateWeight
 from nncf.pruning.filter_pruning.algo import FilterPruningController
 from nncf.pruning.filter_pruning.functions import l2_filter_norm
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_binary_mask
-from nncf.pruning.schedulers import BaselinePruningScheduler
+from nncf.common.pruning.schedulers import BaselinePruningScheduler
 from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
     create_mock_dataloader
 from tests.pruning.helpers import gen_ref_masks, get_basic_pruning_config, PruningTestModel, BigPruningTestModel, \

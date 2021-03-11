@@ -24,13 +24,14 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
-from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
     def create_weight_sparsifying_operation(self, module):
-        return BinaryMask(module.weight.size())
+        device = module.weight.device
+        return BinaryMask(module.weight.size()).to(device)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         params = self.config.get("params", {})

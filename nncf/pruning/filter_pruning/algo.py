@@ -33,7 +33,7 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
 from nncf.pruning.model_analysis import Clusterization
-from nncf.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 

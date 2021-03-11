@@ -19,6 +19,7 @@ import torch.nn as nn
 from functools import partial
 from torch import distributed
 
+from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.common.utils.logger import logger as nncf_logger
@@ -59,7 +60,7 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool):
+                    scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
                    narrow_range, scale_shape, logarithm_scale)
 
@@ -72,14 +73,15 @@ class BaseQuantizer(nn.Module):
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
         self._num_bits = nn.Parameter(torch.IntTensor([qspec.num_bits]), requires_grad=False)
+        OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
         self.level_high = None
         self.level_low = None
 
         self.levels = 0
-
-        self.register_buffer('enabled', torch.IntTensor([1]))
+        ENABLED_VAR_NAME = 'enabled'
+        self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
+        OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
         self.initialized = False
-        self.state_dict_name = None
         self.call_count = 0
         self._scale_shape = qspec.scale_shape
         self._export_mode = QuantizerExportMode.FAKE_QUANTIZE
@@ -95,11 +97,10 @@ class BaseQuantizer(nn.Module):
 
             def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
                         module):
-                if module.state_dict_name:
-                    for module_key in module.state_dict().keys():
-                        candidate = module.state_dict_name + '.' + module_key
-                        if candidate in state_dict:
-                            module.initialized = True
+                for module_key in module.state_dict().keys():
+                    candidate = prefix + module_key
+                    if candidate in state_dict:
+                        module.initialized = True
 
             def close(self):
                 self.hook.remove()

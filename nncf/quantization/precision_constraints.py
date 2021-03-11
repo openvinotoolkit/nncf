@@ -42,7 +42,7 @@ class HardwareQuantizationConstraints:
         if quantizer_id in self._constraints:
             self._constraints[quantizer_id] = qconfig_set
 
-    def get_all_unique_bits(self, qid: QuantizerId = None) -> List[int]:
+    def get_all_unique_bitwidths(self, qid: QuantizerId = None) -> List[int]:
         result = set()
         if qid is None:
             for qconfig_set in self._constraints.values():

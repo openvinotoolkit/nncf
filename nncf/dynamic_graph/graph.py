@@ -24,7 +24,6 @@ from torch import Tensor
 from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search_all, get_edge_boundaries
 from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
 from nncf.layers import ITERATION_MODULES
-
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -185,6 +184,16 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
         self.out_channels = out_channels
         self.stride = stride
         self.groups = groups
+
+
+class GroupNormModuleAttributes(BaseModuleAttributes):
+    def __init__(self,
+                 weight_requires_grad: bool,
+                 num_channels: int,
+                 num_groups: int):
+        super().__init__(weight_requires_grad)
+        self.num_channels = num_channels
+        self.num_groups = num_groups
 
 
 class NNCFNode:

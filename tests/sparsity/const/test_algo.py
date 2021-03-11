@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
 import torch
 from copy import deepcopy
 
@@ -75,7 +76,8 @@ def test_can_restore_binary_mask_on_magnitude_algo_resume():
     check_equal(ref_mask_2, op.operand.binary_mask)
 
 
-def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path):
+@pytest.mark.parametrize("use_data_parallel", [True, False], ids=["dataparallel", "regular"])
+def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path, use_data_parallel):
     config = get_empty_config()
     config["compression"] = [
         {"algorithm": "magnitude_sparsity",
@@ -84,9 +86,12 @@ def test_can_restore_binary_mask_on_magnitude_quant_algo_resume(tmp_path):
 
     sparse_model, _ = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
 
-    # load_state doesn't support CPU + Quantization
-    sparse_model = torch.nn.DataParallel(sparse_model)
-    sparse_model.cuda()
+    if use_data_parallel:
+        if not torch.cuda.is_available():
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
+        sparse_model.cuda()
+        sparse_model = torch.nn.DataParallel(sparse_model)
+
     with torch.no_grad():
         sparse_model(torch.ones([1, 1, 10, 10]))
 

@@ -15,6 +15,7 @@ from beta.examples.tensorflow.common.object_detection.architecture import fpn
 from beta.examples.tensorflow.common.object_detection.architecture import heads
 from beta.examples.tensorflow.common.object_detection.architecture import nn_ops
 from beta.examples.tensorflow.common.object_detection.architecture import resnet
+from beta.examples.tensorflow.common.object_detection.architecture import darknet
 
 
 def norm_activation_generator(params):
@@ -26,12 +27,23 @@ def norm_activation_generator(params):
 
 def backbone_generator(params):
     """Generator function for various backbone models."""
-    assert params.model_params.architecture.backbone.name == 'resnet'
-    resnet_params = params.model_params.architecture.backbone.params
-    backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
-                                activation=params.model_params.norm_activation.activation,
-                                norm_activation=norm_activation_generator(
-                                  params.model_params.norm_activation))
+    backbone_name = params.model_params.architecture.backbone.name
+    if params.model == 'RetinaNet' or params.model == 'MaskRCNN':
+        if backbone_name == 'resnet':
+            resnet_params = params.model_params.architecture.backbone.params
+            backbone_fn = resnet.Resnet(resnet_depth=resnet_params.depth,
+                                        activation=params.model_params.norm_activation.activation,
+                                        norm_activation=norm_activation_generator(
+                                          params.model_params.norm_activation))
+        else:
+            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
+    elif params.model == 'YOLOv4':
+        if backbone_name == 'darknet':
+            backbone_fn = darknet.CSPDarknet53()
+        else:
+            raise ValueError('Backbone {} is not supported for {} model.'.format(backbone_name, params.model))
+    else:
+        raise ValueError('Model {} is not supported.'.format(params.model))
 
     return backbone_fn
 
@@ -110,3 +122,8 @@ def mask_rcnn_head_generator(params):
         params.model_params.norm_activation.activation,
         head_params.use_batch_norm,
         norm_activation=norm_activation_generator(params.model_params.norm_activation))
+
+
+def yolo_v4_head_generator():
+    """Generator function for YOLOv4 neck and head architecture"""
+    return heads.YOLOv4()

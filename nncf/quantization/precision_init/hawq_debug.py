@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2020-2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,35 +12,39 @@
 """
 from collections import OrderedDict
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
+import networkx as nx
 import os
 import torch
-
-from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from torch import Tensor
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.precision_init.perturbations import Perturbations, PerturbationObserver
-from nncf.quantization.precision_init.traces_order import TracesPerLayer
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.layers import NNCFConv2d
+from nncf.nncf_network import ExtraCompressionModuleType
+from nncf.nncf_network import NNCFNetwork
+from nncf.quantization.adjust_padding import add_adjust_padding_nodes
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+from nncf.quantization.precision_init.perturbations import PerturbationObserver
+from nncf.quantization.precision_init.perturbations import Perturbations
+from nncf.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.utils import get_all_modules_by_type
 
 
 class HAWQDebugger:
-    def __init__(self, weight_qconfigs_in_trace_order: List['ConfigurationForHAWQToEvaluate'],
+    def __init__(self,
+                 weight_qconfig_sequences_in_trace_order: List['QConfigSequenceForHAWQToEvaluate'],
                  perturbations: Perturbations,
-                 covering_configurations: List['CoveringConfigurationForQuantNoiseCalculation'],
                  weight_observers_for_each_covering_configuration: List[List[PerturbationObserver]],
-                 traces_per_layer: TracesPerLayer, bits: List[int]):
-        self._weight_qconfigs_in_trace_order = weight_qconfigs_in_trace_order
+                 traces_per_layer: TracesPerLayer,
+                 bitwidths: List[int]):
+        self._weight_qconfig_sequences_in_trace_order = weight_qconfig_sequences_in_trace_order
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
-        self._covering_configurations = covering_configurations
 
         from nncf.debug import DEBUG_LOG_DIR
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
@@ -60,11 +64,11 @@ class HAWQDebugger:
 
         bits_in_megabyte = 2 ** 23
         self._model_sizes = []
-        for configuration in self._weight_qconfigs_in_trace_order:
-            size = torch.sum(torch.Tensor([qc.num_bits for qc in configuration]) *
+        for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
+            size = torch.sum(torch.Tensor([qconfig.num_bits for qconfig in qconfig_sequence]) *
                              self._num_weights_per_layer).item() / bits_in_megabyte
             self._model_sizes.append(size)
-        self._bits = bits
+        self._bitwidths = bitwidths
 
     @staticmethod
     def get_all_quantizers_per_full_scope(model):
@@ -83,20 +87,18 @@ class HAWQDebugger:
     def _paint_activation_quantizer_node(nncf_graph: NNCFGraph,
                                          quantizer_id: NonWeightQuantizerId,
                                          quantizer_info: 'NonWeightQuantizerInfo',
-                                         bits_color_map: Dict[int, str],
+                                         bitwidth_color_map: Dict[int, str],
                                          groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        #pylint:disable=too-many-branches
-        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[InsertionPoint]
+        # pylint:disable=too-many-branches
+        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[PTInsertionPoint]
 
         for insertion_point in affected_insertion_points_list:
             input_agnostic_op_exec_context = insertion_point.ia_op_exec_context
             affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
             affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
-            operator_name = affected_nx_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
             node_id = affected_nx_node[NNCFGraph.ID_NODE_ATTR]
 
             affected_nncf_node = nncf_graph.get_node_by_id(node_id)
-            affected_nx_node['label'] = '_#'.join([operator_name, str(node_id)])
 
             in_port_id = insertion_point.input_port_id
 
@@ -122,8 +124,8 @@ class HAWQDebugger:
                 target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
 
             activation_fq_node = nncf_graph.get_nx_node_by_key(target_nncf_node_key)
-            bits = quantizer_info.quantizer_module_ref.num_bits
-            activation_fq_node['color'] = bits_color_map[bits]
+            bitwidth = quantizer_info.quantizer_module_ref.num_bits
+            activation_fq_node['color'] = bitwidth_color_map[bitwidth]
             activation_fq_node['style'] = 'filled'
             node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
 
@@ -146,7 +148,7 @@ class HAWQDebugger:
         # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
         # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
         # of the quantizer's bitwidth.
-        #pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -161,6 +163,12 @@ class HAWQDebugger:
                     if module.groups == module.in_channels and module.in_channels > 1:
                         operator_name = 'DW_Conv2d'
                         color = 'purple'
+                    kernel_size = 'x'.join(map(str, module.kernel_size))
+                    operator_name += f'_k{kernel_size}'
+                    padding_values = set(module.padding)
+                    padding_enabled = len(padding_values) >= 1 and padding_values.pop()
+                    if padding_enabled:
+                        operator_name += '_PAD'
                 operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'
@@ -168,12 +176,11 @@ class HAWQDebugger:
                     node['color'] = color
 
         non_weight_quantizers = algo_ctrl.non_weight_quantizers
-        bits_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
+        bitwidth_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
         for quantizer_id, quantizer_info in non_weight_quantizers.items():
             HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_id,
-                                                          quantizer_info, bits_color_map,
+                                                          quantizer_info, bitwidth_color_map,
                                                           groups_of_adjacent_quantizers)
-
         for wq_id, wq_info in algo_ctrl.weight_quantizers.items():
             quantized_module_scope = wq_id.get_scope()
             quantizer = wq_info.quantizer_module_ref
@@ -188,7 +195,7 @@ class HAWQDebugger:
             assert len(wq_nodes) == 1
 
             node = wq_nodes[0]
-            bits = quantizer.num_bits
+            bitwidths = quantizer.num_bits
             node_id = node[NNCFGraph.ID_NODE_ATTR]
             node['label'] = 'WFQ_[{}]_#{}'.format(quantizer.get_quantizer_config(), str(node_id))
             if grouped_mode:
@@ -199,7 +206,7 @@ class HAWQDebugger:
                 else:
                     group_id_str = str(group_id)
                 node['label'] += '_G' + group_id_str
-            node['color'] = bits_color_map[bits]
+            node['color'] = bitwidth_color_map[bitwidths]
             node['style'] = 'filled'
         return nncf_graph
 
@@ -216,9 +223,9 @@ class HAWQDebugger:
         ax.plot(self._traces_per_layer.cpu().numpy())
         plt.savefig(dump_file)
 
-    def dump_metric_MB(self, configuration_metric: List[Tensor]):
+    def dump_metric_MB(self, metric_per_qconfig_sequence: List[Tensor]):
         import matplotlib.pyplot as plt
-        list_to_plot = [cm.item() for cm in configuration_metric]
+        list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
         fig = plt.figure()
         fig.suptitle('Pareto Frontier')
         ax = fig.add_subplot(2, 1, 1)
@@ -226,37 +233,37 @@ class HAWQDebugger:
         ax.set_xlabel('Model Size (MB)')
         ax.set_ylabel('Metric value (total perturbation)')
         ax.scatter(self._model_sizes, list_to_plot, s=20, facecolors='none', edgecolors='r')
-        cm = torch.Tensor(configuration_metric)
+        cm = torch.Tensor(metric_per_qconfig_sequence)
         cm_m = cm.median().item()
-        configuration_index = configuration_metric.index(cm_m)
-        ms_m = self._model_sizes[configuration_index]
+        qconfig_index = metric_per_qconfig_sequence.index(cm_m)
+        ms_m = self._model_sizes[qconfig_index]
         ax.scatter(ms_m, cm_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Pareto_Frontier'))
         nncf_logger.info(
             'Distribution of HAWQ metrics: min_value={:.3f}, max_value={:.3f}, median_value={:.3f}, '
             'median_index={}, total_number={}'.format(cm.min().item(), cm.max().item(), cm_m,
-                                                      configuration_index,
-                                                      len(configuration_metric)))
+                                                      qconfig_index,
+                                                      len(metric_per_qconfig_sequence)))
 
-    def dump_metric_flops(self, configuration_metric: List[Tensor], flops_per_config: List[float],
-                          choosen_config_index: int):
+    def dump_metric_flops(self, metric_per_qconfig_sequence: List[Tensor], flops_per_config: List[float],
+                          choosen_qconfig_index: int):
         import matplotlib.pyplot as plt
-        list_to_plot = [cm.item() for cm in configuration_metric]
+        list_to_plot = [cm.item() for cm in metric_per_qconfig_sequence]
         fig = plt.figure()
         fig.suptitle('Pareto Frontier')
         ax = fig.add_subplot(1, 1, 1)
-        ax.set_xlabel('Compression ratio: total INT8 FLOPS_BITS / total MIXED INT FLOPS_BITS')
+        ax.set_xlabel('Compression ratio: total INT8 Bits Complexity / total MIXED INT Bits Complexity')
         ax.set_ylabel('Metric value (total perturbation)')
         ax.scatter(flops_per_config, list_to_plot, s=10, alpha=0.3)  # s=20, facecolors='none', edgecolors='r')
         flops_per_config = [torch.Tensor([v]) for v in flops_per_config]
         cm = torch.Tensor(flops_per_config)
         cm_m = cm.median().item()
         configuration_index = flops_per_config.index(cm_m)
-        ms_m = configuration_metric[configuration_index].item()
+        ms_m = metric_per_qconfig_sequence[configuration_index].item()
         ax.scatter(cm_m, ms_m, s=30, facecolors='none', edgecolors='b', label='median from all metrics')
-        cm_c = configuration_metric[choosen_config_index].item()
-        fpc_c = flops_per_config[choosen_config_index].item()
+        cm_c = metric_per_qconfig_sequence[choosen_qconfig_index].item()
+        fpc_c = flops_per_config[choosen_qconfig_index].item()
         ax.scatter(fpc_c, cm_c, s=30, facecolors='none', edgecolors='r', label='chosen config')
 
         ax.legend()
@@ -264,11 +271,11 @@ class HAWQDebugger:
 
     def dump_density_of_quantization_noise(self):
         noise_per_config = []  # type: List[Tensor]
-        for bits_config in self._weight_qconfigs_in_trace_order:
+        for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
             qnoise = 0
             for i in range(self._num_weights):
                 execution_index = self._traces_order.get_execution_index_by_traces_index(i)
-                qnoise += self._perturbations.get(layer_id=execution_index, qconfig=bits_config[i])
+                qnoise += self._perturbations.get(layer_id=execution_index, qconfig=qconfig_sequence[i])
             noise_per_config.append(qnoise)
 
         list_to_plot = [cm.item() for cm in noise_per_config]
@@ -292,23 +299,24 @@ class HAWQDebugger:
         ax.set_yscale('log')
         perturbations_per_layer_id = list(self._perturbations.get_all().values())
         perturb = []
-        max_bit = []
-        for perturbations_for_all_observed_configs_in_current_layer in perturbations_per_layer_id:
-            configs = perturbations_for_all_observed_configs_in_current_layer.keys()
-            max_bit_config = max(configs, key=lambda x: x.num_bits)
-            perturb.append(perturbations_for_all_observed_configs_in_current_layer[max_bit_config])
-            max_bit.append(max_bit_config.num_bits)
+        max_bitwidths = []
+        for perturbations_for_all_observed_qconfig_sequence_in_current_layer in perturbations_per_layer_id:
+            qconfig_sequence = perturbations_for_all_observed_qconfig_sequence_in_current_layer.keys()
+            max_bitwidth_qconfig = max(qconfig_sequence, key=lambda x: x.num_bits)
+            perturb.append(perturbations_for_all_observed_qconfig_sequence_in_current_layer[max_bitwidth_qconfig])
+            max_bitwidths.append(max_bitwidth_qconfig.num_bits)
         ax.plot(
             [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
             label='normalized n-bit noise')
         ax.plot(perturb, label='n-bit noise')
-        ax.plot(max_bit, label='n')
+        ax.plot(max_bitwidths, label='n')
         ax.plot(self._traces_per_layer.cpu().numpy(), label='trace')
         ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label='trace * noise')
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, 'Quantization_noise_vs_Average_Trace'))
 
-    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: 'NNCFNetwork',
+    def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
                             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        graph = self.get_bitwidth_graph(algo_ctrl, model, groups_of_adjacent_quantizers)
-        graph.dump_graph(self._dump_dir / Path('bitwidth_graph.dot'))
+        nncf_graph = self.get_bitwidth_graph(algo_ctrl, model, groups_of_adjacent_quantizers)
+        nx_graph = add_adjust_padding_nodes(nncf_graph, model)
+        nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

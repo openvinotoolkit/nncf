@@ -11,6 +11,9 @@
  limitations under the License.
 """
 # pylint:disable=relative-beyond-top-level
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.nncf_network import NNCFNetwork
+
 from nncf.api.compression import CompressionLevel
 from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController
 from nncf.common.utils.registry import Registry
@@ -20,6 +23,9 @@ COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
 class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        return PTTransformationLayout()
+
     def build_controller(self, target_model: 'NNCFNetwork') -> PTCompressionAlgorithmController:
         return NoCompressionAlgorithmController(target_model)
 

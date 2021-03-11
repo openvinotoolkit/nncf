@@ -194,6 +194,8 @@ class TestParametrized:
 
         def test_quantize_symmetric_forward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
                                             scale_mode):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
             ref_input = generate_input(input_size)
 
@@ -219,6 +221,8 @@ class TestParametrized:
 
         def test_quantize_symmetric_backward(self, _seed, is_signed, is_weights, is_fp16, input_size, bits, use_cuda,
                                              scale_mode):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
             ref_input = generate_input(input_size)
 
@@ -307,6 +311,8 @@ class TestParametrized:
 
         def test_quantize_asymmetric_forward(self, _seed, input_size, bits, use_cuda, is_weights,
                                              is_fp16, scale_mode):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
             level_low, level_high, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)
@@ -330,6 +336,8 @@ class TestParametrized:
 
         def test_quantize_asymmetric_backward(self, _seed, input_size, bits, use_cuda, is_weights,
                                               is_fp16, scale_mode):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
             skip_if_half_on_cpu(is_fp16, use_cuda)
             level_low, level_high, levels = self.get_range_level(bits)
             ref_input = generate_input(input_size)

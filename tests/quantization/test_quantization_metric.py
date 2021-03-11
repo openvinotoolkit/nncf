@@ -107,8 +107,8 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[6]']]
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
             }},
         activations={
             "mode": "asymmetric",
@@ -137,8 +137,8 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[6]']]
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
         }},
         activations={"bits": 8},
         weights={"bits":6},
@@ -159,8 +159,8 @@ NETWORK_QUANTIZATION_SHARE_METRIC_TEST_CASES = [
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[6]']]
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
         }},
         activations={},
         weights={"bits":6},
@@ -219,8 +219,8 @@ MEMORY_COST_METRIC_TEST_CASES = [
     TestStruct(
         initializers={"precision": {
             "bitwidth_per_scope":
-            [[2, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[0]'],
-             [4, 'InsertionType.NNCF_MODULE_PRE_OP AlexNet/Sequential[features]/NNCFConv2d[6]']]
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
         }},
         activations={},
         weights={"bits": 8},
@@ -244,6 +244,46 @@ MEMORY_COST_METRIC_TEST_CASES = [
                MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 22.19,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
                MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[],
+        target_device='TRIAL',
+        quantizer_setup_type='propagation_based',
+        table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 4.0,
+               MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
+               MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 22.18,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
+    TestStruct(
+        initializers={"precision": {
+            "bitwidth_per_scope":
+            [[2, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[0]'],
+             [4, 'TargetType.OPERATION_WITH_WEIGHTS AlexNet/Sequential[features]/NNCFConv2d[6]']]
+        }},
+        activations={},
+        weights={"bits": 8},
+        ignored_scopes=[],
+        target_device='TRIAL',
+        quantizer_setup_type='propagation_based',
+        table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 4.05,
+               MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
+               MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 21.86,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=['AlexNet/Sequential[features]/NNCFConv2d[0]'],
+        target_device='TRIAL',
+        quantizer_setup_type='propagation_based',
+        table={MemoryCostMetric.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR: 3.99,
+               MemoryCostMetric.SIZE_MEMORY_FP_WEIGHTS_STR: 88.74,
+               MemoryCostMetric.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR: 22.19,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR: 0.0625,
+               MemoryCostMetric.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR: 0.0625}),
 ]
 
 @pytest.fixture(params=MEMORY_COST_METRIC_TEST_CASES)
@@ -257,6 +297,7 @@ def test_memory_cost_metric(memory_cost_metric_test_struct):
     config['compression']["weights"] = memory_cost_metric_test_struct.weights
     config['compression']["ignored_scopes"] = memory_cost_metric_test_struct.ignored_scopes
     config['target_device'] = memory_cost_metric_test_struct.target_device
+    config['quantizer_setup_type'] = memory_cost_metric_test_struct.quantizer_setup_type
     ctrl, compressed_model = create_compressed_model(test_models.AlexNet(), config)
     qmetric = MemoryCostMetric(compressed_model, ctrl.weight_quantizers, ctrl.non_weight_quantizers)
     qmetric.collect()
@@ -296,6 +337,21 @@ SHARE_EDGES_QUANTIZED_DATA_PATH_TEST_CASES = [
         target_device='TRIAL',
         quantizer_setup_type='pattern_based',
         table={ShareEdgesQuantizedDataPath.COUNT_QUANTIZED_EDGES_STR: 95.97}
+    ),
+    TestStruct(
+        initializers={},
+        activations={},
+        weights={},
+        ignored_scopes=[
+            "Inception3/__add___0",
+            "Inception3/__add___1",
+            "Inception3/__add___2",
+            "Inception3/__mul___0",
+            "Inception3/__mul___1",
+            "Inception3/__mul___2"],
+        target_device='TRIAL',
+        quantizer_setup_type='propagation_based',
+        table={ShareEdgesQuantizedDataPath.COUNT_QUANTIZED_EDGES_STR: 98.22}
     )
 ]
 

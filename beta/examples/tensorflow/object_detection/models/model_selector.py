@@ -14,12 +14,16 @@
 import copy
 
 from beta.examples.tensorflow.object_detection.models.retinanet_model import RetinanetModel
+from beta.examples.tensorflow.object_detection.models.yolo_v4_model import YOLOv4Model
 from beta.examples.tensorflow.object_detection.models.retinanet_config import RETINANET_CONFIG
+from beta.examples.tensorflow.object_detection.models.yolo_v4_config import YOLOV4_CONFIG
 
 
 def get_predefined_config(model_name):
     if model_name == 'RetinaNet':
         predefined_config = RETINANET_CONFIG
+    elif model_name == 'YOLOv4':
+        predefined_config = YOLOV4_CONFIG
     else:
         raise ValueError('Model {} is not supported.'.format(model_name))
 
@@ -31,6 +35,8 @@ def get_model_builder(config):
 
     if model_name == 'RetinaNet':
         model_builder = RetinanetModel(config)
+    elif model_name == 'YOLOv4':
+        model_builder = YOLOv4Model(config)
     else:
         raise ValueError('Model {} is not supported.'.format(model_name))
 

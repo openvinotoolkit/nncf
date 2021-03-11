@@ -18,7 +18,7 @@ from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype
     PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype, SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, \
     DropoutMetatype, Conv1dMetatype, Conv2dMetatype, Conv3dMetatype, BatchNormMetatype, CatMetatype, AddMetatype, \
     SubMetatype, DivMetatype, MulMetatype, LinearMetatype, MatMulMetatype, MinMetatype, MaxMetatype, MeanMetatype, \
-    ConvTranspose2dMetatype, ConvTranspose3dMetatype
+    ConvTranspose2dMetatype, ConvTranspose3dMetatype, GroupNormMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PruningOperationsMetatypeRegistry, identity_mask_propagation, get_input_masks, \
@@ -274,6 +274,7 @@ class BatchNorm(DefaultMetaOp):
     def accept_pruned_input(cls, node: NNCFNode):
         return True
 
+
     @classmethod
     def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
         identity_mask_propagation(nx_node, nx_graph)
@@ -298,6 +299,42 @@ class BatchNorm(DefaultMetaOp):
         node_module.running_var = torch.nn.Parameter(node_module.running_var[bool_mask], requires_grad=False)
 
         nncf_logger.info('Pruned BatchNorm {} by input mask. Old num features: {}, new num features:'
+                         ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
+
+
+@PRUNING_OPERATOR_METATYPES.register('group_norm')
+class GroupNorm(DefaultMetaOp):
+    subtypes = [GroupNormMetatype]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        # For Instance Normalization
+        return node.module_attributes.num_groups == node.module_attributes.num_channels
+
+    @classmethod
+    def mask_propagation(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        identity_mask_propagation(nx_node, nx_graph)
+
+    @classmethod
+    def input_prune(cls, model: NNCFNetwork, nx_node, graph: NNCFGraph, nx_graph: nx.DiGraph):
+        input_mask = nx_node['input_masks'][0]
+        if input_mask is None:
+            return
+
+        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+
+        bool_mask = torch.tensor(input_mask, dtype=torch.bool)
+        old_num_clannels = int(node_module.weight.size(0))
+        new_num_channels = int(torch.sum(input_mask))
+
+        node_module.num_channels = new_num_channels
+        node_module.num_groups = new_num_channels
+
+        node_module.weight = torch.nn.Parameter(node_module.weight[bool_mask])
+        node_module.bias = torch.nn.Parameter(node_module.bias[bool_mask])
+
+        nncf_logger.info('Pruned GroupNorm {} by input mask. Old num features: {}, new num features:'
                          ' {}.'.format(nx_node['key'], old_num_clannels, new_num_channels))
 
 
