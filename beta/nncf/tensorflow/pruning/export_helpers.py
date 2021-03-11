@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
-from beta.nncf.tensorflow.pruning.utils import tf_is_depthwise_conv
+from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
@@ -62,7 +62,7 @@ class TFConvolution(DefaultMetaOp):
     def accept_pruned_input(cls, node: NNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
-            if not tf_is_depthwise_conv(node):
+            if not is_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
 

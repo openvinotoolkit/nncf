@@ -778,5 +778,5 @@ class NNCFNodeExpression(NodeExpression):
         super().__init__(node_type, filter_fn, node_type_fn=PTNNCFGraph.node_type_fn)
 
 
-def pt_get_module_identifier(node: PTNNCFNode):
+def get_module_identifier(node: PTNNCFNode):
     return str(node.op_exec_context.scope_in_model)

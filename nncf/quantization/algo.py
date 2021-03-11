@@ -112,7 +112,7 @@ from nncf.tensor_statistics.statistics import TensorStatistic
 from nncf.utils import get_scale_shape
 from nncf.utils import in_scope_list
 from nncf.utils import is_main_process
-from nncf.utils import pt_should_consider_scope
+from nncf.utils import should_consider_scope
 
 
 class QuantizerSetupGeneratorBase:
@@ -1233,7 +1233,7 @@ class QuantizationController(QuantizationControllerBase):
                 ignored_scopes = range_init_subconfig.get("ignored_scopes", None)
                 target_quantizer_group = range_init_subconfig.get("target_quantizer_group", quantizer_group)
                 if quantizer_group == target_quantizer_group and \
-                    pt_should_consider_scope(str(scope), target_scopes, ignored_scopes):
+                    should_consider_scope(str(scope), target_scopes, ignored_scopes):
                     matched_init_range_config.append(range_init_subconfig)
 
             if len(matched_init_range_config) > 1:

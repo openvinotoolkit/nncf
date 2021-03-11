@@ -127,6 +127,6 @@ def get_weight_node_name(nxgraph, node_name):
     return node_name
 
 
-def tf_get_layer_identifier(node: NNCFNode):
+def get_layer_identifier(node: NNCFNode):
     layer_name, _ = get_original_name_and_instance_index(node.node_name)
     return layer_name

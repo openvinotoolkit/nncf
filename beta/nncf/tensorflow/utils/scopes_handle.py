@@ -13,6 +13,6 @@
 from typing import List
 
 
-def tf_should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
+def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
     # TODO: add implementation
     return True

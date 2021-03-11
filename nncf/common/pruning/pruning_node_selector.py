@@ -33,15 +33,15 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.backend import __nncf_backend__
 
 if __nncf_backend__ == 'Torch':
-    from nncf.pruning.utils import pt_is_depthwise_conv as is_depthwise_conv
-    from nncf.pruning.utils import pt_is_conv_with_downsampling as is_conv_with_downsampling
-    from nncf.dynamic_graph.graph import pt_get_module_identifier as get_module_identifier
-    from nncf.utils import pt_should_consider_scope as should_consider_scope
+    from nncf.pruning.utils import is_depthwise_conv
+    from nncf.pruning.utils import is_conv_with_downsampling
+    from nncf.dynamic_graph.graph import get_module_identifier as get_module_identifier
+    from nncf.utils import should_consider_scope
 elif __nncf_backend__ == 'TensorFlow':
-    from beta.nncf.tensorflow.pruning.utils import tf_is_depthwise_conv as is_depthwise_conv
-    from beta.nncf.tensorflow.pruning.utils import tf_is_conv_with_downsampling as is_conv_with_downsampling
-    from beta.nncf.tensorflow.graph.utils import tf_get_layer_identifier as get_module_identifier
-    from beta.nncf.tensorflow.utils.scopes_handle import tf_should_consider_scope as should_consider_scope
+    from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
+    from beta.nncf.tensorflow.pruning.utils import is_conv_with_downsampling
+    from beta.nncf.tensorflow.graph.utils import get_layer_identifier as get_module_identifier
+    from beta.nncf.tensorflow.utils.scopes_handle import should_consider_scope
 
 
 class PruningNodeSelector:

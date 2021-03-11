@@ -16,7 +16,7 @@ from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, MinM
     MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
     MeanPercentileStatisticCollector
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.utils import pt_should_consider_scope
+from nncf.utils import should_consider_scope
 
 
 class RangeInitConfig:
@@ -130,7 +130,7 @@ class RangeInitParams:
     def get_init_config_for_scope_and_group(self, scope_str: str, group: QuantizerGroup) -> RangeInitConfig:
         matches = []  # type: List[RangeInitConfig]
         for pl_config in self.per_layer_range_init_configs:
-            if pt_should_consider_scope(scope_str, pl_config.target_scopes, pl_config.ignored_scopes):
+            if should_consider_scope(scope_str, pl_config.target_scopes, pl_config.ignored_scopes):
                 if group == pl_config.target_group or pl_config.target_group is None:
                     matches.append(RangeInitConfig(pl_config.init_type, pl_config.num_init_samples,
                                                    pl_config.init_type_specific_params))

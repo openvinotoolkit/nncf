@@ -24,7 +24,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
-def tf_is_depthwise_conv(node: NNCFNode) -> bool:
+def is_depthwise_conv(node: NNCFNode) -> bool:
     return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
            and node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
@@ -32,7 +32,7 @@ def tf_is_depthwise_conv(node: NNCFNode) -> bool:
            or node.node_type == 'DepthwiseConv2D'
 
 
-def tf_is_conv_with_downsampling(node: NNCFNode) -> bool:
+def is_conv_with_downsampling(node: NNCFNode) -> bool:
     return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in DECONV_LAYERS

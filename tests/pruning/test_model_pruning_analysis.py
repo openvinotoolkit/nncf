@@ -21,7 +21,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_helpers import PTIdentityMaskForwardOps
 from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.pruning.export_helpers import PTElementwise
-from nncf.pruning.utils import pt_is_depthwise_conv
+from nncf.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
@@ -260,7 +260,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
     model = test_struct.model()
     nncf_model, _ = create_nncf_model_and_builder(model, {'prune_first_conv': True, 'prune_last_conv': True})
 
-    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, pt_is_depthwise_conv)
+    model_analyser = ModelAnalyzer(nncf_model.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, is_depthwise_conv)
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
     for node_id in can_prune_analysis.keys():
         assert can_prune_analysis[node_id] == test_struct.ref_can_prune[node_id]

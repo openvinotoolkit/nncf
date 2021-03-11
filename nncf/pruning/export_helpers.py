@@ -30,7 +30,7 @@ from nncf.pruning.export_utils import PTPruningOperationsMetatypeRegistry
 from nncf.pruning.export_utils import identity_mask_propagation, get_input_masks, \
     fill_input_masks
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.pruning.utils import pt_is_depthwise_conv
+from nncf.pruning.utils import is_depthwise_conv
 
 PT_PRUNING_OPERATOR_METATYPES = PTPruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -101,7 +101,7 @@ class PTConvolution(PTDefaultMetaOp):
     def accept_pruned_input(cls, node: PTNNCFNode):
         accept_pruned_input = True
         if is_grouped_conv(node):
-            if not pt_is_depthwise_conv(node):
+            if not is_depthwise_conv(node):
                 accept_pruned_input = False
         return accept_pruned_input
 
@@ -119,7 +119,7 @@ class PTConvolution(PTDefaultMetaOp):
 
         # In case of group convs we can't prune by output filters
         if is_grouped_conv(nncf_node):
-            if pt_is_depthwise_conv(nncf_node):
+            if is_depthwise_conv(nncf_node):
                 # Depthwise case
                 is_depthwise = True
                 output_mask = input_masks[0]

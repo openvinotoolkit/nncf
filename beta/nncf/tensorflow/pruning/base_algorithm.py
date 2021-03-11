@@ -26,7 +26,7 @@ from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from beta.nncf.tensorflow.graph.utils import tf_get_layer_identifier
+from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.common import BIAS_ATTR_NAME
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
@@ -98,7 +98,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
             for node in group.nodes:
-                layer_name = tf_get_layer_identifier(node)
+                layer_name = get_layer_identifier(node)
                 if layer_name in shared_layers:
                     continue
                 if is_shared(node):
@@ -122,7 +122,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 if self._prune_batch_norms:
                     bn_nodes = self._get_related_batchnorms(layer_name, group, graph)
                     for bn_node in bn_nodes:
-                        bn_layer_name = tf_get_layer_identifier(bn_node)
+                        bn_layer_name = get_layer_identifier(bn_node)
                         for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                             attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[bn_node.node_type][attr_name_key]
                             transformations.register(
@@ -161,13 +161,13 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         Note: Single node per layer for shared bactchnorm layers
         """
         layer_nodes = [node_ for node_ in group.nodes
-                       if tf_get_layer_identifier(node_) == layer_name]
+                       if get_layer_identifier(node_) == layer_name]
         bn_nodes = []
         bn_layer_names = []
         for layer_node in layer_nodes:
             for next_node in graph.get_next_nodes(layer_node):
                 for bn_node in graph.traverse_graph(next_node, self._get_bn_for_node):
-                    bn_layer_name = tf_get_layer_identifier(bn_node)
+                    bn_layer_name = get_layer_identifier(bn_node)
                     if bn_layer_name not in bn_layer_names:
                         bn_layer_names.append(bn_layer_name)
                         bn_nodes.append(bn_node)
