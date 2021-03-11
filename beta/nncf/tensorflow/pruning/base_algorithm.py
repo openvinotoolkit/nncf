@@ -35,8 +35,8 @@ from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
-from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.common.graph.graph import NNCFNode
@@ -107,7 +107,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
 
-                nncf_logger.info("Adding Weight Pruner in: {}".format(layer_name))
+                nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
                 for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
                     if getattr(layer, attr_name) is not None:
@@ -222,7 +222,9 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()
-        return convert_raw_to_printable(raw_pruning_statistics)
+        prefix = 'pruning'
+        header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
+        return convert_raw_to_printable(raw_pruning_statistics, prefix, header)
 
     def raw_statistics(self) -> Dict[str, object]:
         raw_pruning_statistics = {}

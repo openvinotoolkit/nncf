@@ -23,40 +23,41 @@ from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
 
-def convert_raw_to_printable(raw_sparsity_statistics):
-    sparsity_statistics = {}
-    sparsity_statistics.update(raw_sparsity_statistics)
+def convert_raw_to_printable(raw_statistics, prefix, header):
+    statistics = {}
+    statistics.update(raw_statistics)
 
     table = Texttable()
-    header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
     data = [header]
 
-    for sparsity_info in raw_sparsity_statistics['sparsity_statistic_by_module']:
-        row = [sparsity_info[h] for h in header]
+    statistic_by_layer = prefix + '_statistic_by_layer'
+    for info in raw_statistics[statistic_by_layer]:
+        row = [info[h] for h in header]
         data.append(row)
     table.add_rows(data)
-    sparsity_statistics['sparsity_statistic_by_module'] = table
-    return sparsity_statistics
+    statistics[statistic_by_layer] = table
+    return statistics
 
 
-def prepare_for_tensorboard(raw_sparsity_statistics):
-    sparsity_statistics = {}
+def prepare_for_tensorboard(raw_sparsity_statistics, prefix, rate_abbreviation):
+    statistics = {}
+    statistic_by_layer = prefix + '_statistic_by_layer'
     base_prefix = '2.compression/statistics/'
     detailed_prefix = '3.compression_details/statistics/'
     for key, value in raw_sparsity_statistics.items():
-        if key == 'sparsity_statistic_by_module':
+        if key == statistic_by_layer:
             for v in value:
-                sparsity_statistics[detailed_prefix + v['Name'] + '/sparsity'] = v['SR']
+                statistics[detailed_prefix + v['Name'] + '/' + prefix] = v[rate_abbreviation]
         else:
-            sparsity_statistics[base_prefix + key] = value
+            statistics[base_prefix + key] = value
 
-    return sparsity_statistics
+    return statistics
 
 
 def strip_model_from_masks(model: tf.keras.Model) -> tf.keras.Model:
     if not isinstance(model, tf.keras.Model):
         raise ValueError(
-            'Expected model to be a `tf.keras.Model` instance but got: ', model)
+            'Expected model to be a `tf.keras.Model` instance but got: {}'.format(type(model)))
 
     transformations = TFTransformationLayout()
 

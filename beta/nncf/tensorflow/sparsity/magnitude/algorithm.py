@@ -174,7 +174,9 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only=False):
         raw_sparsity_statistics = self.raw_statistics()
-        return convert_raw_to_printable(raw_sparsity_statistics)
+        prefix = 'sparsity'
+        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
+        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}
@@ -217,9 +219,9 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['sparsity_statistic_by_module'] = []
+        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
         for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['sparsity_statistic_by_module'].append({
+            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
                 'Name': mask_name,
                 'Weight\'s Shape': weights_shape,
                 'SR': sparsity_level,

@@ -13,7 +13,6 @@
 
 import numpy as np
 import tensorflow as tf
-from texttable import Texttable
 
 from beta.nncf.tensorflow.layers.common import DECONV_LAYERS
 from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
@@ -65,36 +64,6 @@ def broadcast_filter_mask(filter_mask, shape, dim):
     meta_shape[dim] = filter_mask.shape[0]
     broadcasted_filter_mask += tf.reshape(filter_mask, tuple(meta_shape))
     return broadcasted_filter_mask
-
-
-def convert_raw_to_printable(raw_pruning_statistics: dict) -> dict:
-    pruning_statistics = {}
-    pruning_statistics.update(raw_pruning_statistics)
-
-    table = Texttable()
-    header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
-    data = [header]
-
-    for pruning_info in raw_pruning_statistics['pruning_statistic_by_layer']:
-        row = [pruning_info[h] for h in header]
-        data.append(row)
-    table.add_rows(data)
-    pruning_statistics['pruning_statistic_by_layer'] = table
-    return pruning_statistics
-
-
-def prepare_for_tensorboard(raw_pruning_statistics: dict) -> dict:
-    pruning_statistics = {}
-    base_prefix = '2.compression/statistics/'
-    detailed_prefix = '3.compression_details/statistics/'
-    for key, value in raw_pruning_statistics.items():
-        if key == 'pruning_statistic_by_layer':
-            for v in value:
-                pruning_statistics[detailed_prefix + v['Name'] + '/pruning'] = v['PR']
-        else:
-            pruning_statistics[base_prefix + key] = value
-
-    return pruning_statistics
 
 
 class TFPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):

@@ -173,7 +173,7 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     return _get_nncf_graph_from_raw_nodes(model_config, raw_nodes)
 
 
-def _prepare_raw_nodes(model: tf.keras.layers.Layer) -> Dict:
+def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
     model_config = model.get_config()
     raw_nodes = Dict()
     for layer in model_config['layers']:

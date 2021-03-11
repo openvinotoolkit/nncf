@@ -36,7 +36,11 @@ class SparsityStatisticsCallback(StatisticsCallback):
     """
 
     def _prepare_for_tensorboard(self, raw_statistics: dict):
-        return prepare_for_tensorboard(raw_statistics)
+        prefix = 'sparsity'
+        rate_abbreviation = 'SR'
+        return prepare_for_tensorboard(raw_statistics, prefix, rate_abbreviation)
 
     def _convert_raw_to_printable(self, raw_statistics: dict):
-        return convert_raw_to_printable(raw_statistics)
+        prefix = 'sparsity'
+        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
+        return convert_raw_to_printable(raw_statistics, prefix, header)

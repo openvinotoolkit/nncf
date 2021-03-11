@@ -12,8 +12,8 @@
 """
 
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
-from beta.nncf.tensorflow.pruning.utils import convert_raw_to_printable
-from beta.nncf.tensorflow.pruning.utils import prepare_for_tensorboard
+from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
+from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
 
 
 class PruningStatisticsCallback(StatisticsCallback):
@@ -22,7 +22,11 @@ class PruningStatisticsCallback(StatisticsCallback):
     """
 
     def _prepare_for_tensorboard(self, raw_statistics: dict) -> dict:
-        return prepare_for_tensorboard(raw_statistics)
+        prefix = 'pruning'
+        rate_abbreviation = 'PR'
+        return prepare_for_tensorboard(raw_statistics, prefix, rate_abbreviation)
 
     def _convert_raw_to_printable(self, raw_statistics: dict) -> dict:
-        return convert_raw_to_printable(raw_statistics)
+        prefix = 'pruning'
+        header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
+        return convert_raw_to_printable(raw_statistics, prefix, header)

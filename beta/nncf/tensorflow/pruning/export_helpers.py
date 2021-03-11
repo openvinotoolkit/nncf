@@ -43,6 +43,7 @@ class TFInput(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
+    # TODO: maybe Reshape should be in some other metaop
     additional_types = _get_types(KERAS_ACTIVATIONS | TF_ACTIVATIONS) \
                        + ['AvgPool2D', 'GlobalAvgPool2D', 'AveragePooling2D', 'GlobalAveragePooling2D'] \
                        + ['MaxPooling2D', 'GlobalMaxPooling2D', 'MaxPool2D', 'GlobalMaxPool2D'] \
