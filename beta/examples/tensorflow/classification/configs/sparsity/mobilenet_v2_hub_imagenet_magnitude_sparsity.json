@@ -9,9 +9,9 @@
     "epochs": 17,
 
      "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
-        "schedule_params": {
+        "scheduler_params": {
             "boundaries": [12, 14, 16],
             "values":  [1e-5, 1e-6, 1e-7, 1e-8]
         }

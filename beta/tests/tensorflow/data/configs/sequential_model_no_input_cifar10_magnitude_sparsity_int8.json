@@ -7,9 +7,9 @@
     "num_classes": 10,
 
     "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
-        "schedule_params": {
+        "scheduler_params": {
             "boundaries": [20, 25, 30],
             "values": [1e-3, 1e-4, 1e-5, 1e-6]
         }

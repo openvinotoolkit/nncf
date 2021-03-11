@@ -14,7 +14,7 @@
     "optimizer": {
         "type": "sgd",
         "schedule_type": "piecewise_constant",
-        "schedule_params": {
+        "scheduler_params": {
             "boundaries": [
                 1
             ],

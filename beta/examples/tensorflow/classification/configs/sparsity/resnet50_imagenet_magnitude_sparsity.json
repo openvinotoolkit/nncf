@@ -7,9 +7,9 @@
     "batch_size": 256,
     "epochs": 55,
     "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
-        "schedule_params": {
+        "scheduler_params": {
             "boundaries": [30, 45, 50],
             "values": [1e-3, 1e-4, 1e-5, 1e-6]
         }

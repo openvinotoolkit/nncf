@@ -8,9 +8,9 @@
     "weight_decay": 0.0001,
 
     "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
-        "schedule_params": {
+        "scheduler_params": {
             "boundaries": [
                 1
             ],
