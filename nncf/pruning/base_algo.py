@@ -20,7 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
@@ -28,10 +28,10 @@ from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
-from nncf.pruning.model_analysis import NodesCluster, Clusterization
-from nncf.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
+from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
 from nncf.pruning.utils import get_bn_for_module_scope
-from nncf.pruning.export_helpers import PRUNING_OPERATOR_METATYPES
+from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 
 
 class BatchNormInfo:
@@ -53,7 +53,7 @@ class PrunedModuleInfo:
 
 
 class NodeInfo:
-    def __init__(self, nncf_node: NNCFNode, module: nn.Module, module_scope: Scope):
+    def __init__(self, nncf_node: PTNNCFNode, module: nn.Module, module_scope: Scope):
         self.node = nncf_node
         self.id = nncf_node.node_id
         self.module = module
@@ -71,7 +71,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
-        self.pruning_node_selector = PruningNodeSelector(PRUNING_OPERATOR_METATYPES,
+        self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
                                                          self.get_op_types_of_pruned_modules(),
                                                          self.get_types_of_grouping_ops(),
                                                          self.ignored_scopes,

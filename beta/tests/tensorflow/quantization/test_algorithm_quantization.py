@@ -19,6 +19,7 @@ import pytest
 
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -557,7 +558,7 @@ def get_test_layers_desk():
 def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     layer_desk = LAYERS_MAP[layer_name](input_type, data_type)
     layer_name = \
-        LAYERS_WITH_WEIGHTS[layer_desk.layer_name]['weight_attr_name']
+        LAYERS_WITH_WEIGHTS[layer_desk.layer_name][WEIGHT_ATTR_NAME]
     q = Quantizer()
     q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
                                  layer_name, layer_desk.layer)

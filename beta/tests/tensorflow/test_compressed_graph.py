@@ -20,6 +20,7 @@ import networkx as nx
 
 from beta.tests.tensorflow import test_models
 from beta.tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
+from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
 from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 
 
@@ -157,6 +158,25 @@ def _sparsity_case_config(request):
     return SparsityTestCaseConfiguration(graph_dir)
 
 
+class PruningTestCaseConfiguration:
+    def __init__(self, graph_dir):
+        self.graph_dir = graph_dir
+
+
+PRUNING_ALGORITHMS = [
+    'filter_pruning',
+]
+
+
+@pytest.fixture(
+    scope='function', params=PRUNING_ALGORITHMS, ids=PRUNING_ALGORITHMS
+)
+def _pruning_case_config(request):
+    pruning_algorithm = request.param
+    graph_dir = os.path.join('pruning', pruning_algorithm)
+    return PruningTestCaseConfiguration(graph_dir)
+
+
 class ModelDesc:
     def __init__(self, ref_graph_filename: str, model_builder, input_sample_sizes):
         self.model_name, _ = os.path.splitext(ref_graph_filename)
@@ -168,17 +188,32 @@ class ModelDesc:
 SKIP_MAP = {
     'quantization': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
-        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18')
+        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
+        'xception': pytest.mark.skip(reason='gitlab issue #28')
     },
     'magnitude_sparsity': {
-        'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17')
+        'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
+        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
+        'xception': pytest.mark.skip(reason='gitlab issue #28')
+    },
+    'filter_pruning': {
+        'densenet121': pytest.mark.skip(reason='ticket #50604'),
+        'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
+        'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
+        'xception': pytest.mark.skip(reason='gitlab issue #28'),
+        'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
+        'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
+        'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
     }
 }
 
 
 def get_test_models_desc(algorithm):
     return [
-        ModelDesc('densenet121.pb', test_models.DenseNet121, [1, 32, 32, 3]),
+        pytest.param(
+            ModelDesc('densenet121.pb', test_models.DenseNet121, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('densenet121', ())
+        ),
         pytest.param(
             ModelDesc('inception_resnet_v2.pb', test_models.InceptionResNetV2, [1, 75, 75, 3]),
             marks=SKIP_MAP[algorithm].get('inception_resnet_v2', ())
@@ -193,14 +228,32 @@ def get_test_models_desc(algorithm):
         ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
         ModelDesc('resnet50_v2.pb', test_models.ResNet50V2, [1, 32, 32, 3]),
         ModelDesc('vgg16.pb', test_models.VGG16, [1, 32, 32, 3]),
-        ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
-        ModelDesc('retinanet.pb', test_models.RetinaNet, [1, None, None, 3]),
+        pytest.param(
+            ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
+            marks=SKIP_MAP[algorithm].get('xception', ())
+        ),
+        pytest.param(
+            ModelDesc('retinanet.pb', test_models.RetinaNet, [1, None, None, 3]),
+            marks=SKIP_MAP[algorithm].get('retinanet', ())
+        ),
         ModelDesc('sequential_model.pb', test_models.SequentialModel, [1, 224, 224, 3]),
         ModelDesc('sequential_no_input_model.pb', test_models.SequentialModelNoInput, [1, 224, 224, 3]),
-        ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
-        ModelDesc('shared_layers_model.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
-        ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
-        ModelDesc('yolo_v4.pb', test_models.YOLOv4, [1, None, None, 3]),
+        pytest.param(
+            ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
+        ),
+        pytest.param(
+            ModelDesc('shared_layers_model.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
+            marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
+        ),
+        pytest.param(
+            ModelDesc('mask_rcnn.dot', test_models.MaskRCNN, [1, 1024, 1024, 3]),
+            marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
+        ),
+        pytest.param(
+            ModelDesc('yolo_v4.pb', test_models.YOLOv4, [1, None, None, 3]),
+            marks=SKIP_MAP[algorithm].get('yolo_v4', ())
+        ),
     ]
 
 
@@ -256,6 +309,19 @@ class TestModelsGraph:
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
         check_model_graph(compressed_model, desc.ref_graph_filename, _sparsity_case_config.graph_dir)
+
+    @pytest.mark.parametrize(
+        'desc', get_test_models_desc('filter_pruning'), ids=[
+            m.model_name if isinstance(m, ModelDesc)
+            else m.values[0].model_name for m in get_test_models_desc('filter_pruning')
+        ]
+    )
+    def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
+        model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+        config = get_basic_filter_pruning_config(desc.input_sample_sizes)
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+        check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir)
 
 
 QUANTIZE_OUTPUTS = [

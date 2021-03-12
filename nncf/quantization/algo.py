@@ -50,7 +50,7 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
@@ -373,7 +373,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
             nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_context = nncf_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
         contexts_correspond_to_single_module = True

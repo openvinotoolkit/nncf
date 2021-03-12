@@ -11,15 +11,19 @@
  limitations under the License.
 """
 
+WEIGHT_ATTR_NAME = 'weight_attr_name'
+BIAS_ATTR_NAME = 'bias_attr_name'
+CHANNEL_AXES = 'channel_axes'
+
 KERAS_LAYERS_WITH_WEIGHTS = {
-    'Conv1D': {'weight_attr_name': 'kernel', 'channel_axes': -1},
-    'Conv2D': {'weight_attr_name': 'kernel', 'channel_axes': -1},
-    'Conv3D': {'weight_attr_name': 'kernel', 'channel_axes': -1},
-    'DepthwiseConv2D': {'weight_attr_name': 'depthwise_kernel', 'channel_axes': (2, 3)},
-    'Conv1DTranspose': {'weight_attr_name': 'kernel', 'channel_axes': -2},
-    'Conv2DTranspose': {'weight_attr_name': 'kernel', 'channel_axes': -2},
-    'Conv3DTranspose': {'weight_attr_name': 'kernel', 'channel_axes': -2},
-    'Dense': {'weight_attr_name': 'kernel', 'channel_axes': -1}
+    'Conv1D': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -1, BIAS_ATTR_NAME: 'bias'},
+    'Conv2D': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -1, BIAS_ATTR_NAME: 'bias'},
+    'Conv3D': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -1, BIAS_ATTR_NAME: 'bias'},
+    'DepthwiseConv2D': {WEIGHT_ATTR_NAME: 'depthwise_kernel', CHANNEL_AXES: (2, 3), BIAS_ATTR_NAME: 'bias'},
+    'Conv1DTranspose': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -2, BIAS_ATTR_NAME: 'bias'},
+    'Conv2DTranspose': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -2, BIAS_ATTR_NAME: 'bias'},
+    'Conv3DTranspose': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -2, BIAS_ATTR_NAME: 'bias'},
+    'Dense': {WEIGHT_ATTR_NAME: 'kernel', CHANNEL_AXES: -1, BIAS_ATTR_NAME: 'bias'}
 }
 
 TF_LAYERS_WITH_WEIGHTS = {}
@@ -27,6 +31,30 @@ TF_LAYERS_WITH_WEIGHTS = {}
 LAYERS_WITH_WEIGHTS = {}
 LAYERS_WITH_WEIGHTS.update(KERAS_LAYERS_WITH_WEIGHTS)
 LAYERS_WITH_WEIGHTS.update(TF_LAYERS_WITH_WEIGHTS)
+
+SPECIAL_LAYERS_WITH_WEIGHTS = {
+    'BatchNormalization': {WEIGHT_ATTR_NAME: 'gamma', BIAS_ATTR_NAME: 'beta'}
+}
+
+ALL_LAYERS_WITH_WEIGHTS = {}
+ALL_LAYERS_WITH_WEIGHTS.update(LAYERS_WITH_WEIGHTS)
+ALL_LAYERS_WITH_WEIGHTS.update(SPECIAL_LAYERS_WITH_WEIGHTS)
+
+DECONV_LAYERS = [
+    'Conv1DTranspose',
+    'Conv2DTranspose',
+    'Conv3DTranspose'
+]
+
+GENERAL_CONV_LAYERS = [
+    'Conv1D',
+    'Conv2D',
+    'Conv3D',
+    'DepthwiseConv2D',
+    'Conv1DTranspose',
+    'Conv2DTranspose',
+    'Conv3DTranspose'
+]
 
 KERAS_LAYERS_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     'Cropping1D',
