@@ -11,7 +11,8 @@
 """
 from collections import Counter
 from functools import partial
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
 import onnx
 import pytest
@@ -20,12 +21,13 @@ import torch.nn
 from onnx import numpy_helper
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import OperationExecutionContext
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
@@ -395,10 +397,10 @@ def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
                                     ref_coalesced_ip_lists: List[List[PTTargetPoint]]):
     if ref_coalesced_ip_lists is None:
         with pytest.raises(RuntimeError):
-            _ = PatternBasedQuantizerSetupGenerator.coalesce_insertion_points(input_insertion_points,
-                                                                              linked_scopes_groups_list)
+            _ = QuantizerPropagationSolver.coalesce_insertion_points(input_insertion_points,
+                                                                     linked_scopes_groups_list)
     else:
-        test_coalesced_ip_lists = PatternBasedQuantizerSetupGenerator.coalesce_insertion_points(
+        test_coalesced_ip_lists = QuantizerPropagationSolver.coalesce_insertion_points(
             input_insertion_points,
             linked_scopes_groups_list)
         assert len(test_coalesced_ip_lists) == len(ref_coalesced_ip_lists)
@@ -428,11 +430,9 @@ class QuantizerLinkingTestModel(torch.nn.Module):
         return tuple(x + y for x, y in zip(path1_results, path2_results))
 
 
-def test_quantizer_scale_linking():
+def test_quantizer_scale_linking(mocker):
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config['quantizer_setup_type'] = 'pattern_based'
     nncf_config["compression"]["quantize_outputs"] = True
-    nncf_config["compression"]["quantize_inputs"] = False
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -442,7 +442,7 @@ def test_quantizer_scale_linking():
         }
     ]
     nncf_config["compression"]["activations"] = {
-        "linked_quantizer_scopes": [
+        "unified_scale_ops": [
             [
                 # Note: Assuming that quantizers are attached as a post-op to the specified operation
                 "QuantizerLinkingTestModel/Path[path2]/__mul___0",
@@ -460,61 +460,31 @@ def test_quantizer_scale_linking():
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(QuantizerLinkingTestModel(),
                                                                                    nncf_config)
 
-    # 2 paths x 3 quantizers - 1 because two are shared in one path
-    assert len(compression_ctrl.non_weight_quantizers) == 5
+    # 18 inputs to quantize (14 regular + 4 linked),
+    # 8 quantization points left after propagation, out of these 3 are linked
+    assert len(compression_ctrl.non_weight_quantizers) == 6
+
+    shared_quantizer_id = NonWeightQuantizerId(
+        InputAgnosticOperationExecutionContext.from_str("/nncf_model_input_0"))
+
+    non_shared_spies = []
+    for aq_id, aq_info in compression_ctrl.non_weight_quantizers.items():
+        quantizer = aq_info.quantizer_module_ref
+        spy = mocker.spy(quantizer, 'forward')
+        if aq_id == shared_quantizer_id:
+            shared_spy = spy
+        else:
+            non_shared_spies.append(spy)
 
     test_input1 = torch.ones([1, 1, 1, 1])
     test_input2 = 2 * test_input1
+    compressed_model(test_input1, test_input2)
 
-    non_shared_mul_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path1]/__mul___0"))
+    assert shared_spy.call_count == 3
+    for non_shared_spy in non_shared_spies:
+        assert non_shared_spy.call_count == 1
 
-    non_shared_add_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path1]/__add___0"))
 
-    shared_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path2]/__add___0"))
-
-    non_shared_mul_quantizer = compression_ctrl.non_weight_quantizers[non_shared_mul_quantizer_id].quantizer_module_ref
-    non_shared_add_quantizer = compression_ctrl.non_weight_quantizers[non_shared_add_quantizer_id].quantizer_module_ref
-    shared_quantizer = compression_ctrl.non_weight_quantizers[shared_quantizer_id].quantizer_module_ref
-
-    old_scale = 765.0  # so that the quantum is equal to 3
-    with torch.no_grad():
-        for quantizer in compression_ctrl.all_quantizations.values():
-            quantizer.scale.fill_(old_scale)
-
-    # Expected outputs without compression - 6, 12, 8. Scale deliberately set to preserve the values
-    uncompressed_expected_outputs = (6.0 * torch.ones([1]), 12.0 * torch.ones([1]), 18.0 * torch.ones([1]))
-    outputs_with_shared_scale_1 = compressed_model(test_input1, test_input2)
-
-    for uncomp_out, comp_out_1 in zip(uncompressed_expected_outputs, outputs_with_shared_scale_1):
-        assert torch.allclose(uncomp_out, comp_out_1)
-
-    # Specifically clip the shared quantizer's outputs by setting scale to 1.0
-    new_shared_scale = 1.0
-    with torch.no_grad():
-        shared_quantizer.scale.fill_(new_shared_scale)
-    outputs_with_shared_scale_2 = compressed_model(test_input1, test_input2)
-
-    # __add___0 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[0], 4.0 * torch.ones([1]))
-    # __mul___0 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[1], 7.0 * torch.ones([1]))
-    # __add___1 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[2], 12.0 * torch.ones([1]))
-
-    # Clipping the non-shared quantizers at the same position in the path as the two shared ones
-    # in the same manner is required to simulate the same grad input for both the shared quantizers
-    # and the unshared ones
-    with torch.no_grad():
-        non_shared_mul_quantizer.scale.fill_(new_shared_scale)
-        non_shared_add_quantizer.scale.fill_(new_shared_scale)
-    final_output = compressed_model(test_input1, test_input2)[2]
-    final_output.backward()
-
-    assert torch.allclose(shared_quantizer.scale.grad,
-                          non_shared_mul_quantizer.scale.grad + non_shared_add_quantizer.scale.grad)
 
 
 def test_unified_scales_for_vpu():

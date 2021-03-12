@@ -613,42 +613,27 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             qconfig_sequence_in_traces_order,
             qp_ids_in_trace_order,
             ctrl.get_quantizer_setup_for_current_state())
-        if quantizer_setup_to_set.shared_input_operation_set_groups:
-            for group in quantizer_setup_to_set.shared_input_operation_set_groups:
-                weight_qp_ids = []
-                act_qp_ids = []
-                for qp_id in group:
-                    qp = quantizer_setup_to_set.quantization_points[qp_id]
-                    if qp.is_weight_quantization_point():
-                        weight_qp_ids.append(qp_id)
-                    elif qp.is_activation_quantization_point():
-                        act_qp_ids.append(qp_id)
-                weight_qps = [quantizer_setup_to_set.quantization_points[qp_id] for qp_id in weight_qp_ids]
-                weight_bitwidth_set = {weight_qp.qconfig.num_bits for weight_qp in weight_qps}
+        assert quantizer_setup_to_set.shared_input_operation_set_groups
+        for group in quantizer_setup_to_set.shared_input_operation_set_groups:
+            weight_qp_ids = []
+            act_qp_ids = []
+            for qp_id in group:
+                qp = quantizer_setup_to_set.quantization_points[qp_id]
+                if qp.is_weight_quantization_point():
+                    weight_qp_ids.append(qp_id)
+                elif qp.is_activation_quantization_point():
+                    act_qp_ids.append(qp_id)
+            weight_qps = [quantizer_setup_to_set.quantization_points[qp_id] for qp_id in weight_qp_ids]
+            weight_bitwidth_set = {weight_qp.qconfig.num_bits for weight_qp in weight_qps}
 
-                if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
-                    quantizer_setup_to_set = self._set_activations_bitwidth_strictly(quantizer_setup_to_set,
-                                                                                     act_qp_ids,
-                                                                                     weight_bitwidth_set)
-                else:
-                    quantizer_setup_to_set = self._set_activation_bitwidth_liberally(quantizer_setup_to_set,
-                                                                                     act_qp_ids,
-                                                                                     weight_bitwidth_set)
-        else:
-            # TODO: delete not-consistent pairs of activation and weights for pattern-based approach
-            pairs = self._algo.get_weights_activation_quantizers_pairs()
-            for pair in pairs:
-                wq_ids, aq_id = pair
-                aq_qp_ids = ctrl.module_id_to_qp_id_translation_dict[aq_id]
-                wq_qp_ids = set()
-                for wq_id in wq_ids:
-                    wq_qp_id_set = ctrl.module_id_to_qp_id_translation_dict[wq_id]
-                    wq_qp_ids.update(list(wq_qp_id_set))
-
-                wq_bitwidths = [quantizer_setup_to_set.quantization_points[wq_qp_id].qconfig.num_bits
-                                for wq_qp_id in wq_qp_ids]
-                for aq_qp_id in aq_qp_ids:
-                    quantizer_setup_to_set.quantization_points[aq_qp_id].qconfig.num_bits = max(wq_bitwidths)
+            if self._bitwidth_assignment_mode == BitwidthAssignmentMode.STRICT:
+                quantizer_setup_to_set = self._set_activations_bitwidth_strictly(quantizer_setup_to_set,
+                                                                                 act_qp_ids,
+                                                                                 weight_bitwidth_set)
+            else:
+                quantizer_setup_to_set = self._set_activation_bitwidth_liberally(quantizer_setup_to_set,
+                                                                                 act_qp_ids,
+                                                                                 weight_bitwidth_set)
 
         return quantizer_setup_to_set
 

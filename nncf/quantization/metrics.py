@@ -62,11 +62,9 @@ class NetworkQuantizationShareMetric(BaseMetric):
     def __init__(self, compressed_model,
                  weights_quantizers,
                  non_weights_quantizers,
-                 quantizer_setup_type,
                  build_time_info: NetworkQuantizationShareMetricBuildTimeInfo):
         super().__init__()
         self._compressed_model = compressed_model
-        self._quantizer_setup_type = quantizer_setup_type # type: QuantizerSetupType
         self.non_weights_quantizers = {k: v.quantizer_module_ref for k, v in non_weights_quantizers.items()}
         self.weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
         self._all_quantizations = {**self.weights_quantizers, **self.non_weights_quantizers}

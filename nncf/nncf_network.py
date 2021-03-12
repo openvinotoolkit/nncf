@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import inspect
+import operator
 from collections import OrderedDict
 from enum import Enum
 from typing import Callable
@@ -27,6 +28,8 @@ from copy import deepcopy
 
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.module_operations import UpdateWeight
+
+from nncf.dynamic_graph.graph import NNCFNodeExpression
 from torch import nn
 
 from nncf.debug import CombinedDebugInterface
@@ -200,19 +203,29 @@ class InsertionPointGraph(nx.DiGraph):
             if ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
                 self._input_ips.append(post_hook_insertion_point)
 
-    def _base_graph_match_has_breaking_output_edges(self, match):
+    def _base_graph_match_has_breaking_edges(self, match):
+        # Breaking output edges
         for node_key in match[:-1]:
             succs = list(self._base_nx_graph.succ[node_key].keys())
             for succ_key in succs:
                 if succ_key not in match:
                     return True
+
+        # Breaking input edges
+        for node_key in match[1:]:
+            preds = list(self._base_nx_graph.pred[node_key].keys())
+            for pred_key in preds:
+                if pred_key not in match:
+                    return True
         return False
 
     def get_ip_graph_with_merged_hw_optimized_operations(self,
-                                                         hw_config: Optional[HWConfig] = None) -> 'InsertionPointGraph':
+                                                         hw_config: Optional[HWConfig] = None,
+                                                         additional_patterns: Optional[List[str]] = None) \
+            -> 'InsertionPointGraph':
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
-        pattern = self._get_mergeable_operator_patterns(hw_config)
+        pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
         from nncf.dynamic_graph.graph_matching import search_all
         matches = search_all(self._base_nx_graph, pattern)
         for match in matches:
@@ -223,7 +236,7 @@ class InsertionPointGraph(nx.DiGraph):
             output_node_key = match[-1]
 
             # If a subgraph has output edges in its middle, should skip merging it
-            # Example:
+            # Example (conv2d + BN + relu pattern):
             #       (conv2d)
             #          |------\
             #         (BN)    |
@@ -234,7 +247,13 @@ class InsertionPointGraph(nx.DiGraph):
             #          |
             #         ...
 
-            has_breaking_output_edges = self._base_graph_match_has_breaking_output_edges(match)
+            # Same for input edges (linear + add pattern):
+            # (linear)      (linear)
+            #     |            |
+            #     \----(add)---/
+            #            |
+            #           ...
+            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(match)
 
             if has_breaking_output_edges:
                 continue
@@ -285,15 +304,24 @@ class InsertionPointGraph(nx.DiGraph):
     def get_post_hook_node_key(node_key: str) -> str:
         return InsertionPointGraph.POST_HOOK_ID_PREFIX + node_key
 
-    def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None) -> NodeExpression:
+    def _get_mergeable_operator_patterns(self, hw_config: Optional[HWConfig] = None,
+                                         additional_patterns: Optional[List[str]] = None) -> NodeExpression:
         """Resulting pattern should have single input; the operation with inputs to
         quantize should be the input operation; outputs should only be produced by one output node."""
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
         import nncf.dynamic_graph.patterns as p
-        pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
-                  p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
-        return pattern
+        full_pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
+                       p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
+        if additional_patterns is not None:
+            for pattern in additional_patterns:
+                if not isinstance(pattern, str):
+                    custom_pattern = functools.reduce(operator.add,
+                                                      [NNCFNodeExpression(node) for node in pattern])
+                else:
+                    custom_pattern = NNCFNodeExpression(pattern)
+                full_pattern = full_pattern | custom_pattern
+        return full_pattern
 
     def get_op_nodes_in_scope(self, scope: 'Scope') -> List:
         matching_ip_graph_op_nodes_list = []

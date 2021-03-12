@@ -10,10 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import warnings
 # pylint:disable=too-many-lines
 from collections import Counter
 from collections import OrderedDict
 from collections import deque
+from copy import deepcopy
 from enum import Enum
 from typing import Any
 from typing import Callable
@@ -22,8 +24,6 @@ from typing import Set
 from typing import Tuple
 
 import networkx as nx
-import warnings
-from copy import deepcopy
 
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.graph.transformations.commands import TargetType
@@ -499,6 +499,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         target_node = self.nodes[target_ip_node_key]
         target_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = prop_quantizer
         return prop_quantizer
+
+    def unify_pq_scales(self, primary_pq: PropagatingQuantizer, secondary_pq: PropagatingQuantizer):
+        primary_pq.unified_scale = True
+        secondary_pq.unified_scale = True
+        primary_gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(primary_pq.id)
+        if primary_gid is None:
+            primary_gid = self._unified_scale_group_manager.register_group({primary_pq})
+        self._unified_scale_group_manager.add_to_group(primary_gid, secondary_pq)
 
     def add_propagating_quantizer(self, qconf_list: List[QuantizerConfig], ip_node_key: str,
                                   unified_scale: bool = False,
@@ -1279,6 +1287,7 @@ class QuantizerPropagationSolver:
                  quantizable_modules: List[QuantizableModule] = None,
                  scope_overrides: Dict = None,
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
+                 additional_unified_scale_op_scopes: List[List[str]] = None,
                  run_consistency_checks: bool = False):
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
@@ -1299,6 +1308,8 @@ class QuantizerPropagationSolver:
         self._unified_scales_operation_set = set()
         if self._hw_config is not None:
             self._unified_scales_operation_set = self._hw_config.get_operations_with_unified_scales()
+
+        self._additional_unified_scale_op_scopes = additional_unified_scale_op_scopes
 
         # Will handle the "wildcard" quantization situation for the time being
         if default_qconfig_list is not None:
@@ -1679,7 +1690,86 @@ class QuantizerPropagationSolver:
                     continue
                 self._setup_initial_quantizers_for_operator_node(node_key, quant_prop_graph)
 
+        if self._additional_unified_scale_op_scopes is not None:
+            # Link the prop quantizers according to specification in NNCF config
+            occupied_insertion_points_vs_pqs = {}  # type: Dict[PTTargetPoint, PropagatingQuantizer]
+            for pq in self._active_propagating_quantizers_queue:
+                ip_node_key = pq.current_location_node_key
+                ip_node = quant_prop_graph.nodes[ip_node_key]
+                assert ip_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] == \
+                       QuantizerPropagationStateGraphNodeType.INSERTION_POINT
+                ip = ip_node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]
+                occupied_insertion_points_vs_pqs[ip] = pq
+            coalesced_ips = self.coalesce_insertion_points(list(occupied_insertion_points_vs_pqs.keys()),
+                                                           self._additional_unified_scale_op_scopes)
+            for linked_ip_group in coalesced_ips:
+                if len(linked_ip_group) <= 2:
+                    continue
+                main_ip = linked_ip_group[0]
+                main_pq = occupied_insertion_points_vs_pqs[main_ip]
+
+                for ip in linked_ip_group[1:]:
+                    pq = occupied_insertion_points_vs_pqs[ip]
+                    quant_prop_graph.unify_pq_scales(main_pq, pq)
+
         return quant_prop_graph
+
+
+
+    @staticmethod
+    def coalesce_insertion_points(target_insertion_points: List[PTTargetPoint],
+                                  linked_scopes_groups_list: List[List[str]]) -> List[List[PTTargetPoint]]:
+        """Accepts a list of InsertionPoints and groups these according to linked_scope_groups_list.
+           The matching of an InsertionPoint to the string entries in the lists is made based on the
+           string representation of InsertionPoint's InputAgnosticOperationExecutionContext attribute."""
+        # pylint:disable=too-many-branches
+        if linked_scopes_groups_list is None:
+            return [[ip, ] for ip in target_insertion_points]
+        retval = []
+        insertion_point_indices_vs_group_id = OrderedDict()
+
+        for group_idx, group_list in enumerate(linked_scopes_groups_list):
+            for group_member_scope_str in group_list:
+                ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(group_member_scope_str)
+                matching_indices = list(
+                    filter(lambda x: target_insertion_points[x].ia_op_exec_context == ia_op_exec_context,
+                           range(len(target_insertion_points))))
+                if len(matching_indices) == 0:
+                    raise RuntimeError("No match for linked quantizer entry {} among activation quantizers!".format(
+                        group_member_scope_str))
+
+                for target_idx in matching_indices:
+                    if target_idx in insertion_point_indices_vs_group_id:
+                        raise RuntimeError(
+                            "Linked activation quantizer groups {} and {} "
+                            "overlap!".format(group_idx,
+                                              insertion_point_indices_vs_group_id[target_idx])
+                        )
+                for target_idx in matching_indices:
+                    insertion_point_indices_vs_group_id[target_idx] = group_idx
+
+        for i in range(len(target_insertion_points)):
+            if i not in insertion_point_indices_vs_group_id:
+                insertion_point_indices_vs_group_id[i] = None
+
+        group_indices_list = [[] for _ in linked_scopes_groups_list]  # type: List[List[int]]
+        for insertion_point_idx, group_idx in insertion_point_indices_vs_group_id.items():
+            if group_idx is not None:
+                group_indices_list[group_idx].append(insertion_point_idx)
+
+        for intra_group_indices in group_indices_list:
+            main_ip_idx = intra_group_indices[0]
+            main_ip = target_insertion_points[main_ip_idx]
+            grouped_list = [main_ip, ]
+            for linked_ip_idx in intra_group_indices[1:]:
+                grouped_list.append(target_insertion_points[linked_ip_idx])
+            retval.append(grouped_list)
+
+        for insertion_point_idx, group_idx in insertion_point_indices_vs_group_id.items():
+            if group_idx is None:
+                retval.append([target_insertion_points[insertion_point_idx], ])
+
+        return retval
 
     def _filter_qconfigs_according_to_scope(self, qconf_list: List[QuantizerConfig],
                                             operator_scope_str: str) -> List[QuantizerConfig]:
