@@ -22,7 +22,7 @@ class SparseLoss(CompressionLoss):
     def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
         super().__init__()
         self._sparse_layers = sparse_layers
-        self.target = tf.Variable(target)
+        self.target = tf.Variable(target, trainable=False)
         self.p = p
         self.disabled = False
 
