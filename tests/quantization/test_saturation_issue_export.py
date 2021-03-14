@@ -77,7 +77,7 @@ def test_hw_config_saturation_fix_applied():
 
 
 class EightConvTestModel(nn.Module):
-    def __init__(self, in_out_ch):
+    def __init__(self, in_out_ch=((1, 3), (3, 5), (5, 7), (7, 10))):
         super().__init__()
         self.features = []
         self.features.append(create_conv(*in_out_ch[0], 2, -1, -2))
@@ -100,7 +100,7 @@ class DepthWiseConvTestModel(nn.Module):
         self.features = []
         self.features.append(nn.Conv2d(1, 3, 3, groups=1))
         self.features.append(nn.Conv2d(3, 30, 3, groups=3))
-        self.features.append(nn.Conv2d(30, 1, 3))
+        # self.features.append(nn.Conv2d(30, 1, 3))
         self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
@@ -331,17 +331,21 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert np.allclose(level_high_ratio * quantizer_scale, onnx_input_output_high)
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)
 
-
-def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path):
-    model = TwoConvTestModel()
+@pytest.mark.parametrize('model', [TwoConvTestModel(), EightConvTestModel(), DepthWiseConvTestModel()])
+def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path, model):
+    model = model
 
     nncf_config = get_config_for_export_mode(True)
+    nncf_config.update({"input_info": {
+        "sample_size": [1, 1, 20, 20]
+    }})
+
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path)
-    input_tensors = [np.random.normal(size=[1, 1, 4, 4]), np.random.uniform(size=[1, 1, 4, 4]),
-                     100 * np.random.normal(size=[1, 1, 4, 4]), 100 * np.random.uniform(size=[1, 1, 4, 4])]
+    input_tensors = [np.random.normal(size=[1, 1, 20, 20]), np.random.uniform(size=[1, 1, 20, 20]),
+                     100 * np.random.normal(size=[1, 1, 20, 20]), 100 * np.random.uniform(size=[1, 1, 20, 20])]
     for input_tensor in input_tensors:
         torch_input = torch.tensor(input_tensor, dtype=torch.float32)
 
@@ -353,4 +357,4 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path)
         input_name = sess.get_inputs()[0].name
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
-        assert np.allclose(torch_out.numpy(), onnx_out)
+        assert np.allclose(torch_out.numpy(), onnx_out, rtol=0, atol=1e-5)
