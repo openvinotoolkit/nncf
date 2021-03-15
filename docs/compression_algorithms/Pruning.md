@@ -2,7 +2,7 @@
 
 #### Filter pruning    
 
- Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion  (filters with smaller importance are pruned).     
+Filter pruning algorithm zeros output filters in Convolutional layers based on some filter importance criterion  (filters with smaller importance are pruned).     
 The framework contains three such criteria: `L1`, `L2` norm, and `Geometric Median`. Also, different schemes of pruning application are presented by different schedulers.    
 
 #### Filter importance criterions **L1, L2**
@@ -90,7 +90,7 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
         "prune_first_conv": false, // Whether to prune first Convolutional layers or not. First means that it is a convolutional layer such that there is a path from model input to this layer such that there are no other convolution operations on it. `False` by default. 
         "prune_last_conv": false, // Whether to prune last Convolutional layers or not.  Last means that it is a Convolutional layer such that there is a path from this layer to the model output such that there are no other convolution operations on it. `False` by default. 
         "prune_downsample_convs": false, // Whether to prune downsample Convolutional layers (with stride > 1) or not. `False` by default.
-        "prune_batch_norms": false, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of convolution corresponding to this Batch Norm. `False` by default.
+        "prune_batch_norms": true, // Whether to nullifies parameters of Batch Norm layer corresponds to zeroed filters of convolution corresponding to this Batch Norm. `True` by default.
         "zero_grad": true // Whether to setting gradients corresponding to zeroed filters to zero during training, `True` by default.    
     },
 
@@ -123,4 +123,3 @@ To do this, the special `can_prune` attribute is propagated through the network.
 The result is a valid graph for the pruned and non-pruned parts: that is, there is no operation that does not accept a pruned input.
 
 3. On the final stage, there is a direct pruning of operations according to the obtained `can_prune` attribute values.
-
