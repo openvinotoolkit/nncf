@@ -33,13 +33,6 @@ from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
 from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 
 
-class BatchNormInfo:
-    def __init__(self, module_scope: Scope, module: nn.Module, nncf_id: int):
-        self.module = module
-        self.module_scope = module_scope
-        self.nncf_node_id = nncf_id
-
-
 class PrunedModuleInfo:
     def __init__(self, module_scope: Scope, module: nn.Module, operand, node_id: int):
         self.module_scope = module_scope
