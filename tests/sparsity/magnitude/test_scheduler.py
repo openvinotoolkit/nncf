@@ -38,19 +38,19 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
     scheduler.epoch_step()
-    assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.1)
+    assert compression_ctrl.scheduler.sparsity_level == pytest.approx(0.1)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.219, 0.01)
 
     scheduler.epoch_step()
-    assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.5)
+    assert compression_ctrl.scheduler.sparsity_level == pytest.approx(0.5)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.243, 0.01)
 
     scheduler.epoch_step()
-    assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.5)
+    assert compression_ctrl.scheduler.sparsity_level == pytest.approx(0.5)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.243, 0.01)
 
     scheduler.epoch_step()
-    assert compression_ctrl.scheduler.current_sparsity_level == pytest.approx(0.9)
+    assert compression_ctrl.scheduler.sparsity_level == pytest.approx(0.9)
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
 
 
@@ -61,11 +61,11 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
     scheduler = compression_ctrl.scheduler
 
     scheduler.epoch_step(3)
-    assert scheduler.current_sparsity_level == 0.9
+    assert scheduler.sparsity_level == 0.9
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
 
     scheduler.epoch_step()
-    assert scheduler.current_sparsity_level == 0.9
+    assert scheduler.sparsity_level == 0.9
     assert compression_ctrl.statistics()["sparsity_threshold"] == pytest.approx(0.371, 0.01)
 
 
@@ -78,9 +78,9 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     scheduler = compression_ctrl.scheduler
     scheduler.epoch_step()
     assert isinstance(scheduler, MultiStepSparsityScheduler)
-    assert pytest.approx(scheduler.current_sparsity_level) == 0.1
-    assert scheduler.sparsity_levels == [0.1, 0.5]
+    assert pytest.approx(scheduler.sparsity_level) == 0.1
+    assert scheduler.schedule.values == [0.1, 0.5]
     scheduler.epoch_step()
-    assert scheduler.current_sparsity_level == 0.5
+    assert scheduler.sparsity_level == 0.5
     scheduler.epoch_step()
-    assert scheduler.current_sparsity_level == 0.5
+    assert scheduler.sparsity_level == 0.5

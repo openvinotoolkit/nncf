@@ -36,7 +36,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(deepcopy(model), config)
 
     assert isinstance(compression_ctrl, MagnitudeSparsityController)
-    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.sparsity_level == approx(0.1)
     assert len(list(sparse_model.modules())) == 12
 
     _, sparse_model_conv = check_correct_nncf_modules_replacement(model, sparse_model)

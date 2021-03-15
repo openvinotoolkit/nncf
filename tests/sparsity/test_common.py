@@ -14,7 +14,7 @@ from typing import List, Optional
 
 import pytest
 
-from nncf.common.sparsity.schedulers import PolynomialSparseScheduler, ExponentialSparsityScheduler, \
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler, ExponentialSparsityScheduler, \
     AdaptiveSparsityScheduler, MultiStepSparsityScheduler
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \
     MockModel
@@ -24,7 +24,7 @@ from tests.helpers import BasicConvTestModel, get_empty_config, create_compresse
                          ('magnitude_sparsity', 'rb_sparsity'))
 @pytest.mark.parametrize(('schedule_type', 'scheduler_class'),
                          (
-                             ('polynomial', PolynomialSparseScheduler),
+                             ('polynomial', PolynomialSparsityScheduler),
                              ('exponential', ExponentialSparsityScheduler),
                              ('multistep', MultiStepSparsityScheduler)
                          ))
@@ -95,10 +95,10 @@ class TestSparseModules:
 
         scheduler = compression_ctrl.scheduler
         scheduler.epoch_step()
-        assert pytest.approx(scheduler.current_sparsity_level) == ref_levels[0]
+        assert pytest.approx(scheduler.sparsity_level) == ref_levels[0]
         for ref_level in ref_levels[1:]:
             scheduler.epoch_step()
-            assert pytest.approx(scheduler.current_sparsity_level) == ref_level
+            assert pytest.approx(scheduler.sparsity_level) == ref_level
 
         for m in compression_ctrl.sparsified_module_info:
             if hasattr(m.operand, "frozen"):
@@ -131,7 +131,7 @@ class TestPolynomialSparsityScheduler:
             scheduler.step()
 
     @staticmethod
-    def run_epoch_with_per_step_sparsity_check(steps_per_epoch: int, scheduler: PolynomialSparseScheduler,
+    def run_epoch_with_per_step_sparsity_check(steps_per_epoch: int, scheduler: PolynomialSparsityScheduler,
                                                set_sparsity_mock,
                                                ref_vals: List[Optional[float]]):
         assert len(ref_vals) == steps_per_epoch + 1
@@ -162,7 +162,7 @@ class TestPolynomialSparsityScheduler:
             "concave": concave,
         }
         magnitude_algo_mock.set_sparsity_init(0.1)
-        scheduler = PolynomialSparseScheduler(magnitude_algo_mock, params=params)
+        scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
 
         steps_per_epoch = 3
@@ -178,23 +178,23 @@ class TestPolynomialSparsityScheduler:
         # epoch 2
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[2])
-        assert scheduler.current_sparsity_level == ref_sparsity_levels[2]
+        assert scheduler.sparsity_level == ref_sparsity_levels[2]
 
         # epoch 3
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[3])
-        assert scheduler.current_sparsity_level == ref_sparsity_levels[3]
+        assert scheduler.sparsity_level == ref_sparsity_levels[3]
 
         # epoch 4 - sparsity freeze should occur
         self.run_epoch(steps_per_epoch, scheduler, mock)
         mock.assert_called_once_with(ref_sparsity_levels[4])
         magnitude_algo_mock.freeze.assert_called_once()
-        assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
+        assert scheduler.sparsity_level == ref_sparsity_levels[4]
 
         # After freezing
         for _ in range(10):
             self.run_epoch(steps_per_epoch, scheduler, mock)
-            assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
+            assert scheduler.sparsity_level == ref_sparsity_levels[4]
 
     @pytest.mark.parametrize("specify_steps_per_epoch_in_config", [True, False])
     def test_polynomial_schedule_per_optimizer_step(self, magnitude_algo_mock, specify_steps_per_epoch_in_config):
@@ -212,7 +212,7 @@ class TestPolynomialSparsityScheduler:
             params["steps_per_epoch"] = steps_per_epoch
 
         magnitude_algo_mock.set_sparsity_init(0.1)
-        scheduler = PolynomialSparseScheduler(magnitude_algo_mock, params=params)
+        scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
         mock.reset_mock()
         no_update_ref_sparsity_level_sequence = [0.1, None, None, None]
