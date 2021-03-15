@@ -464,19 +464,19 @@ class FilterPruningController(BasePruningAlgoController):
         model_pruner.mask_propagation()
 
         # 2. Apply masks
-        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["batch_norm"]
+        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
+        if self.prune_batch_norms:
+            node_types.append('batch_norm')
         nncf_nodes = [nx_graph.nodes[name] for name in nx_graph]
         pruned_node_modules = list()
-        with torch.no_grad():
-            for node in nncf_nodes:
-                node_type = graph.node_type_fn(node)
-                if node_type not in node_types:
-                    continue
-                nncf_node = graph._nx_node_to_nncf_node(node)
-                scope = nncf_node.op_exec_context.scope_in_model
-                node_module = self.model.get_module_by_scope(scope)
-                if node['output_mask'] is not None and node_module not in pruned_node_modules:
-                    _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
+        for node in nncf_nodes:
+            node_type = graph.node_type_fn(node)
+            if node_type not in node_types:
+                continue
+            scope = node['op_exec_context'].scope_in_model
+            node_module = self.model.get_module_by_scope(scope)
+            if node['output_mask'] is not None and node_module not in pruned_node_modules:
+                _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
 
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
