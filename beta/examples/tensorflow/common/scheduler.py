@@ -142,7 +142,7 @@ def build_scheduler(config, steps_per_epoch):
             raise ValueError('`steps` parameter must be specified '
                              'for the `multistep` scheduler')
         steps = [steps_per_epoch * x for x in steps]
-        lr = MultiStepLearningRate(initial_lr, steps, gamma=0.1)
+        lr = MultiStepLearningRate(initial_lr, steps, gamma=decay_rate)
 
     elif schedule_type == 'step':
         logger.info('Using Step learning rate.')
@@ -154,7 +154,7 @@ def build_scheduler(config, steps_per_epoch):
             raise ValueError('`step` parameter must be specified '
                              'for the `step` scheduler')
         step = step * steps_per_epoch
-        lr = StepLearningRate(initial_lr, step, gamma=0.1)
+        lr = StepLearningRate(initial_lr, step, gamma=decay_rate)
     elif schedule_type == 'step_warmup':
         lr = StepLearningRateWithLinearWarmup(schedule_params)
     else:
