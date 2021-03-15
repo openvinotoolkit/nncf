@@ -169,7 +169,8 @@ class PolynomialSparsityScheduler(SparsityScheduler):
 
     def load_state(self, state: Dict[str, object]) -> None:
         super().load_state(state)
-        self._steps_per_epoch = state['_steps_per_epoch']
+        if self._update_per_optimizer_step:
+            self._steps_per_epoch = state['_steps_per_epoch']
 
     def get_state(self) -> Dict[str, object]:
         state = super().get_state()
