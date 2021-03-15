@@ -15,7 +15,7 @@
 import builtins
 import collections
 import importlib
-import pickle
+import pickle  # nosec
 
 
 # Regular unpickling is prone to arbitrary code execution attacks.
