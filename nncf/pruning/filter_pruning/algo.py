@@ -25,19 +25,25 @@ from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
-from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
+from nncf.pruning.base_algo import BasePruningAlgoBuilder
+from nncf.pruning.base_algo import PrunedModuleInfo
+from nncf.pruning.base_algo import BasePruningAlgoController
 from nncf.pruning.export_helpers import ModelPruner
 from nncf.pruning.export_helpers import PTElementwise
 from nncf.pruning.export_helpers import PTConvolution
 from nncf.pruning.export_helpers import PTTransposeConvolution
-from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
-    tensor_l2_normalizer
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
+from nncf.pruning.filter_pruning.functions import calculate_binary_mask
+from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
+from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.common.pruning.model_analysis import Clusterization
-from nncf.common.pruning.utils import get_next_nodes_of_types, get_rounded_pruned_element_number
+from nncf.common.pruning.utils import get_next_nodes_of_types
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
@@ -449,17 +455,28 @@ class FilterPruningController(BasePruningAlgoController):
                 if module.bias is not None:
                     inplace_apply_filter_binary_mask(mask, module.bias, module_scope)
 
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
-            _apply_binary_mask_to_module_weight_and_bias(minfo.module, minfo.operand.binary_filter_pruning_mask,
-                                                         minfo.module_scope)
 
-            # Applying mask to the BatchNorm node
-            related_modules = minfo.related_modules
-            if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
-                bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
-                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask,
-                                                             minfo.module_scope)
+        # 1. Propagate masks for all modules
+        graph = self.model.get_original_graph()
+        # pylint: disable=protected-access
+        nx_graph = graph._nx_graph
+        model_pruner = ModelPruner(self.model, graph, nx_graph)
+        model_pruner.mask_propagation()
+
+        # 2. Apply masks
+        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["batch_norm"]
+        nncf_nodes = [nx_graph.nodes[name] for name in nx_graph]
+        pruned_node_modules = list()
+        with torch.no_grad():
+            for node in nncf_nodes:
+                node_type = graph.node_type_fn(node)
+                if node_type not in node_types:
+                    continue
+                nncf_node = graph._nx_node_to_nncf_node(node)
+                scope = nncf_node.op_exec_context.scope_in_model
+                node_module = self.model.get_module_by_scope(scope)
+                if node['output_mask'] is not None and node_module not in pruned_node_modules:
+                    _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
 
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):

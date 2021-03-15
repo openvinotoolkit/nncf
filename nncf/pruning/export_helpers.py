@@ -31,6 +31,7 @@ from nncf.pruning.export_utils import identity_mask_propagation, get_input_masks
     fill_input_masks
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.pruning.utils import is_depthwise_conv
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock
 
 PT_PRUNING_OPERATOR_METATYPES = PTPruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -114,8 +115,10 @@ class PTConvolution(PTDefaultMetaOp):
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
         node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
-        if node_module.pre_ops:
-            output_mask = node_module.pre_ops['0'].op.binary_filter_pruning_mask
+        for pre_op in node_module.pre_ops.values():
+            if isinstance(pre_op.op, FilterPruningBlock):
+                output_mask = pre_op.op.binary_filter_pruning_mask
+                break
 
         # In case of group convs we can't prune by output filters
         if is_grouped_conv(nncf_node):
@@ -199,8 +202,10 @@ class PTTransposeConvolution(PTDefaultMetaOp):
         nncf_node = graph._nx_node_to_nncf_node(nx_node)
         node_module = model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
 
-        if node_module.pre_ops:
-            output_mask = node_module.pre_ops['0'].op.binary_filter_pruning_mask
+        for pre_op in node_module.pre_ops.values():
+            if isinstance(pre_op.op, FilterPruningBlock):
+                output_mask = pre_op.op.binary_filter_pruning_mask
+                break
 
         nx_node['input_masks'] = input_masks
         nx_node['output_mask'] = output_mask
@@ -367,7 +372,8 @@ class PTConcat(PTDefaultMetaOp):
         result_mask = None
 
         if cls.check_concat(nx_node, nx_graph, graph):
-            input_masks, filled_input_masks = fill_input_masks(nx_node, nx_graph)
+            device = next(model.parameters()).device
+            input_masks, filled_input_masks = fill_input_masks(nx_node, nx_graph, device)
 
             if all(mask is None for mask in input_masks):
                 result_mask = None

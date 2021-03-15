@@ -35,7 +35,7 @@ def identity_mask_propagation(nx_node, nx_graph):
     nx_node['output_mask'] = input_masks[0]
 
 
-def fill_input_masks(nx_node, nx_graph):
+def fill_input_masks(nx_node, nx_graph, device='cpu'):
     """
     Return all input masks and all input masks with all None replaced by identity masks.
     """
@@ -45,7 +45,7 @@ def fill_input_masks(nx_node, nx_graph):
     filled_input_masks = []
     for i, mask in enumerate(input_masks):
         if mask is None:
-            mask = torch.ones(nx_graph.edges[input_edges[i]]['activation_shape'][1])
+            mask = torch.ones(nx_graph.edges[input_edges[i]]['activation_shape'][1], device=device)
         filled_input_masks.append(mask)
     return input_masks, filled_input_masks
 
