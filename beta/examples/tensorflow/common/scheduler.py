@@ -46,7 +46,8 @@ class StepLearningRateWithLinearWarmup(tf.keras.optimizers.schedules.LearningRat
 class StepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, init_lr, step, gamma=0.1):
         """
-        Creates the step learning rate tensor
+        Creates the step learning rate schedule.
+        Decays learning rate by gamma every `step` steps.
         Args:
             init_lr: Initial learning rate
             step: Period of learning rate decay
@@ -69,7 +70,13 @@ class StepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
 class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, init_lr, steps, gamma=0.1):
         """
-        Creates the multistep learning rate tensor
+        Creates the multistep learning rate schedule.
+        Decays learning rate by `gamma` once `global_step` reaches
+        one of the milestones in the `steps` list.
+        For init_lr = 0.01, steps = [10, 15] and gamma = 0.1
+        lr = 0.01    if global_step < 10
+        lr = 0.001   if 10 <= global_step < 15
+        lr = 0.0001  if global_step >= 15
         Args:
             init_lr: Initial learning rate
             steps: List of step indices
