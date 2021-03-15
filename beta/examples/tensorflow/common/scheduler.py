@@ -58,7 +58,7 @@ class StepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
         self._gamma = gamma
 
     def __call__(self, global_step):
-        return self._init_lr * self._gamma ** global_step // self._step
+        return self._init_lr * self._gamma ** tf.cast(global_step // self._step, tf.float32)
 
     def get_config(self):
         return {'init_lr': self._init_lr,
@@ -77,16 +77,15 @@ class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
         """
         super().__init__()
         self._init_lr = init_lr
-        self._steps = [0] + sorted(steps)
+        self._steps = sorted(steps)
         self._gamma = gamma
+        self._lr_values = [init_lr * self._gamma ** (i + 1) for i in range(len(self._steps))]
 
     def __call__(self, global_step):
-        decay_power = 0
-        for i in range(len(self._steps)):
-            if self._steps[i] <= global_step < self._steps[i + 1]:
-                decay_power = i
-                break
-        return self._init_lr * self._gamma ** decay_power
+        learning_rate = self._init_lr
+        for next_learning_rate, start_step in zip(self._lr_values, self._steps):
+            learning_rate = tf.where(global_step >= start_step, next_learning_rate, learning_rate)
+        return learning_rate
 
     def get_config(self):
         return {'init_lr': self._init_lr,
@@ -120,7 +119,7 @@ def build_scheduler(config, steps_per_epoch):
     elif schedule_type == 'piecewise_constant':
         boundaries = schedule_params.get('boundaries', None)
         if boundaries is None:
-            raise ValueError('Boundaries parameter must be specified '
+            raise ValueError('`boundaries` parameter must be specified '
                              'for the `piecewise_constant` scheduler')
 
         values = schedule_params.get('values', None)
