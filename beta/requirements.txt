@@ -1,4 +1,4 @@
-absl-py~=0.10
+absl-py==0.10
 addict
 networkx
 tensorflow==2.4.0
