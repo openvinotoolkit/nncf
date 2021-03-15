@@ -50,8 +50,11 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.graph_builder import PostGraphBuildActing
 from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
+from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
@@ -388,7 +391,7 @@ class PTInsertionPoint:
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
-                 ignored_scopes=None, target_scopes=None, reset: bool = False):
+                 ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None):
         super().__init__()
         self._set_nncf_wrapped_model(module)
         self._forward_signature = inspect.signature(module.forward)
@@ -407,6 +410,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                                           self._forward_signature,
                                                                           module_ref_for_device=self)
             self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+
+        if wrap_outputs_fn is not None:
+            self._wrap_outputs_fn = wrap_outputs_fn
+        else:
+            self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
         self._nncf_module_scopes = []  # type: List[Scope]
         self.scopes_without_shape_matching = scopes_without_shape_matching
@@ -455,7 +463,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 # correctly wrapping inputs inside it as well.
                 args, kwargs = self._strip_traced_tensors(args, kwargs)
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
-            retval = self.get_nncf_wrapped_model()(*args, **kwargs)
+            retval = self._wrap_outputs_fn(self.get_nncf_wrapped_model()(*args, **kwargs))
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -543,7 +551,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
-                                           wrap_inputs_fn=self._wrap_inputs_fn)
+                                           wrap_inputs_fn=self._wrap_inputs_fn,
+                                           wrap_outputs_fn=self._wrap_outputs_fn)
 
         def wrapped_user_dummy_forward_fn(*args, **kwargs):
             self._in_user_dummy_forward = True
@@ -552,6 +561,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return retval
 
         return wrapped_user_dummy_forward_fn
+
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):

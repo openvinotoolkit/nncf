@@ -16,6 +16,7 @@ strict digraph  {
 "14 LeNet/RELU" [id=14, scope=LeNet, type=RELU];
 "15 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" [id=15, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]", type=apply_binary_mask];
 "16 LeNet/NNCFLinear[fc3]/linear" [id=16, scope="LeNet/NNCFLinear[fc3]", type=linear];
+"17 /nncf_model_output" [id=17, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "2 LeNet/NNCFConv2d[conv1]/conv2d";
 "1 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "2 LeNet/NNCFConv2d[conv1]/conv2d";
 "2 LeNet/NNCFConv2d[conv1]/conv2d" -> "3 LeNet/RELU";
@@ -32,4 +33,5 @@ strict digraph  {
 "13 LeNet/NNCFLinear[fc2]/linear" -> "14 LeNet/RELU";
 "14 LeNet/RELU" -> "16 LeNet/NNCFLinear[fc3]/linear";
 "15 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "16 LeNet/NNCFLinear[fc3]/linear";
+"16 LeNet/NNCFLinear[fc3]/linear" -> "17 /nncf_model_output";
 }

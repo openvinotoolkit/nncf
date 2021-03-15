@@ -21,6 +21,7 @@ strict digraph  {
 "19 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=19, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "20 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=20, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "21 LeNet/NNCFLinear[fc3]/linear" [id=21, scope="LeNet/NNCFLinear[fc3]", type=linear];
+"22 /nncf_model_output" [id=22, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 LeNet/NNCFConv2d[conv1]/conv2d";
 "1 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 LeNet/NNCFConv2d[conv1]/conv2d";
@@ -42,4 +43,5 @@ strict digraph  {
 "18 LeNet/RELU" -> "21 LeNet/NNCFLinear[fc3]/linear";
 "19 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "20 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "20 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "21 LeNet/NNCFLinear[fc3]/linear";
+"21 LeNet/NNCFLinear[fc3]/linear" -> "22 /nncf_model_output";
 }

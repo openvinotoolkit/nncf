@@ -10,6 +10,7 @@ strict digraph  {
 "8 LeNet/Linear[fc2]/linear" [id=8, scope="LeNet/Linear[fc2]", type=linear];
 "9 LeNet/RELU" [id=9, scope=LeNet, type=RELU];
 "10 LeNet/Linear[fc3]/linear" [id=10, scope="LeNet/Linear[fc3]", type=linear];
+"11 /nncf_model_output" [id=11, scope="", type=nncf_model_output];
 "0 LeNet/Conv2d[conv1]/conv2d" -> "1 LeNet/RELU";
 "1 LeNet/RELU" -> "2 LeNet/max_pool2d";
 "2 LeNet/max_pool2d" -> "3 LeNet/Conv2d[conv2]/conv2d";
@@ -20,4 +21,5 @@ strict digraph  {
 "7 LeNet/RELU" -> "8 LeNet/Linear[fc2]/linear";
 "8 LeNet/Linear[fc2]/linear" -> "9 LeNet/RELU";
 "9 LeNet/RELU" -> "10 LeNet/Linear[fc3]/linear";
+"10 LeNet/Linear[fc3]/linear" -> "11 /nncf_model_output";
 }

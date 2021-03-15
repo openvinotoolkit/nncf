@@ -75,6 +75,7 @@ strict digraph  {
 "73 VGG/Sequential[features]/AvgPool2d[44]/AsymmetricQuantizer/asymmetric_quantize" [id=73, scope="VGG/Sequential[features]/AvgPool2d[44]/AsymmetricQuantizer", type=asymmetric_quantize];
 "74 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=74, scope="VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "75 VGG/NNCFLinear[classifier]/linear" [id=75, scope="VGG/NNCFLinear[classifier]", type=linear];
+"76 /nncf_model_output" [id=76, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 VGG/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 VGG/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -150,4 +151,5 @@ strict digraph  {
 "72 VGG/Sequential[features]/AvgPool2d[44]/avg_pool2d" -> "73 VGG/Sequential[features]/AvgPool2d[44]/AsymmetricQuantizer/asymmetric_quantize";
 "73 VGG/Sequential[features]/AvgPool2d[44]/AsymmetricQuantizer/asymmetric_quantize" -> "75 VGG/NNCFLinear[classifier]/linear";
 "74 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "75 VGG/NNCFLinear[classifier]/linear";
+"75 VGG/NNCFLinear[classifier]/linear" -> "76 /nncf_model_output";
 }

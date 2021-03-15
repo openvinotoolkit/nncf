@@ -52,7 +52,9 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
+from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
@@ -339,7 +341,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             quantizable_modules=quantizable_modules,
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints,
-            additional_unified_scale_op_scopes=self._unified_scale_ops)
+            additional_unified_scale_op_scopes=self._unified_scale_ops,
+            quantize_outputs=self._quantize_outputs)
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
             self.hw_config,

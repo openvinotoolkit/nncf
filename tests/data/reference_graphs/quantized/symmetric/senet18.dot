@@ -216,6 +216,7 @@ strict digraph  {
 "214 SENet/SymmetricQuantizer/symmetric_quantize" [id=214, scope="SENet/SymmetricQuantizer", type=symmetric_quantize];
 "215 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=215, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "216 SENet/NNCFLinear[linear]/linear" [id=216, scope="SENet/NNCFLinear[linear]", type=linear];
+"217 /nncf_model_output" [id=217, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 SENet/NNCFConv2d[conv1]/conv2d";
 "2 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 SENet/NNCFConv2d[conv1]/conv2d";
@@ -448,4 +449,5 @@ strict digraph  {
 "213 SENet/avg_pool2d" -> "214 SENet/SymmetricQuantizer/symmetric_quantize";
 "214 SENet/SymmetricQuantizer/symmetric_quantize" -> "216 SENet/NNCFLinear[linear]/linear";
 "215 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "216 SENet/NNCFLinear[linear]/linear";
+"216 SENet/NNCFLinear[linear]/linear" -> "217 /nncf_model_output";
 }

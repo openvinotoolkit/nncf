@@ -322,6 +322,8 @@ strict digraph  {
 "320 Inception3/adaptive_avg_pool2d" [id=320, scope=Inception3, type=adaptive_avg_pool2d];
 "321 Inception3/dropout" [id=321, scope=Inception3, type=dropout];
 "322 Inception3/Linear[fc]/linear" [id=322, scope="Inception3/Linear[fc]", type=linear];
+"323 /nncf_model_output" [id=323, scope="", type=nncf_model_output];
+"324 /nncf_model_output" [id=324, scope="", type=nncf_model_output];
 "0 Inception3/cat" -> "1 Inception3/BasicConv2d[Conv2d_1a_3x3]/Conv2d[conv]/conv2d";
 "1 Inception3/BasicConv2d[Conv2d_1a_3x3]/Conv2d[conv]/conv2d" -> "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/BatchNorm2d[bn]/batch_norm";
 "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/BatchNorm2d[bn]/batch_norm" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/RELU";
@@ -585,6 +587,7 @@ strict digraph  {
 "234 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm" -> "235 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU";
 "235 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU" -> "236 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d";
 "236 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d" -> "237 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear";
+"237 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear" -> "324 /nncf_model_output";
 "238 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/Conv2d[conv]/conv2d" -> "239 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/BatchNorm2d[bn]/batch_norm";
 "239 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/BatchNorm2d[bn]/batch_norm" -> "240 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/RELU";
 "240 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/RELU" -> "241 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_2]/Conv2d[conv]/conv2d";
@@ -679,4 +682,5 @@ strict digraph  {
 "319 Inception3/InceptionE[Mixed_7c]/cat" -> "320 Inception3/adaptive_avg_pool2d";
 "320 Inception3/adaptive_avg_pool2d" -> "321 Inception3/dropout";
 "321 Inception3/dropout" -> "322 Inception3/Linear[fc]/linear";
+"322 Inception3/Linear[fc]/linear" -> "323 /nncf_model_output";
 }

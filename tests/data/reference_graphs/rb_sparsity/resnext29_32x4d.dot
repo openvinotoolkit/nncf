@@ -165,6 +165,7 @@ strict digraph  {
 "163 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=163, scope="ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "164 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=164, scope="ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "165 ResNeXt/NNCFLinear[linear]/linear" [id=165, scope="ResNeXt/NNCFLinear[linear]", type=linear];
+"166 /nncf_model_output" [id=166, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
 "1 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
@@ -339,4 +340,5 @@ strict digraph  {
 "162 ResNeXt/avg_pool2d" -> "165 ResNeXt/NNCFLinear[linear]/linear";
 "163 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "164 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "164 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "165 ResNeXt/NNCFLinear[linear]/linear";
+"165 ResNeXt/NNCFLinear[linear]/linear" -> "166 /nncf_model_output";
 }

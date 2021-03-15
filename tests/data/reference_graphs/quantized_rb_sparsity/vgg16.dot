@@ -103,6 +103,7 @@ strict digraph  {
 "101 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=101, scope="VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "102 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=102, scope="VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "103 VGG/NNCFLinear[classifier]/linear" [id=103, scope="VGG/NNCFLinear[classifier]", type=linear];
+"104 /nncf_model_output" [id=104, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 VGG/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -206,4 +207,5 @@ strict digraph  {
 "100 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "101 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "101 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "102 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "102 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "103 VGG/NNCFLinear[classifier]/linear";
+"103 VGG/NNCFLinear[classifier]/linear" -> "104 /nncf_model_output";
 }
