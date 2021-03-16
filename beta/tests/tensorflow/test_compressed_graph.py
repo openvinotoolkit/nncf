@@ -255,8 +255,8 @@ def rename_graph_def_nodes(graph_def, names_map: dict):
     for node in graph_def.node:
         node.name = names_map.get(node.name, node.name)
         inp_names = []
-        for input in node.input:
-            inp_names.append(names_map.get(input, input))
+        for inp in node.input:
+            inp_names.append(names_map.get(inp, inp))
         del node.input[:]
         node.input.extend(inp_names)
 
@@ -369,7 +369,8 @@ class TestModelsGraph:
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir)
+        check_model_graph(compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir,
+                          desc.rename_resource_nodes)
 
 
 QUANTIZE_OUTPUTS = [
