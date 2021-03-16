@@ -62,7 +62,7 @@ class PruningScheduler(CompressionScheduler):
         self.num_warmup_epochs = params.get('num_init_steps', 0)
         self.num_pruning_epochs = params.get('pruning_steps', 100)
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
-        self.current_pruning = self.initial_pruning
+        self._current_pruning = self.initial_pruning
 
     def _calculate_pruning_level(self) -> float:
         """
@@ -76,8 +76,8 @@ class PruningScheduler(CompressionScheduler):
 
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         super().epoch_step(next_epoch)
-        self.current_pruning = self._calculate_pruning_level()
-        self.controller.set_pruning_rate(self.pruning_level)
+        self._current_pruning = self._calculate_pruning_level()
+        self.controller.set_pruning_rate(self.current_pruning_level)
         if self.current_epoch >= self.freeze_epoch:
             self.controller.freeze()
 
@@ -86,14 +86,14 @@ class PruningScheduler(CompressionScheduler):
         self.controller.step(next_step)
 
     @property
-    def pruning_level(self) -> float:
+    def current_pruning_level(self) -> float:
         """
         Returns pruning level for the `current_epoch`.
 
         :return: Current sparsity level.
         """
         if self.current_epoch >= self.num_warmup_epochs:
-            return self.current_pruning
+            return self._current_pruning
         return 0
 
 

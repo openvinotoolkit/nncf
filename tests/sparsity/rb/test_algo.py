@@ -119,7 +119,7 @@ def test_can_create_sparse_loss_and_scheduler():
     assert loss.p == approx(0.05)
 
     assert isinstance(scheduler, PolynomialSparsityScheduler)
-    assert scheduler.sparsity_level == approx(0.02)
+    assert scheduler.current_sparsity_level == approx(0.02)
     assert scheduler.target_sparsity == approx(0.5)
     assert scheduler.target_epoch == 2
     assert scheduler.freeze_epoch == 3

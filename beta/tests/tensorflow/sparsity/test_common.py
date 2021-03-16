@@ -83,18 +83,18 @@ class TestSparseModules:
 
         scheduler = compression_ctrl.scheduler
 
-        assert pytest.approx(scheduler.sparsity_level) == ref_levels[0]
+        assert pytest.approx(scheduler.current_sparsity_level) == ref_levels[0]
         for ref_level in ref_levels[1:]:
             scheduler.epoch_step()
-            assert pytest.approx(scheduler.sparsity_level) == ref_level
+            assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
         _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
         scheduler = compression_ctrl.scheduler
 
-        assert pytest.approx(scheduler.sparsity_level) == ref_levels[0]
+        assert pytest.approx(scheduler.current_sparsity_level) == ref_levels[0]
         for i, ref_level in enumerate(ref_levels[1:]):
             scheduler.epoch_step(i)
-            assert pytest.approx(scheduler.sparsity_level) == ref_level
+            assert pytest.approx(scheduler.current_sparsity_level) == ref_level
 
 
 @pytest.fixture(name="magnitude_algo_mock")
@@ -176,19 +176,19 @@ class TestPolynomialSparsityScheduler:
 
         # After epoch 2
         self.run_epoch(steps_per_epoch, scheduler, mock, ref_sparsity_levels, explicit, epoch)
-        assert scheduler.sparsity_level == ref_sparsity_levels[3]
+        assert scheduler.current_sparsity_level == ref_sparsity_levels[3]
         epoch += 1
 
         # After epoch 3 - sparsity freeze should occur
         self.run_epoch(steps_per_epoch, scheduler, mock, ref_sparsity_levels, explicit, epoch)
         magnitude_algo_mock.freeze.assert_called_once()
-        assert scheduler.sparsity_level == ref_sparsity_levels[4]
+        assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
         epoch += 1
 
         # After freezing
         for i in range(10):
             self.run_epoch(steps_per_epoch, scheduler, mock, ref_sparsity_levels, explicit, epoch + i)
-            assert scheduler.sparsity_level == ref_sparsity_levels[4]
+            assert scheduler.current_sparsity_level == ref_sparsity_levels[4]
 
     @pytest.mark.parametrize("explicit", [True, False], ids=["explicit_steps", "implicit_steps"])
     def test_polynomial_schedule_per_optimizer_step(self,

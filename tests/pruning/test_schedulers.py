@@ -36,14 +36,14 @@ def test_baseline_scheduler():
 
     # Check pruning params before epoch 0
     scheduler.epoch_step()
-    assert pytest.approx(scheduler.pruning_level) == 0.0
+    assert pytest.approx(scheduler.current_pruning_level) == 0.0
     assert pytest.approx(compression_ctrl.pruning_rate) == 0.0
     assert scheduler.current_epoch == 0
     assert compression_ctrl.frozen is False
 
     # Check pruning params after epoch 0
     scheduler.epoch_step()
-    assert pytest.approx(scheduler.pruning_level) == 0.5
+    assert pytest.approx(scheduler.current_pruning_level) == 0.5
     assert pytest.approx(compression_ctrl.pruning_rate) == 0.5
     assert scheduler.current_epoch == 1
     assert compression_ctrl.frozen is True
@@ -71,7 +71,7 @@ def test_exponential_scheduler():
 
     # Check pruning params before epoch 0
     scheduler.epoch_step()
-    assert pytest.approx(scheduler.pruning_level) == 0.0
+    assert pytest.approx(scheduler.current_pruning_level) == 0.0
     assert pytest.approx(compression_ctrl.pruning_rate) == 0.0
     assert compression_ctrl.frozen is False
     assert scheduler.current_epoch == 0
@@ -82,14 +82,14 @@ def test_exponential_scheduler():
         scheduler.epoch_step()
         pruning_rate = scheduler.a * np.exp(
             -scheduler.k * (scheduler.current_epoch - scheduler.num_warmup_epochs - 1)) + scheduler.b
-        assert pytest.approx(scheduler.pruning_level) == pruning_rate
+        assert pytest.approx(scheduler.current_pruning_level) == pruning_rate
         assert pytest.approx(compression_ctrl.pruning_rate) == pruning_rate
         assert compression_ctrl.frozen is False
         assert scheduler.current_epoch == i + 1
 
     # Check pruning params after epoch 20
     scheduler.epoch_step()
-    assert pytest.approx(scheduler.pruning_level, abs=1e-4) == 0.5
+    assert pytest.approx(scheduler.current_pruning_level, abs=1e-4) == 0.5
     assert pytest.approx(compression_ctrl.pruning_rate, abs=1e-4) == 0.5
     assert compression_ctrl.frozen is True
     assert scheduler.current_epoch == 21
