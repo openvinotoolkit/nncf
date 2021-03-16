@@ -174,12 +174,15 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         model.forward = partial(model.forward, *args, **kwargs)
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
+            # Should call this, otherwise the operations executed during export will end up in graph
+            model.disable_dynamic_graph_building()
             torch.onnx.export(model, tuple(input_tensor_list),
                               save_path, input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
                               opset_version=10,
                               training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
+            model.enable_dynamic_graph_building()
         model.forward = original_forward
 
 

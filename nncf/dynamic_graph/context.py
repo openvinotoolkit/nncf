@@ -19,6 +19,7 @@ from functools import partial
 from typing import Callable, List, Dict, Tuple, Union
 from copy import deepcopy
 from itertools import islice
+from typing import Optional
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
@@ -244,6 +245,7 @@ class TracingContext:
         self._n_instance = 0
         self._cond = threading.Condition()
         self.is_tracing = True
+        self._may_add_nodes = True
         self._input_comparators_per_scope = []
 
     def __enter__(self):
@@ -261,7 +263,7 @@ class TracingContext:
         self.leave()
 
     def find_operator_node(self, inputs: OperatorInput,
-                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> PTNNCFNode:
+                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:
         with self._cond:
             self._n_instance += 1
         tensor_metas = make_input_infos(inputs)
@@ -272,7 +274,7 @@ class TracingContext:
             self._n_instance -= 1
             self._cond.notify_all()
 
-        if node is None:
+        if node is None and self._may_add_nodes:
             with self._cond:
                 while self._n_instance > 0:
                     self._cond.wait()
@@ -399,6 +401,12 @@ class TracingContext:
 
     def enable_tracing(self):
         self.is_tracing = True
+
+    def enable_node_additions(self):
+        self._may_add_nodes = True
+
+    def disable_node_additions(self):
+        self._may_add_nodes = False
 
     def add_node_comparators(self, scopes_to_apply: List[str],
                              node_input_comparator: 'TensorMetaComparator' = None):

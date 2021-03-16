@@ -529,6 +529,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_tracing_context(self) -> TracingContext:
         return self._compressed_context
 
+    def enable_dynamic_graph_building(self):
+        self._compressed_context.enable_node_additions()
+
+    def disable_dynamic_graph_building(self):
+        self._compressed_context.disable_node_additions()
+
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
