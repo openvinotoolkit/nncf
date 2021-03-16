@@ -160,7 +160,7 @@ SKIP_MAP = {
     'quantization': {
         'inception_resnet_v2': pytest.mark.skip(reason='gitlab issue #17'),
         'nasnet_mobile': pytest.mark.skip(reason='gitlab issue #18'),
-        'mobilenet_v2_slim': pytest.mark.skip(reason='TF Hub model'),
+        'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
         'xception': pytest.mark.skip(reason='gitlab issue #28')
     },
     'magnitude_sparsity': {
@@ -176,6 +176,7 @@ SKIP_MAP = {
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
         'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
         'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
+        'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
     }
 }
 
