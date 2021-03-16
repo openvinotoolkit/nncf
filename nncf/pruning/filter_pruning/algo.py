@@ -464,19 +464,21 @@ class FilterPruningController(BasePruningAlgoController):
         model_pruner.mask_propagation()
 
         # 2. Apply masks
-        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
+        types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
         if self.prune_batch_norms:
-            node_types.append('batch_norm')
-        nncf_nodes = [nx_graph.nodes[name] for name in nx_graph]
+            types_to_apply_mask.append('batch_norm')
+        nncf_nodes = graph.get_all_nodes()
         pruned_node_modules = list()
+
         for node in nncf_nodes:
             node_type = graph.node_type_fn(node)
-            if node_type not in node_types:
+            if node_type not in types_to_apply_mask:
                 continue
             scope = node['op_exec_context'].scope_in_model
             node_module = self.model.get_module_by_scope(scope)
             if node['output_mask'] is not None and node_module not in pruned_node_modules:
                 _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
+                pruned_node_modules.append(node_module)
 
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
