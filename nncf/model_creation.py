@@ -109,6 +109,10 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
 
+    # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
+    # In particular, this is currently required for correct functioning of RNNs.
+    compressed_model.rebuild_graph()
+
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
@@ -123,4 +127,5 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+
     return compression_ctrl, compressed_model
