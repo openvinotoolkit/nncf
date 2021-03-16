@@ -11,7 +11,7 @@
     "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",
-        "scheduler_params": {
+        "schedule_params": {
             "boundaries": [5],
             "values": [1e-5, 1e-6]
         }
