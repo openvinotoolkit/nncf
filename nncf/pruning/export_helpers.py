@@ -466,7 +466,6 @@ class ModelPruner:
             node_type = self.graph.node_type_fn(node)
             cls = self.get_class_by_type_name(node_type)
             cls.mask_propagation(self.model, node, self.graph, self.nx_graph)
-        nncf_logger.info('Finished mask propagation in graph')
 
     def apply_mask(self):
         """
