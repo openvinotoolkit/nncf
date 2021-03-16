@@ -59,15 +59,6 @@ class SparsityScheduler(CompressionScheduler):
         self.freeze_epoch = params.get('sparsity_freeze_epoch', 100)
         self.current_sparsity = self.initial_sparsity
 
-    def _maybe_freeze(self) -> None:
-        """
-        Checks if sparsity mask needs to be frozen and not to be trained.
-        If freezing is needed, then the internal state of the `controller`
-        object will be changed.
-        """
-        if self.current_epoch >= self.freeze_epoch:
-            self.controller.freeze()
-
     def _calculate_sparsity_level(self) -> float:
         """
         Calculates a sparsity level that should be applied to the weights
@@ -85,7 +76,8 @@ class SparsityScheduler(CompressionScheduler):
         state of the `controller`.
         """
         self.current_sparsity = self._calculate_sparsity_level()
-        self._maybe_freeze()
+        if self.current_epoch >= self.freeze_epoch:
+            self.controller.freeze()
         self.controller.set_sparsity_level(self.current_sparsity)
 
     @property

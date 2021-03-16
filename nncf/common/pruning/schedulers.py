@@ -64,15 +64,6 @@ class PruningScheduler(CompressionScheduler):
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
         self.current_pruning = self.initial_pruning
 
-    def _maybe_freeze(self) -> None:
-        """
-        Checks if pruning mask needs to be frozen and not to be trained.
-        If freezing is needed, then the internal state of the `controller`
-        object will be changed.
-        """
-        if self.current_epoch >= self.freeze_epoch:
-            self.controller.freeze()
-
     def _calculate_pruning_level(self) -> float:
         """
         Calculates a pruning level that should be applied to the model
@@ -87,7 +78,8 @@ class PruningScheduler(CompressionScheduler):
         super().epoch_step(next_epoch)
         self.current_pruning = self._calculate_pruning_level()
         self.controller.set_pruning_rate(self.pruning_level)
-        self._maybe_freeze()
+        if self.current_epoch >= self.freeze_epoch:
+            self.controller.freeze()
 
     def step(self, next_step: Optional[int] = None) -> None:
         super().step(next_step)
