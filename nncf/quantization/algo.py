@@ -26,7 +26,9 @@ import numpy as np
 import shutil
 import torch
 from copy import deepcopy
+
 from nncf.nncf_network import LoadStateListener
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 
 from nncf.utils import get_state_dict_names_with_modules
 
@@ -370,7 +372,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         """Does not access actual modules - only uses the InputAgnosticOperationExecutionContext info."""
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
-            nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR]
+            nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
             ia_op_exec_context = nncf_node.op_exec_context.input_agnostic
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
@@ -411,7 +413,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 if len(associated_ops) > 1:
                     self._check_if_ip_graph_nodes_point_to_single_module(associated_ops)
                 graph_operation = associated_ops[0]
-                metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
+                nncf_node_ref = graph_operation[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+                metatype = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
                 qconfig_list = meta_vs_qconfig_map[metatype]
                 if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
                     qconfig_list = [default_qconfig]
@@ -840,7 +843,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if not graph_node:
                 raise RuntimeError(f'Internal error: failed to find node for by scope={module_scope}')
 
-            op_type = graph_node[NNCFGraph.OP_TYPE_NODE_ATTR]
+            op_type = PTOperatorMetatypeNodeMatcher.match(graph_node)
             is_adjust_padding_applicable = op_type in adjust_padding_operation_set
             if self._should_setup_adjust_pad_ops and is_adjust_padding_applicable:
                 found_groups = filter(lambda group: wqp_id in group, quantizer_setup.shared_input_operation_set_groups)

@@ -13,21 +13,28 @@
 
 import re
 import threading
-from collections import deque, OrderedDict
+from collections import OrderedDict
+from collections import deque
 from contextlib import contextmanager
-from functools import partial
-from typing import Callable, List, Dict, Tuple, Union
 from copy import deepcopy
+from functools import partial
 from itertools import islice
+from typing import Callable
+from typing import Dict
+from typing import List
 from typing import Optional
+from typing import Tuple
+from typing import Union
 import torch
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import PTNNCFGraph, PTNNCFNode
-from nncf.dynamic_graph.trace_tensor import make_input_infos
+from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.layers import ITERATION_MODULES
+from nncf.dynamic_graph.graph import ModuleAttributes
 from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
@@ -243,7 +250,7 @@ class TracingContext:
 
         self._thread_local = threading.local()
 
-        self._n_instance = 0
+        self._n_instances_searching_graph = 0
         self._cond = threading.Condition()
         self.is_tracing = True
         self._may_add_nodes = True
@@ -263,28 +270,32 @@ class TracingContext:
         self.reset_scope_operator_call_counters()
         self.leave()
 
-    def find_operator_node(self, inputs: OperatorInput,
+    def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
                            ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:
         with self._cond:
-            self._n_instance += 1
-        tensor_metas = make_input_infos(inputs)
+            self._n_instances_searching_graph += 1
 
         node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
 
         with self._cond:
-            self._n_instance -= 1
+            self._n_instances_searching_graph -= 1
             self._cond.notify_all()
+        return node
 
-        if node is None and self._may_add_nodes:
-            with self._cond:
-                while self._n_instance > 0:
-                    self._cond.wait()
-                # Another thread may have added a node inside this block,
-                # so we need to check again if a node is already added.
-                node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
-                if node is None:
-                    node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
-                                               inputs, op_type)
+    def maybe_add_node(self, inputs: OperatorInput, tensor_metas: List[Optional[TensorMeta]],
+                       ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                       module_attrs: ModuleAttributes = None) -> NNCFNode:
+        if not self._may_add_nodes:
+            return None
+        with self._cond:
+            while self._n_instances_searching_graph > 0:
+                self._cond.wait()
+            # Another thread may have added a node inside this block,
+            # so we need to check again if a node is already added.
+            node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
+            if node is None:
+                node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
+                                           inputs, module_attrs)
         return node
 
     def get_caller_context(self, operator_type: str) -> InputAgnosticOperationExecutionContext:

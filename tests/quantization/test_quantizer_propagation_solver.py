@@ -15,14 +15,15 @@ import random
 from collections import namedtuple
 from itertools import permutations
 from typing import Dict
+from unittest.mock import MagicMock
 from typing import List
 from typing import Tuple
 
 import networkx as nx
 import pytest
-
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
@@ -34,7 +35,6 @@ from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import OperationExecutionContext
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.nncf_network import InsertionPointGraph
-from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
 from nncf.quantization.quantizer_propagation import OPERATOR_METATYPES
 from nncf.quantization.quantizer_propagation import PropagatingQuantizer
@@ -62,7 +62,10 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
+        op_name = shuffled_op_names[idx]
         node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+        if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+            node[PTNNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -75,8 +78,11 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
     for node_key in op_name_keys:
         attrs = {
             PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
-                get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key])
+                get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key]),
         }
+
+        if node_key in OP_NAMES_REQUIRING_MODULE_ATTRS:
+            attrs[PTNNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
         actual_key = node_key + '_{}'.format(node_key_appearances[node_key])
         graph.add_node(actual_key, **attrs)
         node_key_appearances[node_key] += 1
@@ -158,12 +164,6 @@ class TestQuantizerPropagationSolver:
         mock_graph = get_randomly_connected_model_graph(tested_op_names)
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
         ip_graph = InsertionPointGraph(nncf_graph)
-        for node in ip_graph.nodes.values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
-                op_name = op_exec_context.operator_name
-                ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
         quant_prop_graph = QPSG(ip_graph)
         quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
@@ -187,12 +187,6 @@ class TestQuantizerPropagationSolver:
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
         ip_graph = InsertionPointGraph(nncf_graph)
 
-        for node in ip_graph.nodes.values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
-                op_name = op_exec_context.operator_name
-                ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
         qp_graph = QPSG(ip_graph)
         quant_prop_solver = QuantizerPropagationSolver(run_consistency_checks=True)
@@ -1608,13 +1602,6 @@ class TestQuantizerPropagationSolver:
         mock_nx_graph = run_on_ip_graph_test_struct.base_graph
         nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
         ip_graph = InsertionPointGraph(nncf_graph)
-
-        for node in ip_graph.nodes.values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
-                op_name = op_exec_context.operator_name
-                ref_meta = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-                node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = ref_meta
 
         quant_prop_solver = QuantizerPropagationSolver(ignored_scopes=run_on_ip_graph_test_struct.ignored_scope,
                                                        run_consistency_checks=True)

@@ -20,8 +20,10 @@ from typing import Tuple
 import networkx as nx
 import pytest
 import torch
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 
 from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
@@ -29,7 +31,7 @@ from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import PreHookId
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import NNCFNode
 from nncf.dynamic_graph.graph import OperationExecutionContext
@@ -47,7 +49,7 @@ from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import PTInsertionPoint
 from nncf.nncf_network import PTInsertionType
 from nncf.nncf_network import PTModelTransformer
-from nncf.dynamic_graph.operator_metatypes import NoopMetatype
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
@@ -358,6 +360,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             ia_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
         else:
             ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
+        module_attributes = node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
         tensor_metas = []
         preds = list(nx_graph.predecessors(curr_node_key))
         for idx, pred in enumerate(preds):
@@ -365,7 +368,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
             output_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
             tensor_metas.append(TensorMeta(creator_id, output_idx,
                                            [1, 1, 1, 1]))
-        node = mock_graph.add_node(ia_op_exec_context, tensor_metas, [], None)
+        node = mock_graph.add_node(ia_op_exec_context, tensor_metas, [], None, module_attrs=module_attributes)
         key_vs_id[curr_node_key] = node.node_id
         for idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
             edge_vs_output_idx_and_creator_id[out_edge] = (idx, node.node_id)
@@ -410,7 +413,7 @@ def get_mock_nncf_node_attrs(op_name=None):
         PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
                                                                          Scope(),
                                                                          0,
-                                                                         [None])
+                                                                       [None]),
     }
 
 
@@ -635,15 +638,13 @@ class TestInsertionPointGraph:
 
         model = ModelForMetatypeTesting()
         nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
-        ip_graph = nncf_network.get_insertion_point_graph()
+        nncf_graph = nncf_network.get_original_graph()
 
-        for node in ip_graph.nodes().values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR]
-                scope_str = str(nncf_node_ref.op_exec_context.input_agnostic)
-                assert scope_str in ref_scope_vs_metatype_dict
-                ref_metatype = ref_scope_vs_metatype_dict[scope_str]
-                assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
+        for nncf_node in nncf_graph.get_all_nodes():  # type: PTNNCFNode
+            scope_str = str(nncf_node.op_exec_context.input_agnostic)
+            assert scope_str in ref_scope_vs_metatype_dict
+            ref_metatype = ref_scope_vs_metatype_dict[scope_str]
+            assert PTOperatorMetatypeNodeMatcher.match(nncf_node) == ref_metatype
 
     @pytest.mark.parametrize(("mock_graph_factory", "dot_file_name"),
                              MERGE_PATTERN_TEST_CASES,
