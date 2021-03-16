@@ -451,8 +451,6 @@ class ModelPruner:
         """
         cls = PT_PRUNING_OPERATOR_METATYPES.get_operator_metatype_by_op_name(type_name)
         if cls is None:
-            nncf_logger.warning(
-                "Layer {} is not pruneable - will not propagate pruned filters through it".format(type_name))
             cls = PTStopMaskForwardOps
         return cls
 
