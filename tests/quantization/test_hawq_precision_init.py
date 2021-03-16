@@ -309,7 +309,10 @@ HAWQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator().cuda()
+
+    model = params.model_creator()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
