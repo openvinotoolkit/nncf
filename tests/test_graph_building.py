@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from copy import deepcopy
 from typing import Tuple, List
 
 import pytest
@@ -100,8 +101,8 @@ class ModelForTest(torch.nn.Module):
         self.convt1 = nn.ConvTranspose2d(self.CONV1_OUT_CHANNELS, self.IN_CHANNELS, kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(self.CONV2_IN_CHANNELS, self.OUT_CHANNELS, kernel_size=1)
 
-    def forward(self, input_):
-        x = self.conv1(input_)
+    def forward(self, x):
+        x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu1(x)
         x_prev = x
@@ -238,3 +239,25 @@ def test_input_info_specification_from_config(mocker, input_info_test_struct):
 
     for keyword, arg in forward_call_kwargs.items():
         check_arg(arg, ref_kw_vs_arg_info[keyword])
+
+
+def test_compressed_graph_does_not_inflate_during_multiple_forwards():
+    model = ModelForTest()
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    input_tensor = torch.zeros(input_shapes[0])
+    ref_graph = deepcopy(compressed_model.get_graph())
+    for _ in range(0, 10):
+        _ = compressed_model(input_tensor)
+        curr_graph = compressed_model.get_graph()
+        assert curr_graph == ref_graph
+
+
+def test_compressed_graph_is_the_same_after_export(tmp_path):
+    model = ModelForTest()
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, config)
+    ref_graph = deepcopy(compressed_model.get_graph())
+    ctrl.export_model('tmp.onnx')
+    curr_graph = compressed_model.get_graph()
+    assert curr_graph == ref_graph
