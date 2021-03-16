@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import functools
 import inspect
 import operator
 from collections import OrderedDict
+from copy import deepcopy
 from enum import Enum
 from typing import Callable
 from typing import Dict
@@ -21,28 +23,27 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-import functools
 import networkx as nx
 import torch
-from copy import deepcopy
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.utils import objwalk
 from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.module_operations import UpdateWeight
-from nncf.dynamic_graph.graph import NNCFNodeExpression
 from torch import nn
 
-from nncf.debug import CombinedDebugInterface
-from nncf.debug import debuggable_forward
-from nncf.debug import is_debug
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.module_attributes import BaseModuleAttributes
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.debug import CombinedDebugInterface
+from nncf.debug import debuggable_forward
+from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.graph import NNCFNodeExpression
 from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -60,6 +61,7 @@ from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.module_operations import UpdateWeight
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import compute_FLOPs_hook
 from nncf.utils import get_all_modules_by_type
@@ -447,10 +449,23 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
+            args, kwargs = self._strip_traced_tensors(args, kwargs)
             args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
 
+    def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+        """
+            Required to guard against new forward calls on tensors that have already passed
+            through NNCF's forward once and got turned into TracedTensors by reference access.
+        """
+        is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+        def strip_fn(tensor: TracedTensor) -> torch.Tensor:
+            return torch.Tensor.as_subclass(tensor, torch.Tensor)
+
+        args = objwalk(args, is_traced_tensor_predicate, strip_fn)
+        kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
+        return args, kwargs
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
