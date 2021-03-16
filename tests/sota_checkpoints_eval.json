@@ -112,7 +112,7 @@
                 "reference": "mobilenet_v2_imagenet",
                 "target": 71.23,
                 "metric_type": "Acc@1",
-                "resume": "mobilenet_v2_imagenet_int8.pth",
+                "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
