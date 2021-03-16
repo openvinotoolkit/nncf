@@ -333,8 +333,6 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
 
 @pytest.mark.parametrize('model', [TwoConvTestModel(), EightConvTestModel(), DepthWiseConvTestModel()])
 def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path, model):
-    model = model
-
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"input_info": {
         "sample_size": [1, 1, 20, 20]
