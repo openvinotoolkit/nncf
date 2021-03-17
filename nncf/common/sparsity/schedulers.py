@@ -33,27 +33,26 @@ class SparsityScheduler(CompressionScheduler):
     scheduling algorithm, defined in the `_calculate_sparsity_level()`
     method and a state (some parameters required for current sparsity
     level calculation) defined in the `__init__()` method.
+
+    :param initial_sparsity: Sparsity level which already has been
+        applied to the model. It is the level at which the schedule begins.
+    :param target_sparsity: Sparsity level at which the schedule ends.
+    :param target_epoch: Zero-based index of the epoch from which the
+        sparsity level of the model will be equal to the `target_sparsity`.
+    :param freeze_epoch: Zero-based index of the epoch from which the sparsity
+        mask will be frozen and will not be trained.
     """
 
     def __init__(self, controller, params: dict):
         """
-        Initializes the internal state of the sparsity scheduler specified by:
-            - controller: Sparsity algorithm controller.
-            - initial_sparsity: Sparsity level which already has been
-                applied to the model. It is the level at which the schedule begins.
-            - target_sparsity: Sparsity level at which the schedule ends.
-            - target_epoch: Zero-based index of the epoch from which the
-                sparsity level of the model will be equal to the `target_sparsity`.
-            - freeze_epoch: Zero-based index of the epoch from which the sparsity
-                mask will be frozen and will not be trained.
-            - current_sparsity: Sparsity level for the `current_epoch`.
+        Initializes the internal state of the sparsity scheduler.
 
         :param controller: Sparsity algorithm controller.
         :param params: Parameters of the scheduler.
         """
         super().__init__()
-        self.controller = controller
-        self.initial_sparsity = self.controller.get_sparsity_init()
+        self._controller = controller
+        self.initial_sparsity = self._controller.get_sparsity_init()
         self.target_sparsity = params.get('sparsity_target', 0.5)
         self.target_epoch = params.get('sparsity_target_epoch', 90)
         self.freeze_epoch = params.get('sparsity_freeze_epoch', 100)
@@ -77,8 +76,8 @@ class SparsityScheduler(CompressionScheduler):
         """
         self._current_sparsity = self._calculate_sparsity_level()
         if self.current_epoch >= self.freeze_epoch:
-            self.controller.freeze()
-        self.controller.set_sparsity_level(self._current_sparsity)
+            self._controller.freeze()
+        self._controller.set_sparsity_level(self._current_sparsity)
 
     @property
     def current_sparsity_level(self) -> float:
@@ -250,7 +249,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self._update_sparsity_level()
 
     def _calculate_sparsity_level(self) -> float:
-        if self.controller.loss.current_sparsity >= self._current_sparsity - self.eps:
+        if self._controller.loss.current_sparsity >= self._current_sparsity - self.eps:
             self.num_bad_epochs += 1
 
         current_sparsity = self._current_sparsity
