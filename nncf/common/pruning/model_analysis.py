@@ -52,9 +52,10 @@ class Clusterization:
 
     def get_cluster_by_id(self, cluster_id: int) -> NodesCluster:
         """
-        Returns cluster according to provided cluster_id
-        :param cluster_id: id of the cluster
-        :return: cluster according to provided cluster_id
+        Returns cluster according to provided cluster_id.
+
+        :param cluster_id: Id of the cluster.
+        :return: Cluster according to provided `cluster_id`.
         """
         if cluster_id not in self.clusters:
             raise IndexError('No cluster with id = {}'.format(cluster_id))
@@ -62,9 +63,10 @@ class Clusterization:
 
     def get_cluster_by_node_id(self, node_id: int) -> NodesCluster:
         """
-        Returns cluster containing node with provided node_id
-        :param node_id: id of the node which is in cluster
-        :return: cluster containing node with provided node_id
+        Returns cluster containing node with provided `node_id`.
+
+        :param node_id: Id of the node which is in cluster.
+        :return: Cluster containing node with provided `node_id`.
         """
         if node_id not in self._node_to_cluster:
             raise IndexError('No cluster for node with id = {}'.format(node_id))
@@ -72,17 +74,18 @@ class Clusterization:
 
     def is_node_in_clusterization(self, node_id: int) -> bool:
         """
-        Returns whether node with provided node_id is in clusterization
-        :param node_id: id of the node to test
-        :return: whether node with provided node_id is in clusterization
+        Returns whether node with provided `node_id` is in clusterization.
+
+        :param node_id: Id of the node to test.
+        :return: Whether node with provided `node_id` is in clusterization.
         """
         return node_id in self._node_to_cluster
 
     def add_cluster(self, cluster: NodesCluster):
         """
-        Adds provided cluster to clusterization
-        :param cluster: cluster to add
-        :return:
+        Adds provided cluster to clusterization.
+
+        :param cluster: Cluster to add.
         """
         cluster_id = cluster.id
         if cluster_id in self.clusters:
@@ -93,9 +96,9 @@ class Clusterization:
 
     def delete_cluster(self, cluster_id: int):
         """
-        Removes cluster with `cluster_id` from clusterization
-        :param cluster_id: id of a cluster to delete
-        :return:
+        Removes cluster with `cluster_id` from clusterization.
+
+        :param cluster_id: Id of a cluster to delete.
         """
         if cluster_id not in self.clusters:
             raise IndexError('No cluster with index = {} to delete'.format(cluster_id))
@@ -106,13 +109,17 @@ class Clusterization:
 
     def get_all_clusters(self) -> List[NodesCluster]:
         """
-        Returns list of all clusters in clusterization
+        Returns list of all clusters in clusterization.
+
+        :return: List of all clusters in clusterization.
         """
         return list(self.clusters.values())
 
     def get_all_nodes(self) -> List:
         """
-        Returns list all nodes of all clusters in clusterization
+        Returns list all nodes of all clusters in clusterization.
+
+        :return: List all nodes of all clusters in clusterization.
         """
         all_nodes = []
         for cluster in self.clusters.values():
@@ -121,10 +128,10 @@ class Clusterization:
 
     def merge_clusters(self, first_id: int, second_id: int):
         """
-        Merges two clusters with provided ids
-        :param first_id: id of the first cluster to merge
-        :param second_id: id of the second cluster to merge
-        :return:
+        Merges two clusters with provided ids.
+
+        :param first_id: Id of the first cluster to merge.
+        :param second_id: Id of the second cluster to merge.
         """
         cluster_1 = self.get_cluster_by_id(first_id)
         cluster_2 = self.get_cluster_by_id(second_id)
@@ -141,9 +148,9 @@ class Clusterization:
 
     def merge_list_of_clusters(self, clusters: List[int]):
         """
-        Merges provided clusters
-        :param clusters: list of clusters to merge
-        :return:
+        Merges provided clusters.
+
+        :param clusters: List of clusters to merge.
         """
         clusters = list(set(clusters))
         clusters.sort(key=lambda cluster_id: self.get_cluster_by_id(cluster_id).importance)
@@ -161,7 +168,8 @@ def get_position(nodes_list: List[NNCFNode], idx: int):
 def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clusterization):
     """
     Merges clusters to which nodes from nodes_to_merge belongs.
-    :param nodes_to_merge: all nodes are clusters for which should be тerged
+
+    :param nodes_to_merge: All nodes are clusters for which should be тerged.
     :param clusterization:
     """
     if len(nodes_to_merge) <= 1:
@@ -188,9 +196,10 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_typ
     This model will cluster all operations with type from special_types. Connected nodes is nodes that:
         1. Have path between nodes with only identity type nodes on it
         2. Have common input (identity type nodes can be on path from this input)
-    :param graph: graph to work with
-    :param special_types: list of types that should be grouped to groups of dependent nodes
-    :return: Clusterization of special_types nodes to the dependent groups
+
+    :param graph: Graph to work with.
+    :param special_types: List of types that should be grouped to groups of dependent nodes.
+    :return: Clusterization of `special_types` nodes to the dependent groups.
     """
     topologically_sorted_nodes = graph.topological_sort()
     all_special_nodes = [node for node in graph.get_all_nodes()
@@ -219,18 +228,19 @@ def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_typ
 class ModelAnalyzer:
     """
     Analyze the model before pruning to understand which parts could potentially be pruned without conflicts
-     (all nodes that can't get pruned input will receive a non-pruned input).
+    (all nodes that can't get pruned input will receive a non-pruned input).
 
     The algorithm consists of three steps:
-    1. Set attribute accept_pruned_input to all nodes. This attribute shows can this node potentially get
-     pruned input or node.
-    2.  Calculate can_prune attribute for all nodes by propagating accept_pruned_input up
-     (from the result of the network to the inputs). Node can be pruned if all outputs of this node accept
-      pruned input and all outputs can be pruned.
-    3. Propagates can_prune down from input nodes to the outputs.
+        1. Set attribute `accept_pruned_input` to all nodes. This attribute shows can this node potentially get
+        pruned input or node.
+        2.  Calculate `can_prune` attribute for all nodes by propagating `accept_pruned_input` up
+        (from the result of the network to the inputs). Node can be pruned if all outputs of this node accept
+        pruned input and all outputs can be pruned.
+        3. Propagates `can_prune` down from input nodes to the outputs.
 
-    As a result, all nodes marked by the can_prune attribute as potentially prunable or not.
+    As a result, all nodes marked by the `can_prune` attribute as potentially prunable or not.
     """
+
     def __init__(self, graph: NNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  is_depthwise_conv_fn: Callable[[NNCFNode], bool]):
@@ -249,10 +259,11 @@ class ModelAnalyzer:
 
     def node_propagate_can_prune_attr(self, nncf_node: NNCFNode) -> bool:
         """
-        Whether node propagates can_prune attr through. That means a node can propagate pruning mask
-         (for example,  activations propagate mask, but convolutions stop mask propagation)
-        :param nncf_node: node to work with
-        :return: bool: propagates this node can_prune throw or not
+        Whether node propagates `can_prune` attr through. That means a node can propagate pruning mask
+        (for example, activations propagate mask, but convolutions stop mask propagation).
+
+        :param nncf_node: Node to work with.
+        :return: Propagates this node can_prune throw or not.
         """
         node_type = nncf_node.node_type
         is_conv = node_type in self._convolution_op_metatype.get_all_op_aliases()
@@ -260,13 +271,17 @@ class ModelAnalyzer:
 
     def node_accept_different_inputs(self, nncf_node: NNCFNode) -> bool:
         """
-        Return whether node accept pruned and not pruned inputs as inputs at the same time.
+        Returns whether node accepts pruned and not pruned inputs as inputs at the same time.
+
+        :return: Whether node accepts pruned and not pruned inputs as inputs at the same time.
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
     def get_class_by_type_name(self, type_name: str) -> DefaultMetaOp:
         """
-        Return class of metaop that corresponds to type_name type.
+        Returns class of metaop that corresponds to `type_name` type.
+
+        :return: Class of metaop that corresponds to `type_name` type.
         """
         cls = self._pruning_operator_metatypes.get_operator_metatype_by_op_name(type_name)
         if cls is None:
