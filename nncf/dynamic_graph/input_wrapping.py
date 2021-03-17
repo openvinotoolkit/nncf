@@ -6,7 +6,7 @@ import torch
 
 from nncf.dynamic_graph.patch_pytorch import register_operator
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_mock_tensor
-from nncf.utils import is_tensor, objwalk
+from nncf.utils import is_tensor, objwalk, is_traced_tensor
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -24,7 +24,7 @@ def wrap_nncf_model_inputs_with_objwalk(model_args, model_kwargs):
     return model_args, model_kwargs
 
 def wrap_nncf_model_outputs_with_objwalk(model_outputs):
-    model_outputs = objwalk(model_outputs, is_tensor, nncf_model_output)
+    model_outputs = objwalk(model_outputs, is_traced_tensor, nncf_model_output)
     return model_outputs
 
 class InputInfoWrapManager:

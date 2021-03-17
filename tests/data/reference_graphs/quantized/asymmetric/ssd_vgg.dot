@@ -154,8 +154,6 @@ strict digraph  {
 "152 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=152, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=softmax];
 "153 /nncf_model_output" [id=153, scope="", type=nncf_model_output];
 "154 /nncf_model_output" [id=154, scope="", type=nncf_model_output];
-"155 /nncf_model_output" [id=155, scope="", type=nncf_model_output];
-"156 /nncf_model_output" [id=156, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
 "2 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
@@ -317,7 +315,7 @@ strict digraph  {
 "147 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[loc]/conv2d" -> "150 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
 "148 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "149 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d";
 "149 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d" -> "151 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
-"150 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "154 /nncf_model_output";
+"150 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "153 /nncf_model_output";
 "151 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "152 SSD_VGG/SSDDetectionOutput[detection_head]/softmax";
-"151 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "155 /nncf_model_output";
+"151 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "154 /nncf_model_output";
 }

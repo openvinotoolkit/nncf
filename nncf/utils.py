@@ -21,6 +21,7 @@ from torch import distributed as dist, nn
 from torch.nn import Module
 
 from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
 
@@ -295,6 +296,8 @@ iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
+def is_traced_tensor(obj):
+    return isinstance(obj, TracedTensor)
 
 def maybe_get_iterator(obj):
     it = None

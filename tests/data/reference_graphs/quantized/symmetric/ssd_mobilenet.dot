@@ -205,8 +205,6 @@ strict digraph  {
 "203 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax" [id=203, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=softmax];
 "204 /nncf_model_output" [id=204, scope="", type=nncf_model_output];
 "205 /nncf_model_output" [id=205, scope="", type=nncf_model_output];
-"206 /nncf_model_output" [id=206, scope="", type=nncf_model_output];
-"207 /nncf_model_output" [id=207, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
 "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
@@ -419,7 +417,7 @@ strict digraph  {
 "198 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[loc]/conv2d" -> "201 MobileNetSSD/SSDDetectionOutput[detection_head]/cat";
 "199 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "200 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d";
 "200 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d" -> "202 MobileNetSSD/SSDDetectionOutput[detection_head]/cat";
-"201 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "205 /nncf_model_output";
+"201 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "204 /nncf_model_output";
 "202 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "203 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax";
-"202 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "206 /nncf_model_output";
+"202 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "205 /nncf_model_output";
 }
