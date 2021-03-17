@@ -163,7 +163,7 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
 
     # pylint: disable=protected-access
     for wrapper in loss._sparse_layers:
-        assert wrapper.get_op_by_name(OP_NAME).trainable
+        assert tf.equal(wrapper.ops_weights[OP_NAME]['trainable'], tf.constant(1, dtype=tf.int8))
 
     scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.2
@@ -186,4 +186,4 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert loss() == 0
 
     for wrapper in loss._sparse_layers:
-        assert not wrapper.get_op_by_name(OP_NAME).trainable
+        assert tf.equal(wrapper.ops_weights[OP_NAME]['trainable'], tf.constant(0, dtype=tf.int8))

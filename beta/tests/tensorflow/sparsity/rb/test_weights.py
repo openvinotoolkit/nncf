@@ -15,7 +15,6 @@ import pytest
 import tensorflow as tf
 
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
@@ -28,7 +27,6 @@ def get_RBSParsityWeigth_and_layer(frozen=False):
     layer = NNCFWrapper(tf.keras.layers.Conv2D(1, 1))
     layer.registry_weight_operation('kernel', sw)
     layer.build((1, ))
-    sw.build((1, ), InputType.WEIGHTS, 'dummy_layer_name', layer)
     if frozen:
         sw.freeze(layer.ops_weights[OP_NAME])
     return sw, layer
@@ -38,7 +36,6 @@ def test_can_create_sparse_weight__with_defaults():
     sw, layer = get_RBSParsityWeigth_and_layer()
     trainable_weight = get_weight_by_name(layer, 'trainable')
     mask = get_weight_by_name(layer, 'mask')
-    assert sw.trainable
     tf.debugging.assert_near(default_rb_mask_value, mask)
     assert trainable_weight == tf.constant(1, dtype=tf.int8)
     assert sw.eps == 1e-6
@@ -47,10 +44,8 @@ def test_can_create_sparse_weight__with_defaults():
 def test_can_freeze_mask():
     sw, layer = get_RBSParsityWeigth_and_layer(frozen=False)
     trainable_weight = get_weight_by_name(layer, 'trainable')
-    assert sw.trainable
     assert trainable_weight == tf.constant(1, dtype=tf.int8)
     sw.freeze(layer.ops_weights[OP_NAME])
-    assert not sw.trainable
     assert trainable_weight == tf.constant(0, dtype=tf.int8)
 
 

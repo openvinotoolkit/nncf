@@ -113,8 +113,8 @@ class TestSparseModules:
                              ids=('frozen', 'not_frozen'))
     def test_calc_loss(self, model_name, frozen, raising, local_mode):
         model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-        rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
-        assert rb_weight.trainable is not frozen
+        trainable = model.layers[1].ops_weights['rb_sparsity_mask_apply']['trainable']
+        assert tf.equal(trainable, tf.constant(int(not frozen), dtype=tf.int8))
         cls = SparseLoss
         # pylint: disable=protected-access
         loss = cls(algo.loss._sparse_layers)
@@ -122,7 +122,7 @@ class TestSparseModules:
             assert loss() == 0
         except ZeroDivisionError:
             pytest.fail("Division by zero")
-        except AssertionError:
+        except tf.errors.InvalidArgumentError:
             if not raising:
                 pytest.fail("Exception is not expected")
 
@@ -132,18 +132,18 @@ class TestSparseModules:
         def test_can_freeze_mask(self, model_name, local_mode, frozen):
             model, _, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
             rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
-            assert rb_weight.trainable is not frozen
-            trainable = get_weight_by_name(model.layers[1], 'trainable')
-            val = tf.constant(int(not frozen), shape=(), dtype=tf.int8)
-            assert trainable == val
+            weights = model.layers[1].ops_weights['rb_sparsity_mask_apply']
+            assert tf.equal(weights['trainable'], tf.constant(int(not frozen), dtype=tf.int8))
+            rb_weight.freeze(weights)
+            assert tf.equal(weights['trainable'], tf.constant(0, dtype=tf.int8))
 
         def test_disable_loss(self, model_name, local_mode, frozen):
             model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-            rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
-            assert rb_weight.trainable is not frozen
+            trainable = model.layers[1].ops_weights['rb_sparsity_mask_apply']['trainable']
+            assert tf.equal(trainable, tf.constant(int(not frozen), dtype=tf.int8))
             loss = algo.loss
             loss.disable()
-            assert not rb_weight.trainable
+            assert tf.equal(trainable, tf.constant(0, dtype=tf.int8))
 
         def test_check_gradient_existing(self, model_name, local_mode, frozen):
             model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)

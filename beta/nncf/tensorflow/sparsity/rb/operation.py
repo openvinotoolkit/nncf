@@ -30,8 +30,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param eps: minimum value and the gap from the maximum value in
             distributed mask
         '''
-        super().__init__(name=OP_NAME,
-                         trainable=True)
+        super().__init__(name=OP_NAME)
         self.eps = eps
 
     # TODO: make it static
