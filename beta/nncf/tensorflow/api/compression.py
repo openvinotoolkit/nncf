@@ -74,14 +74,6 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         save_model(self.model, save_path, save_format)
 
-    def get_compression_metrics(self, model_loss):
-        """
-        Return metrics specific for current compression algorithm
-
-        :param model_loss: main loss function of the compressed model
-        :return: List of compression metrics
-        """
-        return []
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """

@@ -16,6 +16,7 @@ import os.path as osp
 from pathlib import Path
 
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
@@ -161,14 +162,14 @@ def run(config):
                 config=config,
                 scheduler=scheduler)
 
-            metrics = [
-                tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
-                tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5')
-            ]
-
             loss_obj = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1)
 
-            metrics += compression_ctrl.get_compression_metrics(loss_obj)
+            metrics = [
+                tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
+                tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5'),
+                tfa.metrics.MeanMetricWrapper(loss_obj, name='ce_loss'),
+                tfa.metrics.MeanMetricWrapper(compression_ctrl.loss, name='cr_loss')
+            ]
 
             compress_model.add_loss(compression_ctrl.loss)
             compress_model.compile(optimizer=optimizer,
@@ -199,7 +200,7 @@ def run(config):
         ckpt_dir=config.checkpoint_save_dir)
 
     callbacks.append(get_progress_bar(
-        stateful_metrics=[metric.name for metric in metrics]))
+        stateful_metrics=['loss'] + [metric.name for metric in metrics]))
     callbacks.extend(compression_callbacks)
 
     validation_kwargs = {
