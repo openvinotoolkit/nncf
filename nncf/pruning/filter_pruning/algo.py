@@ -467,10 +467,9 @@ class FilterPruningController(BasePruningAlgoController):
         types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
-        nncf_nodes = graph.get_all_nodes()
+        nx_nodes = [nx_graph.nodes[name] for name in nx_graph]
         pruned_node_modules = list()
-
-        for node in nncf_nodes:
+        for node in nx_nodes:
             node_type = graph.node_type_fn(node)
             if node_type not in types_to_apply_mask:
                 continue
