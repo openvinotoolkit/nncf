@@ -33,9 +33,9 @@ Then during pruning filters with smaller ![G(F_i)](https://latex.codecogs.com/pn
 The zeroed filters are frozen afterwards and the remaining model parameters are fine-tuned.   
 
 **Parameters of the scheduler:**  
- - `num_init_steps` - number of epochs for model pretraining **before** pruning.    
-    - `pruning_target` - pruning rate target . For example, the value `0.5` means that right after pretraining, at the epoch    
-     with the number of `num_init_steps`, the model will have 50% of its convolutional filters zeroed.   
+- `num_init_steps` - number of epochs for model pretraining **before** pruning.
+- `pruning_target` - pruning rate target . For example, the value `0.5` means that right after pretraining, at the epoch
+with the number of `num_init_steps`, the model will have 50% of its convolutional filters zeroed.
 
 
 **Exponential scheduler**   
@@ -48,10 +48,10 @@ Current pruning rate ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-
 Where ![a, k](https://latex.codecogs.com/svg.latex?a,%20k) - parameters.  
 
 **Parameters of scheduler:**  
- - `num_init_steps` - number of epochs for model pretraining before pruning.    
-    - `pruning_steps` - the number of epochs during which the pruning rate target is increased from  `pruning_init` to `pruning_target` value.    
-    - `pruning_init` - initial pruning rate target. For example, value `0.1` means that at the begging of training, the model is trained to have 10% of convolutional filters zeroed.    
-    - `pruning_target` - pruning rate target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, the model is trained to have 50% of its convolutional filters zeroed.    
+- `num_init_steps` - number of epochs for model pretraining before pruning.
+- `pruning_steps` - the number of epochs during which the pruning rate target is increased from  `pruning_init` to `pruning_target` value.
+- `pruning_init` - initial pruning rate target. For example, value `0.1` means that at the begging of training, the model is trained to have 10% of convolutional filters zeroed.
+- `pruning_target` - pruning rate target at the end of the schedule. For example, the value `0.5` means that at the epoch with the number of `num_init_steps + pruning_steps`, the model is trained to have 50% of its convolutional filters zeroed.
 
 **Exponential with bias scheduler**   
 Similar to the `Exponential scheduler`, but current pruning rate ![P_{i}](https://latex.codecogs.com/svg.latex?P_{i}) (on i-th epoch) during training calculates by equation:  
