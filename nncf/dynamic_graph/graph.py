@@ -515,7 +515,7 @@ class PTNNCFGraph(NNCFGraph):
         nncf_node = self._nx_node_to_nncf_node(nx_node)
         return nncf_node
 
-    def get_nx_node_by_key(self, key: str):
+    def get_nx_node_by_key(self, key: str) -> dict:
         return self._nx_graph.nodes[key]
 
     def get_node_key_by_iap_context(self, iap_ctx: InputAgnosticOperationExecutionContext) -> str:
@@ -526,6 +526,12 @@ class PTNNCFGraph(NNCFGraph):
 
     def get_successors(self, node_name: str):
         return self._nx_graph.successors(node_name)
+
+    def get_successor_nncf_nodes(self, node_id: int) -> List[NNCFNode]:
+        key = self.get_node_key_by_id(node_id)
+        succs = list(self._nx_graph.successors(key))
+        nncf_nodes = [self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]) for nx_node_key in succs]
+        return nncf_nodes
 
     def get_matching_nncf_graph_pattern_io_list(self, expression: Expression) -> List[NNCFGraphPatternIO]:
         matched_node_key_sequences = search_all(self._nx_graph, expression)
@@ -590,6 +596,7 @@ class PTNNCFGraph(NNCFGraph):
             assert port_id not in retval
             retval[port_id] = edge_attr_dict[PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
         return retval
+
 
     def _get_graph_for_structure_analysis(self, extended=False) -> nx.DiGraph:
         """The graph to dump has certain node attributes omitted, compared to the graph stored
@@ -736,7 +743,7 @@ class PTNNCFGraph(NNCFGraph):
                           nx_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                           nx_node)
 
-    def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[dict]:
+    def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[NNCFNode]:
         """
         Looking for node with scope == scope in networkx graph.
         :param self: graphs to work on
@@ -746,7 +753,7 @@ class PTNNCFGraph(NNCFGraph):
         nodes = self._nx_graph.nodes
         for node_key in nodes:
             if nodes[node_key][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model == scope:
-                return nodes[node_key]
+                return self._nx_node_to_nncf_node(nodes[node_key])
         return None
 
     def find_node_in_nx_graph_by_input_agnostic(
