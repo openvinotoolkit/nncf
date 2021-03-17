@@ -28,6 +28,7 @@ from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
 from nncf import register_module
+<<<<<<< 5994286b075219ac090d8e1c5738b2cb690b9d6b
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import PreHookId
 from nncf.dynamic_graph.context import Scope
@@ -39,6 +40,7 @@ from nncf.dynamic_graph.graph_builder import GraphBuilder
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
@@ -84,7 +86,7 @@ def test_disable_shape_matching():
 
     keys_1 = list(graph_1.get_all_node_keys())
     keys_2 = list(graph_2.get_all_node_keys())
-    assert len(keys_1) == 2  # 1 input node + 1 operation node
+    assert len(keys_1) == 3  # 1 input node + 1 operation node + 1 output node
     assert keys_1 == keys_2
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
@@ -604,7 +606,8 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": DepthwiseConv2dSubtype,
             "ModelForMetatypeTesting/__iadd___0": AddMetatype,
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
-            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype
+            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
+            "/" + MODEL_OUTPUT_OP_NAME + "_0": NoopMetatype,
         }
 
         class ModelForMetatypeTesting(torch.nn.Module):
@@ -754,7 +757,7 @@ def test_multiple_forward():
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
-    for node_key in list(graph.get_all_node_keys())[1:]:
+    for node_key in list(graph.get_all_node_keys())[1:4]:
         node = graph.get_nx_node_by_key(node_key)
         assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)

@@ -132,7 +132,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             if dummy_forward_fn is None:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=
                                                         create_dummy_forward_fn(input_info_list,
-                                                                                with_input_tracing=False))
+                                                                                with_input_tracing=False,
+                                                                                with_output_tracing=False))
             else:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
