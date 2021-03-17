@@ -16,7 +16,7 @@
                 "model_description": "ResNet-50",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.5
             },
             "resnet50_imagenet_int8_per_tensor": {
                 "config": "examples/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json",
@@ -27,7 +27,7 @@
                 "model_description": "ResNet-50",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.5
             },
             "resnet50_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json",
@@ -88,7 +88,7 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 1.0
             },
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
@@ -99,11 +99,11 @@
                 "model_description": "Inception V3",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.4
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/classification/configs/quantization/mobilenet_v2_imagenet.json",
-                "target": 71.75,
+                "target": 71.91,
                 "metric_type": "Acc@1",
                 "model_description": "MobileNet V2"
             },
@@ -171,7 +171,7 @@
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 57.94,
+                "target": 58.15,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -301,7 +301,7 @@
             "ssd300_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_int8.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 96.5,
+                "target": 96.45,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_int8.pth",
                 "model_description": "SSD300-VGG-BN",
@@ -380,7 +380,7 @@
             "unet_camvid_int8": {
                 "config": "examples/semantic_segmentation/configs/unet_camvid_int8.json",
                 "reference": "unet_camvid",
-                "target": 71.66,
+                "target": 71.96,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid_int8.pth",
                 "model_description": "UNet",
