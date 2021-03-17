@@ -57,7 +57,7 @@ class RBSparsifyingWeight(NNCFOperation):
             name + '_trainable',
             initializer=tf.keras.initializers.Constant(1),
             trainable=False,
-            dtype=tf.int8)
+            dtype=tf.bool)
 
         return {
             'mask': mask,
