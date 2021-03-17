@@ -438,6 +438,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._compressed_context = TracingContext()
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)
+        self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
@@ -449,8 +450,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
-            args, kwargs = self._strip_traced_tensors(args, kwargs)
-            args, kwargs = self._wrap_inputs_fn(args, kwargs)
+            if not self._in_user_dummy_forward:
+                # If a user supplies own dummy forward, he is responsible for
+                # correctly wrapping inputs inside it as well.
+                args, kwargs = self._strip_traced_tensors(args, kwargs)
+                args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
 
@@ -540,7 +544,14 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
                                            wrap_inputs_fn=self._wrap_inputs_fn)
-        return self._user_dummy_forward_fn
+
+        def wrapped_user_dummy_forward_fn(*args, **kwargs):
+            self._in_user_dummy_forward = True
+            retval = self._user_dummy_forward_fn(*args, **kwargs)
+            self._in_user_dummy_forward = False
+            return retval
+
+        return wrapped_user_dummy_forward_fn
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):
@@ -643,7 +654,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             train_mode = self.training
             self.eval()
         with torch.no_grad():
-            self._dummy_forward_fn(self)
+            with self._compressed_context as ctx:
+                ctx.base_module_thread_local_replica = self
+                self._dummy_forward_fn(self)
         if force_eval:
             if train_mode:
                 self.train()

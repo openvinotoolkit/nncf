@@ -11,17 +11,20 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import Tuple, List
+from typing import List
+from typing import Tuple
 
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from nncf import nncf_model_input
 from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_dummy_forward_fn, GraphBuilder
-from tests.test_compressed_graph import get_basic_quantization_config
+from nncf.dynamic_graph.graph_builder import GraphBuilder
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.test_compressed_graph import get_basic_quantization_config
 
 TEST_TRACING_CONTEXT = 'test'
 
@@ -111,6 +114,21 @@ class ModelForTest(torch.nn.Module):
         x = torch.cat([x, x_prev], 1)
         x = self.conv2(x)
         return x
+
+    @staticmethod
+    def simple_wrap_fn(args, kwargs):
+        arglist = list(args)
+        arglist[0] = nncf_model_input(arglist[0])
+        args = tuple(arglist)
+        return args, kwargs
+
+    @staticmethod
+    def simple_user_dummy_forward(model):
+        mock_tensor = torch.zeros(input_shapes[0])
+        args = (mock_tensor, )
+        kwargs = {}
+        args, kwargs = ModelForTest.simple_wrap_fn(args, kwargs)
+        return model(*args, **kwargs)
 
 
 input_shapes = [
@@ -241,23 +259,96 @@ def test_input_info_specification_from_config(mocker, input_info_test_struct):
         check_arg(arg, ref_kw_vs_arg_info[keyword])
 
 
-def test_compressed_graph_does_not_inflate_during_multiple_forwards():
+def create_model_and_control_with_defaults():
     model = ModelForTest()
     config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    input_tensor = torch.zeros(input_shapes[0])
-    ref_graph = deepcopy(compressed_model.get_graph())
-    for _ in range(0, 10):
-        _ = compressed_model(input_tensor)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    return compressed_model, compression_ctrl
+
+
+def create_model_with_user_dummy():
+    model = ModelForTest()
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    compressed_model, compression_ctrl = \
+        create_compressed_model_and_algo_for_test(model, config,
+                                                  dummy_forward_fn=ModelForTest.simple_user_dummy_forward,
+                                                  wrap_inputs_fn=ModelForTest.simple_wrap_fn)
+    return compressed_model, compression_ctrl
+
+
+def create_model_with_user_wrap_inputs_fn():
+    model = ModelForTest()
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    compressed_model, compression_ctrl = \
+        create_compressed_model_and_algo_for_test(model, config,
+                                                  dummy_forward_fn=ModelForTest.simple_user_dummy_forward,
+                                                  wrap_inputs_fn=ModelForTest.simple_wrap_fn)
+    return compressed_model, compression_ctrl
+
+
+class TestGraphStability:
+    MODEL_CREATORS_AND_IDS = [
+        (create_model_and_control_with_defaults, 'default'),
+        (create_model_with_user_dummy, 'user_dummy'),
+        (create_model_with_user_wrap_inputs_fn, 'user_wrap_inputs_fn')
+    ]
+
+    @pytest.fixture(params=[x[0] for x in MODEL_CREATORS_AND_IDS],
+                    ids=[x[1] for x in MODEL_CREATORS_AND_IDS])
+    def model_and_ctrl_creator(self, request):
+        return request.param
+
+    def test_compressed_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
+        compressed_model, _ = model_and_ctrl_creator()
+        input_tensor = torch.zeros(input_shapes[0])
+        ref_graph = deepcopy(compressed_model.get_graph())
+        for _ in range(0, 10):
+            _ = compressed_model(input_tensor)
+            curr_graph = compressed_model.get_graph()
+            assert curr_graph == ref_graph
+
+    def test_compressed_graph_is_the_same_after_export(self, model_and_ctrl_creator, tmp_path):
+        compressed_model, ctrl = model_and_ctrl_creator()
+        ref_graph = deepcopy(compressed_model.get_graph())
+        ctrl.export_model('tmp.onnx')
         curr_graph = compressed_model.get_graph()
         assert curr_graph == ref_graph
 
+    def test_dummy_forwards_do_not_inflate_graph(self, model_and_ctrl_creator):
+        compressed_model, _ = model_and_ctrl_creator()
+        ref_graph = deepcopy(compressed_model.get_graph())
+        compressed_model.do_dummy_forward()
+        curr_graph = deepcopy(compressed_model.get_graph())
+        assert curr_graph == ref_graph
 
-def test_compressed_graph_is_the_same_after_export(tmp_path):
-    model = ModelForTest()
-    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
-    compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, config)
-    ref_graph = deepcopy(compressed_model.get_graph())
-    ctrl.export_model('tmp.onnx')
-    curr_graph = compressed_model.get_graph()
-    assert curr_graph == ref_graph
+    def test_compressed_graph_with_user_wrap_fn(self):
+        # Create a model with a dummy forward analogous to
+        # the default dummy forward, compare original and compressed model graphs afterwards
+
+        comp_model_wo_wrap, _ = create_model_and_control_with_defaults()
+        comp_model_w_wrap, _ = create_model_with_user_wrap_inputs_fn()
+
+        ref_original_graph = comp_model_wo_wrap.get_graph()
+        ref_compressed_graph = comp_model_wo_wrap.get_graph()
+
+        original_graph_with_wrap = comp_model_w_wrap.get_graph()
+        compressed_graph_with_wrap = comp_model_w_wrap.get_graph()
+
+        assert ref_original_graph == original_graph_with_wrap
+        assert ref_compressed_graph == compressed_graph_with_wrap
+
+    def test_compressed_graph_with_user_dummy_forward(self):
+        # Create a model with a dummy forward analogous to
+        # the default dummy forward, compare original and compressed model graphs afterwards
+
+        comp_model_wo_dummy, _ = create_model_and_control_with_defaults()
+        comp_model_w_dummy, _ = create_model_with_user_dummy()
+
+        ref_original_graph = comp_model_wo_dummy.get_graph()
+        ref_compressed_graph = comp_model_wo_dummy.get_graph()
+
+        original_graph_with_dummy = comp_model_w_dummy.get_graph()
+        compressed_graph_with_dummy = comp_model_w_dummy.get_graph()
+
+        assert ref_original_graph == original_graph_with_dummy
+        assert ref_compressed_graph == compressed_graph_with_dummy
