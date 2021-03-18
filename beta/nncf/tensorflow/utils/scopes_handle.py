@@ -10,9 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import re
 from typing import List
 
 
 def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
-    # TODO: add implementation
-    return True
+    # TODO: rewrite and add target_scopes handling
+    return all(not re.fullmatch(ignored.replace('{re}', ''), scope_str) if ignored.startswith('{re}')
+               else scope_str != ignored
+               for ignored in ignored_scopes)
