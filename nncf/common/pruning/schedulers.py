@@ -32,12 +32,12 @@ class PruningScheduler(CompressionScheduler):
     (some parameters required for current pruning level calculation)
     defined in the `__init__()` method.
 
-    :param initial_pruning: Pruning level which already has been
+    :param initial_level: Pruning level which already has been
         applied to the model. It is the level at which the schedule begins.
-    :param target_pruning: Pruning level at which the schedule ends.
+    :param target_level: Pruning level at which the schedule ends.
     :param num_warmup_epochs: Number of epochs for model pre-training before pruning.
     :param num_pruning_epochs: Number of epochs during which the pruning level
-        is increased from `initial_pruning` to `target_pruning`.
+        is increased from `initial_level` to `target_level`.
     :param freeze_epoch: Zero-based index of the epoch from which the pruning
         mask will be frozen and will not be trained.
     """
@@ -51,17 +51,17 @@ class PruningScheduler(CompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.initial_pruning = self._controller.pruning_init
+        self.initial_level = self._controller.pruning_init
 
         if self._controller.prune_flops:
-            self.target_pruning = params.get('pruning_flops_target')
+            self.target_level = params.get('pruning_flops_target')
         else:
-            self.target_pruning = params.get('pruning_target', 0.5)
+            self.target_level = params.get('pruning_target', 0.5)
 
         self.num_warmup_epochs = params.get('num_init_steps', 0)
         self.num_pruning_epochs = params.get('pruning_steps', 100)
         self.freeze_epoch = self.num_warmup_epochs + self.num_pruning_epochs
-        self._current_pruning = self.initial_pruning
+        self._current_level = self.initial_level
 
     def _calculate_pruning_level(self) -> float:
         """
@@ -82,7 +82,7 @@ class PruningScheduler(CompressionScheduler):
             will update the state of the pruning method.
         """
         super().epoch_step(next_epoch)
-        self._current_pruning = self._calculate_pruning_level()
+        self._current_level = self._calculate_pruning_level()
         self._controller.set_pruning_rate(self.current_pruning_level)
         if self.current_epoch >= self.freeze_epoch:
             self._controller.freeze()
@@ -106,7 +106,7 @@ class PruningScheduler(CompressionScheduler):
         :return: Current sparsity level.
         """
         if self.current_epoch >= self.num_warmup_epochs:
-            return self._current_pruning
+            return self._current_level
         return 0
 
 
@@ -116,7 +116,7 @@ class BaselinePruningScheduler(PruningScheduler):
     Pruning scheduler which applies the same pruning level for each epoch.
 
     The model is trained without pruning during `num_warmup_epochs` epochs.
-    Then scheduler sets `target_pruning` and freezes the algorithm.
+    Then scheduler sets `target_level` and freezes the algorithm.
     """
 
     def __init__(self, controller, params: dict):
@@ -124,7 +124,7 @@ class BaselinePruningScheduler(PruningScheduler):
         self.freeze_epoch = self.num_warmup_epochs
 
     def _calculate_pruning_level(self) -> float:
-        return self.target_pruning
+        return self.target_level
 
 
 @PRUNING_SCHEDULERS.register("exponential")
@@ -136,7 +136,7 @@ class ExponentialPruningScheduler(PruningScheduler):
     to calculate the pruning level for the `current_epoch`.
     The density level for the `current_epoch` is calculated as
 
-        current_density = 1.0 - current_pruning
+        current_density = 1.0 - current_level
     """
 
     def __init__(self, controller, params: dict):
@@ -147,14 +147,15 @@ class ExponentialPruningScheduler(PruningScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        initial_density = 1.0 - self.initial_pruning
-        target_density = 1.0 - self.target_pruning
-        self.schedule = ExponentialDecaySchedule(initial_density, target_density, self.num_pruning_epochs)
+        initial_density = 1.0 - self.initial_level
+        target_density = 1.0 - self.target_level
+        target_epoch = self.num_pruning_epochs - 1
+        self.schedule = ExponentialDecaySchedule(initial_density, target_density, target_epoch)
 
     def _calculate_pruning_level(self) -> float:
         current_density = self.schedule(self.current_epoch - self.num_warmup_epochs)
-        current_pruning = 1.0 - current_density
-        return min(current_pruning, self.target_pruning)
+        current_level = 1.0 - current_density
+        return min(current_level, self.target_level)
 
 
 @PRUNING_SCHEDULERS.register("exponential_with_bias")
@@ -169,30 +170,30 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     """
     def __init__(self, controller, params: dict):
         super().__init__(controller, params)
-        self.a, self.b, self.k = self._init_exp(self.num_pruning_epochs, self.initial_pruning, self.target_pruning)
+        self.a, self.b, self.k = self._init_exp(self.num_pruning_epochs, self.initial_level, self.target_level)
 
     def _calculate_pruning_level(self) -> float:
-        current_pruning = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs - 1)) + self.b
-        return min(current_pruning, self.target_pruning)
+        current_level = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs)) + self.b
+        return min(current_level, self.target_level)
 
     @staticmethod
-    def _init_exp(num_pruning_epochs, initial_pruning, target_pruning, D=0.125):
+    def _init_exp(num_pruning_epochs, initial_level, target_level, D=0.125):
         """
         Find a, b, k for system (see [paper](https://arxiv.org/pdf/1808.07471.pdf)):
-            initial_pruning = a + b
-            target_pruning = a * exp(-k * num_pruning_epochs) + b
-            3/4 * target_pruning = a *  exp(-k * num_pruning_epochs * D) + b
+            initial_level = a + b
+            target_level = a * exp(-k * num_pruning_epochs) + b
+            3/4 * target_level = a *  exp(-k * num_pruning_epochs * D) + b
 
         :param num_pruning_epochs: Number of epochs during which the pruning level
-            is increased from `initial_pruning` to `target_pruning`.
-        :param initial_pruning: Pruning level at which the schedule begins.
-        :param target_pruning: Pruning level at which the schedule ends.
+            is increased from `initial_level` to `target_level`.
+        :param initial_level: Pruning level at which the schedule begins.
+        :param target_level: Pruning level at which the schedule ends.
         """
         def get_b(a, k):
-            return initial_pruning - a
+            return initial_level - a
 
         def get_a(k):
-            return (3 / 4 * target_pruning - initial_pruning) / (np.exp(- D * k * num_pruning_epochs) - 1)
+            return (3 / 4 * target_level - initial_level) / (np.exp(- D * k * num_pruning_epochs) - 1)
 
         def f_to_solve(x):
             y = np.exp(D * x * num_pruning_epochs)

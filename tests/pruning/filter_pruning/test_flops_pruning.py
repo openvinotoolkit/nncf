@@ -37,7 +37,7 @@ def test_prune_flops_param(pruning_target, pruning_flops_target, prune_flops_ref
     model = PruningTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert compression_ctrl.prune_flops is prune_flops_ref
-    assert compression_ctrl.scheduler.target_pruning == pruning_target_ref
+    assert compression_ctrl.scheduler.target_level == pruning_target_ref
 
 
 def test_both_targets_assert():

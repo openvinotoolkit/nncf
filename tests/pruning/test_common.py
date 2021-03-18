@@ -39,7 +39,7 @@ def test_can_choose_scheduler(algo, scheduler, scheduler_class):
 @pytest.mark.parametrize(
     ("algo", "ref_scheduler", "ref_scheduler_params"),
     (('filter_pruning', BaselinePruningScheduler, {'num_warmup_epochs': 0, "num_pruning_epochs": 100,
-                                                   "initial_pruning": 0, "target_pruning": 0.5}),)
+                                                   "initial_level": 0, "target_level": 0.5}),)
 )
 def test_check_default_scheduler_params(algo, ref_scheduler, ref_scheduler_params):
     config = get_basic_pruning_config()

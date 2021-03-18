@@ -523,7 +523,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
 
     def compression_level(self) -> CompressionLevel:
-        target_pruning_level = self.scheduler.target_pruning
+        target_pruning_level = self.scheduler.target_level
         actual_pruning_level = self.pruning_rate
         if actual_pruning_level == 0:
             return CompressionLevel.NONE

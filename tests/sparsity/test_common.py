@@ -76,8 +76,8 @@ class TestSparseModules:
         config['compression'] = {'algorithm': algo, "params": {"schedule": 'polynomial'}}
         _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
         scheduler = compression_ctrl.scheduler
-        assert scheduler.initial_sparsity == 0
-        assert scheduler.target_sparsity == 0.5
+        assert scheduler.initial_level == 0
+        assert scheduler.target_level == 0.5
         assert scheduler.target_epoch == 90
         assert scheduler.freeze_epoch == 100
 
