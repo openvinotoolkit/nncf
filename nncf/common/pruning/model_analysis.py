@@ -301,7 +301,6 @@ class ModelAnalyzer:
         for node in reversed_sorted_nodes:
             # Check all output nodes accept_pruned_input attribute
             out_nodes = self.graph.get_next_nodes(node)
-            out_nodes = self.graph.get_next_nodes(nncf_node)
             out_nodes = self._ignore_nncf_output_nodes(out_nodes)
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 

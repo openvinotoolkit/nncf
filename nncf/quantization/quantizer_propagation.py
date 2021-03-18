@@ -1302,6 +1302,7 @@ class QuantizerPropagationSolver:
                  scope_overrides: Dict = None,
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
                  additional_unified_scale_op_scopes: List[List[str]] = None,
+                 run_consistency_checks: bool = False,
                  quantize_outputs: bool = False):
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig

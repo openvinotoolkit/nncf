@@ -28,7 +28,6 @@ from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
 from nncf import register_module
-<<<<<<< 5994286b075219ac090d8e1c5738b2cb690b9d6b
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import PreHookId
 from nncf.dynamic_graph.context import Scope

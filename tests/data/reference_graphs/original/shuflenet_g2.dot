@@ -167,7 +167,6 @@ strict digraph  {
 "165 ShuffleNet/Sequential[layer3]/Bottleneck[3]/RELU" [id=165, scope="ShuffleNet/Sequential[layer3]/Bottleneck[3]", type=RELU];
 "166 ShuffleNet/avg_pool2d" [id=166, scope=ShuffleNet, type=avg_pool2d];
 "167 ShuffleNet/Linear[linear]/linear" [id=167, scope="ShuffleNet/Linear[linear]", type=linear];
-"168 /nncf_model_output" [id=168, scope="", type=nncf_model_output];
 "0 ShuffleNet/Conv2d[conv1]/conv2d" -> "1 ShuffleNet/BatchNorm2d[bn1]/batch_norm";
 "1 ShuffleNet/BatchNorm2d[bn1]/batch_norm" -> "2 ShuffleNet/RELU";
 "2 ShuffleNet/RELU" -> "3 ShuffleNet/Sequential[layer1]/Bottleneck[0]/Conv2d[conv1]/conv2d";
@@ -351,5 +350,4 @@ strict digraph  {
 "164 ShuffleNet/Sequential[layer3]/Bottleneck[3]/__add__" -> "165 ShuffleNet/Sequential[layer3]/Bottleneck[3]/RELU";
 "165 ShuffleNet/Sequential[layer3]/Bottleneck[3]/RELU" -> "166 ShuffleNet/avg_pool2d";
 "166 ShuffleNet/avg_pool2d" -> "167 ShuffleNet/Linear[linear]/linear";
-"167 ShuffleNet/Linear[linear]/linear" -> "168 /nncf_model_output";
 }

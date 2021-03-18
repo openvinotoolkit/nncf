@@ -752,7 +752,6 @@ def test_iterate_module_list():
 
 def test_output_quantization(_case_config):
     # TODO: Add support "quantize_outputs" option in propagation mode.
-    #pytest.skip()
     model = test_models.UNet()
     input_shape = [1, 3, 360, 480]
 

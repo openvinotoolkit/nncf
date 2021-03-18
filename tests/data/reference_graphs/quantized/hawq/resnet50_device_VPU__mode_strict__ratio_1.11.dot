@@ -299,15 +299,12 @@ strict digraph  {
 "297 ResNet/AdaptiveAvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize" [color=green, id=297, label="AFQ_[B:8 M:A SGN:S PC:N]_#297_G1", scope="ResNet/AdaptiveAvgPool2d[avgpool]/AsymmetricQuantizer", style=filled, type=asymmetric_quantize];
 "298 ResNet/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=green, id=298, label="WFQ_[B:8 M:S SGN:S PC:Y]_#298_G1", scope="ResNet/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "299 ResNet/NNCFLinear[fc]/linear" [id=299, label="linear_#299", scope="ResNet/NNCFLinear[fc]", style=filled, type=linear];
-<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
+"300 /nncf_model_output" [id=300, label="nncf_model_output_#300", scope="", style=filled, type=nncf_model_output];
 "141 ResNet/Sequential[layer3]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "213 ResNet/Sequential[layer3]/Bottleneck[4]/NNCFConv2d[conv2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "230 ResNet/Sequential[layer3]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "247 ResNet/Sequential[layer4]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "285 ResNet/Sequential[layer4]/Bottleneck[2]/NNCFConv2d[conv2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
-=======
-"300 /nncf_model_output" [id=300, label="nncf_model_output_#300", scope="", style=filled, type=nncf_model_output];
->>>>>>> Fix model analysis for pruning. Fix tests.
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
@@ -623,13 +620,10 @@ strict digraph  {
 "296 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "297 ResNet/AdaptiveAvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize";
 "297 ResNet/AdaptiveAvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize" -> "299 ResNet/NNCFLinear[fc]/linear";
 "298 ResNet/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "299 ResNet/NNCFLinear[fc]/linear";
-<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
+"299 ResNet/NNCFLinear[fc]/linear" -> "300 /nncf_model_output";
 "141 ResNet/Sequential[layer3]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_apad" -> "141 ResNet/Sequential[layer3]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d";
 "213 ResNet/Sequential[layer3]/Bottleneck[4]/NNCFConv2d[conv2]/conv2d_apad" -> "213 ResNet/Sequential[layer3]/Bottleneck[4]/NNCFConv2d[conv2]/conv2d";
 "230 ResNet/Sequential[layer3]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d_apad" -> "230 ResNet/Sequential[layer3]/Bottleneck[5]/NNCFConv2d[conv2]/conv2d";
 "247 ResNet/Sequential[layer4]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_apad" -> "247 ResNet/Sequential[layer4]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d";
 "285 ResNet/Sequential[layer4]/Bottleneck[2]/NNCFConv2d[conv2]/conv2d_apad" -> "285 ResNet/Sequential[layer4]/Bottleneck[2]/NNCFConv2d[conv2]/conv2d";
-=======
-"299 ResNet/NNCFLinear[fc]/linear" -> "300 /nncf_model_output";
->>>>>>> Fix model analysis for pruning. Fix tests.
 }

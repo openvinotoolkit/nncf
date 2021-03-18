@@ -528,7 +528,7 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.get_graph().get_nodes_count() == 319 # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 143
 
         for name, counter in counters.items():
@@ -538,13 +538,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-<<<<<<< 5994286b075219ac090d8e1c5738b2cb690b9d6b
-        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert model.get_graph().get_nodes_count() == 319  # NB: may always fail in debug due to superfluous 'cat' nodes
         assert len(counters) == 143
-=======
-        assert model.get_graph().get_nodes_count() == 233  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 57
->>>>>>> Fix tests.
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name

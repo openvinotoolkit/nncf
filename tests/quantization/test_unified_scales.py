@@ -432,7 +432,6 @@ class QuantizerLinkingTestModel(torch.nn.Module):
 
 def test_quantizer_scale_linking(mocker):
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],

@@ -15,9 +15,6 @@ strict digraph  {
 "13 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" [id=13, scope="NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint", type=cat];
 "14 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=14, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
 "15 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=15, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
-"16 /nncf_model_output" [id=16, scope="", type=nncf_model_output];
-"17 /nncf_model_output" [id=17, scope="", type=nncf_model_output];
-"18 /nncf_model_output" [id=18, scope="", type=nncf_model_output];
 "0 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/Linear[input_linear]/linear" -> "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__";
 "1 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/Linear[hidden_linear]/linear" -> "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__";
 "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add__" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/sigmoid";
@@ -36,7 +33,4 @@ strict digraph  {
 "11 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "12 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat";
 "11 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "14 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "12 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat" -> "13 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat";
-"13 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" -> "18 /nncf_model_output";
-"14 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "16 /nncf_model_output";
-"15 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "17 /nncf_model_output";
 }

@@ -508,11 +508,7 @@ def get_scopes_of_skipped_weight_quantizers():
 
 def test_disable_quantizer_gradients():
     _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
-<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55:tests/quantization/test_hawq_precision_init.py
     assert len(parameters_to_restore.originally_disabled_gradients) == 406
-=======
-    assert len(parameters_to_restore.originally_disabled_gradients) == 357
->>>>>>> Fix model analysis for pruning. Fix tests.:tests/quantization/test_precision_init.py
     assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / 'data/hawq_reference/mobilenet_v2_requires_grad_per_param.json')

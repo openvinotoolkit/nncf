@@ -173,7 +173,6 @@ strict digraph  {
 "171 ResNet/Sequential[layer4]/Bottleneck[2]/RELU" [id=171, scope="ResNet/Sequential[layer4]/Bottleneck[2]", type=RELU];
 "172 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" [id=172, scope="ResNet/AdaptiveAvgPool2d[avgpool]", type=adaptive_avg_pool2d];
 "173 ResNet/Linear[linear]/linear" [id=173, scope="ResNet/Linear[linear]", type=linear];
-"174 /nncf_model_output" [id=174, scope="", type=nncf_model_output];
 "0 ResNet/Conv2d[conv1]/conv2d" -> "1 ResNet/BatchNorm2d[bn1]/batch_norm";
 "1 ResNet/BatchNorm2d[bn1]/batch_norm" -> "2 ResNet/RELU";
 "2 ResNet/RELU" -> "3 ResNet/MaxPool2d[maxpool]/max_pool2d";
@@ -363,5 +362,4 @@ strict digraph  {
 "170 ResNet/Sequential[layer4]/Bottleneck[2]/__iadd__" -> "171 ResNet/Sequential[layer4]/Bottleneck[2]/RELU";
 "171 ResNet/Sequential[layer4]/Bottleneck[2]/RELU" -> "172 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d";
 "172 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "173 ResNet/Linear[linear]/linear";
-"173 ResNet/Linear[linear]/linear" -> "174 /nncf_model_output";
 }

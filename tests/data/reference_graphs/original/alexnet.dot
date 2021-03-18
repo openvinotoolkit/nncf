@@ -19,7 +19,6 @@ strict digraph  {
 "17 AlexNet/Sequential[classifier]/Linear[4]/linear" [id=17, scope="AlexNet/Sequential[classifier]/Linear[4]", type=linear];
 "18 AlexNet/Sequential[classifier]/ReLU[5]/RELU" [id=18, scope="AlexNet/Sequential[classifier]/ReLU[5]", type=RELU];
 "19 AlexNet/Sequential[classifier]/Linear[6]/linear" [id=19, scope="AlexNet/Sequential[classifier]/Linear[6]", type=linear];
-"20 /nncf_model_output" [id=20, scope="", type=nncf_model_output];
 "0 AlexNet/Sequential[features]/Conv2d[0]/conv2d" -> "1 AlexNet/Sequential[features]/ReLU[1]/RELU";
 "1 AlexNet/Sequential[features]/ReLU[1]/RELU" -> "2 AlexNet/Sequential[features]/MaxPool2d[2]/max_pool2d";
 "2 AlexNet/Sequential[features]/MaxPool2d[2]/max_pool2d" -> "3 AlexNet/Sequential[features]/Conv2d[3]/conv2d";
@@ -39,5 +38,4 @@ strict digraph  {
 "16 AlexNet/Sequential[classifier]/Dropout[3]/dropout" -> "17 AlexNet/Sequential[classifier]/Linear[4]/linear";
 "17 AlexNet/Sequential[classifier]/Linear[4]/linear" -> "18 AlexNet/Sequential[classifier]/ReLU[5]/RELU";
 "18 AlexNet/Sequential[classifier]/ReLU[5]/RELU" -> "19 AlexNet/Sequential[classifier]/Linear[6]/linear";
-"19 AlexNet/Sequential[classifier]/Linear[6]/linear" -> "20 /nncf_model_output";
 }
