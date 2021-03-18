@@ -18,6 +18,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.dynamic_graph.input_wrapping import MODEL_OUTPUT_OP_NAME
+
 
 
 class NodesCluster:
@@ -299,6 +301,8 @@ class ModelAnalyzer:
         for node in reversed_sorted_nodes:
             # Check all output nodes accept_pruned_input attribute
             out_nodes = self.graph.get_next_nodes(node)
+            out_nodes = self.graph.get_next_nodes(nncf_node)
+            out_nodes = self._ignore_nncf_output_nodes(out_nodes)
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
@@ -333,3 +337,7 @@ class ModelAnalyzer:
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
         return self.can_prune
+
+    @staticmethod
+    def _ignore_nncf_output_nodes(nncf_nodes):
+        return list(filter(lambda node: node.op_exec_context.operator_name != MODEL_OUTPUT_OP_NAME, nncf_nodes))

@@ -288,11 +288,14 @@ strict digraph  {
 "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=141, label="softmax_#141", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=softmax];
 "142 /nncf_model_output" [id=142, label="nncf_model_output_#142", scope="", style=filled, type=nncf_model_output];
 "143 /nncf_model_output" [id=143, label="nncf_model_output_#143", scope="", style=filled, type=nncf_model_output];
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "144 /nncf_model_output" [id=144, label="nncf_model_output_#144", scope="", style=filled, type=nncf_model_output];
 "145 /nncf_model_output" [id=145, label="nncf_model_output_#145", scope="", style=filled, type=nncf_model_output];
 "146 /nncf_model_output" [id=146, label="nncf_model_output_#146", scope="", style=filled, type=nncf_model_output];
 "147 /nncf_model_output" [id=147, label="nncf_model_output_#147", scope="", style=filled, type=nncf_model_output];
 >>>>>>> Fix graph for SSD-models. Rewrite reference graps.
+=======
+>>>>>>> Fix model analysis for pruning. Fix tests.
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
 "2 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
@@ -498,8 +501,11 @@ strict digraph  {
 "139 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "142 /nncf_model_output";
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax";
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "143 /nncf_model_output";
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "142 /nncf_model_output" -> "145 /nncf_model_output";
 "143 /nncf_model_output" -> "146 /nncf_model_output";
 "144 /nncf_model_output" -> "147 /nncf_model_output";
 >>>>>>> Fix graph for SSD-models. Rewrite reference graps.
+=======
+>>>>>>> Fix model analysis for pruning. Fix tests.
 }

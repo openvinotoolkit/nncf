@@ -523,6 +523,8 @@ strict digraph  {
 "521 Inception3/Dropout[dropout]/dropout" [id=521, label="dropout_#521", scope="Inception3/Dropout[dropout]", style=filled, type=dropout];
 "522 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=green, id=522, label="WFQ_[B:8 M:S SGN:S PC:Y]_#522_G9", scope="Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "523 Inception3/NNCFLinear[fc]/linear" [id=523, label="linear_#523", scope="Inception3/NNCFLinear[fc]", style=filled, type=linear];
+"524 /nncf_model_output" [id=524, label="nncf_model_output_#524", scope="", style=filled, type=nncf_model_output];
+"525 /nncf_model_output" [id=525, label="nncf_model_output_#525", scope="", style=filled, type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d";
 "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d";
@@ -933,6 +935,7 @@ strict digraph  {
 "381 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm" -> "382 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU";
 "382 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU" -> "383 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d";
 "383 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d" -> "384 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear";
+"384 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear" -> "525 /nncf_model_output";
 "385 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
 "386 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/AsymmetricQuantizer/asymmetric_quantize" -> "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
 "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d" -> "388 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/BatchNorm2d[bn]/batch_norm";
@@ -1081,4 +1084,5 @@ strict digraph  {
 "520 Inception3/AdaptiveAvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize" -> "521 Inception3/Dropout[dropout]/dropout";
 "521 Inception3/Dropout[dropout]/dropout" -> "523 Inception3/NNCFLinear[fc]/linear";
 "522 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "523 Inception3/NNCFLinear[fc]/linear";
+"523 Inception3/NNCFLinear[fc]/linear" -> "524 /nncf_model_output";
 }

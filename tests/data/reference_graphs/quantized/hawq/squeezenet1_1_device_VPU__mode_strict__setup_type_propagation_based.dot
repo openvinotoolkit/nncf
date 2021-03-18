@@ -118,6 +118,7 @@ strict digraph  {
 "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" [id=116, label="RELU_#116", scope="SqueezeNet/Sequential[classifier]/ReLU[2]", style=filled, type=RELU];
 "117 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize" [color=green, id=117, label="AFQ_[B:8 M:S SGN:U PC:Y]_#117_G0", scope="SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer", style=filled, type=symmetric_quantize];
 "118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" [id=118, label="adaptive_avg_pool2d_#118", scope="SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]", style=filled, type=adaptive_avg_pool2d];
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "16 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "29 SqueezeNet/Sequential[features]/Fire[4]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "43 SqueezeNet/Sequential[features]/Fire[6]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
@@ -126,6 +127,9 @@ strict digraph  {
 "83 SqueezeNet/Sequential[features]/Fire[10]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "96 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "109 SqueezeNet/Sequential[features]/Fire[12]/NNCFConv2d[expand3x3]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
+=======
+"119 /nncf_model_output" [id=119, label="nncf_model_output_#119", scope="", style=filled, type=nncf_model_output];
+>>>>>>> Fix model analysis for pruning. Fix tests.
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 SqueezeNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 SqueezeNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 SqueezeNet/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -252,6 +256,7 @@ strict digraph  {
 "115 SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/conv2d" -> "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU";
 "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" -> "117 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize";
 "117 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize" -> "118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d";
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "16 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/conv2d_apad" -> "16 SqueezeNet/Sequential[features]/Fire[3]/NNCFConv2d[expand3x3]/conv2d";
 "29 SqueezeNet/Sequential[features]/Fire[4]/NNCFConv2d[expand3x3]/conv2d_apad" -> "29 SqueezeNet/Sequential[features]/Fire[4]/NNCFConv2d[expand3x3]/conv2d";
 "43 SqueezeNet/Sequential[features]/Fire[6]/NNCFConv2d[expand3x3]/conv2d_apad" -> "43 SqueezeNet/Sequential[features]/Fire[6]/NNCFConv2d[expand3x3]/conv2d";
@@ -260,4 +265,7 @@ strict digraph  {
 "83 SqueezeNet/Sequential[features]/Fire[10]/NNCFConv2d[expand3x3]/conv2d_apad" -> "83 SqueezeNet/Sequential[features]/Fire[10]/NNCFConv2d[expand3x3]/conv2d";
 "96 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/conv2d_apad" -> "96 SqueezeNet/Sequential[features]/Fire[11]/NNCFConv2d[expand3x3]/conv2d";
 "109 SqueezeNet/Sequential[features]/Fire[12]/NNCFConv2d[expand3x3]/conv2d_apad" -> "109 SqueezeNet/Sequential[features]/Fire[12]/NNCFConv2d[expand3x3]/conv2d";
+=======
+"118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" -> "119 /nncf_model_output";
+>>>>>>> Fix model analysis for pruning. Fix tests.
 }

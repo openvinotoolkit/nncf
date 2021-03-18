@@ -523,12 +523,17 @@ strict digraph  {
 "521 Inception3/Dropout[dropout]/dropout" [id=521, label="dropout_#521", scope="Inception3/Dropout[dropout]", style=filled, type=dropout];
 "522 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=red, id=522, label="WFQ_[B:4 M:S SGN:S PC:Y]_#522_G9", scope="Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "523 Inception3/NNCFLinear[fc]/linear" [id=523, label="linear_#523", scope="Inception3/NNCFLinear[fc]", style=filled, type=linear];
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "13 Inception3/BasicConv2d[Conv2d_2b_3x3]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "40 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "50 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "116 Inception3/InceptionA[Mixed_5d]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "154 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "495 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
+=======
+"524 /nncf_model_output" [id=524, label="nncf_model_output_#524", scope="", style=filled, type=nncf_model_output];
+"525 /nncf_model_output" [id=525, label="nncf_model_output_#525", scope="", style=filled, type=nncf_model_output];
+>>>>>>> Fix model analysis for pruning. Fix tests.
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d";
 "2 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 Inception3/BasicConv2d[Conv2d_1a_3x3]/NNCFConv2d[conv]/conv2d";
@@ -939,6 +944,7 @@ strict digraph  {
 "381 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm" -> "382 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU";
 "382 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU" -> "383 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d";
 "383 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d" -> "384 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear";
+"384 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear" -> "525 /nncf_model_output";
 "385 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
 "386 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/SymmetricQuantizer/symmetric_quantize" -> "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
 "387 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d" -> "388 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/BatchNorm2d[bn]/batch_norm";
@@ -1087,10 +1093,14 @@ strict digraph  {
 "520 Inception3/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "521 Inception3/Dropout[dropout]/dropout";
 "521 Inception3/Dropout[dropout]/dropout" -> "523 Inception3/NNCFLinear[fc]/linear";
 "522 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "523 Inception3/NNCFLinear[fc]/linear";
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "13 Inception3/BasicConv2d[Conv2d_2b_3x3]/NNCFConv2d[conv]/conv2d_apad" -> "13 Inception3/BasicConv2d[Conv2d_2b_3x3]/NNCFConv2d[conv]/conv2d";
 "40 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d_apad" -> "40 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d";
 "50 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" -> "50 Inception3/InceptionA[Mixed_5b]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d";
 "116 Inception3/InceptionA[Mixed_5d]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d_apad" -> "116 Inception3/InceptionA[Mixed_5d]/BasicConv2d[branch5x5_2]/NNCFConv2d[conv]/conv2d";
 "154 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" -> "154 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d";
 "495 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d_apad" -> "495 Inception3/InceptionE[Mixed_7c]/BasicConv2d[branch3x3dbl_2]/NNCFConv2d[conv]/conv2d";
+=======
+"523 Inception3/NNCFLinear[fc]/linear" -> "524 /nncf_model_output";
+>>>>>>> Fix model analysis for pruning. Fix tests.
 }

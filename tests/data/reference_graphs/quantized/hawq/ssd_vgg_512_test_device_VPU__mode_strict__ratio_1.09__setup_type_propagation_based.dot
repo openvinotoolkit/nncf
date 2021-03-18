@@ -141,6 +141,7 @@ strict digraph  {
 "139 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=139, label="cat_#139", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=cat];
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=140, label="cat_#140", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=cat];
 "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=141, label="softmax_#141", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=softmax];
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "7 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[2]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "12 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[5]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "16 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[7]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
@@ -173,6 +174,10 @@ strict digraph  {
 "134 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[loc]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
+=======
+"142 /nncf_model_output" [id=142, label="nncf_model_output_#142", scope="", style=filled, type=nncf_model_output];
+"143 /nncf_model_output" [id=143, label="nncf_model_output_#143", scope="", style=filled, type=nncf_model_output];
+>>>>>>> Fix model analysis for pruning. Fix tests.
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
 "2 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
@@ -325,7 +330,9 @@ strict digraph  {
 "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[loc]/conv2d" -> "139 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
 "137 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d";
 "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d" -> "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
+"139 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "142 /nncf_model_output";
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax";
+<<<<<<< e0f202c16298eb86d12e6acd343e3173e9b4af55
 "7 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[2]/conv2d_apad" -> "7 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[2]/conv2d";
 "12 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[5]/conv2d_apad" -> "12 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[5]/conv2d";
 "16 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[7]/conv2d_apad" -> "16 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[7]/conv2d";
@@ -358,4 +365,7 @@ strict digraph  {
 "134 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d_apad" -> "134 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d";
 "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[loc]/conv2d_apad" -> "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[loc]/conv2d";
 "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d_apad" -> "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d";
+=======
+"140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "143 /nncf_model_output";
+>>>>>>> Fix model analysis for pruning. Fix tests.
 }
