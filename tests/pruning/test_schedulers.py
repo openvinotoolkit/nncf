@@ -30,9 +30,9 @@ def test_baseline_scheduler():
 
     # Check default params
     assert isinstance(scheduler, BaselinePruningScheduler)
-    assert pytest.approx(scheduler.pruning_target) == 0.5
-    assert pytest.approx(scheduler.initial_pruning) == 0.0
-    assert scheduler.num_init_steps == 1
+    assert pytest.approx(scheduler.target_level) == 0.5
+    assert pytest.approx(scheduler.initial_level) == 0.0
+    assert scheduler.num_warmup_epochs == 1
 
     # Check pruning params before epoch 0
     scheduler.epoch_step()
@@ -61,10 +61,10 @@ def test_exponential_scheduler():
 
     # Check default params
     assert isinstance(scheduler, ExponentialWithBiasPruningScheduler)
-    assert pytest.approx(scheduler.pruning_target) == 0.5
-    assert pytest.approx(scheduler.initial_pruning) == 0.0
-    assert scheduler.num_init_steps == 1
-    assert scheduler.pruning_steps == 20
+    assert pytest.approx(scheduler.target_level) == 0.5
+    assert pytest.approx(scheduler.initial_level) == 0.0
+    assert scheduler.num_warmup_epochs == 1
+    assert scheduler.num_pruning_epochs == 20
     assert pytest.approx(scheduler.a, abs=1e-4) == -0.5
     assert pytest.approx(scheduler.b, abs=1e-4) == 0.5
     assert pytest.approx(scheduler.k, abs=1e-4) == 0.5544
@@ -81,7 +81,7 @@ def test_exponential_scheduler():
         # Check pruning params on epoch 1
         scheduler.epoch_step()
         pruning_rate = scheduler.a * np.exp(
-            -scheduler.k * (scheduler.current_epoch - scheduler.num_init_steps - 1)) + scheduler.b
+            -scheduler.k * (scheduler.current_epoch - scheduler.num_warmup_epochs)) + scheduler.b
         assert pytest.approx(scheduler.current_pruning_level) == pruning_rate
         assert pytest.approx(compression_ctrl.pruning_rate) == pruning_rate
         assert compression_ctrl.frozen is False
