@@ -29,6 +29,8 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OPS
 from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
@@ -36,26 +38,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeig
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.utils.node import is_ignored
-
-SPARSITY_LAYERS = {
-    'Conv1D': {WEIGHT_ATTR_NAME: 'kernel'},
-    'Conv2D': {WEIGHT_ATTR_NAME: 'kernel'},
-    'DepthwiseConv2D': {WEIGHT_ATTR_NAME: 'depthwise_kernel'},
-    'Conv3D': {WEIGHT_ATTR_NAME: 'kernel'},
-    'Conv2DTranspose': {WEIGHT_ATTR_NAME: 'kernel'},
-    'Conv3DTranspose': {WEIGHT_ATTR_NAME: 'kernel'},
-    'Dense': {WEIGHT_ATTR_NAME: 'kernel'},
-    'Embedding': {WEIGHT_ATTR_NAME: 'embeddings'},
-    'LocallyConnected1D': {WEIGHT_ATTR_NAME: 'kernel'},
-    'LocallyConnected2D': {WEIGHT_ATTR_NAME: 'kernel'}
-}
-
-SPARSITY_TF_OPS = [
-    'Conv2D',
-    'Conv3D',
-    'DepthwiseConv2dNative',
-    'QuantizedConv2D'
-]
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')

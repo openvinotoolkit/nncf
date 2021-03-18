@@ -30,28 +30,13 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
-from beta.nncf.tensorflow.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
-
-
-PRUNING_LAYERS = {
-    'Conv1D': {'weight_attr_name': 'kernel'},
-    'Conv2D': {'weight_attr_name': 'kernel'},
-    'DepthwiseConv2D': {'weight_attr_name': 'depthwise_kernel'},
-    'Conv3D': {'weight_attr_name': 'kernel'},
-    'Conv2DTranspose': {'weight_attr_name': 'kernel'},
-    'Conv3DTranspose': {'weight_attr_name': 'kernel'},
-    'Dense': {'weight_attr_name': 'kernel'},
-    'SeparableConv1D': {'weight_attr_name': 'pointwise_kernel'},
-    'SeparableConv2D': {'weight_attr_name': 'pointwise_kernel'},
-    'Embedding': {'weight_attr_name': 'embeddings'},
-    'LocallyConnected1D': {'weight_attr_name': 'kernel'},
-    'LocallyConnected2D': {'weight_attr_name': 'kernel'}
-}
 
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
@@ -69,7 +54,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         for node_name, node in nxmodel.nodes.items():
             original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if node['type'] not in PRUNING_LAYERS \
+            if node['type'] not in SPARSITY_LAYERS\
                     or is_ignored(node_name, self.ignored_scopes) \
                     or original_node_name in shared_nodes:
                 continue
@@ -77,7 +62,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            weight_attr_name = PRUNING_LAYERS[node['type']]['weight_attr_name']
+            weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),

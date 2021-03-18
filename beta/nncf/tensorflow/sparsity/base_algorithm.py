@@ -14,6 +14,30 @@
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 
 
+SPARSITY_LAYERS = {
+    'Conv1D': {'weight_attr_name': 'kernel'},
+    'Conv2D': {'weight_attr_name': 'kernel'},
+    'DepthwiseConv2D': {'weight_attr_name': 'depthwise_kernel'},
+    'Conv3D': {'weight_attr_name': 'kernel'},
+    'Conv2DTranspose': {'weight_attr_name': 'kernel'},
+    'Conv3DTranspose': {'weight_attr_name': 'kernel'},
+    'Dense': {'weight_attr_name': 'kernel'},
+    'SeparableConv1D': {'weight_attr_name': 'pointwise_kernel'},
+    'SeparableConv2D': {'weight_attr_name': 'pointwise_kernel'},
+    'Embedding': {'weight_attr_name': 'embeddings'},
+    'LocallyConnected1D': {'weight_attr_name': 'kernel'},
+    'LocallyConnected2D': {'weight_attr_name': 'kernel'}
+}
+
+
+SPARSITY_TF_OPS = [
+    'Conv2D',
+    'Conv3D',
+    'DepthwiseConv2dNative',
+    'QuantizedConv2D'
+]
+
+
 class BaseSparsityController(TFCompressionAlgorithmController):
     @staticmethod
     def _apply_mask(wrapped_layer, weight_attr, op_name):
