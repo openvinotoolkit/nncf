@@ -24,28 +24,34 @@ class SparseLoss(CompressionLoss):
         self._sparse_layers = sparse_layers
         self.target = tf.Variable(target, trainable=False)
         self.p = p
-        self.disabled = False
+        self.disabled = tf.Variable(False, trainable=False)
 
     def set_layers(self, sparse_layers: [NNCFWrapper]):
         self._sparse_layers = sparse_layers
 
     def disable(self):
-        if not self.disabled:
-            self.disabled = True
+        tf.cond(self.disabled,
+                    lambda: None,
+                    self._disable)
 
-            for sparse_layer in self._sparse_layers:
-                op = sparse_layer.get_op_by_name(OP_NAME)
-                op.freeze(sparse_layer.ops_weights[OP_NAME])
+    def _disable(self):
+        self.disabled.assign(True)
+
+        for sparse_layer in self._sparse_layers:
+            op = sparse_layer.get_op_by_name(OP_NAME)
+            op.freeze(sparse_layer.ops_weights[OP_NAME])
 
     def calculate(self, *args, **kwargs):
-        if self.disabled:
-            return tf.constant(0.)
+        return tf.cond(self.disabled,
+                    lambda: tf.constant(0.),
+                    self._calculate)
 
+    def _calculate(self):
         params = tf.constant(0)
         loss = tf.constant(0.)
         for sparse_layer in self._sparse_layers:
             sw_loss, params_layer, trainable = self._get_params_from_sparse_layer(sparse_layer)
-            tf.debugging.assert_equal(trainable, tf.constant(1, dtype=tf.int8),
+            tf.debugging.assert_equal(trainable, tf.constant(True),
                                       "Invalid state of SparseLoss and SparsifiedWeight:\
                                                             mask is frozen for enabled loss")
             params = params + params_layer

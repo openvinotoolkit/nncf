@@ -37,16 +37,16 @@ def test_can_create_sparse_weight__with_defaults():
     trainable_weight = get_weight_by_name(layer, 'trainable')
     mask = get_weight_by_name(layer, 'mask')
     tf.debugging.assert_near(default_rb_mask_value, mask)
-    assert trainable_weight == tf.constant(1, dtype=tf.int8)
+    assert trainable_weight
     assert sw.eps == 1e-6
 
 
 def test_can_freeze_mask():
     sw, layer = get_RBSParsityWeigth_and_layer(frozen=False)
     trainable_weight = get_weight_by_name(layer, 'trainable')
-    assert trainable_weight == tf.constant(1, dtype=tf.int8)
+    assert trainable_weight
     sw.freeze(layer.ops_weights[OP_NAME])
-    assert trainable_weight == tf.constant(0, dtype=tf.int8)
+    assert not trainable_weight
 
 
 @pytest.mark.parametrize('frozen', (True, False), ids=('sparsify', 'frozen'))

@@ -55,7 +55,7 @@ class RBSparsifyingWeight(NNCFOperation):
 
         trainable = layer.add_weight(
             name + '_trainable',
-            initializer=tf.keras.initializers.Constant(1),
+            initializer=tf.keras.initializers.Constant(True),
             trainable=False,
             dtype=tf.bool)
 
@@ -64,16 +64,16 @@ class RBSparsifyingWeight(NNCFOperation):
             'trainable': trainable,
         }
 
-    def call(self, layer_weights, op_weights, _):
+    def call(self, layer_weights, op_weights, trainable):
         '''
         Apply rb sparsity mask to given weights
 
         :param layer_weights: target weights to sparsify
         :param op_weights: operation weights contains
            mask and param `trainable`
-        :param _:
+        :param trainable: true if operation called in training mode
         '''
-        return tf.cond(tf.equal(op_weights['trainable'], tf.constant(1, dtype=tf.int8)),
+        return tf.cond(op_weights['trainable'],
                        true_fn=lambda: apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
                        false_fn=lambda: apply_mask(layer_weights, binary_mask(op_weights['mask'])))
 
@@ -83,8 +83,7 @@ class RBSparsifyingWeight(NNCFOperation):
 
         :param op_weights: weight of rb operation
         '''
-        op_weights['trainable'].assign(0)
-        self._trainable = False
+        op_weights['trainable'].assign(False)
 
     @staticmethod
     def loss(mask):
