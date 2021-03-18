@@ -11,25 +11,32 @@
  limitations under the License.
 """
 
-from typing import List, Optional, Tuple, Dict
 import os
+from copy import deepcopy
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
-
-from copy import deepcopy
 from networkx.drawing.nx_agraph import to_agraph
 from torch import Tensor
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.dynamic_graph.graph_matching import Expression, NodeExpression, search_all, get_edge_boundaries
-from nncf.dynamic_graph.trace_tensor import TensorMeta, TracedTensor
-from nncf.layers import ITERATION_MODULES
+from nncf.common.graph.module_attributes import BaseModuleAttributes
 from nncf.common.utils.logger import logger as nncf_logger
-
-
+from nncf.dynamic_graph.graph_matching import Expression
+from nncf.dynamic_graph.graph_matching import NodeExpression
+from nncf.dynamic_graph.graph_matching import get_edge_boundaries
+from nncf.dynamic_graph.graph_matching import search_all
+from nncf.dynamic_graph.trace_tensor import TensorMeta
+from nncf.dynamic_graph.trace_tensor import TracedTensor
+from nncf.layers import ITERATION_MODULES
 # pylint: disable=too-many-public-methods
+
 class TensorMetaComparator:
     def __call__(self, lhs: TensorMeta, rhs: TensorMeta) -> bool:
         raise NotImplementedError
@@ -169,6 +176,9 @@ class OperationExecutionContext:
         return self.input_agnostic.call_order
 
 
+ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseModuleAttributes)
+
+
 class PTNNCFNode(NNCFNode):
     def __init__(self, node_id: int, op_exec_context: OperationExecutionContext, data: dict = None):
         super().__init__(node_id, data)
@@ -221,7 +231,8 @@ class DefaultScopeNodeMatcher:
                     node_candidates[successor_node_key] = successor_node
         return node_candidates
 
-    def add_node(self, op_exec_context: OperationExecutionContext, inputs) -> PTNNCFNode:
+    def add_node(self, op_exec_context: OperationExecutionContext, inputs,
+                 module_attrs: ModuleAttributes = None) -> PTNNCFNode:
         node_id = len(self._node_id_to_key_dict)
 
         name_parts = (str(op_exec_context.scope_in_model), op_exec_context.operator_name)
@@ -233,8 +244,10 @@ class DefaultScopeNodeMatcher:
         attrs = {
             PTNNCFGraph.ID_NODE_ATTR: node_id,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context
         }
+        if module_attrs is not None:
+            attrs[NNCFGraph.MODULE_ATTRIBUTES] = module_attrs
         self._nx_graph.add_node(node_key, **attrs)
 
         has_traced_inputs = False
@@ -321,8 +334,9 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     first_nodes[node_name] = node
                     nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
 
-    def add_node(self, op_exec_context: OperationExecutionContext, inputs) -> PTNNCFNode:
-        node = super().add_node(op_exec_context, inputs)
+    def add_node(self, op_exec_context: OperationExecutionContext, inputs,
+                 module_attrs: ModuleAttributes = None) -> NNCFNode:
+        node = super().add_node(op_exec_context, inputs, module_attrs)
         self.save_first_iteration_node(inputs, node)
         return node
 
@@ -430,7 +444,8 @@ class NodeManager:
     def add_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
                  tensor_metas: List[TensorMeta],
                  tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
-                 inputs) -> PTNNCFNode:
+                 inputs,
+                 module_attrs: ModuleAttributes = None) -> PTNNCFNode:
         matcher = self.choose_matcher(ia_op_exec_context)
         tm_comparators = self.choose_tm_comparators(ia_op_exec_context, tm_comparators_per_scope)
         op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
@@ -439,7 +454,7 @@ class NodeManager:
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs)
+        return matcher.add_node(op_exec_context, inputs, module_attrs)
 
 
 class NNCFGraphEdge:
@@ -499,8 +514,10 @@ class PTNNCFGraph(NNCFGraph):
     def add_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
-                 inputs) -> PTNNCFNode:
-        node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs)
+                 inputs,
+                 module_attrs: ModuleAttributes = None) -> PTNNCFNode:
+        node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs,
+                                           module_attrs)
 
         from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:  # TODO: refactorable model input node name
@@ -743,7 +760,7 @@ class PTNNCFGraph(NNCFGraph):
                           nx_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR],
                           nx_node)
 
-    def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[NNCFNode]:
+    def find_node_in_nx_graph_by_scope(self, scope: 'Scope') -> Optional[PTNNCFNode]:
         """
         Looking for node with scope == scope in networkx graph.
         :param self: graphs to work on

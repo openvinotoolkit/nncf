@@ -43,6 +43,7 @@ from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.quantization.quantizer_setup import QuantizationPointId
@@ -272,11 +273,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 qpg_node[
                     self.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.NON_QUANTIZABLE
                 qpg_node[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
-                qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qpg_node[self.IS_IN_IGNORED_SCOPES] = False
 
-                node_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_DATA_NODE_ATTR].op_exec_context
-                node_ia_op_exec_context = node_op_exec_context.input_agnostic
+                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+                node_ia_op_exec_context = nncf_node_ref.op_exec_context.input_agnostic
+
+                qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model
                 qpg_node[self.OPERATOR_IA_OP_EXEC_CONTEXT_NODE_ATTR] = node_ia_op_exec_context
                 node_scope = str(node_ia_op_exec_context)
