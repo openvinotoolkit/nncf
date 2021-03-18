@@ -245,7 +245,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_target and pruning_flops_target:
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
         if pruning_flops_target:
-            self.prune_flops = True
+            raise Exception('Pruning by flops is not supported in NNCF TensorFlow yet.')
 
     def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()
