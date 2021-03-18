@@ -172,7 +172,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
         original_forward = model.forward
         model.forward = partial(model.forward, *args, **kwargs)
-        original_state_dict = model.state_dict()
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
             # Should call this, otherwise the operations executed during export will end up in graph
@@ -185,7 +184,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
                               training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
             model.enable_dynamic_graph_building()
         model.forward = original_forward
-        model.load_state_dict(original_state_dict)
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """

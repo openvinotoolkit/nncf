@@ -160,7 +160,7 @@ class HWConfig(list):
         raise RuntimeError("Invalid quantization granularity specified in HW config")
 
     @staticmethod
-    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict, apply_saturation_fix=False):
+    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -185,8 +185,7 @@ class HWConfig(list):
         return QuantizerConfig(num_bits=bits,
                                mode=mode,
                                per_channel=is_per_channel,
-                               signedness_to_force=signedness_to_force,
-                               apply_saturation_fix=apply_saturation_fix)
+                               signedness_to_force=signedness_to_force)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
@@ -218,11 +217,8 @@ class HWConfig(list):
 
             qconf_list_with_possible_duplicates = []
             for hw_config_qconf_dict in allowed_qconfs:
-                apply_saturation_fix = False
-                if self.target_device == "CPU" and for_weights and hw_config_qconf_dict['bits'] == 8:
-                    apply_saturation_fix = True
                 qconf_list_with_possible_duplicates.append(
-                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, apply_saturation_fix))
+                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict))
 
             qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 

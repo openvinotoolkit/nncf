@@ -18,8 +18,7 @@ class QuantizerConfig:
     def __init__(self, num_bits: int = 8,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
-                 per_channel: bool = False,
-                 apply_saturation_fix: bool = False):
+                 per_channel: bool = False):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -33,7 +32,6 @@ class QuantizerConfig:
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
-        self.apply_saturation_fix = apply_saturation_fix
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__

@@ -693,9 +693,14 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         module = target_model.get_module_by_scope(insertion_point.module_scope)
         scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
         use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
+        apply_saturation_fix = False
+        if self.hw_config:
+            if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+                apply_saturation_fix = True
         qspec = PTQuantizerSpec.from_config(qconfig, narrow_range=True,
                                             scale_shape=tuple(scale_shape),
-                                            logarithm_scale=use_logarithm_scale)
+                                            logarithm_scale=use_logarithm_scale,
+                                            apply_saturation_fix=apply_saturation_fix)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
@@ -950,7 +955,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         qspec = PTQuantizerSpec.from_config(qconfig,
                                             narrow_range=False,
                                             scale_shape=tuple(scale_shape),
-                                            logarithm_scale=use_logarithm_scale)
+                                            logarithm_scale=use_logarithm_scale,
+                                            apply_saturation_fix=False)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],

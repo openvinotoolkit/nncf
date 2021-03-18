@@ -64,13 +64,14 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
+                    scale_shape: Tuple[int], logarithm_scale: bool,
+                    apply_saturation_fix: bool = False) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
-                   narrow_range, scale_shape, logarithm_scale, qconfig.apply_saturation_fix)
+                   narrow_range, scale_shape, logarithm_scale, apply_saturation_fix)
 
 
 class BaseQuantizer(nn.Module):
-    #pylint:disable=too-many-public-methods
+    # pylint:disable=too-many-public-methods
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._narrow_range = qspec.narrow_range
@@ -246,7 +247,6 @@ class BaseQuantizer(nn.Module):
 
     def get_quantizer_config(self) -> QuantizerConfig:
         raise NotImplementedError
-
 
     @property
     def per_channel(self) -> bool:
@@ -461,6 +461,7 @@ class SymmetricQuantizer(BaseQuantizer):
                                mode=QuantizationMode.SYMMETRIC,
                                signedness_to_force=self.signed,
                                per_channel=self.per_channel)
+
 
 @COMPRESSION_MODULES.register()
 @QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
