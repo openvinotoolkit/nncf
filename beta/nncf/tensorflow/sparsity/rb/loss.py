@@ -26,9 +26,6 @@ class SparseLoss(CompressionLoss):
         self.p = p
         self.disabled = tf.Variable(False, trainable=False)
 
-    def set_layers(self, sparse_layers: [NNCFWrapper]):
-        self._sparse_layers = sparse_layers
-
     def disable(self):
         tf.cond(self.disabled,
                     lambda: None,
