@@ -177,26 +177,27 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         return min(current_level, self.target_level)
 
     @staticmethod
-    def _init_exp(num_pruning_epochs, initial_level, target_level, D=0.125):
+    def _init_exp(epoch_idx, p_min, p_max, factor=0.125):
         """
-        Find a, b, k for system (see [paper](https://arxiv.org/pdf/1808.07471.pdf)):
-            initial_level = a + b
-            target_level = a * exp(-k * num_pruning_epochs) + b
-            3/4 * target_level = a *  exp(-k * num_pruning_epochs * D) + b
+        Finds parameters a, b, k from the system:
+            p_min = a + b
+            p_max = a * exp(-k * epoch_idx) + b
+            3/4 * p_max = a * exp(-k * factor * epoch_idx) + b
+        For more details see [paper](https://arxiv.org/pdf/1808.07471.pdf).
 
-        :param num_pruning_epochs: Number of epochs during which the pruning level
-            is increased from `initial_level` to `target_level`.
-        :param initial_level: Pruning level at which the schedule begins.
-        :param target_level: Pruning level at which the schedule ends.
+        :param epoch_idx: Zero-based index of the epoch for which the a * exp(-k * epoch_idx) + b = p_max.
+        :param p_min: Initial pruning level at which the schedule begins.
+        :param p_max: Target pruning level at which the schedule ends.
+        :param factor: Hyperparameter.
         """
         def get_b(a, k):
-            return initial_level - a
+            return p_min - a
 
         def get_a(k):
-            return (3 / 4 * target_level - initial_level) / (np.exp(- D * k * num_pruning_epochs) - 1)
+            return (3 / 4 * p_max - p_min) / (np.exp(-k * factor * epoch_idx) - 1)
 
         def f_to_solve(x):
-            y = np.exp(D * x * num_pruning_epochs)
+            y = np.exp(factor * x * epoch_idx)
             return 1 / 3 * y + 1 / (y ** 7) - 4 / 3
 
         k = scipy.optimize.fsolve(f_to_solve, [1])[0]
