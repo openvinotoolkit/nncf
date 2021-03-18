@@ -88,16 +88,14 @@ class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model,
                  params):
         super().__init__(target_model)
-        self._scheduler = None
-        self._distributed = False
         self.sparsity_init = params.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
-        sparsifyed_layers = collect_wrapped_layers(target_model)
-        # TODO: find out purpose of this attribute
-        self._check_sparsity_masks = params.get("check_sparsity_masks", False)
         if sparsity_level_mode == 'local':
             raise NotImplementedError
-        self._loss = SparseLoss(sparsifyed_layers)  # type: SparseLoss
+        
+        sparsifyed_layers = collect_wrapped_layers(target_model)
+        self._loss = SparseLoss(sparsifyed_layers)
+                
         schedule_type = params.get("schedule", "exponential")
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)
