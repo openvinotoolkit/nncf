@@ -254,8 +254,8 @@ class ModelAnalyzer:
 
         self._is_depthwise_conv_fn = is_depthwise_conv_fn
 
-        self.can_prune = {idx: True for idx in self.graph.get_all_node_idxs()}
-        self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_idxs()}
+        self.can_prune = {idx: True for idx in self.graph.get_all_node_ids()}
+        self.accept_pruned_input = {idx: True for idx in self.graph.get_all_node_ids()}
 
     def node_propagate_can_prune_attr(self, nncf_node: NNCFNode) -> bool:
         """

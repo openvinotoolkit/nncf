@@ -35,7 +35,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     :param graph: NNCF graph to work with.
     :return: List of all sources nodes.
     """
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -61,7 +61,7 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     :param types: List of types.
     :return: List of next nodes for nncf_node of type not from types list.
     """
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x not in types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -85,7 +85,7 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
     :return: List of next nodes of nncf_node with type from types list.
     """
     sources_types = types
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -138,7 +138,7 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
     """
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
@@ -161,7 +161,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     """
     graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
 
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)

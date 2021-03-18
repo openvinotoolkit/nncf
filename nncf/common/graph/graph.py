@@ -114,7 +114,7 @@ class NNCFGraph:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type
 
-    def get_all_node_idxs(self) -> KeysView[int]:
+    def get_all_node_ids(self) -> KeysView[int]:
         """
         Returns all graph nodes' node_ids.
         """
