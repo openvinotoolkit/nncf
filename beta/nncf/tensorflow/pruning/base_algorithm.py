@@ -226,6 +226,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         self.pruning_init = config.get('pruning_init', 0)
         self.pruning_rate = self.pruning_init
         self._pruned_layer_groups_info = pruned_layer_groups_info
+        self.prune_flops = False
         self._check_pruning_rate(params)
 
     def freeze(self):
@@ -233,6 +234,9 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def set_pruning_rate(self, pruning_rate: float):
         raise NotImplementedError
+
+    def step(self, next_step):
+        pass
 
     def _check_pruning_rate(self, params):
         """
@@ -242,6 +246,8 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         pruning_flops_target = params.get('pruning_flops_target', None)
         if pruning_target and pruning_flops_target:
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
+        if pruning_flops_target:
+            raise Exception('Pruning by flops is not supported in NNCF TensorFlow yet.')
 
     def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()
