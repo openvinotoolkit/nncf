@@ -186,7 +186,7 @@ class PruningNodeSelector:
         """
         Found all nodes that forward several times.
 
-        :return: list
+        :return: List of nodes that forward several times.
         """
         ret = defaultdict(list)
         for node in graph.get_nodes_by_types(self._prune_operations):

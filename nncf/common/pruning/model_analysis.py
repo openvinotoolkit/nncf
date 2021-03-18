@@ -169,8 +169,8 @@ def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clu
     """
     Merges clusters to which nodes from nodes_to_merge belongs.
 
-    :param nodes_to_merge: All nodes are clusters for which should be тerged.
-    :param clusterization:
+    :param nodes_to_merge: All nodes are clusters for which should be merged.
+    :param clusterization: Clusterization of nodes to work with.
     """
     if len(nodes_to_merge) <= 1:
         return

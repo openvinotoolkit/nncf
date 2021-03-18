@@ -106,7 +106,7 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
 
     :param total: Total elements number.
     :param sparsity_rate: Prorortion of zero elements in total.
-    :param multiple_of:
+    :param multiple_of: Number of remaining elements must be a multiple of `multiple_of`.
     :return: Number of elements to be zeroed.
     """
     remaining_elems = math.ceil((total - total * sparsity_rate) / multiple_of) * multiple_of

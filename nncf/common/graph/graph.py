@@ -24,8 +24,9 @@ from nncf.common.graph.module_attributes import BaseModuleAttributes
 
 class NNCFNode:
     """
-    Class describing nodes used in NNCFGraph
+    Class describing nodes used in NNCFGraph.
     """
+
     def __init__(self,
                  node_id: int,
                  data: dict = None):
@@ -61,8 +62,9 @@ class NNCFNode:
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
-    providing some useful methods for graph traverse
+    providing some useful methods for graph traverse.
     """
+
     ID_NODE_ATTR = 'id'
     KEY_NODE_ATTR = 'key'
     NODE_TYPE_ATTR = 'type'
@@ -74,14 +76,14 @@ class NNCFGraph:
 
     def get_node_by_id(self, node_id: int) -> NNCFNode:
         """
-        :param node_id: id of the node
-        :return: node in a graph with such id
+        :param node_id: Id of the node.
+        :return: Node in a graph with such id.
         """
         return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
 
     def get_input_nodes(self) -> List[NNCFNode]:
         """
-        Returns list of input nodes of the graph
+        Returns list of input nodes of the graph.
         """
         inputs = []
         for nx_node_key, deg in self._nx_graph.in_degree():
@@ -91,7 +93,7 @@ class NNCFGraph:
 
     def get_graph_outputs(self) -> List[NNCFNode]:
         """
-        Returns list of output nodes of the graph
+        Returns list of output nodes of the graph.
         """
         outputs = []
         for nx_node_key, deg in self._nx_graph.out_degree():
@@ -101,8 +103,8 @@ class NNCFGraph:
 
     def get_nodes_by_types(self, type_list: List[str]) -> List[NNCFNode]:
         """
-        :param type_list: list of types to look for
-        :return: list of nodes with provided types
+        :param type_list: List of types to look for.
+        :return: List of nodes with provided types.
         """
         all_nodes_of_type = []
         for node_key in self.get_all_node_keys():
@@ -114,19 +116,19 @@ class NNCFGraph:
 
     def get_all_node_idxs(self) -> KeysView[int]:
         """
-        Returns all graph nodes' node_ids
+        Returns all graph nodes' node_ids.
         """
         return self._node_id_to_key_dict.keys()
 
     def get_all_node_keys(self) -> ValuesView[str]:
         """
-        Returns all graph nodes' keys i.e. node_names
+        Returns all graph nodes' keys i.e. node_names.
         """
         return self._node_id_to_key_dict.copy().values()
 
     def get_all_nodes(self) -> List[NNCFNode]:
         """
-        Returns list of all graph nodes
+        Returns list of all graph nodes.
         """
         all_nodes = []
         for node_key in self.get_all_node_keys():
@@ -141,27 +143,31 @@ class NNCFGraph:
 
     def get_node_key_by_id(self, node_id: id) -> str:
         """
-        Returns node key (node_name) by provided id
-        :param node_id: id of the node
-        :return: key of the node with provided id
+        Returns node key (node_name) by provided id.
+
+        :param node_id: Id of the node.
+        :return: Key of the node with provided id.
         """
         return self._node_id_to_key_dict[node_id]
 
     def get_next_nodes(self, node: NNCFNode) -> List[NNCFNode]:
         """
-        Returns consumer nodes of provided node
-        :param node: producer node
-        :return: list of consumer nodes of provided node
+        Returns consumer nodes of provided node.
+
+        :param node: Producer node.
+        :return: List of consumer nodes of provided node.
         """
         nx_node_keys = self._nx_graph.succ[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 
     def get_previous_nodes(self, node: NNCFNode) -> List[NNCFNode]:
         """
-        Returns producer nodes of provided node
-        :param node: consumer node
-        :return: list of producers nodes of provided node
+        Returns producer nodes of provided node.
+
+        :param node: Consumer node.
+        :return: List of producers nodes of provided node.
         """
+
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 
@@ -170,10 +176,11 @@ class NNCFGraph:
                        traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
                        traverse_forward: bool = True):
         """
-        Traverses graph up or down starting form `curr_node` node
-        :param curr_node: node from which traverse is started
-        :param traverse_function: function describing condition of traverse continuation/termination
-        :param traverse_forward: flag specifying direction of traverse
+        Traverses graph up or down starting form `curr_node` node.
+
+        :param curr_node: Node from which traverse is started.
+        :param traverse_function: Function describing condition of traverse continuation/termination.
+        :param traverse_forward: Flag specifying direction of traverse.
         :return:
         """
         output = []
@@ -191,10 +198,10 @@ class NNCFGraph:
 
     def add_node(self, label: str, **attrs):
         """
-        Adds node with `label` key (node_name) and `attr` attributes to the graph
-        :param label: key (node_name) of the node
-        :param attrs: attributes of the node
-        :return:
+        Adds node with `label` key (node_name) and `attr` attributes to the graph.
+
+        :param label: Key (node_name) of the node.
+        :param attrs: Attributes of the node.
         """
         node_id = len(self._node_id_to_key_dict)
         self._node_id_to_key_dict[node_id] = label
@@ -204,25 +211,25 @@ class NNCFGraph:
 
     def add_edge(self, u_of_edge: str, v_of_edge: str, **attrs):
         """
-        Adds edge with attrs attributes between u and v
-        :param u_of_edge: producer node key (node_name)
-        :param v_of_edge: consumer node key (node_name)
-        :param attrs: attributes of the edge
-        :return:
+        Adds edge with attrs attributes between u and v.
+
+        :param u_of_edge: Producer node key (node_name).
+        :param v_of_edge: Consumer node key (node_name).
+        :param attrs: Attributes of the edge.
         """
         self._nx_graph.add_edge(u_of_edge, v_of_edge, **attrs)
 
     def topological_sort(self) -> List[NNCFNode]:
         """
-        Returns nodes in topologically sorted order
+        Returns nodes in topologically sorted order.
         """
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[node_name])
                 for node_name in nx.topological_sort(self._nx_graph)]
 
     def dump_graph(self, path: str):
         """
-        Writes graph in .dot format
-        :param path: path to save
-        :return:
+        Writes graph in .dot format.
+
+        :param path: Path to save.
         """
         nx.drawing.nx_pydot.write_dot(self._nx_graph, path)
