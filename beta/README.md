@@ -90,6 +90,7 @@ Quick jump to the samples:
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.04|75.04|
 |ResNet50|Sparsity 50% (Magnitude)|ImageNet|75.04|75|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 50% (Magnitude)|ImageNet|75.04|74.46|
+|ResNet50|Filter Pruning 40%|ImageNet|75.04|74.98|
 |TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.84|71.73|
 
 #### Object detection
@@ -98,6 +99,7 @@ Quick jump to the samples:
 | :---: | :---: | :---: | :---: | :---: |
 |RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.44|33.3|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.44|33.13|
+|RetinaNet|Filter Pruning 40%|COCO2017|33.44|32.7|
 
 #### Instance Segmentation
 
