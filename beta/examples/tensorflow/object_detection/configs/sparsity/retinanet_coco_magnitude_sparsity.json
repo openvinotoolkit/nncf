@@ -12,7 +12,7 @@
     "dataset_type": "tfds",
 
     "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
             "boundaries": [

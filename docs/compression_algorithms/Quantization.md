@@ -192,7 +192,7 @@ For automatic mixed-precision selection it's recommended to use the following te
         "base_lr": 3.1e-4,
         "schedule_type": "plateau",
         "type": "Adam",
-        "scheduler_params": {
+        "schedule_params": {
             "threshold": 0.1,
             "cooldown": 3
         },

@@ -10,7 +10,7 @@
         "weight_decay": 5e-4,
         "base_lr": 1e-3,
         "schedule_type": "plateau",
-        "scheduler_params": {
+        "schedule_params": {
             "threshold": 0.1,
             "cooldown": 30
         }

@@ -11,7 +11,7 @@
     "dataset": "coco/2017",
 
      "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
             "boundaries": [1],
