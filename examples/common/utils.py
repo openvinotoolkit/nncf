@@ -77,12 +77,8 @@ def get_name(config):
 def write_metrics(acc, filename):
     avg = round(acc * 100, 2)
     metrics = {"Accuracy": avg}
-    if os.path.isfile(filename):
-        with open(filename, 'r+') as metric_file:
-            json.dump(metrics, metric_file)
-    else:
-        with open(filename, 'w') as outfile:
-            json.dump(metrics, outfile)
+    with open(filename, 'w') as outfile:
+        json.dump(metrics, outfile)
 
 
 def configure_paths(config):
