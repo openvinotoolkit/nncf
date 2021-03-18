@@ -24,7 +24,7 @@
         "algorithm": "rb_sparsity",
         "sparsity_init": 0.01,
         "params": {
-            "sparsity_target": 0.5
+            "sparsity_target": 0.5,
             "sparsity_target_epoch": 6,
             "sparsity_freeze_epoch": 11
         }
