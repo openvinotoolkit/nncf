@@ -203,8 +203,6 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             train_loss = train_step(x) # grads
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
-
-
             #grads = tf.nest.map_structure(lambda s: s.numpy().astype(float), grads)
             #grads = list(zip(grads, model.trainable_variables))
             #with train_grads_writer.as_default():
@@ -214,13 +212,12 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             #train_grads_writer.flush()
 
 
-            
-            if np.isnan(train_metric_result['total_confidence_loss']):
-                print('total_confidence_loss loss is NaN')
-            if np.isnan(train_metric_result['total_class_loss']):
-                print('total_class_loss loss is NaN')
-            if np.isnan(train_metric_result['total_location_loss']):
-                print('location loss is NaN')
+            # if np.isnan(train_metric_result['total_confidence_loss']):
+            #     print('total_confidence_loss loss is NaN')
+            # if np.isnan(train_metric_result['total_class_loss']):
+            #     print('total_class_loss loss is NaN')
+            # if np.isnan(train_metric_result['total_location_loss']):
+            #     print('location loss is NaN')
 
             if np.isnan(train_metric_result['total_loss']):
                raise ValueError('total loss is NaN')
@@ -292,6 +289,34 @@ def run(config):
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
+
+
+
+
+    # import time
+    # def benchmark(dataset, num_epochs=1):
+    #
+    #     for epoch_num in range(num_epochs):
+    #         i = 0
+    #         for sample in dataset:
+    #             # Performing a training step
+    #             i += 1
+    #             print("\nSample #", i)
+    #             if i == 5:
+    #                 start_time = time.perf_counter()
+    #             if i == 15:
+    #                 break
+    #     print("Execution time:", time.perf_counter() - start_time)
+    #
+    # print('\nBenchmarking...')
+    # benchmark(train_dataset)
+
+
+
+
+
+
+
     # Training parameters
     epochs = config.epochs
     steps_per_epoch = train_builder.steps_per_epoch
@@ -340,11 +365,12 @@ def run(config):
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
+    # tf.profiler.experimental.start(config.log_dir)
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq) # , compress_model
-
+    # tf.profiler.experimental.stop()
 
     print_statistics(compression_ctrl.statistics())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)

@@ -20,7 +20,6 @@ from scipy.special import expit, softmax
 # def expit(x):
 #     return 1/(1+np.exp(-x))
 #
-#
 # def softmax(x):
 #     return np.exp(x)/sum(np.exp(x))
 

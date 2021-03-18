@@ -55,7 +55,7 @@ def letterbox_resize(image, target_size, return_padding_info=False):
         return new_image
 
 
-def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.3, scale_jitter=0.5):
+def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_jitter=0.7):
     """
     Randomly resize image and crop|padding to target size. It can
     be used for data augment in training data preprocess

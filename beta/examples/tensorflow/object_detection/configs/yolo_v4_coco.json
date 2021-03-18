@@ -9,24 +9,33 @@
         ]
     },
 
-    "epochs": 10,
-    "batch_size": 9,
+    "epochs": 100,
+    "batch_size": 66,
+    "workers": 12,
 
     "dataset": "coco/2017",
     "dataset_type": "tfds",
 
+
     "optimizer": {
-        "type": "Adam",
-        "schedule_type": "piecewise_constant",
+        "type": "momentum",
+        "optimizer_params": {
+            "momentum": 0.95
+        },
+
+        "schedule_type": "step",
         "schedule_params": {
-            "boundaries": [
-                1
+            "warmup_learning_rate": 0.000001,
+            "warmup_steps": 1000,
+            "init_learning_rate": 0.00001,
+            "learning_rate_levels": [
+                0.00001
             ],
-            "values": [
-                1e-3,
-                1e-3
+            "learning_rate_steps": [
+                50000
             ]
         }
     }
+
 
 }
