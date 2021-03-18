@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import functools
 import inspect
 import operator
 from collections import OrderedDict
+from copy import deepcopy
 from enum import Enum
 from typing import Callable
 from typing import Dict
@@ -21,28 +23,27 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-import functools
 import networkx as nx
 import torch
-from copy import deepcopy
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.utils import objwalk
 from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.module_operations import UpdateWeight
-from nncf.dynamic_graph.graph import NNCFNodeExpression
 from torch import nn
 
-from nncf.debug import CombinedDebugInterface
-from nncf.debug import debuggable_forward
-from nncf.debug import is_debug
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.module_attributes import BaseModuleAttributes
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.utils.ordered_enum import OrderedEnum
+from nncf.debug import CombinedDebugInterface
+from nncf.debug import debuggable_forward
+from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.graph import NNCFNodeExpression
 from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -60,6 +61,7 @@ from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.module_operations import UpdateWeight
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import compute_FLOPs_hook
 from nncf.utils import get_all_modules_by_type
@@ -436,6 +438,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._compressed_context = TracingContext()
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)
+        self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
@@ -447,10 +450,26 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
-            args, kwargs = self._wrap_inputs_fn(args, kwargs)
+            if not self._in_user_dummy_forward:
+                # If a user supplies own dummy forward, he is responsible for
+                # correctly wrapping inputs inside it as well.
+                args, kwargs = self._strip_traced_tensors(args, kwargs)
+                args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
 
+    def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+        """
+            Required to guard against new forward calls on tensors that have already passed
+            through NNCF's forward once and got turned into TracedTensors by reference access.
+        """
+        is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+        def strip_fn(tensor: TracedTensor) -> torch.Tensor:
+            return torch.Tensor.as_subclass(tensor, torch.Tensor)
+
+        args = objwalk(args, is_traced_tensor_predicate, strip_fn)
+        kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
+        return args, kwargs
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -514,12 +533,25 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_tracing_context(self) -> TracingContext:
         return self._compressed_context
 
+    def enable_dynamic_graph_building(self):
+        self._compressed_context.enable_node_additions()
+
+    def disable_dynamic_graph_building(self):
+        self._compressed_context.disable_node_additions()
+
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
                                            wrap_inputs_fn=self._wrap_inputs_fn)
-        return self._user_dummy_forward_fn
+
+        def wrapped_user_dummy_forward_fn(*args, **kwargs):
+            self._in_user_dummy_forward = True
+            retval = self._user_dummy_forward_fn(*args, **kwargs)
+            self._in_user_dummy_forward = False
+            return retval
+
+        return wrapped_user_dummy_forward_fn
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):
@@ -622,7 +654,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             train_mode = self.training
             self.eval()
         with torch.no_grad():
-            self._dummy_forward_fn(self)
+            with self._compressed_context as ctx:
+                ctx.base_module_thread_local_replica = self
+                self._dummy_forward_fn(self)
         if force_eval:
             if train_mode:
                 self.train()

@@ -53,14 +53,15 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             processed_input = ctx.execute_pre_hooks(ia_op_exec_context, op_input)
 
             node = ctx.find_operator_node(processed_input, ia_op_exec_context)
-            if is_debug():
+            if is_debug() and node is not None:
                 ctx.register_node_call(ctx.graph.get_node_key_by_id(node.node_id))
 
             args = tuple(processed_input.op_args)
             kwargs = processed_input.op_kwargs
             result = operator(*args, **kwargs)
 
-            result = trace_tensors(result, node)
+            if node is not None:
+                result = trace_tensors(result, node)
             result = ctx.execute_post_hooks(ia_op_exec_context, result)
 
         ctx.in_operator = False
