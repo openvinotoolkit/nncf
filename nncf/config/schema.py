@@ -221,7 +221,7 @@ PER_LAYER_RANGE_INIT_CONFIG_PROPERTIES = {
                                          description=TARGET_SCOPES_DESCRIPTION),
         "ignored_scopes": with_attributes(make_string_or_array_of_strings_schema(),
                                           description=IGNORED_SCOPES_DESCRIPTION),
-        "target_quantizer_qroup": with_attributes(_STRING, description="The target group of quantizers for which "
+        "target_quantizer_group": with_attributes(_STRING, description="The target group of quantizers for which "
                                                                        "specified type of range initialization will "
                                                                        "be applied. It can take 'activations' or "
                                                                        "'weights'. By default specified type of range "
