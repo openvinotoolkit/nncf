@@ -12,11 +12,11 @@
 """
 
 import tensorflow as tf
-import tensorflow_addons as tfa
 from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
@@ -34,7 +34,6 @@ from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
-from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.utils.node import is_ignored
 
@@ -43,7 +42,7 @@ from beta.nncf.tensorflow.utils.node import is_ignored
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         if isinstance(tf.distribute.get_strategy(), tf.distribute.MirroredStrategy):
-            raise Exception("RB sparsity algorithm do not support the distributed mode with mirrored strategy")
+            raise Exception('RB sparsity algorithm do not support the distributed mode with mirrored strategy')
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
 
@@ -76,29 +75,26 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        # TODO: unify for TF and PyTorch
-        params = self.config.get('params', {})
-        if 'sparsity_init' not in params:
-            params['sparsity_init'] = self.config.get("sparsity_init", 0)
 
-        return RBSparsityController(model, params)
+        return RBSparsityController(model, self.config)
 
 
 class RBSparsityController(BaseSparsityController):
-    def __init__(self, target_model,
-                 params):
+    def __init__(self, target_model, config):
+        params = config.get('params', {})
         super().__init__(target_model)
-        self.sparsity_init = params.get('sparsity_init', 0)
+        self.sparsity_init = config.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
+
         if sparsity_level_mode == 'local':
             raise NotImplementedError
-        
+
         sparsifyed_layers = collect_wrapped_layers(target_model)
         self._loss = SparseLoss(sparsifyed_layers)
-                
         schedule_type = params.get("schedule", "exponential")
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)
+        self.set_sparsity_level(self.sparsity_init)
 
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)

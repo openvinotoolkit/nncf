@@ -44,10 +44,10 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
         "compression":
             {
                 "algorithm": "rb_sparsity",
+                "sparsity_init": sparsity_init,
                 "params":
                     {
                         "schedule": "polynomial",
-                        "sparsity_init": sparsity_init,
                         "sparsity_target": sparsity_target,
                         "sparsity_target_epoch": sparsity_target_epoch,
                         "sparsity_freeze_epoch": sparsity_freeze_epoch
