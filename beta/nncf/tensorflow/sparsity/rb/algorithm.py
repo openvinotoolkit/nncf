@@ -134,7 +134,9 @@ class RBSparsityController(BaseSparsityController):
 
     def statistics(self):
         raw_sparsity_statistics = self.raw_statistics()
-        return convert_raw_to_printable(raw_sparsity_statistics)
+        prefix = 'rb_sparsity'
+        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
+        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}
@@ -186,13 +188,6 @@ class RBSparsityController(BaseSparsityController):
             })
 
         return raw_sparsity_statistics
-
-    def get_compression_metrics(self, model_loss):
-        return [
-            model_loss,
-            tfa.metrics.MeanMetricWrapper(self.loss,
-                                          name='rb_loss')
-            ]
 
     def get_sparsity_init(self):
         return self.sparsity_init

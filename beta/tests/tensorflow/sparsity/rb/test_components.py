@@ -62,14 +62,10 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
                          list(TEST_MODELS.keys()), ids=list(TEST_MODELS.keys()))
 class TestSparseModules:
     def test_create_loss__with_defaults(self, model_name, local_mode):
-        _, algo, config = get_basic_rb_sparse_model(model_name, local_mode)
+        _, algo, _ = get_basic_rb_sparse_model(model_name, local_mode)
         loss = algo.loss
         assert not loss.disabled
-        tf.debugging.assert_near(loss.target_sparsity_rate,
-                                        tf.Variable(config['compression']['params']['multistep_sparsity_levels'][0],
-                                                    dtype=tf.float64),
-                                 rtol=tf.Variable(1e-6, dtype=tf.float64))
-        # TODO: too big tolerance due to python float error
+        assert loss.target_sparsity_rate == 0
         assert loss.p == 0.05
 
     REF_LOSS_IF_NOT_FROZEN = {

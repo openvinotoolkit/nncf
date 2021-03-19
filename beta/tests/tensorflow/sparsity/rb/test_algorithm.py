@@ -17,7 +17,7 @@ from pytest import approx
 
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.sparsity.schedulers import PolynomialSparseScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
 from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
 from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
@@ -62,8 +62,8 @@ def test_can_load_sparse_algo__with_defaults():
     config = get_basic_sparsity_config(sparsity_init=0.1)
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
-    assert compression_ctrl.get_sparsity_init() == approx(0.1)
-    assert compression_ctrl.loss.target_sparsity_rate == approx(0.1)
+    # pylint: disable=protected-access
+    assert compression_ctrl._scheduler.initial_sparsity == approx(0.1)
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
@@ -124,9 +124,9 @@ def test_can_create_sparse_loss_and_scheduler():
 
     assert isinstance(scheduler, PolynomialSparseScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.sparsity_target == approx(0.5)
-    assert scheduler.sparsity_target_epoch == 2
-    assert scheduler.sparsity_freeze_epoch == 3
+    assert scheduler.target_sparsity == approx(0.5)
+    assert scheduler.target_epoch == 2
+    assert scheduler.freeze_epoch == 3
 
 
 def test_sparse_algo_can_collect_sparse_layers():
@@ -148,9 +148,9 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
         "params": {
             'schedule': 'polynomial',
             'power': 1,
-            'sparsity_target_epoch': 3,
+            'sparsity_target_epoch': 2,
             'sparsity_target': 0.6,
-            'sparsity_freeze_epoch': 4
+            'sparsity_freeze_epoch': 3
         }
     }
 
@@ -158,7 +158,6 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     scheduler = compression_ctrl.scheduler
     loss = compression_ctrl.loss
 
-    assert pytest.approx(loss.target_sparsity_rate) == 0.2
     assert not loss.disabled
 
     # pylint: disable=protected-access
