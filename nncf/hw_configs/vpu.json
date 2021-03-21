@@ -310,6 +310,23 @@
         {"type": "Crop"},
         {"type": "Transpose"},
         {"type": "Tile"},
-        {"type": "StridedSlice"}
+        {"type": "StridedSlice"},
+        // NNCF-specific extensions are below:
+        {
+            "type": "Embedding",
+            "quantization": {
+                "weights": [
+                    "q8_tn"
+                ]
+            }
+        },
+        {
+            "type": "EmbeddingBag",
+            "quantization": {
+                "weights": [
+                    "q8_tn"
+                ]
+            }
+        }
     ]
 }

@@ -270,7 +270,7 @@ def test_quantizers_have_proper_narrow_range_set():
             for op in module.pre_ops.values():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.narrow_range == isinstance(op, UpdateWeight)
-    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER).items():
+    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER).items():
         assert aq.narrow_range is False
 
 

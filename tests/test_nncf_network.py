@@ -407,11 +407,12 @@ def get_two_branch_mock_model_graph() -> PTNNCFGraph:
 MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
-def get_mock_nncf_node_attrs(op_name=None):
+def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
+    scope_to_set = Scope() if scope_str is None else Scope.from_str(scope_str)
     return {
         PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                         Scope(),
+                                                                         scope_to_set,
                                                                          0,
                                                                        [None]),
     }

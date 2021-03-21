@@ -74,7 +74,7 @@ Module = TypeVar('Module', bound=nn.Module)
 
 
 class ExtraCompressionModuleType(Enum):
-    ACTIVATION_QUANTIZER = 0
+    EXTERNAL_QUANTIZER = 0
 
 
 class LoadStateListener:
@@ -638,7 +638,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """Required for backward compatibility with checkpoints that store function and activation
         quantizers directly under corresponding attributes of NNCFNetwork."""
-        if compression_module_type == ExtraCompressionModuleType.ACTIVATION_QUANTIZER:
+        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
             return "activation_quantizers"
         raise RuntimeError("Unknown extra module type")
 

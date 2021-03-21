@@ -1608,8 +1608,9 @@ class TestQuantizerPropagationSolver:
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 
         assert retval.quantizer_setup.quantization_points == run_on_ip_graph_test_struct.retval_qps
-        assert retval.quantizer_setup.unified_scale_groups == run_on_ip_graph_test_struct.retval_unified_scale_qp_groups
-        assert retval.quantizer_setup.shared_input_operation_set_groups == \
+        assert list(retval.quantizer_setup.unified_scale_groups.values()) == \
+               run_on_ip_graph_test_struct.retval_unified_scale_qp_groups
+        assert list(retval.quantizer_setup.shared_input_operation_set_groups.values()) == \
                run_on_ip_graph_test_struct.retval_shared_input_operation_set_groups
 
         assert len(quant_prop_solver.get_active_propagating_quantizers_queue()) == expected_count_active_quant

@@ -22,17 +22,25 @@ from typing import Tuple
 
 import networkx as nx
 import pytest
-
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.quantizer_propagation import QuantizationTrait
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.test_nncf_network import get_mock_nncf_node_attrs
 from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import get_two_branch_mock_model_graph
 from tests.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
+
+#pylint:disable=too-many-lines
 
 
 def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
@@ -974,3 +982,386 @@ class TestRedundantQuantizerMerge:
             assert pq.current_location_node_key in ref_remaining_pq_positions
 
         assert len(remaining_pqs) == len(ref_remaining_pq_positions)
+
+
+class TestOutputQuantAsWeightsSetup:
+    class OutputQuantAsWeightsSetupTestStruct(ABC):
+        operator_node_key_vs_trait_dict: Dict[str, QuantizationTrait]
+        quantizable_modules_vs_qconfigs: Dict[Scope, List[QuantizerConfig]]
+
+        def prepare_qpsg_state(self, qpsg: QPSG) -> QPSG:
+            qpsg = TestQuantizerPropagationStateGraph.mark_nodes_with_traits(qpsg, self.operator_node_key_vs_trait_dict)
+            return self._setup_and_propagate_quantizers(qpsg)
+
+        @abstractmethod
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pass
+
+        @abstractmethod
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            pass
+
+    class LinearPropagation(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '5 F/F': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig()]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('C')),
+                possible_qconfigs=[QuantizerConfig()],
+                scopes_of_directly_quantized_operators=[Scope.from_str('C'), Scope.from_str('G')])
+            setup.shared_input_operation_set_groups[0] = {0}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            return qpsg
+
+    class LinearPropagationWithConfigSubspaceSelection(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '4 D/D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig(num_bits=6),
+                                                                 QuantizerConfig(num_bits=8)]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('C')),
+                possible_qconfigs=[QuantizerConfig(num_bits=8)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('C'), Scope.from_str('G')])
+            setup.shared_input_operation_set_groups[0] = {0}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            return qpsg
+
+    class LinearPropagationWithFailedMerge(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '4 D/D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig(num_bits=6),
+                                                                 QuantizerConfig(num_bits=8)]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('C')),
+                possible_qconfigs=[QuantizerConfig(num_bits=6),
+                                   QuantizerConfig(num_bits=8)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('C')])
+            setup.quantization_points[1] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str('C/C_0')),
+                possible_qconfigs=[QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=5)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('G')])
+            setup.shared_input_operation_set_groups = {0: {0, 1}}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=5)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            return qpsg
+
+    class LinearPropagationWithUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(num_bits=4)]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('I')),
+                possible_qconfigs=[QuantizerConfig(num_bits=4)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('I'), Scope.from_str('J')])
+            setup.quantization_points[1] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
+                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str('J/J_0'),
+                              input_port_id=1),
+                possible_qconfigs=[QuantizerConfig(num_bits=4)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('J')])
+            setup.unified_scale_groups = {0: {0, 1}}
+            setup.shared_input_operation_set_groups = {0: {0, 1}}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=0), )
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=1), )
+            qpsg.unify_pq_scales(pq_1, pq_2)
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=0))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+            return qpsg
+
+    class BranchingPropagationWithUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                                           Scope.from_str('F'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('I')),
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('I'), Scope.from_str('J')])
+            setup.quantization_points[1] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                              module_scope=Scope.from_str('F')),
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('F'), Scope.from_str('J')])
+            setup.unified_scale_groups = {0: {0, 1}}
+            setup.shared_input_operation_set_groups = {0: {0, 1}}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=0), )
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=1), )
+            qpsg.unify_pq_scales(pq_1, pq_2)
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=0))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=1))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_2, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            return qpsg
+
+    class BranchingPropagationWithPerChannelFiltering(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
+                                                                                 per_channel=True),
+                                                                 QuantizerConfig(num_bits=4)],
+                                           Scope.from_str('F'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
+                                                                                 per_channel=True),
+                                                                 QuantizerConfig(num_bits=4)]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('I')),
+                possible_qconfigs=[QuantizerConfig(num_bits=4)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('I'), Scope.from_str('J')])
+            setup.quantization_points[1] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                              module_scope=Scope.from_str('F')),
+                possible_qconfigs=[QuantizerConfig(num_bits=4)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('F'), Scope.from_str('J')])
+            setup.unified_scale_groups = {0: {0, 1}}
+            setup.shared_input_operation_set_groups = {0: {0, 1}}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                                                   QuantizerConfig(num_bits=4)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=0), )
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4, per_channel=True),
+                                                   QuantizerConfig(num_bits=4)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=1), )
+            qpsg.unify_pq_scales(pq_1, pq_2)
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=0))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=1))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_2, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            return qpsg
+
+    class BranchingPropagationWithPerChannelFilteringAndUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
+        operator_node_key_vs_trait_dict = {
+            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        }
+        quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
+                                                                 QuantizerConfig(num_bits=6,
+                                                                                 signedness_to_force=True),
+                                                                 QuantizerConfig(num_bits=4,
+                                                                                 signedness_to_force=True)],
+                                           Scope.from_str('F'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
+                                                                                 per_channel=True),
+                                                                 QuantizerConfig(num_bits=4),
+                                                                 QuantizerConfig()]}
+
+        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+            setup = MultiConfigQuantizerSetup()
+            setup.quantization_points[0] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=Scope.from_str('I')),
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('I'), Scope.from_str('J')])
+            setup.quantization_points[1] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                              module_scope=Scope.from_str('F')),
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
+                                                   per_channel=True),
+                                   QuantizerConfig(num_bits=4),
+                                   QuantizerConfig()],
+                scopes_of_directly_quantized_operators=[Scope.from_str('F')])
+            setup.quantization_points[2] = MultiConfigQuantizationPoint(
+                PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                              ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str('F/F_0')),
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                scopes_of_directly_quantized_operators=[Scope.from_str('J')])
+            setup.unified_scale_groups = {0: {0, 2}}
+            setup.shared_input_operation_set_groups = {0: {0, 1, 2}}
+            return setup
+
+        def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
+            pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
+                                                   QuantizerConfig(num_bits=6, signedness_to_force=False)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=0), )
+            pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4, per_channel=True),
+                                                   QuantizerConfig(num_bits=4),
+                                                   QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                            in_port_id=1), )
+            qpsg.unify_pq_scales(pq_1, pq_2)
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=0))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_1, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+
+            paths = get_edge_paths_for_propagation(qpsg,
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                                                             in_port_id=1))
+            path = paths[0]
+            qpsg.propagate_quantizer_via_path(pq_2, path)
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            return qpsg
+
+    OUTPUT_QUANT_AS_WEIGHTS_TEST_CASES = [
+        LinearPropagation(),
+        LinearPropagationWithConfigSubspaceSelection(),
+        LinearPropagationWithFailedMerge(),
+        LinearPropagationWithUnifiedScales(),
+        BranchingPropagationWithUnifiedScales(),
+        BranchingPropagationWithPerChannelFiltering(),
+        BranchingPropagationWithPerChannelFilteringAndUnifiedScales()
+    ]
+
+    @pytest.fixture(params=OUTPUT_QUANT_AS_WEIGHTS_TEST_CASES)
+    def output_quant_as_weights_test_struct(self, request):
+        return request.param
+
+    @pytest.fixture
+    def model_graph_qpsg(self):
+        mock_graph = self.get_model_graph()
+        ip_graph = InsertionPointGraph(mock_graph)
+        quant_prop_graph = QPSG(ip_graph)
+        return quant_prop_graph
+
+    @staticmethod
+    def get_model_graph() -> NNCFGraph:
+        mock_graph = nx.DiGraph()
+
+        #      (0 A/A)       (1 B/B)
+        #        |             |
+        #      (2 C/C)         |
+        #    /         \      /
+        # (3 D/D)       (4 E/E)
+        #   |             |
+        # (6 G/G)       (5 F/F)
+        #   |             |
+        # (7 H/H)         |
+        #   |             |
+        # (8 I/I)         |
+        #    \           /
+        #     \         /
+        #       (9 J/J)
+        node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+        for node_key in node_keys:
+            mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key,
+                                                       scope_str=node_key)
+            mock_graph.add_node(node_key, **mock_node_attrs)
+
+        mock_graph.add_edges_from([('A', 'C'), ('C', 'D'), ('C', 'E'), ('D', 'G'), ('G', 'H'),
+                                   ('H', 'I'), ('I', 'J'), ('B', 'E'), ('E', 'F'), ('F', 'J')])
+        mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
+        return get_nncf_graph_from_mock_nx_graph(mock_graph)
+
+    def test_create_quantizer_setup_with_output_quant_as_weights_ops(self, model_graph_qpsg: QPSG,
+                                                                     output_quant_as_weights_test_struct:
+                                                                     OutputQuantAsWeightsSetupTestStruct):
+        prepped_qpsg = output_quant_as_weights_test_struct.prepare_qpsg_state(model_graph_qpsg)
+        test_quantizer_setup = prepped_qpsg.create_quantizer_setup(
+            output_quant_as_weights_test_struct.quantizable_modules_vs_qconfigs)
+        ref_quantizer_setup = output_quant_as_weights_test_struct.ref_quantizer_setup()
+        assert test_quantizer_setup.equivalent_to(ref_quantizer_setup)

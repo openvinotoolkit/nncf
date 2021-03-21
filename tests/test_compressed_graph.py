@@ -54,6 +54,8 @@ from tests.helpers import get_empty_config
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
 from tests.test_models.synthetic import ArangeModel
+from tests.test_models.synthetic import EmbeddingCatLinearModel
+from tests.test_models.synthetic import EmbeddingSumModel
 from tests.test_models.synthetic import GatherModel
 from tests.test_models.synthetic import ManyNonEvalModules
 from tests.test_models.synthetic import MaskedFillModel
@@ -63,7 +65,7 @@ from tests.test_models.synthetic import ReshapeModel
 from tests.test_models.synthetic import TransposeModel
 
 
-def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info=None):
+def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):
     config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {"algorithm": "quantization",
                              "activations": {
@@ -489,7 +491,7 @@ class BaseDesc(IModelDesc):
 class GeneralModelDesc(BaseDesc):
     def __init__(self,
                  input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
-                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info=None):
+                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info: Dict = None):
         super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
         if not model_name and hasattr(model_builder, '__name__'):
             self.model_name = model_builder.__name__
@@ -687,8 +689,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
                           input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
-                         input_info=[{"sample_size": [1, 1]},
-                                     {"sample_size": [1], "type": "long", "filler": "zeros"},
+                         input_info=[{"sample_size": [1], "type": "long", "filler": "zeros"},
+                                     {"sample_size": [1, 1]},
                                      {"sample_size": [1], "type": "long", "filler": "zeros"}]),
 
     SingleLayerModelDesc(model_name='softmax', layer=F.softmax),
@@ -713,7 +715,13 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name='pixel_shuffle', layer=partial(F.pixel_shuffle, upscale_factor=1),
                          input_sample_sizes=([1, 1, 1, 1])),
 
-    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1]))
+    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1])),
+    GeneralModelDesc(model_builder=EmbeddingSumModel, input_info={"sample_size": [1, 1],
+                                                                  "type": "long",
+                                                                  "filler": "zeros"}),
+    GeneralModelDesc(model_builder=EmbeddingCatLinearModel, input_info={"sample_size": [1, 1],
+                                                                  "type": "long",
+                                                                  "filler": "zeros"})
 ]
 
 

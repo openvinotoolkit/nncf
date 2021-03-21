@@ -65,7 +65,7 @@ class GroupsOfAdjacentQuantizers:
     def parse_from_quantizer_setup(self, all_quantizations: Dict[QuantizerId, BaseQuantizer],
                                    quantizer_setup: QuantizerSetupBase,
                                    quantization_point_id_vs_quantizer_id: Dict[QuantizationPointId, QuantizerId]):
-        for group_idx, group in enumerate(quantizer_setup.shared_input_operation_set_groups):
+        for group_idx, group in quantizer_setup.shared_input_operation_set_groups.items():
             act_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
             wt_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
 
@@ -89,7 +89,7 @@ class GroupsOfAdjacentQuantizers:
 
             for module_scope, w_qp_id in module_scope_per_weight_qp_id.items():
                 if module_scope not in module_scope_per_activation_qp_id:
-                    nncf_logger.warning('Not quantized inputs for module `%s` with quantized weights!', module_scope)
+                    nncf_logger.warning('Module `%s` has quantized weights and no quantized inputs!', module_scope)
                     continue
                 a_qp_id = module_scope_per_activation_qp_id[module_scope]
                 if w_qp_id in self.weight_qp_id_per_activation_qp_id:

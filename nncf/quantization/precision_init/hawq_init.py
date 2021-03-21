@@ -625,7 +625,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             ctrl.get_quantizer_setup_for_current_state())
 
         assert quantizer_setup_to_set.shared_input_operation_set_groups
-        for group in quantizer_setup_to_set.shared_input_operation_set_groups:
+        for group in quantizer_setup_to_set.shared_input_operation_set_groups.values():
             weight_qp_ids = []
             act_qp_ids = []
             for qp_id in group:
