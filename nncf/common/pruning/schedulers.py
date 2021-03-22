@@ -198,7 +198,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param p_max: Target pruning level at which the schedule ends.
         :param factor: Hyperparameter.
         """
-        def get_b(a, k):
+        def get_b(a):
             return p_min - a
 
         def get_a(k):
@@ -211,5 +211,5 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
 
         k = scipy.optimize.fsolve(f_to_solve, [1])[0]
         a = get_a(k)
-        b = get_b(a, k)
+        b = get_b(a)
         return a, b, k
