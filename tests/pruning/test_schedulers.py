@@ -67,7 +67,7 @@ def test_exponential_scheduler():
     assert scheduler.num_pruning_epochs == 20
     assert pytest.approx(scheduler.a, abs=1e-4) == -0.5
     assert pytest.approx(scheduler.b, abs=1e-4) == 0.5
-    assert pytest.approx(scheduler.k, abs=1e-4) == 0.5544
+    assert pytest.approx(scheduler.k, abs=1e-4) == 0.5836
 
     # Check pruning params before epoch 0
     scheduler.epoch_step()
@@ -93,3 +93,53 @@ def test_exponential_scheduler():
     assert pytest.approx(compression_ctrl.pruning_rate, abs=1e-4) == 0.5
     assert compression_ctrl.frozen is True
     assert scheduler.current_epoch == 21
+
+
+@pytest.fixture(name='pruning_controller_mock')
+def pruning_controller_mock_(mocker):
+    class MockPruningController:
+        def __init__(self):
+            self.pruning_init = 0
+            self.prune_flops = False
+            self.set_pruning_rate = mocker.stub()
+            self.freeze = mocker.stub()
+            self.step = mocker.stub()
+
+        def set_pruning_init(self, pruning_init):
+            self.pruning_init = pruning_init
+
+    return MockPruningController()
+
+
+def test_exponential_with_bias(pruning_controller_mock):
+    pruning_init = 0.1
+    scheduler_params = {
+        'pruning_target': 0.7,
+        'num_init_steps': 3,
+        'pruning_steps': 5
+    }
+    expected_levels = [0, 0, 0, 0.1, 0.6489741, 0.6956869, 0.6996617, 0.7, 0.7, 0.7]
+    freeze_epoch = scheduler_params['num_init_steps'] + scheduler_params['pruning_steps']
+
+    pruning_controller_mock.set_pruning_init(pruning_init)
+    scheduler = ExponentialWithBiasPruningScheduler(pruning_controller_mock, scheduler_params)
+
+    num_epochs = 10
+    steps_per_epoch = 3
+
+    assert len(expected_levels) == num_epochs
+    for epoch_idx in range(num_epochs):
+        scheduler.epoch_step()
+        expected_level = pytest.approx(expected_levels[epoch_idx])
+        assert scheduler.current_pruning_level == expected_level
+        for _ in range(steps_per_epoch):
+            scheduler.step()
+
+        pruning_controller_mock.set_pruning_rate.assert_called_once_with(expected_level)
+        pruning_controller_mock.set_pruning_rate.reset_mock()
+
+        if epoch_idx < freeze_epoch:
+            pruning_controller_mock.freeze.assert_not_called()
+        else:
+            pruning_controller_mock.freeze.assert_called_once()
+            pruning_controller_mock.freeze.reset_mock()

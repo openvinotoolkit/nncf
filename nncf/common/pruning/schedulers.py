@@ -161,16 +161,24 @@ class ExponentialPruningScheduler(PruningScheduler):
 @PRUNING_SCHEDULERS.register("exponential_with_bias")
 class ExponentialWithBiasPruningScheduler(PruningScheduler):
     """
-    Calculates pruning rate progressively according to the formula
-    P = a * exp(- k * epoch) + b
-    Where:
-    epoch - epoch number
-    P - pruning rate for current epoch
-    a, b, k - params
+    Pruning scheduler which calculates pruning rate for the current epoch
+    according to the formula:
+
+        current_level = a * exp(-k * epoch_idx) + b,
+
+    where a, b, k is a params.
     """
+
     def __init__(self, controller, params: dict):
+        """
+        Initializes a pruning scheduler with an exponential (with bias) decay schedule.
+
+        :param controller: Sparsity algorithm controller.
+        :param params: Parameters of the scheduler.
+        """
         super().__init__(controller, params)
-        self.a, self.b, self.k = self._init_exp(self.num_pruning_epochs, self.initial_level, self.target_level)
+        target_epoch = self.num_pruning_epochs - 1
+        self.a, self.b, self.k = self._init_exp(target_epoch, self.initial_level, self.target_level)
 
     def _calculate_pruning_level(self) -> float:
         current_level = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs)) + self.b
@@ -190,17 +198,18 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param p_max: Target pruning level at which the schedule ends.
         :param factor: Hyperparameter.
         """
-        def get_b(a, k):
+        def get_b(a):
             return p_min - a
 
         def get_a(k):
-            return (3 / 4 * p_max - p_min) / (np.exp(-k * factor * epoch_idx) - 1)
+            return (p_max - p_min) / (np.exp(-k * epoch_idx) - 1)
 
         def f_to_solve(x):
-            y = np.exp(factor * x * epoch_idx)
-            return 1 / 3 * y + 1 / (y ** 7) - 4 / 3
+            c = (0.75 * p_max - p_min) / (p_max - p_min)
+            y = np.exp(-x * epoch_idx)
+            return y ** factor - c * y + c - 1
 
         k = scipy.optimize.fsolve(f_to_solve, [1])[0]
         a = get_a(k)
-        b = get_b(a, k)
+        b = get_b(a)
         return a, b, k
