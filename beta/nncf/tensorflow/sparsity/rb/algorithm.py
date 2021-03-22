@@ -35,6 +35,7 @@ from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
+from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.utils.node import is_ignored
 
 
@@ -45,7 +46,6 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             raise Exception('RB sparsity algorithm do not support the distributed mode with mirrored strategy')
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
-        self.op_names = set()
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -94,15 +94,7 @@ class RBSparsityController(BaseSparsityController):
         if sparsity_level_mode == 'local':
             raise NotImplementedError
 
-        sparsifyed_layers = collect_wrapped_layers(target_model)
-        target_ops = []
-        for layer in sparsifyed_layers:
-            for ops in layer.weights_attr_ops.values():
-                for op in ops.values():
-                    if op.name in op_names:
-                        weight = layer.get_operation_weights(op.name)
-                        target_ops.append((op, weight['mask'], weight['trainable']))
-
+        target_ops = apply_fn_to_op_weights(target_model, op_names, lambda x: (x['mask'], x['trainable']))
         self._loss = SparseLoss(target_ops)
         schedule_type = params.get("schedule", "exponential")
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)

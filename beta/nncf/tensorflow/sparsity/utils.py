@@ -19,6 +19,7 @@ from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
 from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
@@ -78,6 +79,18 @@ def strip_model_from_masks(model: tf.keras.Model) -> tf.keras.Model:
                         ))
 
     return TFModelTransformer(model, transformations).transform()
+
+
+def apply_fn_to_op_weights(model: tf.keras.Model, op_names, fn = lambda x: x):
+    sparsifyed_layers = collect_wrapped_layers(model)
+    target_ops = []
+    for layer in sparsifyed_layers:
+        for ops in layer.weights_attr_ops.values():
+            for op in ops.values():
+                if op.name in op_names:
+                    weight = layer.get_operation_weights(op.name)
+                    target_ops.append((op, *fn(weight)))
+    return target_ops
 
 
 def apply_mask(wrapped_layer: NNCFWrapper, weight_attr: str, op_name: str):

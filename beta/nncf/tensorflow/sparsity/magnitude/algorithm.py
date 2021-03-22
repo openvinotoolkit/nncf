@@ -35,6 +35,8 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_bin
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
+from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BM
+from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BMWB
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.utils.node import is_ignored
@@ -62,10 +64,13 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
+            name = node_name + OP_NAME_BM
+            assert name not in self.op_names
+            self.op_names.add(name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=BinaryMask(),
+                    callable_object=BinaryMask(name),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
 
@@ -74,11 +79,15 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             for node_name, node in nxmodel.nodes.items():
                 if node['type'] in SPARSITY_TF_OPS \
                         and not is_ignored(node_name, self.ignored_scopes):
+
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
+                    name = node_name + OP_NAME_BMWB
+                    assert name not in self.op_names
+                    self.op_names.add(name)
                     transformations.register(
                         TFInsertionCommand(
                             target_point=TFLayerWeight(layer.name, weight_attr_name),
-                            callable_object=BinaryMaskWithWeightsBackup(weight_attr_name),
+                            callable_object=BinaryMaskWithWeightsBackup(name, weight_attr_name),
                             priority=TransformationPriority.SPARSIFICATION_PRIORITY
                         ))
 
@@ -99,10 +108,11 @@ class MagnitudeSparsityController(BaseSparsityController):
     compression loss.
     """
 
-    def __init__(self, target_model, config):
+    def __init__(self, target_model, config, op_names):
         super().__init__(target_model)
         params = config.get('params', {})
         self._threshold = 0
+        self.op_names = op_names
         self._frozen = False
         self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
 
@@ -142,7 +152,7 @@ class MagnitudeSparsityController(BaseSparsityController):
                 weight = wrapped_layer.layer_weights[weight_attr]
 
                 for op_name, op in ops.items():
-                    if isinstance(op, BinaryMask):
+                    if op_name in self.op_names:
                         wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
                                                        self._weight_importance_fn,
@@ -153,8 +163,8 @@ class MagnitudeSparsityController(BaseSparsityController):
         all_weights = []
         for wrapped_layer in collect_wrapped_layers(self._model):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op in ops.values():
-                    if isinstance(op, BinaryMask):
+                for op_name, op in ops.items():
+                    if op_name in self.op_names:
                         all_weights.append(tf.reshape(
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
                             [-1]))
@@ -179,18 +189,19 @@ class MagnitudeSparsityController(BaseSparsityController):
         for wrapped_layer in wrapped_layers:
             for ops in wrapped_layer.weights_attr_ops.values():
                 for op_name, op in ops.items():
-                    if isinstance(op, BinaryMaskWithWeightsBackup):
-                        total_bkup_weights_number += tf.size(op.bkup_var)
-                    if isinstance(op, BinaryMask):
-                        mask = wrapped_layer.ops_weights[op_name]['mask']
-                        mask_names.append(mask.name)
-                        weights_shapes.append(list(mask.shape))
-                        weights_number = tf.size(mask)
-                        weights_numbers.append(weights_number)
-                        sparsified_weights_number = weights_number - tf.reduce_sum(tf.cast(mask, tf.int32))
-                        sparsity_levels.append(sparsified_weights_number / weights_number)
-                        total_weights_number += weights_number
-                        total_sparsified_weights_number += sparsified_weights_number
+                    if op_name in self.op_names:
+                        if isinstance(op, BinaryMaskWithWeightsBackup):
+                            total_bkup_weights_number += tf.size(op.bkup_var)
+                        if isinstance(op, BinaryMask):
+                            mask = wrapped_layer.ops_weights[op_name]['mask']
+                            mask_names.append(mask.name)
+                            weights_shapes.append(list(mask.shape))
+                            weights_number = tf.size(mask)
+                            weights_numbers.append(weights_number)
+                            sparsified_weights_number = weights_number - tf.reduce_sum(tf.cast(mask, tf.int32))
+                            sparsity_levels.append(sparsified_weights_number / weights_number)
+                            total_weights_number += weights_number
+                            total_sparsified_weights_number += sparsified_weights_number
 
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number - total_bkup_weights_number

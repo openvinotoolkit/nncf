@@ -36,6 +36,7 @@ from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BM
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
@@ -131,11 +132,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
                     if getattr(layer, attr_name) is not None:
                         transformations.register(
-                            TFInsertionCommand(
-                                target_point=TFLayerWeight(layer_name, attr_name),
-                                callable_object=BinaryMask(),
-                                priority=TransformationPriority.PRUNING_PRIORITY
-                            ))
+                            self._get_insertion_command_binary_mask(layer_name, attr_name)
+                        )
 
                 related_layers = {}
                 if self._prune_batch_norms:
@@ -145,11 +143,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                             attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[bn_node.node_type][attr_name_key]
                             transformations.register(
-                                TFInsertionCommand(
-                                    target_point=TFLayerWeight(bn_layer_name, attr_name),
-                                    callable_object=BinaryMask(),
-                                    priority=TransformationPriority.PRUNING_PRIORITY
-                                ))
+                                self._get_insertion_command_binary_mask(bn_layer_name, attr_name)
+                            )
                         if PrunedLayerInfo.BN_LAYER_NAME in related_layers:
                             related_layers[PrunedLayerInfo.BN_LAYER_NAME].append(bn_layer_name)
                         else:
@@ -161,6 +156,17 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             self._pruned_layer_groups_info.add_cluster(cluster)
 
         return transformations
+
+    def _get_insertion_command_binary_mask(self, layer_name, attr_name):
+        name = layer_name + OP_NAME_BM
+        assert name in self.op_names
+        self.op_names.add(name)
+
+        return TFInsertionCommand(
+            target_point=TFLayerWeight(layer_name, attr_name),
+            callable_object=BinaryMask(name),
+            priority=TransformationPriority.PRUNING_PRIORITY
+        )
 
     @staticmethod
     def _get_bn_for_node(node: NNCFNode, bn_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
@@ -265,7 +271,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 for op_name, op in ops.items():
-                    if isinstance(op, BinaryMask):
+                    if op_name in self.op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))

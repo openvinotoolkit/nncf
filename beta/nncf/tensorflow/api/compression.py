@@ -81,6 +81,10 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     order to enable algorithm-specific compression during fine-tuning.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.op_names = set()
+
     def apply_to(self, model: ModelType) -> ModelType:
         """
         Applies algorithm-specific modifications to the model.

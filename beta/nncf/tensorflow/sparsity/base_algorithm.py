@@ -39,13 +39,4 @@ SPARSITY_TF_OPS = [
 
 
 class BaseSparsityController(TFCompressionAlgorithmController):
-    @staticmethod
-    def _apply_mask(wrapped_layer, weight_attr, op_name):
-        layer_weight = wrapped_layer.layer_weights[weight_attr]
-        op = wrapped_layer.weights_attr_ops[weight_attr][op_name]
-        layer_weight.assign(
-            op(layer_weight,
-               wrapped_layer.ops_weights[op_name],
-               False)
-        )
-        wrapped_layer.set_layer_weight(weight_attr, layer_weight)
+    pass
