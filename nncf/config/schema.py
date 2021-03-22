@@ -564,7 +564,7 @@ MAGNITUDE_SPARSITY_SCHEMA = {
                                                                      "to determine the sparsity threshold "
                                                                      "corresponding to a specific sparsity level. "
                                                                      "Either 'abs' or 'normed_abs'.",
-                                                         default="normed_abs")
+                                                         default="abs")
                 },
                 "additionalProperties": False
             },

@@ -37,7 +37,7 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
         params = self.config.get("params", {})
         return MagnitudeSparsityController(target_model, self._sparsified_module_info,
                                            self.config,
-                                           params.get('weight_importance', 'normed_abs'))
+                                           params.get('weight_importance', 'abs'))
 
 
 class MagnitudeSparsityController(BaseSparsityAlgoController):

@@ -114,7 +114,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
         params = config.get('params', {})
         self.sparsity_level = self.threshold = 0
         self.frozen = False
-        self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+        self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'abs')]
         self.sparsity_init = config.get('sparsity_init', 0)
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
         self._scheduler = scheduler_cls(self, params)
