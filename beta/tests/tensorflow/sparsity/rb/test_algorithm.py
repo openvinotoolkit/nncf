@@ -19,12 +19,12 @@ from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
 from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
-from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
+from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import logit
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, \
-    create_compressed_model_and_algo_for_test, get_weight_by_name, get_basic_two_conv_test_model
+    create_compressed_model_and_algo_for_test, get_op_by_cls, get_basic_two_conv_test_model
 
 
 def get_basic_sparsity_config(model_size=4, input_sample_size=None,
@@ -73,12 +73,11 @@ def test_can_load_sparse_algo__with_defaults():
     assert len(conv_names) == len(correct_wrappers)
 
     for wrapper in wrappers:
-        mask = get_weight_by_name(wrapper, 'mask')
-        op = wrapper.get_op_by_name(OP_NAME)
+        op = get_op_by_cls(wrapper, RBSparsifyingWeight)
+        mask = wrapper.get_operation_weights(op.name)['mask']
         ref_mask = tf.fill(mask.shape, logit(0.99))
 
         tf.assert_equal(mask, ref_mask)
-        assert isinstance(op, RBSparsifyingWeight)
 
 
 def test_can_set_sparse_layers_to_loss():
@@ -88,9 +87,33 @@ def test_can_set_sparse_layers_to_loss():
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
     # pylint: disable=protected-access
-    for layer in loss._sparse_layers:
-        assert isinstance(layer, NNCFWrapper)
-        assert isinstance(layer.get_op_by_name(OP_NAME), RBSparsifyingWeight)
+    for op, _, _ in loss._target_ops:
+        assert isinstance(op, RBSparsifyingWeight)
+
+
+def test_loss_has_correct_ops():
+    inp = tf.keras.layers.Input((10, 10, 3))
+    y = inp
+    for _ in range(3):
+        y = tf.keras.layers.Conv2D(1, 1)(y)
+    y = tf.keras.layers.BatchNormalization()(y)
+
+    model = tf.keras.Model(inputs=inp, outputs=y)
+    config = get_basic_sparsity_config()
+    compress_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    wrappers = collect_wrapped_layers(compress_model)
+    target_ops = {op[0].name: op for op in compression_ctrl.loss._target_ops}
+    for wrapper in wrappers:
+        for ops in wrapper.weights_attr_ops.values():
+            # find corresponding op in target_ops
+            op = list(ops.values())[0]
+            assert op.name in target_ops
+            target_op = target_ops[op.name]
+            weights = wrapper.get_operation_weights(op.name)
+            assert op is target_op[0]
+            assert weights['mask'] is target_op[1]
+            assert weights['trainable'] is target_op[2]
+
 
 
 def test_sparse_algo_does_not_replace_not_conv_layer():
@@ -103,9 +126,9 @@ def test_sparse_algo_does_not_replace_not_conv_layer():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
     # pylint: disable=protected-access
-    sparse_layers = compression_ctrl.loss._sparse_layers
-    assert len(sparse_layers) == 1
-    assert isinstance(sparse_layers[0].get_op_by_name(OP_NAME), RBSparsifyingWeight)
+    target_ops = compression_ctrl.loss._target_ops
+    assert len(target_ops) == 1
+    assert isinstance(target_ops[0][0], RBSparsifyingWeight)
 
 
 def test_can_create_sparse_loss_and_scheduler():
@@ -129,14 +152,14 @@ def test_can_create_sparse_loss_and_scheduler():
     assert scheduler.freeze_epoch == 3
 
 
-def test_sparse_algo_can_collect_sparse_layers():
+def test_sparse_algo_can_collect_sparse_ops():
     model = get_basic_two_conv_test_model()
 
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     # pylint: disable=protected-access
-    assert len(compression_ctrl.loss._sparse_layers) == 2
+    assert len(compression_ctrl.loss._target_ops) == 2
 
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():
@@ -161,8 +184,8 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert not loss.disabled
 
     # pylint: disable=protected-access
-    for wrapper in loss._sparse_layers:
-        assert wrapper.ops_weights[OP_NAME]['trainable']
+    for _, _, trainable in loss._target_ops:
+        assert trainable
 
     scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.2
@@ -184,5 +207,5 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.6
     assert loss() == 0
 
-    for wrapper in loss._sparse_layers:
-        assert not wrapper.ops_weights[OP_NAME]['trainable']
+    for _, _, trainable in loss._target_ops:
+        assert not trainable

@@ -18,8 +18,9 @@ from addict import Dict
 
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_basic_fc_test_model, \
-    create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name
+    create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name, get_op_by_cls
 
 CONF = Path(__file__).parent.parent.parent / 'data' / 'configs' / 'sequential_model_cifar10_rb_sparsity.json'
 
@@ -109,11 +110,12 @@ class TestSparseModules:
                              ids=('frozen', 'not_frozen'))
     def test_calc_loss(self, model_name, frozen, raising, local_mode):
         model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-        trainable = model.layers[1].ops_weights['rb_sparsity_mask_apply']['trainable']
+        op = list(list(model.layers[1].weights_attr_ops.values())[0].values())[0]
+        trainable = model.layers[1].ops_weights[op.name]['trainable']
         assert tf.equal(trainable, tf.constant(not frozen))
         cls = SparseLoss
         # pylint: disable=protected-access
-        loss = cls(algo.loss._sparse_layers)
+        loss = cls(algo.loss._target_ops)
         try:
             assert loss() == 0
         except ZeroDivisionError:
@@ -127,15 +129,17 @@ class TestSparseModules:
     class TestWithSparsify:
         def test_can_freeze_mask(self, model_name, local_mode, frozen):
             model, _, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-            rb_weight = model.layers[1].get_op_by_name('rb_sparsity_mask_apply')
-            weights = model.layers[1].ops_weights['rb_sparsity_mask_apply']
+            rb_op = get_op_by_cls(model.layers[1], RBSparsifyingWeight)
+            weights = model.layers[1].get_operation_weights(rb_op.name)
             assert tf.equal(weights['trainable'], tf.constant(not frozen))
-            rb_weight.freeze(weights)
+            rb_op.freeze(weights['trainable'])
             assert not weights['trainable']
 
         def test_disable_loss(self, model_name, local_mode, frozen):
             model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
-            trainable = model.layers[1].ops_weights['rb_sparsity_mask_apply']['trainable']
+            rb_op = get_op_by_cls(model.layers[1], RBSparsifyingWeight)
+            weights = model.layers[1].get_operation_weights(rb_op.name)
+            trainable = weights['trainable']
             assert tf.equal(trainable, tf.constant(not frozen))
             loss = algo.loss
             loss.disable()

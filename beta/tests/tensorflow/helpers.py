@@ -132,3 +132,11 @@ def get_coco_dataset_builders(config, num_devices, **kwargs):
 
 def get_weight_by_name(layer, name):
     return next(x for x in layer.weights if x.name[:-2].endswith(name))
+
+
+def get_op_by_cls(wrapper, cls):
+    for ops in wrapper.weights_attr_ops.values():
+        for op in ops.values():
+            if isinstance(op, cls):
+                return op
+    return None

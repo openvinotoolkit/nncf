@@ -45,6 +45,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             raise Exception('RB sparsity algorithm do not support the distributed mode with mirrored strategy')
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
+        self.op_names = set()
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -62,10 +63,14 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
+            name = node_name + OP_NAME
+            assert name not in self.op_names, 'duplicate names of RBSparsifyingWeight'
+            self.op_names.add(name)
+
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=RBSparsifyingWeight(),
+                    callable_object=RBSparsifyingWeight(name),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
 
@@ -76,11 +81,11 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         Should be called once the compressed model target_model is fully constructed
         """
 
-        return RBSparsityController(model, self.config)
+        return RBSparsityController(model, self.config, self.op_names)
 
 
 class RBSparsityController(BaseSparsityController):
-    def __init__(self, target_model, config):
+    def __init__(self, target_model, config, op_names: set):
         params = config.get('params', {})
         super().__init__(target_model)
         self.sparsity_init = config.get('sparsity_init', 0)
@@ -90,7 +95,15 @@ class RBSparsityController(BaseSparsityController):
             raise NotImplementedError
 
         sparsifyed_layers = collect_wrapped_layers(target_model)
-        self._loss = SparseLoss(sparsifyed_layers)
+        target_ops = []
+        for layer in sparsifyed_layers:
+            for ops in layer.weights_attr_ops.values():
+                for op in ops.values():
+                    if op.name in op_names:
+                        weight = layer.get_operation_weights(op.name)
+                        target_ops.append((op, weight['mask'], weight['trainable']))
+
+        self._loss = SparseLoss(target_ops)
         schedule_type = params.get("schedule", "exponential")
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)

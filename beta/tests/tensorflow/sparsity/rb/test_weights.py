@@ -19,33 +19,34 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
 from beta.tests.tensorflow.sparsity.rb.utils import default_rb_mask_value
-from beta.tests.tensorflow.helpers import get_weight_by_name
 
 
 def get_RBSParsityWeigth_and_layer(frozen=False):
-    sw = RBSparsifyingWeight()
+    op_name = 'rb_op_name'
+    sw = RBSparsifyingWeight(op_name)
     layer = NNCFWrapper(tf.keras.layers.Conv2D(1, 1))
     layer.registry_weight_operation('kernel', sw)
     layer.build((1, ))
     if frozen:
-        sw.freeze(layer.ops_weights[OP_NAME])
-    return sw, layer
+        sw.freeze(layer.ops_weights[op_name]['trainable'])
+    return sw, layer, op_name
 
 
 def test_can_create_sparse_weight__with_defaults():
-    sw, layer = get_RBSParsityWeigth_and_layer()
-    trainable_weight = get_weight_by_name(layer, 'trainable')
-    mask = get_weight_by_name(layer, 'mask')
+    sw, layer, op_name = get_RBSParsityWeigth_and_layer()
+    weights = layer.ops_weights[op_name]
+    trainable_weight = weights['trainable']
+    mask = weights['mask']
     tf.debugging.assert_near(default_rb_mask_value, mask)
     assert trainable_weight
     assert sw.eps == 1e-6
 
 
 def test_can_freeze_mask():
-    sw, layer = get_RBSParsityWeigth_and_layer(frozen=False)
-    trainable_weight = get_weight_by_name(layer, 'trainable')
+    sw, layer, op_name = get_RBSParsityWeigth_and_layer(frozen=False)
+    trainable_weight = layer.ops_weights[op_name]['trainable']
     assert trainable_weight
-    sw.freeze(layer.ops_weights[OP_NAME])
+    sw.freeze(trainable_weight)
     assert not trainable_weight
 
 
@@ -53,10 +54,11 @@ def test_can_freeze_mask():
 class TestWithSparsify:
     @pytest.mark.parametrize('is_train', (True, False), ids=('train', 'not_train'))
     def test_mask_is_not_updated_on_forward(self, frozen, is_train):
-        sw, layer = get_RBSParsityWeigth_and_layer(frozen=frozen)
-        mask = get_weight_by_name(layer, 'mask')
+        sw, layer, op_name = get_RBSParsityWeigth_and_layer(frozen=frozen)
+        op_weights = layer.ops_weights[op_name]
+        mask = op_weights['mask']
+
         tf.debugging.assert_near(default_rb_mask_value, mask)
-        op_weights = layer.ops_weights[OP_NAME]
         w = tf.ones(1)
         sw(w, op_weights, None)
         tf.debugging.assert_near(default_rb_mask_value, mask)
@@ -67,13 +69,13 @@ class TestWithSparsify:
                               (0.3, 1),
                               (-0.3, 0)), ids=('default', 'zero', 'positive', 'negative'))
     def test_loss_value(self, mask_value, ref_loss, frozen):
-        sw, layer = get_RBSParsityWeigth_and_layer(frozen=frozen)
-        mask = get_weight_by_name(layer, 'mask')
-        op_weights = layer.ops_weights[OP_NAME]
+        sw, layer, op_name = get_RBSParsityWeigth_and_layer(frozen=frozen)
+        op_weights = layer.ops_weights[op_name]
+        mask = op_weights['mask']
         if mask_value is not None:
             mask.assign(tf.fill(mask.shape, mask_value))
         assert sw.loss(mask) == ref_loss
         w = tf.ones(1)
         assert apply_mask(w, st_binary_mask(mask)) == ref_loss
-        sw.freeze(op_weights)
+        sw.freeze(op_weights['trainable'])
         assert sw(w, op_weights, None) == ref_loss

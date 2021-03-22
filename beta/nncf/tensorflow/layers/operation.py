@@ -26,12 +26,12 @@ class NNCFOperation:
     The abstract class represents main building block for adding compression
     extensions to a model.
     """
-    def __init__(self, name=None):
+    def __init__(self, name):
         """
         Initializes internal NNCF operation state
         """
         self._call_pre_hooks = OrderedDict()
-        self.name = name
+        self._name = name
 
     def build(self, input_shape, input_type, name, layer):
         """
@@ -82,7 +82,11 @@ class NNCFOperation:
         return self.call(inputs, *args[1:], **kwargs)
 
     def get_config(self):
-        return {}
+        return {'name': self._name}
+
+    @property
+    def name(self):
+        return self._name
 
     @classmethod
     def from_config(cls, config):

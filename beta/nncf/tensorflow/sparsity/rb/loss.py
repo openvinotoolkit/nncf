@@ -19,9 +19,9 @@ from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 
 
 class SparseLoss(CompressionLoss):
-    def __init__(self, sparse_layers: [NNCFWrapper] = None, target=1.0, p=0.05):
+    def __init__(self, target_ops, target=1.0, p=0.05):
         super().__init__()
-        self._sparse_layers = sparse_layers
+        self._target_ops = target_ops
         self.target = tf.Variable(target, trainable=False)
         self.p = p
         self.disabled = tf.Variable(False, trainable=False)
@@ -34,9 +34,8 @@ class SparseLoss(CompressionLoss):
     def _disable(self):
         self.disabled.assign(True)
 
-        for sparse_layer in self._sparse_layers:
-            op = sparse_layer.get_op_by_name(OP_NAME)
-            op.freeze(sparse_layer.ops_weights[OP_NAME])
+        for op, _, trainable in self._target_ops:
+            op.freeze(trainable)
 
     def calculate(self, *args, **kwargs):
         return tf.cond(self.disabled,
@@ -46,13 +45,13 @@ class SparseLoss(CompressionLoss):
     def _calculate(self):
         params = tf.constant(0)
         loss = tf.constant(0.)
-        for sparse_layer in self._sparse_layers:
-            sw_loss, params_layer, trainable = self._get_params_from_sparse_layer(sparse_layer)
+        for op, mask, trainable in self._target_ops:
             tf.debugging.assert_equal(trainable, tf.constant(True),
-                                      "Invalid state of SparseLoss and SparsifiedWeight:\
-                                                            mask is frozen for enabled loss")
-            params = params + params_layer
-            loss = loss + sw_loss
+                                      'Invalid state of SparseLoss and SparsifiedWeight:\
+                                                            mask is frozen for enabled loss')
+
+            params = params + tf.size(mask)
+            loss = loss + op.loss(mask)
 
         params = tf.cast(params, tf.float32)
         return tf.reshape(tf.math.pow(((loss / params - self.target) / self.p), 2), shape=[])
@@ -64,14 +63,6 @@ class SparseLoss(CompressionLoss):
         if rate < 0 or rate > 1:
             raise IndexError("Target is not within range(0,1)")
         return rate
-
-    @staticmethod
-    def _get_params_from_sparse_layer(sparse_layer):
-        op = sparse_layer.get_op_by_name(OP_NAME)
-        weights = sparse_layer.ops_weights[OP_NAME]
-        mask = weights['mask']
-        trainable = weights['trainable']
-        return op.loss(mask), tf.size(mask), trainable
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target.assign(1 - sparsity_level)
