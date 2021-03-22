@@ -100,7 +100,7 @@ class DepthWiseConvTestModel(nn.Module):
         self.features = []
         self.features.append(nn.Conv2d(1, 3, 3, groups=1))
         self.features.append(nn.Conv2d(3, 30, 3, groups=3))
-        # self.features.append(nn.Conv2d(30, 1, 3))
+        self.features.append(nn.Conv2d(30, 1, 3))
         self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
