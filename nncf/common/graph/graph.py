@@ -62,7 +62,7 @@ class NNCFNode:
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
-    providing some useful methods for graph traverse.
+    providing some useful methods for graph traversal.
     """
 
     ID_NODE_ATTR = 'id'
@@ -178,9 +178,9 @@ class NNCFGraph:
         """
         Traverses graph up or down starting form `curr_node` node.
 
-        :param curr_node: Node from which traverse is started.
-        :param traverse_function: Function describing condition of traverse continuation/termination.
-        :param traverse_forward: Flag specifying direction of traverse.
+        :param curr_node: Node from which traversal is started.
+        :param traverse_function: Function describing condition of traversal continuation/termination.
+        :param traverse_forward: Flag specifying direction of traversal.
         :return:
         """
         output = []

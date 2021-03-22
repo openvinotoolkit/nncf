@@ -231,14 +231,14 @@ class ModelAnalyzer:
     (all nodes that can't get pruned input will receive a non-pruned input).
 
     The algorithm consists of three steps:
-        1. Set attribute `accept_pruned_input` to all nodes. This attribute shows can this node potentially get
-        pruned input or node.
-        2.  Calculate `can_prune` attribute for all nodes by propagating `accept_pruned_input` up
+        1. Set attribute `accept_pruned_input` to all nodes. This attribute shows whether this node can
+        potentially get pruned input or node.
+        2. Calculate `can_prune` attribute for all nodes by propagating `accept_pruned_input` up
         (from the result of the network to the inputs). Node can be pruned if all outputs of this node accept
         pruned input and all outputs can be pruned.
         3. Propagates `can_prune` down from input nodes to the outputs.
 
-    As a result, all nodes marked by the `can_prune` attribute as potentially prunable or not.
+    As a result, all nodes are marked by the `can_prune` attribute as potentially prunable or not.
     """
 
     def __init__(self, graph: NNCFGraph,
@@ -259,7 +259,7 @@ class ModelAnalyzer:
 
     def node_propagate_can_prune_attr(self, nncf_node: NNCFNode) -> bool:
         """
-        Whether node propagates `can_prune` attr through. That means a node can propagate pruning mask
+        Whether the node can propagate the `can_prune` attr. That means a node can propagate pruning mask
         (for example, activations propagate mask, but convolutions stop mask propagation).
 
         :param nncf_node: Node to work with.
