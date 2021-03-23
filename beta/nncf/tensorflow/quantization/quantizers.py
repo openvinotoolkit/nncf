@@ -35,9 +35,11 @@ class TFQuantizerSpec(QuantizerSpec):
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
                  half_range: bool,
-                 per_channel: bool):
+                 per_channel: bool,
+                 name: str = 'quantizer'):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = per_channel
+        self.name = name
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool):
@@ -46,18 +48,19 @@ class TFQuantizerSpec(QuantizerSpec):
                    qconfig.signedness_to_force,
                    narrow_range,
                    half_range,
-                   qconfig.per_channel)
+                   qconfig.per_channel,
+                   qconfig.name)
 
 
 class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations
     """
-    def __init__(self):
+    def __init__(self, name):
         """
         Initializes internal NNCF quantization operation state
         """
-        super().__init__()
+        super().__init__(name=name)
         self.enabled = True
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
@@ -229,16 +232,12 @@ class Quantizer(NNCFOperation):
     def get_config(self):
         raise NotImplementedError
 
-    @classmethod
-    def from_config(cls, config):
-        return cls()
-
 
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, qspec: TFQuantizerSpec):
-        super().__init__()
+        super().__init__(name=qspec.name)
         self.num_bits = qspec.num_bits
         self.per_channel = qspec.per_channel
         self.narrow_range = qspec.narrow_range
@@ -289,6 +288,7 @@ class SymmetricQuantizer(Quantizer):
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
+            name=self.name,
             num_bits=self.num_bits,
             mode=QuantizationMode.SYMMETRIC,
             signedness_to_force=self.signedness_to_force,
@@ -296,7 +296,8 @@ class SymmetricQuantizer(Quantizer):
         )
 
     def get_config(self):
-        qspec = TFQuantizerSpec(num_bits=self.num_bits,
+        qspec = TFQuantizerSpec(name=self.name,
+                                num_bits=self.num_bits,
                                 mode=QuantizationMode.SYMMETRIC,
                                 signedness_to_force=self.signedness_to_force,
                                 narrow_range=self.narrow_range,
@@ -306,7 +307,8 @@ class SymmetricQuantizer(Quantizer):
 
     @classmethod
     def from_config(cls, config):
-        qspec = TFQuantizerSpec(num_bits=config["num_bits"],
+        qspec = TFQuantizerSpec(name=config['name'],
+                                num_bits=config["num_bits"],
                                 mode=QuantizationMode.SYMMETRIC,
                                 signedness_to_force=config["signedness_to_force"],
                                 narrow_range=config["narrow_range"],
@@ -320,7 +322,7 @@ class SymmetricQuantizer(Quantizer):
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, qspec: TFQuantizerSpec):
-        super().__init__()
+        super().__init__(name=qspec.name)
         self.num_bits = qspec.num_bits
         self.narrow_range = qspec.narrow_range
         self.per_channel = qspec.per_channel
@@ -370,6 +372,7 @@ class AsymmetricQuantizer(Quantizer):
 
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
+            name=self.name,
             num_bits=self.num_bits,
             mode=QuantizationMode.ASYMMETRIC,
             signedness_to_force=None,
@@ -377,8 +380,9 @@ class AsymmetricQuantizer(Quantizer):
         )
 
     def get_config(self):
-        qspec = TFQuantizerSpec(self.num_bits,
-                                QuantizationMode.ASYMMETRIC,
+        qspec = TFQuantizerSpec(name=self.name,
+                                num_bits=self.num_bits,
+                                mode=QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
                                 narrow_range=self.narrow_range,
                                 half_range=self._half_range ,
@@ -387,7 +391,8 @@ class AsymmetricQuantizer(Quantizer):
 
     @classmethod
     def from_config(cls, config):
-        qspec = TFQuantizerSpec(num_bits=config["num_bits"],
+        qspec = TFQuantizerSpec(name=config['name'],
+                                num_bits=config["num_bits"],
                                 mode=QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
                                 narrow_range=config["narrow_range"],
