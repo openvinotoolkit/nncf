@@ -58,11 +58,14 @@ class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations
     """
-    def __init__(self, name):
+    def __init__(self, name, num_bits, narrow_range, per_channel):
         """
         Initializes internal NNCF quantization operation state
         """
         super().__init__(name=name)
+        self.num_bits = num_bits
+        self.per_channel = per_channel
+        self.narrow_range = narrow_range
         self.enabled = True
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
@@ -250,10 +253,10 @@ class Quantizer(NNCFOperation):
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name, qspec: TFQuantizerSpec):
-        super().__init__(name=name)
-        self.num_bits = qspec.num_bits
-        self.per_channel = qspec.per_channel
-        self.narrow_range = qspec.narrow_range
+        super().__init__(name=name,
+                         num_bits=qspec.num_bits,
+                         narrow_range=qspec.narrow_range,
+                         per_channel=qspec.per_channel)
         self.signedness_to_force = qspec.signedness_to_force
         self._half_range = qspec.half_range
 
@@ -329,10 +332,10 @@ class SymmetricQuantizer(Quantizer):
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, name, qspec: TFQuantizerSpec):
-        super().__init__(name=name)
-        self.num_bits = qspec.num_bits
-        self.narrow_range = qspec.narrow_range
-        self.per_channel = qspec.per_channel
+        super().__init__(name=name,
+                         num_bits=qspec.num_bits,
+                         narrow_range=qspec.narrow_range,
+                         per_channel=qspec.per_channel)
         self._half_range = qspec.half_range
 
     def build(self, input_shape, input_type, name, layer):
