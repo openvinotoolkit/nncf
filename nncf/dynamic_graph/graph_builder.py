@@ -140,7 +140,7 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                 args, kwargs = wrap_nncf_model_inputs_with_objwalk(args, kwargs)
             else:
                 args, kwargs = wrap_inputs_fn(args, kwargs)
-        if with_output_tracing:    
+        if with_output_tracing:
             if wrap_outputs_fn is not None:
                 return wrap_outputs_fn(model(*args, **kwargs))
             return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))

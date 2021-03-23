@@ -37,7 +37,6 @@ from nncf.dynamic_graph.graph import NNCFNode
 from nncf.dynamic_graph.graph import OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import GraphBuilder
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames

@@ -18,7 +18,6 @@ import torch.nn.functional as F
 from torch.nn import Module, Conv2d, BatchNorm2d, ReLU, MaxPool2d, Sequential, AvgPool2d, init
 
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
-from nncf.dynamic_graph.input_wrapping import MODEL_OUTPUT_OP_NAME
 from nncf.utils import get_all_modules_by_type, get_module_by_node_name, get_all_node_names, \
     apply_by_node_name, set_module_by_node_name, parse_node_name
 

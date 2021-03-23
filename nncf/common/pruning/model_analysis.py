@@ -18,7 +18,6 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.dynamic_graph.input_wrapping import MODEL_OUTPUT_OP_NAME
 
 
 
