@@ -91,7 +91,7 @@ Quick jump to the samples:
 |ResNet50|Sparsity 50% (Magnitude)|ImageNet|75.04|75|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 50% (Magnitude)|ImageNet|75.04|74.46|
 |ResNet50|Filter Pruning 40%|ImageNet|75.04|74.98|
-|TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.84|71.73|
+|TensorFlow Hub MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.84|71.90|
 
 #### Object detection
 

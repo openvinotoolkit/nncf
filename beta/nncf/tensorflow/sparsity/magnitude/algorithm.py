@@ -50,6 +50,13 @@ SPARSITY_LAYERS = {
     'LocallyConnected2D': {WEIGHT_ATTR_NAME: 'kernel'}
 }
 
+SPARSITY_TF_OPS = [
+    'Conv2D',
+    'Conv3D',
+    'DepthwiseConv2dNative',
+    'QuantizedConv2D'
+]
+
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
@@ -83,7 +90,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         for layer in get_custom_layers(model):
             nxmodel = convert_layer_graph_to_nxmodel(layer)
             for node_name, node in nxmodel.nodes.items():
-                if node['type'] in SPARSITY_LAYERS \
+                if node['type'] in SPARSITY_TF_OPS \
                         and not is_ignored(node_name, self.ignored_scopes):
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     transformations.register(
