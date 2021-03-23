@@ -10,9 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import functools
 import inspect
 import operator
 from collections import OrderedDict
+from copy import deepcopy
 from enum import Enum
 from typing import Callable
 from typing import Dict
@@ -21,27 +23,26 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-import functools
 import networkx as nx
 import torch
-from copy import deepcopy
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 
-from nncf.common.utils.ordered_enum import OrderedEnum
-from nncf.module_operations import UpdateWeight
-
-from nncf.dynamic_graph.graph import NNCFNodeExpression
+from nncf.common.graph.graph import NNCFGraph
+from nncf.utils import objwalk
+from nncf.dynamic_graph.graph import ModuleAttributes
 from torch import nn
 
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
-from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.graph.module_attributes import BaseModuleAttributes
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
-from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.dynamic_graph.context import TracingContext
+from nncf.dynamic_graph.graph import NNCFNodeExpression
 from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_builder import GraphBuilder
@@ -51,15 +52,16 @@ from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
 from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.dynamic_graph.wrappers import _get_module_attributes
 from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.module_operations import UpdateWeight
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import compute_FLOPs_hook
 from nncf.utils import get_all_modules_by_type
@@ -68,7 +70,7 @@ from nncf.utils import get_state_dict_names_with_modules
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 
 Module = TypeVar('Module', bound=nn.Module)
-ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseModuleAttributes)
+
 
 class ExtraCompressionModuleType(Enum):
     ACTIVATION_QUANTIZER = 0
@@ -114,23 +116,21 @@ class InsertionPointGraph(nx.DiGraph):
     NODE_TYPE_NODE_ATTR = "node_type"
     INSERTION_POINT_DATA_NODE_ATTR = "insertion_point_data"
     IS_IN_NNCF_MODULE_NODE_ATTR = "is_in_nncf_module"
-    REGULAR_NODE_REF_NODE_ATTR = "regular_node_ref"
+    REGULAR_NODE_REF_NODE_ATTR = "regular_node_data"
     ASSOCIATED_IP_NODE_KEYS_NODE_ATTR = "associated_ip_node_keys"
-    OPERATOR_METATYPE_NODE_ATTR = "op_meta"
 
     PRE_HOOK_ID_PREFIX = "PRE HOOK "  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = "POST HOOK "
 
-    def __init__(self, model_nx_graph: nx.DiGraph):
+    def __init__(self, nncf_graph: NNCFGraph):
         super().__init__()
-        self._base_nx_graph = deepcopy(model_nx_graph)
-        self._input_ips = []  # type: List[PTTargetPoint]
+        self._base_nx_graph = deepcopy(nncf_graph.get_nx_graph_copy())
+        self._input_ips = []  # type: List[InsertionPoint]
 
         for node_key, node in self._base_nx_graph.nodes.items():
-            attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: node,
+            attrs = {InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR: nncf_graph._nx_node_to_nncf_node(node),
                      InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.OPERATOR,
-                     InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR: set(),
-                     InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR: None}
+                     InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR: set()}
             self.add_node(node_key, **attrs)
 
         IN_PORT_ID_ATTR_NAME = "in_port_id"
@@ -150,12 +150,13 @@ class InsertionPointGraph(nx.DiGraph):
         node_keys_working_set = [deepcopy(node_key) for node_key in self.nodes.keys()]
         for operator_node_key in node_keys_working_set:
             original_node = self.nodes[operator_node_key][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = original_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_context = original_node.op_exec_context.input_agnostic
+
+            operator_node = self.nodes[operator_node_key]
 
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
             # a port ID attribute.
-            operator_node = self.nodes[operator_node_key]
             in_edges = list(self.in_edges(operator_node_key))
             for edge in in_edges:
                 port_id = self.edges[edge][IN_PORT_ID_ATTR_NAME]
@@ -296,6 +297,7 @@ class InsertionPointGraph(nx.DiGraph):
 
         return merged_ip_graph
 
+
     @staticmethod
     def get_pre_hook_node_key(node_key: str, in_port_id: int = 0) -> str:
         return InsertionPointGraph.PRE_HOOK_ID_PREFIX + str(in_port_id) + ' ' + node_key
@@ -327,8 +329,8 @@ class InsertionPointGraph(nx.DiGraph):
         matching_ip_graph_op_nodes_list = []
         for node in self.nodes().values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                nncf_graph_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_exec_context = nncf_graph_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                nncf_graph_node = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+                op_exec_context = nncf_graph_node.op_exec_context
                 op_scope = op_exec_context.input_agnostic.scope_in_model
                 if op_scope in scope:
                     matching_ip_graph_op_nodes_list.append(node)
@@ -436,6 +438,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._compressed_context = TracingContext()
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)
+        self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
@@ -447,10 +450,26 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
-            args, kwargs = self._wrap_inputs_fn(args, kwargs)
+            if not self._in_user_dummy_forward:
+                # If a user supplies own dummy forward, he is responsible for
+                # correctly wrapping inputs inside it as well.
+                args, kwargs = self._strip_traced_tensors(args, kwargs)
+                args, kwargs = self._wrap_inputs_fn(args, kwargs)
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
         return retval
 
+    def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+        """
+            Required to guard against new forward calls on tensors that have already passed
+            through NNCF's forward once and got turned into TracedTensors by reference access.
+        """
+        is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+        def strip_fn(tensor: TracedTensor) -> torch.Tensor:
+            return torch.Tensor.as_subclass(tensor, torch.Tensor)
+
+        args = objwalk(args, is_traced_tensor_predicate, strip_fn)
+        kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
+        return args, kwargs
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -514,12 +533,25 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_tracing_context(self) -> TracingContext:
         return self._compressed_context
 
+    def enable_dynamic_graph_building(self):
+        self._compressed_context.enable_node_additions()
+
+    def disable_dynamic_graph_building(self):
+        self._compressed_context.disable_node_additions()
+
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
                                            wrap_inputs_fn=self._wrap_inputs_fn)
-        return self._user_dummy_forward_fn
+
+        def wrapped_user_dummy_forward_fn(*args, **kwargs):
+            self._in_user_dummy_forward = True
+            retval = self._user_dummy_forward_fn(*args, **kwargs)
+            self._in_user_dummy_forward = False
+            return retval
+
+        return wrapped_user_dummy_forward_fn
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):
@@ -622,7 +654,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             train_mode = self.training
             self.eval()
         with torch.no_grad():
-            self._dummy_forward_fn(self)
+            with self._compressed_context as ctx:
+                ctx.base_module_thread_local_replica = self
+                self._dummy_forward_fn(self)
         if force_eval:
             if train_mode:
                 self.train()
@@ -639,38 +673,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return quantizer_input_shape
 
     def get_insertion_point_graph(self) -> InsertionPointGraph:
-        ip_graph = InsertionPointGraph(self._original_graph.get_nx_graph_copy())
-
-        # Mark IP graph operator nodes with associated op metatypes
-        # Determining operator metatypes is more suited to occur at wrap_operator
-        # stage, because it might be influenced by specific non-tensor function paramters,
-        # but we have to inspect the containing module parameters as well, so the
-        # TracingContext in wrap_operator would have to retain a reference to
-        # the model that uses it. Since currently we do not need to inspect the
-        # function arguments to determine the metatype, we can do this here, but
-        # once we need to inspect the arguments, the code will have to be moved to
-        # wrap_operator.
-
-        for node_key in ip_graph.nodes:
-            ip_graph_node = ip_graph.nodes[node_key]
-            ip_graph_node_type = ip_graph_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
-            if ip_graph_node_type == InsertionPointGraphNodeType.OPERATOR:
-                nncf_graph_node_ref = ip_graph_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_arch = self.get_op_arch_by_graph_node(nncf_graph_node_ref)
-                ip_graph_node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] = op_arch
+        ip_graph = InsertionPointGraph(self._original_graph)
         return ip_graph
-
-    def get_op_arch_by_graph_node(self, nncf_graph_node_ref: dict) -> 'OperatorMetatype':
-        op_exec_context = nncf_graph_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
-        op_name = op_exec_context.operator_name
-        scope = op_exec_context.scope_in_model
-        op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
-        module = self.get_module_by_scope(scope)
-        if module is not None:
-            subtype = op_arch.determine_subtype(containing_module=module)
-            if subtype is not None:
-                op_arch = subtype
-        return op_arch
 
     def get_module_by_scope(self, scope: 'Scope') -> torch.nn.Module:
         curr_module = self.get_nncf_wrapped_model()
@@ -764,9 +768,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         """
         result = []
         eval_graph = graph_builder.build_graph(model, as_eval=True)
-        for node_key in eval_graph.get_all_node_keys():
-            node = eval_graph.get_nx_node_by_key(node_key)
-            op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        for nncf_node in eval_graph.get_all_nodes():
+            op_exec_context = nncf_node.op_exec_context
             if op_exec_context:
                 result.append(str(op_exec_context.input_agnostic))
         return result

@@ -140,4 +140,5 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |RetinaNet|None|COCO2017|33.44|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet.tar.gz)|
 |RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.3|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_a_sym_t.tar.gz)|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
+|RetinaNet|Filter Pruning 40%|COCO2017|32.7|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
 

@@ -27,7 +27,7 @@ class TransformationLayout:
 
     def __init__(self):
         """
-        Initialize Transformation Layout
+        Initialize Transformation Layout.
         """
         self._transformations = []
 
@@ -37,18 +37,18 @@ class TransformationLayout:
 
     def register(self, transformation: TransformationCommand) -> None:
         """
-        Registers the transformation command in the transformation layout
+        Registers the transformation command in the transformation layout.
 
         :param transformation: The transformation command to be registered in
-            the transformation layout
+            the transformation layout.
         """
         self.transformations.append(transformation)
 
     def update(self, other: 'TransformationLayout') -> None:
         """
-        D.update(other), updates D from other
+        D.update(other), updates D from other.
 
-        :param other: Another transformation layout
+        :param other: Another transformation layout.
         """
         for transformation in other.transformations:
             self.register(transformation)

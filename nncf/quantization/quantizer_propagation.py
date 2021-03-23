@@ -32,10 +32,9 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
@@ -44,6 +43,7 @@ from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.quantization.quantizer_setup import QuantizationPointId
@@ -273,12 +273,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 qpg_node[
                     self.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.NON_QUANTIZABLE
                 qpg_node[self.AFFECTING_PROPAGATING_QUANTIZERS_ATTR] = []
-                qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
                 qpg_node[self.IS_IN_IGNORED_SCOPES] = False
 
-                # pylint:disable=line-too-long
-                node_ia_op_exec_context = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR][
-                    PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic  # type: InputAgnosticOperationExecutionContext
+                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+                node_ia_op_exec_context = nncf_node_ref.op_exec_context.input_agnostic
+
+                qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model
                 qpg_node[self.OPERATOR_IA_OP_EXEC_CONTEXT_NODE_ATTR] = node_ia_op_exec_context
                 node_scope = str(node_ia_op_exec_context)
@@ -330,6 +330,17 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     @staticmethod
     def get_barrier_node_key(node_key: str):
         return QuantizerPropagationStateGraph.BARRIER_NODE_KEY_POSTFIX + node_key
+
+    def get_node_key_for_insertion_point(self, ip: PTTargetPoint) -> str:
+        matches = []
+        for node_key, node in self.nodes(data=True):
+            node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if node_type is QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
+                node_ip = node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR]
+                if node_ip == ip:
+                    matches.append(node_key)
+        assert len(matches) == 1
+        return matches[0]
 
     # pylint:disable=too-many-branches
     def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: List[Tuple[str, str]]):

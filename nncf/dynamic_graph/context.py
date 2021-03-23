@@ -13,19 +13,28 @@
 
 import re
 import threading
-from collections import deque, OrderedDict
+from collections import OrderedDict
+from collections import deque
 from contextlib import contextmanager
-from functools import partial
-from typing import Callable, List, Dict, Tuple, Union
 from copy import deepcopy
+from functools import partial
 from itertools import islice
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
+import torch
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import PTNNCFGraph, PTNNCFNode
-from nncf.dynamic_graph.trace_tensor import make_input_infos
+from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.layers import ITERATION_MODULES
+from nncf.dynamic_graph.graph import ModuleAttributes
 from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
@@ -241,9 +250,10 @@ class TracingContext:
 
         self._thread_local = threading.local()
 
-        self._n_instance = 0
+        self._n_instances_searching_graph = 0
         self._cond = threading.Condition()
         self.is_tracing = True
+        self._may_add_nodes = True
         self._input_comparators_per_scope = []
 
     def __enter__(self):
@@ -260,28 +270,32 @@ class TracingContext:
         self.reset_scope_operator_call_counters()
         self.leave()
 
-    def find_operator_node(self, inputs: OperatorInput,
-                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> PTNNCFNode:
+    def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
+                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:
         with self._cond:
-            self._n_instance += 1
-        tensor_metas = make_input_infos(inputs)
+            self._n_instances_searching_graph += 1
 
         node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
 
         with self._cond:
-            self._n_instance -= 1
+            self._n_instances_searching_graph -= 1
             self._cond.notify_all()
+        return node
 
-        if node is None:
-            with self._cond:
-                while self._n_instance > 0:
-                    self._cond.wait()
-                # Another thread may have added a node inside this block,
-                # so we need to check again if a node is already added.
-                node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
-                if node is None:
-                    node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
-                                               inputs)
+    def maybe_add_node(self, inputs: OperatorInput, tensor_metas: List[Optional[TensorMeta]],
+                       ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                       module_attrs: ModuleAttributes = None) -> NNCFNode:
+        if not self._may_add_nodes:
+            return None
+        with self._cond:
+            while self._n_instances_searching_graph > 0:
+                self._cond.wait()
+            # Another thread may have added a node inside this block,
+            # so we need to check again if a node is already added.
+            node = self.graph.find_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope)
+            if node is None:
+                node = self.graph.add_node(ia_op_exec_context, tensor_metas, self._input_comparators_per_scope,
+                                           inputs, module_attrs)
         return node
 
     def get_caller_context(self, operator_type: str) -> InputAgnosticOperationExecutionContext:
@@ -345,14 +359,14 @@ class TracingContext:
         _CURRENT_CONTEXT = self._save_context
         self._save_context = None
 
-    def push_scope(self, scope_module):
-        relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(scope_module)
-        self.scope_modules.append(scope_module)
+    def push_scope(self, called_module: torch.nn.Module):
+        relative_scopes_list = self._get_scope_relative_to_last_registered_module_call(called_module)
+        self.module_call_stack.append(called_module)
         self.relative_scopes_stack.append(relative_scopes_list)
 
     def pop_scope(self):
         self.relative_scopes_stack.pop()
-        self.scope_modules.pop()
+        self.module_call_stack.pop()
 
     def register_pre_hooks(self, fn_list: List[Callable], ia_op_exec_context: InputAgnosticOperationExecutionContext,
                            input_port_id: int):
@@ -400,6 +414,12 @@ class TracingContext:
     def enable_tracing(self):
         self.is_tracing = True
 
+    def enable_node_additions(self):
+        self._may_add_nodes = True
+
+    def disable_node_additions(self):
+        self._may_add_nodes = False
+
     def add_node_comparators(self, scopes_to_apply: List[str],
                              node_input_comparator: 'TensorMetaComparator' = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
@@ -425,9 +445,14 @@ class TracingContext:
         self._thread_local.in_operator = val
 
     @property
-    def scope_modules(self):
+    def module_call_stack(self) -> List[torch.nn.Module]:
         self._init_thread_local()
-        return self._thread_local.scope_modules
+        return self._thread_local.module_call_stack
+
+    def get_current_module(self) -> Optional[torch.nn.Module]:
+        if self.module_call_stack:
+            return self.module_call_stack[-1]
+        return None
 
     @property
     def relative_scopes_stack(self) -> List[Scope]:
@@ -441,7 +466,7 @@ class TracingContext:
             return
         tl.ready = True
         tl.scopes = []
-        tl.scope_modules = []
+        tl.module_call_stack = []
         tl.in_operator = False
         tl.num_nested_hooks = 0
         tl.base_module_replica = None
@@ -463,9 +488,9 @@ class TracingContext:
 
     def _get_scope_relative_to_last_registered_module_call(self, module) -> Scope:
         module_class = module.__class__.__name__
-        if not self.scope_modules:
+        if not self.module_call_stack:
             return Scope([ScopeElement(module_class), ])
-        q = deque([(tuple(), self.scope_modules[-1])])
+        q = deque([(tuple(), self.module_call_stack[-1])])
         while q:
             scope_parts, top = q.popleft()
             if module is top:

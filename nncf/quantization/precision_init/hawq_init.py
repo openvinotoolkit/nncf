@@ -623,6 +623,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             qconfig_sequence_in_traces_order,
             wqp_ids_in_trace_order,
             ctrl.get_quantizer_setup_for_current_state())
+
         assert quantizer_setup_to_set.shared_input_operation_set_groups
         for group in quantizer_setup_to_set.shared_input_operation_set_groups:
             weight_qp_ids = []

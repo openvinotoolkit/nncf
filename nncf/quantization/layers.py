@@ -17,6 +17,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from functools import partial
+
+from nncf.dynamic_graph.context import no_nncf_trace
 from torch import distributed
 
 from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -132,7 +134,8 @@ class BaseQuantizer(nn.Module):
             return x
         self.set_level_ranges()
         if is_tracing_state():
-            return self.run_export_quantization(x)
+            with no_nncf_trace():
+                return self.run_export_quantization(x)
 
         return self.quantize(x)
 

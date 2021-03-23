@@ -10,7 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict, Callable, Any, Union, List
+from typing import Dict
+from typing import Callable
+from typing import Any
+from typing import Union
+from typing import List
 from typing import Tuple
 
 import numpy as np
@@ -165,7 +169,7 @@ def check_equal(test, reference, rtol=1e-4):
         np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
 
 
-def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFConfig,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               resuming_state_dict: dict = None) \

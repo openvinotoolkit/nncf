@@ -44,14 +44,8 @@ def geometric_median_filter_norm(weight_tensor, dim=0):
     weight_tensor = weight_tensor.transpose(0, dim).contiguous()
     filters_count = weight_tensor.size(0)
     weight_vec = weight_tensor.view(filters_count, -1)
-    similar_matrix = torch.zeros((filters_count, filters_count))
-    pdist_fn = torch.nn.PairwiseDistance(p=2)
-    for i in range(filters_count):
-        for j in range(i, filters_count):
-            similar_matrix[i, j] = pdist_fn(weight_vec[None, i], weight_vec[None, j])[0].item()
-            similar_matrix[j, i] = similar_matrix[i, j]
-    similar_sum = similar_matrix.sum(axis=0).to(weight_tensor.device)
-    return similar_sum
+    similarity_matrix = torch.cdist(weight_vec[None, :], weight_vec[None, :], p=2.0)
+    return similarity_matrix.squeeze().sum(axis=0).to(weight_tensor.device)
 
 
 FILTER_IMPORTANCE_FUNCTIONS = {

@@ -27,7 +27,6 @@ from beta.nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFConvolution
 from beta.nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
-from beta.nncf.tensorflow.pruning.schedulers import PRUNING_SCHEDULERS
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -38,6 +37,7 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')

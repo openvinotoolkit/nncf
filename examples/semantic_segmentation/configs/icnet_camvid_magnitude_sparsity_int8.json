@@ -32,7 +32,7 @@
             "weight_decay": 2.0e-4
         },
         "schedule_type": "poly",
-        "scheduler_params": {
+        "schedule_params": {
             "power": 0.9
         }
     },

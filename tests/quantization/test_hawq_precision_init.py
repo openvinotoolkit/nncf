@@ -341,6 +341,9 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     model = params.model_creator()
     if torch.cuda.is_available():
         model = model.cuda()
+        pregen_device = 'cuda'
+    else:
+        pregen_device = 'cpu'
 
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
@@ -350,7 +353,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
-    pregen_traces_for_all_layers = params.avg_traces_creator(model, 'cuda')
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
     chosen_index_spy = mocker.spy(HAWQPrecisionInitializer, 'choose_qconfig_sequence')
 
@@ -434,9 +437,10 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     model = squeezenet1_1(num_classes=10, dropout=0)
     from torchvision.models.squeezenet import model_urls
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
-    model = model.cuda()
-
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss()
+    if torch.cuda.is_available():
+        model = model.cuda()
+        criterion = criterion.cuda()
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)

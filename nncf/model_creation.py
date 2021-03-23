@@ -54,7 +54,10 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     the internal graph representation via tracing. Specifying this is useful when the original training pipeline
     has special formats of data loader output or has additional *forward* arguments other than input tensors.
     Otherwise, the *forward* call of the model during graph tracing will be made with mock tensors according
-    to the shape specified in the config object.
+    to the shape specified in the config object. The dummy_forward_fn code MUST contain calls to nncf.nncf_model_input
+    functions made with each compressed model input tensor in the underlying model's args/kwargs tuple, and these
+    calls should be exactly the same as in the wrap_inputs_fn function code (see below); if dummy_forward_fn is
+    specified, then wrap_inputs_fn also must be specified.
     :param wrap_inputs_fn: if supplied, will be used on the module's input arguments during a regular, non-dummy
     forward call before passing the inputs to the underlying compressed model. This is required if the model's input
     tensors that are important for compression are not supplied as arguments to the model's forward call directly, but
@@ -64,12 +67,18 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     supplied model's args and kwargs that is important for compression (e.g. quantization) with an nncf.nncf_model_input
     function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
     graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
-    input, but each tensor in the original input.
+    input, but each tensor in the original input. Must be specified if dummy_forward_fn is specified.
     :param dump_graphs: Whether or not should also dump the internal graph representation of the
     original and compressed models in the .dot format into the log directory.
     :return: A controller for the compression algorithm (or algorithms, in which case the controller
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
     as an object of NNCFNetwork."""
+
+    if dummy_forward_fn is not None and wrap_inputs_fn is None:
+        raise ValueError("A custom dummy forward function was specified, but the corresponding input wrapping function "
+                         "was not. In case a custom dummy forward function is specified for purposes of NNCF graph "
+                         "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
+                         "the input wrapping done in dummy_forward_fn.")
 
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
@@ -109,6 +118,10 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
     compression_ctrl = composite_builder.build_controller(compressed_model)
 
+    # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
+    # In particular, this is currently required for correct functioning of RNNs.
+    compressed_model.rebuild_graph()
+
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
@@ -123,4 +136,5 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+
     return compression_ctrl, compressed_model

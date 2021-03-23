@@ -113,7 +113,7 @@ staged_quantization_params = {'activations_quant_start_epoch': 1, 'weights_quant
 magnitude_sparsity_params = {'schedule': 'multistep',
                              'multistep_steps': [1, 2],
                              'multistep_sparsity_levels': [0, 0.3, 0.5]}
-filter_pruning_params = {'schedule': 'exponential', 'num_init_steps': 0, 'pruning_steps': 2}
+filter_pruning_params = {'schedule': 'exponential', 'num_init_steps': 0, 'pruning_steps': 3}
 FFF_levels = [CompressionLevel.FULL] * 3
 NPF_levels = [CompressionLevel.NONE, CompressionLevel.PARTIAL, CompressionLevel.FULL]
 LIST_OF_TEST_PARAMS = [
@@ -143,7 +143,7 @@ LIST_OF_TEST_PARAMS = [
     CompressionLevelTestStruct(
         config_provider=TestConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
-            'pruning_steps': 1,
+            'pruning_steps': 2,
         }),
         compression_levels=[CompressionLevel.NONE, CompressionLevel.FULL, CompressionLevel.FULL]
     ),

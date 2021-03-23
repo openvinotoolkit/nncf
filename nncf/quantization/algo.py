@@ -26,7 +26,9 @@ import numpy as np
 import shutil
 import torch
 from copy import deepcopy
+
 from nncf.nncf_network import LoadStateListener
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 
 from nncf.utils import get_state_dict_names_with_modules
 
@@ -50,7 +52,6 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
@@ -243,7 +244,6 @@ class QuantizerSetupGeneratorBase:
         return quantized_modules_with_potential_qconfig
 
 
-
 class IQuantizerSetupDisambiguator:
     def select_final_quantizer_setup(self, multi_config_setup: MultiConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
         raise NotImplementedError
@@ -373,7 +373,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
             nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+            ia_op_exec_context = nncf_node.op_exec_context.input_agnostic
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
         contexts_correspond_to_single_module = True
@@ -413,7 +413,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
                 if len(associated_ops) > 1:
                     self._check_if_ip_graph_nodes_point_to_single_module(associated_ops)
                 graph_operation = associated_ops[0]
-                metatype = graph_operation[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR]
+                nncf_node_ref = graph_operation[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
+                metatype = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
                 qconfig_list = meta_vs_qconfig_map[metatype]
                 if HWConfig.is_wildcard_quantization(qconfig_list):  # Empty list = wildcard quantization
                     qconfig_list = [default_qconfig]
@@ -842,8 +843,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if not graph_node:
                 raise RuntimeError(f'Internal error: failed to find node for by scope={module_scope}')
 
-            op_arch = target_model.get_op_arch_by_graph_node(graph_node)
-            is_adjust_padding_applicable = op_arch in adjust_padding_operation_set
+            op_type = PTOperatorMetatypeNodeMatcher.match(graph_node)
+            is_adjust_padding_applicable = op_type in adjust_padding_operation_set
             if self._should_setup_adjust_pad_ops and is_adjust_padding_applicable:
                 found_groups = filter(lambda group: wqp_id in group, quantizer_setup.shared_input_operation_set_groups)
                 for found_group in found_groups:

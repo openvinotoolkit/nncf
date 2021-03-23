@@ -31,6 +31,7 @@ class TransformationPriority(OrderedEnum):
     of sparsity level on the value threshold becomes discontinuous which impacts the
     corresponding algorithms.
     """
+
     DEFAULT_PRIORITY = 0
     FP32_TENSOR_STATISTICS_OBSERVATION = 1
     PRUNING_PRIORITY = 2
@@ -67,6 +68,7 @@ class TargetType(OrderedEnum):
     registration location:`PRE_LAYER_OPERATION`, `POST_LAYER_OPERATION` and
     `OPERATION_WITH_WEIGHTS`.
     """
+
     LAYER = 0
     BEFORE_LAYER = 1
     AFTER_LAYER = 2
@@ -84,6 +86,7 @@ class TransformationType(OrderedEnum):
     `TransformationType` defines *what* to do, while `TargetType` more concerns itself with
     *where* to do it.
     """
+
     INSERT = 0
     MULTI_INSERT = 1
     REMOVE = 2
@@ -102,9 +105,9 @@ class TargetPoint:
 
     def __init__(self, target_type: TargetType):
         """
-        Constructor
+        Constructor.
 
-        :param target_type: Type of the target point
+        :param target_type: Type of the target point.
         """
         self._target_type = target_type
 
@@ -126,14 +129,14 @@ class TargetPoint:
 
 class TransformationCommand:
     """
-    The base class for all transformation commands
+    The base class for all transformation commands.
     """
 
     def __init__(self, command_type: TransformationType, target_point: TargetPoint):
         """
-        Constructor
+        Constructor.
 
-        :param command_type: Type of the transformation command
+        :param command_type: Type of the transformation command.
         :param target_point: Target point, the object or spot in the model graph
             to which the transformation command will be applied.
         """

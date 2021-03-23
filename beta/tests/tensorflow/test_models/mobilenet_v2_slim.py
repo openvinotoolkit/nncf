@@ -10,12 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import re
-from typing import List
+
+from beta.examples.tensorflow.common.models import mobilenet_v2_100_224
 
 
-def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scopes: List[str]):
-    # TODO: rewrite and add target_scopes handling
-    return all(not re.fullmatch(ignored.replace('{re}', ''), scope_str) if ignored.startswith('{re}')
-               else scope_str != ignored
-               for ignored in ignored_scopes)
+def HubMobileNetV2(input_shape=None):
+    return mobilenet_v2_100_224(input_shape)

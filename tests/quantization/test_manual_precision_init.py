@@ -85,6 +85,8 @@ MANUAL_CONFIG_TEST_PARAMS = [
 @pytest.mark.parametrize('manual_config_params', MANUAL_CONFIG_TEST_PARAMS,
                          ids=[p.name for p in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
+    if manual_config_params.name != 'resnet18_cifar10_mixed_int_manual.json':
+        pytest.skip("Propagation-based manual config TBA")
     config = manual_config_params.create_nncf_config()
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
     model = manual_config_params.create_model(config['model'])

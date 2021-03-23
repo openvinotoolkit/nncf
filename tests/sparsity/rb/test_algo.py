@@ -23,7 +23,7 @@ from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from tests.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement, get_empty_config
 
@@ -118,9 +118,9 @@ def test_can_create_sparse_loss_and_scheduler():
     assert loss.target_sparsity_rate == approx(0.02)
     assert loss.p == approx(0.05)
 
-    assert isinstance(scheduler, PolynomialSparseScheduler)
+    assert isinstance(scheduler, PolynomialSparsityScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.target_sparsity == approx(0.5)
+    assert scheduler.target_level == approx(0.5)
     assert scheduler.target_epoch == 2
     assert scheduler.freeze_epoch == 3
 
