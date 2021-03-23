@@ -29,6 +29,8 @@ class NNCFOperation:
     def __init__(self, name):
         """
         Initializes internal NNCF operation state
+
+        :param name: unique operation name in algorithm scope
         """
         self._call_pre_hooks = OrderedDict()
         self._name = name
