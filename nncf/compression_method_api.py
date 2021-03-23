@@ -185,6 +185,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             model.enable_dynamic_graph_building()
         model.forward = original_forward
 
+
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """
     Determines which modifications should be made to the original FP32 model in
