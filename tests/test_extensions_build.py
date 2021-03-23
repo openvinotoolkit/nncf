@@ -1,7 +1,7 @@
+import os
+import pytest
 import pathlib
 import shutil
-
-import pytest
 
 from tests.conftest import TEST_ROOT
 from tests.test_sanity_sample import Command
@@ -16,6 +16,9 @@ def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_ty
     Check that CUDA Extensions weren't initially built and \
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     '''
+
+    if not os.getenv('CUDA_HOME'):
+        pytest.skip('There is no CUDA on the machine. Test will be skipped')
 
     venv_path = tmp_venv_with_nncf
 
