@@ -53,8 +53,6 @@ from nncf.dynamic_graph.graph_matching import NodeExpression
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
 from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
@@ -586,7 +584,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()
-        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False, with_output_tracing=False)
+        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
+                                                                         with_output_tracing=False)
         builder = GraphBuilder(dummy_forward_fn)
         _ = builder.build_graph(self, self._compressed_context)
 

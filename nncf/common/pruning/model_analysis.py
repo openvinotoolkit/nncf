@@ -337,6 +337,8 @@ class ModelAnalyzer:
         self.propagate_can_prune_attr_down()
         return self.can_prune
 
-    @staticmethod
-    def _ignore_nncf_output_nodes(nncf_nodes):
-        return list(filter(lambda node: node.op_exec_context.operator_name != MODEL_OUTPUT_OP_NAME, nncf_nodes))
+    def _ignore_nncf_output_nodes(self, list_nncf_nodes):
+        for node in self.graph.get_output_nodes():
+            if node in list_nncf_nodes:
+                list_nncf_nodes.remove(node)
+        return list_nncf_nodes

@@ -91,6 +91,9 @@ class NNCFGraph:
                 inputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
         return inputs
 
+    def get_output_nodes(self):
+        return self.get_graph_outputs()
+
     def get_graph_outputs(self) -> List[NNCFNode]:
         """
         Returns list of output nodes of the graph.

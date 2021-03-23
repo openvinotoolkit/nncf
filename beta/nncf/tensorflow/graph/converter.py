@@ -164,8 +164,18 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
     else:
         nncf_graph = _get_nncf_graph_from_sequential(model)
 
+    nncf_graph = _add_dummy_output_nodes(nncf_graph)
     return nncf_graph
 
+def _add_dummy_output_nodes(nncf_graph: NNCFGraph) -> NNCFGraph:
+    output_nodes = nncf_graph.get_graph_outputs()
+
+    for i, node in enumerate(output_nodes):
+        dummy_node_name = "nncf_model_output_{}".format(i)
+        nncf_graph.add_node(dummy_node_name)
+        nncf_graph.add_edge(node.node_name, dummy_node_name)
+
+    return nncf_graph
 
 def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     model_config = model.get_config()

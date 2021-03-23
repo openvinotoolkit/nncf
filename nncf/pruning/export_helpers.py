@@ -71,6 +71,8 @@ class PTInput(PTDefaultMetaOp):
 
     @classmethod
     def accept_pruned_input(cls, node: PTNNCFNode):
+        if node.node_type == "nncf_model_output":
+            return True
         return False
 
     @classmethod
