@@ -17,7 +17,7 @@ from pytest import approx
 
 from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from beta.nncf.tensorflow.sparsity.rb.algorithm import RBSparsityController
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
@@ -145,7 +145,7 @@ def test_can_create_sparse_loss_and_scheduler():
     assert loss.target_sparsity_rate == approx(0.02)
     assert loss.p == approx(0.05)
 
-    assert isinstance(scheduler, PolynomialSparseScheduler)
+    assert isinstance(scheduler, PolynomialSparsityScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
     assert scheduler.target_sparsity == approx(0.5)
     assert scheduler.target_epoch == 2

@@ -37,8 +37,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BM
 from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BMWB
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.utils.node import is_ignored
 
 
@@ -97,7 +95,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        return MagnitudeSparsityController(model, self.config)
+        return MagnitudeSparsityController(model, self.config, self.op_names)
 
 
 class MagnitudeSparsityController(BaseSparsityController):
@@ -109,10 +107,9 @@ class MagnitudeSparsityController(BaseSparsityController):
     """
 
     def __init__(self, target_model, config, op_names):
-        super().__init__(target_model)
+        super().__init__(target_model, op_names)
         params = config.get('params', {})
         self._threshold = 0
-        self.op_names = op_names
         self._frozen = False
         self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
 
@@ -121,9 +118,6 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
         self._scheduler = scheduler_cls(self, params)
         self.set_sparsity_level(sparsity_init)
-
-    def strip_model(self, model):
-        return strip_model_from_masks(model)
 
     def freeze(self):
         self._frozen = True
@@ -170,11 +164,8 @@ class MagnitudeSparsityController(BaseSparsityController):
                             [-1]))
         return all_weights
 
-    def statistics(self, quickly_collected_only=False):
-        raw_sparsity_statistics = self.raw_statistics()
-        prefix = 'sparsity'
-        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)
+    def statistics(self):
+        return super().statistics('magnitude_sparsity')
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}
@@ -218,9 +209,9 @@ class MagnitudeSparsityController(BaseSparsityController):
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
+        raw_sparsity_statistics['magnitude_sparsity_statistic_by_layer'] = []
         for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
+            raw_sparsity_statistics['magnitude_sparsity_statistic_by_layer'].append({
                 'Name': mask_name,
                 'Weight\'s Shape': weights_shape,
                 'SR': sparsity_level,

@@ -132,18 +132,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         self.weights_attr_ops[weights_attr][op.name] = op
         return op.name
 
-    def get_op_by_name(self, name):
-        '''
-        :param name: op name
-        :return: op by name if it exist
-        else None
-        '''
-        for _, ops in self.weights_attr_ops.items():
-            for op_name, op in ops.items():
-                if op_name == name:
-                    return op
-        return None
-
     def get_operation_weights(self, operation_name):
         return self._ops_weights[operation_name]
 

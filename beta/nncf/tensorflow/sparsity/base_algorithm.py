@@ -12,7 +12,8 @@
 """
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-
+from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
+from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 
 SPARSITY_LAYERS = {
     'Conv1D': {'weight_attr_name': 'kernel'},
@@ -39,4 +40,14 @@ SPARSITY_TF_OPS = [
 
 
 class BaseSparsityController(TFCompressionAlgorithmController):
-    pass
+    def __init__(self, target_model, op_names):
+        super().__init__(target_model)
+        self.op_names = op_names
+
+    def strip_model(self, model):
+        return strip_model_from_masks(model, self.op_names)
+
+    def statistics(self, prefix):
+        raw_sparsity_statistics = self.raw_statistics()
+        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
+        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)

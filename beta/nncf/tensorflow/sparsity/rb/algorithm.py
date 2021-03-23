@@ -34,7 +34,6 @@ from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.utils.node import is_ignored
 
@@ -86,8 +85,8 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
 class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config, op_names: set):
+        super().__init__(target_model, op_names)
         params = config.get('params', {})
-        super().__init__(target_model)
         self.sparsity_init = config.get('sparsity_init', 0)
         sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
 
@@ -104,41 +103,12 @@ class RBSparsityController(BaseSparsityController):
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)
 
-    def strip_model(self, model):
-        if not isinstance(model, tf.keras.Model):
-            raise ValueError(
-                'Expected model to be a `tf.keras.Model` instance but got: ', model)
-
-        self.freeze()
-        transformations = TFTransformationLayout()
-
-        for layer in model.layers:
-            if isinstance(layer, NNCFWrapper):
-                for weight_attr, ops in layer.weights_attr_ops.items():
-                    for op_name, _ in ops.items():
-                        if op_name == OP_NAME:
-
-                            self._apply_mask(layer, weight_attr, OP_NAME)
-
-                            transformations.register(
-                                TFRemovalCommand(
-                                    target_point=TFOperationWithWeights(
-                                        layer.name,
-                                        weights_attr_name=weight_attr,
-                                        operation_name=OP_NAME)
-                                ))
-
-        return TFModelTransformer(model, transformations).transform()
-
     def freeze(self):
         self._loss.disable()
-
+    
     def statistics(self):
-        raw_sparsity_statistics = self.raw_statistics()
-        prefix = 'rb_sparsity'
-        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)
-
+        return super().statistics('rb_sparsity')
+        
     def raw_statistics(self):
         raw_sparsity_statistics = {}
         sparsity_levels = []
