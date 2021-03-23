@@ -19,16 +19,11 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
-from beta.nncf.tensorflow.graph.transformations.commands import TFOperationWithWeights
-from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
-from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
@@ -105,10 +100,10 @@ class RBSparsityController(BaseSparsityController):
 
     def freeze(self):
         self._loss.disable()
-    
+
     def statistics(self):
         return super().statistics('rb_sparsity')
-        
+
     def raw_statistics(self):
         raw_sparsity_statistics = {}
         sparsity_levels = []

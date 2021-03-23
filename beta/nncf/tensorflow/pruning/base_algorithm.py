@@ -222,10 +222,12 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
+                 op_names: set,
                  prunable_types: List[str],
                  pruned_layer_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
+        self.op_names = op_names
         self._prunable_types = prunable_types
         self.config = config
         params = self.config.get('params', {})
@@ -270,7 +272,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name, op in ops.items():
+                for op_name in ops.keys():
                     if op_name in self.op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
@@ -305,4 +307,4 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         return raw_pruning_statistics
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
-        return strip_model_from_masks(model)
+        return strip_model_from_masks(model, self.op_names)

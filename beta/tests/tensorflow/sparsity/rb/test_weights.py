@@ -16,7 +16,7 @@ import tensorflow as tf
 
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import st_binary_mask
 from beta.tests.tensorflow.sparsity.rb.utils import default_rb_mask_value
 

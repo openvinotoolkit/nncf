@@ -145,7 +145,7 @@ class MagnitudeSparsityController(BaseSparsityController):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 weight = wrapped_layer.layer_weights[weight_attr]
 
-                for op_name, op in ops.items():
+                for op_name in ops.keys():
                     if op_name in self.op_names:
                         wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
@@ -157,7 +157,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         all_weights = []
         for wrapped_layer in collect_wrapped_layers(self._model):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name, op in ops.items():
+                for op_name in ops.keys():
                     if op_name in self.op_names:
                         all_weights.append(tf.reshape(
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),

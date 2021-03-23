@@ -62,8 +62,7 @@ def test_can_load_sparse_algo__with_defaults():
     config = get_basic_sparsity_config(sparsity_init=0.1)
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
-    # pylint: disable=protected-access
-    assert compression_ctrl._scheduler.initial_sparsity == approx(0.1)
+    assert compression_ctrl.scheduler.initial_level == approx(0.1)
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
@@ -102,6 +101,7 @@ def test_loss_has_correct_ops():
     config = get_basic_sparsity_config()
     compress_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     wrappers = collect_wrapped_layers(compress_model)
+    # pylint: disable=protected-access
     target_ops = {op[0].name: op for op in compression_ctrl.loss._target_ops}
     for wrapper in wrappers:
         for ops in wrapper.weights_attr_ops.values():
@@ -147,7 +147,7 @@ def test_can_create_sparse_loss_and_scheduler():
 
     assert isinstance(scheduler, PolynomialSparsityScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.target_sparsity == approx(0.5)
+    assert scheduler.target_level == approx(0.5)
     assert scheduler.target_epoch == 2
     assert scheduler.freeze_epoch == 3
 

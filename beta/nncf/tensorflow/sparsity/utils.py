@@ -21,7 +21,6 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 
 
 def convert_raw_to_printable(raw_statistics, prefix, header):

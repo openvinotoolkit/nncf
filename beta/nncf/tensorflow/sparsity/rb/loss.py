@@ -14,12 +14,10 @@
 import tensorflow as tf
 
 from nncf.api.compression import CompressionLoss
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.sparsity.rb.operation import OP_NAME
 
 
 class SparseLoss(CompressionLoss):
-    def __init__(self, target_ops=[], target=1.0, p=0.05):
+    def __init__(self, target_ops, target=1.0, p=0.05):
         super().__init__()
         self._target_ops = target_ops
         self.target = tf.Variable(target, trainable=False)
