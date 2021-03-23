@@ -158,13 +158,13 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
-        name = layer_name + OP_NAME_BM
-        assert name in self.op_names
-        self.op_names.add(name)
+        op_name = layer_name + '_' +  attr_name + OP_NAME_BM
+        assert op_name not in self.op_names
+        self.op_names.add(op_name)
 
         return TFInsertionCommand(
             target_point=TFLayerWeight(layer_name, attr_name),
-            callable_object=BinaryMask(name),
+            callable_object=BinaryMask(op_name),
             priority=TransformationPriority.PRUNING_PRIORITY
         )
 

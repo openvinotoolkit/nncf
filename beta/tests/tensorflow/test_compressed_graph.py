@@ -181,7 +181,7 @@ SKIP_MAP = {
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
         'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
         'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
-        'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
+        'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight')
     },
     'rb_sparsity': {
 
@@ -195,7 +195,7 @@ def get_test_models_desc(algorithm):
         # regardless tf.compat.v1.reset_default_graph and
         #            tf.keras.backend.clear_session
         ext = '.dot' if algorithm == SparsityAlgo.rb else '.pb'
-        return name + ext
+        return name.split('.')[0] + ext
 
     # PLEASE USE .dot FORMAT FOR ALL NETS WHICH USE tf.cond OPERATION
     return [
@@ -215,7 +215,10 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('nasnet_mobile', ())
         ),
         ModelDesc(ref_name('resnet50.pb'), test_models.ResNet50, [1, 32, 32, 3]),
-        ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+        pytest.param(
+            ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('resnet50_v2', ())
+        ),
         ModelDesc(ref_name('vgg16.pb'), test_models.VGG16, [1, 32, 32, 3]),
         pytest.param(
             ModelDesc(ref_name('xception.pb'), test_models.Xception, [1, 71, 71, 3]),
@@ -350,11 +353,8 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
 
 
 class TestModelsGraph:
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('quantization'), ids=[
-            get_model_name(m) for m in get_test_models_desc('quantization')
-        ]
-    )
+    @pytest.mark.parametrize('desc', get_test_models_desc('quantization'), ids=[
+        get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
