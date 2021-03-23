@@ -19,9 +19,9 @@
     },
     "compression": {
         "algorithm": "quantization",
-		"weights": {
+        "weights": {
             "per_channel": false
-		}
+        }
     },
     "target_device": "TRIAL"
 }

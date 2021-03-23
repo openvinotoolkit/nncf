@@ -26,7 +26,6 @@ class QuantizerConfig:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param per_channel: True for per-channel quantization, False for per-tensor.
-        :param apply_saturation_fix: True if saturation issue fix *must* be applied, False - otherwise.
         """
         self.num_bits = num_bits
         self.mode = mode
@@ -100,7 +99,8 @@ class QuantizerSpec:
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: bool,
-                 narrow_range: bool):
+                 narrow_range: bool,
+                 apply_saturation_fix: bool = False):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -109,11 +109,13 @@ class QuantizerSpec:
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
         naive case, False if all 2^`num_bits` quantizations should be used.
+        :param apply_saturation_fix: True if saturation issue fix *must* be applied, False - otherwise.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
+        self.apply_saturation_fix = apply_saturation_fix
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__

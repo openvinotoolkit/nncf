@@ -490,6 +490,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             params_dict = self.config.get(group_name, {})
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
+        self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
         self._range_init_params = self._parse_range_init_params(init_config)
@@ -694,8 +696,13 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
         use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
         apply_saturation_fix = False
-        if self.hw_config:
+        if self.hw_config and not self._disable_saturation_fix:
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+                nncf_logger.warning('A saturation issue fix will be applied. '
+                                    'Now all weight quantizers will effectively use only 7 bits out of 8 bits '
+                                    'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                                    'Please take a look at the documentation for a detailed explanation. '
+                                    'https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md')
                 apply_saturation_fix = True
         qspec = PTQuantizerSpec.from_config(qconfig, narrow_range=True,
                                             scale_shape=tuple(scale_shape),

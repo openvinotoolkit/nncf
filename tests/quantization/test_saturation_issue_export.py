@@ -32,48 +32,68 @@ def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, apply_s
 
     quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
 
-    assert quantizer._is_applied_saturation_fix == apply_saturation_fix # pylint: disable=protected-access
+    assert quantizer._is_applied_saturation_fix == apply_saturation_fix  # pylint: disable=protected-access
     assert quantizer.levels == assert_vals[0]
     assert quantizer.level_low == assert_vals[1]
     assert quantizer.level_high == assert_vals[2]
 
 
+def helper_to_test_if_saturation_fix_was_applied(nncf_config, target_device):
+    model = TwoConvTestModel()
+    nncf_config.update({"target_device": target_device})
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    for quantizer in compression_ctrl.weight_quantizers.values():
+        assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert quantizer.quantizer_module_ref.levels == 128
+        assert quantizer.quantizer_module_ref.level_low == -64
+        assert quantizer.quantizer_module_ref.level_high == 63
+
+    for quantizer in compression_ctrl.non_weight_quantizers.values():
+        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+
+
+def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
+    model = TwoConvTestModel()
+    nncf_config.update({"target_device": target_device})
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+
+    for quantizer in compression_ctrl.weight_quantizers.values():
+        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+    for quantizer in compression_ctrl.non_weight_quantizers.values():
+        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+
+
+def test_config_option_disable_saturation_fix():
+    nncf_config = get_config_for_export_mode(True)
+    nncf_config.update({"compression":
+                            {"algorithm": "quantization",
+                             "disable_saturation_fix": True}})
+
+    for device in ['CPU', 'ANY', 'VPU', 'GPU', 'TRIAL']:
+        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+
+    nncf_config.update({"compression":
+                            {"algorithm": "quantization",
+                             "disable_saturation_fix": False}})
+
+    for device in ['CPU', 'ANY']:
+        helper_to_test_if_saturation_fix_was_applied(nncf_config, device)
+
+    for device in ['VPU', 'GPU', 'TRIAL']:
+        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
+
+
 def test_hw_config_saturation_fix_applied():
     nncf_config = get_config_for_export_mode(True)
 
-    # Test CPU, ANY devices in which we use saturation issue
-    def test_with_saturation_helper(target_device):
-        model = TwoConvTestModel()
-        nncf_config.update({"target_device": target_device})
-
-        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-
-        for quantizer in compression_ctrl.weight_quantizers.values():
-            assert quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
-            assert quantizer.quantizer_module_ref.levels == 128
-            assert quantizer.quantizer_module_ref.level_low == -64
-            assert quantizer.quantizer_module_ref.level_high == 63
-
-        for quantizer in compression_ctrl.non_weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
-
-    # Test other devices in which we don't use saturation issue
-    def test_without_saturation_helper(target_device):
-        model = TwoConvTestModel()
-        nncf_config.update({"target_device": target_device})
-
-        _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-
-        for quantizer in compression_ctrl.weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
-        for quantizer in compression_ctrl.non_weight_quantizers.values():
-            assert not quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
-
     for device in ['CPU', 'ANY']:
-        test_with_saturation_helper(device)
+        helper_to_test_if_saturation_fix_was_applied(nncf_config, device)
 
     for device in ['VPU', 'GPU', 'TRIAL']:
-        test_without_saturation_helper(device)
+        helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, device)
 
 
 class EightConvTestModel(nn.Module):
@@ -116,7 +136,7 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
+            assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
@@ -169,7 +189,7 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, c
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
+            assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
@@ -288,7 +308,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert quantizer.quantizer_module_ref.levels == 128
         assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
-        assert quantizer.quantizer_module_ref._is_applied_saturation_fix # pylint: disable=protected-access
+        assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])
@@ -330,6 +350,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert np.allclose(onnx_tensor_weight, quantizer_weight)
         assert np.allclose(level_high_ratio * quantizer_scale, onnx_input_output_high)
         assert np.allclose(-2.0 * level_positive_negative_ratio * quantizer_scale, onnx_input_output_low)
+
 
 @pytest.mark.parametrize('model', [TwoConvTestModel(), EightConvTestModel(), DepthWiseConvTestModel()])
 def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path, model):
