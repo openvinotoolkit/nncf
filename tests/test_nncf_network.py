@@ -150,7 +150,7 @@ def test_find_node_in_nx_graph_by_scope():
 
     # Valid scopes should be successfully found
     valid_nncf_modules = nncf_model.get_nncf_modules()
-    nodes_list = list(nncf_graph.get_all_node_idxs())
+    nodes_list = list(nncf_graph.get_all_node_ids())
     for module_scope, _ in valid_nncf_modules.items():
         graph_node = nncf_graph.find_node_in_nx_graph_by_scope(module_scope)
         assert graph_node is not None
@@ -521,7 +521,7 @@ class TestInsertionPointGraph:
         assert len(ip_graph.nodes) == ref_node_len
         assert len(ip_graph.edges) == ref_edge_len
 
-        for nncf_node_idx in mock_graph.get_all_node_idxs():
+        for nncf_node_idx in mock_graph.get_all_node_ids():
             node_key = mock_graph.get_node_key_by_id(nncf_node_idx)
             ip_graph_op_node = ip_graph.nodes[node_key]
             assert ip_graph_op_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR

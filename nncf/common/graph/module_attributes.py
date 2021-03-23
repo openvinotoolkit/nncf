@@ -16,7 +16,7 @@ from typing import Tuple
 class BaseModuleAttributes:
     """
     This class stores base useful for some algorithms attributes
-    of modules/layers
+    of modules/layers.
     """
 
     def __init__(self, weight_requires_grad: bool):
@@ -30,7 +30,7 @@ class BaseModuleAttributes:
 class ConvolutionModuleAttributes(BaseModuleAttributes):
     """
     This class stores attributes of convolution modules/layers
-    that are useful for some algorithms
+    that are useful for some algorithms.
     """
 
     def __init__(self,
@@ -57,7 +57,7 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
 class GroupNormModuleAttributes(BaseModuleAttributes):
     """
     This class stores attributes of group normalization modules/layers
-    that are useful for some algorithms
+    that are useful for some algorithms.
     """
 
     def __init__(self,
