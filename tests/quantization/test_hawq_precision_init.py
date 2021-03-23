@@ -44,14 +44,11 @@ from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
-from nncf.module_operations import UpdatePaddingValue
 from nncf.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.quantization.hessian_trace import HessianTraceEstimator
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.layers import QuantizerConfig
 from nncf.quantization.layers import QuantizersSwitcher
-from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
 from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
@@ -61,6 +58,7 @@ from nncf.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.quantization.precision_init.perturbations import Perturbations
 from nncf.quantization.precision_init.traces_order import TracesOrder
 from nncf.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.utils import get_all_modules_by_type
 from nncf.utils import safe_thread_call
@@ -166,6 +164,11 @@ class BaseConfigBuilder:
         self._options['with'] = 'ignored_scopes'
         return self
 
+    def with_target_scope(self, target_scopes=List[str]):
+        self._config['target_scopes'] = target_scopes
+        self._options['with'] = 'target_scopes'
+        return self
+
     def __str__(self):
         if self._extra_params:
             return '_'.join([self.filename_suffix(), self._extra_params])
@@ -182,6 +185,8 @@ class HAWQConfigBuilder(BaseConfigBuilder):
         if not config_creator_fn:
             self._config = self.create_hawq_test_config(batch_size, num_data_points, image_size)
         self.num_data_points = num_data_points
+        self.compression_ratio = 0
+        self.should_add_flops = False
 
     def _set_bitwidth_assignment_mode(self, mode: BitwidthAssignmentMode):
         self._config['compression']['initializer']['precision']['bitwidth_assignment_mode'] = mode.value
@@ -200,6 +205,14 @@ class HAWQConfigBuilder(BaseConfigBuilder):
     def for_vpu(self):
         super().for_vpu()
         return self.strict_mode()
+
+    def check_compression_ratio(self, compression_ratio=1.5):
+        self.compression_ratio = compression_ratio
+        return self
+
+    def add_flops(self):
+        self.should_add_flops = True
+        return self
 
     @staticmethod
     def create_hawq_test_config(batch_size=10, num_data_points=100, image_size=10):
@@ -250,7 +263,7 @@ def get_avg_traces(model, init_device: str):
     return torch.randperm(num_layers).to(init_device) + 1
 
 
-def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
+def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=False):
     if torch.cuda.is_available():
         model = model.cuda()
     all_quantizers_per_full_scope = HAWQDebugger.get_all_quantizers_per_full_scope(model)
@@ -260,7 +273,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir):
     model.rebuild_graph()
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
     graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model,
-                                            groups_of_adjacent_quantizers)
+                                            groups_of_adjacent_quantizers, add_flops)
     nx_graph = add_adjust_padding_nodes(graph, model)
     check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=False)
 
@@ -275,40 +288,55 @@ class HAWQTestStruct(NamedTuple):
         return '_'.join([self.model_creator.__name__, str(self.config_builder)])
 
 
+INCV3_FLOPS_PER_MODULE = [83886080, 100663296, 117440512,
+                          56623104, 56623104, 198180864, 50331648,
+                          56623104, 56623104]
+INCV3_BITWIDTH_PER_MODULE = [4, 8, 4,
+                             4, 8, 4, 4,
+                             8, 4]
+INCV3_BITS_COMPLEXITY = map(lambda x, y: x * y, INCV3_FLOPS_PER_MODULE, INCV3_BITWIDTH_PER_MODULE)
+INCV3_COMPRESSION_RATIO = sum(INCV3_FLOPS_PER_MODULE) * 8 / sum(INCV3_BITS_COMPLEXITY)
+
 HAWQ_TEST_PARAMS = (
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu()),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5)),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5)),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.02).for_vpu()),
     HAWQTestStruct(model_creator=squeezenet1_1,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
                    config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
     HAWQTestStruct(model_creator=resnet50,
-                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5)),
+                   config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5)),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1)),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
-                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).with_ratio(2.5)),
+                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).with_ratio(1.5)),
+    HAWQTestStruct(model_creator=inception_v3,
+                   avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:9],
+                   config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
+                   with_target_scope([r'{re}.*InceptionE\[Mixed_7c\].*']).
+                   with_ratio(1.5).check_compression_ratio(INCV3_COMPRESSION_RATIO).add_flops()),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
                    config_builder=HAWQConfigBuilder().with_sample_size(
-                       [2, 3, 299, 299]).for_vpu().liberal_mode().with_ratio(2.5)),
+                       [2, 3, 299, 299]).for_vpu().liberal_mode().with_ratio(1.5)),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
                    config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09)),
     HAWQTestStruct(model_creator=ssd_vgg_512_test,
                    config_builder=HAWQConfigBuilder().with_sample_size(
-                       [1, 3, 512, 512]).for_vpu().liberal_mode().with_ratio(2.5)),
+                       [1, 3, 512, 512]).for_vpu().liberal_mode().with_ratio(1.5)),
 )
 
 
 @pytest.mark.parametrize('params', HAWQ_TEST_PARAMS, ids=[str(p) for p in HAWQ_TEST_PARAMS])
 def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
-    config = params.config_builder.build()
+    config_builder = params.config_builder
+    config = config_builder.build()
 
     model = params.model_creator()
     if torch.cuda.is_available():
@@ -326,7 +354,8 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
     pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
-    adjust_pad_creation_spy = mocker.spy(UpdatePaddingValue, '__init__')
+    ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
+    chosen_index_spy = mocker.spy(HAWQPrecisionInitializer, 'choose_qconfig_sequence')
 
     # There may be less traces required to be calculated during HAWQ than there are weightable layers.
     def side_effect_fn(self, max_iter=500, tolerance=1e-5):
@@ -334,18 +363,53 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
         return pregen_traces_for_all_layers[:len(self._parameter_handler.parameters)]
 
     mocked_trace.side_effect = side_effect_fn
-    model, algo_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    model, ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    final_num_of_adjust_pad_ops = len(get_all_modules_by_type(model, 'UpdatePaddingValue'))
-    assert adjust_pad_creation_spy.call_count == final_num_of_adjust_pad_ops
-
-    path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, params.config_builder.filename_suffix())
+    path_to_dot = '{}_{}.dot'.format(params.model_creator.__name__, config_builder.filename_suffix())
     graph_dir = os.path.join('quantized', 'hawq')
-    check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
+    check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir, add_flops=config_builder.should_add_flops)
+    if config_builder.compression_ratio:
+        ratio_list = ratio_list_spy.spy_return
+        index = chosen_index_spy.spy_return
+        assert config_builder.compression_ratio == ratio_list[index]
+
+
+class RefRatios(NamedTuple):
+    target_ratio: int
+    expected_ratio: int
+
+    def __str__(self):
+        return f'target_ratio:{str(self.target_ratio)}__expected_ratio:{str(self.expected_ratio)}'
+
+
+TEST_REF_RATIOS = [RefRatios(1, 2), RefRatios(2, 2), RefRatios(3, 4), RefRatios(4, 4), RefRatios(5, 6), RefRatios(6, 6)]
+
+
+@pytest.mark.parametrize('ratios', TEST_REF_RATIOS, ids=map(str, TEST_REF_RATIOS))
+def test_can_choose_pareto_optimal_sequence(ratios):
+    # (metric)
+    # 6|   *
+    # 5| *
+    # 4|           *
+    # 3|     *
+    # 2|       *
+    # 1|   *
+    #    _ _ _ _ _ _
+    #    1 2 3 4 5 6  (ratio)
+    compression_ratio_per_qconfig = [1, 2, 2, 3, 4, 6]
+    metric_per_qconfig_sequences = [5, 1, 6, 3, 2, 4]
+    target_ratio, expected_ratio = ratios
+    metric_per_qconfig_sequences = list(map(lambda x: torch.Tensor([x]), metric_per_qconfig_sequences))
+
+    qconfig_sequence_index = HAWQPrecisionInitializer.choose_qconfig_sequence(metric_per_qconfig_sequences,
+                                                                              compression_ratio_per_qconfig,
+                                                                              target_ratio)
+
+    assert compression_ratio_per_qconfig[qconfig_sequence_index] == expected_ratio
 
 
 def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
-    config = HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(2.5).build()
+    config = HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5).build()
     model = MobileNetV2(num_classes=10)
     criterion = nn.CrossEntropyLoss()
     if not dataset_dir:
@@ -597,40 +661,105 @@ def get_quantization_config_with_ignored_scope():
     return config
 
 
-@pytest.mark.parametrize(('config_creator', 'ref_values'), (
-        [
-            get_quantization_config_without_range_init,
-            (1.25, pytest.approx(1.42, abs=1e-2), (1, 2), (1, 4), (1, pytest.approx(1.8181, abs=1e-4)))
-        ],
-        [
-            get_quantization_config_with_ignored_scope,
-            (2, 1, (1, 2), (1, 4), (1, 1))
-        ]
-))
-def test_flops(config_creator, ref_values):
-    class ConvLinear(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.conv1 = create_conv(1, 1, 2, -1, -2)
-            self.fc = nn.Linear(3, 6)
+class RatioCalculatorTestDesc:
+    NAMES_OF_INSERTION_POINTS = [
+        'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0',
+        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFConv2d[conv1]',
+        'TargetType.OPERATOR_POST_HOOK ConvLinear/NNCFConv2d[conv1]/conv2d_0',
+        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFLinear[fc]'
+    ]
 
-        def forward(self, x):
-            return self.fc(self.conv1(x))
+    def __init__(self, ref_ratio: float = 1):
+        self._bitwidth_sequence = [8] * len(self.NAMES_OF_INSERTION_POINTS)
+        self._config_factory = get_quantization_config_without_range_init
+        self._ignored_scopes = []
+        self.ref_ratio = ref_ratio
 
-    config = config_creator()
-    model, compression_ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
-    quantizers = compression_ctrl.weight_quantizers
+    def bitwidths(self, bitwidth_sequence=List[int]):
+        self._bitwidth_sequence = bitwidth_sequence
+        return self
 
-    handler = WeightQuantizersHandler(model, quantizers, HardwareQuantizationConstraints())
-    ratio_calculator = CompressionRatioCalculator(model, handler)
+    def ignore_fc(self):
+        self._ignored_scopes = ['ConvLinear/NNCFLinear[fc]']
+        return self
 
-    assert ratio_calculator.compression_ratio_for_bitwitdh_sequence([4, 8]) == ref_values[0]
-    assert ratio_calculator.compression_ratio_for_bitwitdh_sequence([8, 4]) == ref_values[1]
-    assert ratio_calculator.ratio_limits([4, 8]) == ref_values[2]
-    assert ratio_calculator.ratio_limits([2, 4, 8]) == ref_values[3]
-    constraints = HardwareQuantizationConstraints()
-    constraints.add(list(quantizers)[0], {8})
-    assert ratio_calculator.ratio_limits([2, 8], constraints) == ref_values[4]
+    def create_config(self):
+        config = self._config_factory()
+        if self._ignored_scopes:
+            config['compression']['ignored_scopes'] = self._ignored_scopes
+        return config
+
+    def apply_to_quantizer_setup(self, quantizer_setup: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
+        for i, bitwidth in enumerate(self._bitwidth_sequence):
+            ip_name = self.NAMES_OF_INSERTION_POINTS[i]
+            quantization_points = quantizer_setup.quantization_points.values()
+            found_qp = list(filter(lambda qp: str(qp.insertion_point) == ip_name, quantization_points))
+            assert len(found_qp) == 1
+            found_qp[0].qconfig.num_bits = bitwidth
+        return quantizer_setup
+
+    def __str__(self):
+        is_ignored = 'with_FC_ignored' if self._ignored_scopes else 'all'
+        return '_'.join([is_ignored, *map(str, self._bitwidth_sequence)])
+
+
+class ConvLinear(nn.Module):
+    CONV_FLOPS = 72
+    LINEAR_FLOPS = 108
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 1, 2, -1, -2)
+        self.fc = nn.Linear(3, 6)
+
+    def forward(self, x):
+        return self.fc(self.conv1(x))
+
+
+CONV_FLOPS = ConvLinear.CONV_FLOPS
+LINEAR_FLOPS = ConvLinear.LINEAR_FLOPS
+MAX_BITS_COMPLEXITY = (CONV_FLOPS + LINEAR_FLOPS) * 8
+R48 = MAX_BITS_COMPLEXITY / (CONV_FLOPS * 4 + LINEAR_FLOPS * 8)
+R84 = MAX_BITS_COMPLEXITY / (CONV_FLOPS * 8 + LINEAR_FLOPS * 4)
+
+RATIO_CALCULATOR_TEST_DESCS = [
+    RatioCalculatorTestDesc(ref_ratio=2.0).bitwidths([4, 4, 4, 4]),
+    RatioCalculatorTestDesc(ref_ratio=R48).bitwidths([4, 4, 4, 8]),
+    RatioCalculatorTestDesc(ref_ratio=R48).bitwidths([4, 4, 8, 4]),
+    RatioCalculatorTestDesc(ref_ratio=R48).bitwidths([4, 4, 8, 8]),
+    RatioCalculatorTestDesc(ref_ratio=R84).bitwidths([4, 8, 4, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([4, 8, 4, 8]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([4, 8, 8, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([4, 8, 8, 8]),
+    RatioCalculatorTestDesc(ref_ratio=R84).bitwidths([8, 4, 4, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 4, 4, 8]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 4, 8, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 4, 8, 8]),
+    RatioCalculatorTestDesc(ref_ratio=R84).bitwidths([8, 8, 4, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 8, 4, 8]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 8, 8, 4]),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 8, 8, 8]),
+    RatioCalculatorTestDesc(ref_ratio=2.0).bitwidths([4, 4]).ignore_fc(),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([4, 8]).ignore_fc(),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 4]).ignore_fc(),
+    RatioCalculatorTestDesc(ref_ratio=1.0).bitwidths([8, 8]).ignore_fc(),
+]
+
+
+@pytest.mark.parametrize('desc', RATIO_CALCULATOR_TEST_DESCS, ids=map(str, RATIO_CALCULATOR_TEST_DESCS))
+def test_compression_ratio(desc, mocker):
+    config = desc.create_config()
+    from nncf.quantization.algo import QuantizationBuilder
+    get_qsetyp_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
+    model, ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
+
+    quantizer_setup = get_qsetyp_spy.spy_return
+    weight_qp_id_per_activation_qp_id = ctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id
+    flops_per_module = model.get_flops_per_module()
+    ratio_calculator = CompressionRatioCalculator(flops_per_module, quantizer_setup, weight_qp_id_per_activation_qp_id)
+
+    quantizer_setup = desc.apply_to_quantizer_setup(quantizer_setup)
+    assert ratio_calculator.run_for_quantizer_setup(quantizer_setup) == desc.ref_ratio
 
 
 def test_staged_quantization_saves_enabled_quantizers_in_state_dict(tmp_path):
