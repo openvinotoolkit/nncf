@@ -34,6 +34,7 @@ from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATO
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
+from beta.nncf.tensorflow.quantization.quantizers import OP_NAME
 from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
@@ -93,9 +94,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _create_quantizer(self, qconfig: QuantizerConfig):
+    def _create_quantizer(self, name, qconfig: QuantizerConfig):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qconfig.mode)
-        return quantizer_cls(qconfig)
+        return quantizer_cls(name, qconfig)
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -117,7 +118,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
+            name = node_name + OP_NAME + '_weights'
+            assert name not in self.op_names
+            self.op_names.add(name)
+            operation = self._create_quantizer(name, TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True,
                                                                            half_range=False))
 
@@ -133,10 +137,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
+            op_name = original_node_name + OP_NAME + '_inputs'
+            assert op_name not in self.op_names
+            self.op_names.add(name)
             fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=False,
                                                                            half_range=False),
-                                               name=fake_quantize_name)
+                                               name=fake_quantize_name,
+                                               op_name=op_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),
