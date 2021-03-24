@@ -74,6 +74,7 @@ def test_quantization_configs__with_defaults():
                                        mode=QuantizationMode.SYMMETRIC,
                                        signedness_to_force=True,
                                        narrow_range=True,
+                                       apply_saturation_fix=False,
                                        scale_shape=model.wq_scale_shape_per_channel,
                                        logarithm_scale=False)
     for wq_info in weight_quantizers.values():
@@ -83,6 +84,7 @@ def test_quantization_configs__with_defaults():
                                            mode=QuantizationMode.SYMMETRIC,
                                            signedness_to_force=None,
                                            narrow_range=False,
+                                           apply_saturation_fix=False,
                                            scale_shape=(1, ),
                                            logarithm_scale=False)
     for aq_info in activation_quantizer_infos.values():
@@ -117,6 +119,7 @@ def test_quantization_configs__custom():
                                        signedness_to_force=None,
                                        scale_shape=model.wq_scale_shape_per_channel,
                                        narrow_range=True,
+                                       apply_saturation_fix=False,
                                        logarithm_scale=False)
     for wq_info in weight_quantizers.values():
         compare_qspecs(ref_weight_qspec, wq_info.quantizer_module_ref)
@@ -126,6 +129,7 @@ def test_quantization_configs__custom():
                                            signedness_to_force=True,
                                            scale_shape=(1, ),
                                            narrow_range=False,
+                                           apply_saturation_fix=False,
                                            logarithm_scale=False)
 
     for aq_info in activation_quantizer_infos.values():

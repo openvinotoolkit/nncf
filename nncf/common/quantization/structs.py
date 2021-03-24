@@ -100,7 +100,7 @@ class QuantizerSpec:
                  mode: QuantizationMode,
                  signedness_to_force: bool,
                  narrow_range: bool,
-                 apply_saturation_fix: bool = False):
+                 apply_saturation_fix: bool):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -121,11 +121,12 @@ class QuantizerSpec:
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, apply_saturation_fix: bool) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
-                   narrow_range)
+                   narrow_range,
+                   apply_saturation_fix)
 
 
 class QuantizationConstraints:

@@ -143,7 +143,7 @@
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.94,
+                "target": 71.21,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_rb_sparsity_int8.pth",
                 "model_description": "MobileNet V2",

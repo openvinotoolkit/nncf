@@ -701,8 +701,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 nncf_logger.warning('A saturation issue fix will be applied. '
                                     'Now all weight quantizers will effectively use only 7 bits out of 8 bits '
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                                    'Please take a look at the documentation for a detailed explanation. '
-                                    'https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md')
+                                    'Please take a look at the documentation for a detailed information. ')
                 apply_saturation_fix = True
         qspec = PTQuantizerSpec.from_config(qconfig, narrow_range=True,
                                             scale_shape=tuple(scale_shape),

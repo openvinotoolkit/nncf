@@ -745,6 +745,7 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
                                   signedness_to_force=None,
                                   scale_shape=tuple(test_struct.ref_scale_shape),
                                   narrow_range=test_struct.is_weights,
+                                  apply_saturation_fix=False,
                                   logarithm_scale=False)
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer

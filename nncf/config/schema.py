@@ -463,10 +463,8 @@ QUANTIZATION_SCHEMA = {
                                                               "If set to True, the fix will not be applied. "
                                                               "If set to False while "
                                                               "appropriate target_devices are chosen "
-                                                              "the fix will be applied"
-                                                              "For a detailed information, please, visit "
-                                                              "https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md"
-                                                              " "),
+                                                              "the fix will be applied. For a detailed information "
+                                                              ", please, take look at the docs"),
         **STAGED_QUANTIZATION_PARAMS,
         **COMMON_COMPRESSION_ALGORITHM_PROPERTIES,
     },

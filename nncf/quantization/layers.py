@@ -54,9 +54,9 @@ class PTQuantizerSpec(QuantizerSpec):
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
+                 apply_saturation_fix: bool,
                  scale_shape: Tuple[int, ...],
-                 logarithm_scale: bool,
-                 apply_saturation_fix: bool = False):
+                 logarithm_scale: bool,):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, apply_saturation_fix)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
@@ -64,15 +64,15 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool,
-                    apply_saturation_fix: bool = False) -> 'PTQuantizerSpec':
+                    apply_saturation_fix: bool, scale_shape: Tuple[int],
+                    logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
+                   apply_saturation_fix,
                    scale_shape,
-                   logarithm_scale,
-                   apply_saturation_fix)
+                   logarithm_scale)
 
 
 class BaseQuantizer(nn.Module):
