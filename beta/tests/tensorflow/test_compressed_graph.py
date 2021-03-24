@@ -372,7 +372,8 @@ class TestModelsGraph:
         config['compression']['params'] = {'schedule': 'multistep'}
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir)
+        check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
+                          desc.rename_resource_nodes)
 
     @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.rb), ids=[
         get_model_name(m) for m in get_test_models_desc(SparsityAlgo.rb)])
