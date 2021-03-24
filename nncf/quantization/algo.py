@@ -37,6 +37,7 @@ from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
@@ -1049,6 +1050,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo = None,
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics

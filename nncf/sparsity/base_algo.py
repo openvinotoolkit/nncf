@@ -16,6 +16,7 @@ from typing import List
 
 from texttable import Texttable
 
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
@@ -76,6 +77,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self.sparsified_module_info = sparsified_module_info
 
     def freeze(self):
