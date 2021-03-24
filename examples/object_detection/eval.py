@@ -77,7 +77,7 @@ class AverageMeter:
         self.count += n
         self.avg = self.sum / self.count
 
-def evaluate_detections(box_list, dataset, use_07=False):
+def evaluate_detections(box_list, dataset, use_07=True):
     cachedir = os.path.join('cache', 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010

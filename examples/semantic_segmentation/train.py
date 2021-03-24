@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import time
 from examples.common.example_logger import logger
 from examples.semantic_segmentation.utils.loss_funcs import do_model_specific_postprocessing
 
@@ -57,6 +58,7 @@ class Train:
         epoch_loss = 0.0
         epoch_comp_loss = 0.0
         self.metric.reset()
+        start_epoch = time.time()
         for step, batch_data in enumerate(self.data_loader):
             compression_scheduler.step()
             # Get the inputs and labels
@@ -89,5 +91,5 @@ class Train:
 
             if iteration_loss:
                 logger.info("[Step: {}] Iteration loss: {:.4f}".format(step, loss.item()))
-
+        print(f'Epoch took {time.time() - start_epoch} seconds')
         return (epoch_loss / len(self.data_loader), epoch_comp_loss / len(self.data_loader)), self.metric.value()

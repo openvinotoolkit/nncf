@@ -161,11 +161,13 @@ def main_worker(current_gpu, config):
             resuming_checkpoint_path)
 
     compression_ctrl, net = create_model(config, resuming_model_sd)
+    print(config.batch_size)
     if config.distributed:
         config.batch_size //= config.ngpus_per_node
         config.workers //= config.ngpus_per_node
         compression_ctrl.distributed()
 
+    print('batch size' + str(config.batch_size))
     ###########################
     # Optimizer
     ###########################
@@ -261,8 +263,7 @@ def create_model(config: SampleConfig, resuming_model_sd: dict = None):
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get('weights')
     if weights:
-        sd = torch.load(weights, map_location='cpu',
-                        pickle_module=restricted_pickle_module)
+        sd = torch.load(weights, map_location='cpu')
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
@@ -291,10 +292,12 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
         targets = [anno.requires_grad_(False).to(config.device) for anno in targets]
 
         # forward
+        print(f'Comp model inputs size: {images.size()}')
         out = net(images)
+        print(f'Comp model outputs size: {out[1].size()}')
         # backprop
         loss_l, loss_c = criterion(out, targets)
-        loss_comp = compression_ctrl.loss(out, images)
+        loss_comp = compression_ctrl.loss((out[0], out[1]), images)
         loss = loss_l + loss_c + loss_comp
         batch_loss += loss
         loss.backward()
@@ -319,7 +322,11 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     best_mAp = 0
     best_compression_level = CompressionLevel.NONE
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
+    comp_loss_stats = torch.zeros((epoch_size)).to(config.device)
+    loss_l_stats = torch.zeros((epoch_size)).to(config.device)
+    loss_c_stats = torch.zeros((epoch_size)).to(config.device)
 
+    start_epoch = time.time()
     for iteration in range(config.start_iter, config['max_iter']):
         if (not batch_iterator) or (iteration % epoch_size == 0):
             # create batch iterator
@@ -329,6 +336,15 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
 
         compression_ctrl.scheduler.step()
         if iteration % epoch_size == 0:
+            if is_main_process():
+                logger.info(f'Epoch took {time.time() - start_epoch} seconds')
+            logger.info(f'Loss_l variance: {torch.var(loss_l_stats)}')
+            logger.info(f'Loss_c variance: {torch.var(loss_c_stats)}')
+            logger.info(f'Comp loss variance: {torch.var(comp_loss_stats)}')
+            comp_loss_stats = torch.zeros((epoch_size)).to(config.device)
+            loss_l_stats = torch.zeros((epoch_size)).to(config.device)
+            loss_c_stats = torch.zeros((epoch_size)).to(config.device)
+            start_epoch = time.time()
             compression_ctrl.scheduler.epoch_step(epoch)
             if is_main_process():
                 print_statistics(compression_ctrl.statistics())
@@ -379,6 +395,9 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         batch_loss_c = batch_loss_c / config.iter_size
         model_loss = (batch_loss_l + batch_loss_c) / config.iter_size
         batch_loss = batch_loss / config.iter_size
+        comp_loss_stats[iteration % epoch_size] = loss_comp
+        loss_l_stats[iteration % epoch_size] = batch_loss_l
+        loss_c_stats[iteration % epoch_size] = batch_loss_c
 
         loc_loss += batch_loss_l.item()
         conf_loss += batch_loss_c.item()

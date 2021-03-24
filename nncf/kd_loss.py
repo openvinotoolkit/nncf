@@ -25,7 +25,7 @@ class KDLossCalculator(PTCompressionLoss):
         if is_softmax:
             def kdloss_fn(ref_outputs, compressed_model_outputs):
                 return -(nn.functional.log_softmax(compressed_model_outputs, dim=1) *
-                       nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
+                         nn.functional.softmax(ref_outputs, dim=1)).mean() * (compressed_model_outputs.shape[1])
         else:
             def kdloss_fn(ref_outputs, compressed_model_outputs):
                 mse = torch.nn.MSELoss()
@@ -53,9 +53,13 @@ class KDLossCalculator(PTCompressionLoss):
         with torch.no_grad():
             ref_outputs = self.original_model(target)
         ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
+        print(f'kd loss outputs {ref_loss_outputs[0].size()}')
+        print(f'KDModel parameters device {next(self.original_model.parameters()).device}')
         compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
-        return self.scale * reduce(lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
-                       zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
+        # check for shapes zip is not reliable
+        return self.scale * reduce(
+            lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
+            zip(ref_loss_outputs, compressed_model_loss_outputs), 0)
 
     def statistics(self, quickly_collected_only=False):
         return {}
@@ -70,6 +74,7 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
     def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
         self.original_model = deepcopy(target_model.nncf_module)
+        #self.original_model = torch.nn.DataParallel(self.original_model)
         return []
 
     def build_controller(self, target_model):

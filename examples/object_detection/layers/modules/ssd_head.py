@@ -52,6 +52,7 @@ class SSDDetectionOutput(nn.Module):
         loc = torch.cat([o.view(batch, -1) for o in locs], 1)
         conf = torch.cat([o.view(batch, -1) for o in confs], 1)
         conf_softmax = F.softmax(conf.view(conf.size(0), -1, self.num_classes), dim=-1)
+        print(f'conf size {conf.size()}')
 
         with no_nncf_trace():
             priors = torch.cat(priors, dim=2)
