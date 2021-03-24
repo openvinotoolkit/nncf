@@ -41,7 +41,13 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
                  narrow_range: bool = False,
                  apply_saturation_fix: bool = False,
                  logarithm_scale: bool = None):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, scale_shape, logarithm_scale)
+        super().__init__(num_bits,
+                         mode,
+                         signedness_to_force,
+                         narrow_range,
+                         apply_saturation_fix,
+                         scale_shape,
+                         logarithm_scale)
 
 # reference impl
 class ReferenceQuantizeSymmetric(torch.autograd.Function):

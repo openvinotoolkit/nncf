@@ -369,11 +369,11 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         torch_input = torch.tensor(input_tensor, dtype=torch.float32)
 
         with torch.no_grad():
-            torch_out = compressed_model.forward(torch_input)
+            torch_out = compressed_model(torch_input)
 
         # ONNXRuntime
         sess = rt.InferenceSession(onnx_checkpoint_path)
         input_name = sess.get_inputs()[0].name
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
-        assert np.allclose(torch_out.numpy(), onnx_out, rtol=0, atol=1e-5)
+        assert np.allclose(torch_out.numpy(), onnx_out, rtol=0, atol=1e-4)
