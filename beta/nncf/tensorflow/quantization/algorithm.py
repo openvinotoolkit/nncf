@@ -94,7 +94,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _create_quantizer(self, name, qconfig: QuantizerConfig):
+    def _create_quantizer(self, name: str, qconfig: QuantizerConfig):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qconfig.mode)
         return quantizer_cls(name, qconfig)
 

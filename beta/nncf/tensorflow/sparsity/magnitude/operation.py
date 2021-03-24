@@ -49,7 +49,7 @@ class BinaryMask(NNCFOperation):
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMaskWithWeightsBackup(BinaryMask):
-    def __init__(self, name, w_name_to_bkup=None):
+    def __init__(self, name: str, w_name_to_bkup: str = None):
         super().__init__(name=name)
         self.w_name_to_bkup = w_name_to_bkup
         self.bkup_var = None

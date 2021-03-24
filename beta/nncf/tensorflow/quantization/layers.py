@@ -22,7 +22,7 @@ from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
 @NNCF_CUSTOM_OBJECTS.register()
 class FakeQuantize(tf.keras.layers.Layer):
-    def __init__(self, config: TFQuantizerSpec, op_name, data_format='channels_last', **kwargs):
+    def __init__(self, config: TFQuantizerSpec, op_name: str, data_format: str ='channels_last', **kwargs):
         """
         Create a FakeQuantize layer.
         """

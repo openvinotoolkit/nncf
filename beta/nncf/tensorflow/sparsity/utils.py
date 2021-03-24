@@ -64,7 +64,7 @@ def strip_model_from_masks(model: tf.keras.Model, op_names: set) -> tf.keras.Mod
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             for weight_attr, ops in layer.weights_attr_ops.items():
-                for op_name in ops.keys():
+                for op_name in ops:
                     if op_name in op_names:
                         apply_mask(layer, weight_attr, op_name)
 

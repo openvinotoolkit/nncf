@@ -252,7 +252,7 @@ class Quantizer(NNCFOperation):
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
-    def __init__(self, name, qspec: TFQuantizerSpec):
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name=name,
                          num_bits=qspec.num_bits,
                          narrow_range=qspec.narrow_range,
@@ -312,8 +312,8 @@ class SymmetricQuantizer(Quantizer):
 
     def get_config(self, keep_op_name=True):
         return super()._get_config(mode=QuantizationMode.SYMMETRIC,
-                                  signedness_to_force=self.signedness_to_force,
-                                  keep_op_name=keep_op_name)
+                                   signedness_to_force=self.signedness_to_force,
+                                   keep_op_name=keep_op_name)
 
     @classmethod
     def from_config(cls, config):
@@ -331,7 +331,7 @@ class SymmetricQuantizer(Quantizer):
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
-    def __init__(self, name, qspec: TFQuantizerSpec):
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name=name,
                          num_bits=qspec.num_bits,
                          narrow_range=qspec.narrow_range,
@@ -390,8 +390,8 @@ class AsymmetricQuantizer(Quantizer):
 
     def get_config(self, keep_op_name=True):
         return super()._get_config(mode=QuantizationMode.ASYMMETRIC,
-                                  signedness_to_force=None,
-                                  keep_op_name=keep_op_name)
+                                   signedness_to_force=None,
+                                   keep_op_name=keep_op_name)
 
     @classmethod
     def from_config(cls, config):

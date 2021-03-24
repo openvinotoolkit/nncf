@@ -48,9 +48,9 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         for node_name, node in nxmodel.nodes.items():
             original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if node['type'] not in SPARSITY_LAYERS\
-                    or is_ignored(node_name, self.ignored_scopes) \
-                    or original_node_name in shared_nodes:
+            if (node['type'] not in SPARSITY_LAYERS or
+                is_ignored(node_name, self.ignored_scopes) or
+                original_node_name in shared_nodes):
                 continue
 
             if node['is_shared']:
@@ -83,14 +83,14 @@ class RBSparsityController(BaseSparsityController):
         super().__init__(target_model, op_names)
         params = config.get('params', {})
         self.sparsity_init = config.get('sparsity_init', 0)
-        sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
+        sparsity_level_mode = params.get('sparsity_level_setting_mode', 'global')
 
         if sparsity_level_mode == 'local':
             raise NotImplementedError
 
         target_ops = apply_fn_to_op_weights(target_model, op_names, lambda x: (x['mask'], x['trainable']))
         self._loss = SparseLoss(target_ops)
-        schedule_type = params.get("schedule", "exponential")
+        schedule_type = params.get('schedule', 'exponential')
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)
         self.set_sparsity_level(self.sparsity_init)

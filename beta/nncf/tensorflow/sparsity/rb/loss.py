@@ -26,8 +26,8 @@ class SparseLoss(CompressionLoss):
 
     def disable(self):
         tf.cond(self.disabled,
-                    lambda: None,
-                    self._disable)
+                lambda: None,
+                self._disable)
 
     def _disable(self):
         self.disabled.assign(True)
@@ -37,16 +37,16 @@ class SparseLoss(CompressionLoss):
 
     def calculate(self, *args, **kwargs):
         return tf.cond(self.disabled,
-                    lambda: tf.constant(0.),
-                    self._calculate)
+                       lambda: tf.constant(0.),
+                       self._calculate)
 
     def _calculate(self):
         params = tf.constant(0)
         loss = tf.constant(0.)
         for op, mask, trainable in self._target_ops:
-            tf.debugging.assert_equal(trainable, tf.constant(True),
-                                      'Invalid state of SparseLoss and SparsifiedWeight:\
-                                                            mask is frozen for enabled loss')
+            tf.debugging.assert_equal(
+                trainable, tf.constant(True),
+                'Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss')
 
             params = params + tf.size(mask)
             loss = loss + op.loss(mask)
@@ -59,7 +59,7 @@ class SparseLoss(CompressionLoss):
         eager_target = tf.keras.backend.eval(self.target)
         rate = 1. - eager_target
         if rate < 0 or rate > 1:
-            raise IndexError("Target is not within range(0,1)")
+            raise ValueError('Target is not within range (0, 1)')
         return rate
 
     def set_target_sparsity_loss(self, sparsity_level):

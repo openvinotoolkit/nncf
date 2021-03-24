@@ -53,9 +53,9 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         for node_name, node in nxmodel.nodes.items():
             original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if node['type'] not in SPARSITY_LAYERS \
-                    or is_ignored(node_name, self.ignored_scopes) \
-                    or original_node_name in shared_nodes:
+            if (node['type'] not in SPARSITY_LAYERS or
+                is_ignored(node_name, self.ignored_scopes) or
+                original_node_name in shared_nodes):
                 continue
 
             if node['is_shared']:
@@ -75,8 +75,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         for layer in get_custom_layers(model):
             nxmodel = convert_layer_graph_to_nxmodel(layer)
             for node_name, node in nxmodel.nodes.items():
-                if node['type'] in SPARSITY_TF_OPS \
-                        and not is_ignored(node_name, self.ignored_scopes):
+                if (node['type'] in SPARSITY_TF_OPS and
+                    not is_ignored(node_name, self.ignored_scopes)):
 
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     name = node_name + OP_NAME_BMWB
@@ -145,7 +145,7 @@ class MagnitudeSparsityController(BaseSparsityController):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 weight = wrapped_layer.layer_weights[weight_attr]
 
-                for op_name in ops.keys():
+                for op_name in ops:
                     if op_name in self.op_names:
                         wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
@@ -157,7 +157,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         all_weights = []
         for wrapped_layer in collect_wrapped_layers(self._model):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name in ops.keys():
+                for op_name in ops:
                     if op_name in self.op_names:
                         all_weights.append(tf.reshape(
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),

@@ -272,7 +272,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name in ops.keys():
+                for op_name in ops:
                     if op_name in self.op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)

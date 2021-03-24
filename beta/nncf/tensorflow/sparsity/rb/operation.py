@@ -26,27 +26,26 @@ OP_NAME = '_rb_sparsity_mask_apply'
 
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
-
-    def __init__(self, name, eps=1e-6):
-        '''
-        :param name: model scope unique operation name
-        :param eps: minimum value and the gap from the maximum value in
-            distributed mask
-        '''
+    def __init__(self, name: str, eps: float = 1e-6):
+        """
+        :param name: Model scope unique operation name.
+        :param eps: Minimum value and the gap from the maximum value in
+            distributed mask.
+        """
         super().__init__(name=name)
         self.eps = eps
 
     def build(self, input_shape, input_type, name, layer):
-        '''
-        :param input_shape: shape of weights which needs to be sparsifyed
-        :param input_type: type of operation input, must be InputType.WEIGHTS
-        :param name: name of weight attribute which needs to be sparsifyed
-        :param layer: layer which needs to be sparsifyed
-        '''
+        """
+        :param input_shape: Shape of weights which needs to be sparsifyed.
+        :param input_type: Type of operation input, must be InputType.WEIGHTS.
+        :param name: Name of weight attribute which needs to be sparsifyed.
+        :param layer: Layer which needs to be sparsifyed.
+        """
         if input_type is not InputType.WEIGHTS:
             raise ValueError(
-                'RB Sparsity mask operation could not be applied to input of the layer: {}'.
-                    format(layer.name))
+                'RB Sparsity mask operation could not be applied' +
+                'to input of the layer: {}'.format(layer.name))
 
         mask = layer.add_weight(
             name + '_mask',
@@ -67,34 +66,37 @@ class RBSparsifyingWeight(NNCFOperation):
         }
 
     def call(self, layer_weights, op_weights, trainable):
-        '''
-        Apply rb sparsity mask to given weights
+        """
+        Apply rb sparsity mask to given weights.
 
-        :param layer_weights: target weights to sparsify
-        :param op_weights: operation weights contains
-           mask and param `trainable`
-        :param trainable: 1 if operation called in training mode
+        :param layer_weights: Target weights to sparsify.
+        :param op_weights: Operation weights contains
+           mask and param `trainable`.
+        :param trainable: 1 if operation called in training mode.
             else 0
-        '''
+        """
         if not isinstance(trainable, tf.Tensor):
             trainable = tf.constant(bool(trainable), tf.bool)
+
         return smart_cond(tf.math.logical_and(op_weights['trainable'], trainable),
-                       true_fn=lambda: apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
-                       false_fn=lambda: apply_mask(layer_weights, binary_mask(op_weights['mask'])))
+                          true_fn=lambda: apply_mask(
+                              layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
+                          false_fn=lambda: apply_mask(
+                              layer_weights, binary_mask(op_weights['mask'])))
 
     def freeze(self, trainable_weight):
-        '''
-        Freeze rb mask from operation weights
+        """
+        Freeze rb mask from operation weights.
 
-        :param trainable_weight: trainable weight of rb operation
-        '''
+        :param trainable_weight: Trainable weight of rb operation.
+        """
         trainable_weight.assign(False)
 
     @staticmethod
     def loss(mask):
-        '''
-        Return count of non zero weight in mask
+        """
+        Return count of non zero weight in mask.
 
-        :param mask: given mask
-        '''
+        :param mask: Given mask.
+        """
         return tf.reduce_sum(st_binary_mask(mask))
