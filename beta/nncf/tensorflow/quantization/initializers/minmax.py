@@ -12,6 +12,7 @@
 """
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmInitializer
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
@@ -19,6 +20,16 @@ from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.data_layout import get_channel_axis
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
+
+
+def mean_estimate_no_outliers(data, min_percentile=10, max_percentile=90):
+    lower = tfp.stats.percentile(data, min_percentile, axis=0)
+    upper = tfp.stats.percentile(data, max_percentile, axis=0)
+    mask = tf.math.logical_and(data>=lower, data<=upper)
+    # zero out the outliers
+    data_masked = tf.multiply(data, tf.cast(mask, data.dtype))
+    mean = tf.math.reduce_sum(data_masked, axis=0) / tf.math.reduce_sum(tf.cast(mask, data_masked.dtype), axis=0)
+    return mean
 
 
 class MinMaxStatisticsCollector:
@@ -36,7 +47,9 @@ class MinMaxStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_min_values):
                 self.all_min_values[i] = tf.reshape(t, shape=(new_shape))
-        return tf.math.reduce_mean(tf.stack(self.all_min_values), axis=0)
+        # return tf.math.reduce_mean(tf.stack(self.all_min_values), axis=0)
+        # return tfp.stats.percentile(tf.stack(self.all_min_values), 50, axis=0)
+        return mean_estimate_no_outliers(tf.stack(self.all_min_values))
 
     @property
     def max(self):
@@ -46,7 +59,9 @@ class MinMaxStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_max_values):
                 self.all_max_values[i] = tf.reshape(t, shape=(new_shape))
-        return tf.math.reduce_mean(tf.stack(self.all_max_values), axis=0)
+        # return tf.math.reduce_mean(tf.stack(self.all_max_values), axis=0)
+        # return tfp.stats.percentile(tf.stack(self.all_max_values), 50, axis=0)
+        return mean_estimate_no_outliers(tf.stack(self.all_max_values))
 
     def call(self, inputs):
         ndims = len(inputs.shape)
@@ -55,11 +70,34 @@ class MinMaxStatisticsCollector:
             for val in self.channel_axes:
                 val = (ndims + val) % ndims
                 axis.remove(val)
-        self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
-        self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+            self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
+            self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+        else:
+            axis.remove(0)
+            self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
+            self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
+
+
+        # min_percentile = 10
+        # max_percentile = 90
+        # self.all_min_values.append(tfp.stats.percentile(inputs, min_percentile, axis=axis))
+        # self.all_max_values.append(tfp.stats.percentile(inputs, max_percentile, axis=axis))
+
+        # if inputs.shape[0] == 63:
+        #     axis.remove(0)
+
+        # print('\ninputs', inputs.shape)
+        # if self.per_channel:
+        #     print('per channel...')
+        # print('axis', axis)
+        # print('tf.reduce_min(inputs, axis=axis)', tf.reduce_min(inputs, axis=axis).shape)
+        # self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
+        # self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
+
+
 
 
 class MinMaxInitializer(TFCompressionAlgorithmInitializer):
@@ -89,6 +127,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
                             op_statistics.append((layer, op_name, op, minmax))
 
         for step, (x, _) in enumerate(dataset):
+            print('step', step)
             if step >= self.num_steps:
                 break
             model(x, training=False)
