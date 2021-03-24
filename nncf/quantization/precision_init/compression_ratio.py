@@ -11,15 +11,9 @@
  limitations under the License.
 """
 from typing import Dict
-from typing import List
 
-from nncf.nncf_network import NNCFNetwork
-from nncf.quantization.layers import BaseQuantizer
-from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.quantization.precision_init.base_init import WeightQuantizersHandler
-from nncf.quantization.quantizer_id import QuantizerId
-from nncf.utils import get_all_modules_by_type
+from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 
 
 class CompressionRatioCalculator:
@@ -31,70 +25,31 @@ class CompressionRatioCalculator:
     """
     DEFAULT_NUMBER_OF_BITS = 8
 
-    def __init__(self, model: NNCFNetwork, quantizers_handler: WeightQuantizersHandler):
-        flops_per_module_scope = model.get_flops_per_module()
+    def __init__(self, flops_per_module_scope: Dict['Scope', int],
+                 quantizer_setup: SingleConfigQuantizerSetup,
+                 weight_qp_id_per_activation_qp_id: Dict[QuantizationPointId, QuantizationPointId]):
+        self._weight_qp_id_per_activation_qp_id = weight_qp_id_per_activation_qp_id
+        self._flops_per_weight_qp_id = {}  # type: Dict[QuantizationPointId, float]
+        for qp_id, qp in quantizer_setup.quantization_points.items():
+            if qp.is_weight_quantization_point():
+                module_scope = qp.insertion_point.module_scope
+                self._flops_per_weight_qp_id[qp_id] = flops_per_module_scope[module_scope]
+        self.maximum_bits_complexity = sum(self._flops_per_weight_qp_id.values()) * self.DEFAULT_NUMBER_OF_BITS
 
-        self._weight_quantizers_in_exec_order = quantizers_handler.get_weight_quantizers_in_execution_order_per_id()
-
-        self.flops_per_weight_quantizer_id = {}
-        quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
-        all_quantizers_in_model = get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_types)
-
-        for scope in all_quantizers_in_model:
-            if quantizers_handler.is_wq_scope(scope):
-                quantizer_id = quantizers_handler.get_quantizer_id_by_scope(scope)
-                affected_module_scope = quantizers_handler.get_owning_module_scope_from_wq_scope(scope)
-                self.flops_per_weight_quantizer_id[quantizer_id] = flops_per_module_scope[affected_module_scope]
-
-        self.maximum_bits_complexity = sum(self.flops_per_weight_quantizer_id.values()) * self.DEFAULT_NUMBER_OF_BITS
-
-    def compression_ratio_for_bitwitdh_sequence(self, execution_order_bitwidth_sequence: List[int],
-                                                skipped: Dict[QuantizerId, BaseQuantizer] = None) -> float:
+    def run_for_quantizer_setup(self, quantizer_setup: SingleConfigQuantizerSetup) -> float:
         """
-        Calculates compression ratio for a given bitwidth sequence
-
-        Args:
-            execution_order_bitwidth_sequence: list of bitwidths for each weight quantization in the order of execution
-            skipped: quantizers that were skipped from bitwidth initialization, since their bitwidth is determined
-            unambiguously based on constraints of the HW config
-
-        Returns:
-            compression ratio of mixed-precision model by relation to fully INT8
+        Calculates compression ratio for a given quantizer setup with
+        :param: quantizer_setup: setup with information quantization points
+        :returns: compression ratio of mixed-precision model by relation to fully INT8
         """
+        quantization_points = quantizer_setup.quantization_points
+        weight_qps = filter(lambda pair: pair[1].is_weight_quantization_point(), quantization_points.items())
         bits_complexity = 0
-        for wq_num_bits, (wq_id, wq) in zip(execution_order_bitwidth_sequence,
-                                            self._weight_quantizers_in_exec_order.items()):
-            bits_complexity += wq_num_bits * self.flops_per_weight_quantizer_id[wq_id]
-        if skipped:
-            for wq_id, wq in skipped.items():
-                bits_complexity += wq.num_bits * self.flops_per_weight_quantizer_id[wq_id]
-
+        for w_qp_id, w_qp in weight_qps:
+            wq_num_bits = w_qp.qconfig.num_bits
+            a_qp_id = self._weight_qp_id_per_activation_qp_id[w_qp_id]
+            a_qp = quantization_points[a_qp_id]
+            aq_num_bits = a_qp.qconfig.num_bits
+            num_bits = max(wq_num_bits, aq_num_bits)
+            bits_complexity += num_bits * self._flops_per_weight_qp_id[w_qp_id]
         return self.maximum_bits_complexity / bits_complexity
-
-    def ratio_limits(self, bitwidths: List[int], constraints: HardwareQuantizationConstraints = None,
-                     skipped: Dict[QuantizerId, BaseQuantizer] = None) -> (float, float):
-        """
-        Calculates minimum and maximum compression ratio.
-
-        Args:
-            bitwidths: list of all available bitwidth for weight quantization
-            constraints: precision constraints defined by HW config
-            skipped: quantizers that were skipped from bitwidth initialization, since their bitwidth is determined
-            unambiguously based on constraints of the HW config
-
-        Returns:
-            minimum and maximum compression ratio
-        """
-        sequence_len = len(self._weight_quantizers_in_exec_order)
-        min_bitwidth_sequence = [min(bitwidths)] * sequence_len
-        max_bitwidth_sequence = [max(bitwidths)] * sequence_len
-        if constraints:
-            for i, quantizer_id in enumerate(self._weight_quantizers_in_exec_order):
-                bit_constraints = constraints.get(quantizer_id)
-                if bit_constraints:
-                    min_bitwidth_sequence[i] = min(bit_constraints)
-                    max_bitwidth_sequence[i] = max(bit_constraints)
-
-        max_ratio = self.compression_ratio_for_bitwitdh_sequence(min_bitwidth_sequence, skipped)
-        min_ratio = self.compression_ratio_for_bitwitdh_sequence(max_bitwidth_sequence, skipped)
-        return min_ratio, max_ratio

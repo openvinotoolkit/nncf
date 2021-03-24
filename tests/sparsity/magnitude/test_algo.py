@@ -99,7 +99,7 @@ def test_can_create_magnitude_algo__without_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_steps': [1]}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
-    assert compression_ctrl.scheduler.sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
 
 def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():

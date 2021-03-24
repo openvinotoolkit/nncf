@@ -13,7 +13,8 @@ from nncf.quantization.quantizer_setup import QuantizationPointBase, QuantizerSe
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.tensor_statistics.algo import TensorStatisticObservationPoint
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, MinMaxStatisticCollector, ReductionShape, \
-    MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector
+    MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
+    MeanPercentileStatisticCollector
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.utils import should_consider_scope
 
@@ -50,9 +51,13 @@ class RangeInitConfig:
         if self.init_type == "threesigma":
             return MedianMADStatisticCollector(reduction_shapes, num_samples)
         if self.init_type == "percentile":
-            min_percentile = self.init_type_specific_params.get("min_percentile", 10)
-            max_percentile = self.init_type_specific_params.get("max_percentile", 90)
+            min_percentile = self.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.init_type_specific_params.get("max_percentile", 99.9)
             return PercentileStatisticCollector([min_percentile, max_percentile], reduction_shapes, num_samples)
+        if self.init_type == "mean_percentile":
+            min_percentile = self.init_type_specific_params.get("min_percentile", 0.1)
+            max_percentile = self.init_type_specific_params.get("max_percentile", 99.9)
+            return MeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shapes, num_samples)
         raise RuntimeError("Unknown range init type: {}".format(self.init_type))
 
 

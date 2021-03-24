@@ -15,8 +15,9 @@ from typing import TypeVar
 
 import numpy as np
 
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController, \
-    CompositeCompressionScheduler
+from nncf.composite_compression import PTCompositeCompressionAlgorithmController
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.api.composite_compression import CompositeCompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.initialization import TrainEpochArgs
 from nncf.compression_method_api import PTStubCompressionScheduler
@@ -31,8 +32,19 @@ ModelType = TypeVar('ModelType')
 ACCURACY_AWARE_CONTROLLER_TYPES = [BaseSparsityAlgoController, FilterPruningController]
 
 
-class PTAccuracyAwareCompressionAlgorithmController(
-    CompositeCompressionAlgorithmController, PTCompressionAlgorithmController):
+class PTAccuracyAwareCompressionAlgorithmBuilder(PTCompositeCompressionAlgorithmBuilder):
+    def __init__(self, config: 'NNCFConfig', should_init: bool = True):
+        super().__init__(config, should_init)
+        self.accuracy_aware_config = config.get('accuracy_aware_training_config', None)
+
+    def build_controller(self, model: ModelType) -> 'PTAccuracyAwareCompressionAlgorithmController':
+        composite_ctrl = PTAccuracyAwareCompressionAlgorithmController(model, self.accuracy_aware_config)
+        for builder in self.child_builders:
+            composite_ctrl.add(builder.build_controller(model))
+        return composite_ctrl
+
+
+class PTAccuracyAwareCompressionAlgorithmController(PTCompositeCompressionAlgorithmController):
     def __init__(self, target_model: ModelType, accuracy_aware_config):
         super().__init__(target_model)
         self.accuracy_aware_config = accuracy_aware_config

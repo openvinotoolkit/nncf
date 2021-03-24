@@ -23,8 +23,10 @@ from nncf.api.composite_compression import CompositeCompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import PTCompressionLoss
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.hw_config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import PTModelTransformer
 from nncf.pruning.base_algo import BasePruningAlgoController
 
 ModelType = TypeVar('ModelType')
@@ -44,7 +46,6 @@ class PTCompositeCompressionAlgorithmBuilder(
         CompositeCompressionAlgorithmBuilder, PTCompressionAlgorithmBuilder):
     def __init__(self, config: 'NNCFConfig', should_init: bool = True):
         from nncf import NNCFConfig
-        from nncf.common.quantization.structs import QuantizerSetupType
         from nncf.model_creation import get_compression_algorithm
 
         super().__init__(config, should_init)
@@ -53,18 +54,14 @@ class PTCompositeCompressionAlgorithmBuilder(
         compression_config_json_section = deepcopy(compression_config_json_section)
 
         hw_config_type = None
-        quantizer_setup_type_str = config.get("quantizer_setup_type", "propagation_based")
-        quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
-        if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
-            target_device = config.get("target_device", "ANY")
-            if target_device != 'TRIAL':
-                hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
+        target_device = config.get("target_device", "ANY")
+        if target_device != 'TRIAL':
+            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
         if isinstance(compression_config_json_section, dict):
             compression_config = NNCFConfig(compression_config_json_section)
             compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
             compression_config["hw_config_type"] = hw_config_type
-            compression_config['quantizer_setup_type'] = quantizer_setup_type
             self._child_builders = [
                 get_compression_algorithm(compression_config)(compression_config, should_init=should_init), ]
         else:
@@ -72,7 +69,6 @@ class PTCompositeCompressionAlgorithmBuilder(
                 algo_config = NNCFConfig(algo_config)
                 algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
                 algo_config["hw_config_type"] = hw_config_type
-                algo_config['quantizer_setup_type'] = quantizer_setup_type
                 self._child_builders.append(
                     get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
 
@@ -80,9 +76,44 @@ class PTCompositeCompressionAlgorithmBuilder(
         return bool(self.child_builders)
 
     def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
-        for builder in self._child_builders:
-            target_model = builder.apply_to(target_model)
-        return target_model
+        layout = self.get_transformation_layout(target_model)
+        transformer = PTModelTransformer(target_model, layout)
+        transformed_model = transformer.transform()
+        return transformed_model
+
+    def build_controller(self, model: ModelType) -> 'PTCompositeCompressionAlgorithmController':
+        """
+        Builds `PTCompositeCompressionAlgorithmController` to handle the additional
+        modules, parameters, and hooks inserted into the model to enable
+        algorithm-specific compression.
+
+        :param model: The model with additional modifications necessary to enable
+         algorithm-specific compression during fine-tuning.
+        :return: The instance of the `PTCompositeCompressionAlgorithmController`.
+        """
+        if len(self._child_builders) == 1:
+            return self._child_builders[0].build_controller(model)
+        composite_ctrl = PTCompositeCompressionAlgorithmController(model)
+        for builder in self.child_builders:
+            composite_ctrl.add(builder.build_controller(model))
+        return composite_ctrl
+
+    def get_transformation_layout(self, model: ModelType) -> PTTransformationLayout:
+        """
+        Computes necessary model transformations to enable algorithm-specific
+        compression.
+
+        :param model: The original uncompressed model.
+        :return: The instance of the `PTTransformationLayout` class containing
+            a list of algorithm-specific modifications.
+        """
+        transformations = PTTransformationLayout()
+        for builder in self.child_builders:
+            transformations.update(builder.get_transformation_layout(model))
+        return transformations
+
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        pass  # Higher-level get_transformation_layout is overridden, no need to define this
 
 
 class PTCompositeCompressionAlgorithmController(

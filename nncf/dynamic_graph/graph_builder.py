@@ -86,7 +86,7 @@ class GraphBuilder:
         self.custom_forward_fn = custom_forward_fn
 
     def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False) -> 'NNCFGraph':
+                    as_eval: bool = False) -> 'PTNNCFGraph':
         sd = deepcopy(model.state_dict())
 
         from nncf.dynamic_graph.context import TracingContext

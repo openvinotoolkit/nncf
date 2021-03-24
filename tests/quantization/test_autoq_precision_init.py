@@ -134,7 +134,11 @@ AUTOQ_TEST_PARAMS = (
 @pytest.mark.parametrize('params', AUTOQ_TEST_PARAMS, ids=[str(p) for p in AUTOQ_TEST_PARAMS])
 def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     config = params.config_builder.build()
-    model = params.model_creator().cuda()
+
+    model = params.model_creator()
+    if torch.cuda.is_available():
+        model = model.cuda()
+
     config['log_dir'] = str(tmp_path)
 
     if not dataset_dir:
@@ -172,6 +176,8 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
 
 def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs_subprocess_in_precommit):
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     config_builder = AutoQConfigBuilder(batch_size=2).for_trial()
     config = config_builder.build()
     ngpus_per_node = torch.cuda.device_count()

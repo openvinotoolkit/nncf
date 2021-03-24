@@ -85,6 +85,8 @@ MANUAL_CONFIG_TEST_PARAMS = [
 @pytest.mark.parametrize('manual_config_params', MANUAL_CONFIG_TEST_PARAMS,
                          ids=[p.name for p in MANUAL_CONFIG_TEST_PARAMS])
 def test_hawq_manual_configs(manual_config_params):
+    if manual_config_params.name != 'resnet18_cifar10_mixed_int_manual.json':
+        pytest.skip("Propagation-based manual config TBA")
     config = manual_config_params.create_nncf_config()
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config), criterion=None)
     model = manual_config_params.create_model(config['model'])
@@ -97,7 +99,7 @@ def test_hawq_manual_configs(manual_config_params):
 
 
 class ManualSingleConvTestParams:
-    ACTIVATION_SCOPE = 'InsertionType.OPERATOR_POST_HOOK /nncf_model_input_0'
+    ACTIVATION_SCOPE = 'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0'
 
     def __init__(self, name: str):
         self.name = name
@@ -169,9 +171,10 @@ def test_quantization_configs__with_precisions_list():
     config['compression']['initializer'].update({
         "precision": {
             "bitwidth_per_scope":
-                [[2, 'InsertionType.NNCF_MODULE_PRE_OP ModelForTest/NNCFConv2d[conv1]'],
-                 [4, 'InsertionType.NNCF_MODULE_PRE_OP ModelForTest/NNCFConv2d[conv2]']]
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv1]'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv2]']]
         }})
+    config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
     config['quantizer_setup_type'] = 'pattern_based'
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)

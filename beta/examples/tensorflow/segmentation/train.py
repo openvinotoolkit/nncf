@@ -239,9 +239,7 @@ def run_train(config):
 
             scheduler = build_scheduler(
                 config=config,
-                epoch_size=train_builder.num_examples,
-                batch_size=train_builder.global_batch_size,
-                steps=steps_per_epoch)
+                steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(
                 config=config,

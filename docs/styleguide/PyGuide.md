@@ -273,7 +273,7 @@ the first line.
 
 # Aligned with opening delimiter
 foo = long_function_name(var_one, var_two,
-                        var_three, var_four)
+                         var_three, var_four)
 meal = (spam,
        beans)
 
@@ -521,14 +521,18 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 <a id="classes"></a>
 #### 3.5.3 Classes 
 
-Classes should have a docstring below the class definition describing the class.
+Classes should have a docstring below the class definition describing the class. If your class
+has public attributes, they should be documented here follow the same formatting as a function's
+params section.
 
 ```python
 class ModelTransformer:
     """
     Applies transformations to the model.
+
+    :param public_attribute: Public attribute description
     """
-    
+
     def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
         Initializes Model Transformer
@@ -539,6 +543,7 @@ class ModelTransformer:
         """
         self._model = model
         self._transformations = transformation_layout.transformations
+        self.public_attribute = None
 
     def transform(self) -> ModelType:
         """

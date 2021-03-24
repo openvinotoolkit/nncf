@@ -21,7 +21,7 @@ import torch
 from torch import Tensor
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.layers import NNCFConv2d
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.nncf_network import NNCFNetwork
@@ -84,19 +84,19 @@ class HAWQDebugger:
         return all_quantizations
 
     @staticmethod
-    def _paint_activation_quantizer_node(nncf_graph: NNCFGraph,
+    def _paint_activation_quantizer_node(nncf_graph: PTNNCFGraph,
                                          quantizer_id: NonWeightQuantizerId,
                                          quantizer_info: 'NonWeightQuantizerInfo',
                                          bitwidth_color_map: Dict[int, str],
                                          groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
         # pylint:disable=too-many-branches
-        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[InsertionPoint]
+        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[PTInsertionPoint]
 
         for insertion_point in affected_insertion_points_list:
             input_agnostic_op_exec_context = insertion_point.ia_op_exec_context
             affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
             affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
-            node_id = affected_nx_node[NNCFGraph.ID_NODE_ATTR]
+            node_id = affected_nx_node[PTNNCFGraph.ID_NODE_ATTR]
 
             affected_nncf_node = nncf_graph.get_node_by_id(node_id)
 
@@ -114,7 +114,7 @@ class HAWQDebugger:
                 target_node = None
                 for prev_node in previous_nodes:
                     prev_edge = nncf_graph.get_nx_edge(prev_node, affected_nncf_node)
-                    if prev_edge[NNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
+                    if prev_edge[PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
                         target_node = prev_node
                         break
 
@@ -127,7 +127,7 @@ class HAWQDebugger:
             bitwidth = quantizer_info.quantizer_module_ref.num_bits
             activation_fq_node['color'] = bitwidth_color_map[bitwidth]
             activation_fq_node['style'] = 'filled'
-            node_id = activation_fq_node[NNCFGraph.ID_NODE_ATTR]
+            node_id = activation_fq_node[PTNNCFGraph.ID_NODE_ATTR]
 
             activation_fq_node['label'] = 'AFQ_[{}]_#{}'.format(
                 quantizer_info.quantizer_module_ref.get_quantizer_config(),
@@ -144,19 +144,22 @@ class HAWQDebugger:
 
     @staticmethod
     def get_bitwidth_graph(algo_ctrl, model,
-                           groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers) -> NNCFGraph:
+                           groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+                           add_flops=False) -> PTNNCFGraph:
         # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
         # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
         # of the quantizer's bitwidth.
         # pylint:disable=too-many-branches
+        if add_flops:
+            flops_per_module = model.get_flops_per_module()
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
             node = nncf_graph.get_nx_node_by_key(node_key)
             color = ''
-            if node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
-                operator_name = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-                quantized_module_scope = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic.scope_in_model
+            if node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
+                operator_name = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                quantized_module_scope = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic.scope_in_model
                 module = model.get_module_by_scope(quantized_module_scope)
                 if isinstance(module, NNCFConv2d):
                     color = 'lightblue'
@@ -169,7 +172,9 @@ class HAWQDebugger:
                     padding_enabled = len(padding_values) >= 1 and padding_values.pop()
                     if padding_enabled:
                         operator_name += '_PAD'
-                operator_name += '_#{}'.format(str(node[NNCFGraph.ID_NODE_ATTR]))
+                    if add_flops:
+                        operator_name += f'_FLOPS:{str(flops_per_module[quantized_module_scope])}'
+                operator_name += '_#{}'.format(str(node[PTNNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'
                 if color:
@@ -190,13 +195,13 @@ class HAWQDebugger:
                 raise AttributeError('Failed to get any nodes by scope={}'.format(str(quantized_module_scope)))
             wq_nodes = []
             for pot_wq_node in nodes:
-                if 'UpdateWeight' in str(pot_wq_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic):
+                if 'UpdateWeight' in str(pot_wq_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic):
                     wq_nodes.append(pot_wq_node)
             assert len(wq_nodes) == 1
 
             node = wq_nodes[0]
             bitwidths = quantizer.num_bits
-            node_id = node[NNCFGraph.ID_NODE_ATTR]
+            node_id = node[PTNNCFGraph.ID_NODE_ATTR]
             node['label'] = 'WFQ_[{}]_#{}'.format(quantizer.get_quantizer_config(), str(node_id))
             if grouped_mode:
                 group_id_str = 'UNDEFINED'

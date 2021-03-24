@@ -17,6 +17,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from functools import partial
+
+from nncf.dynamic_graph.context import no_nncf_trace
 from torch import distributed
 
 from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -60,7 +62,7 @@ class PTQuantizerSpec(QuantizerSpec):
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    scale_shape: Tuple[int], logarithm_scale: bool):
+                    scale_shape: Tuple[int], logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force,
                    narrow_range, scale_shape, logarithm_scale)
 
@@ -82,7 +84,6 @@ class BaseQuantizer(nn.Module):
         self.register_buffer(ENABLED_VAR_NAME, torch.IntTensor([1]))
         OPTIONAL_PARAMETERS_REGISTRY.register(ENABLED_VAR_NAME)
         self.initialized = False
-        self.state_dict_name = None
         self.call_count = 0
         self._scale_shape = qspec.scale_shape
         self._export_mode = QuantizerExportMode.FAKE_QUANTIZE
@@ -98,11 +99,10 @@ class BaseQuantizer(nn.Module):
 
             def hook_fn(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
                         module):
-                if module.state_dict_name:
-                    for module_key in module.state_dict().keys():
-                        candidate = module.state_dict_name + '.' + module_key
-                        if candidate in state_dict:
-                            module.initialized = True
+                for module_key in module.state_dict().keys():
+                    candidate = prefix + module_key
+                    if candidate in state_dict:
+                        module.initialized = True
 
             def close(self):
                 self.hook.remove()
@@ -134,7 +134,8 @@ class BaseQuantizer(nn.Module):
             return x
         self.set_level_ranges()
         if is_tracing_state():
-            return self.run_export_quantization(x)
+            with no_nncf_trace():
+                return self.run_export_quantization(x)
 
         return self.quantize(x)
 

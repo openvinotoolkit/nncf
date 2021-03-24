@@ -13,7 +13,7 @@
 
 import tensorflow as tf
 
-from beta.nncf.helpers.utils import print_statistics
+from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
 
@@ -30,42 +30,17 @@ class UpdateMask(tf.keras.callbacks.Callback):
         self._scheduler.epoch_step(epoch)
 
 
-class SparsityStatistics(tf.keras.callbacks.Callback):
+class SparsityStatisticsCallback(StatisticsCallback):
     """
     Callback for logging sparsity compression statistics to tensorboard and stdout
     """
-    def __init__(self, raw_statistics_fn, log_tensorboard=True, log_text=True, log_dir=None):
-        """
-        Arguments:
-            `raw_statistics_fn` - callable to evaluate raw sparsity compression statistics,
-            `log_tensorboard` - whether to log statistics to tensorboard or not,
-            `log_text` - whether to log statistics to stdout,
-            `log_dir` -  the directory for tensorbard logging.
-        """
-        super().__init__()
-        self._raw_statistics_fn = raw_statistics_fn
-        self._log_tensorboard = log_tensorboard
-        self._log_text = log_text
-        self._file_writer = None
-        if log_tensorboard:
-            if log_dir is None:
-                raise RuntimeError('log_dir must be specified if log_tensorboard is true.')
-            # pylint: disable=no-member
-            self._file_writer = tf.summary.create_file_writer(log_dir + '/compression')
 
-    def _dump_to_tensorboard(self, logs, step):
-        with self._file_writer.as_default(): # pylint: disable=E1129
-            for name, value in logs.items():
-                tf.summary.scalar(name, value, step=step)
+    def _prepare_for_tensorboard(self, raw_statistics: dict):
+        prefix = 'sparsity'
+        rate_abbreviation = 'SR'
+        return prepare_for_tensorboard(raw_statistics, prefix, rate_abbreviation)
 
-    def on_epoch_end(self, epoch, logs=None):
-        raw_statistics = self._raw_statistics_fn()
-        if self._log_tensorboard:
-            self._dump_to_tensorboard(prepare_for_tensorboard(raw_statistics),
-                                      self.model.optimizer.iterations.numpy())
-        if self._log_text:
-            print_statistics(convert_raw_to_printable(raw_statistics))
-
-    def on_train_end(self, logs=None):
-        if self._file_writer:
-            self._file_writer.close()
+    def _convert_raw_to_printable(self, raw_statistics: dict):
+        prefix = 'sparsity'
+        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
+        return convert_raw_to_printable(raw_statistics, prefix, header)

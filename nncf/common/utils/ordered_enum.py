@@ -26,3 +26,6 @@ class OrderedEnum(Enum):
         if self.__class__ is other.__class__:
             return self.value < other.value # pylint: disable=W0143
         return NotImplemented
+
+    def __hash__(self):
+        return hash(self.value)
