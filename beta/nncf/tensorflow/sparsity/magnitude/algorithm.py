@@ -164,8 +164,8 @@ class MagnitudeSparsityController(BaseSparsityController):
                             [-1]))
         return all_weights
 
-    def statistics(self):
-        return super().statistics('magnitude_sparsity')
+    def statistics(self, quickly_collected_only: bool = False):
+        return super().statistics(quickly_collected_only=quickly_collected_only)
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}
@@ -209,9 +209,9 @@ class MagnitudeSparsityController(BaseSparsityController):
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['magnitude_sparsity_statistic_by_layer'] = []
+        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
         for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['magnitude_sparsity_statistic_by_layer'].append({
+            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
                 'Name': mask_name,
                 'Weight\'s Shape': weights_shape,
                 'SR': sparsity_level,

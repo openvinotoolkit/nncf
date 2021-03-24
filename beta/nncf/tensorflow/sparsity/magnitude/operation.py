@@ -75,7 +75,6 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
         return bkup_var
 
     def get_config(self):
-        return {
-            'name': self.name,
-            'w_name_to_bkup': self.w_name_to_bkup
-        }
+        config = super().get_config()
+        config['w_name_to_bkup'] = self.w_name_to_bkup
+        return config

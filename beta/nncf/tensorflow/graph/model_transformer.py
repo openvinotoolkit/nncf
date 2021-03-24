@@ -194,7 +194,7 @@ class TFModelTransformer(ModelTransformer):
 
         def find_weights_operation(operations, name):
             for op in operations:
-                if op['name'] == name:
+                if op['config']['name'] == name:
                     return op
             return None
 

@@ -47,10 +47,10 @@ class BaseSparsityController(TFCompressionAlgorithmController):
     def strip_model(self, model):
         return strip_model_from_masks(model, self.op_names)
 
-    def statistics(self, prefix):
+    def statistics(self, quickly_collected_only: bool = False):
         raw_sparsity_statistics = self.raw_statistics()
         header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        return convert_raw_to_printable(raw_sparsity_statistics, prefix, header)
+        return convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header)
 
     def raw_statistics(self):
         raise NotImplementedError
