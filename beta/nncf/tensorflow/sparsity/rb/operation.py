@@ -65,20 +65,20 @@ class RBSparsifyingWeight(NNCFOperation):
             'trainable': trainable,
         }
 
-    def call(self, layer_weights, op_weights, trainable):
+    def call(self, layer_weights, op_weights, training):
         """
         Apply rb sparsity mask to given weights.
 
         :param layer_weights: Target weights to sparsify.
         :param op_weights: Operation weights contains
            mask and param `trainable`.
-        :param trainable: 1 if operation called in training mode.
+        :param training: 1 if operation called in training mode.
             else 0
         """
-        if not isinstance(trainable, tf.Tensor):
-            trainable = tf.constant(bool(trainable), tf.bool)
+        if not isinstance(training, tf.Tensor):
+            training = tf.constant(bool(training), tf.bool)
 
-        return smart_cond(tf.math.logical_and(op_weights['trainable'], trainable),
+        return smart_cond(tf.math.logical_and(op_weights['trainable'], training),
                           true_fn=lambda: apply_mask(
                               layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
                           false_fn=lambda: apply_mask(
