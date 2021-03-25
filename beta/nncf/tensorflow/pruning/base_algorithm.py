@@ -162,7 +162,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         if op_name in self.op_names:
             assert ValueError('Attempt to apply BinaryMask operation two times on one weight')
 
-        assert op_name not in self.op_names
         self.op_names.add(op_name)
 
         return TFInsertionCommand(

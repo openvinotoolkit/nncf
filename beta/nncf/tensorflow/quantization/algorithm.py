@@ -122,7 +122,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if name in self.op_names:
                 raise ValueError('Attempt to apply Quantize operation two times on one weight')
 
-            assert name not in self.op_names
             self.op_names.add(name)
             operation = self._create_quantizer(name, TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True,

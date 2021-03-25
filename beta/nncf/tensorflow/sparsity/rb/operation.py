@@ -21,6 +21,7 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 OP_NAME = '_rb_sparsity_mask_apply'
 
@@ -35,7 +36,7 @@ class RBSparsifyingWeight(NNCFOperation):
         super().__init__(name=name)
         self.eps = eps
 
-    def build(self, input_shape, input_type, name, layer):
+    def build(self, input_shape, input_type: InputType, name: str, layer: NNCFWrapper):
         """
         :param input_shape: Shape of weights which needs to be sparsifyed.
         :param input_type: Type of operation input, must be InputType.WEIGHTS.

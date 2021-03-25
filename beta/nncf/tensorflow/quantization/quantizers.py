@@ -56,11 +56,17 @@ class TFQuantizerSpec(QuantizerSpec):
 
 class Quantizer(NNCFOperation):
     """
-    Base class for all NNCF quantization operations
+    Base class for all NNCF quantization operations.
     """
-    def __init__(self, name, num_bits, narrow_range, per_channel):
+    def __init__(self, name: str, num_bits: int, narrow_range: bool, per_channel: bool):
         """
-        Initializes internal NNCF quantization operation state
+        Initializes internal NNCF quantization operation state.
+
+        :param name: Unique operation name in algorithm scope.
+        :param num_bits: Bitwidth of the quantization.
+        :param narrow_range: True if the range of quantized values should be narrowed as compared to the
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param per_channel: True for per-channel quantization, False for per-tensor.
         """
         super().__init__(name=name)
         self.num_bits = num_bits
@@ -74,11 +80,11 @@ class Quantizer(NNCFOperation):
     def call(self, inputs, weights, _):
         """
         The method applies quantization to the input tensor if the quantizer is enabled,
-        otherwise, if the quantizer is disabled, the method returns the input tensor as is
+        otherwise, if the quantizer is disabled, the method returns the input tensor as is.
 
-        :param inputs: input tensor
-        :param weights: quantizer's weights
-        :return: output tensor
+        :param inputs: Input tensor.
+        :param weights: Quantizer's weights.
+        :return: Output tensor.
         """
         if not self.enabled:
             return inputs
@@ -91,21 +97,21 @@ class Quantizer(NNCFOperation):
         """
         Apply quantization to the input tensor.
 
-        :param inputs: input tensor
-        :param weights: quantizer's weights
-        :return: quantized tensor
+        :param inputs: Input tensor.
+        :param weights: Quantizer's weights.
+        :return: Quantized tensor.
         """
         raise NotImplementedError
 
     def apply_minmax_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         """
-        Initialize quantizer parameters using minimum and maximum weight values
+        Initialize quantizer parameters using minimum and maximum weight values.
 
-        :param weights: quantizer's weights
-        :param min_values: minimum weight values
-        :param max_values: maximum weight values
-        :param min_range: minimum range
-        :param eps: smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range)
+        :param weights: Quantizer's weights.
+        :param min_values: Minimum weight values.
+        :param max_values: Maximum weight values.
+        :param min_range: Minimum range.
+        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
         """
         raise NotImplementedError
 
@@ -115,13 +121,13 @@ class Quantizer(NNCFOperation):
         The TensorFlow fake_quant_with_min_max_vars_per_channel supports only inputs tensor one of
         the shapes: [d], [b, d] [b, h, w, d]. For this reason, Quantizer transforms any inputs tensor
         to one of the supported shapes, then quantizes and then transforms quantized tensor to
-        the original inputs shape
+        the original inputs shape.
 
-        :param input_shape: shape of the input
-        :param input_type: type of the input identifies that inputs are layer weights
-                           or inputs of the layer
-        :param input_name: input name
-        :param layer: layer, where the Quantizer is registered
+        :param input_shape: Shape of the input.
+        :param input_type: Type of the input identifies that inputs are layer weights
+                           or inputs of the layer.
+        :param input_name: Input name.
+        :param layer: Layer, where the Quantizer is registered.
         """
         self._pre_processing_fn, self._post_processing_fn = \
             self._make_transformation_fns(input_shape, input_type, input_name, layer)
@@ -230,6 +236,7 @@ class Quantizer(NNCFOperation):
     def get_quantizer_config(self) -> QuantizerConfig:
         """
         Used to get a current quantizer state in terms of QuantizerConfig objects.
+
         :return: A QuantizerConfig struct that corresponds to current state of the quantizer.
         """
         raise NotImplementedError
@@ -237,7 +244,7 @@ class Quantizer(NNCFOperation):
     def get_config(self):
         raise NotImplementedError
 
-    def _get_config(self, mode, signedness_to_force, keep_op_name):
+    def _get_config(self, mode: QuantizationMode, signedness_to_force: Optional[bool], keep_op_name: bool):
         qspec = TFQuantizerSpec(num_bits=self.num_bits,
                                 mode=mode,
                                 signedness_to_force=signedness_to_force,

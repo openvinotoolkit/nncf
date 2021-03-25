@@ -66,7 +66,6 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             if name in self.op_names:
                 raise ValueError('Attempt to apply BinaryMask two times on one weight')
 
-            assert name not in self.op_names
             self.op_names.add(name)
             transformations.register(
                 TFInsertionCommand(

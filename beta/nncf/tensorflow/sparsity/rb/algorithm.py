@@ -88,7 +88,7 @@ class RBSparsityController(BaseSparsityController):
         sparsity_level_mode = params.get('sparsity_level_setting_mode', 'global')
 
         if sparsity_level_mode == 'local':
-            raise NotImplementedError
+            raise NotImplementedError('RB sparsity algorithm do not support local sparsity loss')
 
         target_ops = apply_fn_to_op_weights(target_model, op_names, lambda x: (x['mask'], x['trainable']))
         self._loss = SparseLoss(target_ops)

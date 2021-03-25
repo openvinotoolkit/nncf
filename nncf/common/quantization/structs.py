@@ -108,9 +108,9 @@ class QuantizerSpec:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
-        naive case, False if all 2^`num_bits` quantizations should be used.
+            naive case, False if all 2^`num_bits` quantizations should be used.
         :param half_range: If ``True`` effectively only a half of an quantizer range are used.
-        False - the full range are used.
+            False - the full range are used.
         """
         self.num_bits = num_bits
         self.mode = mode

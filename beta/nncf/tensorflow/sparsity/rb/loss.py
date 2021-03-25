@@ -59,7 +59,7 @@ class SparseLoss(CompressionLoss):
         eager_target = tf.keras.backend.eval(self.target)
         rate = 1. - eager_target
         if rate < 0 or rate > 1:
-            raise ValueError('Target is not within range (0, 1)')
+            raise ValueError('Target is not within range [0, 1]')
         return rate
 
     def set_target_sparsity_loss(self, sparsity_level):
