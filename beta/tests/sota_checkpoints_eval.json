@@ -191,6 +191,7 @@
                     "metric_type": "mAP",
                     "model_description": "retinanet_pruning_40",
                     "compression_description": "Filter pruning 40%",
+                    "batch": 40,
                     "diff_fp32_min": -1,
                     "diff_fp32_max": 0.4
                 }
