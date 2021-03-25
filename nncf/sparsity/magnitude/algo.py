@@ -63,7 +63,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         stats = super().statistics()
         if self.sparsity_level_mode == 'global':
             stats['sparsity_threshold'] =\
-                 self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+                 self._select_threshold(self.sparsity_rate_for_sparsified_modules(), self.sparsified_module_info)
         else:
             table = Texttable()
             header = ["Name", "Per-layer sparsity threshold"]
@@ -73,7 +73,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                 drow = {h: 0 for h in header}
                 drow["Name"] = minfo.module_name
                 drow['Per-layer sparsity threshold'] =\
-                     self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+                     self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
                 row = [drow[h] for h in header]
                 data.append(row)
             table.add_rows(data)
