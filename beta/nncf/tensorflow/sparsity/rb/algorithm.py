@@ -58,7 +58,9 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
             name = node_name + OP_NAME
-            assert name not in self.op_names, 'duplicate names of RBSparsifyingWeight'
+            if name in self.op_names:
+                raise ValueError('Attempt to apply RBSparsityWeight operation two times on one weight')
+
             self.op_names.add(name)
 
             transformations.register(
