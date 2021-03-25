@@ -164,9 +164,6 @@ class MagnitudeSparsityController(BaseSparsityController):
                             [-1]))
         return all_weights
 
-    def statistics(self, quickly_collected_only: bool = False):
-        return super().statistics(quickly_collected_only=quickly_collected_only)
-
     def raw_statistics(self):
         raw_sparsity_statistics = {}
         sparsity_levels = []
