@@ -149,7 +149,8 @@
                     "target": 33.44,
                     "weights": "retinanet/retinanet.h5",
                     "metric_type": "mAP",
-                    "model_description": "retinanet"
+                    "model_description": "retinanet",
+                    "batch": 40
                 },
                 "retinanet_int8_w_sym_t_a_sym_t": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json",
@@ -158,7 +159,8 @@
                     "resume": "retinanet_int8_w_sym_t_a_sym_t",
                     "metric_type": "mAP",
                     "model_description": "retinanet_int8_w_sym_t_a_sym_t",
-                    "compression_description": "INT8"
+                    "compression_description": "INT8",
+                    "batch": 40
                 },
                 "retinanet_sparsity_50": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json",
@@ -167,7 +169,8 @@
                     "resume": "retinanet_sparsity_50",
                     "metric_type": "mAP",
                     "model_description": "retinanet_sparsity_50",
-                    "compression_description": "Sparsity 50"
+                    "compression_description": "Sparsity 50",
+                    "batch": 40
                 }
             }
         }
