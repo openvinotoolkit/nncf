@@ -755,7 +755,7 @@ def test_multiple_forward():
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
-    for node_key in list(graph.get_all_node_keys())[1:4]:
+    for node_key in list(graph.get_all_node_keys())[1:-1]:
         node = graph.get_nx_node_by_key(node_key)
         assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
