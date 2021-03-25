@@ -114,17 +114,20 @@ class RBSparsityController(BaseSparsityController):
         total_sparsified_weights_number = tf.constant(0)
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
-            mask = wrapped_layer.ops_weights[OP_NAME]['mask']
-            sw_loss = tf.reduce_sum(binary_mask(mask))
-            weights_number = tf.size(mask)
-            sparsified_weights_number = weights_number - tf.cast(sw_loss, tf.int32)
-            mask_names.append(wrapped_layer.name + '_rb_mask')
-            weights_shapes.append(list(mask.shape))
-            weights_numbers.append(weights_number)
-            sparsity_levels.append(sparsified_weights_number / weights_number)
-            sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
-            total_weights_number += weights_number
-            total_sparsified_weights_number += sparsified_weights_number
+            for ops in wrapped_layer.weights_attr_ops.values():
+                for op_name in ops:
+                    if op_name in self.op_names:
+                        mask = wrapped_layer.ops_weights[op_name]['mask']
+                        sw_loss = tf.reduce_sum(binary_mask(mask))
+                        weights_number = tf.size(mask)
+                        sparsified_weights_number = weights_number - tf.cast(sw_loss, tf.int32)
+                        mask_names.append(wrapped_layer.name + '_rb_mask')
+                        weights_shapes.append(list(mask.shape))
+                        weights_numbers.append(weights_number)
+                        sparsity_levels.append(sparsified_weights_number / weights_number)
+                        sparse_prob_sum += tf.math.reduce_sum(tf.math.sigmoid(mask))
+                        total_weights_number += weights_number
+                        total_sparsified_weights_number += sparsified_weights_number
 
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number
@@ -143,9 +146,9 @@ class RBSparsityController(BaseSparsityController):
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['sparsity_statistic_by_module'] = []
+        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
         for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['sparsity_statistic_by_module'].append({
+            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
                 'Name': mask_name,
                 'Weight\'s Shape': weights_shape,
                 'SR': sparsity_level,
