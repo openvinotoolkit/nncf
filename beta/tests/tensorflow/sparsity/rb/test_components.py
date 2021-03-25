@@ -199,7 +199,7 @@ class TestSparseModules:
             actual_rate = loss.target_sparsity_rate
             if expected_rate is None:
                 pytest.fail("Exception should be raised")
-        except IndexError:
+        except ValueError:
             if expected_rate is not None:
                 pytest.fail("Exception is not expected")
         if expected_rate is not None:
