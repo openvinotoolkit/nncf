@@ -60,7 +60,7 @@ class TestWithSparsify:
 
         tf.debugging.assert_near(default_rb_mask_value, mask)
         w = tf.ones(1)
-        sw(w, op_weights, None)
+        sw(w, op_weights, tf.constant(is_train, tf.bool))
         tf.debugging.assert_near(default_rb_mask_value, mask)
 
     @pytest.mark.parametrize(('mask_value', 'ref_loss'),
@@ -78,4 +78,4 @@ class TestWithSparsify:
         w = tf.ones(1)
         assert apply_mask(w, st_binary_mask(mask)) == ref_loss
         sw.freeze(op_weights['trainable'])
-        assert sw(w, op_weights, None) == ref_loss
+        assert sw(w, op_weights, tf.constant(True, tf.bool)) == ref_loss
