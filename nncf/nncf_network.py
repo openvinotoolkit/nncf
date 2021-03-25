@@ -465,7 +465,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         """
         is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
         def strip_fn(tensor: TracedTensor) -> torch.Tensor:
-            return torch.Tensor.as_subclass(tensor, torch.Tensor)
+            if hasattr(torch.Tensor, 'as_subclass'):
+                return torch.Tensor.as_subclass(tensor, torch.Tensor)
+            # Torch < 1.7.0 fallback
+            return torch.tensor(tensor, device=tensor.device, requires_grad=tensor.requires_grad)
 
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
