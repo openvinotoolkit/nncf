@@ -59,7 +59,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
 
 python_version = sys.version_info[:2]
 if python_version[0] < 3 or python_version[1] < 6:
-    print("Only Python > 3.6 is supported")
+    print("Only Python >= 3.6 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
