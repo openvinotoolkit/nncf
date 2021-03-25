@@ -39,13 +39,13 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
                  narrow_range: bool = False,
-                 apply_saturation_fix: bool = False,
+                 half_range: bool = False,
                  logarithm_scale: bool = None):
         super().__init__(num_bits,
                          mode,
                          signedness_to_force,
                          narrow_range,
-                         apply_saturation_fix,
+                         half_range,
                          scale_shape,
                          logarithm_scale)
 

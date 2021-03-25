@@ -100,7 +100,7 @@ class QuantizerSpec:
                  mode: QuantizationMode,
                  signedness_to_force: bool,
                  narrow_range: bool,
-                 apply_saturation_fix: bool):
+                 half_range: bool):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -109,24 +109,25 @@ class QuantizerSpec:
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
         naive case, False if all 2^`num_bits` quantizations should be used.
-        :param apply_saturation_fix: True if saturation issue fix *must* be applied, False - otherwise.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+        False - the full range are used.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
-        self.apply_saturation_fix = apply_saturation_fix
+        self.half_range = half_range
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, apply_saturation_fix: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
-                   apply_saturation_fix)
+                   half_range)
 
 
 class QuantizationConstraints:

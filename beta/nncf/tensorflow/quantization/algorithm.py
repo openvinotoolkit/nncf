@@ -119,7 +119,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
             operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True,
-                                                                           apply_saturation_fix=False))
+                                                                           half_range=False))
 
             weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             transformations.register(
@@ -135,7 +135,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
             fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=False,
-                                                                           apply_saturation_fix=False),
+                                                                           half_range=False),
                                                name=fake_quantize_name)
             transformations.register(
                 TFInsertionCommand(

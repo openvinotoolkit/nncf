@@ -12,7 +12,7 @@ from tests.quantization.test_onnx_export import get_config_for_export_mode
 import pytest
 
 
-@pytest.mark.parametrize('num_bits, mode, scale_shape, apply_saturation_fix, assert_vals',
+@pytest.mark.parametrize('num_bits, mode, scale_shape, half_range, assert_vals',
                          [(8, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
                           (8, QuantizationMode.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),
                           (7, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (64, -32, 31)),
@@ -20,7 +20,7 @@ import pytest
                           (8, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (128, -64, 63)),
                           (8, QuantizationMode.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127))
                           ])
-def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, apply_saturation_fix, assert_vals):
+def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, half_range, assert_vals):
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
         mode=mode,
@@ -28,11 +28,11 @@ def test_is_correct_saturation_issue_levels(num_bits, mode, scale_shape, apply_s
         narrow_range=False,
         scale_shape=scale_shape,
         logarithm_scale=False,
-        apply_saturation_fix=apply_saturation_fix)
+        half_range=half_range)
 
     quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
 
-    assert quantizer._is_applied_saturation_fix == apply_saturation_fix  # pylint: disable=protected-access
+    assert quantizer._half_range == half_range  # pylint: disable=protected-access
     assert quantizer.levels == assert_vals[0]
     assert quantizer.level_low == assert_vals[1]
     assert quantizer.level_high == assert_vals[2]
@@ -45,13 +45,13 @@ def helper_to_test_if_saturation_fix_was_applied(nncf_config, target_device):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     for quantizer in compression_ctrl.weight_quantizers.values():
-        assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
         assert quantizer.quantizer_module_ref.levels == 128
         assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
 
     for quantizer in compression_ctrl.non_weight_quantizers.values():
-        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
 def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
@@ -61,9 +61,9 @@ def helper_to_test_if_saturation_fix_wasnt_applied(nncf_config, target_device):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
 
     for quantizer in compression_ctrl.weight_quantizers.values():
-        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
     for quantizer in compression_ctrl.non_weight_quantizers.values():
-        assert not quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert not quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
 
 def test_config_option_disable_saturation_fix():
@@ -136,7 +136,7 @@ def are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, co
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+            assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.scale = torch.nn.Parameter(
@@ -189,7 +189,7 @@ def are_asymmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, c
     with torch.no_grad():
         for quantizer in quantizers:
             assert quantizer.quantizer_module_ref.levels == levels
-            assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+            assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
             assert quantizer.quantizer_module_ref.level_low == level_low
             assert quantizer.quantizer_module_ref.level_high == level_high
             quantizer.quantizer_module_ref.input_range = torch.nn.Parameter(
@@ -308,7 +308,7 @@ def test_are_qdq_exported_per_tensor_weights_tensors_clipped(tmp_path):
         assert quantizer.quantizer_module_ref.levels == 128
         assert quantizer.quantizer_module_ref.level_low == -64
         assert quantizer.quantizer_module_ref.level_high == 63
-        assert quantizer.quantizer_module_ref._is_applied_saturation_fix  # pylint: disable=protected-access
+        assert quantizer.quantizer_module_ref._half_range  # pylint: disable=protected-access
 
     onnx_checkpoint_path = str(tmp_path / 'model.onnx')
     compression_ctrl.export_model(onnx_checkpoint_path, input_names=['input'])

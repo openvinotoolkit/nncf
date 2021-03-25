@@ -695,18 +695,18 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         module = target_model.get_module_by_scope(insertion_point.module_scope)
         scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
         use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-        apply_saturation_fix = False
+        half_range = False
         if self.hw_config and not self._disable_saturation_fix:
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
                 nncf_logger.warning('A saturation issue fix will be applied. '
                                     'Now all weight quantizers will effectively use only 7 bits out of 8 bits '
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
                                     'Please take a look at the documentation for a detailed information. ')
-                apply_saturation_fix = True
+                half_range = True
         qspec = PTQuantizerSpec.from_config(qconfig, narrow_range=True,
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
-                                            apply_saturation_fix=apply_saturation_fix)
+                                            half_range=half_range)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
@@ -962,7 +962,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             narrow_range=False,
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
-                                            apply_saturation_fix=False)
+                                            half_range=False)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],

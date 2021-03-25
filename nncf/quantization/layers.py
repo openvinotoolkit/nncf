@@ -54,23 +54,23 @@ class PTQuantizerSpec(QuantizerSpec):
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
-                 apply_saturation_fix: bool,
+                 half_range: bool,
                  scale_shape: Tuple[int, ...],
-                 logarithm_scale: bool,):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, apply_saturation_fix)
+                 logarithm_scale: bool):
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
 
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
-                    apply_saturation_fix: bool, scale_shape: Tuple[int],
+                    half_range: bool, scale_shape: Tuple[int],
                     logarithm_scale: bool) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
-                   apply_saturation_fix,
+                   half_range,
                    scale_shape,
                    logarithm_scale)
 
@@ -82,7 +82,7 @@ class BaseQuantizer(nn.Module):
         self._narrow_range = qspec.narrow_range
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
-        self._is_applied_saturation_fix = qspec.apply_saturation_fix
+        self._half_range = qspec.half_range
         self._num_bits = nn.Parameter(torch.IntTensor([qspec.num_bits]), requires_grad=False)
         OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
         self.level_high = None
@@ -378,7 +378,7 @@ class SymmetricQuantizer(BaseQuantizer):
         self._scale_param_storage.requires_grad = False
 
     def set_level_ranges(self):
-        scaled_num_bits = 1 if self._is_applied_saturation_fix else 0
+        scaled_num_bits = 1 if self._half_range else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits,
                                                                                    self.signed)
 
@@ -447,7 +447,7 @@ class SymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
-            if self._is_applied_saturation_fix:
+            if self._half_range:
                 if self.scale_shape[0] > 1:
                     for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())
@@ -534,7 +534,7 @@ class AsymmetricQuantizer(BaseQuantizer):
         return True
 
     def set_level_ranges(self):
-        scaled_num_bits = 1 if self._is_applied_saturation_fix else 0
+        scaled_num_bits = 1 if self._half_range else 0
         self.level_low, self.level_high, self.levels = self.calculate_level_ranges(self.num_bits - scaled_num_bits)
 
     @staticmethod
@@ -586,7 +586,7 @@ class AsymmetricQuantizer(BaseQuantizer):
                                                                    self.eps)
             level_low = self.level_low
             level_high = self.level_high
-            if self._is_applied_saturation_fix:
+            if self._half_range:
                 if self.scale_shape[0] > 1:
                     for i in range(self.scale_shape[0]):
                         x[i] = torch.clamp(x[i], min=input_low[i].item(), max=input_high[i].item())

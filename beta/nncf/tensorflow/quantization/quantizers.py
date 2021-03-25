@@ -34,18 +34,18 @@ class TFQuantizerSpec(QuantizerSpec):
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
-                 apply_saturation_fix: bool,
+                 half_range: bool,
                  per_channel: bool):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range, apply_saturation_fix)
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = per_channel
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, apply_saturation_fix: bool):
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool):
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
-                   apply_saturation_fix,
+                   half_range,
                    qconfig.per_channel)
 
 
@@ -243,7 +243,7 @@ class SymmetricQuantizer(Quantizer):
         self.per_channel = qspec.per_channel
         self.narrow_range = qspec.narrow_range
         self.signedness_to_force = qspec.signedness_to_force
-        self._is_applied_saturation_fix = qspec.apply_saturation_fix
+        self._half_range = qspec.half_range
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
@@ -300,7 +300,7 @@ class SymmetricQuantizer(Quantizer):
                                 mode=QuantizationMode.SYMMETRIC,
                                 signedness_to_force=self.signedness_to_force,
                                 narrow_range=self.narrow_range,
-                                apply_saturation_fix=self._is_applied_saturation_fix,
+                                half_range=self._half_range ,
                                 per_channel=self.per_channel)
         return deepcopy(qspec.__dict__)
 
@@ -310,7 +310,7 @@ class SymmetricQuantizer(Quantizer):
                                 mode=QuantizationMode.SYMMETRIC,
                                 signedness_to_force=config["signedness_to_force"],
                                 narrow_range=config["narrow_range"],
-                                apply_saturation_fix=config['apply_saturation_fix'],
+                                half_range=config['half_range'],
                                 per_channel=config["per_channel"])
         return cls(qspec)
 
@@ -324,7 +324,7 @@ class AsymmetricQuantizer(Quantizer):
         self.num_bits = qspec.num_bits
         self.narrow_range = qspec.narrow_range
         self.per_channel = qspec.per_channel
-        self._is_applied_saturation_fix = qspec.apply_saturation_fix
+        self._half_range = qspec.half_range
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
@@ -381,7 +381,7 @@ class AsymmetricQuantizer(Quantizer):
                                 QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
                                 narrow_range=self.narrow_range,
-                                apply_saturation_fix=self._is_applied_saturation_fix,
+                                half_range=self._half_range ,
                                 per_channel=self.per_channel)
         return deepcopy(qspec.__dict__)
 
@@ -391,6 +391,6 @@ class AsymmetricQuantizer(Quantizer):
                                 mode=QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
                                 narrow_range=config["narrow_range"],
-                                apply_saturation_fix=config['apply_saturation_fix'],
+                                half_range=config['half_range'],
                                 per_channel=config["per_channel"])
         return cls(qspec)
