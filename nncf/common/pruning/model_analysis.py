@@ -20,7 +20,6 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
-
 class NodesCluster:
     """
     Represents element of Сlusterization. Groups together nodes.
@@ -300,7 +299,6 @@ class ModelAnalyzer:
         for node in reversed_sorted_nodes:
             # Check all output nodes accept_pruned_input attribute
             out_nodes = self.graph.get_next_nodes(node)
-            out_nodes = self._ignore_nncf_output_nodes(out_nodes)
             outputs_accept_pruned_input = all(self.accept_pruned_input[node.node_id] for node in out_nodes)
 
             # Check all output nodes can_prune attribute
@@ -335,9 +333,3 @@ class ModelAnalyzer:
         self.propagate_can_prune_attr_up()
         self.propagate_can_prune_attr_down()
         return self.can_prune
-
-    def _ignore_nncf_output_nodes(self, list_nncf_nodes):
-        for node in self.graph.get_output_nodes():
-            if node in list_nncf_nodes:
-                list_nncf_nodes.remove(node)
-        return list_nncf_nodes

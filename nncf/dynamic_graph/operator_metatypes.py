@@ -153,9 +153,15 @@ OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 @OPERATOR_METATYPES.register()
-class NoopMetatype(OperatorMetatype):
-    name = "noop"
-    external_op_names = [name, MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME]
+class InputNoopMetatype(OperatorMetatype):
+    name = "input_noop"
+    external_op_names = [name, MODEL_INPUT_OP_NAME]
+
+
+@OPERATOR_METATYPES.register()
+class OutputNoopMetatype(OperatorMetatype):
+    name = "output_noop"
+    external_op_names = [name, MODEL_OUTPUT_OP_NAME]
 
 
 @OPERATOR_METATYPES.register()

@@ -503,9 +503,9 @@ def test_quantize_outputs_with_scope_overrides():
             "mode": "asymmetric",
         }
     }
-    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    model, ctrl = create_compressed_model_and_algo_for_test(model, config)
     output_quantizers =\
-        [quantizer for scope_str, quantizer in model.activation_quantizers.items() if "conv2d" in scope_str]
+        [ q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
     for q in output_quantizers:
         assert q.num_bits == 4
         assert isinstance(q, AsymmetricQuantizer)

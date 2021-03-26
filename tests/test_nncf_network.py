@@ -23,7 +23,7 @@ import torch
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 
 from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.operator_metatypes import NoopMetatype
+from nncf.dynamic_graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
@@ -595,7 +595,7 @@ class TestInsertionPointGraph:
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
-            "/" + MODEL_INPUT_OP_NAME + "_0": NoopMetatype,
+            "/" + MODEL_INPUT_OP_NAME + "_0": InputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
             "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
             "ModelForMetatypeTesting/RELU_0": RELUMetatype,
@@ -605,7 +605,7 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/__iadd___0": AddMetatype,
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
             "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
-            "/" + MODEL_OUTPUT_OP_NAME + "_0": NoopMetatype,
+            "/" + MODEL_OUTPUT_OP_NAME + "_0": OutputNoopMetatype,
         }
 
         class ModelForMetatypeTesting(torch.nn.Module):
@@ -755,7 +755,7 @@ def test_multiple_forward():
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
-    for node_key in list(graph.get_all_node_keys())[1:-1]:
+    for node_key in list(graph.get_all_node_keys())[1:-2]:
         node = graph.get_nx_node_by_key(node_key)
         assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
