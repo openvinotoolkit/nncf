@@ -90,7 +90,6 @@ class FakeQuantize(tf.keras.layers.Layer):
         config = super().get_config()
         config.update({
             'quantizer_config': {
-                'mode': self.mode,
                 **self._quantizer.get_config()['quantizer_spec']
             },
             'op_name': self.op_name,

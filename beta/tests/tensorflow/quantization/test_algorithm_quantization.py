@@ -564,9 +564,13 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     layer_name = \
         LAYERS_WITH_WEIGHTS[layer_desk.layer_name][WEIGHT_ATTR_NAME]
     q = Quantizer(name='quantizer',
-                  num_bits=8,
-                  narrow_range=None,
-                  per_channel=True)
+                  qspec=TFQuantizerSpec(
+                            num_bits=8,
+                            mode=None,
+                            signedness_to_force=None,
+                            narrow_range=None,
+                            half_range=False,
+                            per_channel=True))
     q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
                                  layer_name, layer_desk.layer)
     # pylint: disable=protected-access

@@ -33,8 +33,7 @@ OP_NAME = '_quantize'
 
 
 class TFQuantizerSpec(QuantizerSpec):
-    def __init__(self,
-                 num_bits: int,
+    def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
@@ -50,34 +49,25 @@ class TFQuantizerSpec(QuantizerSpec):
                    qconfig.signedness_to_force,
                    narrow_range,
                    half_range,
-                   qconfig.per_channel,
-                   qconfig.name)
+                   qconfig.per_channel)
 
 
 class Quantizer(NNCFOperation):
     """
     Base class for all NNCF quantization operations.
     """
-    def __init__(self,
-                 name: str,
-                 num_bits: int,
-                 narrow_range: bool,
-                 per_channel: bool,
-                 half_range: bool):
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
         """
         Initializes internal NNCF quantization operation state.
 
         :param name: Unique operation name in algorithm scope.
-        :param num_bits: Bitwidth of the quantization.
-        :param narrow_range: True if the range of quantized values should be narrowed as compared to the
-            naive case, False if all 2^`num_bits` quantizations should be used.
-        :param per_channel: True for per-channel quantization, False for per-tensor.
+        :param qspec: Parameter struct required to initialize Quantizer.
         """
         super().__init__(name=name)
-        self.num_bits = num_bits
-        self.per_channel = per_channel
-        self.narrow_range = narrow_range
-        self._half_range = half_range
+        self.num_bits = qspec.num_bits
+        self.per_channel = qspec.per_channel
+        self.narrow_range = qspec.narrow_range
+        self._half_range = qspec.half_range
         self.enabled = True
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
@@ -256,10 +246,7 @@ class Quantizer(NNCFOperation):
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name=name,
-                         num_bits=qspec.num_bits,
-                         narrow_range=qspec.narrow_range,
-                         per_channel=qspec.per_channel,
-                         half_range=qspec.half_range)
+                         qspec=qspec)
         self.signedness_to_force = qspec.signedness_to_force
 
     def build(self, input_shape, input_type, name, layer):
@@ -315,8 +302,10 @@ class SymmetricQuantizer(Quantizer):
     def get_config(self, keep_op_name=True):
         qspec_dict = dict()
         qspec_dict['num_bits'] = self.num_bits
+        qspec_dict['mode'] = QuantizationMode.SYMMETRIC
         qspec_dict['signedness_to_force'] = self.signedness_to_force
         qspec_dict['narrow_range'] = self.narrow_range
+        qspec_dict['half_range'] = self._half_range
         qspec_dict['per_channel'] = self.per_channel
         config = dict()
         config['quantizer_spec'] = qspec_dict
@@ -330,7 +319,7 @@ class SymmetricQuantizer(Quantizer):
                                 mode=QuantizationMode.SYMMETRIC,
                                 signedness_to_force=qspec_dict['signedness_to_force'],
                                 narrow_range=qspec_dict['narrow_range'],
-                                half_range=config['half_range'],
+                                half_range=qspec_dict['half_range'],
                                 per_channel=qspec_dict['per_channel'])
         name = config['name']
         return cls(name, qspec)
@@ -340,14 +329,6 @@ class SymmetricQuantizer(Quantizer):
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
-    def __init__(self, name: str, qspec: TFQuantizerSpec):
-        super().__init__(name=name,
-                         num_bits=qspec.num_bits,
-                         narrow_range=qspec.narrow_range,
-                         per_channel=qspec.per_channel,
-                         half_range=qspec.half_range)
-        self._half_range = qspec.half_range
-
     def build(self, input_shape, input_type, name, layer):
         shape = None
         if self.per_channel:
@@ -401,8 +382,10 @@ class AsymmetricQuantizer(Quantizer):
     def get_config(self, keep_op_name=True):
         qspec_dict = dict()
         qspec_dict['num_bits'] = self.num_bits
+        qspec_dict['mode'] = QuantizationMode.ASYMMETRIC
         qspec_dict['signedness_to_force'] = None
         qspec_dict['narrow_range'] = self.narrow_range
+        qspec_dict['half_range'] = self._half_range
         qspec_dict['per_channel'] = self.per_channel
         config = dict()
         config['quantizer_spec'] = qspec_dict
@@ -416,6 +399,7 @@ class AsymmetricQuantizer(Quantizer):
                                 mode=QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
                                 narrow_range=qspec_dict['narrow_range'],
+                                half_range=qspec_dict['half_range'],
                                 per_channel=qspec_dict['per_channel'])
         name = config['name']
         return cls(name, qspec)
