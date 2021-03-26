@@ -385,7 +385,7 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
     assert count_custom_ops == 4
 
 
-def charnge_compression_algorithms_order(config):
+def change_compression_algorithms_order(config):
     # changes order of compression algorithms in config
     def shift_list(list_for_shift):
         shifted_list = [list_for_shift.pop()] + list_for_shift
@@ -423,7 +423,7 @@ def get_basic_rb_sparsity_int8_config():
 
 comp_loss_configs = [
     get_basic_rb_sparsity_int8_config(),
-    charnge_compression_algorithms_order(get_basic_rb_sparsity_int8_config())
+    change_compression_algorithms_order(get_basic_rb_sparsity_int8_config())
 ]
 
 
