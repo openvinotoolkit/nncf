@@ -7,7 +7,14 @@
                 "mode": "asymmetric",
                 "granularity": "pertensor"
             },
+
             "q8_ch": {
+                "bits": 8,
+                "mode": "symmetric",
+                "granularity": "perchannel"
+            },
+
+            "q8_w": {
                 "bits": 8,
                 "mode": "symmetric",
                 "granularity": [
@@ -25,10 +32,28 @@
                 "mode": "symmetric",
                 "granularity": "perchannel"
             },
+
+            "q4_w": {
+                "bits": 4,
+                "mode": "symmetric",
+                "granularity": [
+                    "perchannel",
+                    "pertensor"
+                ]
+            },
             "q2_ch": {
                 "bits": 2,
                 "mode": "symmetric",
                 "granularity": "perchannel"
+            },
+
+            "q2_w": {
+                "bits": 2,
+                "mode": "symmetric",
+                "granularity": [
+                    "perchannel",
+                    "pertensor"
+                ]
             }
         }
     },
@@ -40,28 +65,28 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch","q4_ch", "q2_ch"]
+                "weights": ["q8_w", "q4_w", "q2_w"]
             }
         },
         {
             "type": "GroupConvolutionBackpropData",
             "quantization": {
                 "activations": "q8_tn",
-                "weights": ["q8_ch","q4_ch", "q2_ch"]
+                "weights": ["q8_w", "q4_w", "q2_w"]
             }
         },
         {
             "type": "DepthWiseConvolution",
             "quantization": {
                 "activations": "q8_ch",
-                "weights": ["q8_ch","q4_ch", "q2_ch"]
+                "weights": ["q8_w", "q4_w", "q2_w"]
             }
         },
         {
             "type": "MatMul",
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch","q4_ch", "q2_ch"]
+                "weights": ["q8_w", "q4_w", "q2_w"]
             }
         },
         {
@@ -71,7 +96,7 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch", "q4_tn"]
+                "weights": ["q8_w", "q4_tn"]
             }
         },
         {
@@ -81,7 +106,7 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch", "q4_tn"]
+                "weights": ["q8_w", "q4_tn"]
             }
         },
         {
@@ -91,7 +116,7 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch", "q4_tn"]
+                "weights": ["q8_w", "q4_tn"]
             }
         },
         {
@@ -101,7 +126,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -111,7 +136,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -121,7 +146,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -131,7 +156,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -141,7 +166,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -151,7 +176,7 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch", "q4_tn"]
+                "weights": ["q8_w", "q4_tn"]
             }
         },
         {
@@ -161,7 +186,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -171,7 +196,7 @@
             },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
-                "weights": ["q8_ch", "q4_tn"]
+                "weights": ["q8_w", "q4_tn"]
             }
         },
         {
@@ -181,7 +206,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -191,7 +216,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -201,7 +226,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -211,7 +236,7 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
@@ -221,14 +246,14 @@
             },
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
             "type": "LogicalNot",
             "quantization": {
                 "activations": "q8_tn",
-                "weights": "q8_ch"
+                "weights": "q8_w"
             }
         },
         {
