@@ -102,9 +102,12 @@ else:
         mode=mode,
         whl_mode=whl_mode)
 
-DEPENDENCY_LINKS = [TORCH_SOURCE_URL, TORCHVISION_SOURCE_URL]
-INSTALL_REQUIRES.extend([f"torch @ {TORCH_SOURCE_URL}",
-                         f"torchvision @ {TORCHVISION_SOURCE_URL}"])
+if not os.environ.get('NNCF_SKIP_INSTALLING_TORCH'):
+    DEPENDENCY_LINKS = [TORCH_SOURCE_URL, TORCHVISION_SOURCE_URL]
+    INSTALL_REQUIRES.extend([f"torch @ {TORCH_SOURCE_URL}",
+                             f"torchvision @ {TORCHVISION_SOURCE_URL}"])
+else:
+    DEPENDENCY_LINKS = []
 
 
 EXTRAS_REQUIRE = {
