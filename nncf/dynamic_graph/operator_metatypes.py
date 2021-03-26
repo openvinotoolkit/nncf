@@ -164,6 +164,13 @@ class OutputNoopMetatype(OperatorMetatype):
     external_op_names = [name, MODEL_OUTPUT_OP_NAME]
 
 
+
+@OPERATOR_METATYPES.register()
+class NoopMetatype(OperatorMetatype):
+    name = "noop"
+    external_op_names = [name]
+
+
 @OPERATOR_METATYPES.register()
 class DepthwiseConv1dSubtype(OperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
