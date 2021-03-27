@@ -162,7 +162,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         if self._dump_autoq_data and self.tb_writer is not None:
             # Need to replace '|' in nodestr (QuantizerId/QuantizerPointId)
-            # to '+' as it is a special character in markdown 
+            # to '+' as it is a special character in markdown
             temp_df = deepcopy(env.master_df[env.state_list + ['n_op']])
             temp_df["modified_nodestr"] = list(map(lambda x: x.replace("|","+"), temp_df.index.tolist()))
             temp_df = temp_df.set_index("modified_nodestr").reset_index()
@@ -216,8 +216,10 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
             if done:  # end of episode
                 logger.info(
-                    '## Episode[{}], reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, model_size(MB): {:.2f}, BOP_ratio: {:.3f}\n' \
-                    .format(episode, episode_reward, info['accuracy'], info['model_ratio'], info['model_size']/8e6, info['bop_ratio']))
+                    '## Episode[{}], reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, '
+                    'model_size(MB): {:.2f}, BOP_ratio: {:.3f}\n' \
+                    .format(episode, episode_reward, info['accuracy'], info['model_ratio'],
+                    info['model_size']/8e6, info['bop_ratio']))
 
                 final_reward = transition_buffer[-1][0]
 
@@ -260,10 +262,10 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 if final_reward > best_reward:
                     best_reward = final_reward
                     best_policy = deepcopy(env.master_df['action'])
-                    # best_policy = env.master_df['action']
                     info_tuple = (episode, best_reward, info['accuracy'], info['model_ratio'], info['bop_ratio'])
                     self._dump_best_episode(info_tuple, bit_stats_df, env)
-                    log_str = '## Episode[{}] New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, BOP_ratio: {:.3f}'\
+                    log_str = '## Episode[{}] New best policy: {}, reward: {:.3f}, \
+                    acc: {:.3f}, model_ratio: {:.3f}, BOP_ratio: {:.3f}'\
                         .format(episode, best_policy.values.tolist(), best_reward,
                                 info['accuracy'], info['model_ratio'],  info['bop_ratio'])
                     logger.info("\033[92m {}\033[00m" .format(log_str))
@@ -353,7 +355,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         text_string = bit_stats_df.to_markdown() + "\n\n\n"
         text_string += "Episode: {:>4}, Reward: {:.3f}, ".format(episode, reward)
-        text_string += "Accuracy: {:.3f}, Model_Size_Ratio: {:.3f}, BOP_Ratio: {:.3f}\n\n\n".format(accuracy, model_ratio, bop_ratio)
+        text_string += "Accuracy: {:.3f}, Model_Size_Ratio: {:.3f}, BOP_Ratio: {:.3f}\n\n\n"\
+            .format(accuracy, model_ratio, bop_ratio)
 
         for _, row_id in enumerate(qdf.index.tolist()):
             Qtype = '(WQ)' if qdf.is_wt_quantizer[row_id] else '(AQ)'
