@@ -161,9 +161,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
         stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
 
-        return self.add_algo_specific_stats(stats)
-
-    def add_algo_specific_stats(self, stats):
         return stats
 
     def compression_level(self) -> CompressionLevel:

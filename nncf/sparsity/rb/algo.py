@@ -119,7 +119,8 @@ class RBSparsityController(BaseSparsityAlgoController):
 
         return ncor_values / nvalues
 
-    def add_algo_specific_stats(self, stats):
+    def statistics(self, quickly_collected_only=False):
+        stats = super().statistics(quickly_collected_only)
         stats["target_sparsity_rate"] = self.loss.target_sparsity_rate
         if self._distributed and self._check_sparsity_masks:
             stats["masks_consistents"] = self.check_distributed_masks()

@@ -104,7 +104,8 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def add_algo_specific_stats(self, stats):
+    def statistics(self, quickly_collected_only=False):
+        stats = super().statistics(quickly_collected_only)
         stats['pruning_rate'] = self.pruning_rate
         stats["FLOPS pruning level"] = 1 - self.current_flops / self.full_flops
         stats["FLOPS current / full"] = f"{self.current_flops} / {self.full_flops}"
