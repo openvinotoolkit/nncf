@@ -237,7 +237,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         return mask.shape
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]
         data = [header]

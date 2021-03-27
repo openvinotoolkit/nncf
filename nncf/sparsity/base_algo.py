@@ -138,7 +138,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         return 1 - nonzero / max(count, 1)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "SR", "% weights"]
         data = [header]
