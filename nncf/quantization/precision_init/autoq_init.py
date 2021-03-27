@@ -259,7 +259,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 if final_reward > best_reward:
                     best_reward = final_reward
-                    best_policy = env.master_df['action']
+                    best_policy = deepcopy(env.master_df['action'])
+                    # best_policy = env.master_df['action']
                     info_tuple = (episode, best_reward, info['accuracy'], info['model_ratio'], info['bop_ratio'])
                     self._dump_best_episode(info_tuple, bit_stats_df, env)
                     log_str = '## Episode[{}] New best policy: {}, reward: {:.3f}, acc: {:.3f}, model_ratio: {:.3f}, BOP_ratio: {:.3f}'\
