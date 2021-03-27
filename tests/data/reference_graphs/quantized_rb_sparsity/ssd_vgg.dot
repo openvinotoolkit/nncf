@@ -222,6 +222,8 @@ strict digraph  {
 "220 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=220, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=cat];
 "221 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=221, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=cat];
 "222 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=222, scope="SSD_VGG/SSDDetectionOutput[detection_head]", type=softmax];
+"223 /nncf_model_output" [id=223, scope="", type=nncf_model_output];
+"224 /nncf_model_output" [id=224, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/conv2d";
 "2 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -453,5 +455,7 @@ strict digraph  {
 "217 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "218 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "218 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "219 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d";
 "219 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d" -> "221 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
+"220 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "223 /nncf_model_output";
 "221 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "222 SSD_VGG/SSDDetectionOutput[detection_head]/softmax";
+"221 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "224 /nncf_model_output";
 }

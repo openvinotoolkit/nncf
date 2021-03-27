@@ -281,6 +281,7 @@ strict digraph  {
 "279 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=279, scope="ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "280 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=280, scope="ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "281 ShuffleNetV2/NNCFLinear[linear]/linear" [id=281, scope="ShuffleNetV2/NNCFLinear[linear]", type=linear];
+"282 /nncf_model_output" [id=282, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 ShuffleNetV2/NNCFConv2d[conv1]/conv2d";
 "1 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 ShuffleNetV2/NNCFConv2d[conv1]/conv2d";
@@ -578,4 +579,5 @@ strict digraph  {
 "278 ShuffleNetV2/avg_pool2d" -> "281 ShuffleNetV2/NNCFLinear[linear]/linear";
 "279 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "280 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "280 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "281 ShuffleNetV2/NNCFLinear[linear]/linear";
+"281 ShuffleNetV2/NNCFLinear[linear]/linear" -> "282 /nncf_model_output";
 }

@@ -38,6 +38,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+                            wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                             dump_graphs=True, ) \
     -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
@@ -108,6 +109,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
+                                   wrap_outputs_fn=wrap_outputs_fn,
                                    ignored_scopes=ignored_scopes,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
@@ -130,7 +132,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             if dummy_forward_fn is None:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=
                                                         create_dummy_forward_fn(input_info_list,
-                                                                                with_input_tracing=False))
+                                                                                with_input_tracing=False,
+                                                                                with_output_tracing=False))
             else:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 

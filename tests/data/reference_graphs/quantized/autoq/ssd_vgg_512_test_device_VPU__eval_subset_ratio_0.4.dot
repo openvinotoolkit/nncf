@@ -141,6 +141,8 @@ strict digraph  {
 "139 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=139, label="cat_#139", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=cat];
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" [id=140, label="cat_#140", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=cat];
 "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax" [id=141, label="softmax_#141", scope="SSD_VGG/SSDDetectionOutput[detection_head]", style=filled, type=softmax];
+"142 /nncf_model_output" [id=142, label="nncf_model_output_#142", scope="", style=filled, type=nncf_model_output];
+"143 /nncf_model_output" [id=143, label="nncf_model_output_#143", scope="", style=filled, type=nncf_model_output];
 "21 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[10]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "25 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[12]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "29 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[14]/conv2d_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
@@ -304,7 +306,9 @@ strict digraph  {
 "136 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[loc]/conv2d" -> "139 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
 "137 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d";
 "138 SSD_VGG/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[6]/NNCFConv2d[conf]/conv2d" -> "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat";
+"139 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "142 /nncf_model_output";
 "140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "141 SSD_VGG/SSDDetectionOutput[detection_head]/softmax";
+"140 SSD_VGG/SSDDetectionOutput[detection_head]/cat" -> "143 /nncf_model_output";
 "21 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[10]/conv2d_apad" -> "21 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[10]/conv2d";
 "25 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[12]/conv2d_apad" -> "25 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[12]/conv2d";
 "29 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[14]/conv2d_apad" -> "29 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[14]/conv2d";

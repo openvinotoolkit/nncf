@@ -518,6 +518,7 @@ strict digraph  {
 "516 PNASNet/SymmetricQuantizer/symmetric_quantize" [id=516, scope="PNASNet/SymmetricQuantizer", type=symmetric_quantize];
 "517 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=517, scope="PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "518 PNASNet/NNCFLinear[linear]/linear" [id=518, scope="PNASNet/NNCFLinear[linear]", type=linear];
+"519 /nncf_model_output" [id=519, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
 "2 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
@@ -1096,4 +1097,5 @@ strict digraph  {
 "515 PNASNet/avg_pool2d" -> "516 PNASNet/SymmetricQuantizer/symmetric_quantize";
 "516 PNASNet/SymmetricQuantizer/symmetric_quantize" -> "518 PNASNet/NNCFLinear[linear]/linear";
 "517 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "518 PNASNet/NNCFLinear[linear]/linear";
+"518 PNASNet/NNCFLinear[linear]/linear" -> "519 /nncf_model_output";
 }

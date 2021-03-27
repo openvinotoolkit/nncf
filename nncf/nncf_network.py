@@ -50,8 +50,9 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.graph_builder import PostGraphBuildActing
 from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_matching import NodeExpression
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
@@ -388,7 +389,7 @@ class PTInsertionPoint:
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
-                 ignored_scopes=None, target_scopes=None, reset: bool = False):
+                 ignored_scopes=None, target_scopes=None, reset: bool = False, wrap_outputs_fn=None):
         super().__init__()
         self._set_nncf_wrapped_model(module)
         self._forward_signature = inspect.signature(module.forward)
@@ -408,6 +409,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                                           module_ref_for_device=self)
             self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
 
+        if wrap_outputs_fn is not None:
+            self._wrap_outputs_fn = wrap_outputs_fn
+        else:
+            self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
+
         self._nncf_module_scopes = []  # type: List[Scope]
         self.scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
@@ -415,7 +421,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         # pylint:disable=line-too-long
         self._insertions_into_original_graph = {}  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
 
-        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True)
+        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=True,
+                                                                                     with_output_tracing=True)
         self._graph_builder = GraphBuilder(_orig_graph_build_forward_fn)
 
         nncf_wrapped_model = self.get_nncf_wrapped_model()
@@ -427,6 +434,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         _orig_context = TracingContext()
 
         _orig_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+        _orig_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
             _orig_context.add_node_comparators(scopes_without_shape_matching,
                                                ShapeIgnoringTensorMetaComparator())
@@ -437,10 +445,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._compressed_context = TracingContext()
 
-        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)
+
+        self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False, with_output_tracing=False)
         self._in_user_dummy_forward = False
 
         self._compressed_context.add_node_comparators([MODEL_INPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
+        self._compressed_context.add_node_comparators([MODEL_OUTPUT_OP_NAME], ShapeIgnoringTensorMetaComparator())
         if self.scopes_without_shape_matching:
             self._compressed_context.add_node_comparators(scopes_without_shape_matching,
                                                           ShapeIgnoringTensorMetaComparator())
@@ -455,7 +465,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                 # correctly wrapping inputs inside it as well.
                 args, kwargs = self._strip_traced_tensors(args, kwargs)
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
-            retval = self.get_nncf_wrapped_model()(*args, **kwargs)
+            retval = self._wrap_outputs_fn(self.get_nncf_wrapped_model()(*args, **kwargs))
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -542,11 +552,13 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def disable_dynamic_graph_building(self):
         self._compressed_context.disable_node_additions()
 
-    def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing):
+    def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing, with_output_tracing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(self.input_infos,
                                            with_input_tracing=with_input_tracing,
-                                           wrap_inputs_fn=self._wrap_inputs_fn)
+                                           wrap_inputs_fn=self._wrap_inputs_fn,
+                                           wrap_outputs_fn=self._wrap_outputs_fn,
+                                           with_output_tracing=with_output_tracing)
 
         def wrapped_user_dummy_forward_fn(*args, **kwargs):
             self._in_user_dummy_forward = True
@@ -555,6 +567,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return retval
 
         return wrapped_user_dummy_forward_fn
+
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):
@@ -576,7 +589,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
     def rebuild_graph(self, *input_args):
         self._compressed_context.reset_graph()
-        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False)
+        dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
+                                                                         with_output_tracing=False)
         builder = GraphBuilder(dummy_forward_fn)
         _ = builder.build_graph(self, self._compressed_context)
 

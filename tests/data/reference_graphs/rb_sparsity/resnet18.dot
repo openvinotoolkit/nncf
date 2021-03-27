@@ -110,6 +110,7 @@ strict digraph  {
 "108 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=108, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "109 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=109, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "110 ResNet/NNCFLinear[linear]/linear" [id=110, scope="ResNet/NNCFLinear[linear]", type=linear];
+"111 /nncf_model_output" [id=111, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
 "1 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
@@ -228,4 +229,5 @@ strict digraph  {
 "107 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "110 ResNet/NNCFLinear[linear]/linear";
 "108 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "109 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "109 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "110 ResNet/NNCFLinear[linear]/linear";
+"110 ResNet/NNCFLinear[linear]/linear" -> "111 /nncf_model_output";
 }

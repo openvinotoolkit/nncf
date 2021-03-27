@@ -41,6 +41,7 @@ from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.layers import PTQuantizerSpec
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.layers import SymmetricQuantizer
+from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type
@@ -452,3 +453,63 @@ def test_quantizer_ordering(requanting_qconf: QuantizerConfig,
                             base_qconf: QuantizerConfig, is_valid_requant: bool):
     test_result = requanting_qconf.is_valid_requantization_for(base_qconf)
     assert test_result == is_valid_requant
+
+class QuantizeOutputsTestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv3 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv4 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv5 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+
+
+    def forward(self, x):
+        self.conv5(x)
+        return self.conv1(x), self.conv2(x), self.conv3(x), self.conv4(x)
+
+
+def test_quantize_outputs():
+    config = get_quantization_config_without_range_init()
+    config["input_info"] = [
+        {
+            "sample_size": [2, 3, 32, 32],
+        }
+    ]
+    model = QuantizeOutputsTestModel()
+    config['compression']['quantize_outputs'] = True
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    REF_QUANTIZED_OUTPUT_MODULE_SCOPES = [
+        'QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv2]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv3]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv4]/conv2d_0|OUTPUT'
+    ]
+    actual_output_quantizer_str_scopes =\
+         [str_scope for str_scope in model.activation_quantizers if not 'nncf_model_input' in str_scope]
+    assert len(REF_QUANTIZED_OUTPUT_MODULE_SCOPES) == len(actual_output_quantizer_str_scopes)
+    for ref_qoutput_scope_str in REF_QUANTIZED_OUTPUT_MODULE_SCOPES:
+        assert isinstance(model.activation_quantizers[ref_qoutput_scope_str], SymmetricQuantizer)
+
+def test_quantize_outputs_with_scope_overrides():
+    config = get_quantization_config_without_range_init()
+    config["input_info"] = [
+        {
+            "sample_size": [2, 3, 32, 32],
+        }
+    ]
+    model = QuantizeOutputsTestModel()
+    config['compression']['quantize_outputs'] = True
+    config['target_device'] = "TRIAL"
+    config['compression']['scope_overrides'] = {
+        "nncf_model_output_0": {
+            "bits": 4,
+            "mode": "asymmetric",
+        }
+    }
+    model, ctrl = create_compressed_model_and_algo_for_test(model, config)
+    output_quantizers =\
+        [ q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
+    for q in output_quantizers:
+        assert q.num_bits == 4
+        assert isinstance(q, AsymmetricQuantizer)

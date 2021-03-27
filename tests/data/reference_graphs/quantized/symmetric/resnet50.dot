@@ -299,6 +299,7 @@ strict digraph  {
 "297 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" [id=297, scope="ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer", type=symmetric_quantize];
 "298 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=298, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "299 ResNet/NNCFLinear[linear]/linear" [id=299, scope="ResNet/NNCFLinear[linear]", type=linear];
+"300 /nncf_model_output" [id=300, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
@@ -614,4 +615,5 @@ strict digraph  {
 "296 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "297 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize";
 "297 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "299 ResNet/NNCFLinear[linear]/linear";
 "298 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "299 ResNet/NNCFLinear[linear]/linear";
+"299 ResNet/NNCFLinear[linear]/linear" -> "300 /nncf_model_output";
 }

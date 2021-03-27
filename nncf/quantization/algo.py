@@ -339,7 +339,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             quantizable_modules=quantizable_modules,
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints,
-            additional_unified_scale_op_scopes=self._unified_scale_ops)
+            additional_unified_scale_op_scopes=self._unified_scale_ops,
+            quantize_outputs=self._quantize_outputs)
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
             self.hw_config,

@@ -28,6 +28,7 @@ strict digraph  {
 "26 AlexNet/Sequential[classifier]/ReLU[5]/RELU" [id=26, scope="AlexNet/Sequential[classifier]/ReLU[5]", type=RELU];
 "27 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" [id=27, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]", type=apply_binary_mask];
 "28 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" [id=28, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]", type=linear];
+"29 /nncf_model_output" [id=29, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "2 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "1 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "2 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d" -> "3 AlexNet/Sequential[features]/ReLU[1]/RELU";
@@ -56,4 +57,5 @@ strict digraph  {
 "25 AlexNet/Sequential[classifier]/NNCFLinear[4]/linear" -> "26 AlexNet/Sequential[classifier]/ReLU[5]/RELU";
 "26 AlexNet/Sequential[classifier]/ReLU[5]/RELU" -> "28 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
 "27 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "28 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
+"28 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" -> "29 /nncf_model_output";
 }

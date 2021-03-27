@@ -21,6 +21,7 @@ strict digraph  {
 "19 LeNet/SymmetricQuantizer/symmetric_quantize" [id=19, scope="LeNet/SymmetricQuantizer", type=symmetric_quantize];
 "20 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=20, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "21 LeNet/NNCFLinear[fc3]/linear" [id=21, scope="LeNet/NNCFLinear[fc3]", type=linear];
+"22 /nncf_model_output" [id=22, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 LeNet/NNCFConv2d[conv1]/conv2d";
 "2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 LeNet/NNCFConv2d[conv1]/conv2d";
@@ -42,4 +43,5 @@ strict digraph  {
 "18 LeNet/RELU" -> "19 LeNet/SymmetricQuantizer/symmetric_quantize";
 "19 LeNet/SymmetricQuantizer/symmetric_quantize" -> "21 LeNet/NNCFLinear[fc3]/linear";
 "20 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "21 LeNet/NNCFLinear[fc3]/linear";
+"21 LeNet/NNCFLinear[fc3]/linear" -> "22 /nncf_model_output";
 }

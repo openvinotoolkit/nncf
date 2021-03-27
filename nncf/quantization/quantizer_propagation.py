@@ -38,8 +38,9 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config import HWConfig
-from nncf.nncf_network import InsertionPointGraph
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
+from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
@@ -49,7 +50,6 @@ from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.utils import in_scope_list
-
 
 class QuantizationTrait(Enum):
     """General, hardware-agnostic specifications for the relation of operators to quantization.
@@ -1302,7 +1302,8 @@ class QuantizerPropagationSolver:
                  scope_overrides: Dict = None,
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
                  additional_unified_scale_op_scopes: List[List[str]] = None,
-                 run_consistency_checks: bool = False):
+                 run_consistency_checks: bool = False,
+                 quantize_outputs: bool = False):
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
         self._debug_interface = debug_interface
@@ -1311,6 +1312,7 @@ class QuantizerPropagationSolver:
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._input_infos = input_infos
+        self._quantize_outputs = quantize_outputs
         self._quantizable_modules = quantizable_modules  # type: List['QuantizableModule']
         if scope_overrides is None:
             self._scope_overrides = {}
@@ -1818,15 +1820,18 @@ class QuantizerPropagationSolver:
         if not preds:
             return  # TODO: remove this once module insertion points are included in the IP graph
 
+        if not self._quantize_outputs and MODEL_OUTPUT_OP_NAME in operator_node_key:
+            return
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
                  QuantizationTrait.QUANTIZATION_AGNOSTIC,
-                 QuantizationTrait.CONCAT]:
+                 QuantizationTrait.CONCAT] and MODEL_OUTPUT_OP_NAME not in operator_node_key:
             return
-
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+        if MODEL_OUTPUT_OP_NAME in operator_node_key:
+            qconf_list = self.default_global_qconfig_list
         assert qconf_list is not None
 
         ia_op_exec_context = node[QuantizerPropagationStateGraph.OPERATOR_IA_OP_EXEC_CONTEXT_NODE_ATTR]

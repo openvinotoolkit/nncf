@@ -50,6 +50,7 @@ strict digraph  {
 "48 SmallModel/NNCFConv2d[conv_output]/conv2d" [id=48, scope="SmallModel/NNCFConv2d[conv_output]", type=conv2d];
 "49 SmallModel/__mul__" [id=49, scope=SmallModel, type=__mul__];
 "50 SmallModel/add" [id=50, scope=SmallModel, type=add];
+"51 /nncf_model_output" [id=51, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "9 SmallModel/NNCFConv2d[conv_input]/conv2d";
 "1 /nncf_model_input" -> "3 SmallModel/NNCFConv2d[conv_cubic1]/conv2d";
 "2 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "3 SmallModel/NNCFConv2d[conv_cubic1]/conv2d";
@@ -109,4 +110,5 @@ strict digraph  {
 "47 SmallModel/NNCFConv2d[conv_output]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "48 SmallModel/NNCFConv2d[conv_output]/conv2d";
 "48 SmallModel/NNCFConv2d[conv_output]/conv2d" -> "49 SmallModel/__mul__";
 "49 SmallModel/__mul__" -> "50 SmallModel/add";
+"50 SmallModel/add" -> "51 /nncf_model_output";
 }
