@@ -12,6 +12,7 @@
 """
 from typing import Dict
 from typing import List
+from typing import Union
 
 import numpy as np
 import torch
@@ -96,6 +97,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(params.get('weight_importance', 'L2'))
         self.all_weights = params.get("all_weights", False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
 
@@ -194,8 +196,8 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes])
+            assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
+                        group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             for node in group.nodes:
                 tmp_out_channels[node.module_scope] = new_out_channels_num
@@ -242,8 +244,8 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes])
+            assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
+                        group.nodes)
             # prune all nodes in cluster (by output channels)
             old_out_channels = self.modules_out_channels[group.nodes[0].module_scope]
             num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
@@ -259,12 +261,12 @@ class FilterPruningController(BasePruningAlgoController):
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
 
-    def _find_layerwise_pruning_rate(self, target_flops_pruning_rate):
+    def _find_uniform_pruning_rate_for_target_flops(self, target_flops_pruning_rate):
         """
-        Searching for minimal layer-wise pruning rate (proportion of zero filters in a layer, same for all layers)
-         needed to achieve target flops pruning rate.
+        Searching for the minimal uniform layer-wise weight pruning rate (proportion of zero filters in a layer)
+         needed to achieve the target pruning rate in flops.
         :param target_flops_pruning_rate: target proportion of flops that should be pruned in the model
-        :return: pruning rate for all layers
+        :return: uniform pruning rate for all layers
         """
         error = 0.01
         target_flops = self.full_flops * (1 - target_flops_pruning_rate)
@@ -280,62 +282,82 @@ class FilterPruningController(BasePruningAlgoController):
         if flops < target_flops:
             self.current_flops = flops
             return right
-        raise RuntimeError("Can't prune model to asked flops pruning rate = {}".format(target_flops_pruning_rate))
+        raise RuntimeError("Can't prune the model to get the required "
+                           "pruning rate in flops = {}".format(target_flops_pruning_rate))
 
-    def set_pruning_rate(self, pruning_rate, run_batchnorm_adaptation=False):
+    def set_pruning_rate(self, pruning_rate: Union[float, Dict],
+                         run_batchnorm_adaptation: bool = False, groupwise_pruning_rates: bool = False):
         # Pruning rate from scheduler can be flops pruning rate or percentage of params that should be pruned
         self.pruning_rate = pruning_rate
+        group_ids = [group.id for group in self.pruned_module_groups_info.get_all_clusters()]
         if not self.frozen:
-            nncf_logger.info("Computing filter importances and masks...")
-            if self.all_weights:
-                if self.prune_flops:
-                    self._set_binary_masks_for_all_pruned_modules_by_flops_target(pruning_rate)
+            nncf_logger.info("Computing filter importance scores and binary masks...")
+            with torch.no_grad():
+                if self.all_weights:
+                    # Non-uniform (global) importance-score-based pruning according
+                    # to the global pruning rate
+                    if self.prune_flops:
+                        self._set_binary_masks_for_pruned_modules_globally_by_flops_target(pruning_rate)
+                    else:
+                        self._set_binary_masks_for_pruned_modules_globally(pruning_rate)
+                elif groupwise_pruning_rates:
+                    if set(pruning_rate.keys()) != set(group_ids):
+                        raise RuntimeError('Groupwise pruning rate dict keys do not correspond to '
+                                           'layer group ids')
+                    self._set_binary_masks_for_pruned_modules_groupwise(pruning_rate)
                 else:
-                    self._set_binary_masks_for_all_pruned_modules(pruning_rate)
-            else:
-                layerwise_pruning_rate = pruning_rate
-                if self.prune_flops:
-                    # Looking for layerwise pruning rate needed for asked flops pruning rate
-                    layerwise_pruning_rate = self._find_layerwise_pruning_rate(pruning_rate)
-                self._set_binary_masks_for_filters(layerwise_pruning_rate)
+                    # Pruning uniformly with the same pruning rate across layers
+                    layerwise_pruning_rate = pruning_rate
+                    if self.prune_flops:
+                        # Looking for layerwise pruning rate needed for the required flops pruning rate
+                        layerwise_pruning_rate = self._find_uniform_pruning_rate_for_target_flops(pruning_rate)
+                    layerwise_pruning_rate_dict = {group_id: layerwise_pruning_rate for group_id in group_ids}
+                    self._set_binary_masks_for_pruned_modules_groupwise(layerwise_pruning_rate_dict)
 
             if self.zero_grad:
                 self.zero_grads_for_pruned_modules()
+
         self._apply_masks()
         if run_batchnorm_adaptation:
             self.run_batchnorm_adaptation(self.config)
 
-    def _set_binary_masks_for_filters(self, pruning_rate):
-        nncf_logger.debug("Setting new binary masks for pruned modules.")
+    @property
+    def current_groupwise_pruning_rate(self):
+        groupwise_pruning_rate_dict = {}
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            groupwise_pruning_rate_dict[group.id] = self.pruning_rate_for_mask(group.nodes[0])
+        return groupwise_pruning_rate_dict
 
-        with torch.no_grad():
-            for group in self.pruned_module_groups_info.get_all_clusters():
-                filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
-                assert torch.all(filters_num == filters_num[0])
-                device = group.nodes[0].module.weight.device
+    def _set_binary_masks_for_pruned_modules_groupwise(self, pruning_rate: Dict):
+        nncf_logger.debug("Updating binary masks for pruned modules.")
 
-                cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
-                # 1. Calculate cumulative importance for all filters in group
-                for minfo in group.nodes:
-                    filters_importance = self.filter_importance(minfo.module.weight,
-                                                                minfo.module.target_weight_dim_for_compression)
-                    cumulative_filters_importance += filters_importance
+        for group in self.pruned_module_groups_info.get_all_clusters():
+            filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.nodes])
+            assert torch.all(filters_num == filters_num[0])
+            device = group.nodes[0].module.weight.device
 
-                # 2. Calculate threshold
-                num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
-                                                                        pruning_rate)
-                threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num[0] - 1)]
-                mask = calculate_binary_mask(cumulative_filters_importance, threshold)
+            cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
+            # 1. Calculate cumulative importance for all filters in group
+            for minfo in group.nodes:
+                filters_importance = self.filter_importance(minfo.module.weight,
+                                                            minfo.module.target_weight_dim_for_compression)
+                cumulative_filters_importance += filters_importance
 
-                # 3. Set binary masks for filter
-                for minfo in group.nodes:
-                    pruning_module = minfo.operand
-                    pruning_module.binary_filter_pruning_mask = mask
+            # 2. Calculate threshold
+            num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.size(0),
+                                                                    pruning_rate[group.id])
+            threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num[0] - 1)]
+            mask = calculate_binary_mask(cumulative_filters_importance, threshold)
+
+            # 3. Set binary masks for filter
+            for minfo in group.nodes:
+                pruning_module = minfo.operand
+                pruning_module.binary_filter_pruning_mask = mask
 
         # Calculate actual flops with new masks
         self.current_flops = self._calculate_flops_pruned_model_by_masks()
 
-    def _set_binary_masks_for_all_pruned_modules(self, pruning_rate):
+    def _set_binary_masks_for_pruned_modules_globally(self, pruning_rate: float):
         nncf_logger.debug("Setting new binary masks for all pruned modules together.")
         filter_importances = []
         # 1. Calculate importances for all groups of  filters
@@ -358,7 +380,7 @@ class FilterPruningController(BasePruningAlgoController):
         importances = torch.cat(filter_importances)
         threshold = sorted(importances)[int(pruning_rate * importances.size(0))]
 
-        # 3. Set binary masks for filters in grops
+        # 3. Set binary masks for filters in groups
         for i, group in enumerate(self.pruned_module_groups_info.get_all_clusters()):
             mask = calculate_binary_mask(filter_importances[i], threshold)
             for minfo in group.nodes:
@@ -368,21 +390,20 @@ class FilterPruningController(BasePruningAlgoController):
         # Calculate actual flops with new masks
         self.current_flops = self._calculate_flops_pruned_model_by_masks()
 
-    def _set_binary_masks_for_all_pruned_modules_by_flops_target(self, target_flops_pruning_rate):
+    def _set_binary_masks_for_pruned_modules_globally_by_flops_target(self, target_flops_pruning_rate: float):
         """
-        Sorting all prunable filters in the network by importance and prune such amount less important filters
-        to archieve target pruning rate by flops.
+        Sorting all prunable filters in the network by importance and pruning the amount of the
+        least important filters sufficient to achieve the target pruning rate by flops.
         :param target_flops_pruning_rate: target proportion of flops removed from the model
         :return:
         """
         target_flops = self.full_flops * (1 - target_flops_pruning_rate)
 
-        # 1. Init masks
+        # 1. Initialize masks
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            with torch.no_grad():
-                pruning_module = minfo.operand
-                pruning_module.binary_filter_pruning_mask = torch.ones(get_filters_num(minfo.module)).to(
-                    minfo.module.weight.device)
+            pruning_module = minfo.operand
+            pruning_module.binary_filter_pruning_mask = torch.ones(get_filters_num(minfo.module)).to(
+                minfo.module.weight.device)
 
         # 2. Calculate filter importances for all prunable groups
         filter_importances = []
@@ -410,8 +431,8 @@ class FilterPruningController(BasePruningAlgoController):
         cluster_indexes = torch.cat(cluster_indexes)
         filter_indexes = torch.cat(filter_indexes)
 
-        # 3. Sort all filters groups by importances and prune less important filters while target flops pruning
-        # rate is not achieved
+        # 3. Sort all filter groups by importances and prune the least important filters
+        # until target flops pruning rate is achieved
         sorted_importances = sorted(zip(importances, cluster_indexes, filter_indexes), key=lambda x: x[0])
         cur_num = 0
         tmp_in_channels = self.modules_in_channels.copy()
@@ -449,9 +470,9 @@ class FilterPruningController(BasePruningAlgoController):
         def _apply_binary_mask_to_module_weight_and_bias(module, mask, module_scope):
             with torch.no_grad():
                 dim = module.target_weight_dim_for_compression if isinstance(module, _NNCFModuleMixin) else 0
-                # Applying mask to weights
+                # Applying the mask to weights
                 inplace_apply_filter_binary_mask(mask, module.weight, module_scope, dim)
-                # Applying mask to bias too (if exists)
+                # Applying the mask to biases (if they exist)
                 if module.bias is not None:
                     inplace_apply_filter_binary_mask(mask, module.bias, module_scope)
 
@@ -463,7 +484,7 @@ class FilterPruningController(BasePruningAlgoController):
         model_pruner = ModelPruner(self.model, graph, nx_graph)
         model_pruner.mask_propagation()
 
-        # 2. Apply masks
+        # 2. Apply the masks
         types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
