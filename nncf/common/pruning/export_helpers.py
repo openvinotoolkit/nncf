@@ -12,6 +12,7 @@
 """
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
 
 
 class DefaultMetaOp:
@@ -27,6 +28,18 @@ class DefaultMetaOp:
     def accept_pruned_input(cls, node: NNCFNode):
         """
         :return: accept_pruned_input - can this operation work with pruned input or not
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        """
+        Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
+        Should set the following attributes:
+        input_masks - list of masks of input nodes (None if there is no mask in some input)
+        output_mask - resulting mask of node operation
+        :param node: node from graph to propagate mask through it
+        :param graph: graph of model to prune
         """
         raise NotImplementedError
 

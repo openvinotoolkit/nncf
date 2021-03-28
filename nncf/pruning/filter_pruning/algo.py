@@ -36,15 +36,18 @@ from nncf.pruning.export_helpers import ModelPruner
 from nncf.pruning.export_helpers import PTElementwise
 from nncf.pruning.export_helpers import PTConvolution
 from nncf.pruning.export_helpers import PTTransposeConvolution
+from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
+from nncf.pruning.utils import init_output_masks_in_graph
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.mask_propagator import MaskPropagator
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
 
@@ -98,7 +101,6 @@ class FilterPruningController(BasePruningAlgoController):
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
-
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
@@ -458,25 +460,26 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
-        # pylint: disable=protected-access
-        nx_graph = graph._nx_graph
-        model_pruner = ModelPruner(self.model, graph, nx_graph)
-        model_pruner.mask_propagation()
+
+        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
+
+        # Init graph with outputs_masks
+        pruner = MaskPropagator(graph, PT_PRUNING_OPERATOR_METATYPES)
+        pruner.mask_propagation()
 
         # 2. Apply masks
         types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
         if self.prune_batch_norms:
             types_to_apply_mask.append('batch_norm')
-        nx_nodes = [nx_graph.nodes[name] for name in nx_graph]
+
         pruned_node_modules = list()
-        for node in nx_nodes:
-            node_type = graph.node_type_fn(node)
-            if node_type not in types_to_apply_mask:
+        for node in graph.get_all_nodes():
+            if node.node_type not in types_to_apply_mask:
                 continue
-            scope = node['op_exec_context'].scope_in_model
+            scope = node.op_exec_context.scope_in_model
             node_module = self.model.get_module_by_scope(scope)
-            if node['output_mask'] is not None and node_module not in pruned_node_modules:
-                _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
+            if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
+                _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], scope)
                 pruned_node_modules.append(node_module)
 
     @staticmethod
@@ -521,14 +524,13 @@ class FilterPruningController(BasePruningAlgoController):
         self._apply_masks()
         model = self._model.eval().cpu()
         graph = model.get_original_graph()
-        # pylint: disable=protected-access
-        nx_graph = graph._nx_graph
 
         parameters_count_before = model.get_parameters_count_in_model()
         flops = model.get_MACs_in_model()
         pruned_layers_stats = self.get_stats_for_pruned_modules()
 
-        model_pruner = ModelPruner(model, graph, nx_graph)
+        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
+        model_pruner = ModelPruner(model, graph, PT_PRUNING_OPERATOR_METATYPES)
         model_pruner.prune_model()
 
         parameters_count_after = model.get_parameters_count_in_model()
