@@ -64,6 +64,14 @@ class RingBuffer:
             raise KeyError()
         return self.data[(self.start + idx) % self.maxlen]
 
+    def __delitem__(self, subscript):
+        del self.data[subscript]
+        # Workaround: Pad to expected size, 
+        # we always refill at the beginning section of the ring buffer
+        for _ in range(self.maxlen - len(self.data)):
+            self.data.insert(0, None)
+        self.start = 0 
+
     def append(self, v):
         if self.length < self.maxlen:
             # We have space, simply increase the length.
@@ -102,6 +110,17 @@ class Memory:
     def append(self, observation, action, reward, terminal, training=True):
         self.recent_observations.append(observation)
         self.recent_terminals.append(terminal)
+
+    # TODO: buggy and not called as recent_observations and recent_terminals are not used in AutoQ.
+    # recent_observations and recent_terminals are deque objects instead of RingBuffer
+    def __delitem__(self, subscript):
+        if not isinstance(subscript, slice):
+            raise ValueError("Unsupported Mode, Memory only supports slice removal")
+        if subscript.step is not None:
+            raise ValueError("Unsupported Mode, Memory only supports slice step of None")
+        for i in range(subscript.start, subscript.stop):
+            del self.recent_observations[i]
+            del self.recent_terminals[i]
 
     def get_recent_state(self, current_observation):
         # This code is slightly complicated by the fact that subsequent observations might be
@@ -229,6 +248,15 @@ class SequentialMemory(Memory):
             self.actions.append(action)
             self.rewards.append(reward)
             self.terminals.append(terminal)
+
+    def __delitem__(self, subscript):
+        # TODO: buggy and not called as recent_observations and recent_terminals are not used in AutoQ
+        # super().__delitem__(subscript)
+
+        del self.observations[subscript]
+        del self.actions[subscript]
+        del self.rewards[subscript]
+        del self.terminals[subscript]
 
     @property
     def nb_entries(self):
