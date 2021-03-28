@@ -142,7 +142,7 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
-def create_train_step_fn(strategy, model, loss_fn, optimizer):
+def create_train_step_fn(strategy, model, loss_fn, optimizer, trainable_variables):
     """Creates a distributed training step"""
 
     def _train_step_fn(inputs):
@@ -155,10 +155,10 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
                 losses[k] = tf.reduce_mean(v)
             per_replica_loss = losses['total_loss'] / strategy.num_replicas_in_sync
 
-        grads = tape.gradient(per_replica_loss, model.trainable_variables)
+        grads = tape.gradient(per_replica_loss, trainable_variables) # model.trainable_variables
         # test:
         # grads, _ = tf.clip_by_global_norm(grads, 5.0)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        optimizer.apply_gradients(zip(grads, trainable_variables)) # model.trainable_variables
         #return losses, grads
         return losses
 
@@ -182,6 +182,11 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
     # train_grads_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'train_grads'))
+
+    test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
+    validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
+    eval_metric.reset_states()
+    logger.info('Validation metric = {}'.format(test_metric_result))
 
     timer = Timer()
     timer.tic()
@@ -211,7 +216,6 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
             #        tf.summary.histogram(var.name + '/gradient', grad, step=optimizer.iterations.numpy())
             #train_grads_writer.flush()
 
-
             # if np.isnan(train_metric_result['total_confidence_loss']):
             #     print('total_confidence_loss loss is NaN')
             # if np.isnan(train_metric_result['total_class_loss']):
@@ -231,6 +235,18 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
                 timer.tic()
+
+            if step == 30 and epoch == 0:
+                test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
+                validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
+                eval_metric.reset_states()
+                logger.info('Validation metric = {}'.format(test_metric_result))
+
+            if step % 400 == 0 and step > 0:
+                test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
+                validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
+                eval_metric.reset_states()
+                logger.info('Validation metric = {}'.format(test_metric_result))
 
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
@@ -291,32 +307,6 @@ def run(config):
 
 
 
-
-
-    # import time
-    # def benchmark(dataset, num_epochs=1):
-    #
-    #     for epoch_num in range(num_epochs):
-    #         i = 0
-    #         for sample in dataset:
-    #             # Performing a training step
-    #             i += 1
-    #             print("\nSample #", i)
-    #             if i == 5:
-    #                 start_time = time.perf_counter()
-    #             if i == 15:
-    #                 break
-    #     print("Execution time:", time.perf_counter() - start_time)
-    #
-    # print('\nBenchmarking...')
-    # benchmark(train_dataset)
-
-
-
-
-
-
-
     # Training parameters
     epochs = config.epochs
     steps_per_epoch = train_builder.steps_per_epoch
@@ -361,16 +351,56 @@ def run(config):
             else:
                 logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
+                # save_path = checkpoint_manager.save()
+                # logger.info('Saved checkpoint after initialization: {}'.format(save_path))
 
-    train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
+
+            # ##########################################################################################################
+            # for i in range(len(compress_model.layers)):
+            #     layer = compress_model.layers[i]
+            #     if layer.__class__.__name__ == "FakeQuantize":
+            #         layer.trainable = True
+            #     elif layer.__class__.__name__ == "NNCFWrapper":
+            #         # try to train only scales here
+            #         # layer.trainable = False
+            #         kernel_scale = layer._trainable_weights.pop()
+            #         layer._non_trainable_weights.append(kernel_scale)
+            #         # layer._non_trainable_weights = layer._trainable_weights
+            #         # layer._trainable_weights = []
+            #         # layer.trainable = False
+            #     # elif layer.__class__.__name__ == "SyncBatchNormalization":
+            #     #     layer._non_trainable_weights = layer._trainable_weights
+            #     #     layer._trainable_weights = []
+            #     else:
+            #         layer.trainable = False
+            # compress_model.summary()
+            # #########################################################################################################
+
+
+    # trainable_variables = [var for var in compress_model.trainable_variables if 'scale' in var.name]
+    trainable_variables = compress_model.trainable_variables
+
+    # import os
+    # os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5,6"
+    # # Create dataset
+    # config.batch_size = 63
+    # strategy = get_distribution_strategy(config)
+    # builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
+    # datasets = [builder.build() for builder in builders]
+    # train_builder, test_builder = builders
+    # train_dataset, test_dataset = datasets
+    # train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
+    # test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
+    # num_test_batches = test_builder.steps_per_epoch
+
+
+    train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer, trainable_variables)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
-    # tf.profiler.experimental.start(config.log_dir)
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq) # , compress_model
-    # tf.profiler.experimental.stop()
 
     print_statistics(compression_ctrl.statistics())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)

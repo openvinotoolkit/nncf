@@ -22,7 +22,7 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 
 
-def mean_estimate_no_outliers(data, min_percentile=10, max_percentile=90):
+def mean_estimate_no_outliers(data, min_percentile=5, max_percentile=95):
     lower = tfp.stats.percentile(data, min_percentile, axis=0)
     upper = tfp.stats.percentile(data, max_percentile, axis=0)
     mask = tf.math.logical_and(data>=lower, data<=upper)
@@ -77,20 +77,6 @@ class MinMaxStatisticsCollector:
             self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
             self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
 
-
-        # min_percentile = 10
-        # max_percentile = 90
-        # self.all_min_values.append(tfp.stats.percentile(inputs, min_percentile, axis=axis))
-        # self.all_max_values.append(tfp.stats.percentile(inputs, max_percentile, axis=axis))
-
-        # if inputs.shape[0] == 63:
-        #     axis.remove(0)
-
-        # print('\ninputs', inputs.shape)
-        # if self.per_channel:
-        #     print('per channel...')
-        # print('axis', axis)
-        # print('tf.reduce_min(inputs, axis=axis)', tf.reduce_min(inputs, axis=axis).shape)
         # self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
         # self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
 
