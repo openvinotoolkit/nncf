@@ -69,7 +69,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.frozen = False
         self.pruning_rate = 0
         self.pruning_init = config.get("pruning_init", 0)
-        self.pruning_quota = 1.0
+        self.pruning_quota = 0.9
 
         self.modules_in_channels = {}  # type: Dict[Scope, int]
         self.modules_out_channels = {}  # type: Dict[Scope, int]
