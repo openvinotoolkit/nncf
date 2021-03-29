@@ -4,6 +4,8 @@ import pytest
 import pathlib
 import shutil
 
+import torch
+
 from tests.conftest import TEST_ROOT
 from tests.test_sanity_sample import Command
 
@@ -17,16 +19,18 @@ def test_force_cuda_build(tmp_venv_with_nncf, install_type, tmp_path, package_ty
     Check that CUDA Extensions weren't initially built and \
     then with TORCH_CUDA_ARCH_LIST were forced to be built
     '''
-
-    try:
-        nvcc = subprocess.check_output(['which', 'nvcc'])
-        cuda_home = os.path.dirname(os.path.dirname(nvcc))
-        if not cuda_home:
-            cuda_home = '/usr/local/cuda'
-            if not os.path.exists(cuda_home):
-                pytest.skip('There is no CUDA on the machine. The test will be skipped')
-    except subprocess.CalledProcessError:
-        pytest.skip('There is no CUDA on the machine. The test will be skipped')
+    cuda_home = os.environ.get('CUDA_HOME') or os.environ.get('CUDA_PATH')
+    if cuda_home is None:
+        try:
+            nvcc = subprocess.check_output(['which', 'nvcc'])
+            cuda_home = os.path.dirname(os.path.dirname(nvcc))
+        except subprocess.CalledProcessError:
+            if not cuda_home:
+                cuda_home = '/usr/local/cuda'
+                if not os.path.exists(cuda_home):
+                    cuda_home = None
+        if not cuda_home and not torch.cuda.is_available():
+            pytest.skip('There is no CUDA on the machine. The test will be skipped')
 
     venv_path = tmp_venv_with_nncf
 
