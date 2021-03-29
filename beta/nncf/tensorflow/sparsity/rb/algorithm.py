@@ -27,7 +27,7 @@ from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
-from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight, OP_NAME
+from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.utils.node import is_ignored
@@ -57,16 +57,16 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
-            name = node_name + OP_NAME
-            if name in self.op_names:
+            op_name = RBSparsifyingWeight.create_operation_name(node_name, weight_attr_name)
+            if op_name in self._op_names:
                 raise ValueError('Attempt to apply RBSparsityWeight operation two times on one weight')
 
-            self.op_names.add(name)
+            self._op_names.add(op_name)
 
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=RBSparsifyingWeight(name),
+                    callable_object=RBSparsifyingWeight(op_name),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
 
@@ -77,7 +77,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         Should be called once the compressed model target_model is fully constructed
         """
 
-        return RBSparsityController(model, self.config, self.op_names)
+        return RBSparsityController(model, self.config, self._op_names)
 
 
 class RBSparsityController(BaseSparsityController):
@@ -116,7 +116,7 @@ class RBSparsityController(BaseSparsityController):
         for wrapped_layer in wrapped_layers:
             for ops in wrapped_layer.weights_attr_ops.values():
                 for op_name in ops:
-                    if op_name in self.op_names:
+                    if op_name in self._op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         sw_loss = tf.reduce_sum(binary_mask(mask))
                         weights_number = tf.size(mask)

@@ -156,13 +156,13 @@ class TestSparseModules:
             loss_ce = tf.keras.losses.CategoricalCrossentropy()
 
             with tf.GradientTape() as tape:
-                output = model(dummy_x)
-                loss = loss_ce(dummy_y, output) + algo.loss()
+                output = model(dummy_x, training=True)
+                loss = loss_ce(dummy_y, output)
 
             grads = tape.gradient(loss, model.trainable_weights)
             grads_weights_paris = list(zip(grads, model.trainable_weights))
             assert all([g is not None for g, w in grads_weights_paris if 'mask' not in w.name])
-            assert all([g is None if frozen else not None for g, w in grads_weights_paris if 'mask' in w.name])
+            assert all([g is None if frozen else g is not None for g, w in grads_weights_paris if 'mask' in w.name])
 
         def test_masks_gradients(self, model_name, local_mode, frozen):
             model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)

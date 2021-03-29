@@ -36,7 +36,6 @@ from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BM
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
@@ -158,11 +157,11 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
-        op_name = layer_name + '_' +  attr_name + OP_NAME_BM
-        if op_name in self.op_names:
-            assert ValueError('Attempt to apply BinaryMask operation two times on one weight')
+        op_name = BinaryMask.create_operation_name(layer_name, attr_name)
+        if op_name in self._op_names:
+            raise ValueError('Attempt to apply BinaryMask operation two times on one weight')
 
-        self.op_names.add(op_name)
+        self._op_names.add(op_name)
 
         return TFInsertionCommand(
             target_point=TFLayerWeight(layer_name, attr_name),
@@ -229,7 +228,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
                  pruned_layer_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
-        self.op_names = op_names
+        self._op_names = op_names
         self._prunable_types = prunable_types
         self.config = config
         params = self.config.get('params', {})
@@ -275,7 +274,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 for op_name in ops:
-                    if op_name in self.op_names:
+                    if op_name in self._op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))
@@ -309,4 +308,4 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         return raw_pruning_statistics
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
-        return strip_model_from_masks(model, self.op_names)
+        return strip_model_from_masks(model, self._op_names)

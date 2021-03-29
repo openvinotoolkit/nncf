@@ -13,7 +13,6 @@
 
 from functools import partial
 from typing import Optional
-from copy import deepcopy
 
 import tensorflow as tf
 
@@ -29,7 +28,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 
 
-OP_NAME = '_quantize'
+OP_NAME = 'quantize'
 
 
 class TFQuantizerSpec(QuantizerSpec):
@@ -229,6 +228,10 @@ class Quantizer(NNCFOperation):
 
         return post_processing_fn
 
+    @staticmethod
+    def create_operation_name(layer_name, weight_attr_name):
+        return f'{layer_name}_{weight_attr_name}_{OP_NAME}'
+
     def get_quantizer_config(self) -> QuantizerConfig:
         """
         Used to get a current quantizer state in terms of QuantizerConfig objects.
@@ -299,18 +302,20 @@ class SymmetricQuantizer(Quantizer):
             per_channel=self.per_channel
         )
 
-    def get_config(self, keep_op_name=True):
-        qspec_dict = dict()
-        qspec_dict['num_bits'] = self.num_bits
-        qspec_dict['mode'] = QuantizationMode.SYMMETRIC
-        qspec_dict['signedness_to_force'] = self.signedness_to_force
-        qspec_dict['narrow_range'] = self.narrow_range
-        qspec_dict['half_range'] = self._half_range
-        qspec_dict['per_channel'] = self.per_channel
-        config = dict()
-        config['quantizer_spec'] = qspec_dict
-        config['name'] = self.name
-        return deepcopy(config)
+    def get_config(self):
+        qspec_dict = {
+            'num_bits':  self.num_bits,
+            'mode': QuantizationMode.SYMMETRIC,
+            'signedness_to_force': self.signedness_to_force,
+            'narrow_range': self.narrow_range,
+            'half_range': self._half_range,
+            'per_channel': self.per_channel,
+        }
+        config = {
+            'quantizer_spec': qspec_dict,
+            'name': self.name,
+        }
+        return config
 
     @classmethod
     def from_config(cls, config):
@@ -379,18 +384,20 @@ class AsymmetricQuantizer(Quantizer):
             per_channel=self.per_channel
         )
 
-    def get_config(self, keep_op_name=True):
-        qspec_dict = dict()
-        qspec_dict['num_bits'] = self.num_bits
-        qspec_dict['mode'] = QuantizationMode.ASYMMETRIC
-        qspec_dict['signedness_to_force'] = None
-        qspec_dict['narrow_range'] = self.narrow_range
-        qspec_dict['half_range'] = self._half_range
-        qspec_dict['per_channel'] = self.per_channel
-        config = dict()
-        config['quantizer_spec'] = qspec_dict
-        config['name'] = self.name
-        return deepcopy(config)
+    def get_config(self):
+        qspec_dict = {
+            'num_bits': self.num_bits,
+            'mode': QuantizationMode.ASYMMETRIC,
+            'signedness_to_force': None,
+            'narrow_range': self.narrow_range,
+            'half_range': self._half_range,
+            'per_channel': self.per_channel,
+        }
+        config = {
+            'quantizer_spec': qspec_dict,
+            'name': self.name,
+        }
+        return config
 
     @classmethod
     def from_config(cls, config):

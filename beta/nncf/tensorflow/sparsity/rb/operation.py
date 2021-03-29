@@ -23,7 +23,7 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 
-OP_NAME = '_rb_sparsity_mask_apply'
+OP_NAME = 'rb_sparsity_mask_apply'
 
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
@@ -76,11 +76,12 @@ class RBSparsifyingWeight(NNCFOperation):
         :param training: True if operation called in training mode
             else False
         """
-        return smart_cond(op_weights['trainable'] and training,
-                          true_fn=lambda: apply_mask(
-                              layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps)),
-                          false_fn=lambda: apply_mask(
-                              layer_weights, binary_mask(op_weights['mask'])))
+        true_fn = lambda: apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps))
+        false_fn = lambda: apply_mask(layer_weights, binary_mask(op_weights['mask']))
+        return smart_cond(training,
+                          true_fn=lambda: smart_cond(op_weights['trainable'],
+                                                     true_fn=true_fn, false_fn=false_fn),
+                          false_fn=false_fn)
 
     def freeze(self, trainable_weight):
         """
@@ -98,3 +99,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param mask: Given mask.
         """
         return tf.reduce_sum(st_binary_mask(mask))
+
+    @staticmethod
+    def create_operation_name(layer_name, weight_attr_name):
+        return f'{layer_name}_{weight_attr_name}_{OP_NAME}'

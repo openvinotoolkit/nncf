@@ -34,7 +34,7 @@ from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATO
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from beta.nncf.tensorflow.quantization.quantizers import OP_NAME
+from beta.nncf.tensorflow.quantization.quantizers import Quantizer
 from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
@@ -118,16 +118,16 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            name = node_name + OP_NAME + '_weights'
-            if name in self.op_names:
+            weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
+            op_name = Quantizer.create_operation_name(node_name, weight_attr_name)
+            if op_name in self._op_names:
                 raise ValueError('Attempt to apply Quantize operation two times on one weight')
 
-            self.op_names.add(name)
-            operation = self._create_quantizer(name, TFQuantizerSpec.from_config(qconfig,
+            self._op_names.add(op_name)
+            operation = self._create_quantizer(op_name, TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True,
                                                                            half_range=False))
 
-            weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
@@ -139,13 +139,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            op_name = original_node_name + OP_NAME + '_inputs'
-            if op_name in self.op_names:
+            op_name = Quantizer.create_operation_name(original_node_name, 'inputs')
+            if op_name in self._op_names:
                 raise ValueError('Attempt to insert FakeQuantize layer two times on one place')
 
-            self.op_names.add(name)
-            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
-                                                                           narrow_range=False,
+            self._op_names.add(op_name)
+            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
                                                                            half_range=False),
                                                name=fake_quantize_name,
                                                op_name=op_name)

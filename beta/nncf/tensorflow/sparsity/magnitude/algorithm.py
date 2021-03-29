@@ -35,8 +35,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_bin
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
-from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BM
-from beta.nncf.tensorflow.sparsity.magnitude.operation import OP_NAME_BMWB
 from beta.nncf.tensorflow.utils.node import is_ignored
 
 
@@ -62,15 +60,15 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
-            name = node_name + OP_NAME_BM
-            if name in self.op_names:
+            op_name = BinaryMask.create_operation_name(node_name, weight_attr_name)
+            if op_name in self._op_names:
                 raise ValueError('Attempt to apply BinaryMask two times on one weight')
 
-            self.op_names.add(name)
+            self._op_names.add(op_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=BinaryMask(name),
+                    callable_object=BinaryMask(op_name),
                     priority=TransformationPriority.SPARSIFICATION_PRIORITY
                 ))
 
@@ -81,15 +79,15 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                     not is_ignored(node_name, self.ignored_scopes)):
 
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
-                    name = node_name + OP_NAME_BMWB
-                    if name in self.op_names:
+                    op_name = BinaryMaskWithWeightsBackup.create_operation_name(node_name, weight_attr_name)
+                    if op_name in self._op_names:
                         raise ValueError('Attempt to apply BinaryMaskWithWeightsBackup two times on one weight')
 
-                    self.op_names.add(name)
+                    self._op_names.add(op_name)
                     transformations.register(
                         TFInsertionCommand(
                             target_point=TFLayerWeight(layer.name, weight_attr_name),
-                            callable_object=BinaryMaskWithWeightsBackup(name, weight_attr_name),
+                            callable_object=BinaryMaskWithWeightsBackup(op_name, weight_attr_name),
                             priority=TransformationPriority.SPARSIFICATION_PRIORITY
                         ))
 
@@ -99,7 +97,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         """
         Should be called once the compressed model target_model is fully constructed
         """
-        return MagnitudeSparsityController(model, self.config, self.op_names)
+        return MagnitudeSparsityController(model, self.config, self._op_names)
 
 
 class MagnitudeSparsityController(BaseSparsityController):
@@ -150,7 +148,7 @@ class MagnitudeSparsityController(BaseSparsityController):
                 weight = wrapped_layer.layer_weights[weight_attr]
 
                 for op_name in ops:
-                    if op_name in self.op_names:
+                    if op_name in self._op_names:
                         wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
                                                        self._weight_importance_fn,
@@ -162,7 +160,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         for wrapped_layer in collect_wrapped_layers(self._model):
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
                 for op_name in ops:
-                    if op_name in self.op_names:
+                    if op_name in self._op_names:
                         all_weights.append(tf.reshape(
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
                             [-1]))
@@ -181,7 +179,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         for wrapped_layer in wrapped_layers:
             for ops in wrapped_layer.weights_attr_ops.values():
                 for op_name, op in ops.items():
-                    if op_name in self.op_names:
+                    if op_name in self._op_names:
                         if isinstance(op, BinaryMaskWithWeightsBackup):
                             total_bkup_weights_number += tf.size(op.bkup_var)
                         if isinstance(op, BinaryMask):

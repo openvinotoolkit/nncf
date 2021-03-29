@@ -49,7 +49,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 
     def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
         return FilterPruningController(target_model,
-                                       self.op_names,
+                                       self._op_names,
                                        self._prunable_types,
                                        self._pruned_layer_groups_info,
                                        self.config)

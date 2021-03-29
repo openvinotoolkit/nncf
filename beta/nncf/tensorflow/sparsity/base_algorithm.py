@@ -42,10 +42,10 @@ SPARSITY_TF_OPS = [
 class BaseSparsityController(TFCompressionAlgorithmController):
     def __init__(self, target_model, op_names):
         super().__init__(target_model)
-        self.op_names = op_names
+        self._op_names = op_names
 
     def strip_model(self, model):
-        return strip_model_from_masks(model, self.op_names)
+        return strip_model_from_masks(model, self._op_names)
 
     def statistics(self, quickly_collected_only: bool = False):
         raw_sparsity_statistics = self.raw_statistics()

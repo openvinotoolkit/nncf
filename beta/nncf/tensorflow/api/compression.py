@@ -83,7 +83,7 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.op_names = set()
+        self._op_names = set()
 
     def apply_to(self, model: ModelType) -> ModelType:
         """
