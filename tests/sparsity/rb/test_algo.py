@@ -135,7 +135,7 @@ def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
     assert compression_ctrl.sparsity_rate_for_model == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
+    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
     assert len(compression_ctrl.sparsified_module_info) == 1
 
 
@@ -158,7 +158,7 @@ def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
     assert compression_ctrl.sparsity_rate_for_model == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
+    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
 
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():

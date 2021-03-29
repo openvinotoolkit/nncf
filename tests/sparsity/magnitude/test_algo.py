@@ -234,3 +234,39 @@ def test_create_magnitude_algo_with_stub_scheduler():
 
     # pylint: disable=protected-access
     assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)
+
+def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
+    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
+    module_name_conv2 = 'MagnitudeTestModel/NNCFConv2d[conv2]'
+    config = get_basic_magnitude_sparsity_config()
+    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
+     if sparse_info.module_name == module_name_conv1]
+    sparse_info_conv2 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
+     if sparse_info.module_name == module_name_conv2]
+
+    compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
+
+    compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
+    stats = compression_ctrl.statistics()
+
+    # sparsity threshold for module_name_conv1
+    # pylint: disable=protected-access
+    assert pytest.approx(float(stats['sparsity_thresholds']._rows[0][1])) == 0.334
+
+    # sparsity threshold for module_name_conv2
+    # pylint: disable=protected-access
+    assert pytest.approx(float(stats['sparsity_thresholds']._rows[1][1])) == 0.219
+
+def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
+    module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
+    config = get_basic_magnitude_sparsity_config()
+    config['compression']['params'] = {"sparsity_level_setting_mode": 'local'}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(MagnitudeTestModel(), config)
+    sparse_info_conv1 = [sparse_info for sparse_info in compression_ctrl.sparsified_module_info\
+     if sparse_info.module_name == module_name_conv1]
+
+    compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
+
+    assert pytest.approx(compression_ctrl.sparsity_rate_for_sparsified_modules(sparse_info_conv1[0]), 1e-2) == 0.5

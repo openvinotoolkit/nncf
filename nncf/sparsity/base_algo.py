@@ -91,12 +91,15 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
             count = count + minfo.module.weight.view(-1).size(0)
         return max(count, 1)
 
-    @property
-    def sparsity_rate_for_sparsified_modules(self):
+    def sparsity_rate_for_sparsified_modules(self, target_sparsified_module_info=None):
+        if target_sparsified_module_info is None:
+            target_sparsified_module_info = self.sparsified_module_info
+        else:
+            target_sparsified_module_info = [target_sparsified_module_info]
+
         nonzero = 0
         count = 0
-
-        for minfo in self.sparsified_module_info:
+        for minfo in target_sparsified_module_info:
             mask = minfo.operand.apply_binary_mask(minfo.module.weight)
             nonzero = nonzero + mask.nonzero().size(0)
             count = count + mask.view(-1).size(0)
@@ -153,7 +156,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         table.add_rows(data)
 
         stats["sparsity_statistic_by_module"] = table
-        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules
+        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
         stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
 
         return self.add_algo_specific_stats(stats)
