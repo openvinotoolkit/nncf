@@ -10,14 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import tensorflow as tf
+
 from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
 from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.export_helpers import DefaultMetaOp
+from nncf.common.pruning.mask_propagator import identity_mask_propagation
+from nncf.common.pruning.mask_propagator import get_input_masks
 
 TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -40,6 +45,11 @@ class TFInput(DefaultMetaOp):
     def accept_pruned_input(cls, node: NNCFNode):
         return False
 
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        node.data['input_masks'] = []
+        node.data['output_mask'] = None
+
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):
@@ -51,6 +61,10 @@ class TFIdentityMaskForwardOps(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        identity_mask_propagation(node, graph)
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('convolution')
@@ -65,6 +79,20 @@ class TFConvolution(DefaultMetaOp):
                 accept_pruned_input = False
         return accept_pruned_input
 
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        output_mask = node.data.get('output_mask', None)
+
+        if is_grouped_conv(node):
+            if is_depthwise_conv(node):
+                output_mask = input_masks[0]
+            else:
+                output_mask = None
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = output_mask
+
 
 @TF_PRUNING_OPERATOR_METATYPES.register('transpose_convolution')
 class TFTransposeConvolution(DefaultMetaOp):
@@ -73,6 +101,21 @@ class TFTransposeConvolution(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+        output_mask = node.data.get('output_mask', None)
+
+        # In case of group convs we can't prune by output filters
+        if is_grouped_conv(node):
+            if is_depthwise_conv(node):
+                output_mask = input_masks[0]
+            else:
+                output_mask = None
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = output_mask
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
@@ -83,6 +126,10 @@ class TFBatchNorm(DefaultMetaOp):
     def accept_pruned_input(cls, node: NNCFNode):
         return True
 
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        identity_mask_propagation(node, graph)
+
 
 @TF_PRUNING_OPERATOR_METATYPES.register('concat')
 class TFConcat(DefaultMetaOp):
@@ -91,6 +138,16 @@ class TFConcat(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+
+        #TODO check and generate masks for None
+        result_mask = tf.concat(input_masks, axis=0)
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = result_mask
 
 
 @TF_PRUNING_OPERATOR_METATYPES.register('elementwise')
@@ -101,6 +158,15 @@ class TFElementwise(DefaultMetaOp):
     def accept_pruned_input(cls, node: NNCFNode):
         return True
 
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+
+        node.data['input_masks'] = input_masks
+        if input_masks[0] is not None:
+            assert all(tf.debugging.assert_near(input_masks[0], mask) for mask in input_masks)
+        node.data['output_mask'] = input_masks[0]
+
 
 @TF_PRUNING_OPERATOR_METATYPES.register('stop_propagation_ops')
 class TFStopMaskForwardOps(DefaultMetaOp):
@@ -109,3 +175,10 @@ class TFStopMaskForwardOps(DefaultMetaOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
         return False
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        input_masks = get_input_masks(node, graph)
+
+        node.data['input_masks'] = input_masks
+        node.data['output_mask'] = None

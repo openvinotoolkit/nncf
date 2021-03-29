@@ -20,6 +20,7 @@ from tensorflow.python.framework.convert_to_constants import convert_variables_t
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
@@ -52,6 +53,9 @@ def convert_keras_model_to_nxmodel(model):
 def _get_layer_type(layer):
     if layer['class_name'] == 'TensorFlowOpLayer':
         return layer['config']['node_def']['op']
+    if layer['class_name'] == 'NNCFWrapper':
+        # Return class_name of wrapped layer
+        return layer['config']['layer']['class_name']
     return layer['class_name']
 
 
@@ -278,8 +282,15 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
 
 def _get_module_attributes(layer: tf.keras.layers.Layer, attrs: dict) -> ConvolutionModuleAttributes:
     channel_axis = -1 if attrs['data_format'] == 'channels_last' else 1
+    if isinstance(layer, NNCFWrapper):
+        strides = layer.layer.strides[0]
+        groups = layer.layer.groups
+    else:
+        strides = layer.strides[0]
+        groups = layer.groups
+
     return ConvolutionModuleAttributes(layer.trainable,
                                        layer.get_input_shape_at(0)[channel_axis],
                                        layer.get_output_shape_at(0)[channel_axis],
-                                       layer.strides[0],
-                                       layer.groups)
+                                       strides,
+                                       groups)
