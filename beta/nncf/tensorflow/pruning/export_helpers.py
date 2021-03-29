@@ -47,7 +47,6 @@ class TFInput(DefaultMetaOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        node.data['input_masks'] = []
         node.data['output_mask'] = None
 
 
@@ -90,7 +89,6 @@ class TFConvolution(DefaultMetaOp):
             else:
                 output_mask = None
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -114,7 +112,6 @@ class TFTransposeConvolution(DefaultMetaOp):
             else:
                 output_mask = None
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = output_mask
 
 
@@ -146,7 +143,6 @@ class TFConcat(DefaultMetaOp):
         #TODO check and generate masks for None
         result_mask = tf.concat(input_masks, axis=0)
 
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = result_mask
 
 
@@ -161,8 +157,6 @@ class TFElementwise(DefaultMetaOp):
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
-
-        node.data['input_masks'] = input_masks
         if input_masks[0] is not None:
             assert all(tf.debugging.assert_near(input_masks[0], mask) for mask in input_masks)
         node.data['output_mask'] = input_masks[0]
@@ -178,7 +172,4 @@ class TFStopMaskForwardOps(DefaultMetaOp):
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = get_input_masks(node, graph)
-
-        node.data['input_masks'] = input_masks
         node.data['output_mask'] = None

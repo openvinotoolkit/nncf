@@ -24,7 +24,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
-from beta.nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFConvolution
 from beta.nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
@@ -35,13 +34,12 @@ from beta.nncf.tensorflow.pruning.utils import broadcast_filter_mask
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.common.pruning.model_analysis import Clusterization
-from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.mask_propagator import MaskPropagator
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
+
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
 class FilterPruningBuilder(BasePruningAlgoBuilder):
