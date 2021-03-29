@@ -49,7 +49,7 @@ from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.compression_method_api import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.initialization import register_default_init_args, default_criterion_fn, register_training_loop_args
+from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process
 from examples.classification.common import set_seed, load_resuming_checkpoint
 
@@ -139,19 +139,9 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, config):
-            top1, _ = validate(val_loader, model, criterion, config)
-            return top1
-
-        def train_epoch_function(config, compression_ctrl, model, epoch, optimizers, lr_schedulers):
-            return train_step(epoch, config, compression_ctrl, model, criterion,
-                              train_criterion_fn, lr_schedulers[0], model_name, optimizers[0],
-                              train_loader, train_sampler, val_loader)
-
-        def configure_optimizers():
-            params_to_optimize = get_parameter_groups(model, config)
-            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-            return (optimizer, ), (lr_scheduler, )
+        def autoq_eval_fn(model, eval_loader):
+            _, top5 = validate(eval_loader, model, criterion, config)
+            return top5
 
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, train_criterion_fn,
@@ -205,108 +195,183 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
-        return
-
-    config.best_compression_level = CompressionLevel.NONE
-    config.best_acc1 = 0
-    config.log_epoch = None
 
     if config.mode.lower() == 'train':
-        if config.accuracy_aware_training_config:
-
-            def validate_fn(model, config):
-                top1, _ = validate(val_loader, model, criterion, config)
-                return top1
-
-            def train_epoch_function(config, compression_ctrl, model, epoch, optimizers, lr_schedulers):
-                return train_step(epoch, config, compression_ctrl, model, criterion,
-                                train_criterion_fn, lr_schedulers[0], model_name, optimizers[0],
-                                train_loader, train_sampler, val_loader)
-
-            def configure_optimizers():
-                params_to_optimize = get_parameter_groups(model, config)
-                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-                return (optimizer, ), (lr_scheduler, )
-
-            def on_training_end_fn():
-                pass
-
-            nncf_config = register_training_loop_args(nncf_config, train_epoch_function, validate_fn,
-                                                      configure_optimizers, on_training_end_fn, config)
-            compression_ctrl.run_accuracy_aware_training(nncf_config)
-        else:
-            train(config, compression_ctrl, model, criterion, train_criterion_fn,
-                  lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader, best_acc1)
+        train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
+              train_loader, train_sampler, val_loader, best_acc1)
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
+    best_compression_level = CompressionLevel.NONE
     for epoch in range(config.start_epoch, config.epochs):
-        train_step(epoch, config, compression_ctrl, model, criterion, criterion_fn,
-                   lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader)
+        # update compression scheduler state at the begin of the epoch
+        compression_ctrl.scheduler.epoch_step()
+
+        if config.distributed:
+            train_sampler.set_epoch(epoch)
+
+        # train for one epoch
+        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
+
+        # Learning rate scheduling should be applied after optimizer’s update
+        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
+
+        # compute compression algo statistics
+        stats = compression_ctrl.statistics()
+
+        acc1 = best_acc1
+        if epoch % config.test_every_n_epochs == 0:
+            # evaluate on validation set
+            acc1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+
+        compression_level = compression_ctrl.compression_level()
+        # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
+        # still can be best if current compression level is bigger then best one. Compression levels in ascending
+        # order: NONE, PARTIAL, FULL.
+        is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
+        is_best = is_best_by_accuracy or compression_level > best_compression_level
+        if is_best:
+            best_acc1 = acc1
+        config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
+        best_compression_level = max(compression_level, best_compression_level)
+        acc = best_acc1 / 100
+        if config.metrics_dump is not None:
+            write_metrics(acc, config.metrics_dump)
+        if is_main_process():
+            print_statistics(stats)
+
+            checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
+            checkpoint = {
+                'epoch': epoch + 1,
+                'arch': model_name,
+                'state_dict': model.state_dict(),
+                'best_acc1': best_acc1,
+                'compression_level': compression_level,
+                'acc1': acc1,
+                'optimizer': optimizer.state_dict(),
+                'scheduler': compression_ctrl.scheduler.get_state()
+            }
+
+            torch.save(checkpoint, checkpoint_path)
+            make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
+
+            for key, value in stats.items():
+                if isinstance(value, (int, float)):
+                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
+                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
-def train_step(epoch, config, compression_ctrl, model, criterion, criterion_fn,
-               lr_scheduler, model_name, optimizer, train_loader, train_sampler, val_loader):
+def get_dataset(dataset_config, config, transform, is_train):
+    if dataset_config == 'imagenet':
+        prefix = 'train' if is_train else 'val'
+        return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
+    if dataset_config == 'mock_32x32':
+        # For testing purposes
+        return MockDataset(img_size=(32, 32), transform=transform)
+    return create_cifar(config, dataset_config, is_train, transform)
 
-    # update compression scheduler state at the begin of the epoch
-    compression_ctrl.scheduler.epoch_step()
 
-    config.cur_epoch = epoch
+def create_cifar(config, dataset_config, is_train, transform):
+    create_cifar_fn = None
+    if dataset_config == 'cifar100':
+        create_cifar_fn = partial(CIFAR100, config.dataset_dir, train=is_train, transform=transform)
+    if dataset_config == 'cifar10':
+        create_cifar_fn = partial(CIFAR10, config.dataset_dir, train=is_train, transform=transform)
+    if create_cifar_fn:
+        return safe_thread_call(partial(create_cifar_fn, download=True), partial(create_cifar_fn, download=False))
+    return None
+
+
+def create_datasets(config):
+    dataset_config = config.dataset if config.dataset is not None else 'imagenet'
+    dataset_config = dataset_config.lower()
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32'], "Unknown dataset option"
+
+    if dataset_config == 'imagenet':
+        normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                         std=(0.229, 0.224, 0.225))
+    elif dataset_config == 'cifar100':
+        normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
+                                         std=(0.2673, 0.2564, 0.2761))
+    elif dataset_config in ['cifar10', 'mock_32x32']:
+        normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
+                                         std=(0.5, 0.5, 0.5))
+
+    input_info_list = create_input_infos(config)
+    image_size = input_info_list[0].shape[-1]
+
+    if dataset_config in ['cifar10', 'cifar100']:
+        val_transform = transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.RandomCrop(image_size, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    else:
+        size = int(image_size / 0.875)
+        val_transform = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.RandomResizedCrop(image_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+
+    val_dataset = get_dataset(dataset_config, config, val_transform, is_train=False)
+    train_dataset = get_dataset(dataset_config, config, train_transforms, is_train=True)
+
+    return train_dataset, val_dataset
+
+
+def create_data_loaders(config, train_dataset, val_dataset):
+    pin_memory = config.execution_mode != ExecutionMode.CPU_ONLY
+
+    # When using a single GPU per process and per
+    # DistributedDataParallel, we need to divide the batch size
+    # ourselves based on the total number of GPUs we have
+    batch_size = int(config.batch_size)
+    workers = int(config.workers)
+    if config.execution_mode == ExecutionMode.MULTIPROCESSING_DISTRIBUTED:
+        batch_size //= config.ngpus_per_node
+        workers //= config.ngpus_per_node
+
+    val_sampler = torch.utils.data.SequentialSampler(val_dataset)
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=batch_size, shuffle=False,
+        num_workers=workers, pin_memory=pin_memory,
+        sampler=val_sampler, drop_last=True)
+
+    train_sampler = None
     if config.distributed:
-        train_sampler.set_epoch(epoch)
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
 
-    # train for one epoch
-    train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
+    def create_train_data_loader(batch_size_):
+        return torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
+            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler, drop_last=True)
 
-    # Learning rate scheduling should be applied after optimizer’s update
-    lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else config.best_acc1)
+    train_loader = create_train_data_loader(batch_size)
 
-    # compute compression algo statistics
-    stats = compression_ctrl.statistics()
+    if config.batch_size_init:
+        init_loader = create_train_data_loader(config.batch_size_init)
+    else:
+        init_loader = deepcopy(train_loader)
+    if config.distributed:
+        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
 
-    acc1 = config.best_acc1
-    if epoch % config.test_every_n_epochs == 0:
-        # evaluate on validation set
-        acc1, _ = validate(val_loader, model, criterion, config)
+    return train_loader, train_sampler, val_loader, init_loader
 
-    compression_level = compression_ctrl.compression_level()
-    # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
-    # still can be best if current compression level is bigger then best one. Compression levels in ascending
-    # order: NONE, PARTIAL, FULL.
-    is_best_by_accuracy = acc1 > config.best_acc1 and compression_level == config.best_compression_level
-    is_best = is_best_by_accuracy or compression_level > config.best_compression_level
-    if is_best:
-        config.best_acc1 = acc1
-    config.mlflow.safe_call('log_metric', "best_acc1", config.best_acc1)
-    config.best_compression_level = max(compression_level, config.best_compression_level)
-    acc = config.best_acc1 / 100
-    if config.metrics_dump is not None:
-        write_metrics(acc, config.metrics_dump)
-    if config.log_epoch is not None:
-        epoch = config.log_epoch
-    if is_main_process():
-        print_statistics(stats)
-
-        checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
-        checkpoint = {
-            'epoch': epoch + 1,
-            'arch': model_name,
-            'state_dict': model.state_dict(),
-            'best_acc1': config.best_acc1,
-            'compression_level': compression_level,
-            'acc1': acc1,
-            'optimizer': optimizer.state_dict(),
-            'scheduler': compression_ctrl.scheduler.get_state()
-        }
-
-        torch.save(checkpoint, checkpoint_path)
-        make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
-
-        for key, value in stats.items():
-            if isinstance(value, (int, float)):
-                config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
-                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
     batch_time = AverageMeter()
@@ -360,9 +425,6 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if config.log_epoch is not None:
-            epoch = config.log_epoch
-
         if i % config.print_freq == 0:
             logger.info(
                 '{rank}: '
@@ -395,107 +457,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
-def get_dataset(dataset_config, config, transform, is_train):
-    if dataset_config == 'imagenet':
-        prefix = 'train' if is_train else 'val'
-        return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
-    if dataset_config == 'mock_32x32':
-        # For testing purposes
-        return MockDataset(img_size=(32, 32), transform=transform)
-    return create_cifar(config, dataset_config, is_train, transform)
-
-
-def create_cifar(config, dataset_config, is_train, transform):
-    create_cifar_fn = None
-    if dataset_config == 'cifar100':
-        create_cifar_fn = partial(CIFAR100, config.dataset_dir, train=is_train, transform=transform)
-    if dataset_config == 'cifar10':
-        create_cifar_fn = partial(CIFAR10, config.dataset_dir, train=is_train, transform=transform)
-    if create_cifar_fn:
-        return safe_thread_call(partial(create_cifar_fn, download=True), partial(create_cifar_fn, download=False))
-    return None
-
-
-def create_datasets(config):
-    dataset_config = config.dataset if config.dataset is not None else 'imagenet'
-    dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32'], "Unknown dataset option"
-
-    if dataset_config == 'imagenet':
-        normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
-                                         std=(0.229, 0.224, 0.225))
-    elif dataset_config == 'cifar100':
-        normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
-                                         std=(0.2023, 0.1994, 0.2010))
-    elif dataset_config in ['cifar10', 'mock_32x32']:
-        normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
-                                         std=(0.5, 0.5, 0.5))
-
-    input_info_list = create_input_infos(config)
-    image_size = input_info_list[0].shape[-1]
-    size = int(image_size / 0.875)
-    val_transform = transforms.Compose([
-        transforms.Resize(size),
-        transforms.CenterCrop(image_size),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    val_dataset = get_dataset(dataset_config, config, val_transform, is_train=False)
-
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(image_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    train_dataset = get_dataset(dataset_config, config, train_transforms, is_train=True)
-
-    return train_dataset, val_dataset
-
-
-def create_data_loaders(config, train_dataset, val_dataset):
-    pin_memory = config.execution_mode != ExecutionMode.CPU_ONLY
-
-    # When using a single GPU per process and per
-    # DistributedDataParallel, we need to divide the batch size
-    # ourselves based on the total number of GPUs we have
-    batch_size = int(config.batch_size)
-    workers = int(config.workers)
-    if config.execution_mode == ExecutionMode.MULTIPROCESSING_DISTRIBUTED:
-        batch_size //= config.ngpus_per_node
-        workers //= config.ngpus_per_node
-
-    val_sampler = torch.utils.data.SequentialSampler(val_dataset)
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=batch_size, shuffle=False,
-        num_workers=workers, pin_memory=pin_memory,
-        sampler=val_sampler, drop_last=True)
-
-    train_sampler = None
-    if config.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-
-    def create_train_data_loader(batch_size_):
-        return torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size_, shuffle=(train_sampler is None),
-            num_workers=workers, pin_memory=pin_memory, sampler=train_sampler, drop_last=True)
-
-    train_loader = create_train_data_loader(batch_size)
-
-    if config.batch_size_init:
-        init_loader = create_train_data_loader(config.batch_size_init)
-    else:
-        init_loader = deepcopy(train_loader)
-    if config.distributed:
-        init_loader.num_workers = 0  # PyTorch multiprocessing dataloader issue WA
-
-    return train_loader, train_sampler, val_loader, init_loader
-
-
-def validate(val_loader, model, criterion, config):
+def validate(val_loader, model, criterion, config, epoch=0):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -503,8 +465,6 @@ def validate(val_loader, model, criterion, config):
 
     # switch to evaluate mode
     model.eval()
-
-    config.cur_epoch = config.log_epoch
 
     with torch.no_grad():
         end = time.time()
@@ -540,12 +500,12 @@ def validate(val_loader, model, criterion, config):
                     ))
 
         if is_main_process():
-            config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/loss", float(losses.avg), config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), config.get('cur_epoch', 0))
-            config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), config.get('cur_epoch', 0))
+            config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * epoch)
+            config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * epoch)
+            config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * epoch)
+            config.mlflow.safe_call('log_metric', "val/loss", float(losses.avg), epoch)
+            config.mlflow.safe_call('log_metric', "val/top1", float(top1.avg), epoch)
+            config.mlflow.safe_call('log_metric', "val/top5", float(top5.avg), epoch)
 
         logger.info(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
 

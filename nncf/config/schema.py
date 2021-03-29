@@ -702,14 +702,16 @@ ACCURACY_AWARE_SCHEMA = {
     "initial_training_phase_epochs": with_attributes(_NUMBER,
                                                      description="Number of epochs to tune during the initial"
                                                                  "training phase"),
-    "initial_compression_level_step": with_attributes(_NUMBER,
-                                                      description="initial_compression_level_step"),
-    "compression_level_step_reduction_factor":  with_attributes(_NUMBER,
-                                                      description="compression_level_step_reduction_factor"),
-    "minimal_compression_level_step":  with_attributes(_NUMBER,
-                                                      description="minimal_compression_level_step"),
+    "initial_compression_rate_step": with_attributes(_NUMBER,
+                                                      description="initial_compression_rate_step"),
+    "compression_rate_step_reduction_factor":  with_attributes(_NUMBER,
+                                                      description="compression_rate_step_reduction_factor"),
+    "minimal_compression_rate_step":  with_attributes(_NUMBER,
+                                                      description="minimal_compression_rate_step"),
     "patience_epochs":  with_attributes(_NUMBER,
                                         description="patience epochs"),
+    "maximal_total_epochs":  with_attributes(_NUMBER,
+                                        description="maximal_total_epochs"),
 }
 
 

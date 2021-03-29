@@ -124,13 +124,13 @@ class TrainEpochArgs(NNCFExtraConfigStruct):
                  train_epoch_fn,
                  eval_fn,
                  configure_optimizers_fn,
-                 on_training_end_fn,
-                 config):
+                 tensorboard_writer,
+                 log_dir):
         self.train_epoch_fn = train_epoch_fn
         self.eval_fn = eval_fn
         self.configure_optimizers_fn = configure_optimizers_fn
-        self.on_training_end_fn = on_training_end_fn
-        self.config = config
+        self.tensorboard_writer = tensorboard_writer
+        self.log_dir = log_dir
 
     @classmethod
     def get_id(cls) -> str:

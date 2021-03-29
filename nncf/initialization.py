@@ -11,9 +11,7 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.progress_bar import ProgressBar
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
-    BNAdaptationInitArgs, AutoQPrecisionInitArgs, TrainEpochArgs
-from nncf.utils import objwalk, is_tensor, training_mode_switcher
+from nncf.structures import TrainEpochArgs
 from nncf.structures import AutoQPrecisionInitArgs
 from nncf.structures import BNAdaptationInitArgs
 from nncf.structures import QuantizationPrecisionInitArgs
@@ -257,12 +255,12 @@ def register_training_loop_args(nncf_config: 'NNCFConfig',
                                 train_epoch_fn=None,
                                 eval_fn=None,
                                 configure_optimizers_fn=None,
-                                on_training_end_fn=None,
-                                config=None):
+                                tensorboard_writer=None,
+                                log_dir=None):
 
     nncf_config.register_extra_structs([TrainEpochArgs(train_epoch_fn=train_epoch_fn,
                                                        eval_fn=eval_fn,
                                                        configure_optimizers_fn=configure_optimizers_fn,
-                                                       on_training_end_fn=on_training_end_fn,
-                                                       config=config)])
+                                                       tensorboard_writer=tensorboard_writer,
+                                                       log_dir=log_dir)])
     return nncf_config

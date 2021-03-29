@@ -46,6 +46,7 @@ from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
+from nncf.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -70,6 +71,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return PTElementwise.get_all_op_aliases()
 
 
+@ACCURACY_AWARE_CONTROLLERS.register('filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  pruned_module_groups: Clusterization,
@@ -194,8 +196,8 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes])
+            assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
+                        group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             for node in group.nodes:
                 tmp_out_channels[node.module_scope] = new_out_channels_num
@@ -242,8 +244,8 @@ class FilterPruningController(BasePruningAlgoController):
         tmp_out_channels = self.modules_out_channels.copy()
 
         for group in self.pruned_module_groups_info.get_all_clusters():
-            assert all([tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes])
+            assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
+                        group.nodes)
             # prune all nodes in cluster (by output channels)
             old_out_channels = self.modules_out_channels[group.nodes[0].module_scope]
             num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
@@ -548,3 +550,15 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionLevel.FULL
         return CompressionLevel.PARTIAL
+
+    @property
+    def compression_rate(self):
+        if self.prune_flops:
+            return 1 - self.current_flops / self.full_flops
+        return self.pruning_rate
+
+    def set_compression_rate(self, pruning_rate):
+        is_pruning_controller_frozen = self.frozen
+        self.frozen = False
+        self.set_pruning_rate(pruning_rate)
+        self.frozen = is_pruning_controller_frozen

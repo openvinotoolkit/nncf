@@ -220,7 +220,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
     for epoch in range(config.start_epoch, config.epochs):
         # update compression scheduler state at the start of the epoch
         compression_ctrl.scheduler.epoch_step()
-        config.cur_epoch = epoch
+
         if config.distributed:
             train_sampler.set_epoch(epoch)
 
@@ -234,7 +234,8 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
-            acc1, _ = validate(val_loader, model, criterion, config)
+            # pylint: disable=E1123
+            acc1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
         compression_level = compression_ctrl.compression_level()
         # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint

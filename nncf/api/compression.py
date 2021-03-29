@@ -254,6 +254,13 @@ class CompressionAlgorithmController:
         """
         return model
 
+    @property
+    def compression_rate(self) -> float:
+        raise NotImplementedError
+
+    def set_compression_rate(self, compression_rate: float) -> None:
+        raise NotImplementedError
+
 
 class CompressionAlgorithmBuilder:
     """

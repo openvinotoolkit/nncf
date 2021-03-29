@@ -17,7 +17,6 @@ from torch.nn import Module
 
 from nncf.checkpoint_loading import load_state
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.accuracy_aware_compression import PTAccuracyAwareCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.debug import set_debug_log_dir
@@ -113,12 +112,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
-    accuracy_aware_config = config.get('accuracy_aware_training_config', None)
     should_init = resuming_state_dict is None
-    if accuracy_aware_config is not None:
-        composite_builder = PTAccuracyAwareCompressionAlgorithmBuilder(config, should_init=should_init)
-    else:
-        composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
 
     composite_builder.apply_to(compressed_model)
 

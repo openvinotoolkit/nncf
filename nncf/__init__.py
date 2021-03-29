@@ -43,6 +43,7 @@ if __nncf_backend__ == 'Torch':
     from .layers import register_module
     from .dynamic_graph.patch_pytorch import register_operator
     from .dynamic_graph.input_wrapping import nncf_model_input
+    from .accuracy_aware_training.algo import run_accuracy_aware_compressed_training
 
     # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
