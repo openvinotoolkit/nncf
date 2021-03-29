@@ -153,7 +153,7 @@ def build_scheduler(config, steps_per_epoch):
             raise ValueError('initial_lr parameter must be specified '
                              'for the cosine scheduler')
 
-        decay_steps = steps * config.epochs
+        decay_steps = steps_per_epoch * config.epochs
         logger.info('Using cosine learning rate with: '
                     'initial_learning_rate: {initial_lr}, '
                     'decay_steps: {decay_steps}'.format(initial_lr=initial_lr,

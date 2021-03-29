@@ -201,3 +201,14 @@ class Timer:
         self.start_time = 0.
         self.diff = 0.
         self.average_time = 0.
+
+
+def get_scheduler_state(num_steps, steps_per_epoch, config):
+        current_step = num_steps - 1
+        current_epoch = current_step // steps_per_epoch
+        scheduler_state = {'current_step': current_step, 'current_epoch': current_epoch}
+
+        if isinstance(config.compression, list) and len(config.compression) > 1:
+            scheduler_state = [scheduler_state for _ in config.compression]
+
+        return scheduler_state

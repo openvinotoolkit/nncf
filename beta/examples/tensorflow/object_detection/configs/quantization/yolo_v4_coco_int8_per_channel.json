@@ -22,17 +22,9 @@
             "momentum": 0.95
         },
 
-        "schedule_type": "step",
+        "schedule_type": "cosine",
         "schedule_params": {
-            "warmup_learning_rate": 1e-8,
-            "warmup_steps": 1000,
-            "init_learning_rate": 1e-5,
-            "learning_rate_levels": [
-                1e-5
-            ],
-            "learning_rate_steps": [
-                50000
-            ]
+            "initial_lr": 1e-4
         }
     },
 

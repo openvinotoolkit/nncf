@@ -22,7 +22,6 @@ YOLOV4_CONFIG = SampleConfig({
         "multi_anchor_assign": True,
     },
 
-    #'val_json_file': '/home/automation/etykunov/nncf/beta/examples/tensorflow/object_detection/keras-YOLOv3-model-set/data/COCO2017/annotations/instances_val2017.json',
     'iou_threshold': 0.5,
 
     "input_shape": (608, 608),
@@ -51,3 +50,4 @@ YOLOV4_CONFIG = SampleConfig({
     'postprocessing': {
         'conf_threshold': 0.001,
     }
+})
