@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -25,6 +26,13 @@ def pytest_addoption(parser):
     parser.addoption(
         "--data", type=str, default=None,
         help="Path to test datasets, e.g. CIFAR10 - for sanity tests or CIFAR100 - for weekly ones"
+    )
+
+    parser.addoption(
+        "--regen-dot", action="store_true", default=False, help="If specified, the "
+                                                                "reference .dot files will be regenerated "
+                                                                "using the current state of the repository."
+
     )
     parser.addoption(
         "--torch-home", type=str, default=None, help="Path to cached test models, downloaded by torchvision"
@@ -70,6 +78,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
     )
+
+
+def pytest_configure(config):
+    regen_dot = config.getoption('--regen-dot', False)
+    if regen_dot:
+        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 
 
 @pytest.fixture(scope="module")
