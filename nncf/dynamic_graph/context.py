@@ -50,6 +50,7 @@ class InputIndexEntry:
         self.getter = getter
         self.setter = setter
 
+
 class TupleRebuildingSetter:
     def __init__(self, idx_to_set, current_tuple, previous_level_setter_for_current_tuple):
         self._previous_level_setter = previous_level_setter_for_current_tuple
@@ -76,7 +77,7 @@ class OperatorInput:
         op_kwargs_index_entries = []
         self._nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
 
-        #pylint:disable=unnecessary-comprehension
+        # pylint:disable=unnecessary-comprehension
         self._index = {idx: entry for idx, entry in
                        enumerate(op_args_index_entries + op_kwargs_index_entries)}
 
@@ -524,6 +525,8 @@ def no_nncf_trace():
                 ctx.enable_tracing()
         else:
             yield
+    else:
+        yield
 
 
 def get_current_context() -> TracingContext:
