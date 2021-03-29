@@ -22,16 +22,6 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 
 
-def mean_estimate_no_outliers(data, min_percentile=5, max_percentile=95):
-    lower = tfp.stats.percentile(data, min_percentile, axis=0)
-    upper = tfp.stats.percentile(data, max_percentile, axis=0)
-    mask = tf.math.logical_and(data>=lower, data<=upper)
-    # zero out the outliers
-    data_masked = tf.multiply(data, tf.cast(mask, data.dtype))
-    mean = tf.math.reduce_sum(data_masked, axis=0) / tf.math.reduce_sum(tf.cast(mask, data_masked.dtype), axis=0)
-    return mean
-
-
 class MinMaxStatisticsCollector:
     def __init__(self, per_channel, channel_axes):
         self.per_channel = per_channel
@@ -47,9 +37,7 @@ class MinMaxStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_min_values):
                 self.all_min_values[i] = tf.reshape(t, shape=(new_shape))
-        # return tf.math.reduce_mean(tf.stack(self.all_min_values), axis=0)
-        # return tfp.stats.percentile(tf.stack(self.all_min_values), 50, axis=0)
-        return mean_estimate_no_outliers(tf.stack(self.all_min_values))
+        return tf.math.reduce_mean(tf.stack(self.all_min_values), axis=0)
 
     @property
     def max(self):
@@ -59,9 +47,7 @@ class MinMaxStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_max_values):
                 self.all_max_values[i] = tf.reshape(t, shape=(new_shape))
-        # return tf.math.reduce_mean(tf.stack(self.all_max_values), axis=0)
-        # return tfp.stats.percentile(tf.stack(self.all_max_values), 50, axis=0)
-        return mean_estimate_no_outliers(tf.stack(self.all_max_values))
+        return tf.math.reduce_mean(tf.stack(self.all_max_values), axis=0)
 
     def call(self, inputs):
         ndims = len(inputs.shape)
@@ -77,19 +63,79 @@ class MinMaxStatisticsCollector:
             self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
             self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
 
-        # self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
-        # self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+    def __call__(self, *args, **kwargs):
+        self.call(*args, **kwargs)
+
+
+class MinMaxPercentileStatisticsCollector:
+    def __init__(self, per_channel, channel_axes, min_percentile=5, max_percentile=95):
+        self.per_channel = per_channel
+        self.channel_axes = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
+        self.all_min_values = []
+        self.all_max_values = []
+        self.min_percentile = min_percentile
+        self.max_percentile = max_percentile
+
+    def _mean_estimate_no_outliers(self, data):
+        lower = tfp.stats.percentile(data, self.min_percentile, axis=0)
+        upper = tfp.stats.percentile(data, self.max_percentile, axis=0)
+        mask = tf.math.logical_and(data >= lower, data <= upper)
+        # zero out the outliers
+        data_masked = tf.multiply(data, tf.cast(mask, data.dtype))
+        mean = tf.math.reduce_sum(data_masked, axis=0) / tf.math.reduce_sum(tf.cast(mask, data_masked.dtype), axis=0)
+        return mean
+
+    @property
+    def min(self):
+        if self.per_channel:
+            new_shape = 1
+            for val in self.all_min_values[0].shape:
+                new_shape *= val
+            for i, t in enumerate(self.all_min_values):
+                self.all_min_values[i] = tf.reshape(t, shape=(new_shape))
+        return self._mean_estimate_no_outliers(tf.stack(self.all_min_values))
+
+    @property
+    def max(self):
+        if self.per_channel:
+            new_shape = 1
+            for val in self.all_max_values[0].shape:
+                new_shape *= val
+            for i, t in enumerate(self.all_max_values):
+                self.all_max_values[i] = tf.reshape(t, shape=(new_shape))
+        return self._mean_estimate_no_outliers(tf.stack(self.all_max_values))
+
+    def call(self, inputs):
+        ndims = len(inputs.shape)
+        axis = list(range(ndims))
+        if self.per_channel:
+            for val in self.channel_axes:
+                val = (ndims + val) % ndims
+                axis.remove(val)
+            self.all_min_values.append(tf.reduce_min(inputs, axis=axis))
+            self.all_max_values.append(tf.reduce_max(inputs, axis=axis))
+        else:
+            axis.remove(0)
+            self.all_min_values.extend(tf.unstack(tf.reduce_min(inputs, axis=axis)))
+            self.all_max_values.extend(tf.unstack(tf.reduce_max(inputs, axis=axis)))
 
     def __call__(self, *args, **kwargs):
         self.call(*args, **kwargs)
 
 
-
-
 class MinMaxInitializer(TFCompressionAlgorithmInitializer):
-    def __init__(self, num_steps=100):
-        self.num_steps = num_steps
+    def __init__(self, initializer_config):
+        range_config = initializer_config.get('range', {})
+        self.num_steps = range_config.get('num_init_samples', 100)
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
+
+        range_type = range_config.get('type', 'minmax')
+        if range_type == 'minmax':
+            self.statistics_collector = MinMaxStatisticsCollector
+        elif range_type == 'minmax_percentile':
+            self.statistics_collector = MinMaxPercentileStatisticsCollector
+        else:
+            raise ValueError('Range {} is not supported.'.format(range_type))
 
     def call(self, model, dataset=None, loss=None):
         layer_statistics = []
@@ -98,7 +144,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
         for layer in model.layers:
             if isinstance(layer, FakeQuantize):
                 channel_axes = get_channel_axis(InputType.INPUTS, '', layer)
-                minmax = MinMaxStatisticsCollector(layer.per_channel, channel_axes)
+                minmax = self.statistics_collector(layer.per_channel, channel_axes)
                 handles.append(layer.register_hook_pre_quantizer(minmax))
                 layer.enabled = False
                 layer_statistics.append((layer, minmax))
@@ -107,7 +153,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
                     for op_name, op in ops.items():
                         if op.__class__ in self.nncf_quantization_operation_classes:
                             channel_axes = get_channel_axis(InputType.WEIGHTS, weight_attr, layer)
-                            minmax = MinMaxStatisticsCollector(op.per_channel, channel_axes)
+                            minmax = self.statistics_collector(op.per_channel, channel_axes)
                             handles.append(op.register_hook_pre_call(minmax))
                             op.enabled = False
                             op_statistics.append((layer, op_name, op, minmax))

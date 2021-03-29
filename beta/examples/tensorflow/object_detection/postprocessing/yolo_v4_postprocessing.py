@@ -13,15 +13,17 @@
 
 import numpy as np
 import copy
-from scipy.special import expit, softmax
-# https://stackoverflow.com/questions/21106134/numpy-pure-functions-for-performance-caching
 
 
-# def expit(x):
-#     return 1/(1+np.exp(-x))
-#
-# def softmax(x):
-#     return np.exp(x)/sum(np.exp(x))
+def expit(x):
+    return np.where(x >= 0,
+                    1 / (1 + np.exp(-x)),
+                    np.exp(x) / (1 + np.exp(x)))
+
+
+def softmax(x):
+    x = x - np.max(x)
+    return np.exp(x)/np.sum(np.exp(x))
 
 
 def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, use_softmax=False):
@@ -30,14 +32,10 @@ def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, us
     num_anchors = len(anchors)
 
     grid_size = np.shape(prediction)[1:3]
-    # check if stride on height & width are same
-    assert input_dims[0] // grid_size[0] == input_dims[1] // grid_size[1], 'model stride mismatch.'
-    stride = input_dims[0] // grid_size[0]
 
     prediction = np.reshape(prediction,
                             (batch_size, grid_size[0] * grid_size[1] * num_anchors, num_classes + 5))
 
-    ################################
     # generate x_y_offset grid map
     grid_y = np.arange(grid_size[0])
     grid_x = np.arange(grid_size[1])
@@ -50,8 +48,6 @@ def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, us
     x_y_offset = np.tile(x_y_offset, (1, num_anchors))
     x_y_offset = np.reshape(x_y_offset, (-1, 2))
     x_y_offset = np.expand_dims(x_y_offset, 0)
-
-    ################################
 
     # Log space transform of the height and width
     anchors = np.tile(anchors, (grid_size[0] * grid_size[1], 1))
@@ -95,16 +91,9 @@ def yolo3_decode(predictions, anchors, num_classes, input_dims, elim_grid_sense=
     :param predictions: A list of three tensors with shape (N, 19, 19, 255), (N, 38, 38, 255) and (N, 76, 76, 255)
     :return: A tensor with the shape (N, num_boxes, 85)
     """
-    assert len(predictions) == len(anchors) // 3, 'anchor numbers does not match prediction.'
 
-    if len(predictions) == 3:  # assume 3 set of predictions is YOLOv3
-        anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
-        scale_x_y = [1.05, 1.1, 1.2] if elim_grid_sense else [None, None, None]
-    elif len(predictions) == 2:  # 2 set of predictions is YOLOv3-tiny
-        anchor_mask = [[3, 4, 5], [0, 1, 2]]
-        scale_x_y = [1.05, 1.05] if elim_grid_sense else [None, None]
-    else:
-        raise ValueError('Unsupported prediction length: {}'.format(len(predictions)))
+    anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
+    scale_x_y = [1.05, 1.1, 1.2] if elim_grid_sense else [None, None, None]
 
     results = []
     for i, prediction in enumerate(predictions):
@@ -705,7 +694,6 @@ def postprocess_yolo_v4_np(image_info, out1, out2, out3, anchors, num_classes, i
     for i in range(batch_size):
         prediction = [out1[i][None, ...], out2[i][None, ...], out3[i][None, ...]]
         image_shape = image_info[i][0]
-        # anchors = get_anchors(anchors_path)
         pred_boxes, pred_classes, pred_scores = yolo3_postprocess_np(prediction, image_shape, anchors, num_classes,
                                                                      input_shape, max_boxes=100,
                                                                      confidence=conf_threshold,

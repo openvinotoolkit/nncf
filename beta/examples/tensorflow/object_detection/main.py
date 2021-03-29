@@ -142,7 +142,7 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
     return test_step
 
 
-def create_train_step_fn(strategy, model, loss_fn, optimizer, trainable_variables):
+def create_train_step_fn(strategy, model, loss_fn, optimizer):
     """Creates a distributed training step"""
 
     def _train_step_fn(inputs):
@@ -155,38 +155,26 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer, trainable_variable
                 losses[k] = tf.reduce_mean(v)
             per_replica_loss = losses['total_loss'] / strategy.num_replicas_in_sync
 
-        grads = tape.gradient(per_replica_loss, trainable_variables) # model.trainable_variables
-        # test:
-        # grads, _ = tf.clip_by_global_norm(grads, 5.0)
-        optimizer.apply_gradients(zip(grads, trainable_variables)) # model.trainable_variables
-        #return losses, grads
+        grads = tape.gradient(per_replica_loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
         return losses
 
     @tf.function
     def train_step(dataset_inputs):
-        #per_replica_losses, per_replica_grads = strategy.run(_train_step_fn, args=(dataset_inputs,))
         per_replica_losses = strategy.run(_train_step_fn, args=(dataset_inputs,))
-        #grads = tf.nest.map_structure(lambda x: strategy.reduce(tf.distribute.ReduceOp.MEAN, x, axis=None),
-        #                               per_replica_grads)
         losses = tf.nest.map_structure(lambda x: strategy.reduce(tf.distribute.ReduceOp.MEAN, x, axis=None),
                                        per_replica_losses)
-        return losses #, grads
+        return losses
 
     return train_step
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq): # , model
+    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
-    # train_grads_writer = tf.summary.create_file_writer(os.path.join(log_dir, 'train_grads'))
-
-    test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
-    validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
-    eval_metric.reset_states()
-    logger.info('Validation metric = {}'.format(test_metric_result))
 
     timer = Timer()
     timer.tic()
@@ -205,26 +193,11 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 break
 
             compression_ctrl.scheduler.step()
-            train_loss = train_step(x) # grads
+            train_loss = train_step(x)
             train_metric_result = tf.nest.map_structure(lambda s: s.numpy().astype(float), train_loss)
 
-            #grads = tf.nest.map_structure(lambda s: s.numpy().astype(float), grads)
-            #grads = list(zip(grads, model.trainable_variables))
-            #with train_grads_writer.as_default():
-            #    for grad, var in grads:
-            #        tf.summary.histogram(var.name, var, step=optimizer.iterations.numpy())
-            #        tf.summary.histogram(var.name + '/gradient', grad, step=optimizer.iterations.numpy())
-            #train_grads_writer.flush()
-
-            # if np.isnan(train_metric_result['total_confidence_loss']):
-            #     print('total_confidence_loss loss is NaN')
-            # if np.isnan(train_metric_result['total_class_loss']):
-            #     print('total_class_loss loss is NaN')
-            # if np.isnan(train_metric_result['total_location_loss']):
-            #     print('location loss is NaN')
-
             if np.isnan(train_metric_result['total_loss']):
-               raise ValueError('total loss is NaN')
+                raise ValueError('total loss is NaN')
 
             train_metric_result.update({'learning_rate': optimizer.lr(optimizer.iterations).numpy()})
 
@@ -235,18 +208,6 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
                 logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
                 timer.tic()
-
-            if step == 30 and epoch == 0:
-                test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
-                validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
-                eval_metric.reset_states()
-                logger.info('Validation metric = {}'.format(test_metric_result))
-
-            if step % 400 == 0 and step > 0:
-                test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
-                validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
-                eval_metric.reset_states()
-                logger.info('Validation metric = {}'.format(test_metric_result))
 
         test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
@@ -305,8 +266,6 @@ def run(config):
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
 
-
-
     # Training parameters
     epochs = config.epochs
     steps_per_epoch = train_builder.steps_per_epoch
@@ -319,12 +278,6 @@ def run(config):
                                 weights=config.get('weights', None)) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
-
-            # backbone_len = 250
-            # freeze_level = 1
-            # num = (backbone_len, len(compress_model.layers) - 3)[freeze_level - 1]
-            # for i in range(num): compress_model.layers[i].trainable = False
-            #     print('Freeze the first {} layers of total {} layers.'.format(num, len(compress_model.layers)))
 
             scheduler = build_scheduler(
                 config=config,
@@ -351,66 +304,21 @@ def run(config):
             else:
                 logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
-                # save_path = checkpoint_manager.save()
-                # logger.info('Saved checkpoint after initialization: {}'.format(save_path))
 
-
-            # ##########################################################################################################
-            # for i in range(len(compress_model.layers)):
-            #     layer = compress_model.layers[i]
-            #     if layer.__class__.__name__ == "FakeQuantize":
-            #         layer.trainable = True
-            #     elif layer.__class__.__name__ == "NNCFWrapper":
-            #         # try to train only scales here
-            #         # layer.trainable = False
-            #         kernel_scale = layer._trainable_weights.pop()
-            #         layer._non_trainable_weights.append(kernel_scale)
-            #         # layer._non_trainable_weights = layer._trainable_weights
-            #         # layer._trainable_weights = []
-            #         # layer.trainable = False
-            #     # elif layer.__class__.__name__ == "SyncBatchNormalization":
-            #     #     layer._non_trainable_weights = layer._trainable_weights
-            #     #     layer._trainable_weights = []
-            #     else:
-            #         layer.trainable = False
-            # compress_model.summary()
-            # #########################################################################################################
-
-
-    # trainable_variables = [var for var in compress_model.trainable_variables if 'scale' in var.name]
-    trainable_variables = compress_model.trainable_variables
-
-    # import os
-    # os.environ['CUDA_VISIBLE_DEVICES'] = "0,1,2,3,4,5,6"
-    # # Create dataset
-    # config.batch_size = 63
-    # strategy = get_distribution_strategy(config)
-    # builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
-    # datasets = [builder.build() for builder in builders]
-    # train_builder, test_builder = builders
-    # train_dataset, test_dataset = datasets
-    # train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
-    # test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
-    # num_test_batches = test_builder.steps_per_epoch
-
-
-    train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer, trainable_variables)
+    train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
-            config.print_freq) # , compress_model
+            config.print_freq)
 
     print_statistics(compression_ctrl.statistics())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 
-
     if config.metrics_dump is not None:
         write_metrics(metric_result['AP'], config.metrics_dump)
-
-    compress_model.save(os.path.join(config['log_dir'], 'dumped.h5'))
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)
@@ -422,9 +330,7 @@ def export(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model(weights=config.get('weights', None))
 
-    print('\n\ncompressing the model...')
     compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
-    print('\nmodel is compressed!!!\n\n\n\n')
 
     if config.ckpt_path:
         checkpoint = tf.train.Checkpoint(model=compress_model)
@@ -433,8 +339,6 @@ def export(config):
     save_path, save_format = get_saving_parameters(config)
     compression_ctrl.export_model(save_path, save_format)
     logger.info("Saved to {}".format(save_path))
-
-    compress_model.save(os.path.join(config['log_dir'], 'dumped.h5'))
 
 
 def main(argv):

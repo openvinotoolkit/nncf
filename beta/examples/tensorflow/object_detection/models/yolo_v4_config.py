@@ -14,20 +14,14 @@
 from beta.examples.tensorflow.common.sample_config import SampleConfig
 
 YOLOV4_CONFIG = SampleConfig({
-
     "preprocessing": {
-        "enhance_augment": "mosaic",
         "enhance_mosaic_augment": True,
-        "enhance_cutmix_augment": False,
         "multi_anchor_assign": True,
     },
-
     'iou_threshold': 0.5,
-
     "input_shape": (608, 608),
     "anchors": [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401],
     "elim_grid_sense": True,
-
     "model_params": {
         "architecture": {
             "backbone": {
@@ -46,7 +40,6 @@ YOLOV4_CONFIG = SampleConfig({
             "use_diou_loss": True
         }
     },
-
     'postprocessing': {
         'conf_threshold': 0.001,
     }

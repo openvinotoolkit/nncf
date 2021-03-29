@@ -1,21 +1,15 @@
 {
     "model": "YOLOv4",
     "input_info": {
-        "sample_size": [
-            1,
-            608,
-            608,
-            3
-        ]
+        "sample_size": [1, 608, 608, 3]
     },
 
-    "epochs": 100,
+    "epochs": 30,
     "batch_size": 66,
     "workers": 12,
 
     "dataset": "coco/2017",
     "dataset_type": "tfds",
-
 
     "optimizer": {
         "type": "momentum",
@@ -25,14 +19,16 @@
 
         "schedule_type": "step",
         "schedule_params": {
-            "warmup_learning_rate": 0.000001,
+            "warmup_learning_rate": 1e-10,
             "warmup_steps": 1000,
-            "init_learning_rate": 0.00001,
+            "init_learning_rate": 1e-4,
             "learning_rate_levels": [
-                0.00001
+                1e-5,
+                1e-6
             ],
             "learning_rate_steps": [
-                50000
+                5000,
+                45000
             ]
         }
     }

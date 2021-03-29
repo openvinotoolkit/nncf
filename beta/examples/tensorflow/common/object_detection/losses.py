@@ -498,13 +498,6 @@ class YOLOv4Loss:
         # Returns
             softmax_focal_loss: Softmax focal loss, tensor of shape (?, num_boxes).
         """
-
-        # Scale predictions so that the class probas of each sample sum to 1
-        # y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
-
-        # Clip the prediction value to prevent NaN's and Inf's
-        # epsilon = K.epsilon()
-        # y_pred = K.clip(y_pred, epsilon, 1. - epsilon)
         y_pred = tf.nn.softmax(y_pred)
         y_pred = tf.maximum(tf.minimum(y_pred, 1 - 1e-15), 1e-15)
 
@@ -542,7 +535,6 @@ class YOLOv4Loss:
         alpha_weight_factor = (y_true * alpha + (1 - y_true) * (1 - alpha))
 
         sigmoid_focal_loss = modulating_factor * alpha_weight_factor * sigmoid_loss
-        # sigmoid_focal_loss = tf.reduce_sum(sigmoid_focal_loss, axis=-1)
 
         return sigmoid_focal_loss
 
@@ -754,14 +746,14 @@ class YOLOv4Loss:
         return box_xy, box_wh, box_confidence, box_class_probs
 
     def get_anchors(self, anchors_path):
-        '''loads the anchors from a file'''
+        """loads the anchors from a file"""
         with open(anchors_path) as f:
             anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
 
     def __call__(self, labels, outputs, anchors, num_classes, ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True, use_focal_loss=False, use_focal_obj_loss=False, use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
-        '''
+        """
         YOLOv3 loss function.
 
         Parameters
@@ -775,8 +767,7 @@ class YOLOv4Loss:
         Returns
         -------
         loss: tensor, shape=(1,)
-
-        '''
+        """
         anchors = np.array(anchors).astype(float).reshape(-1, 2)
         num_layers = len(anchors)//3 # default setting
         yolo_outputs = list(outputs.values()) # args[:num_layers]
@@ -790,7 +781,6 @@ class YOLOv4Loss:
             scale_x_y = [1.05, 1.05] if elim_grid_sense else [None, None]
 
         input_shape = K.cast(K.shape(yolo_outputs[0])[1:3] * 32, K.dtype(y_true[0]))
-        grid_shapes = [K.cast(K.shape(yolo_outputs[i])[1:3], K.dtype(y_true[0])) for i in range(num_layers)]
         loss = 0
         total_location_loss = 0
         total_confidence_loss = 0
@@ -811,10 +801,6 @@ class YOLOv4Loss:
                  anchors[anchor_mask[i]], num_classes, input_shape, scale_x_y=scale_x_y[i], calc_loss=True)
             pred_box = K.concatenate([pred_xy, pred_wh])
 
-            # # Darknet raw box to calculate loss.
-            # raw_true_xy = y_true[i][..., :2]*grid_shapes[i][::-1] - grid
-            # raw_true_wh = K.log(y_true[i][..., 2:4] / (anchors[anchor_mask[i]] * input_shape[::-1]) + K.epsilon())
-            # raw_true_wh = K.switch(object_mask, raw_true_wh, K.zeros_like(raw_true_wh)) # avoid log(0)=-inf
             box_loss_scale = 2 - y_true[i][...,2:3]*y_true[i][...,3:4]
 
             # Find ignore mask, iterate over each of batch.
@@ -830,79 +816,33 @@ class YOLOv4Loss:
             ignore_mask = ignore_mask.stack()
             ignore_mask = K.expand_dims(ignore_mask, -1)
 
+            raw_pred = raw_pred + K.epsilon()
+            if use_focal_obj_loss:
+                # Focal loss for objectness confidence
+                confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[...,4:5])
+            else:
+                confidence_loss = object_mask * K.binary_crossentropy(true_objectness_probs, raw_pred[...,4:5], from_logits=True)+ \
+                    (1-object_mask) * K.binary_crossentropy(object_mask, raw_pred[...,4:5], from_logits=True) * ignore_mask
 
-
-
-            # test:
-            with tf.control_dependencies([
-                tf.Assert(tf.debugging.is_numeric_tensor(raw_pred), [raw_pred]),
-                tf.debugging.assert_non_negative(true_objectness_probs, [true_objectness_probs]),
-                tf.debugging.assert_less_equal(true_objectness_probs, tf.cast(1.0, true_objectness_probs.dtype), [true_objectness_probs]),
-                tf.debugging.assert_non_negative(true_class_probs, [true_class_probs]),
-                tf.debugging.assert_less_equal(true_class_probs, tf.cast(1.0, true_class_probs.dtype), [true_class_probs])
-            ]):
-
-                raw_pred = raw_pred + K.epsilon()
-
-                if use_focal_obj_loss:
-                    # Focal loss for objectness confidence
-                    confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[...,4:5])
+            if use_focal_loss:
+                # Focal loss for classification score
+                if use_softmax_loss:
+                    class_loss = self.softmax_focal_loss(true_class_probs, raw_pred[...,5:])
                 else:
-                    confidence_loss = object_mask * K.binary_crossentropy(true_objectness_probs, raw_pred[...,4:5], from_logits=True)+ \
-                        (1-object_mask) * K.binary_crossentropy(object_mask, raw_pred[...,4:5], from_logits=True) * ignore_mask
-
-                if use_focal_loss:
-                    # Focal loss for classification score
-                    if use_softmax_loss:
-                        class_loss = self.softmax_focal_loss(true_class_probs, raw_pred[...,5:])
-                    else:
-                        class_loss = self.sigmoid_focal_loss(true_class_probs, raw_pred[...,5:])
+                    class_loss = self.sigmoid_focal_loss(true_class_probs, raw_pred[...,5:])
+            else:
+                if use_softmax_loss:
+                    # use softmax style classification output
+                    class_loss = object_mask * K.expand_dims(K.categorical_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True), axis=-1)
                 else:
-                    if use_softmax_loss:
-                        # use softmax style classification output
-                        class_loss = object_mask * K.expand_dims(K.categorical_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True), axis=-1)
-                    else:
-                        # use sigmoid style classification output
-                        class_loss = object_mask * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
+                    # use sigmoid style classification output
+                    class_loss = object_mask * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
 
-
-
-            # test:
-            with tf.control_dependencies([
-                tf.Assert(tf.debugging.is_numeric_tensor(pred_box), [pred_box])
-            ]):
-
-                # if use_giou_loss:
-                #     # Calculate GIoU loss as location loss
-                #     raw_true_box = y_true[i][...,0:4]
-                #     giou = self.box_giou(raw_true_box, pred_box)
-                #     giou_loss = object_mask * box_loss_scale * (1 - giou)
-                #     giou_loss = K.sum(giou_loss) / batch_size_f
-                #     location_loss = giou_loss
-                # elif use_diou_loss:
-                # Calculate DIoU loss as location loss
-                raw_true_box = y_true[i][...,0:4]
-                diou = self.box_diou(raw_true_box, pred_box)
-                diou_loss = object_mask * box_loss_scale * (1 - diou)
-                with tf.control_dependencies([
-                    tf.Assert(tf.debugging.is_numeric_tensor(diou_loss), [diou_loss])
-                ]):
-                    diou_loss = K.sum(diou_loss) / batch_size_f
-                location_loss = diou_loss
-                # else:
-                #     # Standard YOLOv3 location loss
-                #     # K.binary_crossentropy is helpful to avoid exp overflow.
-                #     xy_loss = object_mask * box_loss_scale * K.binary_crossentropy(raw_true_xy, raw_pred[...,0:2], from_logits=True)
-                #     wh_loss = object_mask * box_loss_scale * 0.5 * K.square(raw_true_wh-raw_pred[...,2:4])
-                #     xy_loss = K.sum(xy_loss) / batch_size_f
-                #     wh_loss = K.sum(wh_loss) / batch_size_f
-                #     location_loss = xy_loss + wh_loss
-
-            # test:
-            # with tf.control_dependencies([
-            #     tf.Assert(tf.debugging.is_numeric_tensor(confidence_loss), [confidence_loss]),
-            #     tf.Assert(tf.debugging.is_numeric_tensor(class_loss), [class_loss]),
-            # ]):
+            raw_true_box = y_true[i][...,0:4]
+            diou = self.box_diou(raw_true_box, pred_box)
+            diou_loss = object_mask * box_loss_scale * (1 - diou)
+            diou_loss = K.sum(diou_loss) / batch_size_f
+            location_loss = diou_loss
 
             confidence_loss = K.sum(confidence_loss) / batch_size_f
             class_loss = K.sum(class_loss) / batch_size_f
@@ -911,7 +851,6 @@ class YOLOv4Loss:
             total_confidence_loss += confidence_loss
             total_class_loss += class_loss
 
-        # Fit for tf 2.0.0 loss shape
         loss = K.expand_dims(loss, axis=-1)
 
         return loss, total_location_loss, total_confidence_loss, total_class_loss

@@ -1,35 +1,37 @@
 {
     "model": "YOLOv4",
     "input_info": {
-        "sample_size": [
-            1,
-            608,
-            608,
-            3
-        ]
+        "sample_size": [1, 608, 608, 3]
     },
 
-    "epochs": 0,
-    "batch_size": 60,
+    "epochs": 15,
+    "batch_size": 63,
+    "workers": 16,
 
     "dataset": "coco/2017",
     "dataset_type": "tfds",
 
     "optimizer": {
         "type": "Adam",
-        "schedule_type": "piecewise_constant",
+        "schedule_type": "cosine",
         "schedule_params": {
-            "boundaries": [
-                1
-            ],
-            "values": [
-                5e-5,
-                5e-5
-            ]
+            "base_lr": 5e-5
         }
     },
 
     "compression": {
-        "algorithm": "quantization"
+        "algorithm": "quantization",
+        "weights": {
+            "per_channel": true
+        },
+        "activations": {
+            "mode": "asymmetric"
+        },
+        "initializer": {
+            "range": {
+                "num_init_samples": 300,
+                "type": "minmax_percentile"
+            }
+        }
     }
 }

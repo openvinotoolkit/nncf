@@ -69,8 +69,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QUANTIZER_GROUPS:
             self._parse_group_params(self.config, quantizer_group)
 
-    def build_controller(self, model):
-        return QuantizationController(model)
+    def build_controller(self, model, initializer_config):
+        return QuantizationController(model, initializer_config)
 
     def _parse_group_params(self, config, quantizer_group):
         params_dict = config.get(quantizer_group, {})
@@ -226,9 +226,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
 
 class QuantizationController(TFCompressionAlgorithmController):
-    def __init__(self, target_model):
+    def __init__(self, target_model, initializer_config):
         super().__init__(target_model)
-        self._initializer = MinMaxInitializer()
+        self._initializer = MinMaxInitializer(initializer_config)
 
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
