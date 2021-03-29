@@ -60,7 +60,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         self.set_sparsity_level(self.sparsity_init)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         if self.sparsity_level_mode == 'global':
             stats['sparsity_threshold'] =\
                  self._select_threshold(self.sparsity_rate_for_sparsified_modules(), self.sparsified_module_info)

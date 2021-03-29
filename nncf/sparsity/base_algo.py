@@ -138,7 +138,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         return 1 - nonzero / max(count, 1)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "SR", "% weights"]
         data = [header]
@@ -161,9 +161,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
         stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
 
-        return self.add_algo_specific_stats(stats)
-
-    def add_algo_specific_stats(self, stats):
         return stats
 
     def compression_level(self) -> CompressionLevel:
