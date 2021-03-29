@@ -38,7 +38,7 @@ class SparseLoss(PTCompressionLoss):
             for sparse_layer in self._sparse_layers:
                 sparse_layer.frozen = True
 
-    def forward(self):
+    def calculate(self) -> torch.Tensor:
         if self.disabled:
             return 0
 
@@ -79,7 +79,7 @@ class SparseLossForPerLayerSparsity(SparseLoss):
         for sparse_layer in self._sparse_layers:
             self.per_layer_target[sparse_layer] = self.target
 
-    def forward(self):
+    def calculate(self) -> torch.Tensor:
         if self.disabled:
             return 0
 

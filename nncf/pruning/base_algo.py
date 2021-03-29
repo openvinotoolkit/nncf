@@ -16,6 +16,7 @@ from functools import update_wrapper
 from texttable import Texttable
 from torch import nn
 
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -141,6 +142,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
                  pruned_module_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self.config = config
         params = self.config.get("params", {})
         self.pruned_module_groups_info = pruned_module_groups_info
