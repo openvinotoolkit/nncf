@@ -516,11 +516,14 @@ class TracingContext:
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
-    if ctx is not None:
-        ctx.disable_tracing()
-    yield
-    if ctx is not None:
-        ctx.enable_tracing()
+    if ctx:
+        if ctx.is_tracing:
+            ctx.disable_tracing()
+            yield
+            if ctx:
+                ctx.enable_tracing()
+        else:
+            yield
 
 
 def get_current_context() -> TracingContext:
