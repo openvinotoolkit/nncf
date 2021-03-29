@@ -47,7 +47,7 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.common.pruning.mask_propagator import MaskPropagator
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
 
@@ -461,11 +461,9 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Propagate masks for all modules
         graph = self.model.get_original_graph()
 
-        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
 
-        # Init graph with outputs_masks
-        pruner = MaskPropagator(graph, PT_PRUNING_OPERATOR_METATYPES)
-        pruner.mask_propagation()
+        init_output_masks_in_graph(graph, self.pruned_module_groups_info.get_all_nodes())
+        MaskPropagationAlgorithm(graph, PT_PRUNING_OPERATOR_METATYPES).mask_propagation()
 
         # 2. Apply masks
         types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']

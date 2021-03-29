@@ -37,7 +37,7 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.common.pruning.mask_propagator import MaskPropagator
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 
 
@@ -147,8 +147,8 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_node.data['output_mask'] = filter_mask
 
         # 2. Propagating masks across the graph
-        pruner = MaskPropagator(graph, TF_PRUNING_OPERATOR_METATYPES)
-        pruner.mask_propagation()
+        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
 
         # 3. Apply the masks
         for wrapped_layer in wrapped_layers:
@@ -223,8 +223,8 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_node.data['output_mask'] = filter_mask
 
         # 2. Propagating masks across the graph
-        pruner = MaskPropagator(graph, TF_PRUNING_OPERATOR_METATYPES)
-        pruner.mask_propagation()
+        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
 
         # 3. Apply the masks
         for wrapped_layer in wrapped_layers:

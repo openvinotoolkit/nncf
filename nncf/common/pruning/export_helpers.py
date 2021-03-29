@@ -34,12 +34,9 @@ class DefaultMetaOp:
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         """
-        Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
-        Should set the following attributes:
-        input_masks - list of masks of input nodes (None if there is no mask in some input)
-        output_mask - resulting mask of node operation
-        :param node: node from graph to propagate mask through it
-        :param graph: graph of model to prune
+        Propagates the pruning mask through a node using pruning masks of all inputs and the current node (if any).
+        :param node: The graph node to propagate mask through it
+        :param graph: The model graph to prune
         """
         raise NotImplementedError
 
