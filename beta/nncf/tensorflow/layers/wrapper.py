@@ -51,18 +51,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         self._track_trackable(layer, name='layer')
 
         self.weights_attr_ops = {}
-        #TODO: add
-        # self.inputs_ops = OrderedDict()
-        # self.outputs_ops = OrderedDict()
-        # self.pre_callable_attr_ops = {}
-        # self.post_callable_attr_ops = {}
-        # self.pre_hook = {}
-        # self.post_hook = {}
-
-        # TODO: add
-        # if not hasattr(self, '_batch_input_shape') and hasattr(
-        #         layer, '_batch_input_shape'):
-        #     self._batch_input_shape = self.layer._batch_input_shape
 
         self._init_layer_call_fn_args()
         self._trainable_weights = []
@@ -117,12 +105,11 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self._trainable_weights.append(weight)
 
     def call(self, inputs, training=None):
-        if training is None:
-            training = tf.keras.backend.learning_phase()
+        training = self._get_training_value(training)
 
         self._apply_ops(training)
 
-        if self._expects_training_arg:
+        if self._layer_expects_training_arg:
             outputs = self.layer.call(inputs, training=training)
         else:
             outputs = self.layer.call(inputs)
@@ -169,7 +156,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     def _init_layer_call_fn_args(self):
         call_full_argspec = getfullargspec(self.layer.call)
         call_fn_args = self._get_call_fn_args(call_full_argspec)
-        self._expects_training_arg = "training" in call_fn_args
+        self._layer_expects_training_arg = "training" in call_fn_args
 
     @staticmethod
     def _get_call_fn_args(call_full_argspec):
@@ -177,6 +164,16 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         if all_args and all_args[0] == 'self':
             return all_args[1:]
         return all_args
+
+    @staticmethod
+    def _get_training_value(training):
+        if training is None:
+            training = tf.keras.backend.learning_phase()
+            if tf.is_tensor(training):
+                training = tf.cast(training, tf.bool)
+            else:
+                training = bool(training)
+        return training
 
     def get_config(self):
         config = super().get_config()

@@ -62,9 +62,7 @@ class FakeQuantize(tf.keras.layers.Layer):
             input_shape, InputType.INPUTS, self.name, self)
 
     def call(self, inputs, training=None):
-        if training is None:
-            training = tf.keras.backend.learning_phase()
-
+        training = self._get_training_value(training)
         return self._quantizer(inputs, self._quantizer_weights, training)
 
     def register_hook_pre_quantizer(self, hook):
@@ -76,6 +74,16 @@ class FakeQuantize(tf.keras.layers.Layer):
     def _create_quantizer(self, qspec: TFQuantizerSpec) -> Quantizer:
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(qspec)
+
+    @staticmethod
+    def _get_training_value(training):
+        if training is None:
+            training = tf.keras.backend.learning_phase()
+            if tf.is_tensor(training):
+                training = tf.cast(training, tf.bool)
+            else:
+                training = bool(training)
+        return training
 
     def get_config(self):
         config = super().get_config()
