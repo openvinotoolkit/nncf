@@ -17,8 +17,23 @@ from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 
-class MaskPropagator:
+class MaskPropagationAlgorithm:
+    """
+    Algorithm responsible for propagation masks across all nodes in the graph.
+    Before mask_propagation() you need set node.data['output_masks']
+    for nodes that have masks already defined.
+    """
     def __init__(self, graph: NNCFGraph, pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
+        """
+        Initializes MaskPropagationAlgorithm.
+
+        :param graph: Graph to work with.
+        :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
+                metatypes describing operations with common pruning mask application and propagation properties, e.g.
+                IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+                Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
+                and provide some output masks.
+        """
         self.graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
 

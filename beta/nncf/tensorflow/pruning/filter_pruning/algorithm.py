@@ -112,9 +112,8 @@ class FilterPruningController(BasePruningAlgoController):
         graph = convert_keras_model_to_nncf_graph(self._model)
         nncf_sorted_nodes = graph.topological_sort()
 
-        # 0. Clean mask in nodes
+        # 0. Removing masks at the nodes of the graph
         for node in nncf_sorted_nodes:
-            node.data.pop('input_mask', None)
             node.data.pop('output_mask', None)
 
         # 1. Calculate masks
@@ -185,9 +184,8 @@ class FilterPruningController(BasePruningAlgoController):
         graph = convert_keras_model_to_nncf_graph(self._model)
         nncf_sorted_nodes = graph.topological_sort()
 
-        # 0. Clean mask in nodes
+        # 0. Removing masks at the nodes of the graph
         for node in nncf_sorted_nodes:
-            node.data.pop('input_mask', None)
             node.data.pop('output_mask', None)
 
         # 1. Calculate importances for all groups of  filters

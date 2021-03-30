@@ -21,8 +21,8 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.export_helpers import DefaultMetaOp
-from nncf.common.pruning.mask_propagator import identity_mask_propagation
-from nncf.common.pruning.mask_propagator import get_input_masks
+from nncf.common.pruning.mask_propagation import identity_mask_propagation
+from nncf.common.pruning.mask_propagation import get_input_masks
 
 TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
 

@@ -17,9 +17,9 @@ from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
-from nncf.common.pruning.mask_propagator import identity_mask_propagation
-from nncf.common.pruning.mask_propagator import get_input_masks
-from nncf.common.pruning.mask_propagator import MaskPropagator
+from nncf.common.pruning.mask_propagation import identity_mask_propagation
+from nncf.common.pruning.mask_propagation import get_input_masks
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.dynamic_graph.graph import PTNNCFGraph
@@ -469,7 +469,7 @@ class PTStopMaskForwardOps(PTDefaultMetaOp):
         node.data['output_mask'] = None
 
 
-class ModelPruner(MaskPropagator):
+class ModelPruner(MaskPropagationAlgorithm):
     def __init__(self, model: NNCFNetwork, graph: PTNNCFGraph,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
         super().__init__(graph, pruning_operator_metatypes)
