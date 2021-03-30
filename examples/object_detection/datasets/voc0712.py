@@ -105,14 +105,12 @@ class VOCDetection(data.Dataset):
     name = 'voc'
 
     def __init__(self, root, image_sets=(('2007', 'trainval'), ('2012', 'trainval')), transform=None,
-                 target_transform=VOCAnnotationTransform(keep_difficult=False), dataset_name='VOC2012',
-                 return_image_info=False, rgb=True):
+                 target_transform=VOCAnnotationTransform(keep_difficult=False), return_image_info=False, rgb=True):
         super().__init__()
         self.rgb = rgb
         self.root = root
         self.image_set = image_sets
         self.transform = transform
-        self.dataset_name = dataset_name
         self.target_transform = target_transform
         self.return_image_info = return_image_info
         self._annopath = os.path.join('%s', 'Annotations', '%s.xml')
