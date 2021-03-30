@@ -103,13 +103,6 @@ def magnitude_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
-            self.sparsity_init = 0
-
-        def set_sparsity_init(self, sparsity_init):
-            self.sparsity_init = sparsity_init
-
-        def get_sparsity_init(self):
-            return self.sparsity_init
 
     return MockSparsityAlgo()
 
@@ -154,12 +147,13 @@ class TestPolynomialSparsityScheduler:
         ref_sparsity_levels = concavity_and_ref_sparsity_levels[1]
         params = {
             "power": 2,
+            'sparsity_init': 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 2,
             "sparsity_freeze_epoch": 3,
             "concave": concave,
         }
-        magnitude_algo_mock.set_sparsity_init(0.1)
+
         scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
 
@@ -197,6 +191,7 @@ class TestPolynomialSparsityScheduler:
         steps_per_epoch = 3
         params = {
             "power": 2,
+            'sparsity_init': 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
@@ -205,7 +200,6 @@ class TestPolynomialSparsityScheduler:
             "steps_per_epoch": steps_per_epoch
         }
 
-        magnitude_algo_mock.set_sparsity_init(0.1)
         scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
 

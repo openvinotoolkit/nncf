@@ -269,9 +269,3 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         algo_name = self._registered_name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'
-
-
-class PTStubCompressionScheduler(CompressionScheduler):
-
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
