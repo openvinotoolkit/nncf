@@ -11,15 +11,14 @@
  limitations under the License.
 """
 
-from abc import ABC, abstractmethod
+from nncf.api.compression import CompressionAlgorithmController
 
 
-class SparsityController(ABC):
+class SparsityController(CompressionAlgorithmController):
     """
     This is the class from which all sparsity controllers inherit.
     """
 
-    @abstractmethod
     def set_sparsity_level(self, sparsity_level: float):
         """
         Sets the sparsity level that should be applied to the model's weights.
@@ -27,7 +26,6 @@ class SparsityController(ABC):
         :param sparsity_level: Sparsity level that should be applied to the model's weights.
         """
 
-    @abstractmethod
     def freeze(self):
         """
         Freezes all sparsity masks. Sparsity masks will not be trained after calling this method.
