@@ -22,16 +22,15 @@ from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 
 @NNCF_CUSTOM_OBJECTS.register()
 class FakeQuantize(tf.keras.layers.Layer):
-    def __init__(self, config: TFQuantizerSpec, op_name: str, data_format: str ='channels_last', **kwargs):
+    def __init__(self, config: TFQuantizerSpec, data_format: str ='channels_last', **kwargs):
         """
         Create a FakeQuantize layer.
         """
         super().__init__(**kwargs)
         self.mode = config.mode
         self.data_format = data_format
-        self.op_name = op_name
 
-        self._quantizer = self._create_quantizer(op_name, config)
+        self._quantizer = self._create_quantizer(config)
         self._quantizer_weights = {}
 
     @property
@@ -54,6 +53,10 @@ class FakeQuantize(tf.keras.layers.Layer):
     def enabled(self):
         return self._quantizer.enabled
 
+    @property
+    def op_name(self):
+        return self._quantizer.name
+
     @enabled.setter
     def enabled(self, v):
         self._quantizer.enabled = v
@@ -72,7 +75,8 @@ class FakeQuantize(tf.keras.layers.Layer):
     def apply_minmax_initialization(self, min_values, max_values, min_range=0.1, eps=0.01):
         self._quantizer.apply_minmax_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
 
-    def _create_quantizer(self, op_name, qspec: TFQuantizerSpec) -> Quantizer:
+    def _create_quantizer(self, qspec: TFQuantizerSpec) -> Quantizer:
+        op_name = Quantizer.create_operation_name(self.name, 'inputs')
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qspec.mode)
         return quantizer_cls(op_name, qspec)
 

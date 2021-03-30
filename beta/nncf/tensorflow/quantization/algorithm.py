@@ -140,15 +140,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            op_name = Quantizer.create_operation_name(original_node_name, 'inputs')
+            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
+                                                                           half_range=False),
+                                               name=fake_quantize_name)
+            op_name = fake_quantize_layer.op_name
             if op_name in self._op_names:
                 raise RuntimeError('Attempt to insert FakeQuantize layer two times on one place')
 
             self._op_names.add(op_name)
-            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
-                                                                           half_range=False),
-                                               name=fake_quantize_name,
-                                               op_name=op_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),
