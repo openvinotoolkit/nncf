@@ -58,7 +58,7 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "wheel>=0.36.1"]
 
 python_version = sys.version_info[:2]
-if python_version[0] < 3 or python_version[1] < 6:
+if python_version < (3, 6):
     print("Only Python >= 3.6 is supported")
     sys.exit(0)
 
