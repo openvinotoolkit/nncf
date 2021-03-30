@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+# pylint: disable=E1120
+# pylint: disable=E1124
 
 import math
 import tensorflow as tf

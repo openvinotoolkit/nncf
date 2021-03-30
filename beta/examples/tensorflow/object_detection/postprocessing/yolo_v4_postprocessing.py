@@ -13,7 +13,7 @@
 
 import numpy as np
 import copy
-from scipy.special import expit, softmax
+from scipy.special import expit, softmax # pylint: disable=E0611
 
 
 def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, use_softmax=False):
