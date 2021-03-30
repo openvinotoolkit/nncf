@@ -36,7 +36,6 @@ from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.compression import CompressionLevel
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 
