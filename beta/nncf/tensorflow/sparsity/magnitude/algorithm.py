@@ -16,6 +16,7 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -109,49 +110,48 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         return MagnitudeSparsityController(model, self.config)
 
 
-class MagnitudeSparsityController(TFCompressionAlgorithmController):
+class MagnitudeSparsityController(TFCompressionAlgorithmController, SparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss.
     """
+
     def __init__(self, target_model, config):
         super().__init__(target_model)
         params = config.get('params', {})
-        self.sparsity_level = self.threshold = 0
-        self.frozen = False
-        self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
-        self.sparsity_init = config.get('sparsity_init', 0)
-        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
+        self._threshold = 0
+        self._frozen = False
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+
+        sparsity_init = config.get('sparsity_init', 0)
+        params['sparsity_init'] = sparsity_init
+        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
         self._scheduler = scheduler_cls(self, params)
-        self.set_sparsity_level(self.sparsity_init)
+        self.set_sparsity_level(sparsity_init)
 
     def strip_model(self, model):
         return strip_model_from_masks(model)
 
     def freeze(self):
-        self.frozen = True
+        self._frozen = True
 
     def set_sparsity_level(self, sparsity_level):
-        if not self.frozen:
+        if not self._frozen:
             if sparsity_level >= 1 or sparsity_level < 0:
                 raise AttributeError(
                     'Sparsity level should be within interval [0,1), actual value to set is: {}'.format(sparsity_level))
-            self.sparsity_level = sparsity_level
 
-            self.threshold = self._select_threshold()
-            self._set_masks_for_threshold(self.threshold)
+            self._threshold = self._select_threshold(sparsity_level)
+            self._set_masks_for_threshold(self._threshold)
 
-    def get_sparsity_init(self):
-        return self.sparsity_init
-
-    def _select_threshold(self):
+    def _select_threshold(self, sparsity_level):
         all_weights = self._collect_all_weights()
         if not all_weights:
             return 0.0
         all_weights_tensor = tf.sort(tf.concat(all_weights, 0))
-        index = int(tf.cast(tf.size(all_weights_tensor), all_weights_tensor.dtype) * self.sparsity_level)
+        index = int(tf.cast(tf.size(all_weights_tensor), all_weights_tensor.dtype) * sparsity_level)
         threshold = all_weights_tensor[index].numpy()
         return threshold
 
@@ -164,7 +164,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
                     if isinstance(op, BinaryMask):
                         wrapped_layer.ops_weights[op_name]['mask'].assign(
                             calc_magnitude_binary_mask(weight,
-                                                       self.weight_importance,
+                                                       self._weight_importance_fn,
                                                        threshold_val)
                         )
 
@@ -175,7 +175,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
                 for op in ops.values():
                     if isinstance(op, BinaryMask):
                         all_weights.append(tf.reshape(
-                            self.weight_importance(wrapped_layer.layer_weights[weight_attr]),
+                            self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
                             [-1]))
         return all_weights
 
@@ -218,7 +218,7 @@ class MagnitudeSparsityController(TFCompressionAlgorithmController):
         raw_sparsity_statistics.update({
             'sparsity_rate_for_sparsified_modules': sparsity_rate_for_sparsified_modules,
             'sparsity_rate_for_model': sparsity_rate_for_model,
-            'sparsity_threshold': self.threshold
+            'sparsity_threshold': self._threshold
         })
 
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)

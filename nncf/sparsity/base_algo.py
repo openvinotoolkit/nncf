@@ -19,6 +19,7 @@ from texttable import Texttable
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.sparsity.controller import SparsityController
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
@@ -66,25 +67,16 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return BaseSparsityAlgoController(target_model, self._sparsified_module_info)
-
     def create_weight_sparsifying_operation(self, target_module):
         raise NotImplementedError
 
 
-class BaseSparsityAlgoController(PTCompressionAlgorithmController):
+class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self.sparsified_module_info = sparsified_module_info
-
-    def freeze(self):
-        raise NotImplementedError
-
-    def set_sparsity_level(self, sparsity_level: float):
-        raise NotImplementedError
 
     @property
     def sparsified_weights_count(self):

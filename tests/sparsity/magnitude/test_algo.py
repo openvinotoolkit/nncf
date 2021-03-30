@@ -16,7 +16,7 @@ import torch
 from copy import deepcopy
 from pytest import approx
 
-from nncf.compression_method_api import PTStubCompressionScheduler
+from nncf.api.compression import CompressionLevel
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.algo import MagnitudeSparsityController
@@ -45,7 +45,8 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     stats = compression_ctrl.statistics()
     assert stats["sparsity_threshold"] == approx(0.24, 0.1)
-    assert isinstance(compression_ctrl.weight_importance, type(normed_magnitude))
+    # pylint: disable=protected-access
+    assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
     for sparse_module in sparse_model_conv.values():
         store = []
@@ -227,13 +228,11 @@ def test_can_freeze_binary_masks():
     for sparse_layer in compression_ctrl.sparsified_module_info:
         assert sparse_layer.operand.frozen
 
-def test_create_magnitude_algo_with_stub_scheduler():
+def test_create_magnitude_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': "magnitude_sparsity", "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
-
-    # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)
+    assert compression_ctrl.compression_level() == CompressionLevel.FULL
 
 def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
     module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'
