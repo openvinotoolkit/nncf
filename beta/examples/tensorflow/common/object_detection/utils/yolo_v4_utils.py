@@ -20,7 +20,7 @@ def rand(a=0, b=1):
     return np.random.rand()*(b-a) + a
 
 
-def letterbox_resize(image, target_size, return_padding_info=False):
+def letterbox_resize(image, target_size):
     """
     Resize image with unchanged aspect ratio using padding
 
@@ -58,10 +58,7 @@ def letterbox_resize(image, target_size, return_padding_info=False):
     new_image = Image.new('RGB', target_size, (128,128,128))
     new_image.paste(image, offset)
 
-    if return_padding_info:
-        return new_image, padding_size, offset
-    else:
-        return new_image
+    return new_image
 
 
 def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_jitter=0.7):
@@ -89,7 +86,8 @@ def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_ji
     target_w, target_h = target_size
 
     # generate random aspect ratio & scale for resize
-    rand_aspect_ratio = target_w/target_h * rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter)/rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter)
+    rand_aspect_ratio = (target_w/target_h * rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter)) \
+                        / (rand(1-aspect_ratio_jitter,1+aspect_ratio_jitter))
     rand_scale = rand(scale_jitter, 1/scale_jitter)
 
     # calculate random padding size and resize
@@ -198,7 +196,7 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1):  # box1(4,n),
     return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 / (w1 * h1 + 1e-16) > area_thr) & (ar < ar_thr)  # candidates
 
 
-def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size):
+def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R0912
     # adjust & merge mosaic samples bboxes as following area order:
     # -----------
     # |     |   |
@@ -218,33 +216,33 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size):
             if i == 0: # bboxes[0] is for top-left area
                 if y_min > crop_y or x_min > crop_x:
                     continue
-                if y_max > crop_y and y_min < crop_y:
+                if y_min < crop_y < y_max:
                     y_max = crop_y
-                if x_max > crop_x and x_min < crop_x:
+                if x_min < crop_x < x_max:
                     x_max = crop_x
 
             if i == 1: # bboxes[1] is for bottom-left area
                 if y_max < crop_y or x_min > crop_x:
                     continue
-                if y_max > crop_y and y_min < crop_y:
+                if y_min < crop_y < y_max:
                     y_min = crop_y
-                if x_max > crop_x and x_min < crop_x:
+                if x_min < crop_x < x_max:
                     x_max = crop_x
 
             if i == 2: # bboxes[2] is for bottom-right area
                 if y_max < crop_y or x_max < crop_x:
                     continue
-                if y_max > crop_y and y_min < crop_y:
+                if y_min < crop_y < y_max:
                     y_min = crop_y
-                if x_max > crop_x and x_min < crop_x:
+                if x_min < crop_x < x_max:
                     x_min = crop_x
 
             if i == 3: # bboxes[3] is for top-right area
                 if y_min > crop_y or x_max < crop_x:
                     continue
-                if y_max > crop_y and y_min < crop_y:
+                if y_min < crop_y < y_max:
                     y_max = crop_y
-                if x_max > crop_x and x_min < crop_x:
+                if x_min < crop_x < x_max:
                     x_min = crop_x
 
             if abs(x_max-x_min) < max(10, width*0.01) or abs(y_max-y_min) < max(10, height*0.01):
@@ -284,9 +282,8 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
         boxes_data: augmented batch bboxes data.
     """
     do_augment = rand() < prob
-    if not do_augment:
-        return image_data, boxes_data
-    else:
+
+    if do_augment:
         batch_size = len(image_data)
         assert batch_size >= 4, 'mosaic augment need batch size >= 4'
 
@@ -307,7 +304,7 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
         height, width = image_data[0].shape[:2]
         #each batch has batch_size images, so we also need to
         #generate batch_size mosaic images
-        for i in range(batch_size):
+        for _ in range(batch_size):
             images, bboxes = get_mosaic_samples()
 
             #crop_x = np.random.randint(int(width*min_offset), int(width*(1 - min_offset)))
@@ -344,79 +341,10 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
 
         new_images = np.stack(new_images)
         new_boxes = np.array(new_boxes)
-        return new_images, new_boxes
+        image_data = new_images
+        boxes_data = new_boxes
 
-
-def merge_cutmix_bboxes(bboxes, cut_xmin, cut_ymin, cut_xmax, cut_ymax, image_size):
-    # adjust & merge cutmix samples bboxes as following area order:
-    # -----------------
-    # |               |
-    # |  0            |
-    # |       ____    |
-    # |      |    |   |
-    # |      |  1 |   |
-    # |      |____|   |
-    # |               |
-    # -----------------
-    assert bboxes.shape[0] == 2, 'cutmix sample number should be 2'
-    max_boxes = bboxes.shape[1]
-    height, width = image_size
-    merge_bbox = []
-    for i in range(bboxes.shape[0]):
-        for box in bboxes[i]:
-            x_min, y_min, x_max, y_max = box[0], box[1], box[2], box[3]
-
-            if i == 0: # bboxes[0] is for background area
-                if x_min > cut_xmin and x_max < cut_xmax and y_min > cut_ymin and y_max < cut_ymax:
-                    # all box in padding area, drop it
-                    continue
-                elif x_min > cut_xmax or x_max < cut_xmin or y_min > cut_ymax or y_max < cut_ymin:
-                    # all box in background area, do nothing
-                    pass
-                else:
-                    # TODO: currently it is a BAD strategy to adjust box in background area, so seems
-                    # CutMix could not be used directly in object detection data augment
-                    if x_max > cut_xmin and x_max < cut_xmax:
-                        x_max = cut_xmin
-                    elif x_min > cut_xmin and x_min < cut_xmax:
-                        x_min = cut_xmax
-                    if y_max > cut_ymin and y_max < cut_ymax:
-                        y_max = cut_ymin
-                    elif y_min > cut_ymin and y_min < cut_ymax:
-                        y_min = cut_ymax
-
-            if i == 1: # bboxes[1] is for padding area
-                if x_min > cut_xmin and x_max < cut_xmax and y_min > cut_ymin and y_max < cut_ymax :
-                    # all box in padding area, do nothing
-                    pass
-                elif x_min > cut_xmax or x_max < cut_xmin or y_min > cut_ymax or y_max < cut_ymin:
-                    # all box in background area, drop it
-                    continue
-                else:
-                    # limit box in padding area
-                    if x_max > cut_xmax:
-                        x_max = cut_xmax
-                    if x_min < cut_xmin:
-                        x_min = cut_xmin
-                    if y_max > cut_ymax:
-                        y_max = cut_ymax
-                    if y_min < cut_ymin:
-                        y_min = cut_ymin
-
-            if abs(x_max-x_min) < max(10, width*0.01) or abs(y_max-y_min) < max(10, height*0.01):
-                #if the adjusted bbox is too small, bypass it
-                continue
-
-            merge_bbox.append([x_min, y_min, x_max, y_max, box[4]])
-
-    if len(merge_bbox) > max_boxes:
-        merge_bbox = merge_bbox[:max_boxes]
-
-    box_data = np.zeros((max_boxes,5))
-    if len(merge_bbox) > 0:
-        box_data[:len(merge_bbox)] = merge_bbox
-    return box_data
-
+    return image_data, boxes_data
 
 def normalize_image(image):
     """
@@ -433,26 +361,3 @@ def normalize_image(image):
     image = image / 255.0
 
     return image
-
-
-def preprocess_image(image, model_image_size):
-    """
-    Prepare model input image data with letterbox
-    resize, normalize and dim expansion
-
-    # Arguments
-        image: origin input image
-            PIL Image object containing image data
-        model_image_size: model input image size
-            tuple of format (height, width).
-
-    # Returns
-        image_data: numpy array of image data for model input.
-    """
-    #resized_image = cv2.resize(image, tuple(reversed(model_image_size)), cv2.INTER_AREA)
-    resized_image = letterbox_resize(image, tuple(reversed(model_image_size)))
-    image_data = np.asarray(resized_image).astype('float32')
-    image_data = normalize_image(image_data)
-    image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-    return image_data
-

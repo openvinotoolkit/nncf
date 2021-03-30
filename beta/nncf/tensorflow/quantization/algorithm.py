@@ -69,8 +69,12 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         for quantizer_group in QUANTIZER_GROUPS:
             self._parse_group_params(self.config, quantizer_group)
 
-    def build_controller(self, model, initializer_config):
-        return QuantizationController(model, initializer_config)
+        # temporal solution
+        self.compression_config = config.get('compression', {})
+        self.initializer_config = self.compression_config.get('initializer', {})
+
+    def build_controller(self, model):
+        return QuantizationController(model, self.initializer_config)
 
     def _parse_group_params(self, config, quantizer_group):
         params_dict = config.get(quantizer_group, {})

@@ -675,31 +675,6 @@ class YOLOv4Loss:
         enclose_diagonal = K.sum(K.square(enclose_wh), axis=-1)
         # calculate DIoU, add epsilon in denominator to avoid dividing by 0
         diou = iou - 1.0 * (center_distance) / (enclose_diagonal + K.epsilon())
-
-        if use_ciou:
-            # calculate param v and alpha to extend to CIoU
-            v = 4 * K.square(tf.math.atan2(b_true_wh[..., 0], b_true_wh[..., 1]) - tf.math.atan2(b_pred_wh[..., 0],
-                                                                                                 b_pred_wh[..., 1])) / (
-                            math.pi * math.pi)
-
-            # a trick: here we add an non-gradient coefficient w^2+h^2 to v to customize it's back-propagate,
-            #          to match related description for equation (12) in original paper
-            #
-            #
-            #          v'/w' = (8/pi^2) * (arctan(wgt/hgt) - arctan(w/h)) * (h/(w^2+h^2))          (12)
-            #          v'/h' = -(8/pi^2) * (arctan(wgt/hgt) - arctan(w/h)) * (w/(w^2+h^2))
-            #
-            #          The dominator w^2+h^2 is usually a small value for the cases
-            #          h and w ranging in [0; 1], which is likely to yield gradient
-            #          explosion. And thus in our implementation, the dominator
-            #          w^2+h^2 is simply removed for stable convergence, by which
-            #          the step size 1/(w^2+h^2) is replaced by 1 and the gradient direction
-            #          is still consistent with Eqn. (12).
-            v = v * tf.stop_gradient(b_pred_wh[..., 0] * b_pred_wh[..., 0] + b_pred_wh[..., 1] * b_pred_wh[..., 1])
-
-            alpha = v / (1.0 - iou + v + K.epsilon())
-            diou = diou - alpha * v
-
         diou = K.expand_dims(diou, -1)
         return diou
 
@@ -707,7 +682,7 @@ class YOLOv4Loss:
         label_smoothing = K.constant(label_smoothing, dtype=K.floatx())
         return y_true * (1.0 - label_smoothing) + 0.5 * label_smoothing
 
-    def yolo3_decode(self, feats, anchors, num_classes, input_shape, scale_x_y=None, calc_loss=False):
+    def yolo3_decode(self, feats, anchors, num_classes, input_shape, scale_x_y=None):
         """Decode final layer features to bounding box parameters."""
         num_anchors = len(anchors)
         # Reshape to batch, height, width, num_anchors, box_params.
@@ -736,14 +711,12 @@ class YOLOv4Loss:
             box_xy_tmp = K.sigmoid(feats[..., :2]) * scale_x_y - (scale_x_y - 1) / 2
             box_xy = (box_xy_tmp + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
         else:
-            box_xy = (K.sigmoid(feats[..., :2]) + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
-        box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / (K.cast(input_shape[..., ::-1], K.dtype(feats)) + K.epsilon())
-        box_confidence = K.sigmoid(feats[..., 4:5])
-        box_class_probs = K.sigmoid(feats[..., 5:])
+            box_xy = (K.sigmoid(feats[..., :2]) + grid) / (K.cast(grid_shape[..., ::-1], K.dtype(feats))
+                                                           + K.epsilon())
+        box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / (K.cast(input_shape[..., ::-1], K.dtype(feats))
+                                                            + K.epsilon())
 
-        if calc_loss == True:
-            return grid, feats, box_xy, box_wh
-        return box_xy, box_wh, box_confidence, box_class_probs
+        return feats, box_xy, box_wh
 
     def get_anchors(self, anchors_path):
         """loads the anchors from a file"""
@@ -752,7 +725,10 @@ class YOLOv4Loss:
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
 
-    def __call__(self, labels, outputs, anchors, num_classes, ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True, use_focal_loss=False, use_focal_obj_loss=False, use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
+    def __call__(self, labels, outputs, anchors, num_classes,
+                 ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True,
+                 use_focal_loss=False, use_focal_obj_loss=False,
+                 use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
         """
         YOLOv3 loss function.
 
@@ -797,8 +773,8 @@ class YOLOv4Loss:
             else:
                 true_objectness_probs = object_mask
 
-            grid, raw_pred, pred_xy, pred_wh = self.yolo3_decode(yolo_outputs[i],
-                 anchors[anchor_mask[i]], num_classes, input_shape, scale_x_y=scale_x_y[i], calc_loss=True)
+            raw_pred, pred_xy, pred_wh = self.yolo3_decode(yolo_outputs[i],
+                 anchors[anchor_mask[i]], num_classes, input_shape, scale_x_y=scale_x_y[i])
             pred_box = K.concatenate([pred_xy, pred_wh])
 
             box_loss_scale = 2 - y_true[i][...,2:3]*y_true[i][...,3:4]
@@ -821,8 +797,12 @@ class YOLOv4Loss:
                 # Focal loss for objectness confidence
                 confidence_loss = self.sigmoid_focal_loss(true_objectness_probs, raw_pred[...,4:5])
             else:
-                confidence_loss = object_mask * K.binary_crossentropy(true_objectness_probs, raw_pred[...,4:5], from_logits=True)+ \
-                    (1-object_mask) * K.binary_crossentropy(object_mask, raw_pred[...,4:5], from_logits=True) * ignore_mask
+                confidence_loss = (object_mask * K.binary_crossentropy(true_objectness_probs,
+                                                                       raw_pred[...,4:5],
+                                                                       from_logits=True)) \
+                                  + ((1-object_mask) * ignore_mask * K.binary_crossentropy(object_mask,
+                                                                                           raw_pred[...,4:5],
+                                                                                           from_logits=True))
 
             if use_focal_loss:
                 # Focal loss for classification score
@@ -833,10 +813,14 @@ class YOLOv4Loss:
             else:
                 if use_softmax_loss:
                     # use softmax style classification output
-                    class_loss = object_mask * K.expand_dims(K.categorical_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True), axis=-1)
+                    class_loss = object_mask \
+                                 * K.expand_dims(K.categorical_crossentropy(true_class_probs,
+                                                                            raw_pred[...,5:],
+                                                                            from_logits=True), axis=-1)
                 else:
                     # use sigmoid style classification output
-                    class_loss = object_mask * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
+                    class_loss = object_mask \
+                                 * K.binary_crossentropy(true_class_probs, raw_pred[...,5:], from_logits=True)
 
             raw_true_box = y_true[i][...,0:4]
             diou = self.box_diou(raw_true_box, pred_box)

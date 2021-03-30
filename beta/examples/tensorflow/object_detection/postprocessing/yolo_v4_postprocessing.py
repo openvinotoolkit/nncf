@@ -73,7 +73,7 @@ def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, us
 
     if use_softmax:
         # Softmax class scores
-        class_scores = softmax(prediction[..., 5:], axis=-1)
+        class_scores = softmax(prediction[..., 5:])
     else:
         # Sigmoid class scores
         class_scores = expit(prediction[..., 5:])
@@ -114,7 +114,6 @@ def yolo_correct_boxes(predictions, img_shape, model_image_size):
     # model_image_size & image_shape should be (height, width) format
     model_image_size = np.array(model_image_size, dtype='float32')
     image_shape = np.array(img_shape, dtype='float32')
-    height, width = image_shape
 
     new_shape = np.round(image_shape * np.min(model_image_size / image_shape))
     offset = (model_image_size - new_shape) / 2. / model_image_size
@@ -294,8 +293,7 @@ def box_diou_matrix(boxes1, boxes2):
     return diou
 
 
-def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold, confidence=0.1, use_cluster=True,
-                           use_diou=True, use_weighted=True, use_matrix_nms=False, use_spm=False):
+def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold):
     """
     Fast NMS/Cluster NMS/Matrix NMS bbox post process
     Reference Paper:
@@ -351,95 +349,45 @@ def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold, confidence=0.1
         num_boxes = b_nms.shape[0]
 
         # get IoU/DIoU matrix (upper triangular matrix)
-        if use_diou:
-            iou_matrix = box_diou_matrix(b_nms, b_nms)
-        else:
-            iou_matrix = box_iou_matrix(b_nms, b_nms)
+        iou_matrix = box_diou_matrix(b_nms, b_nms)
+
         iou_matrix = np.triu(iou_matrix, k=1)
         max_iou = np.max(iou_matrix, axis=0)
         updated_iou_matrix = copy.deepcopy(iou_matrix)
 
         # Cluster loop
-        if use_cluster:
-            for i in range(200):
-                prev_iou_matrix = copy.deepcopy(updated_iou_matrix)
-                max_iou = np.max(prev_iou_matrix, axis=0)
-                keep_diag = np.diag((max_iou < iou_threshold).astype(np.float32))
-                updated_iou_matrix = np.dot(keep_diag, iou_matrix)
-                if (prev_iou_matrix == updated_iou_matrix).all():
-                    break
+        for _ in range(200):
+            prev_iou_matrix = copy.deepcopy(updated_iou_matrix)
+            max_iou = np.max(prev_iou_matrix, axis=0)
+            keep_diag = np.diag((max_iou < iou_threshold).astype(np.float32))
+            updated_iou_matrix = np.dot(keep_diag, iou_matrix)
+            if (prev_iou_matrix == updated_iou_matrix).all():
+                break
 
-        if use_matrix_nms:
-            # Matrix NMS
-            max_iou_expand = np.tile(max_iou, (num_boxes, 1)).T  # (num_boxes)x(num_boxes)
+        # filter low score box with iou_threshold
+        keep_mask = max_iou < iou_threshold
 
-            def get_decay_factor(method='gauss', sigma=0.5):
-                if method == 'gauss':
-                    # gaussian decay
-                    decay_factor = np.exp(-(iou_matrix ** 2 - max_iou_expand ** 2) / sigma)
-                else:
-                    # linear decay
-                    decay_factor = (1 - iou_matrix) / (1 - max_iou_expand)
+        # generate weights matrix with box score and final IoU matrix
+        weights = (updated_iou_matrix * (updated_iou_matrix > iou_threshold).astype(np.float32) + np.eye(
+            num_boxes)) * (s_nms.reshape((1, num_boxes)))
 
-                # decay factor: 1xN
-                decay_factor = np.min(decay_factor, axis=0)
-                # clamp decay factor to <= 1
-                decay_factor = np.minimum(decay_factor, 1.0)
-                return decay_factor
+        # convert box format to (xmin,ymin,xmax,ymax) for weighted average,
+        # and expand to NxN array
+        xmin_expand = np.tile(b_nms[:, 0], (num_boxes, 1))  # (num_boxes)x(num_boxes)
+        ymin_expand = np.tile(b_nms[:, 1], (num_boxes, 1))  # (num_boxes)x(num_boxes)
+        xmax_expand = np.tile(b_nms[:, 0] + b_nms[:, 2], (num_boxes, 1))  # (num_boxes)x(num_boxes)
+        ymax_expand = np.tile(b_nms[:, 1] + b_nms[:, 3], (num_boxes, 1))  # (num_boxes)x(num_boxes)
 
-            # decay factor for box score
-            decay_factor = get_decay_factor()
+        # apply weighted average to all the candidate boxes
+        weightsum = weights.sum(axis=1)
+        xmin_expand = np.true_divide((xmin_expand * weights).sum(axis=1), weightsum)
+        ymin_expand = np.true_divide((ymin_expand * weights).sum(axis=1), weightsum)
+        xmax_expand = np.true_divide((xmax_expand * weights).sum(axis=1), weightsum)
+        ymax_expand = np.true_divide((ymax_expand * weights).sum(axis=1), weightsum)
 
-            # apply decay factor to punish box score,
-            # and filter box with confidence threshold
-            s_matrix_decay = s_nms * decay_factor
-            keep_mask = s_matrix_decay >= confidence
-
-        elif use_spm:
-            # apply SPM(Score Penalty Mechanism)
-            if use_diou:
-                # TODO: Cluster SPM distance NMS couldn't achieve good result, may need to double check
-                # currently we fallback to normal SPM
-                #
-                # Reference:
-                # https://github.com/Zzh-tju/CIoU/blob/master/layers/functions/detection.py
-                # https://zhuanlan.zhihu.com/p/157900024
-
-                # diou_matrix = box_diou_matrix(b_nms, b_nms)
-                # flag = (updated_iou_matrix >= 0).astype(np.float32)
-                # penalty_coef = np.prod(np.minimum(np.exp(-(updated_iou_matrix**2)/0.2) + diou_matrix*((updated_iou_matrix>0).astype(np.float32)), flag), axis=0)
-                penalty_coef = np.prod(np.exp(-(updated_iou_matrix ** 2) / 0.2), axis=0)
-            else:
-                penalty_coef = np.prod(np.exp(-(updated_iou_matrix ** 2) / 0.2), axis=0)
-            s_spm = penalty_coef * s_nms
-            keep_mask = s_spm >= confidence
-
-        else:
-            # filter low score box with iou_threshold
-            keep_mask = max_iou < iou_threshold
-
-        if use_weighted:
-            # generate weights matrix with box score and final IoU matrix
-            weights = (updated_iou_matrix * (updated_iou_matrix > iou_threshold).astype(np.float32) + np.eye(
-                num_boxes)) * (s_nms.reshape((1, num_boxes)))
-
-            # convert box format to (xmin,ymin,xmax,ymax) for weighted average,
-            # and expand to NxN array
-            xmin_expand = np.tile(b_nms[:, 0], (num_boxes, 1))  # (num_boxes)x(num_boxes)
-            ymin_expand = np.tile(b_nms[:, 1], (num_boxes, 1))  # (num_boxes)x(num_boxes)
-            xmax_expand = np.tile(b_nms[:, 0] + b_nms[:, 2], (num_boxes, 1))  # (num_boxes)x(num_boxes)
-            ymax_expand = np.tile(b_nms[:, 1] + b_nms[:, 3], (num_boxes, 1))  # (num_boxes)x(num_boxes)
-
-            # apply weighted average to all the candidate boxes
-            weightsum = weights.sum(axis=1)
-            xmin_expand = np.true_divide((xmin_expand * weights).sum(axis=1), weightsum)
-            ymin_expand = np.true_divide((ymin_expand * weights).sum(axis=1), weightsum)
-            xmax_expand = np.true_divide((xmax_expand * weights).sum(axis=1), weightsum)
-            ymax_expand = np.true_divide((ymax_expand * weights).sum(axis=1), weightsum)
-
-            # stack the weighted average boxes and convert back to (x,y,w,h)
-            b_nms = np.stack([xmin_expand, ymin_expand, xmax_expand - xmin_expand, ymax_expand - ymin_expand],
-                             axis=1)
+        # stack the weighted average boxes and convert back to (x,y,w,h)
+        b_nms = np.stack([xmin_expand, ymin_expand, xmax_expand - xmin_expand, ymax_expand - ymin_expand],
+                         axis=1)
 
         # keep NMSed boxes
         b_nms = b_nms[keep_mask]
@@ -463,8 +411,7 @@ def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold, confidence=0.1
     return nboxes, nclasses, nscores
 
 
-def nms_boxes(boxes, classes, scores, iou_threshold, confidence=0.1, use_diou=True, is_soft=False,
-              use_exp=False, sigma=0.5):
+def nms_boxes(boxes, classes, scores, iou_threshold):
     nboxes, nclasses, nscores = [], [], []
     for c in set(classes):
         # handle data for one class
@@ -492,33 +439,15 @@ def nms_boxes(boxes, classes, scores, iou_threshold, confidence=0.1, use_diou=Tr
             c_nms[[i, 0]] = c_nms[[0, i]]
             s_nms[[i, 0]] = s_nms[[0, i]]
 
-            if use_diou:
-                iou = box_diou(b_nms)
-                # iou = box_diou_matrix(b_nms, b_nms)[0][1:]
-            else:
-                iou = box_iou(b_nms)
-                # iou = box_iou_matrix(b_nms, b_nms)[0][1:]
+            iou = box_diou(b_nms)
 
             # drop the last line since it has been record
             b_nms = b_nms[1:]
             c_nms = c_nms[1:]
             s_nms = s_nms[1:]
 
-            if is_soft:
-                # Soft-NMS
-                if use_exp:
-                    # score refresh formula:
-                    # score = score * exp(-(iou^2)/sigma)
-                    s_nms = s_nms * np.exp(-(iou * iou) / sigma)
-                else:
-                    # score refresh formula:
-                    # score = score * (1 - iou) if iou > threshold
-                    depress_mask = np.where(iou > iou_threshold)[0]
-                    s_nms[depress_mask] = s_nms[depress_mask] * (1 - iou[depress_mask])
-                keep_mask = np.where(s_nms >= confidence)[0]
-            else:
-                # normal Hard-NMS
-                keep_mask = np.where(iou <= iou_threshold)[0]
+            # normal Hard-NMS
+            keep_mask = np.where(iou <= iou_threshold)[0]
 
             # keep needed box for next loop
             b_nms = b_nms[keep_mask]
@@ -568,22 +497,15 @@ def yolo_handle_predictions(predictions, max_boxes=100, confidence=0.1, iou_thre
     classes = box_classes[pos]
     scores = box_class_scores[pos]
 
-    if use_cluster_nms:
-        # use Fast/Cluster NMS for boxes postprocess
-        n_boxes, n_classes, n_scores = fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold,
-                                                              confidence=confidence)
-    else:
-        # Boxes, Classes and Scores returned from NMS
-        n_boxes, n_classes, n_scores = nms_boxes(boxes, classes, scores, iou_threshold, confidence=confidence)
+    # Boxes, Classes and Scores returned from NMS
+    n_boxes, n_classes, n_scores = nms_boxes(boxes, classes, scores, iou_threshold)
 
     if n_boxes:
         boxes = np.concatenate(n_boxes)
         classes = np.concatenate(n_classes).astype('int32')
         scores = np.concatenate(n_scores)
         boxes, classes, scores = filter_boxes(boxes, classes, scores, max_boxes)
-
         return boxes, classes, scores
-
     else:
         return [], [], []
 
@@ -643,28 +565,17 @@ def yolo3_postprocess_np(yolo_outputs, image_shape, anchors, num_classes, model_
 
 def convert_coco_category(category_id):
     """
-    convert continuous coco class id (0~79) to discontinuous coco category id
+    Convert continuous coco class id to discontinuous coco category id (0..79 --> 0..90)
     """
-    if category_id >= 0 and category_id <= 10:
-        category_id = category_id + 1
-    elif category_id >= 11 and category_id <= 23:
-        category_id = category_id + 2
-    elif category_id >= 24 and category_id <= 25:
-        category_id = category_id + 3
-    elif category_id >= 26 and category_id <= 39:
-        category_id = category_id + 5
-    elif category_id >= 40 and category_id <= 59:
-        category_id = category_id + 6
-    elif category_id == 60:
-        category_id = category_id + 7
-    elif category_id == 61:
-        category_id = category_id + 9
-    elif category_id >= 62 and category_id <= 72:
-        category_id = category_id + 10
-    elif category_id >= 73 and category_id <= 79:
-        category_id = category_id + 11
-    else:
-        raise ValueError('Invalid category id')
+    match = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+             11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+             22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+             35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+             46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+             56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+             67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
+             80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
+    category_id = match[category_id]
     return category_id
 
 

@@ -135,7 +135,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
         elif range_type == 'minmax_percentile':
             self.statistics_collector = MinMaxPercentileStatisticsCollector
         else:
-            raise ValueError('Range {} is not supported.'.format(range_type))
+            raise ValueError('Range type {} is not supported.'.format(range_type))
 
     def call(self, model, dataset=None, loss=None):
         layer_statistics = []

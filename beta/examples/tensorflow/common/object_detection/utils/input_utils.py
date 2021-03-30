@@ -541,16 +541,16 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
         return rotated_boxes
 
     def _rot90_masks(masks):
-      """Rotate masks counter-clockwise by 90 degrees.
-      Args:
+        """Rotate masks counter-clockwise by 90 degrees.
+        Args:
         masks: rank 3 float32 tensor with shape
           [num_instances, height, width] representing instance masks.
-      Returns:
+        Returns:
         rotated masks: rank 3 float32 tensor with shape
           [num_instances, height, width] representing instance masks.
-      """
-      masks = tf.transpose(masks, [0, 2, 1])
-      return masks[:, ::-1, :]
+        """
+        masks = tf.transpose(masks, [0, 2, 1])
+        return masks[:, ::-1, :]
 
     with tf.name_scope('RandomRotation90'):
         result = []
@@ -564,15 +564,15 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
 
         # flip boxes
         if boxes is not None:
-          boxes = tf.cond(do_a_rot90_random, lambda: _rot90_boxes(boxes),
+            boxes = tf.cond(do_a_rot90_random, lambda: _rot90_boxes(boxes),
                           lambda: boxes)
-          result.append(boxes)
+            result.append(boxes)
 
         # flip masks
         if masks is not None:
-          masks = tf.cond(do_a_rot90_random, lambda: _rot90_masks(masks),
+            masks = tf.cond(do_a_rot90_random, lambda: _rot90_masks(masks),
                           lambda: masks)
-          result.append(masks)
+            result.append(masks)
 
         return tuple(result)
 
@@ -595,9 +595,9 @@ def random_adjust_brightness(image,
         delta = tf.random.uniform([], -max_delta, max_delta, seed=seed, dtype=tf.float32)
 
         def _adjust_brightness(image):
-          image = tf.image.adjust_brightness(image / 255, delta) * 255
-          image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
-          return image
+            image = tf.image.adjust_brightness(image / 255, delta) * 255
+            image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
+            return image
 
         image = _adjust_brightness(image)
 
@@ -651,9 +651,9 @@ def random_adjust_contrast(image,
     with tf.name_scope('RandomAdjustContrast'):
         contrast_factor = tf.random.uniform([], min_delta, max_delta, seed=seed, dtype=tf.float32)
         def _adjust_contrast(image):
-              image = tf.image.adjust_contrast(image / 255, contrast_factor) * 255
-              image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
-              return image
+            image = tf.image.adjust_contrast(image / 255, contrast_factor) * 255
+            image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
+            return image
         image = _adjust_contrast(image)
         return image
 

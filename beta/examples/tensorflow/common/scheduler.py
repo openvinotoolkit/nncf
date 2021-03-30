@@ -76,6 +76,14 @@ class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
                 'gamma': self._gamma}
 
 
+def schedule_base_lr_check(schedule_type, base_lr):
+    schedules_with_base_lr = ['exponential', 'multistep', 'step', 'cosine']
+    if schedule_type in schedules_with_base_lr:
+        if base_lr is None:
+            raise ValueError('`base_lr` parameter must be specified '
+                             'for the %s scheduler' % schedule_type)
+
+
 def build_scheduler(config, steps_per_epoch):
     optimizer_config = config.get('optimizer', {})
     schedule_type = optimizer_config.get('schedule_type', 'step').lower()
@@ -83,11 +91,9 @@ def build_scheduler(config, steps_per_epoch):
     gamma = schedule_params.get('gamma', optimizer_config.get('gamma', 0.1))
     base_lr = schedule_params.get('base_lr', optimizer_config.get('base_lr', None))
 
-    if schedule_type == 'exponential':
-        if base_lr is None:
-            raise ValueError('`base_lr` parameter must be specified '
-                             'for the exponential scheduler')
+    schedule_base_lr_check(schedule_type, base_lr)
 
+    if schedule_type == 'exponential':
         step = schedule_params.get('step', optimizer_config.get('step', 1))
         decay_steps = step * steps_per_epoch
 
@@ -117,9 +123,6 @@ def build_scheduler(config, steps_per_epoch):
 
     elif schedule_type == 'multistep':
         logger.info('Using MultiStep learning rate.')
-        if base_lr is None:
-            raise ValueError('`base_lr` parameter must be specified '
-                             'for the `multistep` scheduler')
         steps = schedule_params.get('steps', optimizer_config.get('steps', None))
         if steps is None:
             raise ValueError('`steps` parameter must be specified '
@@ -128,9 +131,6 @@ def build_scheduler(config, steps_per_epoch):
         lr = MultiStepLearningRate(base_lr, steps, gamma=gamma)
 
     elif schedule_type == 'step':
-        if base_lr is None:
-            raise ValueError('`base_lr` parameter must be specified '
-                             'for the `step` scheduler')
         step = schedule_params.get('step', optimizer_config.get('step', 1))
         decay_steps = step * steps_per_epoch
 
@@ -148,10 +148,6 @@ def build_scheduler(config, steps_per_epoch):
         lr = StepLearningRateWithLinearWarmup(schedule_params)
 
     elif schedule_type == 'cosine':
-        if base_lr is None:
-            raise ValueError('`base_lr` parameter must be specified '
-                             'for the cosine scheduler')
-
         decay_steps = steps_per_epoch * config.epochs
         logger.info('Using Cosine learning rate with: '
                     'base_lr: %f, decay steps: %d, '

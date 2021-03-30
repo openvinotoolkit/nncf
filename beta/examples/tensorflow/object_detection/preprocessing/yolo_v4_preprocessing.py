@@ -16,7 +16,8 @@ from PIL import Image
 
 import tensorflow as tf
 from beta.examples.tensorflow.common.object_detection.utils import box_utils
-from beta.examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, letterbox_resize, random_resize_crop_pad, reshape_boxes, random_horizontal_flip, random_mosaic_augment
+from beta.examples.tensorflow.common.object_detection.utils.yolo_v4_utils import normalize_image, \
+    letterbox_resize, random_resize_crop_pad, reshape_boxes, random_horizontal_flip, random_mosaic_augment
 from beta.examples.tensorflow.common.object_detection.utils import dataloader_utils
 from beta.examples.tensorflow.common.object_detection.utils import input_utils
 
@@ -96,7 +97,9 @@ class YOLOv4Preprocessor:
         groundtruth_classes = data['groundtruth_classes']
         groundtruth_boxes = data['groundtruth_boxes']
 
-        image, box = tf.py_function(self._preprocess, [image, groundtruth_classes, groundtruth_boxes, self._input_shape], [tf.float32, tf.float32])
+        image, box = tf.py_function(self._preprocess,
+                                    [image, groundtruth_classes, groundtruth_boxes, self._input_shape],
+                                    [tf.float32, tf.float32])
         image.set_shape([None, None, 3])
         box.set_shape([None, 5])
 
@@ -114,7 +117,10 @@ class YOLOv4Preprocessor:
 
         return out
 
-    def _preprocess_true_boxes(self, true_boxes, input_shape, anchors, num_classes, multi_anchor_assign, iou_thresh=0.2):
+    def _preprocess_true_boxes(self, true_boxes,
+                               input_shape, anchors,
+                               num_classes, multi_anchor_assign,
+                               iou_thresh=0.2):
         """Preprocess true boxes to training input format
 
         Parameters
@@ -213,7 +219,11 @@ class YOLOv4Preprocessor:
             image_data, box_data = random_mosaic_augment(image_data, box_data, prob=0.2)
 
         anchors = np.array(self._anchors).astype(float).reshape(-1, 2)
-        y_true1, y_true2, y_true3 = self._preprocess_true_boxes(box_data, self._input_shape, anchors, self._num_classes, self._multi_anchor_assign)
+        y_true1, y_true2, y_true3 = self._preprocess_true_boxes(box_data,
+                                                                self._input_shape,
+                                                                anchors,
+                                                                self._num_classes,
+                                                                self._multi_anchor_assign)
 
         return image_data, y_true1, y_true2, y_true3
 
@@ -223,7 +233,9 @@ class YOLOv4Preprocessor:
         filename = data['filename']
         im_shape = image_data.shape
 
-        image_data, out0, out1, out2 = tf.py_function(self._preprocess2, [image_data, box_data, filename], [tf.float32, tf.float32, tf.float32, tf.float32]) # , tf.float32
+        image_data, out0, out1, out2 = tf.py_function(self._preprocess2,
+                                                      [image_data, box_data, filename],
+                                                      [tf.float32, tf.float32, tf.float32, tf.float32])
         image_data.set_shape(im_shape)
         out0.set_shape([im_shape[0], 19, 19, 3, 85])
         out1.set_shape([im_shape[0], 38, 38, 3, 85])

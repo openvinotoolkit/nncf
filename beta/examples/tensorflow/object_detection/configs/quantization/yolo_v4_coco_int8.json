@@ -4,7 +4,7 @@
         "sample_size": [1, 608, 608, 3]
     },
 
-    "epochs": 15,
+    "epochs": 3,
     "batch_size": 63,
     "workers": 16,
 
@@ -15,7 +15,7 @@
         "type": "Adam",
         "schedule_type": "cosine",
         "schedule_params": {
-            "base_lr": 5e-5
+            "base_lr": 1e-5
         }
     },
 

@@ -16,7 +16,8 @@ from beta.nncf.tensorflow.api.composite_compression import TFCompositeCompressio
 from beta.nncf.tensorflow.helpers.utils import get_built_model
 
 
-def create_compression_algorithm_builder(compression_config):
+def create_compression_algorithm_builder(config):
+    compression_config = config.get('compression', {})
 
     if isinstance(compression_config, dict):
         return get_compression_algorithm_builder(compression_config)(compression_config)
@@ -29,13 +30,10 @@ def create_compression_algorithm_builder(compression_config):
 
 
 def create_compressed_model(model, config):
-    compression_config = config.get('compression', {})
-    initializer_config = compression_config.get('initializer', {})
-
     model = get_built_model(model, config)
-    builder = create_compression_algorithm_builder(compression_config)
+    builder = create_compression_algorithm_builder(config)
     if builder is None:
         return None, model
     compressed_model = builder.apply_to(model)
-    compression_ctrl = builder.build_controller(compressed_model, initializer_config)
+    compression_ctrl = builder.build_controller(compressed_model)
     return compression_ctrl, compressed_model
