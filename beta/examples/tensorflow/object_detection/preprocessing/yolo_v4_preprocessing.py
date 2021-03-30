@@ -357,7 +357,6 @@ class YOLOv4Preprocessor:
         return decoded_tensors
 
     def _pipeline_fn(self, dataset, decoder_fn):
-
         if self._is_training:
             preprocess_input_fn = self._parse_fn
             preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
@@ -366,8 +365,8 @@ class YOLOv4Preprocessor:
 
             # part of preprocessing which requires batches
             preprocess_input_fn2 = self._parse_fn2
-            preprocess_pipeline2 = lambda record: preprocess_input_fn2(record)
-            dataset = dataset.map(preprocess_pipeline2, num_parallel_calls=self._num_preprocess_workers)
+            # preprocess_pipeline2 = lambda record: preprocess_input_fn2(record)
+            dataset = dataset.map(preprocess_input_fn2, num_parallel_calls=self._num_preprocess_workers)
         else:
             preprocess_input_fn = self._parse_predict_data
             preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))

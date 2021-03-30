@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-import math
 import numpy as np
 
 import tensorflow as tf
@@ -728,7 +727,7 @@ class YOLOv4Loss:
     def __call__(self, labels, outputs, anchors, num_classes,
                  ignore_thresh=.5, label_smoothing=0, elim_grid_sense=True,
                  use_focal_loss=False, use_focal_obj_loss=False,
-                 use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):
+                 use_softmax_loss=False, use_giou_loss=False, use_diou_loss=True):  # pylint: disable=R0915
         """
         YOLOv3 loss function.
 
@@ -749,12 +748,8 @@ class YOLOv4Loss:
         yolo_outputs = list(outputs.values()) # args[:num_layers]
         y_true = list(labels.values()) # args[num_layers:]
 
-        if num_layers == 3:
-            anchor_mask = [[6,7,8], [3,4,5], [0,1,2]]
-            scale_x_y = [1.05, 1.1, 1.2] if elim_grid_sense else [None, None, None]
-        else:
-            anchor_mask = [[3,4,5], [0,1,2]]
-            scale_x_y = [1.05, 1.05] if elim_grid_sense else [None, None]
+        anchor_mask = [[6,7,8], [3,4,5], [0,1,2]]
+        scale_x_y = [1.05, 1.1, 1.2] if elim_grid_sense else [None, None, None]
 
         input_shape = K.cast(K.shape(yolo_outputs[0])[1:3] * 32, K.dtype(y_true[0]))
         loss = 0

@@ -352,7 +352,7 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
         Returns:
           Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, 1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         flipped_xmin = tf.subtract(1.0, xmax)
         flipped_xmax = tf.subtract(1.0, xmin)
         flipped_boxes = tf.concat([ymin, flipped_xmin, ymax, flipped_xmax], 1)
@@ -439,7 +439,7 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
         Returns:
           Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(value=boxes, num_or_size_splits=4, axis=1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         flipped_ymin = tf.subtract(1.0, ymax)
         flipped_ymax = tf.subtract(1.0, ymin)
         flipped_boxes = tf.concat([flipped_ymin, xmin, flipped_ymax, xmax], 1)
@@ -531,7 +531,7 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
         Returns:
         Rotated boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(value=boxes, num_or_size_splits=4, axis=1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         rotated_ymin = tf.subtract(1.0, xmax)
         rotated_ymax = tf.subtract(1.0, xmin)
         rotated_xmin = ymin
@@ -592,7 +592,7 @@ def random_adjust_brightness(image,
     """
     with tf.name_scope('RandomAdjustBrightness'):
         # random variable from [-max_delta, max_delta]
-        delta = tf.random.uniform([], -max_delta, max_delta, seed=seed, dtype=tf.float32)
+        delta = tf.random.uniform([], -max_delta, max_delta, tf.float32, seed)
 
         def _adjust_brightness(image):
             image = tf.image.adjust_brightness(image / 255, delta) * 255
@@ -622,7 +622,7 @@ def random_adjust_saturation(image,
     image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustSaturation'):
-        saturation_factor = tf.random.uniform([], min_delta, max_delta, seed=seed, dtype=tf.float32)
+        saturation_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
         def _adjust_saturation(image):
             image = tf.image.adjust_saturation(image / 255, saturation_factor) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
@@ -649,7 +649,7 @@ def random_adjust_contrast(image,
     image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustContrast'):
-        contrast_factor = tf.random.uniform([], min_delta, max_delta, seed=seed, dtype=tf.float32)
+        contrast_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
         def _adjust_contrast(image):
             image = tf.image.adjust_contrast(image / 255, contrast_factor) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)
@@ -672,7 +672,7 @@ def random_adjust_hue(image,
     image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustHue'):
-        delta = tf.random.uniform([], -max_delta, max_delta, seed=seed, dtype=tf.float32)
+        delta = tf.random.uniform([], -max_delta, max_delta, tf.float32, seed)
         def _adjust_hue(image):
             image = tf.image.adjust_hue(image / 255, delta) * 255
             image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=255.0)

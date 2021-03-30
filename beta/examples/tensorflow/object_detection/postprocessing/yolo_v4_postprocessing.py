@@ -13,17 +13,7 @@
 
 import numpy as np
 import copy
-
-
-def expit(x):
-    return np.where(x >= 0,
-                    1 / (1 + np.exp(-x)),
-                    np.exp(x) / (1 + np.exp(x)))
-
-
-def softmax(x):
-    x = x - np.max(x)
-    return np.exp(x)/np.sum(np.exp(x))
+from scipy.special import expit, softmax
 
 
 def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, use_softmax=False):
@@ -73,7 +63,7 @@ def yolo_decode(prediction, anchors, num_classes, input_dims, scale_x_y=None, us
 
     if use_softmax:
         # Softmax class scores
-        class_scores = softmax(prediction[..., 5:])
+        class_scores = softmax(prediction[..., 5:], axis=-1)
     else:
         # Sigmoid class scores
         class_scores = expit(prediction[..., 5:])
@@ -500,14 +490,14 @@ def yolo_handle_predictions(predictions, max_boxes=100, confidence=0.1, iou_thre
     # Boxes, Classes and Scores returned from NMS
     n_boxes, n_classes, n_scores = nms_boxes(boxes, classes, scores, iou_threshold)
 
+    boxes, classes, scores = [], [], []
     if n_boxes:
         boxes = np.concatenate(n_boxes)
         classes = np.concatenate(n_classes).astype('int32')
         scores = np.concatenate(n_scores)
         boxes, classes, scores = filter_boxes(boxes, classes, scores, max_boxes)
-        return boxes, classes, scores
-    else:
-        return [], [], []
+
+    return boxes, classes, scores
 
 
 def yolo_adjust_boxes(boxes, img_shape):
@@ -584,7 +574,8 @@ def convert_coordinate(box):
     return [ymin, xmin, ymax, xmax]
 
 
-def postprocess_yolo_v4_np(image_info, out1, out2, out3, anchors, num_classes, input_shape, conf_threshold, elim_grid_sense):
+def postprocess_yolo_v4_np(image_info, out1, out2, out3, anchors, num_classes,
+                           input_shape, conf_threshold, elim_grid_sense):
     image_info = image_info.numpy()
     out1 = out1.numpy()
     out2 = out2.numpy()

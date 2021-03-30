@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
+import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmInitializer
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
@@ -77,12 +77,13 @@ class MinMaxPercentileStatisticsCollector:
         self.max_percentile = max_percentile
 
     def _mean_estimate_no_outliers(self, data):
-        lower = tfp.stats.percentile(data, self.min_percentile, axis=0)
-        upper = tfp.stats.percentile(data, self.max_percentile, axis=0)
-        mask = tf.math.logical_and(data >= lower, data <= upper)
+        data = data.numpy()
+        lower = np.percentile(data, self.min_percentile, axis=0)
+        upper = np.percentile(data, self.max_percentile, axis=0)
+        mask = np.logical_and(data >= lower, data <= upper)
         # zero out the outliers
-        data_masked = tf.multiply(data, tf.cast(mask, data.dtype))
-        mean = tf.math.reduce_sum(data_masked, axis=0) / tf.math.reduce_sum(tf.cast(mask, data_masked.dtype), axis=0)
+        data_masked = data * mask
+        mean = np.sum(data_masked, axis=0) / np.sum(mask, axis=0)
         return mean
 
     @property
@@ -93,7 +94,8 @@ class MinMaxPercentileStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_min_values):
                 self.all_min_values[i] = tf.reshape(t, shape=(new_shape))
-        return self._mean_estimate_no_outliers(tf.stack(self.all_min_values))
+        mean = tf.py_function(self._mean_estimate_no_outliers, [tf.stack(self.all_min_values)], Tout=tf.float32)
+        return mean
 
     @property
     def max(self):
@@ -103,7 +105,8 @@ class MinMaxPercentileStatisticsCollector:
                 new_shape *= val
             for i, t in enumerate(self.all_max_values):
                 self.all_max_values[i] = tf.reshape(t, shape=(new_shape))
-        return self._mean_estimate_no_outliers(tf.stack(self.all_max_values))
+        mean = tf.py_function(self._mean_estimate_no_outliers, [tf.stack(self.all_max_values)], Tout=tf.float32)
+        return mean
 
     def call(self, inputs):
         ndims = len(inputs.shape)
