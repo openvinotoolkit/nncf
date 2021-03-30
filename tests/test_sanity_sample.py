@@ -31,7 +31,7 @@ import torch
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.config import NNCFConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
