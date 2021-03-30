@@ -43,6 +43,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
+        self._op_names = set()
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)

@@ -66,6 +66,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
         self.target_scopes_per_group = {}
+        self._op_names = set()
 
         for quantizer_group in QUANTIZER_GROUPS:
             self._parse_group_params(self.config, quantizer_group)

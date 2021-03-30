@@ -87,6 +87,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
+        self._op_names = set()
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
         """

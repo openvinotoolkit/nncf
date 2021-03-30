@@ -35,6 +35,10 @@ class NNCFOperation:
         self._call_pre_hooks = OrderedDict()
         self._name = name
 
+    @property
+    def name(self):
+        return self._name
+
     def build(self, input_shape, input_type, name, layer):
         """
         This method can be used to create weights that depend on the shape(s)
@@ -85,10 +89,6 @@ class NNCFOperation:
 
     def get_config(self):
         return {'name': self._name}
-
-    @property
-    def name(self):
-        return self._name
 
     @classmethod
     def from_config(cls, config):
