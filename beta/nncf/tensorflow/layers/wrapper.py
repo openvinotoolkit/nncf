@@ -130,7 +130,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op.name in self.weights_attr_ops[weights_attr]:
-            raise Exception("Attempt to apply one operation on layer weight twice")
+            raise RuntimeError('Attempt to apply one operation on layer weight twice')
 
         self.weights_attr_ops[weights_attr][op.name] = op
 

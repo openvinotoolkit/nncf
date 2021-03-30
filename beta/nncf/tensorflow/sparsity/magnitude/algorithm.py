@@ -63,7 +63,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
             weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             op_name = BinaryMask.create_operation_name(node_name, weight_attr_name)
             if op_name in self._op_names:
-                raise ValueError('Attempt to apply BinaryMask two times on one weight')
+                raise RuntimeError('Attempt to apply BinaryMask two times on one weight')
 
             self._op_names.add(op_name)
             transformations.register(
@@ -82,7 +82,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     op_name = BinaryMaskWithWeightsBackup.create_operation_name(node_name, weight_attr_name)
                     if op_name in self._op_names:
-                        raise ValueError('Attempt to apply BinaryMaskWithWeightsBackup two times on one weight')
+                        raise RuntimeError('Attempt to apply BinaryMaskWithWeightsBackup two times on one weight')
 
                     self._op_names.add(op_name)
                     transformations.register(

@@ -61,7 +61,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
             op_name = RBSparsifyingWeight.create_operation_name(node_name, weight_attr_name)
             if op_name in self._op_names:
-                raise ValueError('Attempt to apply RBSparsityWeight operation two times on one weight')
+                raise RuntimeError('Attempt to apply RBSparsityWeight operation two times on one weight')
 
             self._op_names.add(op_name)
 

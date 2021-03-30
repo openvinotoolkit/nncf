@@ -160,7 +160,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
         op_name = BinaryMask.create_operation_name(layer_name, attr_name)
         if op_name in self._op_names:
-            raise ValueError('Attempt to apply BinaryMask operation two times on one weight')
+            raise RuntimeError('Attempt to apply BinaryMask operation two times on one weight')
 
         self._op_names.add(op_name)
 
