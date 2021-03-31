@@ -1,4 +1,4 @@
-absl-py~=0.10
+absl-py==0.10
 addict
 networkx
 tensorflow==2.4.0
@@ -14,4 +14,5 @@ jsonschema==3.2.0
 pydot
 yattag>=1.14.0
 prettytable>=2.0.0
+scipy>=1.3.2
 git+https://github.com/alexsu52/cocoapi.git#egg=pycocotools&subdirectory=PythonAPI

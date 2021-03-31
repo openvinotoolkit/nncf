@@ -17,12 +17,18 @@ from examples.common.optimizer import make_optimizer, get_parameter_groups
 from nncf.module_operations import UpdateWeight
 from nncf.pruning.filter_pruning.algo import FilterPruningController
 from nncf.pruning.filter_pruning.functions import l2_filter_norm
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock, apply_filter_binary_mask
-from nncf.pruning.schedulers import BaselinePruningScheduler
-from tests.helpers import create_compressed_model_and_algo_for_test, check_correct_nncf_modules_replacement, \
-    create_mock_dataloader
-from tests.pruning.helpers import gen_ref_masks, get_basic_pruning_config, PruningTestModel, BigPruningTestModel
-
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
+from nncf.common.pruning.schedulers import BaselinePruningScheduler
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import check_correct_nncf_modules_replacement
+from tests.helpers import create_mock_dataloader
+from tests.pruning.helpers import gen_ref_masks
+from tests.pruning.helpers import get_basic_pruning_config
+from tests.pruning.helpers import PruningTestModel
+from tests.pruning.helpers import BigPruningTestModel
+from tests.pruning.helpers import TestModelMultipleForward
+from tests.pruning.helpers import PruningTestModelConcatBN
 
 def create_pruning_algo_with_config(config):
     """
@@ -193,6 +199,7 @@ def test_applying_masks(prune_bn):
     config['compression']['params']['prune_batch_norms'] = prune_bn
     config['compression']['params']['prune_first_conv'] = True
     config['compression']['params']['prune_last_conv'] = True
+    config['compression']['pruning_init'] = 0.5
 
     pruned_model, pruning_algo, nncf_modules = create_pruning_algo_with_config(config)
     pruned_module_info = pruning_algo.pruned_module_groups_info.get_all_nodes()
@@ -217,6 +224,34 @@ def test_applying_masks(prune_bn):
         masked_bn_bias = apply_filter_binary_mask(bn_mask, bn_module.bias)
         assert torch.allclose(bn_module.weight, masked_bn_weight)
         assert torch.allclose(bn_module.bias, masked_bn_bias)
+    else:
+        assert sum(bn_module.weight) == len(bn_module.weight)
+        # Can not check bias because bias initialized with zeros
+
+@pytest.mark.parametrize('prune_bn',
+                         [False,
+                          True]
+                         )
+def test_applying_masks_for_bn_after_concat(prune_bn):
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['prune_batch_norms'] = prune_bn
+    config['compression']['params']['prune_first_conv'] = True
+    config['compression']['params']['prune_last_conv'] = True
+    config['compression']['pruning_init'] = 0.5
+    model = PruningTestModelConcatBN()
+    pruned_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+    bn_modules = [pruned_model.bn, pruned_model.bn1, pruned_model.bn2]
+    for bn_module in bn_modules:
+        if prune_bn:
+            # Check that mask was applied for batch_norm module
+            assert sum(bn_module.weight) == len(bn_module.weight) * 0.5
+            assert sum(bn_module.bias) == len(bn_module.bias) * 0.5
+        else:
+            # Check that mask was not applied for batch_norm module
+            assert sum(bn_module.weight) == len(bn_module.weight)
+            assert sum(bn_module.bias) == len(bn_module.bias)
 
 
 @pytest.mark.parametrize('zero_grad',
@@ -266,7 +301,6 @@ def test_zeroing_gradients(zero_grad):
                 assert torch.allclose(masked_grad, grad)
 
 
-
 @pytest.mark.parametrize(('all_weights', 'pruning_flops_target', 'ref_flops'),
                          [
                              (False, None, 1315008),
@@ -295,3 +329,21 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     assert pruning_algo.current_flops == ref_flops
     # pylint:disable=protected-access
     assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
+
+
+def test_clasters_for_multiple_forward():
+    config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['params']['all_weights'] = False
+    config['compression']['params']['prune_first_conv'] = True
+    config['compression']['params']['prune_last_conv'] = True
+    config['compression']['pruning_init'] = 0.5
+    model = TestModelMultipleForward()
+    _, pruning_algo = create_compressed_model_and_algo_for_test(model, config)
+
+    clusters = pruning_algo.pruned_module_groups_info.clusters
+    assert len(clusters) == 2
+    # Convolutions before one node that forwards several times should be in one cluster
+    assert sorted([n.nncf_node_id for n in clusters[0].nodes]) == [1, 2, 3]
+    # Nodes that associate with one module should be in one cluster
+    assert sorted([n.nncf_node_id for n in clusters[1].nodes]) == [4, 5, 6]

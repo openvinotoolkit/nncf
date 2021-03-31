@@ -19,10 +19,9 @@ from beta.examples.tensorflow.common.logger import logger
 class StepLearningRateWithLinearWarmup(tf.keras.optimizers.schedules.LearningRateSchedule):
     """Class to generate learning rate tensor"""
 
-    def __init__(self, total_steps, params):
+    def __init__(self, params):
         """Creates the step learning rate tensor with linear warmup"""
         super().__init__()
-        self._total_steps = total_steps
         self._params = params
 
     def __call__(self, global_step):
@@ -41,58 +40,112 @@ class StepLearningRateWithLinearWarmup(tf.keras.optimizers.schedules.LearningRat
         return learning_rate
 
     def get_config(self):
-        return {'_params': self._params.as_dict()}
+        return {'params': self._params.as_dict()}
 
 
-def build_scheduler(config, epoch_size, batch_size, steps):
+class MultiStepLearningRate(tf.keras.optimizers.schedules.LearningRateSchedule):
+    def __init__(self, init_lr, steps, gamma=0.1):
+        """
+        Creates the multistep learning rate schedule.
+        Decays learning rate by `gamma` once `global_step` reaches
+        one of the milestones in the `steps` list.
+        For init_lr = 0.01, steps = [10, 15] and gamma = 0.1
+        lr = 0.01    if global_step < 10
+        lr = 0.001   if 10 <= global_step < 15
+        lr = 0.0001  if global_step >= 15
+        Args:
+            init_lr: Initial learning rate
+            steps: List of step indices
+            gamma: Learning rate decay rate
+        """
+        super().__init__()
+        self._init_lr = init_lr
+        self._steps = sorted(steps)
+        self._gamma = gamma
+        self._lr_values = [init_lr * self._gamma ** (i + 1) for i in range(len(self._steps))]
+
+    def __call__(self, global_step):
+        learning_rate = self._init_lr
+        for next_learning_rate, start_step in zip(self._lr_values, self._steps):
+            learning_rate = tf.where(global_step >= start_step, next_learning_rate, learning_rate)
+        return learning_rate
+
+    def get_config(self):
+        return {'init_lr': self._init_lr,
+                'steps': self._steps,
+                'gamma': self._gamma}
+
+
+def build_scheduler(config, steps_per_epoch):
     optimizer_config = config.get('optimizer', {})
-    schedule_type = optimizer_config.get('schedule_type', 'exponential').lower()
-    schedule_params = optimizer_config.get("schedule_params", {})
+    schedule_type = optimizer_config.get('schedule_type', 'step').lower()
+    schedule_params = optimizer_config.get('schedule_params', {})
+    gamma = schedule_params.get('gamma', optimizer_config.get('gamma', 0.1))
+    base_lr = schedule_params.get('base_lr', optimizer_config.get('base_lr', None))
 
     if schedule_type == 'exponential':
-        decay_rate = schedule_params.get('decay_rate', None)
-        if decay_rate is None:
-            raise ValueError('decay_rate parameter must be specified '
+        if base_lr is None:
+            raise ValueError('`base_lr` parameter must be specified '
                              'for the exponential scheduler')
 
-        initial_lr = schedule_params.get('initial_lr', None)
-        if initial_lr is None:
-            raise ValueError('initial_lr parameter must be specified '
-                             'for the exponential scheduler')
-
-        decay_epochs = schedule_params.get('decay_epochs', None)
-        decay_steps = decay_epochs * steps if decay_epochs is not None else 0
+        step = schedule_params.get('step', optimizer_config.get('step', 1))
+        decay_steps = step * steps_per_epoch
 
         logger.info('Using exponential learning rate with: '
-                    'initial_learning_rate: {initial_lr}, decay_steps: {decay_steps}, '
-                    'decay_rate: {decay_rate}'.format(initial_lr=initial_lr,
-                                                      decay_steps=decay_steps,
-                                                      decay_rate=decay_rate))
+                    'initial lr: %f, decay steps: %d, '
+                    'decay rate: %f', base_lr, decay_steps, gamma)
         lr = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=initial_lr,
+            initial_learning_rate=base_lr,
             decay_steps=decay_steps,
-            decay_rate=decay_rate)
-    elif schedule_type == 'piecewise_constant':
-        boundaries = schedule_params.get('boundaries', None)
-        if boundaries is None:
-            raise ValueError('boundaries parameter must be specified '
-                             'for the piecewise_constant scheduler')
+            decay_rate=gamma)
 
-        values = schedule_params.get('values', None)
+    elif schedule_type == 'piecewise_constant':
+        boundaries = schedule_params.get('boundaries', optimizer_config.get('boundaries', None))
+        if boundaries is None:
+            raise ValueError('`boundaries` parameter must be specified '
+                             'for the `piecewise_constant` scheduler')
+
+        values = schedule_params.get('values', optimizer_config.get('values', None))
         if values is None:
-            raise ValueError('values parameter must be specified '
-                             'for the piecewise_constant')
+            raise ValueError('`values` parameter must be specified '
+                             'for the `piecewise_constant` scheduler')
 
         logger.info('Using Piecewise constant decay with warmup. '
-                    'Parameters: batch_size: {batch_size}, epoch_size: {epoch_size}, '
-                    'boundaries: {boundaries}, values: {values}'.format(batch_size=batch_size,
-                                                                        epoch_size=epoch_size,
-                                                                        boundaries=boundaries,
-                                                                        values=values))
-        steps_per_epoch = epoch_size // batch_size
+                    'Parameters: boundaries: %s, values: %s', boundaries, values)
         boundaries = [steps_per_epoch * x for x in boundaries]
         lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(boundaries, values)
+
+    elif schedule_type == 'multistep':
+        logger.info('Using MultiStep learning rate.')
+        if base_lr is None:
+            raise ValueError('`base_lr` parameter must be specified '
+                             'for the `multistep` scheduler')
+        steps = schedule_params.get('steps', optimizer_config.get('steps', None))
+        if steps is None:
+            raise ValueError('`steps` parameter must be specified '
+                             'for the `multistep` scheduler')
+        steps = [steps_per_epoch * x for x in steps]
+        lr = MultiStepLearningRate(base_lr, steps, gamma=gamma)
+
     elif schedule_type == 'step':
-        lr = StepLearningRateWithLinearWarmup(steps, schedule_params)
+        if base_lr is None:
+            raise ValueError('`base_lr` parameter must be specified '
+                             'for the `step` scheduler')
+        step = schedule_params.get('step', optimizer_config.get('step', 1))
+        decay_steps = step * steps_per_epoch
+
+        logger.info('Using Step learning rate with: '
+                    'base_lr: %f, decay steps: %d, '
+                    'gamma: %f', base_lr, decay_steps, gamma)
+        lr = tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=base_lr,
+            decay_steps=decay_steps,
+            decay_rate=gamma,
+            staircase=True
+        )
+    elif schedule_type == 'step_warmup':
+        lr = StepLearningRateWithLinearWarmup(schedule_params)
+    else:
+        raise KeyError(f'Unknown learning rate scheduler type: {schedule_type}')
 
     return lr

@@ -142,6 +142,45 @@ class PruningTestModelConcat(nn.Module):
         return x
 
 
+class PruningTestModelConcatBN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+
+        self.conv2 = create_conv(16, 16, 1, 2, -2)
+        self.conv3 = create_conv(16, 16, 1, 2, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.conv4 = create_conv(32, 16, 1, 10, 0)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+        self.conv5 = create_conv(48, 16, 1, 10, 0)
+
+        self.bn = nn.BatchNorm2d(16)
+        self.bn.bias = torch.nn.Parameter(torch.ones(16))
+
+        self.bn1 = nn.BatchNorm2d(32)
+        self.bn1.bias = torch.nn.Parameter(torch.ones(32))
+
+        self.bn2 = nn.BatchNorm2d(48)
+        self.bn2.bias = torch.nn.Parameter(torch.ones(48))
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x1 = self.bn1(x)
+        x1 = self.conv4(x1)
+        x = torch.cat([x, x1], dim=1)
+        x = self.bn2(x)
+        x = self.conv5(x)
+        return x
+
+
 class PruningTestModelEltwise(nn.Module):
     def __init__(self):
         super().__init__()
@@ -259,6 +298,53 @@ class TestModelShuffleNetUnitDW(nn.Module):
         x = self.conv(x)
         x = self.unit1(x)
         return x
+
+
+class TestModelMultipleForward(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(2, 16, 1, 1, -2)
+        # Wights of conv3 is initialized to check difference masks
+        self.conv4 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        x3 = self.conv3(x)
+        x1 = self.conv4(x1)
+        x2 = self.conv4(x2)
+        x3 = self.conv4(x3)
+
+        return x1, x2, x3
+
+
+class TestModelGroupNorm(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.gn1 = nn.GroupNorm(16, 16)  # Instance Normalization
+        self.conv2 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.gn2 = nn.GroupNorm(2, 16)  # Group Normalization
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.gn1(x)
+        x = self.conv2(x)
+        x = self.gn2(x)
+        return x
+
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
     if input_sample_size is None:

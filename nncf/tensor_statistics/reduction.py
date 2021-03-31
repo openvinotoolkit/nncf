@@ -33,6 +33,18 @@ def min_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int]):
     return tmp_min
 
 
+def percentile_reduce_like(input_: torch.Tensor, ref_tensor_shape: List[int], q: float):
+    numel = np.prod(ref_tensor_shape)
+    if numel == 1:
+        return torch.from_numpy(np.array([np.percentile(input_.cpu().numpy(), q)])).to(dtype=torch.float)
+    tmp = input_
+    for dim_idx, dim in enumerate(ref_tensor_shape):
+        if dim == 1:
+            numpy_tmp = np.percentile(tmp.cpu().numpy(), q, axis=dim_idx, keepdims=True)
+            tmp = torch.from_numpy(numpy_tmp).to(dtype=torch.float)
+    return tmp
+
+
 def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     channel_dim_idx = 0
     channel_count = 1

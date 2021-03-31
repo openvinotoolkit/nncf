@@ -113,6 +113,7 @@ strict digraph  {
 "111 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=111, scope="UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "112 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=112, scope="UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "113 UNet/NNCFConv2d[last]/conv2d" [id=113, scope="UNet/NNCFConv2d[last]", type=conv2d];
+"114 /nncf_model_output" [id=114, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
 "1 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
@@ -230,4 +231,5 @@ strict digraph  {
 "110 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/RELU" -> "113 UNet/NNCFConv2d[last]/conv2d";
 "111 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "112 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "112 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "113 UNet/NNCFConv2d[last]/conv2d";
+"113 UNet/NNCFConv2d[last]/conv2d" -> "114 /nncf_model_output";
 }

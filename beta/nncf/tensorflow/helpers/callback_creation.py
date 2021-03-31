@@ -12,7 +12,9 @@
 """
 
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatistics
+from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
+from beta.nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback
+from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatisticsCallback
 from beta.nncf.tensorflow.sparsity.callbacks import UpdateMask
 from beta.nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 
@@ -22,12 +24,17 @@ def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_tex
         if isinstance(compression_ctrl, CompositeCompressionAlgorithmController) \
         else [compression_ctrl]
     for ctrl in compression_controllers:
-        if isinstance(ctrl, MagnitudeSparsityController):
+        if isinstance(ctrl, (MagnitudeSparsityController, BasePruningAlgoController)):
             callbacks = [UpdateMask(ctrl.scheduler)]
             if log_tensorboard or log_text:
-                callbacks += [SparsityStatistics(ctrl.raw_statistics,
-                                                 log_tensorboard=log_tensorboard,
-                                                 log_text=log_text,
-                                                 log_dir=log_dir)]
+                if isinstance(ctrl, MagnitudeSparsityController):
+                    statistics_callback_cls = SparsityStatisticsCallback
+                else:
+                    statistics_callback_cls = PruningStatisticsCallback
+
+                callbacks += [statistics_callback_cls(ctrl.raw_statistics,
+                                                      log_tensorboard=log_tensorboard,
+                                                      log_text=log_text,
+                                                      log_dir=log_dir)]
             return callbacks
     return []

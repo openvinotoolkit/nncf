@@ -26,12 +26,18 @@
                 "mode": "symmetric",
                 "level_low": -128,
                 "level_high": 127,
-                "granularity": "perchannel"
+                "granularity":  [
+                    "perchannel",
+                    "pertensor"
+                ]
             },
             "q8_w_asym": {
                 "bits": 8,
                 "mode": "asymmetric",
-                "granularity": "perchannel"
+                "granularity":  [
+                    "perchannel",
+                    "pertensor"
+                ]
             }
         }
     },

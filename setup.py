@@ -57,19 +57,12 @@ INSTALL_REQUIRES = ["ninja>=1.10.0.post2",
                     "scikit-learn>=0.24.0",
                     "wheel>=0.36.1"]
 
-DEPENDENCY_LINKS = []
-
 python_version = sys.version_info[:2]
-if python_version[0] < 3:
-    print("Only Python > 3.5 is supported")
-    sys.exit(0)
-elif python_version[1] < 6:
-    print("Only Python > 3.6 is supported")
+if python_version < (3, 6):
+    print("Only Python >= 3.6 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
-
-INSTALL_REQUIRES.extend(["torch", "torchvision"])
 
 TORCH_VERSION = "1.7.0"
 TORCHVISION_VERSION = "0.8.1"
@@ -85,32 +78,34 @@ WHL_MODE_TEMPLATE = '%2B{mode}'
 if "--cpu-only" in sys.argv:
     mode = 'cpu'
     whl_mode = WHL_MODE_TEMPLATE.format(mode=mode)
-    DEPENDENCY_LINKS = [
-        TORCH_SOURCE_URL_TEMPLATE.format(
-            tv=TORCH_VERSION,
-            ver=version_string,
-            mode=mode,
-            whl_mode=whl_mode),
-        TORCHVISION_SOURCE_URL_TEMPLATE.format(
-            tvv=TORCHVISION_VERSION,
-            ver=version_string,
-            mode=mode,
-            whl_mode=whl_mode)]
+    TORCH_SOURCE_URL = TORCH_SOURCE_URL_TEMPLATE.format(
+        tv=TORCH_VERSION,
+        ver=version_string,
+        mode=mode,
+        whl_mode=whl_mode)
+    TORCHVISION_SOURCE_URL = TORCHVISION_SOURCE_URL_TEMPLATE.format(
+        tvv=TORCHVISION_VERSION,
+        ver=version_string,
+        mode=mode,
+        whl_mode=whl_mode)
     sys.argv.remove("--cpu-only")
 else:
     mode = "cu{}".format(CUDA_VERSION)
     whl_mode = '' if IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER else WHL_MODE_TEMPLATE.format(mode=mode)
-    DEPENDENCY_LINKS = [
-        TORCH_SOURCE_URL_TEMPLATE.format(
-            tv=TORCH_VERSION,
-            ver=version_string,
-            mode=mode,
-            whl_mode=whl_mode),
-        TORCHVISION_SOURCE_URL_TEMPLATE.format(
-            tvv=TORCHVISION_VERSION,
-            ver=version_string,
-            mode=mode,
-            whl_mode=whl_mode)]
+    TORCH_SOURCE_URL = TORCH_SOURCE_URL_TEMPLATE.format(
+        tv=TORCH_VERSION,
+        ver=version_string,
+        mode=mode,
+        whl_mode=whl_mode)
+    TORCHVISION_SOURCE_URL = TORCHVISION_SOURCE_URL_TEMPLATE.format(
+        tvv=TORCHVISION_VERSION,
+        ver=version_string,
+        mode=mode,
+        whl_mode=whl_mode)
+
+DEPENDENCY_LINKS = [TORCH_SOURCE_URL, TORCHVISION_SOURCE_URL]
+INSTALL_REQUIRES.extend([f"torch @ {TORCH_SOURCE_URL}",
+                         f"torchvision @ {TORCHVISION_SOURCE_URL}"])
 
 
 EXTRAS_REQUIRE = {

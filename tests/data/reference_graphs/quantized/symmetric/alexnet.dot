@@ -36,6 +36,7 @@ strict digraph  {
 "34 AlexNet/Sequential[classifier]/ReLU[5]/SymmetricQuantizer/symmetric_quantize" [id=34, scope="AlexNet/Sequential[classifier]/ReLU[5]/SymmetricQuantizer", type=symmetric_quantize];
 "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=35, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" [id=36, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]", type=linear];
+"37 /nncf_model_output" [id=37, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -72,4 +73,5 @@ strict digraph  {
 "33 AlexNet/Sequential[classifier]/ReLU[5]/RELU" -> "34 AlexNet/Sequential[classifier]/ReLU[5]/SymmetricQuantizer/symmetric_quantize";
 "34 AlexNet/Sequential[classifier]/ReLU[5]/SymmetricQuantizer/symmetric_quantize" -> "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
 "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
+"36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" -> "37 /nncf_model_output";
 }

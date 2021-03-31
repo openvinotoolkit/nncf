@@ -10,6 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +26,13 @@ def pytest_addoption(parser):
     parser.addoption(
         "--data", type=str, default=None,
         help="Path to test datasets, e.g. CIFAR10 - for sanity tests or CIFAR100 - for weekly ones"
+    )
+
+    parser.addoption(
+        "--regen-dot", action="store_true", default=False, help="If specified, the "
+                                                                "reference .dot files will be regenerated "
+                                                                "using the current state of the repository."
+
     )
     parser.addoption(
         "--torch-home", type=str, default=None, help="Path to cached test models, downloaded by torchvision"
@@ -68,6 +78,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
     )
+
+
+def pytest_configure(config):
+    regen_dot = config.getoption('--regen-dot', False)
+    if regen_dot:
+        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 
 
 @pytest.fixture(scope="module")
@@ -140,3 +156,66 @@ def onnx_dir(request):
 @pytest.fixture(scope="module")
 def ov_config_dir(request):
     return request.config.getoption("--ov-config-dir")
+
+
+@pytest.fixture(scope="function")
+def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pylint:disable=redefined-outer-name
+    if install_type is None:
+        pytest.skip("Please specify type of installation")
+    venv_path = tmp_path / 'venv'
+    venv_path.mkdir()
+
+    python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
+    pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
+
+    version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
+    if venv_type == 'virtualenv':
+        subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
+    elif venv_type == 'venv':
+        subprocess.call("python{} -m venv {}".format(version_string, venv_path), shell=True)
+        subprocess.call("{} install --upgrade pip".format(pip_with_venv), shell=True)
+        subprocess.call("{} install wheel".format(pip_with_venv), shell=True)
+
+    run_path = tmp_path / 'run'
+    run_path.mkdir()
+
+    if package_type == "pip_pypi":
+        subprocess.run(
+            f"{pip_with_venv} install nncf", check=True, shell=True)
+    elif package_type == "pip_local":
+        subprocess.run(
+            f"{pip_with_venv} install {PROJECT_ROOT}", check=True, shell=True)
+    elif package_type == "pip_e_local":
+        subprocess.run(
+            f"{pip_with_venv} install -e {PROJECT_ROOT}", check=True, shell=True)
+    else:
+
+        subprocess.run(
+            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
+                python=python_executable_with_venv,
+                nncf_repo_root=PROJECT_ROOT,
+                package_type=package_type,
+                install_flag='--cpu-only' if
+                install_type == "CPU" else ''),
+            check=True,
+            shell=True,
+            cwd=PROJECT_ROOT)
+
+    return venv_path
+
+
+@pytest.fixture
+def runs_subprocess_in_precommit():
+    # PyTorch caches its CUDA memory allocations, so during the
+    # pytest execution the total memory reserved on GPUs will only grow,
+    # but it is not necessarily completely occupied at the current moment.
+    # The sub-processes are separate to the pytest process and will only see the GPU
+    # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
+    # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
+    # each time a GPU-powered subprocess is executed during a test.
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass

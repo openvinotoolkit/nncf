@@ -71,7 +71,7 @@ def test_removal_command_union():
 
 def test_add_insertion_command_to_multiple_insertion_commands_same():
     check_fn = lambda src, dst: \
-        dst.type ==  TargetType.OPERATION_WITH_WEIGHTS and \
+        dst.type == TargetType.OPERATION_WITH_WEIGHTS and \
         src.layer_name == dst.layer_name
 
     cmd_0 = commands.TFInsertionCommand(

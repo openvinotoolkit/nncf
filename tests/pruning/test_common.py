@@ -12,7 +12,7 @@
 """
 import pytest
 
-from nncf.pruning.schedulers import BaselinePruningScheduler, ExponentialPruningScheduler, \
+from nncf.common.pruning.schedulers import BaselinePruningScheduler, ExponentialPruningScheduler, \
     ExponentialWithBiasPruningScheduler
 from tests.pruning.helpers import PruningTestModel, get_basic_pruning_config
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -38,8 +38,8 @@ def test_can_choose_scheduler(algo, scheduler, scheduler_class):
 
 @pytest.mark.parametrize(
     ("algo", "ref_scheduler", "ref_scheduler_params"),
-    (('filter_pruning', BaselinePruningScheduler, {'num_init_steps': 0, "pruning_steps": 100,
-                                                   "initial_pruning": 0, "pruning_target": 0.5}),)
+    (('filter_pruning', BaselinePruningScheduler, {'num_warmup_epochs': 0, "num_pruning_epochs": 100,
+                                                   "initial_level": 0, "target_level": 0.5}),)
 )
 def test_check_default_scheduler_params(algo, ref_scheduler, ref_scheduler_params):
     config = get_basic_pruning_config()

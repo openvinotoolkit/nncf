@@ -12,17 +12,20 @@
 """
 import math
 import numbers
-from typing import Tuple, Optional
+from typing import Optional
+from typing import Tuple
 
 import torch
 import torch.nn.functional as F
 import warnings
 from torch import nn
+from torch.nn import Parameter
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
+from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.utils.registry import Registry
-from .layer_utils import _NNCFModuleMixin
+from nncf.layer_utils import _NNCFModuleMixin
 
 
 def dict_update(src, dst, recursive=True):
@@ -47,8 +50,34 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
         return nncf_conv
 
 
+NNCF_PADDING_VALUE_ATTR_NAME = 'nncf_padding_value'
+OPTIONAL_PARAMETERS_REGISTRY.register(NNCF_PADDING_VALUE_ATTR_NAME)
+
+
 class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
     op_func_name = "conv2d"
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size,
+        stride=1,
+        padding=0,
+        dilation=1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = 'zeros'
+    ):
+        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
+                         bias, padding_mode)
+        self._set_padding_value(Parameter(torch.zeros([1]), requires_grad=False))
+
+    def get_padding_value_ref(self):
+        return getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)
+
+    def _set_padding_value(self, value):
+        setattr(self, NNCF_PADDING_VALUE_ATTR_NAME, value)
 
     @staticmethod
     def from_module(module):
@@ -59,6 +88,25 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         )
         dict_update(nncf_conv.__dict__, module.__dict__)
         return nncf_conv
+
+    # override class attribute of _NNCFModuleMixin
+    def _custom_forward_fn(self, input_):
+        proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
+        proxy_weight = self.weight
+        return self._conv_forward(input_, proxy_weight, proxy_padding_value)
+
+    def _conv_forward(self, input_, weight, padding_value):
+        self.get_padding_value_ref().data.fill_(padding_value.item())
+        if self.padding_mode != 'zeros':
+            return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, mode=self.padding_mode,
+                                  value=self.get_padding_value_ref().item()),
+                            weight, self.bias, self.stride,
+                            (0, 0), self.dilation, self.groups)
+        if not self.get_padding_value_ref():
+            return F.conv2d(input_, weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
+        return F.conv2d(F.pad(input_, self._reversed_padding_repeated_twice, value=self.get_padding_value_ref().item()),
+                        weight, self.bias, self.stride,
+                        (0, 0), self.dilation, self.groups)
 
 
 class NNCFLinear(_NNCFModuleMixin, nn.Linear):
@@ -206,7 +254,9 @@ def register_module(*quantizable_field_names: str, ignored_algorithms: list = No
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
         return cls
+
     return wrap
+
 
 def add_nncf_functionality_to_user_module(module: torch.nn.Module):
     user_class = module.__class__

@@ -12,6 +12,8 @@
 """
 
 from typing import Iterable
+from typing import List
+from typing import Optional
 
 import numpy as np
 import torch
@@ -85,7 +87,7 @@ def flatten_args(args, kwargs):
     return list(flatten(args)) + list(flatten(kwargs))
 
 
-def trace_tensors(operator_output, node: 'NNCFNode'):
+def trace_tensors(operator_output, node: 'PTNNCFNode'):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
@@ -98,15 +100,15 @@ def trace_tensors(operator_output, node: 'NNCFNode'):
     raise ValueError("Unknown return type. Can not trace function call")
 
 
-def make_input_infos(inputs: 'OperatorInput'):
-    input_infos = []
+def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
+    tensor_metas = []
     for i, node_input_index_entry in enumerate(inputs):
         node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
-            input_infos.append(node_input.tensor_meta)
+            tensor_metas.append(node_input.tensor_meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
             meta = TensorMeta(None, i, node_input.shape)
-            input_infos.append(meta)
+            tensor_metas.append(meta)
         else:
-            input_infos.append(None)
-    return input_infos
+            tensor_metas.append(None)
+    return tensor_metas

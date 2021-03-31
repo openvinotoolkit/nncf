@@ -214,6 +214,8 @@ strict digraph  {
 "212 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=212, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "213 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" [id=213, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=cat];
 "214 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax" [id=214, scope="MobileNetSSD/SSDDetectionOutput[detection_head]", type=softmax];
+"215 /nncf_model_output" [id=215, scope="", type=nncf_model_output];
+"216 /nncf_model_output" [id=216, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
 "1 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 MobileNetSSD/MultiOutputSequential[basenet]/Sequential[0]/NNCFConv2d[0]/conv2d";
@@ -437,5 +439,7 @@ strict digraph  {
 "209 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "210 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "210 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "211 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d";
 "211 MobileNetSSD/SSDDetectionOutput[detection_head]/ModuleList[heads]/SSDHead[5]/NNCFConv2d[conf]/conv2d" -> "213 MobileNetSSD/SSDDetectionOutput[detection_head]/cat";
+"212 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "215 /nncf_model_output";
 "213 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "214 MobileNetSSD/SSDDetectionOutput[detection_head]/softmax";
+"213 MobileNetSSD/SSDDetectionOutput[detection_head]/cat" -> "216 /nncf_model_output";
 }

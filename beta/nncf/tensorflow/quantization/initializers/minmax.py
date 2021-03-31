@@ -91,7 +91,7 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
         for step, (x, _) in enumerate(dataset):
             if step >= self.num_steps:
                 break
-            model(x)
+            model(x, training=False)
 
         for layer, minmax in layer_statistics:
             layer.apply_minmax_initialization(minmax.min, minmax.max)
@@ -106,5 +106,5 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
             handle.remove()
 
         for x, _ in dataset:
-            model(x)
+            model(x, training=False)
             break

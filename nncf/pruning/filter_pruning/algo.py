@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from typing import Dict
+from typing import List
 
 import numpy as np
 import torch
@@ -24,18 +25,27 @@ from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
-from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
-from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, TransposeConvolution
-from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
-    tensor_l2_normalizer
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
-from nncf.pruning.model_analysis import Clusterization
-from nncf.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.pruning.base_algo import BasePruningAlgoBuilder
+from nncf.pruning.base_algo import PrunedModuleInfo
+from nncf.pruning.base_algo import BasePruningAlgoController
+from nncf.pruning.export_helpers import ModelPruner
+from nncf.pruning.export_helpers import PTElementwise
+from nncf.pruning.export_helpers import PTConvolution
+from nncf.pruning.export_helpers import PTTransposeConvolution
+from nncf.pruning.filter_pruning.functions import calculate_binary_mask
+from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
+from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
+from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.utils import get_next_nodes_of_types
+from nncf.common.pruning.utils import get_rounded_pruned_element_number
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
-from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -48,16 +58,16 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
                                        self.pruned_module_groups_info,
                                        self.config)
 
-    def _is_pruned_module(self, module):
+    def _is_pruned_module(self, module) -> bool:
         # Currently prune only Convolutions
         return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_op_types_of_pruned_modules(self):
+    def get_op_types_of_pruned_modules(self) -> List[str]:
         types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
         return types
 
-    def get_types_of_grouping_ops(self):
-        return Elementwise.get_all_op_aliases()
+    def get_types_of_grouping_ops(self) -> List[str]:
+        return PTElementwise.get_all_op_aliases()
 
 
 class FilterPruningController(BasePruningAlgoController):
@@ -94,7 +104,8 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def add_algo_specific_stats(self, stats):
+    def statistics(self, quickly_collected_only=False):
+        stats = super().statistics(quickly_collected_only)
         stats['pruning_rate'] = self.pruning_rate
         stats["FLOPS pruning level"] = 1 - self.current_flops / self.full_flops
         stats["FLOPS current / full"] = f"{self.current_flops} / {self.full_flops}"
@@ -126,13 +137,13 @@ class FilterPruningController(BasePruningAlgoController):
             if out_channels:
                 self.modules_out_channels[scope] = out_channels
 
-        prunable_types = Convolution.get_all_op_aliases() + TransposeConvolution.get_all_op_aliases()
+        prunable_types = PTConvolution.get_all_op_aliases() + PTTransposeConvolution.get_all_op_aliases()
         # 2. Init next_nodes for every pruning cluster
         for cluster in self.pruned_module_groups_info.get_all_clusters():
             next_nodes_cluster = set()
             for cluster_node in cluster.nodes:
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
-                next_nodes = get_next_nodes_of_types(self._model, nncf_cluster_node, prunable_types)
+                next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
                 next_nodes_idxs = [n.op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
@@ -445,17 +456,29 @@ class FilterPruningController(BasePruningAlgoController):
                 if module.bias is not None:
                     inplace_apply_filter_binary_mask(mask, module.bias, module_scope)
 
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
-            _apply_binary_mask_to_module_weight_and_bias(minfo.module, minfo.operand.binary_filter_pruning_mask,
-                                                         minfo.module_scope)
 
-            # Applying mask to the BatchNorm node
-            related_modules = minfo.related_modules
-            if minfo.related_modules is not None and PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules \
-                    and related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
-                bn_module = related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
-                _apply_binary_mask_to_module_weight_and_bias(bn_module, minfo.operand.binary_filter_pruning_mask,
-                                                             minfo.module_scope)
+        # 1. Propagate masks for all modules
+        graph = self.model.get_original_graph()
+        # pylint: disable=protected-access
+        nx_graph = graph._nx_graph
+        model_pruner = ModelPruner(self.model, graph, nx_graph)
+        model_pruner.mask_propagation()
+
+        # 2. Apply masks
+        types_to_apply_mask = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ['group_norm']
+        if self.prune_batch_norms:
+            types_to_apply_mask.append('batch_norm')
+        nx_nodes = [nx_graph.nodes[name] for name in nx_graph]
+        pruned_node_modules = list()
+        for node in nx_nodes:
+            node_type = graph.node_type_fn(node)
+            if node_type not in types_to_apply_mask:
+                continue
+            scope = node['op_exec_context'].scope_in_model
+            node_module = self.model.get_module_by_scope(scope)
+            if node['output_mask'] is not None and node_module not in pruned_node_modules:
+                _apply_binary_mask_to_module_weight_and_bias(node_module, node['output_mask'], scope)
+                pruned_node_modules.append(node_module)
 
     @staticmethod
     def create_stats_table_for_pruning_export(old_modules_info, new_modules_info):
@@ -519,7 +542,7 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
 
     def compression_level(self) -> CompressionLevel:
-        target_pruning_level = self.scheduler.pruning_target
+        target_pruning_level = self.scheduler.target_level
         actual_pruning_level = self.pruning_rate
         if actual_pruning_level == 0:
             return CompressionLevel.NONE

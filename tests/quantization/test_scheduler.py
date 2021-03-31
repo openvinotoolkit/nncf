@@ -116,13 +116,13 @@ def test_staged_scheduler_enables_quantizations_on_load(mocker):
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
     old_scheduler.epoch_step()
-    scheduler_state_dict = old_scheduler.state_dict()
+    scheduler_state = old_scheduler.get_state()
 
     ctrl_spy = QuantizationCtrlBaseSpy(mocker)
     scheduler = create_staged_scheduler(ctrl_spy, 1, 3)
     ctrl_spy.check_call_counts(0, 0, 1, 1, 0)
 
-    scheduler.load_state_dict(scheduler_state_dict)
+    scheduler.load_state(scheduler_state)
     ctrl_spy.check_call_counts(1, 0, 1, 2, 0)
 
     scheduler.epoch_step()
@@ -148,11 +148,10 @@ def test_staged_scheduler_with_empty_quantization():
     for module in algo.all_quantizations.values():
         assert not module.is_enabled_quantization()
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
@@ -193,11 +192,11 @@ def test_staged_scheduler_with_range_init():
         assert not module.is_enabled_quantization()
 
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():
@@ -259,11 +258,10 @@ def test_staged_scheduler_with_hawq():
         assert not module.is_enabled_quantization()
 
     scheduler.epoch_step()
-    for module in algo.all_quantizations.values():
-        if module.is_weights:
-            assert not module.is_enabled_quantization()
-        else:
-            assert module.is_enabled_quantization()
+    for wq_info in algo.weight_quantizers.values():
+        assert not wq_info.quantizer_module_ref.is_enabled_quantization()
+    for aq_info in algo.non_weight_quantizers.values():
+        assert aq_info.quantizer_module_ref.is_enabled_quantization()
 
     scheduler.epoch_step()
     for module in algo.all_quantizations.values():

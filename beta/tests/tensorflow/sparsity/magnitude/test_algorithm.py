@@ -35,7 +35,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, MagnitudeSparsityController)
-    assert compression_ctrl.sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
@@ -44,8 +44,9 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     assert len(conv_names) == len(wrappers)
     assert len(conv_names) == len(correct_wrappers)
 
-    assert compression_ctrl.threshold == approx(0.24, 0.1)
-    assert isinstance(compression_ctrl.weight_importance, type(normed_magnitude))
+    assert compression_ctrl._threshold == approx(0.24, 0.1) # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
     for i, wrapper in enumerate(wrappers):
         ref_mask = tf.ones_like(wrapper.weights[-1]) if i == 0 else ref_mask_2
@@ -73,21 +74,21 @@ def test_magnitude_sparse_algo_sets_threshold(weight_importance, sparsity_level,
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if sparsity_level:
         compression_ctrl.set_sparsity_level(sparsity_level)
-    assert compression_ctrl.threshold == pytest.approx(threshold, 0.01)
+    assert compression_ctrl._threshold == pytest.approx(threshold, 0.01) # pylint: disable=protected-access
 
 
 def test_can_create_magnitude_algo__without_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_steps': [1]}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-    assert compression_ctrl.sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
 
 def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1],
                                        'multistep_steps': [1, 2]}
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 

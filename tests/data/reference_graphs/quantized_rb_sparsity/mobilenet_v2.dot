@@ -375,6 +375,7 @@ strict digraph  {
 "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=373, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=374, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=375, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
+"376 /nncf_model_output" [id=376, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/conv2d";
 "2 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -760,4 +761,5 @@ strict digraph  {
 "372 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "376 /nncf_model_output";
 }

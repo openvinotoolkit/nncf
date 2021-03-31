@@ -30,7 +30,7 @@ from examples.common.distributed import DistributedSampler
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
@@ -178,7 +178,7 @@ def main_worker(current_gpu, config):
     #################################
 
     if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
-        compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
+        compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_iter = resuming_checkpoint.get('iter', 0) + 1
 
@@ -357,7 +357,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                     'state_dict': net.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'iter': iteration,
-                    'scheduler': compression_ctrl.scheduler.state_dict(),
+                    'scheduler': compression_ctrl.scheduler.get_state(),
                     'compression_level': compression_level,
                 }, str(checkpoint_file_path))
                 make_additional_checkpoints(checkpoint_file_path,

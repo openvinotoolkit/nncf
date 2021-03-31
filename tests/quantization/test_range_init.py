@@ -12,7 +12,8 @@
 """
 import itertools
 from collections import namedtuple
-from typing import Tuple, List
+from typing import List
+from typing import Tuple
 
 import pytest
 import re
@@ -21,33 +22,47 @@ import torch.nn as nn
 import torch.utils.data
 from functools import partial
 from pytest import approx
-from torchvision.models import squeezenet1_1
-
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.nncf_network import InsertionPoint, InsertionType
-from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
-from nncf.quantization.structs import QuantizerGroup
-from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, MeanMinMaxStatisticCollector, \
-    MedianMADStatisticCollector
-from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from torch.utils.data import DataLoader
+from torchvision.models import squeezenet1_1
 
 from nncf import utils
 from nncf.checkpoint_loading import load_state
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.initialization import DefaultInitializingDataLoader
-from nncf.quantization.init_range import RangeInitParams, PerLayerRangeInitConfig, \
-    RangeInitConfig
-from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, \
-    BaseQuantizer, QuantizerConfig, QuantizationMode, QUANTIZATION_MODULES
+from nncf.quantization.init_range import PerLayerRangeInitConfig
+from nncf.quantization.init_range import RangeInitConfig
+from nncf.quantization.init_range import RangeInitParams
+from nncf.quantization.layers import AsymmetricQuantizer
+from nncf.quantization.layers import BaseQuantizer
+from nncf.quantization.layers import PTQuantizerSpec
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.layers import SymmetricQuantizer
+from nncf.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.structures import QuantizationRangeInitArgs
-from nncf.utils import get_all_modules_by_type, safe_thread_call
-from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump, \
-    get_squeezenet_quantization_config, distributed_init_test_default, post_compression_test_distr_init, \
-    create_rank_dataloader
-from tests.helpers import TwoConvTestModel, get_empty_config, \
-    create_compressed_model_and_algo_for_test, create_mock_dataloader
+from nncf.tensor_statistics.collectors import MeanMinMaxStatisticCollector
+from nncf.tensor_statistics.collectors import MedianMADStatisticCollector
+from nncf.tensor_statistics.collectors import MinMaxStatisticCollector
+from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.utils import get_all_modules_by_type
+from nncf.utils import safe_thread_call
+from tests.helpers import TwoConvTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import create_mock_dataloader
+from tests.helpers import get_empty_config
+from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump
+from tests.quantization.test_quantization_helpers import create_rank_dataloader
+from tests.quantization.test_quantization_helpers import distributed_init_test_default
+from tests.quantization.test_quantization_helpers import get_squeezenet_quantization_config
+from tests.quantization.test_quantization_helpers import post_compression_test_distr_init
+
+# pylint:disable=unused-import
 
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
@@ -114,7 +129,9 @@ def save_params(model, out_file_path):
         torch.save(gpu_scale_signed_params, out_file)
 
 
-def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path):
+def test_multiprocessing_distributed_shares_init_scales_signedness_across_gpus(tmp_path, runs_subprocess_in_precommit):
+    if not torch.cuda.is_available():
+        pytest.skip("Skipping CUDA test cases for CPU only setups")
     num_init_samples = 10
 
     config = get_squeezenet_quantization_config()
@@ -145,14 +162,19 @@ def create_config():
 
 def generate_qp(scope_str: str, target: QuantizerGroup, in_port_id: int = None) -> SingleConfigQuantizationPoint:
     if target is QuantizerGroup.WEIGHTS:
-        ip = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP, module_scope=Scope.from_str(scope_str))
+        scope = Scope.from_str(scope_str)
+        ip = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, module_scope=scope)
+        scopes_of_directly_quantized_operators = [scope]
     elif target is QuantizerGroup.ACTIVATIONS:
-        ip = InsertionPoint(InsertionType.OPERATOR_POST_HOOK if in_port_id is None else InsertionType.OPERATOR_PRE_HOOK,
-                            ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(scope_str),
-                            input_port_id=in_port_id)
+        ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
+        scopes_of_directly_quantized_operators = [ia_op_exec_context.scope_in_model]
+        ip = PTTargetPoint(TargetType.OPERATOR_POST_HOOK if in_port_id is None else TargetType.OPERATOR_PRE_HOOK,
+                           ia_op_exec_context=InputAgnosticOperationExecutionContext.from_str(scope_str),
+                           input_port_id=in_port_id)
     else:
         raise RuntimeError()
-    return SingleConfigQuantizationPoint(ip, QuantizerConfig())
+    return SingleConfigQuantizationPoint(ip, QuantizerConfig(), scopes_of_directly_quantized_operators)
+
 
 @pytest.mark.parametrize("wrap_dataloader",
                          (True, False),
@@ -258,9 +280,9 @@ class TestRangeInit:
                    ]
         group_2 = [quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
-                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0]"],
+                                      "/Sequential[0]/NNCFConv2d[0]/conv2d_0|OUTPUT]"],
                    quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
-                                      "[/nncf_model_input_0]"],
+                                      "[/nncf_model_input_0|OUTPUT]"],
                    ]
 
         for quantizer in group_1:
@@ -452,7 +474,7 @@ class SingleConv2dSyntheticWeightModel(torch.nn.Module):
 
         for i in range(0, 3):
             for j in range(0, 3):
-                if not(i == 0 and j == 0):
+                if not (i == 0 and j == 0):
                     self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
                     self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
 
@@ -464,6 +486,7 @@ def init_idfn(val):
     if isinstance(val, tuple):
         return val[0]
     return val
+
 
 @pytest.mark.parametrize("quantization_mode, per_channel, range_init_type_vs_ref_vals",
                          itertools.product(["symmetric", "asymmetric"],
@@ -574,50 +597,51 @@ RangeInitCallCountTestStruct = namedtuple('RangeInitCallCountTestStruct',
                                            'expected_call_count_initializer_create',
                                            'expected_call_count_register_input',))
 RANGE_INIT_CALL_COUNT_TEST_CASES = [
-        RangeInitCallCountTestStruct(
-            range_init_config={
-                "type": "min_max",
-                "num_init_samples": 5
-            },
-            expected_call_count_initializer_create={
-                'min_max': 4,
-                'mean_min_max': 0,
-                'three_sigma': 0
-            },
-            expected_call_count_register_input={
-                'min_max': 12,  # 2 activation statistics for 5x inputs, 2 weight statistics for 1 input each
-                'mean_min_max': 0,
-                'three_sigma': 0
-            }
-        ),
-        RangeInitCallCountTestStruct(
-            range_init_config=[{
-                "type": "min_max",
-                "num_init_samples": 5,
-                "target_quantizer_group": "weights",
-                "target_scopes": ["TwoConvTestModel/Sequential[features]"]
-            }, {
-                "type": "mean_min_max",
-                "num_init_samples": 2,
-                "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
-            }, {
-                "type": "threesigma",
-                "num_init_samples": 3,
-                "target_quantizer_group": "activations",
-                "target_scopes": ["TwoConvTestModel/Sequential[features]"]
-            }],
-            expected_call_count_initializer_create={
-                'min_max': 2,
-                'mean_min_max': 1,
-                'three_sigma': 1
-            },
-            expected_call_count_register_input={
-                'min_max': 2,  # Weights only require single input registration
-                'mean_min_max': 2,
-                'three_sigma': 3
-            }
-        )
-    ]
+    RangeInitCallCountTestStruct(
+        range_init_config={
+            "type": "min_max",
+            "num_init_samples": 5
+        },
+        expected_call_count_initializer_create={
+            'min_max': 4,
+            'mean_min_max': 0,
+            'three_sigma': 0
+        },
+        expected_call_count_register_input={
+            'min_max': 12,  # 2 activation statistics for 5x inputs, 2 weight statistics for 1 input each
+            'mean_min_max': 0,
+            'three_sigma': 0
+        }
+    ),
+    RangeInitCallCountTestStruct(
+        range_init_config=[{
+            "type": "min_max",
+            "num_init_samples": 5,
+            "target_quantizer_group": "weights",
+            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+        }, {
+            "type": "mean_min_max",
+            "num_init_samples": 2,
+            "ignored_scopes": ["TwoConvTestModel/Sequential[features]"]
+        }, {
+            "type": "threesigma",
+            "num_init_samples": 3,
+            "target_quantizer_group": "activations",
+            "target_scopes": ["TwoConvTestModel/Sequential[features]"]
+        }],
+        expected_call_count_initializer_create={
+            'min_max': 2,
+            'mean_min_max': 1,
+            'three_sigma': 1
+        },
+        expected_call_count_register_input={
+            'min_max': 2,  # Weights only require single input registration
+            'mean_min_max': 2,
+            'three_sigma': 3
+        }
+    )
+]
+
 
 @pytest.fixture(params=RANGE_INIT_CALL_COUNT_TEST_CASES)
 def range_init_call_count_test_struct(request):
@@ -642,20 +666,19 @@ def test_per_layer_range_init_collectors_are_called_the_required_number_of_times
 
     TestRangeInit.create_algo_and_compressed_model(config)
 
-    assert range_minmax_init_create_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_initializer_create['min_max']
-    assert range_meanminmax_init_create_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_initializer_create['mean_min_max']
-    assert range_threesigma_init_create_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_initializer_create['three_sigma']
+    assert range_minmax_init_create_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_initializer_create['min_max']
+    assert range_meanminmax_init_create_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_initializer_create['mean_min_max']
+    assert range_threesigma_init_create_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_initializer_create['three_sigma']
 
-    assert range_minmax_init_register_input_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_register_input['min_max']
-    assert range_meanminmax_init_register_input_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_register_input['mean_min_max']
-    assert range_threesigma_init_register_input_spy.call_count ==\
-         range_init_call_count_test_struct.expected_call_count_register_input['three_sigma']
-
+    assert range_minmax_init_register_input_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_register_input['min_max']
+    assert range_meanminmax_init_register_input_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_register_input['mean_min_max']
+    assert range_threesigma_init_register_input_spy.call_count == \
+           range_init_call_count_test_struct.expected_call_count_register_input['three_sigma']
 
 
 QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percentile"]
@@ -663,11 +686,12 @@ QUANTIZER_RANGE_INITIALIZERS = ["min_max", "threesigma", "mean_min_max", "percen
 
 class QuantizeRangeInitScaleShapeTestStruct:
     def __init__(self, per_channel: bool, is_weights: bool,
-                 input_shape: List[int], ref_scale_shape: List[int]):
+                 input_shape: List[int], ref_scale_shape: Tuple[int, ...]):
         self.per_channel = per_channel
         self.is_weights = is_weights
         self.input_shape = input_shape
         self.ref_scale_shape = ref_scale_shape
+
 
 QRISSTS = QuantizeRangeInitScaleShapeTestStruct
 
@@ -675,20 +699,21 @@ QUANTIZER_RANGE_INIT_TEST_CASES = [
     QRISSTS(per_channel=False,
             is_weights=False,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1]),
+            ref_scale_shape=(1,)),
     QRISSTS(per_channel=True,
             is_weights=False,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1, 42, 1, 1]),
+            ref_scale_shape=(1, 42, 1, 1)),
     QRISSTS(per_channel=False,
             is_weights=True,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[1]),
+            ref_scale_shape=(1,)),
     QRISSTS(per_channel=True,
             is_weights=True,
             input_shape=[41, 42, 43, 44],
-            ref_scale_shape=[41, 1, 1, 1]),
+            ref_scale_shape=(41, 1, 1, 1)),
 ]
+
 
 def quantizer_range_init_scale_shape_idfn(fixture_value):
     test_struct = fixture_value[0]  # type: QRISSTS
@@ -715,9 +740,13 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
     test_struct = quantizer_range_init_test_struct[0]
     initializer_type = quantizer_range_init_test_struct[1]
     for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:
-        qconfig = QuantizerConfig(mode=quantization_mode, per_channel=test_struct.per_channel,
-                                  is_weights=test_struct.is_weights,
-                                  input_shape=test_struct.input_shape)
+        qconfig = PTQuantizerSpec(num_bits=8,
+                                  mode=quantization_mode,
+                                  signedness_to_force=None,
+                                  scale_shape=tuple(test_struct.ref_scale_shape),
+                                  narrow_range=test_struct.is_weights,
+                                  half_range=False,
+                                  logarithm_scale=False)
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
@@ -730,10 +759,10 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
         if quantization_mode == QuantizationMode.SYMMETRIC:
-            assert list(quantizer.scale.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.scale.shape) == test_struct.ref_scale_shape
         elif quantization_mode == QuantizationMode.ASYMMETRIC:
-            assert list(quantizer.input_low.shape) == test_struct.ref_scale_shape
-            assert list(quantizer.input_range.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.input_low.shape) == test_struct.ref_scale_shape
+            assert tuple(quantizer.input_range.shape) == test_struct.ref_scale_shape
         else:
             assert False  # options above should be exhaustive
 

@@ -10,11 +10,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from itertools import product
+
+import pytest
 import torch
+
 from nncf import NNCFConfig
-from tests.test_helpers import TwoConvTestModel, load_exported_onnx_version
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, \
-    QuantizerExportMode
+from nncf.quantization.layers import PTQuantizerSpec
+from nncf.quantization.layers import QUANTIZATION_MODULES
+from nncf.quantization.layers import QuantizationMode
+from nncf.quantization.layers import QuantizerExportMode
+from tests.test_helpers import TwoConvTestModel
+from tests.test_helpers import load_exported_onnx_version
 
 
 def get_config_for_export_mode(should_be_onnx_standard: bool) -> NNCFConfig:
@@ -80,92 +87,43 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
     assert num_other_nodes == 0
 
 
-def test_onnx_export_to_quantize_dequantize_per_channel():
-    # SYMMETRIC
-    q_config = QuantizerConfig(
-        input_shape=(2, 64, 15, 10),
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
+INPUT_TENSOR_SHAPE = (2, 64, 15, 10)
+PER_CHANNEL_AQ_SCALE_SHAPE = (1, INPUT_TENSOR_SHAPE[1], 1, 1)
+
+
+@pytest.mark.parametrize('per_channel, qmode, export_mode',
+                         product(
+                             [True, False],
+                             [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC],
+                             [QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS]
+                             ))
+def test_onnx_export_to_quantize_dequantize_per_channel(per_channel: bool,
+                                                        qmode: QuantizationMode,
+                                                        export_mode: QuantizerExportMode):
+    scale_shape = PER_CHANNEL_AQ_SCALE_SHAPE if per_channel else (1,)
+    qspec = PTQuantizerSpec(
+        scale_shape=scale_shape,
+        num_bits=8,
+        mode=qmode,
         signedness_to_force=None,
-        per_channel=True)
-    sym_quantizer = SymmetricQuantizer(q_config)
+        logarithm_scale=False,
+        narrow_range=False,
+        half_range=False,
+    )
+
+    q_cls = QUANTIZATION_MODULES.get(qmode)
+    quantizer = q_cls(qspec)
+    if qmode is QuantizationMode.SYMMETRIC:
+        quantizer.scale = torch.nn.Parameter(torch.rand_like(quantizer.scale))
+    else:
+        quantizer.input_low = torch.nn.Parameter(torch.rand_like(quantizer.input_low))
+        quantizer.input_range = torch.nn.Parameter(torch.rand_like(quantizer.input_range))
     # pylint: disable=protected-access
-    sym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
+    quantizer._export_mode = export_mode
 
-    x = torch.rand((2, 64, 15, 10))
-    sym_quantizer.run_export_quantization(x)
-
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=None,
-        per_channel=False)
-    sym_quantizer = SymmetricQuantizer(q_config)
-    # pylint: disable=protected-access
-    sym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-
-    x = torch.rand((2, 64, 15, 10))
-    sym_quantizer.run_export_quantization(x)
-
-    q_config = QuantizerConfig(
-        input_shape=(2, 64, 15, 10),
-        bits=8,
-        mode=QuantizationMode.SYMMETRIC,
-        signedness_to_force=None,
-        per_channel=True)
-    sym_quantizer = SymmetricQuantizer(q_config)
-    # pylint: disable=protected-access
-    sym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-    sym_quantizer.scale = torch.nn.Parameter(torch.rand(1, 64, 1, 1))
-
-    x = torch.rand((2, 64, 15, 10))
-    try:
-        sym_quantizer.run_export_quantization(x)
-    except RuntimeError as e:
-        assert str(
-            e) == "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear " \
-                  "doesn't support per channel quantization"
-    # ASYMMETRIC
-    q_config = QuantizerConfig(
-        input_shape=(2, 64, 15, 10),
-        bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=None,
-        per_channel=True)
-    assym_quantizer = AsymmetricQuantizer(q_config)
-    # pylint: disable=protected-access
-    assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-
-    x = torch.rand((2, 64, 15, 10))
-    assym_quantizer.run_export_quantization(x)
-
-    q_config = QuantizerConfig(
-        bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=None,
-        per_channel=False)
-    assym_quantizer = AsymmetricQuantizer(q_config)
-    # pylint: disable=protected-access
-    assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-
-    x = torch.rand((2, 64, 15, 10))
-    assym_quantizer.run_export_quantization(x)
-
-    q_config = QuantizerConfig(
-        input_shape=(2, 64, 15, 10),
-        bits=8,
-        mode=QuantizationMode.ASYMMETRIC,
-        signedness_to_force=None,
-        per_channel=True)
-    assym_quantizer = AsymmetricQuantizer(q_config)
-    # pylint: disable=protected-access
-    assym_quantizer._export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
-    sym_quantizer.scale = torch.nn.Parameter(torch.rand(1, 64, 1, 1))
-
-    x = torch.rand((2, 64, 15, 10))
-    try:
-        assym_quantizer.run_export_quantization(x)
-    except RuntimeError as e:
-        assert str(
-            e) == "PyTorch v1.5.0 export to ONNX using QuantizeLinear-DequantizeLinear" \
-                  " doesn't support per channel quantization"
+    x = torch.rand(INPUT_TENSOR_SHAPE)
+    if quantizer.per_channel and export_mode is QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+        with pytest.raises(RuntimeError):
+            quantizer.run_export_quantization(x)
+    else:
+        quantizer.run_export_quantization(x)
