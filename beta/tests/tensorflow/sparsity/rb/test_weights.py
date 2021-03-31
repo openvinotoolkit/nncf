@@ -28,7 +28,7 @@ def get_RBSParsityWeigth_and_layer(frozen=False):
     layer.registry_weight_operation('kernel', sw)
     layer.build((1, ))
     if frozen:
-        sw.freeze(layer.ops_weights[op_name]['trainable'])
+        sw.freeze(layer.ops_weights[op_name])
     return sw, layer, op_name
 
 
@@ -44,10 +44,10 @@ def test_can_create_sparse_weight__with_defaults():
 
 def test_can_freeze_mask():
     sw, layer, op_name = get_RBSParsityWeigth_and_layer(frozen=False)
-    trainable_weight = layer.ops_weights[op_name]['trainable']
-    assert trainable_weight
-    sw.freeze(trainable_weight)
-    assert not trainable_weight
+    op_weights = layer.ops_weights[op_name]
+    assert op_weights['trainable']
+    sw.freeze(op_weights)
+    assert not op_weights['trainable']
 
 
 @pytest.mark.parametrize('frozen', (True, False), ids=('sparsify', 'frozen'))
@@ -74,8 +74,8 @@ class TestWithSparsify:
         mask = op_weights['mask']
         if mask_value is not None:
             mask.assign(tf.fill(mask.shape, mask_value))
-        assert sw.loss(mask) == ref_loss
+        assert sw.loss(op_weights) == ref_loss
         w = tf.ones(1)
         assert apply_mask(w, st_binary_mask(mask)) == ref_loss
-        sw.freeze(op_weights['trainable'])
+        sw.freeze(op_weights)
         assert sw(w, op_weights, tf.constant(True, tf.bool)) == ref_loss

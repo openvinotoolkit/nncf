@@ -87,8 +87,9 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model, op_names)
+        sparsity_init = config.get('sparsity_init', 0)
         params = config.get('params', {})
-        self.sparsity_init = config.get('sparsity_init', 0)
+        params['sparsity_init'] = sparsity_init
         sparsity_level_mode = params.get('sparsity_level_setting_mode', 'global')
 
         if sparsity_level_mode == 'local':
@@ -99,7 +100,7 @@ class RBSparsityController(BaseSparsityController):
         schedule_type = params.get('schedule', 'exponential')
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)
-        self.set_sparsity_level(self.sparsity_init)
+        self.set_sparsity_level(sparsity_init)
 
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)
@@ -160,6 +161,3 @@ class RBSparsityController(BaseSparsityController):
             })
 
         return raw_sparsity_statistics
-
-    def get_sparsity_init(self):
-        return self.sparsity_init

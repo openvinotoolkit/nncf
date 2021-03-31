@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
@@ -39,7 +40,7 @@ SPARSITY_TF_OPS = [
 ]
 
 
-class BaseSparsityController(TFCompressionAlgorithmController):
+class BaseSparsityController(TFCompressionAlgorithmController, SparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable sparsity-specific compression.

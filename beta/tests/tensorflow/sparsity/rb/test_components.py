@@ -132,7 +132,7 @@ class TestSparseModules:
             rb_op = get_op_by_cls(model.layers[1], RBSparsifyingWeight)
             weights = model.layers[1].get_operation_weights(rb_op.name)
             assert tf.equal(weights['trainable'], tf.constant(not frozen))
-            rb_op.freeze(weights['trainable'])
+            rb_op.freeze(weights)
             assert not weights['trainable']
 
         def test_disable_loss(self, model_name, local_mode, frozen):
@@ -189,7 +189,8 @@ class TestSparseModules:
                              ids=('default', 'min', 'middle', 'max', 'more_than_max', 'less_then_min'))
     def test_get_target_sparsity_rate(self, model_name, local_mode, target, expected_rate):
         config = get_empty_config()
-        config['compression'] = Dict({'algorithm': 'rb_sparsity', 'params': {'schedule': 'exponential'}})
+        config['compression'] = Dict({'algorithm': 'rb_sparsity',
+                                      'params': {'sparsity_init': 0}})
         _, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, config=config)
         loss = algo.loss
         if target is not None:

@@ -86,7 +86,7 @@ def test_can_set_sparse_layers_to_loss():
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
     # pylint: disable=protected-access
-    for op, _, _ in loss._target_ops:
+    for op, _ in loss._target_ops:
         assert isinstance(op, RBSparsifyingWeight)
 
 
@@ -111,8 +111,7 @@ def test_loss_has_correct_ops():
             target_op = target_ops[op.name]
             weights = wrapper.get_operation_weights(op.name)
             assert op is target_op[0]
-            assert weights['mask'] is target_op[1]
-            assert weights['trainable'] is target_op[2]
+            assert weights is target_op[1]
 
 
 
@@ -184,8 +183,8 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert not loss.disabled
 
     # pylint: disable=protected-access
-    for _, _, trainable in loss._target_ops:
-        assert trainable
+    for op, op_weights in loss._target_ops:
+        assert op.get_trainable_weight(op_weights)
 
     scheduler.epoch_step()
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.2
@@ -207,5 +206,5 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
     assert pytest.approx(loss.target_sparsity_rate, abs=1e-3) == 0.6
     assert loss() == 0
 
-    for _, _, trainable in loss._target_ops:
-        assert not trainable
+    for op, op_weights in loss._target_ops:
+        assert not op.get_trainable_weight(op_weights)
