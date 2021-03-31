@@ -35,21 +35,6 @@ def identity_mask_propagation(nx_node, nx_graph):
     nx_node['output_mask'] = input_masks[0]
 
 
-def fill_input_masks(nx_node, nx_graph, device='cpu'):
-    """
-    Return all input masks and all input masks with all None replaced by identity masks.
-    """
-    input_edges = sorted(list(nx_graph.in_edges(nx_node['key'])), key=lambda edge: nx_graph.edges[edge]['in_port'])
-    input_masks = [nx_graph.nodes[input_node]['output_mask'] for input_node, _ in input_edges]
-
-    filled_input_masks = []
-    for i, mask in enumerate(input_masks):
-        if mask is None:
-            mask = torch.ones(nx_graph.edges[input_edges[i]]['activation_shape'][1], device=device)
-        filled_input_masks.append(mask)
-    return input_masks, filled_input_masks
-
-
 class PTPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):
     @staticmethod
     def get_version_agnostic_name(name):
