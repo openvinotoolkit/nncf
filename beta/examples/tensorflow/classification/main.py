@@ -225,7 +225,7 @@ def run(config):
         validation_dataset,
         steps=validation_steps,
         callbacks=[get_progress_bar(
-            stateful_metrics=[metric.name for metric in metrics])],
+            stateful_metrics=['loss'] + [metric.name for metric in metrics])],
         verbose=1)
 
     if config.metrics_dump is not None:
