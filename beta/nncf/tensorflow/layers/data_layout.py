@@ -11,10 +11,13 @@
  limitations under the License.
 """
 
+import tensorflow as tf
+
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import CHANNEL_AXES
+from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 
 
@@ -39,7 +42,16 @@ def get_data_format(layer):
 
 
 def get_input_channel_axis(layer):
+    original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
     data_format = get_data_format(layer)
+    class_name = original_layer.__class__.__name__
+    if class_name in GENERAL_CONV_LAYERS:
+        return -1 if data_format == 'channels_last' else -1 - original_layer.rank
+    if isinstance(original_layer, (tf.keras.layers.BatchNormalization,
+                                   tf.keras.layers.LayerNormalization)):
+        return original_layer.axis
+    # works for Dense, Cropping family, Pooling family, SeparableConv family,
+    # SpatialDropout family, UpSampling family, ZeroPadding family
     return -1 if data_format == 'channels_last' else 1
 
 
