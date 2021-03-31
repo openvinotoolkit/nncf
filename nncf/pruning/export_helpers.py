@@ -399,7 +399,7 @@ class PTConcat(PTDefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                mask = torch.ones(input_edges[i]['activation_shape'][1], device=device)
+                mask = torch.ones(input_edges[i][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
             filled_input_masks.append(mask)
         return input_masks, torch.cat(filled_input_masks)
 
