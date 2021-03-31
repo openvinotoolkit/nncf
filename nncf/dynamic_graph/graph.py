@@ -803,6 +803,19 @@ class PTNNCFGraph(NNCFGraph):
                 matching_graph_op_nodes.append(node)
         return matching_graph_op_nodes
 
+    def get_input_edges(self, node: NNCFNode) -> List[dict]:
+        """
+        Returns description of edge for input tensors.
+
+        :param node: Consumer node.
+        :return: List of input edges for node.
+        """
+        nx_node_key = self._node_id_to_key_dict[node.node_id]
+        input_edges = sorted(list(self._nx_graph.in_edges(nx_node_key)),
+                             key=lambda edge: self._nx_graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR])
+
+        return [self._nx_graph.edges[edge] for edge in input_edges]
+
 
 class NNCFNodeExpression(NodeExpression):
     def __init__(self, node_type: str = None, filter_fn=None):

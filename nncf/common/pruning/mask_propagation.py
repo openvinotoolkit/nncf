@@ -23,6 +23,7 @@ class MaskPropagationAlgorithm:
     Before call mask_propagation() you need set node.data['output_masks']
     for nodes that have masks already defined.
     """
+
     def __init__(self, graph: NNCFGraph, pruning_operator_metatypes: PruningOperationsMetatypeRegistry):
         """
         Initializes MaskPropagationAlgorithm.
@@ -31,12 +32,15 @@ class MaskPropagationAlgorithm:
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
                metatypes describing operations with common pruning mask application and propagation properties.
         """
-        self.graph = graph
+        self._graph = graph
         self._pruning_operator_metatypes = pruning_operator_metatypes
 
     def get_class_by_type_name(self, type_name: str) -> DefaultMetaOp:
         """
-        Return class of metaop that corresponds to type_name type.
+        Returns class of metaop that corresponds to `type_name` type.
+
+        :param type_name: name of type of layer
+        :return: Class of metaop that corresponds to `type_name` type.
         """
         cls = self._pruning_operator_metatypes.get_operator_metatype_by_op_name(type_name)
         if cls is None:
@@ -48,9 +52,9 @@ class MaskPropagationAlgorithm:
         Mask propagation in graph:
         to propagate masks run method mask_propagation (of metaop of current node) on all nodes in topological order.
         """
-        for node in self.graph.topological_sort():
+        for node in self._graph.topological_sort():
             cls = self.get_class_by_type_name(node.node_type)
-            cls.mask_propagation(node, self.graph)
+            cls.mask_propagation(node, self._graph)
 
 
 def get_input_masks(node: NNCFNode, graph: NNCFGraph):

@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Union
+
 import tensorflow as tf
 
 from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
@@ -85,10 +87,9 @@ class TFConvolution(DefaultMetaOp):
         output_mask = node.data.get('output_mask', None)
 
         if is_grouped_conv(node):
+            output_mask = None
             if is_depthwise_conv(node):
                 output_mask = input_masks[0]
-            else:
-                output_mask = None
 
         node.data['output_mask'] = output_mask
 
@@ -99,7 +100,11 @@ class TFTransposeConvolution(DefaultMetaOp):
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
-        return True
+        accept_pruned_input = True
+        if is_grouped_conv(node):
+            if not is_depthwise_conv(node):
+                accept_pruned_input = False
+        return accept_pruned_input
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
@@ -108,10 +113,9 @@ class TFTransposeConvolution(DefaultMetaOp):
 
         # In case of group convs we can't prune by output filters
         if is_grouped_conv(node):
+            output_mask = None
             if is_depthwise_conv(node):
                 output_mask = input_masks[0]
-            else:
-                output_mask = None
 
         node.data['output_mask'] = output_mask
 
@@ -138,11 +142,13 @@ class TFConcat(DefaultMetaOp):
         return True
 
     @classmethod
-    def check_concat(cls, node: NNCFNode, graph: NNCFGraph):
+    def check_concat(cls, node: NNCFNode, graph: NNCFGraph) -> bool:
         """
-        Return whether all input sources of node is convolutions or not
+        Return whether all input sources of node is convolutions or not.
+
         :param node: node to determine it's sources
         :param graph: NNCF graph to work with
+        :return: True if all input sources of node is convolutions
         """
 
         for input_node in graph.get_previous_nodes(node):
@@ -159,15 +165,19 @@ class TFConcat(DefaultMetaOp):
         return True
 
     @classmethod
-    def generate_result_mask(cls, node: NNCFNode, graph: NNCFGraph):
+    def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[tf.Tensor, None]:
         """
-        Return all input masks and all input masks with all None replaced by identity masks.
+        Generate output mask from input masks with all None replaced by identity masks.
+
+        :param node: node to determine it's sources
+        :param graph: NNCF graph to work with
+        :return: output mask
         """
         previous_nodes = graph.get_previous_nodes(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
 
         if all(mask is None for mask in input_masks):
-            return None, None
+            return None
 
         device = [m for m in input_masks if m is not None][0].device
 
@@ -186,7 +196,7 @@ class TFConcat(DefaultMetaOp):
         result_mask = None
 
         if cls.check_concat(node, graph):
-            result_mask = cls.generate_result_mask(node, graph)
+            result_mask = cls.generate_output_mask(node, graph)
 
         node.data['output_mask'] = result_mask
 

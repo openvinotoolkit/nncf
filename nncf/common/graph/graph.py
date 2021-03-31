@@ -171,19 +171,6 @@ class NNCFGraph:
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 
-    def get_input_edges(self, node: NNCFNode) -> List[dict]:
-        """
-        Returns shapes of input tensors
-
-        :param node: Consumer node.
-        :return: List of shapes of input tensors.
-        """
-        nx_node_key = self._node_id_to_key_dict[node.node_id]
-        input_edges = sorted(list(self._nx_graph.in_edges(nx_node_key)),
-                             key=lambda edge: self._nx_graph.edges[edge]['in_port'])
-
-        return [self._nx_graph.edges[edge] for edge in input_edges]
-
     def traverse_graph(self,
                        curr_node: NNCFNode,
                        traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
