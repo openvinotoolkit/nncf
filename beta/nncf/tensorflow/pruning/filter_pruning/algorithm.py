@@ -142,7 +142,7 @@ class FilterPruningController(BasePruningAlgoController):
             filter_mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
             for layer in layers:
-                nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.node_name][0]
+                nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.data['original_name']][0]
                 nncf_node.data['output_mask'] = filter_mask
 
         # 2. Propagating masks across the graph
@@ -151,7 +151,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Apply the masks
         for wrapped_layer in wrapped_layers:
-            nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.node_name][0]
+            nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.data['original_name']][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
 

@@ -366,7 +366,7 @@ class PTConcat(PTDefaultMetaOp):
         """
         Return whether all input sources of node is convolutions or not
         :param node: node to determine it's sources
-        :param graph:  NNCF graph to work with
+        :param graph: NNCF graph to work with
         """
 
         for input_node in graph.get_previous_nodes(node):
@@ -389,6 +389,7 @@ class PTConcat(PTDefaultMetaOp):
         """
         previous_nodes = graph.get_previous_nodes(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+        input_edges = graph.get_input_edges(node)
 
         if all(mask is None for mask in input_masks):
             return None, None
@@ -398,8 +399,7 @@ class PTConcat(PTDefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                #TODO: looks bad module_attributes.out_channels
-                mask = torch.ones(previous_nodes[i].module_attributes.out_channels, device=device)
+                mask = torch.ones(input_edges[i]['activation_shape'][1], device=device)
             filled_input_masks.append(mask)
         return input_masks, torch.cat(filled_input_masks)
 

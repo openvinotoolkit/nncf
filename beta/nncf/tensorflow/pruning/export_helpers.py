@@ -19,10 +19,11 @@ from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.pruning.utils import is_grouped_conv
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
+from nncf.common.pruning.utils import get_sources_of_node
+from nncf.common.pruning.utils import is_grouped_conv
 
 TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
 
@@ -137,11 +138,55 @@ class TFConcat(DefaultMetaOp):
         return True
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
-        input_masks = get_input_masks(node, graph)
+    def check_concat(cls, node: NNCFNode, graph: NNCFGraph):
+        """
+        Return whether all input sources of node is convolutions or not
+        :param node: node to determine it's sources
+        :param graph: NNCF graph to work with
+        """
 
-        #TODO check and generate masks for None
-        result_mask = tf.concat(input_masks, axis=0)
+        for input_node in graph.get_previous_nodes(node):
+            # If input has mask ->  it went from convolution (source of this node is a convolution)
+            if input_node.data.get('output_mask', None) is None:
+                continue
+
+            source_nodes = get_sources_of_node(input_node, graph, TFConvolution.get_all_op_aliases() +
+                                               TFStopMaskForwardOps.get_all_op_aliases() +
+                                               TFInput.get_all_op_aliases())
+            sources_types = [node.node_type for node in source_nodes]
+            if any(t in sources_types for t in TFStopMaskForwardOps.get_all_op_aliases()):
+                return False
+        return True
+
+    @classmethod
+    def generate_result_mask(cls, node: NNCFNode, graph: NNCFGraph):
+        """
+        Return all input masks and all input masks with all None replaced by identity masks.
+        """
+        previous_nodes = graph.get_previous_nodes(node)
+        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+
+        if all(mask is None for mask in input_masks):
+            return None, None
+
+        device = [m for m in input_masks if m is not None][0].device
+
+        filled_input_masks = []
+        for i, mask in enumerate(input_masks):
+            if mask is None:
+                with tf.device(device):
+                    # TODO: need know input shape
+                    mask = tf.ones(previous_nodes[i].module_attributes.out_channels)
+            filled_input_masks.append(mask)
+        result_mask = tf.concat(filled_input_masks, 0)
+        return result_mask
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        result_mask = None
+
+        if cls.check_concat(node, graph):
+            result_mask = cls.generate_result_mask(node, graph)
 
         node.data['output_mask'] = result_mask
 
@@ -158,7 +203,8 @@ class TFElementwise(DefaultMetaOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         input_masks = get_input_masks(node, graph)
         if input_masks[0] is not None:
-            assert all(tf.debugging.assert_near(input_masks[0], mask) for mask in input_masks)
+            for input_mask in input_masks[1:]:
+                tf.debugging.assert_near(input_masks[0], input_mask)
         node.data['output_mask'] = input_masks[0]
 
 

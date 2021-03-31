@@ -49,32 +49,36 @@ def check_pruning_mask(mask, pruning_rate, layer_name):
 
 
 def get_concat_test_model(input_shape):
-    #            (input)
-    #               |
-    #            (conv1)
-    #        /      |      \
-    #    (conv2) (conv3) (conv4 + bn)
-    #       |       |       |
-    #        \      |      /
-    #          (tf_concat)
-    #               |
-    #          (BatchNorm)
-    #               |
-    #            (conv5)
+    #             (input)
+    #                |
+    #             (conv1)
+    #        /       |       \
+    #    (conv2)  (conv3)  (conv4)
+    #       |        |       |
+    #       |    (gr_conv)   |
+    #         \    /         |
+    #        (concat)    (bn_conv4)
+    #             \       /
+    #              (concat)
+    #                 |
+    #            (bn_concat)
+    #                 |
+    #              (conv5)
 
     inputs = tf.keras.Input(shape=input_shape[1:], name='input')
     conv1 = layers.Conv2D(16, 1, name='conv1')
     conv2 = layers.Conv2D(16, 1, name='conv2')
     conv3 = layers.Conv2D(16, 1, name='conv3')
+    group_conv = layers.Conv2D(16, 1, groups=8, name='group_conv')
     conv4 = layers.Conv2D(32, 1, name='conv4')
     bn_conv4 = layers.BatchNormalization(name="bn_conv4")
     bn_concat = layers.BatchNormalization(name="bn_concat")
-    conv5 = layers.Conv2D(48, 1, name='conv5')
+    conv5 = layers.Conv2D(64, 1, name='conv5')
 
     x = conv1(inputs)
-    x1 = tf.concat([conv2(x), conv3(x)], -1, name='tf_concat_1')
-    x1 = conv4(x1)
-    x1 = bn_conv4(x1)
+    x1 = tf.concat([conv2(x), group_conv(conv3(x))], -1, name='tf_concat_1')
+    x = conv4(x)
+    x = bn_conv4(x)
     x = tf.concat([x, x1], -1, name='tf_concat_2')
     x = bn_concat(x)
     outputs = conv5(x)
@@ -84,10 +88,10 @@ def get_concat_test_model(input_shape):
 
 @pytest.mark.parametrize(('all_weights', 'prune_batch_norms', 'ref_num_wrapped_layer'),
                          [
-                             [True, True, 7],
-                             [False, True, 7],
-                             [True, False, 5],
-                             [False, False, 5],
+                             # [True, True, 6],
+                             [False, True, 6],
+                             # [True, False, 4],
+                             # [False, False, 4],
                          ])
 def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_layer):
     config = get_basic_pruning_config(8)
@@ -108,5 +112,6 @@ def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_l
 
         # Check masks correctness
         if not all_weights:
+            target_pruning_rate = 0.625 if layer.name == 'nncf_wrapper_bn_concat' else 0.5
             for op in layer.ops_weights.values():
-                check_pruning_mask(op['mask'].numpy(), 0.5, layer.name)
+                check_pruning_mask(op['mask'].numpy(), target_pruning_rate, layer.name)
