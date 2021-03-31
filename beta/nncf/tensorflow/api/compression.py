@@ -24,27 +24,6 @@ DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompressionScheduler(CompressionScheduler):
-    def __init__(self):
-        super().__init__()
-        self.last_epoch = -1
-        self.last_step = -1
-
-    def step(self, last: Optional[int] = None) -> None:
-        if last is None:
-            last = self.last_step + 1
-        self.last_step = last
-
-    def epoch_step(self, last: Optional[int] = None) -> None:
-        if last is None:
-            last = self.last_epoch + 1
-        self.last_epoch = last
-
-    def load_state(self, initial_step: int, steps_per_epoch: int) -> None:
-        self.last_step = initial_step - 1
-        self.last_epoch = self.last_step // steps_per_epoch
-
-
 class TFCompressionAlgorithmInitializer:
     def call(self,
              model: ModelType,
@@ -74,7 +53,7 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
         """
         super().__init__(target_model)
         self._initializer = TFCompressionAlgorithmInitializer()
-        self._scheduler = TFCompressionScheduler()
+        self._scheduler = CompressionScheduler()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
@@ -111,7 +90,9 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         """
         transformation_layout = self.get_transformation_layout(model)
-        return TFModelTransformer(model, transformation_layout).transform()
+        transformer = TFModelTransformer(model, transformation_layout)
+        transformed_model = transformer.transform()
+        return transformed_model
 
     def build_controller(self, model: ModelType) -> TFCompressionAlgorithmController:
         """

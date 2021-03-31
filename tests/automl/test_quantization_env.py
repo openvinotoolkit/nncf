@@ -33,10 +33,10 @@ def create_test_quantization_env() -> QuantizationEnv:
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
                                                     nncf_network,
                                                     hw_config=hw_config).generate_setup()
-    experimental_builder = ExperimentalQuantizationBuilder(setup, {})
+    experimental_builder = ExperimentalQuantizationBuilder(setup, {}, hw_config)
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
-    experimental_ctrl = nncf_network.commit_compression_changes()  # type: ExperimentalQuantizationController
+    experimental_ctrl = experimental_builder.build_controller(nncf_network)
     data_loader = create_mock_dataloader(
             {
                 "sample_size": [1, 1, 4, 4],
@@ -44,11 +44,11 @@ def create_test_quantization_env() -> QuantizationEnv:
     constraints = HardwareQuantizationConstraints()
     for qid in experimental_ctrl.all_quantizations:
         qconf_constraint_list = []
-        qconf = experimental_ctrl.all_quantizations[qid].get_current_config()
+        qconf = experimental_ctrl.all_quantizations[qid].get_quantizer_config()
         bit_set = [8, 4, 2] if 'conv' in str(qid) else [8, 4]
         for bits in bit_set:
             adj_qconf = deepcopy(qconf)
-            adj_qconf.bits = bits
+            adj_qconf.num_bits = bits
             qconf_constraint_list.append(adj_qconf)
         constraints.add(qid, qconf_constraint_list)
 

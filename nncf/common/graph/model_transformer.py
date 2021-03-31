@@ -25,9 +25,9 @@ class ModelTransformer:
 
     def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
-        Initializes Model Transformer
+        Initializes Model Transformer.
 
-        :param model: The model to be transformed
+        :param model: The model to be transformed.
         :param transformation_layout: An instance of `TransformationLayout` that
             includes a list of transformations to be applied to the model.
         """
@@ -38,6 +38,6 @@ class ModelTransformer:
         """
         Applies transformations to the model.
 
-        :return: The transformed model
+        :return: The transformed model.
         """
         raise NotImplementedError()

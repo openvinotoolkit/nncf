@@ -10,7 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict, Callable, Any, Union, List
+from typing import Dict
+from typing import Callable
+from typing import Any
+from typing import Union
+from typing import List
 from typing import Tuple
 
 import numpy as np
@@ -47,7 +51,7 @@ def fill_linear_weight(linear, value):
         linear.weight[:n, :n] += torch.eye(n)
 
 
-def create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
+def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init=0, padding=0, stride=1):
     conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
@@ -75,6 +79,8 @@ class BasicConvTestModel(nn.Module):
         self.weight_init = weight_init
         self.bias_init = bias_init
         self.conv = create_conv(in_channels, out_channels, kernel_size, weight_init, bias_init)
+        self.wq_scale_shape_per_channel = (out_channels, 1, 1, 1)
+        self.aq_scale_shape_per_channel = (1, in_channels, 1, 1)
 
     @staticmethod
     def default_weight():
@@ -146,7 +152,7 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
 
     config = NNCFConfig()
     config.update({
-        "model": "basic_sparse_conv",
+        "model": "empty_config",
         "model_size": model_size,
         "input_info": input_info if input_info else _create_input_info()
     })
@@ -163,7 +169,7 @@ def check_equal(test, reference, rtol=1e-4):
         np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
 
 
-def create_compressed_model_and_algo_for_test(model: NNCFNetwork, config: NNCFConfig,
+def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
                                               dummy_forward_fn: Callable[[Module], Any] = None,
                                               wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                               resuming_state_dict: dict = None) \

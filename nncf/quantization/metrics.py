@@ -6,7 +6,7 @@ from texttable import Texttable
 from collections import deque
 
 from nncf.quantization.layers import SymmetricQuantizer
-from nncf.nncf_network import NNCFNetwork, NNCFGraph
+from nncf.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.dynamic_graph.transform_graph import is_nncf_module
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT, QuantizationTrait
 
@@ -62,11 +62,9 @@ class NetworkQuantizationShareMetric(BaseMetric):
     def __init__(self, compressed_model,
                  weights_quantizers,
                  non_weights_quantizers,
-                 quantizer_setup_type,
                  build_time_info: NetworkQuantizationShareMetricBuildTimeInfo):
         super().__init__()
         self._compressed_model = compressed_model
-        self._quantizer_setup_type = quantizer_setup_type # type: QuantizerSetupType
         self.non_weights_quantizers = {k: v.quantizer_module_ref for k, v in non_weights_quantizers.items()}
         self.weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
         self._all_quantizations = {**self.weights_quantizers, **self.non_weights_quantizers}
@@ -97,10 +95,10 @@ class NetworkQuantizationShareMetric(BaseMetric):
             for p in self.params_bits_stat:
                 self.stat[h][p] = 0
 
-        for quantizer in self._all_quantizations.values():  # type: BaseQuantizer
+        for qid, quantizer in self._all_quantizations.items():  # type: Tuple[QuantizerId, BaseQuantizer]
             num_bits = quantizer.num_bits
             self.stat[self.TOTAL_RATIO_STR][num_bits] += 1
-            type_ = self.WEIGHTS_RATIO_STR if quantizer.is_weights else self.ACTIVATIONS_RATIO_STR
+            type_ = self.WEIGHTS_RATIO_STR if qid in self.weights_quantizers else self.ACTIVATIONS_RATIO_STR
             self.stat[type_][num_bits] += 1
             if quantizer.per_channel:
                 self.stat[type_][self.PER_CHANNEL_STR] += 1
@@ -270,7 +268,7 @@ class MemoryCostMetric(BaseMetric):
             if u in input_node_keys:
                 continue
 
-            shape = original_nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+            shape = original_nx_graph.edges[u, v][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             u_node_scope_str = str(original_nx_graph.nodes[u]['op_exec_context'].input_agnostic)
             num_bits = self.get_precision_for_activation_tensor(u, v, original_nx_graph)
             original_nx_graph.edges[u, v]['precision'] = num_bits
@@ -286,7 +284,7 @@ class MemoryCostMetric(BaseMetric):
             self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = 0
 
     def get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
-        scope_u_node = original_nx_graph.nodes[u_node][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
+        scope_u_node = original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
         # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor =\
@@ -300,7 +298,7 @@ class MemoryCostMetric(BaseMetric):
                 precision = 32
             return precision
 
-        u_node_scope_str = str(original_nx_graph.nodes[u_node][NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+        u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
         if u_node_scope_str in self._compressed_model.activation_quantizers:
             precision = self._compressed_model.activation_quantizers[u_node_scope_str].num_bits
         else:
@@ -376,18 +374,29 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 node = merged_original_graph.nodes[node_key]
                 if node[self.IS_MERGED_GRAPH_ATTR]:
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
-                    scope_str = str(last_node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-                    if scope_str in self._compressed_model.activation_quantizers:
+                    scope_str = str(last_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                    matched = False
+                    for aq_key in self._compressed_model.activation_quantizers.keys():
+                        if scope_str in aq_key:
+                            matched = True
+                            break
+                    if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         self._marking_edges(merged_original_graph, node_key, queue, False)
                 else:
-                    scope_str = str(node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-                    if scope_str in self._compressed_model.activation_quantizers:
+                    scope_str = str(node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+
+                    matched = False
+                    for aq_key in self._compressed_model.activation_quantizers.keys():
+                        if scope_str in aq_key:
+                            matched = True
+                            break
+                    if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True
-                        node_op_name = node[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                        node_op_name = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
                         for op in DEFAULT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
                             op_names = [op.name]
                             if op.torch_tensor_patch_spec is not None:
@@ -449,7 +458,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         retval = {"Quantization configuration statistics:" : table}
         return retval
 
-    def get_merged_original_graph_with_patterns(self, original_graph: NNCFGraph):
+    def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         import nncf.dynamic_graph.patterns as p
         from nncf.dynamic_graph.graph_matching import search_all
 
@@ -482,7 +491,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 merged_nodes.append(original_graph._nx_graph.nodes[node_key])
                 merged_graph.remove_node(node_key)
             merged_node_attrs = {
-                NNCFGraph.KEY_NODE_ATTR: merged_node_key,
+                PTNNCFGraph.KEY_NODE_ATTR: merged_node_key,
                 self.NODES_GRAPH_ATTR: merged_nodes,
                 self.IS_MERGED_GRAPH_ATTR: True
             }

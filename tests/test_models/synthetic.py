@@ -10,13 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import torch
+import torch.nn.functional as F
 from abc import abstractmethod
+from torch import nn
+from torch.nn import Dropout
+from torch.nn import Parameter
 
 import nncf
-import torch
-from torch import nn
-import torch.nn.functional as F
-from torch.nn import Parameter, Dropout
 
 
 class ModelWithDummyParameter(nn.Module):
@@ -126,3 +127,21 @@ class ReshapeModel(ModelWithDummyParameter):
         torch.unsqueeze(x, dim=0)
         torch.flatten(x)
         return x.reshape([1]), x.squeeze(), x.flatten(), x.unsqueeze(dim=0), x.view([1])
+
+
+class MultiBranchesModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_a = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=3, padding=1, groups=3)
+        self.max_pool_b = nn.MaxPool2d(kernel_size=3)
+        self.conv_b = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=5, padding=3)
+        self.conv_c = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=3, padding=3)
+        self.conv_d = nn.Conv2d(in_channels=3, out_channels=1, kernel_size=3, padding=0)
+
+    def forward(self, x):
+        x = nn.ReLU()(x)
+        xa = self.conv_a(x)
+        xb = self.conv_b(self.max_pool_b(x))
+        xc = self.conv_c(x)
+        xd = self.conv_d(x)
+        return xa, xb, xc, xd

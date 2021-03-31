@@ -124,6 +124,9 @@ class TestParametrized:
     @pytest.mark.parametrize('weight_bin_type', ["xnor", "dorefa"])
     class TestWeightBinarization:
         def test_binarize_weights_forward(self, _seed, input_size, weight_bin_type, use_cuda):
+            if not torch.cuda.is_available() and use_cuda is True:
+                pytest.skip("Skipping CUDA test cases for CPU only setups")
+
             ref_input = generate_input(input_size)
 
             test_input = get_test_data([ref_input], use_cuda)[0]
@@ -138,6 +141,8 @@ class TestParametrized:
             check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_forward(self, _seed, input_size, use_cuda):
+        if not torch.cuda.is_available() and use_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         ref_input = generate_input(input_size)
         ref_scale, ref_threshold = generate_scale_threshold(input_size)
 
@@ -149,6 +154,8 @@ class TestParametrized:
         check_equal(test_value, ref_value, rtol=1e-3)
 
     def test_binarize_activations_backward(self, _seed, input_size, use_cuda):
+        if not torch.cuda.is_available() and use_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         ref_input = generate_input(input_size)
         ref_scale, ref_threshold = generate_scale_threshold(input_size)
 

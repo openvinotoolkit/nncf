@@ -101,3 +101,29 @@ def norm_activation_builder(momentum=0.997,
                              trainable=trainable,
                              activation=activation,
                              **kwargs)
+
+
+def compose(*funcs):
+    """Compose arbitrarily many functions, evaluated left to right.
+
+    Reference: https://mathieularose.com/function-composition-in-python/
+    """
+    return functools.reduce(lambda f, g: lambda *a, **kw: g(f(*a, **kw)), funcs)
+
+
+@functools.wraps(tf.keras.layers.Conv2D)
+def YoloConv2D(*args, **kwargs):
+    """Wrapper to set Yolo parameters for Conv2D."""
+    L2_FACTOR = 1e-5
+    yolo_conv_kwargs = {'kernel_regularizer': tf.keras.regularizers.l2(L2_FACTOR)}
+    yolo_conv_kwargs['bias_regularizer'] = tf.keras.regularizers.l2(L2_FACTOR)
+    yolo_conv_kwargs.update(kwargs)
+    return tf.keras.layers.Conv2D(*args, **yolo_conv_kwargs)
+
+
+@functools.wraps(YoloConv2D)
+def DarknetConv2D(*args, **kwargs):
+    """Wrapper to set Darknet parameters for YoloConv2D."""
+    darknet_conv_kwargs = {'padding': 'valid' if kwargs.get('strides')==(2,2) else 'same'}
+    darknet_conv_kwargs.update(kwargs)
+    return YoloConv2D(*args, **darknet_conv_kwargs)

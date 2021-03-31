@@ -1,6 +1,6 @@
 import torch.nn as nn
-from nncf.common.utils.registry import Registry
 
+from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry('compression modules')
 
@@ -20,10 +20,13 @@ class _NNCFModuleMixin:
             op_func_name    Name of corresponding torch function.
             target_weight_dim_for_compression   Target dimension of weights that will be compressed in some algorithms.
             ignored_algorithms   List of algorithms that will skip the module.
+            _custom_forward_fn  wrapper of the custom forward function that is called with `self` argument equals to the
+                ProxyModule
         """
 
     op_func_name = ""
     target_weight_dim_for_compression = 0
+    _custom_forward_fn = None
     ignored_algorithms = []
 
     def __init__(self, *args, **kwargs):
@@ -69,7 +72,8 @@ class _NNCFModuleMixin:
                 if not isinstance(op_args, tuple):
                     op_args = tuple([op_args])
                 args = op_args
-        results = super().forward.__func__(proxy_module, *args)
+        forward_fn = self._custom_forward_fn.__func__ if self._custom_forward_fn else super().forward.__func__
+        results = forward_fn(proxy_module, *args)
         for op in self.post_ops.values():
             op_results = op(proxy_module, results)
             if op_results is not None:

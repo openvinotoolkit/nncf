@@ -13,8 +13,8 @@
 from copy import copy
 from typing import List, Optional
 
-import torch
-
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.dynamic_graph.graph import ModuleAttributes
 from nncf.dynamic_graph.patch_pytorch import CustomTraceFunction, ForwardTraceOnly
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
@@ -72,12 +72,12 @@ class OperatorMetatype:
 
     @classmethod
     def determine_subtype(cls,
-                          containing_module: Optional[torch.nn.Module] = None,
+                          module_attributes: Optional[ModuleAttributes] = None,
                           function_args=None,
                           functions_kwargs=None) -> Optional['OperatorSubtype']:
         matches = []
         for subtype in cls.subtypes:
-            if subtype.matches(containing_module,
+            if subtype.matches(module_attributes,
                                function_args,
                                functions_kwargs):
                 matches.append(subtype)
@@ -111,7 +111,7 @@ class OperatorSubtype(OperatorMetatype):
     configuration other than the one used for general operations having the type of OperatorMetatype."""
 
     @classmethod
-    def matches(cls, containing_module: Optional[torch.nn.Module] = None,
+    def matches(cls, module_attributes: Optional[ModuleAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
         raise NotImplementedError
@@ -163,10 +163,10 @@ class DepthwiseConv1dSubtype(OperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, containing_module: Optional[torch.nn.Module] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
+        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
             return True
         return False
 
@@ -184,10 +184,10 @@ class DepthwiseConv2dSubtype(OperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, containing_module: Optional[torch.nn.Module] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
+        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
             return True
         return False
 
@@ -205,10 +205,10 @@ class DepthwiseConv3dSubtype(OperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, containing_module: Optional[torch.nn.Module] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
-        if containing_module.groups == containing_module.in_channels and containing_module.in_channels > 1:
+        if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
             return True
         return False
 
@@ -279,6 +279,11 @@ class LayerNormMetatype(OperatorMetatype):
     name = "layer_norm"
     torch_nn_functional_patch_spec = PatchSpec([name])
     hw_config_names = [HWConfigOpName.MVN]
+
+@OPERATOR_METATYPES.register()
+class GroupNormMetatype(OperatorMetatype):
+    name = "group_norm"
+    torch_nn_functional_patch_spec = PatchSpec([name])
 
 
 @OPERATOR_METATYPES.register()

@@ -18,8 +18,8 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
-from nncf.quantization.structs import QuantizerSetupType
-from nncf.quantization.layers import QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.common.quantization.structs import QuantizationMode
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 
@@ -49,17 +49,16 @@ class TestHWConfigRules:
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
         hw_config = HWConfig.from_dict(hw_config_dict)
         qbuilder = QuantizationBuilder(nncf_config["compression"], should_init=False)
-        qbuilder.quantizer_setup_type = QuantizerSetupType.PROPAGATION_BASED
         qbuilder.hw_config = hw_config
         net = qbuilder.apply_to(net)
-        ctrl = net.commit_compression_changes()
+        ctrl = qbuilder.build_controller(net)
         return net, ctrl
 
     @staticmethod
     def quantizer_has_default_config(quantizer: BaseQuantizer) -> bool:
         default_qconfig = QuantizerSetupGeneratorBase.DEFAULT_QUANTIZER_CONFIG
         is_ok = True
-        is_ok &= (quantizer.num_bits == default_qconfig.bits)
+        is_ok &= (quantizer.num_bits == default_qconfig.num_bits)
         is_ok &= (quantizer.per_channel == default_qconfig.per_channel)
         if default_qconfig.signedness_to_force is not None:
             is_ok &= (quantizer.signed == default_qconfig.signedness_to_force)

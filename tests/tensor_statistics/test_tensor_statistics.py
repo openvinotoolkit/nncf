@@ -18,7 +18,7 @@ import torch
 
 from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, TensorStatisticCollectorBase, ReductionShape, \
     MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
-    StatisticsNotCollectedError, OfflineTensorStatisticCollector
+    MeanPercentileStatisticCollector, StatisticsNotCollectedError, OfflineTensorStatisticCollector
 from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, MedianMADTensorStatistic, \
     PercentileTensorStatistic
 
@@ -136,6 +136,27 @@ class TestCollectedStatistics:
                                              # ),
                                          }
                                  ),
+                                 (
+                                         partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
+                                         {
+                                             (1,): PercentileTensorStatistic(
+                                                 {10.0: torch.tensor([-2.9])}),
+                                             (3, 1): PercentileTensorStatistic(
+                                                 {10.0: torch.tensor([[ 2.0100], [-3.3500], [ 4.4000]])}),
+                                             (1, 3): PercentileTensorStatistic(
+                                                 {10.0: torch.tensor([[-0.3900, -1.9400, -1.9300]])}),
+                                             # Not supported for now:
+                                             # (3, 3): PercentileTensorStatistic(
+                                             #     {
+                                             #         10.0: torch.tensor([
+                                             #             [ 2.7500,  2.3000,  3.3500],
+                                             #             [-1.1500, -3.0000, -3.2500],
+                                             #             [ 4.1500,  5.4000,  6.0500]
+                                             #         ])
+                                             #     }
+                                             # ),
+                                         }
+                                 ),
                              ])
     def test_collected_statistics(self, collector: Type[TensorStatisticCollectorBase],
                                   reduction_shapes_vs_ref_statistic: Dict[ReductionShape, TensorStatistic]):
@@ -150,7 +171,8 @@ class TestCollectedStatistics:
         MinMaxStatisticCollector,
         MeanMinMaxStatisticCollector,
         MedianMADStatisticCollector,
-        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0])]
+        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0])]
     @pytest.fixture(params=COLLECTORS)
     def collector_for_interface_test(self, request):
         collector_type = request.param
@@ -186,7 +208,8 @@ class TestCollectedStatistics:
     OFFLINE_COLLECTORS = [
         MeanMinMaxStatisticCollector,
         MedianMADStatisticCollector,
-        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0])
+        partial(PercentileStatisticCollector, percentiles_to_collect=[10.0]),
+        partial(MeanPercentileStatisticCollector, percentiles_to_collect=[10.0]),
     ]
     REF_NUM_SAMPLES = 3
     @pytest.fixture(params=OFFLINE_COLLECTORS)

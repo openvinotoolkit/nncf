@@ -6,9 +6,10 @@ import torch
 import numpy as np
 
 from nncf.dynamic_graph.context import no_nncf_trace
-from nncf.tensor_statistics.reduction import min_reduce_like, max_reduce_like, get_per_channel_history, expand_like
-from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, MedianMADTensorStatistic, \
-    PercentileTensorStatistic
+from nncf.tensor_statistics.reduction import min_reduce_like, max_reduce_like, \
+    get_per_channel_history, expand_like, percentile_reduce_like
+from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, \
+    MedianMADTensorStatistic, PercentileTensorStatistic
 
 ReductionShape = Tuple[int]
 
@@ -198,4 +199,42 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
                 torch_percentiles = expand_like(torch_percentiles, reduction_shape)
                 percentile_vs_values_dict[pc] = torch_percentiles
             retval[reduction_shape] = PercentileTensorStatistic(percentile_vs_values_dict)
+        return retval
+
+
+class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
+    def __init__(self, percentiles_to_collect: List[float],
+                 reduction_shapes: Set[ReductionShape] = None,
+                 num_samples: int = None,
+                 window_size: int = None):
+        super().__init__(reduction_shapes, num_samples, window_size)
+        self._window_size = window_size
+        self._all_pct_values = {}  # type: Dict[float, Dict[ReductionShape, Deque]]
+        for pc in percentiles_to_collect:
+            self._all_pct_values[pc] = {}
+            if self._reduction_shapes is not None:
+                for rs in self._reduction_shapes:
+                    self._all_pct_values[pc][rs] = deque(maxlen=window_size)
+
+    def _register_input(self, x: torch.Tensor):
+        with no_nncf_trace():
+            for pct in self._all_pct_values:
+                for reduction_shape in self._reduction_shapes:
+                    if reduction_shape not in self._all_pct_values[pct]:
+                        self._all_pct_values[pct][reduction_shape] = deque(maxlen=self._window_size)
+                    self._all_pct_values[pct][reduction_shape].append(percentile_reduce_like(x, reduction_shape, pct))
+
+    def _reset(self):
+        for pct in self._all_pct_values:
+            for rs in self._reduction_shapes:
+                self._all_pct_values[pct][rs].clear()
+
+    def _get_statistics(self) -> Dict[ReductionShape, PercentileTensorStatistic]:
+        retval = {}
+        for rs in self._reduction_shapes:
+            mean_percentile_values = {}
+            for pct in self._all_pct_values:
+                stacked_pct_vals = torch.stack(list(self._all_pct_values[pct][rs]))
+                mean_percentile_values[pct] = stacked_pct_vals.mean(dim=0).view(rs)
+            retval[rs] = PercentileTensorStatistic(mean_percentile_values)
         return retval

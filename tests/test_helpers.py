@@ -13,9 +13,12 @@
 
 import onnx
 import torch
-from nncf import NNCFConfig
 
-from tests.helpers import check_equal, TwoConvTestModel, BasicConvTestModel, create_compressed_model_and_algo_for_test
+from nncf import NNCFConfig
+from tests.helpers import BasicConvTestModel
+from tests.helpers import TwoConvTestModel
+from tests.helpers import check_equal
+from tests.helpers import create_compressed_model_and_algo_for_test
 
 
 def test_basic_model_has_expected_params():

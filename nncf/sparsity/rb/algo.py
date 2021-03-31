@@ -23,7 +23,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from nncf.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.utils import get_world_size
 
 
@@ -124,11 +124,6 @@ class RBSparsityController(BaseSparsityAlgoController):
         if self._distributed and self._check_sparsity_masks:
             stats["masks_consistents"] = self.check_distributed_masks()
         return stats
-
-    def set_sparsity_level_for_module(self, sparsity_level: float,
-                                      target_sparsified_module_info: List[SparseModuleInfo]):
-        sparse_op = target_sparsified_module_info[0].operand
-        self._loss.set_target_sparsity_loss_for_module(sparsity_level, sparse_op) # pylint: disable=E1101
 
     def get_sparsity_init(self):
         return self.sparsity_init

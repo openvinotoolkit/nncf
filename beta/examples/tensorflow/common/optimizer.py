@@ -21,24 +21,28 @@ def build_optimizer(config, scheduler):
     optimizer_config = config.get('optimizer', {})
 
     optimizer_type = optimizer_config.get('type', 'adam').lower()
-    optimizer_params = optimizer_config.get("optimizer_params", {})
+    optimizer_params = optimizer_config.get('optimizer_params', {})
 
     logger.info('Building %s optimizer with params %s', optimizer_type, optimizer_params)
 
-    if optimizer_type == 'sgd':
-        logger.info('Using SGD optimizer')
+    if optimizer_type in ['sgd', 'momentum']:
+        printable_names = {'sgd': 'SGD', 'momentum': 'momentum'}
+        logger.info('Using %s optimizer', printable_names[optimizer_type])
+
+        default_momentum_value = 0.9 if optimizer_type == 'momentum' else 0.0
+        momentum = optimizer_params.get('momentum', default_momentum_value)
         nesterov = optimizer_params.get('nesterov', False)
-        optimizer = tf.keras.optimizers.SGD(learning_rate=scheduler,
-                                            nesterov=nesterov)
-    elif optimizer_type == 'momentum':
-        logger.info('Using momentum optimizer')
-        nesterov = optimizer_params.get('nesterov', False)
-        momentum = optimizer_params.get('momentum', 0.9)
-        optimizer = tf.keras.optimizers.SGD(learning_rate=scheduler,
-                                            momentum=momentum,
-                                            nesterov=nesterov)
+        weight_decay = optimizer_config.get('weight_decay', None)
+        common_params = {'learning_rate': scheduler,
+                         'nesterov': nesterov,
+                         'momentum': momentum}
+        if weight_decay:
+            optimizer = tfa.optimizers.SGDW(**common_params,
+                                            weight_decay=weight_decay)
+        else:
+            optimizer = tf.keras.optimizers.SGD(**common_params)
     elif optimizer_type == 'rmsprop':
-        logger.info('Using RMSProp')
+        logger.info('Using RMSProp optimizer')
         rho = optimizer_params.get('rho', 0.9)
         momentum = optimizer_params.get('momentum', 0.9)
         epsilon = optimizer_params.get('epsilon', 1e-07)
@@ -46,26 +50,25 @@ def build_optimizer(config, scheduler):
                                                 rho=rho,
                                                 momentum=momentum,
                                                 epsilon=epsilon)
-    elif optimizer_type == 'adam':
-        logger.info('Using Adam')
-        beta_1 = optimizer_params.get('beta_1', 0.9)
-        beta_2 = optimizer_params.get('beta_2', 0.999)
-        epsilon = optimizer_params.get('epsilon', 1e-07)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=scheduler,
-                                             beta_1=beta_1,
-                                             beta_2=beta_2,
-                                             epsilon=epsilon)
-    elif optimizer_type == 'adamw':
-        logger.info('Using AdamW')
-        weight_decay = optimizer_params.get('weight_decay', 0.01)
-        beta_1 = optimizer_params.get('beta_1', 0.9)
-        beta_2 = optimizer_params.get('beta_2', 0.999)
-        epsilon = optimizer_params.get('epsilon', 1e-07)
-        optimizer = tfa.optimizers.AdamW(weight_decay=weight_decay,
-                                         learning_rate=scheduler,
-                                         beta_1=beta_1,
-                                         beta_2=beta_2,
-                                         epsilon=epsilon)
+    elif optimizer_type in ['adam', 'adamw']:
+        printable_names = {'adam': 'Adam', 'adamw': 'AdamW'}
+        logger.info('Using %s optimizer', printable_names[optimizer_type])
+
+        beta_1, beta_2 = optimizer_params.get('betas', [0.9, 0.999])
+        epsilon = optimizer_params.get('eps', 1e-07)
+        amsgrad = optimizer_params.get('amsgrad', False)
+        w_decay_defaul_value = 0.01 if optimizer_type == 'adamw' else None
+        weight_decay = optimizer_config.get('weight_decay', w_decay_defaul_value)
+        common_params = {'learning_rate': scheduler,
+                         'beta_1': beta_1,
+                         'beta_2': beta_2,
+                         'epsilon': epsilon,
+                         'amsgrad': amsgrad}
+        if weight_decay:
+            optimizer = tfa.optimizers.AdamW(**common_params,
+                                             weight_decay=weight_decay)
+        else:
+            optimizer = tf.keras.optimizers.Adam(**common_params)
     else:
         raise ValueError('Unknown optimizer %s' % optimizer_type)
 

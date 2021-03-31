@@ -26,10 +26,12 @@ from torch import nn
 
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.graph_builder import create_mock_tensor
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, InsertionCommand
+from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import PTModelTransformer
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
@@ -69,41 +71,6 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         return self.calculate(input_, target)
 
 
-class PTCompressionScheduler(CompressionScheduler):
-    """
-    Implements the logic of compression method control during the training process.
-    May change the method hyperparameters in regards to the current training step or
-    epoch. For example, the sparsity method can smoothly increase the sparsity rate
-    over several epochs.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self._current_epoch = -1
-
-    def epoch_step(self, next_epoch=None):
-        """
-        Should be called before each training epoch.
-        Arguments:
-            `next` - specifies the initial "next" epoch which should be set now
-        """
-        if next_epoch is None:
-            self._current_epoch += 1
-        else:
-            self._current_epoch = next_epoch
-
-    def load_state_dict(self, state_dict):
-        self.__dict__.update(state_dict)
-
-    def state_dict(self):
-        default_keys = {'current_step', '_current_epoch'}
-        return {key: val for key, val in self.__dict__.items() if key in default_keys}
-
-    def __getattribute__(self, name):
-        if name == 'current_epoch':
-            return 0 if self._current_epoch == -1 else self._current_epoch
-        return object.__getattribute__(self, name)
-
 class PTCompressionAlgorithmController(CompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
@@ -120,7 +87,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         """
         super().__init__(target_model)
         self._loss = PTCompressionLoss()
-        self._scheduler = PTCompressionScheduler()
+        self._scheduler = CompressionScheduler()
 
     def distributed(self):
         """
@@ -207,12 +174,15 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         model.forward = partial(model.forward, *args, **kwargs)
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
+            # Should call this, otherwise the operations executed during export will end up in graph
+            model.disable_dynamic_graph_building()
             torch.onnx.export(model, tuple(input_tensor_list),
                               save_path, input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
                               opset_version=10,
                               training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
+            model.enable_dynamic_graph_building()
         model.forward = original_forward
 
 
@@ -239,7 +209,13 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             self.target_scopes = self.config.get('target_scopes')
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+    def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
+        transformation_layout = self.get_transformation_layout(model)
+        transformer = PTModelTransformer(model, transformation_layout)
+        transformed_model = transformer.transform()
+        return transformed_model
+
+    def get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         """
         Applies algorithm-specific modifications to the model. Hooks to be executed during model
         forward operation may be registered using NNCFNetwork command insertion methods. Additional
@@ -248,18 +224,19 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :param target_model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
-        self._model = target_model  # type: NNCFNetwork
-        insertion_commands = self._apply_to(target_model)
-        self._handle_frozen_layers()
+        layout = self._get_transformation_layout(target_model)
+        self._handle_frozen_layers(target_model)
+        return layout
 
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        raise NotImplementedError()
 
-        target_model.register_algorithm(self)
-        return target_model
-
-    def _handle_frozen_layers(self):
-        scopes_of_frozen_layers = self._get_scopes_of_compressed_and_frozen_modules()
+    def _handle_frozen_layers(self, target_model: NNCFNetwork):
+        scopes_of_frozen_layers = []
+        for scope, module in target_model.get_nncf_modules().items():
+            if not module.weight.requires_grad:
+                if should_consider_scope(str(scope), self.target_scopes, self.ignored_scopes):
+                    scopes_of_frozen_layers.append(str(scope))
         scopes_to_print = '\n'.join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
@@ -273,8 +250,6 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
                                    f'Frozen Layers:\n'
                                    f'{scopes_to_print}')
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        return []
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
@@ -294,14 +269,6 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         algo_name = self._registered_name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'
-
-    def _get_scopes_of_compressed_and_frozen_modules(self) -> List[str]:
-        result = []
-        for scope, module in self._model.get_nncf_modules().items():
-            if not module.weight.requires_grad:
-                if should_consider_scope(str(scope), self.target_scopes, self.ignored_scopes):
-                    result.append(str(scope))
-        return result
 
 
 class PTStubCompressionScheduler(CompressionScheduler):
