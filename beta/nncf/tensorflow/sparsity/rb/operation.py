@@ -71,7 +71,7 @@ class RBSparsifyingWeight(NNCFOperation):
 
         :param layer_weights: Target weights to sparsify.
         :param op_weights: Operation weights contains
-            mask and param `trainable`.
+            `mask` and param `trainable`.
         :param training: True if operation called in training mode
             else False
         """
@@ -82,19 +82,37 @@ class RBSparsifyingWeight(NNCFOperation):
                                                      true_fn=true_fn, false_fn=false_fn),
                           false_fn=false_fn)
 
-    def freeze(self, trainable_weight):
+    def freeze(self, op_weights):
         """
         Freeze rb mask from operation weights.
 
-        :param trainable_weight: Trainable weight of rb operation.
+        :param op_weights: Operation weights.
         """
-        trainable_weight.assign(False)
+        op_weights['trainable'].assign(False)
 
     @staticmethod
-    def loss(mask):
+    def loss(op_weights):
         """
         Return count of non zero weight in mask.
 
-        :param mask: Given mask.
+        :param op_weights: Operation weights.
         """
-        return tf.reduce_sum(st_binary_mask(mask))
+        return tf.reduce_sum(st_binary_mask(op_weights['mask']))
+
+    @staticmethod
+    def get_mask(op_weights):
+        """
+        Return mask weight from operation weights.
+
+        :param op_weights: Operation weights.
+        """
+        return op_weights['mask']
+
+    @staticmethod
+    def get_trainable_weight(op_weights):
+        """
+        Return trainable weight from operation weights.
+
+        :param op_weights: Operation weights.
+        """
+        return op_weights['trainable']

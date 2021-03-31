@@ -87,7 +87,7 @@ def apply_fn_to_op_weights(model: tf.keras.Model, op_names, fn = lambda x: x):
             for op in ops.values():
                 if op.name in op_names:
                     weight = layer.get_operation_weights(op.name)
-                    target_ops.append((op, *fn(weight)))
+                    target_ops.append((op, fn(weight)))
     return target_ops
 
 

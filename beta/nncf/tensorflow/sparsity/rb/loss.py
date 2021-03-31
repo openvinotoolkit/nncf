@@ -32,8 +32,8 @@ class SparseLoss(CompressionLoss):
     def _disable(self):
         self.disabled.assign(True)
 
-        for op, _, trainable in self._target_ops:
-            op.freeze(trainable)
+        for op, op_weights in self._target_ops:
+            op.freeze(op_weights)
 
     def calculate(self, *args, **kwargs):
         return tf.cond(self.disabled,
@@ -43,13 +43,13 @@ class SparseLoss(CompressionLoss):
     def _calculate(self):
         params = tf.constant(0)
         loss = tf.constant(0.)
-        for op, mask, trainable in self._target_ops:
+        for op, op_weights in self._target_ops:
             tf.debugging.assert_equal(
-                trainable, tf.constant(True),
+                op.get_trainable_weight(op_weights), tf.constant(True),
                 'Invalid state of SparseLoss and SparsifiedWeight: mask is frozen for enabled loss')
-
+            mask = op.get_mask(op_weights)
             params = params + tf.size(mask)
-            loss = loss + op.loss(mask)
+            loss = loss + op.loss(op_weights)
 
         params = tf.cast(params, tf.float32)
         return tf.reshape(tf.math.pow(((loss / params - self.target) / self.p), 2), shape=[])

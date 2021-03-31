@@ -94,7 +94,7 @@ class RBSparsityController(BaseSparsityController):
         if sparsity_level_mode == 'local':
             raise NotImplementedError('RB sparsity algorithm do not support local sparsity loss')
 
-        target_ops = apply_fn_to_op_weights(target_model, op_names, lambda x: (x['mask'], x['trainable']))
+        target_ops = apply_fn_to_op_weights(target_model, op_names)
         self._loss = SparseLoss(target_ops)
         schedule_type = params.get('schedule', 'exponential')
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
