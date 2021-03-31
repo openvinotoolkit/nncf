@@ -43,12 +43,11 @@ class YOLOv4Preprocessor:
         self._multi_anchor_assign = config.preprocessing.multi_anchor_assign
 
     def create_preprocess_input_fn(self):
-        """Parses data to an image and associated training labels.
-        """
+        """Parses data to an image and associated training labels."""
         return self._tfds_decoder, self._pipeline_fn
 
     def _get_ground_truth_data(self, image, boxes, input_shape, max_boxes=100):
-        """random preprocessing for real-time data augmentation"""
+        """Random preprocessing for real-time data augmentation"""
         image_size = image.size
         model_input_size = tuple(reversed(input_shape))
 
@@ -56,7 +55,7 @@ class YOLOv4Preprocessor:
         image, horizontal_flip = random_horizontal_flip(image)
         image_data = np.array(image).astype(np.float32)
 
-        # reshape boxes based on augment
+        # Reshape boxes based on augment
         boxes = reshape_boxes(boxes, src_shape=image_size, target_shape=model_input_size,
                               padding_shape=padding_size, offset=padding_offset,
                               horizontal_flip=horizontal_flip)
@@ -69,7 +68,6 @@ class YOLOv4Preprocessor:
         return image_data, box_data
 
     def _preprocess(self, image, groundtruth_classes, groundtruth_boxes, input_shape):
-
         image_np = image.numpy()
         image_pil = Image.fromarray(image_np)
 
@@ -121,22 +119,17 @@ class YOLOv4Preprocessor:
                                input_shape, anchors,
                                num_classes, multi_anchor_assign,
                                iou_thresh=0.2):
-        """Preprocess true boxes to training input format
+        """
+        Preprocess true boxes to training input format
 
-        Parameters
-        ----------
-        true_boxes: array, shape=(m, T, 5)
+        :param true_boxes: array, shape=(m, T, 5)
             Absolute x_min, y_min, x_max, y_max, class_id relative to input_shape.
-        input_shape: array-like, hw, multiples of 32
-        anchors: array, shape=(N, 2), wh
-        num_classes: integer
-        multi_anchor_assign: boolean, whether to use iou_thresh to assign multiple
+        :param input_shape: array-like, hw, multiples of 32
+        :param anchors: array, shape=(N, 2), wh
+        :param num_classes: integer
+        :param multi_anchor_assign: boolean, whether to use iou_thresh to assign multiple
                              anchors for a single ground truth
-
-        Returns
-        -------
-        y_true: list of array, shape like yolo_outputs, xywh are reletive value
-
+        :return y_true: list of array, shape like yolo_outputs, xywh are reletive value
         """
         assert (true_boxes[..., 4] < num_classes).all(), 'class id must be less than num_classes'
         num_layers = len(anchors)//3
@@ -207,7 +200,6 @@ class YOLOv4Preprocessor:
                             y_true[l][b, j, i, k, 0:4] = true_boxes[b, t, 0:4]
                             y_true[l][b, j, i, k, 4] = 1
                             y_true[l][b, j, i, k, 5+c] = 1
-
         return y_true
 
     def _preprocess2(self, image_data, box_data, filename):
@@ -224,7 +216,6 @@ class YOLOv4Preprocessor:
                                                                 anchors,
                                                                 self._num_classes,
                                                                 self._multi_anchor_assign)
-
         return image_data, y_true1, y_true2, y_true3
 
     def _parse_train_data2(self, data):
@@ -250,9 +241,7 @@ class YOLOv4Preprocessor:
         return image_data, labels
 
     def _get_image_info(self, image):
-
         desired_size = tf.convert_to_tensor(self._input_shape, dtype=tf.float32)
-
         image_size = tf.cast(tf.shape(input=image)[0:2], tf.float32)
         scaled_size = desired_size
 
@@ -353,7 +342,6 @@ class YOLOv4Preprocessor:
             'groundtruth_area': features_dict['objects']['area'],
             'groundtruth_boxes': features_dict['objects']['bbox'],
         }
-
         return decoded_tensors
 
     def _pipeline_fn(self, dataset, decoder_fn):
@@ -365,12 +353,10 @@ class YOLOv4Preprocessor:
 
             # part of preprocessing which requires batches
             preprocess_input_fn2 = self._parse_fn2
-            # preprocess_pipeline2 = lambda record: preprocess_input_fn2(record)
             dataset = dataset.map(preprocess_input_fn2, num_parallel_calls=self._num_preprocess_workers)
         else:
             preprocess_input_fn = self._parse_predict_data
             preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
             dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers)
             dataset = dataset.batch(self._global_batch_size, drop_remainder=True)
-
         return dataset

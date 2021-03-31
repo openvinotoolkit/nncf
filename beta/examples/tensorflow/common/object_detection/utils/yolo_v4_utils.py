@@ -24,20 +24,16 @@ def letterbox_resize(image, target_size):
     """
     Resize image with unchanged aspect ratio using padding
 
-    # Arguments
-        image: origin image to be resize
+    :param image: origin image to be resize
             PIL Image object containing image data
-        target_size: target image size,
+    :param target_size: target image size,
             tuple of format (width, height).
-        return_padding_info: whether to return padding size & offset info
+    :param return_padding_info: whether to return padding size & offset info
             Boolean flag to control return value
-
-    # Returns
-        new_image: resized PIL Image object.
-
-        padding_size: padding image size (keep aspect ratio).
+    :return new_image: resized PIL Image object.
+    :return padding_size: padding image size (keep aspect ratio).
             will be used to reshape the ground truth bounding box
-        offset: top-left offset in target image padding.
+    :return offset: top-left offset in target image padding.
             will be used to reshape the ground truth bounding box
     """
     src_w, src_h = image.size
@@ -66,21 +62,18 @@ def random_resize_crop_pad(image, target_size, aspect_ratio_jitter=0.1, scale_ji
     Randomly resize image and crop|padding to target size. It can
     be used for data augment in training data preprocess
 
-    # Arguments
-        image: origin image to be resize
+    :param image: origin image to be resize
             PIL Image object containing image data
-        target_size: target image size,
+    :param target_size: target image size,
             tuple of format (width, height).
-        aspect_ratio_jitter: jitter range for random aspect ratio,
+    :param aspect_ratio_jitter: jitter range for random aspect ratio,
             scalar to control the aspect ratio of random resized image.
-        scale_jitter: jitter range for random resize scale,
+    :param scale_jitter: jitter range for random resize scale,
             scalar to control the resize scale of random resized image.
-
-    # Returns
-        new_image: target sized PIL Image object.
-        padding_size: random generated padding image size.
+    :return new_image: target sized PIL Image object.
+    :return padding_size: random generated padding image size.
             will be used to reshape the ground truth bounding box
-        padding_offset: random generated offset in target image padding.
+    :return padding_offset: random generated offset in target image padding.
             will be used to reshape the ground truth bounding box
     """
     target_w, target_h = target_size
@@ -117,25 +110,22 @@ def reshape_boxes(boxes, src_shape, target_shape, padding_shape, offset, horizon
     Reshape bounding boxes from src_shape image to target_shape image,
     usually for training data preprocess
 
-    # Arguments
-        boxes: Ground truth object bounding boxes,
+    :param boxes: Ground truth object bounding boxes,
             numpy array of shape (num_boxes, 5),
             box format (xmin, ymin, xmax, ymax, cls_id).
-        src_shape: origin image shape,
+    :param src_shape: origin image shape,
             tuple of format (width, height).
-        target_shape: target image shape,
+    :param target_shape: target image shape,
             tuple of format (width, height).
-        padding_shape: padding image shape,
+    :param padding_shape: padding image shape,
             tuple of format (width, height).
-        offset: top-left offset when padding target image.
+    :param offset: top-left offset when padding target image.
             tuple of format (dx, dy).
-        horizontal_flip: whether to do horizontal flip.
+    :param horizontal_flip: whether to do horizontal flip.
             boolean flag.
-        vertical_flip: whether to do vertical flip.
+    :param vertical_flip: whether to do vertical flip.
             boolean flag.
-
-    # Returns
-        boxes: reshaped bounding box numpy array
+    :return boxes: reshaped bounding box numpy array
     """
     if len(boxes)>0:
         src_w, src_h = src_shape
@@ -171,15 +161,12 @@ def random_horizontal_flip(image, prob=.5):
     """
     Random horizontal flip for image
 
-    # Arguments
-        image: origin image for horizontal flip
+    :param image: origin image for horizontal flip
             PIL Image object containing image data
-        prob: probability for random flip,
+    :param prob: probability for random flip,
             scalar to control the flip probability.
-
-    # Returns
-        image: adjusted PIL Image object.
-        flip: boolean flag for horizontal flip action
+    :return image: adjusted PIL Image object.
+    :return flip: boolean flag for horizontal flip action
     """
     flip = rand() < prob
     if flip:
@@ -263,23 +250,19 @@ def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size): # pylint: disable=R
 def random_mosaic_augment(image_data, boxes_data, prob=.1):
     """
     Random add mosaic augment on batch images and boxes, from YOLOv4
-
     reference:
         https://github.com/klauspa/Yolov4-tensorflow/blob/master/data.py
         https://github.com/clovaai/CutMix-PyTorch
         https://github.com/AlexeyAB/darknet
 
-    # Arguments
-        image_data: origin images for mosaic augment
+    :param image_data: origin images for mosaic augment
             numpy array for normalized batch image data
-        boxes_data: origin bboxes for mosaic augment
+    :param boxes_data: origin bboxes for mosaic augment
             numpy array for batch bboxes
-        prob: probability for augment ,
+    :param prob: probability for augment ,
             scalar to control the augment probability.
-
-    # Returns
-        image_data: augmented batch image data.
-        boxes_data: augmented batch bboxes data.
+    :return image_data: augmented batch image data.
+    :return boxes_data: augmented batch bboxes data.
     """
     do_augment = rand() < prob
 
@@ -348,16 +331,12 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
 
 def normalize_image(image):
     """
-    normalize image array from 0 ~ 255
+    Normalize image array from 0 ~ 255
     to 0.0 ~ 1.0
 
-    # Arguments
-        image: origin input image
+    :param image: origin input image
             numpy image array with dtype=float, 0.0 ~ 255.0
-
-    # Returns
-        image: numpy image array with dtype=float, 0.0 ~ 1.0
+    :return image: numpy image array with dtype=float, 0.0 ~ 1.0
     """
     image = image / 255.0
-
     return image

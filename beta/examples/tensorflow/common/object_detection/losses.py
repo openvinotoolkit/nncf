@@ -486,16 +486,13 @@ class YOLOv4Loss:
             "Focal Loss for Dense Object Detection"
             https://arxiv.org/abs/1708.02002
 
-        # Arguments
-            y_true: Ground truth targets,
+        :param y_true: Ground truth targets,
                 tensor of shape (?, num_boxes, num_classes).
-            y_pred: Predicted logits,
+        :param y_pred: Predicted logits,
                 tensor of shape (?, num_boxes, num_classes).
-            gamma: exponent of the modulating factor (1 - p_t) ^ gamma.
-            alpha: optional alpha weighting factor to balance positives vs negatives.
-
-        # Returns
-            softmax_focal_loss: Softmax focal loss, tensor of shape (?, num_boxes).
+        :param gamma: exponent of the modulating factor (1 - p_t) ^ gamma.
+        :param alpha: optional alpha weighting factor to balance positives vs negatives.
+        :return softmax_focal_loss: Softmax focal loss, tensor of shape (?, num_boxes).
         """
         y_pred = tf.nn.softmax(y_pred)
         y_pred = tf.maximum(tf.minimum(y_pred, 1 - 1e-15), 1e-15)
@@ -515,16 +512,13 @@ class YOLOv4Loss:
             "Focal Loss for Dense Object Detection"
             https://arxiv.org/abs/1708.02002
 
-        # Arguments
-            y_true: Ground truth targets,
+        :param y_true: Ground truth targets,
                 tensor of shape (?, num_boxes, num_classes).
-            y_pred: Predicted logits,
+        :param y_pred: Predicted logits,
                 tensor of shape (?, num_boxes, num_classes).
-            gamma: exponent of the modulating factor (1 - p_t) ^ gamma.
-            alpha: optional alpha weighting factor to balance positives vs negatives.
-
-        # Returns
-            sigmoid_focal_loss: Sigmoid focal loss, tensor of shape (?, num_boxes).
+        :param gamma: exponent of the modulating factor (1 - p_t) ^ gamma.
+        :param alpha: optional alpha weighting factor to balance positives vs negatives.
+        :return sigmoid_focal_loss: Sigmoid focal loss, tensor of shape (?, num_boxes).
         """
         sigmoid_loss = K.binary_crossentropy(y_true, y_pred, from_logits=True)
 
@@ -541,14 +535,9 @@ class YOLOv4Loss:
         """
         Return iou tensor
 
-        Parameters
-        ----------
-        b1: tensor, shape=(i1,...,iN, 4), xywh
-        b2: tensor, shape=(j, 4), xywh
-
-        Returns
-        -------
-        iou: tensor, shape=(i1,...,iN, j)
+        :param b1: tensor, shape=(i1,...,iN, 4), xywh
+        :param b2: tensor, shape=(j, 4), xywh
+        :return iou: tensor, shape=(i1,...,iN, j)
         """
         # Expand dim to apply broadcasting.
         b1 = K.expand_dims(b1, -2)
@@ -583,14 +572,9 @@ class YOLOv4Loss:
             "Generalized Intersection over Union: A Metric and A Loss for Bounding Box Regression"
             https://arxiv.org/abs/1902.09630
 
-        Parameters
-        ----------
-        b_true: GT boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        b_pred: predict boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-
-        Returns
-        -------
-        giou: tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)
+        :param b_true: GT boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
+        :param b_pred: predict boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
+        :return giou: tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)
         """
         b_true_xy = b_true[..., :2]
         b_true_wh = b_true[..., 2:4]
@@ -632,15 +616,10 @@ class YOLOv4Loss:
             "Distance-IoU Loss: Faster and Better Learning for Bounding Box Regression"
             https://arxiv.org/abs/1911.08287
 
-        Parameters
-        ----------
-        b_true: GT boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        b_pred: predict boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
-        use_ciou: bool flag to indicate whether to use CIoU loss type
-
-        Returns
-        -------
-        diou: tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)
+        :param b_true: GT boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
+        :param b_pred: predict boxes tensor, shape=(batch, feat_w, feat_h, anchor_num, 4), xywh
+        :param use_ciou: bool flag to indicate whether to use CIoU loss type
+        :return diou: tensor, shape=(batch, feat_w, feat_h, anchor_num, 1)
         """
         b_true_xy = b_true[..., :2]
         b_true_wh = b_true[..., 2:4]
@@ -731,17 +710,12 @@ class YOLOv4Loss:
         """
         YOLOv3 loss function.
 
-        Parameters
-        ----------
-        yolo_outputs: list of tensor, the output of yolo_body or tiny_yolo_body
-        y_true: list of array, the output of preprocess_true_boxes
-        anchors: array, shape=(N, 2), wh
-        num_classes: integer
-        ignore_thresh: float, the iou threshold whether to ignore object confidence loss
-
-        Returns
-        -------
-        loss: tensor, shape=(1,)
+        :param yolo_outputs: list of tensor, the output of yolo_body or tiny_yolo_body
+        :param y_true: list of array, the output of preprocess_true_boxes
+        :param anchors: array, shape=(N, 2), wh
+        :param num_classes: integer
+        :param ignore_thresh: float, the iou threshold whether to ignore object confidence loss
+        :return loss: tensor, shape=(1,)
         """
         anchors = np.array(anchors).astype(float).reshape(-1, 2)
         num_layers = len(anchors)//3 # default setting

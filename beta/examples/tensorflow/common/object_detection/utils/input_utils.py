@@ -10,8 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-# pylint: disable=E1120
-# pylint: disable=E1124
 
 import math
 import tensorflow as tf
@@ -20,15 +18,13 @@ from beta.examples.tensorflow.common.object_detection.utils import box_utils
 
 
 def pad_to_fixed_size(input_tensor, size, constant_values=0):
-    """Pads data to a fixed length at the first dimension.
+    """
+    Pads data to a fixed length at the first dimension.
 
-    Args:
-      input_tensor: `Tensor` with any dimension.
-      size: `int` number for the first dimension of output Tensor.
+    :param input_tensor: `Tensor` with any dimension.
+    :param size: `int` number for the first dimension of output Tensor.
       constant_values: `int` value assigned to the paddings.
-
-    Returns:
-      `Tensor` with the first dimension padded to `size`.
+    :return: `Tensor` with the first dimension padded to `size`.
     """
     input_shape = input_tensor.get_shape().as_list()
     padding_shape = []
@@ -72,20 +68,18 @@ def normalize_image(image,
 
 
 def compute_padded_size(desired_size, stride):
-    """Compute the padded size given the desired size and the stride.
+    """
+    Compute the padded size given the desired size and the stride.
 
     The padded size will be the smallest rectangle, such that each dimension is
     the smallest multiple of the stride which is larger than the desired
     dimension. For example, if desired_size = (100, 200) and stride = 32,
     the output padded_size = (128, 224).
 
-    Args:
-      desired_size: a `Tensor` or `int` list/tuple of two elements representing
+    :param desired_size: a `Tensor` or `int` list/tuple of two elements representing
         [height, width] of the target output image size.
-      stride: an integer, the stride of the backbone network.
-
-    Returns:
-      padded_size: a `Tensor` or `int` list/tuple of two elements representing
+    :param stride: an integer, the stride of the backbone network.
+    :return padded_size: a `Tensor` or `int` list/tuple of two elements representing
         [height, width] of the padded output image size.
     """
     if isinstance(desired_size, (list, tuple)):
@@ -106,7 +100,8 @@ def resize_and_crop_image(image,
                           aug_scale_max=1.0,
                           seed=1,
                           method=tf.image.ResizeMethod.BILINEAR):
-    """Resizes the input image to output size.
+    """
+    Resizes the input image to output size.
 
     Resize and pad images given the desired output size of the image and
     stride size.
@@ -117,24 +112,21 @@ def resize_and_crop_image(image,
       `desired_size`.
     2. Pad the rescaled image to the padded_size.
 
-    Args:
-      image: a `Tensor` of shape [height, width, 3] representing an image.
-      desired_size: a `Tensor` or `int` list/tuple of two elements representing
+    :param image: a `Tensor` of shape [height, width, 3] representing an image.
+    :param desired_size: a `Tensor` or `int` list/tuple of two elements representing
         [height, width] of the desired actual output image size.
-      padded_size: a `Tensor` or `int` list/tuple of two elements representing
+    :param padded_size: a `Tensor` or `int` list/tuple of two elements representing
         [height, width] of the padded output image size. Padding will be applied
         after scaling the image to the desired_size.
-      aug_scale_min: a `float` with range between [0, 1.0] representing minimum
+    :param aug_scale_min: a `float` with range between [0, 1.0] representing minimum
         random scale applied to desired_size for training scale jittering.
-      aug_scale_max: a `float` with range between [1.0, inf] representing maximum
+    :param aug_scale_max: a `float` with range between [1.0, inf] representing maximum
         random scale applied to desired_size for training scale jittering.
-      seed: seed for random scale jittering.
-      method: function to resize input image to scaled image.
-
-    Returns:
-      output_image: `Tensor` of shape [height, width, 3] where [height, width]
+    :param seed: seed for random scale jittering.
+    :param method: function to resize input image to scaled image.
+    :return output_image: `Tensor` of shape [height, width, 3] where [height, width]
         equals to `output_size`.
-      image_info: a 2D `Tensor` that encodes the information of the image and the
+    :return image_info: a 2D `Tensor` that encodes the information of the image and the
         applied preprocessing. It is in the format of
         [[original_height, original_width], [desired_height, desired_width],
         [y_scale, x_scale], [y_offset, x_offset]], where [desired_height,
@@ -197,7 +189,8 @@ def resize_and_crop_image_v2(image,
                              aug_scale_max=1.0,
                              seed=1,
                              method=tf.image.ResizeMethod.BILINEAR):
-    """Resizes the input image to output size (Faster R-CNN style).
+    """
+    Resizes the input image to output size (Faster R-CNN style).
 
     Resize and pad images given the specified short / long side length and the
     stride size.
@@ -209,26 +202,23 @@ def resize_and_crop_image_v2(image,
       the aspect ratio and rescal the long side of the image to `long_side`.
     2. Pad the rescaled image to the padded_size.
 
-    Args:
-      image: a `Tensor` of shape [height, width, 3] representing an image.
-      short_side: a scalar `Tensor` or `int` representing the desired short side
+    :param image: a `Tensor` of shape [height, width, 3] representing an image.
+    :param short_side: a scalar `Tensor` or `int` representing the desired short side
         to be rescaled to.
-      long_side: a scalar `Tensor` or `int` representing the desired long side to
+    :param long_side: a scalar `Tensor` or `int` representing the desired long side to
         be rescaled to.
-      padded_size: a `Tensor` or `int` list/tuple of two elements representing
+    :param padded_size: a `Tensor` or `int` list/tuple of two elements representing
         [height, width] of the padded output image size. Padding will be applied
         after scaling the image to the desired_size.
-      aug_scale_min: a `float` with range between [0, 1.0] representing minimum
+    :param aug_scale_min: a `float` with range between [0, 1.0] representing minimum
         random scale applied to desired_size for training scale jittering.
-      aug_scale_max: a `float` with range between [1.0, inf] representing maximum
+    :param aug_scale_max: a `float` with range between [1.0, inf] representing maximum
         random scale applied to desired_size for training scale jittering.
-      seed: seed for random scale jittering.
+    :param seed: seed for random scale jittering.
       method: function to resize input image to scaled image.
-
-    Returns:
-      output_image: `Tensor` of shape [height, width, 3] where [height, width]
+    :return output_image: `Tensor` of shape [height, width, 3] where [height, width]
         equals to `output_size`.
-      image_info: a 2D `Tensor` that encodes the information of the image and the
+    :return image_info: a 2D `Tensor` that encodes the information of the image and the
         applied preprocessing. It is in the format of
         [[original_height, original_width], [desired_height, desired_width],
         [y_scale, x_scale], [y_offset, x_offset]], where [desired_height,
@@ -291,19 +281,17 @@ def resize_and_crop_image_v2(image,
 
 
 def resize_and_crop_boxes(boxes, image_scale, output_size, offset):
-    """Resizes boxes to output size with scale and offset.
+    """
+    Resizes boxes to output size with scale and offset.
 
-    Args:
-      boxes: `Tensor` of shape [N, 4] representing ground truth boxes.
+    :param boxes: `Tensor` of shape [N, 4] representing ground truth boxes.
       image_scale: 2D float `Tensor` representing scale factors that apply to
         [height, width] of input image.
-      output_size: 2D `Tensor` or `int` representing [height, width] of target
+    :param output_size: 2D `Tensor` or `int` representing [height, width] of target
         output image size.
-      offset: 2D `Tensor` representing top-left corner [y0, x0] to crop scaled
+    :param offset: 2D `Tensor` representing top-left corner [y0, x0] to crop scaled
         boxes.
-
-    Returns:
-      boxes: `Tensor` of shape [N, 4] representing the scaled boxes.
+    :return boxes: `Tensor` of shape [N, 4] representing the scaled boxes.
     """
     # Adjusts box coordinates based on image_scale and offset.
     boxes *= tf.tile(tf.expand_dims(image_scale, axis=0), [1, 2])
@@ -315,27 +303,23 @@ def resize_and_crop_boxes(boxes, image_scale, output_size, offset):
 
 
 def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
-    """Randomly flips the image and detections horizontally.
-
+    """
+    Randomly flips the image and detections horizontally.
     The probability of flipping the image is 50%.
 
-    Args:
-      image: rank 3 float32 tensor with shape [height, width, channels].
-      boxes: (optional) rank 2 float32 tensor with shape [N, 4] containing the
+    :param image: rank 3 float32 tensor with shape [height, width, channels].
+    :param boxes: (optional) rank 2 float32 tensor with shape [N, 4] containing the
         bounding boxes. Boxes are in normalized form meaning their coordinates
         vary between [0, 1]. Each row is in the form of [ymin, xmin, ymax, xmax].
-      masks: (optional) rank 3 float32 tensor with shape [num_instances, height,
+    :param masks: (optional) rank 3 float32 tensor with shape [num_instances, height,
         width] containing instance masks. The masks are of the same height, width
         as the input `image`.
-      seed: random seed
-
-    Returns:
-      image: image which is the same shape as input image.
-
-      boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+    :param seed: random seed
+    :return image: image which is the same shape as input image.
+    :return boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
         Boxes are in normalized form meaning their coordinates vary
         between [0, 1].
-      masks: rank 3 float32 tensor with shape [num_instances, height, width]
+    :return masks: rank 3 float32 tensor with shape [num_instances, height, width]
         containing instance masks.
     """
 
@@ -344,31 +328,27 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
         return image_flipped
 
     def _flip_boxes_left_right(boxes):
-        """Left-right flip the boxes.
+        """
+        Left-right flip the boxes.
 
-        Args:
-          boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4]. Boxes
+        :param boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4]. Boxes
             are in normalized form meaning their coordinates vary between [0, 1]. Each
             row is in the form of [ymin, xmin, ymax, xmax].
-
-        Returns:
-          Flipped boxes.
+        :return: Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
         flipped_xmin = tf.subtract(1.0, xmax)
         flipped_xmax = tf.subtract(1.0, xmin)
         flipped_boxes = tf.concat([ymin, flipped_xmin, ymax, flipped_xmax], 1)
         return flipped_boxes
 
     def _flip_masks_left_right(masks):
-        """Left-right flip masks.
+        """
+        Left-right flip masks.
 
-        Args:
-            masks: rank 3 float32 tensor with shape [num_instances, height, width]
+        :param masks: rank 3 float32 tensor with shape [num_instances, height, width]
                 representing instance masks.
-
-        Returns:
-            flipped masks: rank 3 float32 tensor with shape
+        :return flipped masks: rank 3 float32 tensor with shape
                 [num_instances, height, width] representing instance masks.
         """
         return masks[:, :, ::-1]
@@ -405,25 +385,22 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
 
 
 def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=None):
-    """Randomly flips the image and detections vertically.
+    """
+    Randomly flips the image and detections vertically.
 
-    Args:
-      image: rank 3 float32 tensor with shape [height, width, channels].
-      boxes: (optional) rank 2 float32 tensor with shape [N, 4] containing the
+    :param image: rank 3 float32 tensor with shape [height, width, channels].
+    :param boxes: (optional) rank 2 float32 tensor with shape [N, 4] containing the
         bounding boxes. Boxes are in normalized form meaning their coordinates
         vary between [0, 1]. Each row is in the form of [ymin, xmin, ymax, xmax].
-      masks: (optional) rank 3 float32 tensor with shape [num_instances, height,
+    :param masks: (optional) rank 3 float32 tensor with shape [num_instances, height,
         width] containing instance masks. The masks are of the same height, width
         as the input `image`.
-      seed: random seed
-
-    Returns:
-      image: image which is the same shape as input image.
-
-      boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+    :param seed: random seed
+    :return image: image which is the same shape as input image.
+    :return boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
         Boxes are in normalized form meaning their coordinates vary
         between [0, 1].
-      masks: rank 3 float32 tensor with shape [num_instances, height, width]
+    :return masks: rank 3 float32 tensor with shape [num_instances, height, width]
         containing instance masks.
     """
 
@@ -434,26 +411,26 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
     def _flip_boxes_up_down(boxes):
         """Up-down flip the boxes.
         Args:
-          boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+        :param boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
                  Boxes are in normalized form meaning their coordinates vary
                  between [0, 1].
                  Each row is in the form of [ymin, xmin, ymax, xmax].
         Returns:
           Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
         flipped_ymin = tf.subtract(1.0, ymax)
         flipped_ymax = tf.subtract(1.0, ymin)
         flipped_boxes = tf.concat([flipped_ymin, xmin, flipped_ymax, xmax], 1)
         return flipped_boxes
 
     def _flip_masks_up_down(masks):
-        """Up-down flip masks.
-        Args:
-          masks: rank 3 float32 tensor with shape
+        """
+        Up-down flip masks.
+
+        :param masks: rank 3 float32 tensor with shape
             [num_instances, height, width] representing instance masks.
-        Returns:
-          flipped masks: rank 3 float32 tensor with shape
+        :return flipped masks: rank 3 float32 tensor with shape
             [num_instances, height, width] representing instance masks.
         """
         return masks[:, ::-1, :]
@@ -490,31 +467,31 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
 
 
 def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None):
-    """Randomly rotates the image and detections 90 degrees counter-clockwise.
+    """
+    Randomly rotates the image and detections 90 degrees counter-clockwise.
     The probability of rotating the image is 50%. This can be combined with
     random_horizontal_flip and random_vertical_flip to produce an output with a
     uniform distribution of the eight possible 90 degree rotation / reflection
     combinations.
-    Args:
-    image: rank 3 float32 tensor with shape [height, width, channels].
-    boxes: (optional) rank 2 float32 tensor with shape [N, 4]
+
+    :param image: rank 3 float32 tensor with shape [height, width, channels].
+    :param boxes: (optional) rank 2 float32 tensor with shape [N, 4]
            containing the bounding boxes.
            Boxes are in normalized form meaning their coordinates vary
            between [0, 1].
            Each row is in the form of [ymin, xmin, ymax, xmax].
-    masks: (optional) rank 3 float32 tensor with shape
+    :param masks: (optional) rank 3 float32 tensor with shape
            [num_instances, height, width] containing instance masks. The masks
            are of the same height, width as the input `image`.
-    probability: the probability of performing this augmentation.
-    seed: random seed
-    Returns:
-    image: image which is the same shape as input image.
+    :param probability: the probability of performing this augmentation.
+    :param seed: random seed
+    :return image: image which is the same shape as input image.
     If boxes and masks, are not None,
     the function also returns the following tensors.
-    boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+    :return boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
            Boxes are in normalized form meaning their coordinates vary
            between [0, 1].
-    masks: rank 3 float32 tensor with shape [num_instances, height, width]
+    :return masks: rank 3 float32 tensor with shape [num_instances, height, width]
            containing instance masks.
     """
 
@@ -524,16 +501,16 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
         return image_rotated
 
     def _rot90_boxes(boxes):
-        """Rotate boxes counter-clockwise by 90 degrees.
-        Args:
-        boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
+        """
+        Rotate boxes counter-clockwise by 90 degrees.
+
+        :param boxes: rank 2 float32 tensor containing the bounding boxes -> [N, 4].
                Boxes are in normalized form meaning their coordinates vary
                between [0, 1].
                Each row is in the form of [ymin, xmin, ymax, xmax].
-        Returns:
-        Rotated boxes.
+        :return: Rotated boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1) # pylint: disable=E1120, E1124
         rotated_ymin = tf.subtract(1.0, xmax)
         rotated_ymax = tf.subtract(1.0, xmin)
         rotated_xmin = ymin
@@ -543,12 +520,12 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
         return rotated_boxes
 
     def _rot90_masks(masks):
-        """Rotate masks counter-clockwise by 90 degrees.
-        Args:
-        masks: rank 3 float32 tensor with shape
+        """
+        Rotate masks counter-clockwise by 90 degrees.
+
+        :param masks: rank 3 float32 tensor with shape
           [num_instances, height, width] representing instance masks.
-        Returns:
-        rotated masks: rank 3 float32 tensor with shape
+        :return rotated masks: rank 3 float32 tensor with shape
           [num_instances, height, width] representing instance masks.
         """
         masks = tf.transpose(masks, [0, 2, 1])
@@ -582,15 +559,15 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
 def random_adjust_brightness(image,
                              max_delta=0.2,
                              seed=None):
-    """Randomly adjusts brightness.
+    """
+    Randomly adjusts brightness.
     Makes sure the output image is still between 0 and 255.
-    Args:
-    image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
+
+    :param image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
            with pixel values varying between [0, 255].
-    max_delta: how much to change the brightness. A value between [0, 1).
-    seed: random seed.
-    Returns:
-    image: image which is the same shape as input image.
+    :param max_delta: how much to change the brightness. A value between [0, 1).
+    :param seed: random seed.
+    :return image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustBrightness'):
         # random variable from [-max_delta, max_delta]
@@ -610,18 +587,18 @@ def random_adjust_saturation(image,
                              min_delta=0.8,
                              max_delta=1.25,
                              seed=None):
-    """Randomly adjusts saturation.
+    """
+    Randomly adjusts saturation.
     Makes sure the output image is still between 0 and 255.
-    Args:
-    image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
+
+    :param image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
            with pixel values varying between [0, 255].
-    min_delta: see max_delta.
-    max_delta: how much to change the saturation. Saturation will change with a
+    :param min_delta: see max_delta.
+    :param max_delta: how much to change the saturation. Saturation will change with a
                value between min_delta and max_delta. This value will be
                multiplied to the current saturation of the image.
-    seed: random seed.
-    Returns:
-    image: image which is the same shape as input image.
+    :param seed: random seed.
+    :return image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustSaturation'):
         saturation_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
@@ -637,18 +614,18 @@ def random_adjust_contrast(image,
                            min_delta=0.8,
                            max_delta=1.25,
                            seed=None):
-    """Randomly adjusts contrast.
+    """
+    Randomly adjusts contrast.
     Makes sure the output image is still between 0 and 255.
-    Args:
-    image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
+
+    :param image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
            with pixel values varying between [0, 255].
-    min_delta: see max_delta.
-    max_delta: how much to change the contrast. Contrast will change with a
+    :param min_delta: see max_delta.
+    :param max_delta: how much to change the contrast. Contrast will change with a
                value between min_delta and max_delta. This value will be
                multiplied to the current contrast of the image.
-    seed: random seed.
-    Returns:
-    image: image which is the same shape as input image.
+    :param seed: random seed.
+    :return image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustContrast'):
         contrast_factor = tf.random.uniform([], min_delta, max_delta, tf.float32, seed)
@@ -663,15 +640,15 @@ def random_adjust_contrast(image,
 def random_adjust_hue(image,
                       max_delta=0.02,
                       seed=None):
-    """Randomly adjusts hue.
+    """
+    Randomly adjusts hue.
     Makes sure the output image is still between 0 and 255.
-    Args:
-    image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
+
+    :param image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
            with pixel values varying between [0, 255].
-    max_delta: change hue randomly with a value between 0 and max_delta.
-    seed: random seed.
-    Returns:
-    image: image which is the same shape as input image.
+    :param max_delta: change hue randomly with a value between 0 and max_delta.
+    :param seed: random seed.
+    :return image: image which is the same shape as input image.
     """
     with tf.name_scope('RandomAdjustHue'):
         delta = tf.random.uniform([], -max_delta, max_delta, tf.float32, seed)
@@ -686,15 +663,15 @@ def random_adjust_hue(image,
 def random_rgb_to_gray(image,
                        probability=0.2,
                        seed=None):
-    """Changes the image from RGB to Grayscale with the given probability.
-    Args:
-    image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
+    """
+    Changes the image from RGB to Grayscale with the given probability.
+
+    :param image: rank 3 float32 tensor contains 1 image -> [height, width, channels]
            with pixel values varying between [0, 255].
-    probability: the probability of returning a grayscale image.
+    :param probability: the probability of returning a grayscale image.
             The probability should be a number between [0, 1].
-    seed: random seed.
-    Returns:
-    image: image which is the same shape as input image.
+    :param seed: random seed.
+    :return image: image which is the same shape as input image.
     """
     def _image_to_gray(image):
         image_gray1 = tf.image.rgb_to_grayscale(image)

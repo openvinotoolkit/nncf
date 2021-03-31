@@ -78,12 +78,14 @@ class MinMaxPercentileStatisticsCollector:
 
     def _mean_estimate_no_outliers(self, data):
         data = data.numpy()
-        lower = np.percentile(data, self.min_percentile, axis=0)
-        upper = np.percentile(data, self.max_percentile, axis=0)
+        lower = np.percentile(data, self.min_percentile, axis=0, interpolation='nearest')
+        upper = np.percentile(data, self.max_percentile, axis=0, interpolation='nearest')
         mask = np.logical_and(data >= lower, data <= upper)
         # zero out the outliers
         data_masked = data * mask
-        mean = np.sum(data_masked, axis=0) / np.sum(mask, axis=0)
+        data_masked_sum = np.sum(data_masked, axis=0)
+        mask_sum = np.sum(mask, axis=0)
+        mean = np.divide(data_masked_sum, mask_sum, out=np.zeros_like(data_masked_sum), where=mask_sum != 0)
         return mean
 
     @property
@@ -127,8 +129,9 @@ class MinMaxPercentileStatisticsCollector:
 
 
 class MinMaxInitializer(TFCompressionAlgorithmInitializer):
-    def __init__(self, initializer_config):
-        range_config = initializer_config.get('range', {})
+    def __init__(self, config):
+        range_config = config.get('initializer', {}).get('range', {})
+
         self.num_steps = range_config.get('num_init_samples', 100)
         self.nncf_quantization_operation_classes = NNCF_QUANTIZATION_OPERATONS.registry_dict.values()
 

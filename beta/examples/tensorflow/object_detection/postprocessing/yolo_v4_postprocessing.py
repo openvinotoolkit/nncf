@@ -130,14 +130,9 @@ def box_iou(boxes):
     """
     Calculate IoU value of 1st box with other boxes of a box array
 
-    Parameters
-    ----------
-    boxes: bbox numpy array, shape=(N, 4), xywh
+    :param boxes: bbox numpy array, shape=(N, 4), xywh
            x,y are top left coordinates
-
-    Returns
-    -------
-    iou: numpy array, shape=(N-1,)
+    :return iou: numpy array, shape=(N-1,)
          IoU value of boxes[1:] with boxes[0]
     """
     # get box coordinate and area
@@ -168,14 +163,9 @@ def box_diou(boxes):
         "Distance-IoU Loss: Faster and Better Learning for Bounding Box Regression"
         https://arxiv.org/abs/1911.08287
 
-    Parameters
-    ----------
-    boxes: bbox numpy array, shape=(N, 4), xywh
+    :param boxes: bbox numpy array, shape=(N, 4), xywh
            x,y are top left coordinates
-
-    Returns
-    -------
-    diou: numpy array, shape=(N-1,)
+    :return diou: numpy array, shape=(N-1,)
          IoU value of boxes[1:] with boxes[0]
     """
     # get box coordinate and area
@@ -224,14 +214,11 @@ def box_iou_matrix(boxes1, boxes2):
     Reference implementation:
         https://github.com/pytorch/vision/blob/master/torchvision/ops/boxes.py
 
-    Arguments:
-        boxes1 (np.array[N, 4])
-        boxes2 (np.array[M, 4])
-    Returns:
-        iou (np.array[N, M]): the NxM matrix containing the pairwise
+    :param boxes1: (np.array[N, 4])
+    :param boxes2: (np.array[M, 4])
+    :return iou: (np.array[N, M]): the NxM matrix containing the pairwise
             IoU values for every element in boxes1 and boxes2
     """
-
     def box_area(box):
         # box = 4xN
         return box[2] * box[3]
@@ -252,11 +239,9 @@ def box_diou_matrix(boxes1, boxes2):
     Calculate DIoU matrix for two box array.
     Both sets of boxes are expected to be in (x, y, w, h) format.
 
-    Arguments:
-        boxes1 (np.array[N, 4])
-        boxes2 (np.array[M, 4])
-    Returns:
-        diou (np.array[N, M]): the NxM matrix containing the pairwise
+    :param boxes1: (np.array[N, 4])
+    :param boxes2: (np.array[M, 4])
+    :return diou: (np.array[N, M]): the NxM matrix containing the pairwise
             IoU values for every element in boxes1 and boxes2
     """
     iou = box_iou_matrix(boxes1, boxes2)
@@ -299,20 +284,15 @@ def fast_cluster_nms_boxes(boxes, classes, scores, iou_threshold):
         4. Blogpost on zhihu:
            https://zhuanlan.zhihu.com/p/157900024
 
-    Parameters
-    ----------
-    boxes:   bbox numpy array, shape=(N, 4), xywh
+    :param boxes:   bbox numpy array, shape=(N, 4), xywh
              x,y are top left coordinates
-    classes: bbox class index numpy array, shape=(N, 1)
-    scores:  bbox score numpy array, shape=(N, 1)
-    iou_threshold:
-
-    Returns
-    -------
-    nboxes:   NMSed bbox numpy array, shape=(N, 4), xywh
+    :param classes: bbox class index numpy array, shape=(N, 1)
+    :param scores:  bbox score numpy array, shape=(N, 1)
+    :param iou_threshold:
+    :return nboxes:   NMSed bbox numpy array, shape=(N, 4), xywh
               x,y are top left coordinates
-    nclasses: NMSed bbox class index numpy array, shape=(N, 1)
-    nscores:  NMSed bbox score numpy array, shape=(N, 1)
+    :return nclasses: NMSed bbox class index numpy array, shape=(N, 1)
+    :return nscores:  NMSed bbox score numpy array, shape=(N, 1)
     """
     nboxes, nclasses, nscores = [], [], []
     for c in set(classes):
@@ -471,8 +451,7 @@ def filter_boxes(boxes, classes, scores, max_boxes):
     return nboxes, nclasses, nscores
 
 
-def yolo_handle_predictions(predictions, max_boxes=100, confidence=0.1, iou_threshold=0.4,
-                            use_cluster_nms=False):
+def yolo_handle_predictions(predictions, max_boxes=100, confidence=0.1, iou_threshold=0.4):
     boxes = predictions[:, :, :4]
     box_confidences = np.expand_dims(predictions[:, :, 4], -1)
     box_class_probs = predictions[:, :, 5:]
@@ -530,7 +509,7 @@ def yolo_adjust_boxes(boxes, img_shape):
 
 
 def get_anchors(anchors_path):
-    '''loads the anchors from a file'''
+    """loads the anchors from a file"""
     with open(anchors_path) as f:
         anchors = f.readline()
     anchors = [float(x) for x in anchors.split(',')]
@@ -547,7 +526,6 @@ def yolo3_postprocess_np(yolo_outputs, image_shape, anchors, num_classes, model_
                                                      max_boxes=max_boxes,
                                                      confidence=confidence,
                                                      iou_threshold=iou_threshold)
-
     boxes = yolo_adjust_boxes(boxes, image_shape)
 
     return boxes, classes, scores
