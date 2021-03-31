@@ -20,10 +20,6 @@ from beta.nncf.tensorflow.layers.operation import NNCFOperation
 from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 
 
-OP_NAME_BM = 'binary_mask_apply'
-OP_NAME_BMWB = 'binary_mask_weight_backup_apply'
-
-
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMask(NNCFOperation):
     def build(self, input_shape, input_type, name, layer):
@@ -46,15 +42,11 @@ class BinaryMask(NNCFOperation):
     def call(self, inputs, weights, _):
         return apply_mask(inputs, weights['mask'])
 
-    @staticmethod
-    def create_operation_name(layer_name: str, weight_attr_name: str):
-        return  f'{layer_name}_{weight_attr_name}_{OP_NAME_BM}'
-
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMaskWithWeightsBackup(BinaryMask):
     def __init__(self, name: str, w_name_to_bkup: str = None):
-        super().__init__(name=name)
+        super().__init__(name)
         self.w_name_to_bkup = w_name_to_bkup
         self.bkup_var = None
 
@@ -77,10 +69,6 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
 
         bkup_var.assign(var.read_value())
         return bkup_var
-
-    @staticmethod
-    def create_operation_name(layer_name: str, weight_attr_name: str):
-        return  f'{layer_name}_{weight_attr_name}_{OP_NAME_BMWB}'
 
     def get_config(self):
         config = super().get_config()

@@ -87,7 +87,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
-        self._op_names = set()
+        self._op_names = []
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
         """
@@ -158,11 +158,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
-        op_name = BinaryMask.create_operation_name(layer_name, attr_name)
-        if op_name in self._op_names:
-            raise RuntimeError('Attempt to apply BinaryMask operation two times on one weight')
-
-        self._op_names.add(op_name)
+        op_name = self._get_pruning_operation_name(layer_name, attr_name)
 
         return TFInsertionCommand(
             target_point=TFLayerWeight(layer_name, attr_name),
@@ -215,6 +211,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_types_of_grouping_ops(self) -> List[str]:
         raise NotImplementedError
 
+    def _get_pruning_operation_name(self, layer_name, weight_attr_name):
+        name =  f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
+        self._op_names.append(name)
+        return name
 
 class BasePruningAlgoController(TFCompressionAlgorithmController):
     """
@@ -224,7 +224,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
-                 op_names: set,
+                 op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups_info: Clusterization,
                  config):

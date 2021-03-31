@@ -40,6 +40,13 @@ SPARSITY_TF_OPS = [
 
 
 class BaseSparsityController(TFCompressionAlgorithmController):
+    """
+    Serves as a handle to the additional modules, parameters and hooks inserted
+    into the original uncompressed model to enable sparsity-specific compression.
+    Hosts entities that are to be used during the training process, such as
+    compression scheduler and compression loss.
+    """
+
     def __init__(self, target_model, op_names):
         super().__init__(target_model)
         self._op_names = op_names

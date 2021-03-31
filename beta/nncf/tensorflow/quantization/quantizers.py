@@ -28,9 +28,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 
 
-OP_NAME = 'quantize'
-
-
 class TFQuantizerSpec(QuantizerSpec):
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
@@ -61,7 +58,7 @@ class Quantizer(NNCFOperation):
 
         :param name: Unique operation name in algorithm scope.
         """
-        super().__init__(name=name)
+        super().__init__(name)
         self.enabled = True
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
@@ -115,7 +112,7 @@ class Quantizer(NNCFOperation):
 
         :param input_shape: Shape of the input.
         :param input_type: Type of the input identifies that inputs are layer weights
-                           or inputs of the layer.
+            or inputs of the layer.
         :param input_name: Input name.
         :param layer: Layer, where the Quantizer is registered.
         """
@@ -223,10 +220,6 @@ class Quantizer(NNCFOperation):
 
         return post_processing_fn
 
-    @staticmethod
-    def create_operation_name(layer_name, weight_attr_name):
-        return f'{layer_name}_{weight_attr_name}_{OP_NAME}'
-
     def get_quantizer_config(self) -> QuantizerConfig:
         """
         Used to get a current quantizer state in terms of QuantizerConfig objects.
@@ -243,7 +236,7 @@ class Quantizer(NNCFOperation):
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
-        super().__init__(name=name)
+        super().__init__(name)
         self.num_bits = qspec.num_bits
         self.per_channel = qspec.per_channel
         self.narrow_range = qspec.narrow_range
@@ -333,7 +326,7 @@ class SymmetricQuantizer(Quantizer):
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
-        super().__init__(name=name)
+        super().__init__(name)
         self.num_bits = qspec.num_bits
         self.narrow_range = qspec.narrow_range
         self.per_channel = qspec.per_channel

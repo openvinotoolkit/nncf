@@ -23,7 +23,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.functions import apply_mask
 from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask, st_binary_mask, binary_mask
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 
-OP_NAME = 'rb_sparsity_mask_apply'
 
 @NNCF_CUSTOM_OBJECTS.register()
 class RBSparsifyingWeight(NNCFOperation):
@@ -33,7 +32,7 @@ class RBSparsifyingWeight(NNCFOperation):
         :param eps: Minimum value and the gap from the maximum value in
             distributed mask.
         """
-        super().__init__(name=name)
+        super().__init__(name)
         self.eps = eps
 
     def build(self, input_shape, input_type: InputType, name: str, layer: NNCFWrapper):
@@ -45,7 +44,7 @@ class RBSparsifyingWeight(NNCFOperation):
         """
         if input_type is not InputType.WEIGHTS:
             raise ValueError(
-                'RB Sparsity mask operation could not be applied' +
+                'RB Sparsity mask operation could not be applied '
                 'to input of the layer: {}'.format(layer.name))
 
         mask = layer.add_weight(
@@ -99,7 +98,3 @@ class RBSparsifyingWeight(NNCFOperation):
         :param mask: Given mask.
         """
         return tf.reduce_sum(st_binary_mask(mask))
-
-    @staticmethod
-    def create_operation_name(layer_name, weight_attr_name):
-        return f'{layer_name}_{weight_attr_name}_{OP_NAME}'

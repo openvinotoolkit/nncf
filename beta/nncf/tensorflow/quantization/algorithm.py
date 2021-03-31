@@ -34,7 +34,6 @@ from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATO
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from beta.nncf.tensorflow.quantization.quantizers import Quantizer
 from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
@@ -66,7 +65,6 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
         self.target_scopes_per_group = {}
-        self._op_names = set()
 
         for quantizer_group in QUANTIZER_GROUPS:
             self._parse_group_params(self.config, quantizer_group)
@@ -120,11 +118,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
-            op_name = Quantizer.create_operation_name(node_name, weight_attr_name)
-            if op_name in self._op_names:
-                raise RuntimeError('Attempt to apply Quantize operation two times on one weight')
+            op_name = self._get_quantizer_operation_name(node_name, weight_attr_name)
 
-            self._op_names.add(op_name)
             operation = self._create_quantizer(op_name, TFQuantizerSpec.from_config(qconfig,
                                                                            narrow_range=True,
                                                                            half_range=False))
@@ -143,11 +138,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
                                                                            half_range=False),
                                                name=fake_quantize_name)
-            op_name = fake_quantize_layer.op_name
-            if op_name in self._op_names:
-                raise RuntimeError('Attempt to insert FakeQuantize layer two times on one place')
 
-            self._op_names.add(op_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),
@@ -229,6 +220,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if instance_index == 0:
             return '{}/fake_quantize'.format(node_name)
         return '{}/fake_quantize_{}'.format(node_name, instance_index)
+
+    def _get_quantizer_operation_name(self, layer_name, weight_attr_name):
+        return f'{layer_name}_{weight_attr_name}_quantizer'
 
 
 class QuantizationController(TFCompressionAlgorithmController):

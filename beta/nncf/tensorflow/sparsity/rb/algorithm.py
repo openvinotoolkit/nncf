@@ -13,6 +13,7 @@
 
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
+from typing import List
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -41,7 +42,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
-        self._op_names = set()
+        self._op_names = []
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -59,11 +60,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
-            op_name = RBSparsifyingWeight.create_operation_name(node_name, weight_attr_name)
-            if op_name in self._op_names:
-                raise RuntimeError('Attempt to apply RBSparsityWeight operation two times on one weight')
-
-            self._op_names.add(op_name)
+            op_name = self._get_rb_sparsity_operation_name(node_name, weight_attr_name)
 
             transformations.register(
                 TFInsertionCommand(
@@ -74,6 +71,11 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
+    def _get_rb_sparsity_operation_name(self, layer_name, weight_attr_name):
+        name = f'{layer_name}_{weight_attr_name}_rb_sparsity_weight'
+        self._op_names.append(name)
+        return name
+
     def build_controller(self, model) -> BaseSparsityController:
         """
         Should be called once the compressed model target_model is fully constructed
@@ -83,7 +85,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
 
 class RBSparsityController(BaseSparsityController):
-    def __init__(self, target_model, config, op_names: set):
+    def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model, op_names)
         params = config.get('params', {})
         self.sparsity_init = config.get('sparsity_init', 0)

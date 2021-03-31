@@ -43,7 +43,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
     def __init__(self, config):
         super().__init__(config)
         self.ignored_scopes = self.config.get('ignored_scopes', [])
-        self._op_names = set()
+        self._op_names = []
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -61,11 +61,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                 shared_nodes.add(original_node_name)
 
             weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
-            op_name = BinaryMask.create_operation_name(node_name, weight_attr_name)
-            if op_name in self._op_names:
-                raise RuntimeError('Attempt to apply BinaryMask two times on one weight')
+            op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
 
-            self._op_names.add(op_name)
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
@@ -80,11 +77,8 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                     not is_ignored(node_name, self.ignored_scopes)):
 
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
-                    op_name = BinaryMaskWithWeightsBackup.create_operation_name(node_name, weight_attr_name)
-                    if op_name in self._op_names:
-                        raise RuntimeError('Attempt to apply BinaryMaskWithWeightsBackup two times on one weight')
+                    op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
 
-                    self._op_names.add(op_name)
                     transformations.register(
                         TFInsertionCommand(
                             target_point=TFLayerWeight(layer.name, weight_attr_name),
@@ -93,6 +87,11 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
                         ))
 
         return transformations
+
+    def _get_sparsity_operation_name(self, layer_name, weight_attr_name):
+        name = f'{layer_name}_{weight_attr_name}_sparsity_binary_mask'
+        self._op_names.append(name)
+        return name
 
     def build_controller(self, model) -> BaseSparsityController:
         """
