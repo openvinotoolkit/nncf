@@ -84,7 +84,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
-        self._pruned_spec_layers = list()
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
         """
@@ -123,7 +122,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 layer = model.get_layer(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
-
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
                 for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
@@ -140,23 +138,28 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
 
-            # Add masks for all spec modules, because prunable batchnorm layers can be determines
-            # at the moment of mask propagation
-            types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
-            if not self._prune_batch_norms:
-                types_spec_layers.remove('BatchNormalization')
+        # Add masks for all spec modules, because prunable batchnorm layers can be determines
+        # at the moment of mask propagation
+        types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
+        if not self._prune_batch_norms:
+            types_spec_layers.remove('BatchNormalization')
 
-            for spec_node in graph.get_nodes_by_types(types_spec_layers):
-                layer_name = get_layer_identifier(spec_node)
-                for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                    attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
-                    transformations.register(
-                        TFInsertionCommand(
-                            target_point=TFLayerWeight(layer_name, attr_name),
-                            callable_object=BinaryMask(),
-                            priority=TransformationPriority.PRUNING_PRIORITY
-                        ))
-                self._pruned_spec_layers.append(layer_name)
+        spec_nodes = graph.get_nodes_by_types(types_spec_layers)
+        for spec_node in spec_nodes:
+            layer_name = get_layer_identifier(spec_node)
+            if layer_name in shared_layers:
+                continue
+            if is_shared(node):
+                shared_layers.add(layer_name)
+            nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
+            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
+                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
+                transformations.register(
+                    TFInsertionCommand(
+                        target_point=TFLayerWeight(layer_name, attr_name),
+                        callable_object=BinaryMask(),
+                        priority=TransformationPriority.PRUNING_PRIORITY
+                    ))
 
         return transformations
 

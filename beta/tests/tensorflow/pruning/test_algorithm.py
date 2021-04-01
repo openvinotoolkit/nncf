@@ -82,7 +82,6 @@ def get_concat_test_model(input_shape):
     x = tf.concat([x, x1], -1, name='tf_concat_2')
     x = bn_concat(x)
     outputs = conv5(x)
-
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
@@ -113,5 +112,6 @@ def test_masks_in_concat_model(all_weights, prune_batch_norms, ref_num_wrapped_l
         # Check masks correctness
         if not all_weights:
             target_pruning_rate = 0.625 if layer.name == 'nncf_wrapper_bn_concat' else 0.5
+            assert len(layer.ops_weights) == 2
             for op in layer.ops_weights.values():
                 check_pruning_mask(op['mask'].numpy(), target_pruning_rate, layer.name)
