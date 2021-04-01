@@ -175,6 +175,7 @@ class TFConcat(DefaultMetaOp):
         """
         previous_nodes = graph.get_previous_nodes(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
+        input_edges = graph.get_input_edges(node)
 
         if all(mask is None for mask in input_masks):
             return None
@@ -185,8 +186,7 @@ class TFConcat(DefaultMetaOp):
         for i, mask in enumerate(input_masks):
             if mask is None:
                 with tf.device(device):
-                    # TODO: need know input shape
-                    mask = tf.ones(previous_nodes[i].module_attributes.out_channels)
+                    mask = tf.ones(input_edges[i][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][-1])
             filled_input_masks.append(mask)
         result_mask = tf.concat(filled_input_masks, 0)
         return result_mask

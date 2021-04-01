@@ -488,8 +488,6 @@ class NNCFGraphPatternIO:
 class PTNNCFGraph(NNCFGraph):
 
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
-    ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
-    IN_PORT_NAME_EDGE_ATTR = 'in_port'
 
     def __init__(self):
         super().__init__()
@@ -802,19 +800,6 @@ class PTNNCFGraph(NNCFGraph):
             if op_scope in scope:
                 matching_graph_op_nodes.append(node)
         return matching_graph_op_nodes
-
-    def get_input_edges(self, node: NNCFNode) -> List[dict]:
-        """
-        Returns description of edge for input tensors.
-
-        :param node: Consumer node.
-        :return: List of input edges for node.
-        """
-        nx_node_key = self._node_id_to_key_dict[node.node_id]
-        input_edges = sorted(list(self._nx_graph.in_edges(nx_node_key)),
-                             key=lambda edge: self._nx_graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR])
-
-        return [self._nx_graph.edges[edge] for edge in input_edges]
 
 
 class NNCFNodeExpression(NodeExpression):
