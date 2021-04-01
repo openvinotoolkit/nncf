@@ -165,7 +165,6 @@ class MinMaxInitializer(TFCompressionAlgorithmInitializer):
                             op_statistics.append((layer, op_name, op, minmax))
 
         for step, (x, _) in enumerate(dataset):
-            print('step', step)
             if step >= self.num_steps:
                 break
             model(x, training=False)
