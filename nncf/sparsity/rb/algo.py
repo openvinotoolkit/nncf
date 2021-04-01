@@ -127,3 +127,10 @@ class RBSparsityController(BaseSparsityAlgoController):
         if self._distributed and self._check_sparsity_masks:
             stats['masks_consistents'] = self._check_distributed_masks()
         return stats
+
+    def get_sparsity_init(self):
+        return self.sparsity_init
+
+    @property
+    def scheduler(self):
+        return self._scheduler

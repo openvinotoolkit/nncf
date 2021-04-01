@@ -28,6 +28,7 @@ from nncf.common.utils.logger import logger as nncf_logger
 from nncf.graph.transformations.commands import TransformationPriority
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
@@ -76,6 +77,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
 
     @property
@@ -157,3 +159,11 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
+
+    @property
+    def loss(self):
+        return self._loss
+
+    @property
+    def scheduler(self):
+        return self._scheduler

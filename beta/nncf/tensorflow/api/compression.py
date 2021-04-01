@@ -53,7 +53,7 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
         """
         super().__init__(target_model)
         self._initializer = TFCompressionAlgorithmInitializer()
-        self._scheduler = CompressionScheduler()
+        #self._scheduler = CompressionScheduler()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,

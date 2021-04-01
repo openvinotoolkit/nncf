@@ -19,7 +19,7 @@ extend the existing algorithms.
 import numpy
 from copy import copy
 from functools import partial
-from typing import List, Tuple, Optional, TypeVar
+from typing import List, Tuple, Optional, TypeVar, Dict
 
 import torch
 from torch import nn
@@ -69,6 +69,17 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+        """
+        Returns a dictionary of printable statistics.
+
+        :param quickly_collected_only: Enables collection of the statistics that
+            don't take too much time to compute. Can be helpful for the case when
+            need to keep track of statistics on each training batch/step/iteration.
+        :return: A dictionary of printable statistics.
+        """
+        return {}
+
 
 class PTCompressionAlgorithmController(CompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
@@ -85,8 +96,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             by the `CompressionAlgorithmBuilder`.
         """
         super().__init__(target_model)
-        self._loss = PTCompressionLoss()
-        self._scheduler = CompressionScheduler()
 
     def distributed(self):
         """
@@ -105,7 +114,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             statistics on each train batch/step/iteration.
         :return: A dictionary of printable statistics.
         """
-        stats = super().statistics(quickly_collected_only)
+        stats = {}
         if hasattr(self._model, 'statistics'):
             stats.update(self._model.statistics(quickly_collected_only))
         return stats
@@ -268,3 +277,21 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         algo_name = self._registered_name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'
+
+
+class PTStubCompressionScheduler(CompressionScheduler):
+
+    def compression_level(self) -> CompressionLevel:
+        return CompressionLevel.FULL
+
+    def step(self, next_step: Optional[int] = None) -> None:
+        pass
+ 
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        pass
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        pass
+
+    def get_state(self) -> Dict[str, object]:
+        pass

@@ -124,3 +124,14 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
             return CompressionLevel.FULL
         return CompressionLevel.PARTIAL
+
+    def get_sparsity_init(self):
+        return self.sparsity_init
+
+    @property
+    def scheduler(self):
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
+        return self._scheduler
+

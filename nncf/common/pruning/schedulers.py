@@ -17,12 +17,12 @@ import scipy.optimize
 
 from nncf.api.compression import CompressionScheduler
 from nncf.common.utils.registry import Registry
-from nncf.common.schedulers import ExponentialDecaySchedule
+from nncf.common.schedulers import ExponentialDecaySchedule, BaseCompressionScheduler
 
 PRUNING_SCHEDULERS = Registry("pruning_schedulers")
 
 
-class PruningScheduler(CompressionScheduler):
+class PruningScheduler(BaseCompressionScheduler):
     """
     This is the class from which all pruning schedulers inherit.
 

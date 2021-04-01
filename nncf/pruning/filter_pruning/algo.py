@@ -624,3 +624,24 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionLevel.FULL
         return CompressionLevel.PARTIAL
+
+    @property
+    def model(self) -> NNCFNetwork:
+        """
+        :return: The target model.
+        """
+        return self._model
+
+    @property
+    def loss(self):
+        """
+        :return: The instance of the `CompressionLoss`.
+        """
+        return self._loss
+
+    @property
+    def scheduler(self):
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
+        return self._scheduler

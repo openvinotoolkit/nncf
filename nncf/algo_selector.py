@@ -15,7 +15,7 @@ from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
 from nncf.api.compression import CompressionLevel
-from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController, PTCompressionLoss
+from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController, PTCompressionLoss, PTStubCompressionScheduler
 from nncf.common.utils.registry import Registry
 import torch
 
@@ -23,7 +23,7 @@ COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True
 
 
 class ZeroCompressionLoss(PTCompressionLoss):
-    def __init__(self, device):
+    def __init__(self, device: str):
         super().__init__()
         self._device = device
 
@@ -45,6 +45,7 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def __init__(self, target_model):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = PTStubCompressionScheduler()
 
     def compression_level(self) -> CompressionLevel:
         """
@@ -52,3 +53,11 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
         uncompressed, partially compressed and fully compressed models.
         """
         return CompressionLevel.NONE
+
+    @property
+    def loss(self):
+        return self._loss
+
+    @property
+    def scheduler(self):
+        return self._scheduler

@@ -37,6 +37,7 @@ from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -1097,6 +1098,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
@@ -1320,6 +1322,13 @@ class QuantizationController(QuantizationControllerBase):
                     stats[add_info] = table
         return stats
 
+    @property
+    def scheduler(self):
+        return self._scheduler
+
+    @property
+    def loss(self):
+        return self._loss
 
 class QuantizationDebugInterface(DebugInterface):
     QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME = 'quantized_modules'
@@ -1604,3 +1613,24 @@ class ExperimentalQuantizationController(QuantizationController):
         new_builder.apply_to(new_model)
         new_ctrl = new_builder.build_controller(new_model)
         return new_ctrl, new_model
+
+    @property
+    def model(self):
+        """
+        :return: The target model.
+        """
+        return self._model
+
+    @property
+    def loss(self):
+        """
+        :return: The instance of the `CompressionLoss`.
+        """
+        return self._loss
+
+    @property
+    def scheduler(self):
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
+        self._scheduler

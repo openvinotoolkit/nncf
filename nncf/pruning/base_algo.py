@@ -115,9 +115,6 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
             self.pruned_module_groups_info.add_cluster(cluster)
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return BasePruningAlgoController(target_model, self.pruned_module_groups_info, self._params)
-
     def create_weight_pruning_operation(self, module):
         raise NotImplementedError
 

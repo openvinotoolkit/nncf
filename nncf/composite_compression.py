@@ -140,3 +140,11 @@ class PTCompositeCompressionAlgorithmController(
         for ctrl in self.child_ctrls:
             target_model = ctrl.apply_to(target_model)
         return target_model
+
+    @property
+    def loss(self):
+        return self._loss
+
+    @property
+    def scheduler(self):
+        return self._scheduler

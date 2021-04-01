@@ -11,10 +11,12 @@
  limitations under the License.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 from bisect import bisect_right
 
 import numpy as np
+
+from nncf.api.compression import CompressionScheduler
 
 
 class PolynomialDecaySchedule:
@@ -143,3 +145,89 @@ class ExponentialDecaySchedule:
 
         value = self.initial_value * np.power(self.decay_rate, epoch / self.target_epoch)
         return max(value, self.target_value)
+
+
+class BaseCompressionScheduler(CompressionScheduler):
+    """
+    Implements the logic of compression method control during the training process.
+    May change the method hyperparameters in regards to the current training step
+    or epoch. For example, the sparsity method can smoothly increase the sparsity
+    rate over several epochs.
+
+    The `step()` and `epoch_step()` methods of the compression scheduler must be
+    called at the beginning of each training step and epoch, respectively.
+
+    ```
+    for epoch in range(0, num_epochs):
+        scheduler.epoch_step()
+        for i, (x, y) in enumerate(dataset):
+             scheduler.step()
+             ...
+    ```
+    """
+
+    def __init__(self):
+        """
+        Initializes the internal state of the compression scheduler specified by:
+            - `current_step` is the index of the global training step, counted
+            from 0 to the end of training. The initial value is -1
+            - `current_epoch` is the training epoch index (numbering from zero).
+            The initial value is -1.
+
+        The `current_step` and `current_epoch` specify the training step and epoch,
+        respectively, for which the compression scheduler has updated the state of
+        the compression method, in particular its hyperparameters. It means that
+        the compression method is configured and ready to continue training at
+        `current_step` and `current_epoch`.
+
+        When `current_step` is -1, it means that the compression scheduler did not
+        update the compression method state taking into account the training step,
+        there is the same for current_epoch is -1.
+        """
+        self.current_step = -1
+        self.current_epoch = -1
+
+    def step(self, next_step: Optional[int] = None) -> None:
+        """
+        Should be called at the beginning of each training step to prepare
+        the compression method to continue training the model in the `next_step`.
+
+        :param next_step: The global step index for which the compression scheduler
+            will update the state of the compression method.
+        """
+        if next_step is None:
+            next_step = self.current_step + 1
+        self.current_step = next_step
+
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        """
+        Should be called at the beginning of each training epoch to prepare
+        the compression method to continue training the model in the `next_epoch`.
+
+        :param next_epoch: The epoch index for which the compression scheduler
+            will update the state of the compression method.
+        """
+        if next_epoch is None:
+            next_epoch = self.current_epoch + 1
+        self.current_epoch = next_epoch
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression scheduler state, but does not update the state of the
+        compression method.
+
+        :param state: Output of `get_state()` method.
+        """
+        self.current_step = state['current_step']
+        self.current_epoch = state['current_epoch']
+
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression scheduler state.
+
+        :return: The compression scheduler state.
+        """
+        return {
+            'current_step': self.current_step,
+            'current_epoch': self.current_epoch
+        }
