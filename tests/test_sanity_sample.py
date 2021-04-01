@@ -711,8 +711,7 @@ TEST_CASE_DESCRIPTORS = [
     resnet18_desc(AutoQDescriptor()).batch(2).staged().dump_debug(True),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(2),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
-    ssd300_vgg_desc(AutoQDescriptor()).dump_debug(True),
-    ssd300_vgg_desc(AutoQDescriptor()).batch(2),
+    ssd300_vgg_desc(AutoQDescriptor()).batch(2).dump_debug(True),
     unet_desc(AutoQDescriptor()).dump_debug(True),
     icnet_desc(AutoQDescriptor())
 ]
