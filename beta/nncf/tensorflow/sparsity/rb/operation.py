@@ -29,8 +29,8 @@ class RBSparsifyingWeight(NNCFOperation):
     def __init__(self, name: str, eps: float = 1e-6):
         """
         :param name: Model scope unique operation name.
-        :param eps: Minimum value and the gap from the maximum value in
-            distributed mask.
+        :param eps: Minimum value and the gap from the maximum value
+            in the mask.
         """
         super().__init__(name)
         self.eps = eps
@@ -116,3 +116,8 @@ class RBSparsifyingWeight(NNCFOperation):
         :param op_weights: Operation weights.
         """
         return op_weights['trainable']
+
+    def get_config(self):
+        config = super().get_config()
+        config['eps'] = self.eps
+        return config
