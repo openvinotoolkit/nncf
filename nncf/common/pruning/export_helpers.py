@@ -35,6 +35,7 @@ class DefaultMetaOp:
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         """
         Propagates the pruning mask through a node using pruning masks of all inputs and the current node (if any).
+
         :param node: The graph node to propagate mask through it
         :param graph: The model graph to prune
         """
