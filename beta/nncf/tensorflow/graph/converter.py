@@ -178,6 +178,7 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
 
 
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
+    # pylint:disable=too-many-branches
     model_config = model.get_config()
     raw_nodes = Dict()
     for layer in model_config['layers']:
@@ -187,13 +188,13 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
         data_format = layer['config'].get('data_format')
         model_layer = model.get_layer(layer_name)
 
-        input_shape = model_layer.input_shape
-        if not isinstance(input_shape, list):
-            input_shape = [input_shape]
-
         if layer['inbound_nodes']:
             is_shared = len(layer['inbound_nodes']) > 1
             for i, inbound_node in enumerate(layer['inbound_nodes']):
+                input_shape = model_layer.inbound_nodes[i].input_shapes
+                if not isinstance(input_shape, list):
+                    input_shape = [input_shape]
+
                 instance = raw_nodes[layer_name][i]
                 instance['type'] = layer_type
                 instance['dtype'] = layer_dtype
@@ -213,6 +214,9 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                     else:
                         parent_instance['out_ports'] = {parent_out_ports}
         else:
+            input_shape = model_layer.input_shape
+            if not isinstance(input_shape, list):
+                input_shape = [input_shape]
             instance = raw_nodes[layer_name][0]
             instance['type'] = layer_type
             instance['dtype'] = layer_dtype
