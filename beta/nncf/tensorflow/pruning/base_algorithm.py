@@ -149,7 +149,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             layer_name = get_layer_identifier(spec_node)
             if layer_name in shared_layers:
                 continue
-            if is_shared(node):
+            if is_shared(spec_node):
                 shared_layers.add(layer_name)
             nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
             for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
