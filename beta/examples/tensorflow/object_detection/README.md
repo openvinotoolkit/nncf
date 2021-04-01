@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D).
+- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
 - Support [TensorFlow Datasets (TFDS)](https://www.tensorflow.org/datasets) and TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
@@ -141,4 +141,5 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.3|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_a_sym_t.tar.gz)|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
 |RetinaNet|Filter Pruning 40%|COCO2017|32.7|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
-
+|YOLOv4|None|COCO2017|47.04|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4.tar.gz)|
+|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|
