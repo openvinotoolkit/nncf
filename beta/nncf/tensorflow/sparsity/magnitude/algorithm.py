@@ -62,6 +62,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
             op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
+            self._op_names.append(op_name)
 
             transformations.register(
                 TFInsertionCommand(
@@ -78,6 +79,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
                     weight_attr_name = get_weight_node_name(nxmodel, node_name)
                     op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
+                    self._op_names.append(op_name)
 
                     transformations.register(
                         TFInsertionCommand(
@@ -89,9 +91,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def _get_sparsity_operation_name(self, layer_name, weight_attr_name):
-        name = f'{layer_name}_{weight_attr_name}_sparsity_binary_mask'
-        self._op_names.append(name)
-        return name
+        return f'{layer_name}_{weight_attr_name}_sparsity_binary_mask'
 
     def build_controller(self, model) -> BaseSparsityController:
         """

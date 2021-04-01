@@ -159,6 +159,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
         op_name = self._get_pruning_operation_name(layer_name, attr_name)
+        self._op_names.append(op_name)
 
         return TFInsertionCommand(
             target_point=TFLayerWeight(layer_name, attr_name),
@@ -212,9 +213,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         raise NotImplementedError
 
     def _get_pruning_operation_name(self, layer_name, weight_attr_name):
-        name =  f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
-        self._op_names.append(name)
-        return name
+        return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
+
 
 class BasePruningAlgoController(TFCompressionAlgorithmController):
     """

@@ -61,6 +61,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
             weight_attr_name = SPARSITY_LAYERS[node['type']]['weight_attr_name']
             op_name = self._get_rb_sparsity_operation_name(node_name, weight_attr_name)
+            self._op_names.append(op_name)
 
             transformations.register(
                 TFInsertionCommand(
@@ -72,9 +73,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         return transformations
 
     def _get_rb_sparsity_operation_name(self, layer_name, weight_attr_name):
-        name = f'{layer_name}_{weight_attr_name}_rb_sparsity_weight'
-        self._op_names.append(name)
-        return name
+        return f'{layer_name}_{weight_attr_name}_rb_sparsity_weight'
 
     def build_controller(self, model) -> BaseSparsityController:
         """
