@@ -160,7 +160,6 @@
                     "weights": "retinanet/retinanet.h5",
                     "metric_type": "mAP",
                     "model_description": "retinanet",
-                    "batch": 3
                 },
                 "retinanet_int8_w_sym_t_a_sym_t": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json",
@@ -170,7 +169,6 @@
                     "metric_type": "mAP",
                     "model_description": "retinanet_int8_w_sym_t_a_sym_t",
                     "compression_description": "INT8",
-                    "batch": 3
                 },
                 "retinanet_sparsity_50": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json",
@@ -180,7 +178,6 @@
                     "metric_type": "mAP",
                     "model_description": "retinanet_sparsity_50",
                     "compression_description": "Sparsity 50",
-                    "batch": 3
                 },
                 "retinanet_pruning_40": {
                     "config": "examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning.json",
@@ -190,7 +187,6 @@
                     "metric_type": "mAP",
                     "model_description": "retinanet_pruning_40",
                     "compression_description": "Filter pruning 40%",
-                    "batch": 3,
                     "diff_fp32_min": -1,
                     "diff_fp32_max": 0.4
                 },
@@ -200,7 +196,6 @@
                     "weights": "yolo_v4/yolo_v4.h5",
                     "metric_type": "mAP",
                     "model_description": "yolo_v4",
-                    "batch": 3
                 },
                 "yolo_v4_int8_w_sym_c_a_asym_t": {
                     "config": "examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json",
@@ -210,7 +205,6 @@
                     "metric_type": "mAP",
                     "model_description": "yolo_v4_int8_w_sym_c_a_asym_t",
                     "compression_description": "INT8",
-                    "batch": 3
                 },
                 "yolo_v4_sparsity_50": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/yolo_v4_coco_magnitude_sparsity.json",
@@ -220,7 +214,6 @@
                     "metric_type": "mAP",
                     "model_description": "yolo_v4_sparsity_50",
                     "compression_description": "Sparsity 50",
-                    "batch": 3
                 }
             }
         }
@@ -235,7 +228,6 @@
                     "weights": "mask_rcnn_baseline",
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_baseline",
-                    "batch": 16
                 },
                 "mask_rcnn_int8_w_sym_t_a_sym_t": {
                     "config": "examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json",

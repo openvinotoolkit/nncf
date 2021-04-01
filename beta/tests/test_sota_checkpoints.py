@@ -18,6 +18,7 @@ import csv
 import datetime
 from typing import Tuple, List, Optional
 
+import tensorflow as tf
 import pytest
 import subprocess
 import re
@@ -57,6 +58,8 @@ DATASET_TYPE_AVAILABILITY = {
     "segmentation": False,
 }
 
+num_gpu = len(tf.config.list_physical_devices(device_type="GPU"))
+BATCH_SIZE = num_gpu # replica batch size = 1
 
 class EvalRunParamsStruct:
     def __init__(self,
@@ -312,10 +315,10 @@ class TestSotaCheckpoints:
                     resume_file = model_dict[model_name].get('resume', {})
                 else:
                     resume_file = None
-                if model_dict[model_name].get('batch', {}):
-                    batch = model_dict[model_name].get('batch', {})
-                else:
-                    batch = None
+                # if model_dict[model_name].get('batch', {}):
+                #     batch = model_dict[model_name].get('batch', {})
+                # else:
+                #     batch = None
                 if model_dict[model_name].get('mean_value', {}):
                     mean_val = model_dict[model_name].get('mean_value', {})
                 else:
@@ -340,7 +343,7 @@ class TestSotaCheckpoints:
                                                           sample_type_=sample_type_,
                                                           resume_file_=resume_file,
                                                           weights_=weights,
-                                                          batch_=batch,
+                                                          batch_=BATCH_SIZE,
                                                           mean_val_=mean_val,
                                                           scale_val_=scale_val,
                                                           diff_fp32_min_=diff_fp32_min,
