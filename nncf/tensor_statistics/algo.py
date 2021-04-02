@@ -89,9 +89,9 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
         return CompressionLevel.FULL
 
     @property
-    def loss(self):
+    def loss(self) -> ZeroCompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> PTStubCompressionScheduler:
         return self._scheduler

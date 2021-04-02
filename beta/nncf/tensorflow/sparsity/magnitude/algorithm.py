@@ -16,6 +16,7 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.api.compression import CompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
@@ -220,7 +221,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         return raw_sparsity_statistics
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
     @property

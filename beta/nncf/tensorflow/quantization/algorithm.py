@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from typing import Dict
 import networkx as nx
 
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -39,6 +40,7 @@ from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationConstraints
+from nncf.api.compression import CompressionScheduler
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -236,12 +238,12 @@ class QuantizationController(TFCompressionAlgorithmController):
         self._initializer(self._model, dataset, loss)
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
     @property
     def loss(self):
         pass
 
-    def statistics(self):
-        pass
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+        return {}

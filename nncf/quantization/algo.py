@@ -33,6 +33,8 @@ from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
@@ -1311,7 +1313,7 @@ class QuantizationController(QuantizationControllerBase):
         return module_init_range_config
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
@@ -1323,11 +1325,11 @@ class QuantizationController(QuantizationControllerBase):
         return stats
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
     @property
-    def loss(self):
+    def loss(self) -> CompressionLoss:
         return self._loss
 
 class QuantizationDebugInterface(DebugInterface):
@@ -1615,22 +1617,9 @@ class ExperimentalQuantizationController(QuantizationController):
         return new_ctrl, new_model
 
     @property
-    def model(self):
-        """
-        :return: The target model.
-        """
-        return self._model
-
-    @property
-    def loss(self):
-        """
-        :return: The instance of the `CompressionLoss`.
-        """
+    def loss(self) -> CompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
-        """
-        :return: The instance of the `CompressionScheduler`.
-        """
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler

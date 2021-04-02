@@ -142,9 +142,9 @@ class PTCompositeCompressionAlgorithmController(
         return target_model
 
     @property
-    def loss(self):
+    def loss(self) -> PTCompositeCompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompositeCompressionScheduler:
         return self._scheduler

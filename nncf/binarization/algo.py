@@ -18,9 +18,15 @@ from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS, ZeroCompressionLoss
-from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
-    ActivationBinarizationScaleThreshold, BaseBinarizer
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.binarization.layers import BINARIZATION_MODULES
+from nncf.binarization.layers import BinarizationMode
+from nncf.binarization.layers import WeightBinarizer
+from nncf.binarization.layers import ActivationBinarizer
+from nncf.binarization.layers import ActivationBinarizationScaleThreshold
+from nncf.binarization.layers import BaseBinarizer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
@@ -49,7 +55,6 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         for command in commands:
             layout.register(command)
         return layout
-
 
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()
@@ -182,3 +187,11 @@ class BinarizationController(QuantizationControllerBase):
         table.add_rows(table_data)
         nncf_logger.info(table.draw())
         nncf_logger.info("Total binarized MAC share: {:.1f}%".format(ops_bin / ops_total * 100))
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler

@@ -10,14 +10,21 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 # pylint:disable=relative-beyond-top-level
+import torch
+
 from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
 from nncf.api.compression import CompressionLevel
-from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController, PTCompressionLoss, PTStubCompressionScheduler
+from nncf.api.compression import CompressionScheduler
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
+
+from nncf.compression_method_api import PTCompressionLoss
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.common.utils.registry import Registry
-import torch
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
@@ -55,9 +62,9 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
         return CompressionLevel.NONE
 
     @property
-    def loss(self):
+    def loss(self) -> ZeroCompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> PTStubCompressionScheduler:
         return self._scheduler

@@ -18,6 +18,8 @@ from texttable import Texttable
 
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
@@ -161,9 +163,9 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
         return CompressionLevel.FULL
 
     @property
-    def loss(self):
+    def loss(self) -> CompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler

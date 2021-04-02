@@ -37,8 +37,12 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+<<<<<<< c586e89804be488f825b18e93ff83ff2ce06883e
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
+=======
+from nncf.api.compression import CompressionScheduler
+>>>>>>> Fix test auxiliary struct. Add type hints.
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -233,7 +237,7 @@ class FilterPruningController(BasePruningAlgoController):
                 self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler
 
     @property

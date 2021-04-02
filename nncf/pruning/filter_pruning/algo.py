@@ -24,6 +24,8 @@ from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
@@ -626,22 +628,9 @@ class FilterPruningController(BasePruningAlgoController):
         return CompressionLevel.PARTIAL
 
     @property
-    def model(self) -> NNCFNetwork:
-        """
-        :return: The target model.
-        """
-        return self._model
-
-    @property
-    def loss(self):
-        """
-        :return: The instance of the `CompressionLoss`.
-        """
+    def loss(self) -> CompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self):
-        """
-        :return: The instance of the `CompressionScheduler`.
-        """
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler

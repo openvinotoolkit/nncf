@@ -39,7 +39,7 @@ class TFCompositeCompressionAlgorithmController(
             ctrl.initialize(dataset, loss)
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> CompositeCompressionScheduler:
         return self._scheduler
 
     @property

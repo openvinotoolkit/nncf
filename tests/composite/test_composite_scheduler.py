@@ -21,13 +21,19 @@ class DummyScheduler(CompressionScheduler):
         self.delta = delta
 
     def get_state(self):
-        state = super().get_state()
-        state['delta'] = self.delta
+        state = {
+            'delta': self.delta
+        }
         return state
 
     def load_state(self, state):
-        super().load_state(state)
         self.delta = state['delta']
+
+    def step(self, next_step):
+        pass
+
+    def epoch_step(self, next_epoch):
+        pass
 
 
 def test_can_restore_from_state():
