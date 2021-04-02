@@ -77,7 +77,7 @@
                     "weights": "mask_rcnn_baseline",
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_baseline",
-                    "batch_per_gpu": 6
+                    "batch_per_gpu": 4
                 },
                 "mask_rcnn_int8_w_sym_t_a_sym_t": {
                     "config": "examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json",
@@ -87,7 +87,7 @@
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_int8_w_sym_t_a_sym_t",
                     "compression_description": "INT8",
-                    "batch_per_gpu": 6
+                    "batch_per_gpu": 4
                 },
                 "mask_rcnn_sparsity_50": {
                     "config": "examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json",
@@ -97,7 +97,7 @@
                     "metric_type": "mAP",
                     "model_description": "mask_rcnn_sparsity_50",
                     "compression_description": "Sparsity 50",
-                    "batch_per_gpu": 6
+                    "batch_per_gpu": 4
                 }
             }
         }
