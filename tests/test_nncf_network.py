@@ -42,6 +42,7 @@ from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
@@ -697,7 +698,8 @@ def test_get_clean_shallow_copy():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    assert sparse_quantized_model.activation_quantizers
+    external_quantizers = getattr(sparse_quantized_model, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+    assert external_quantizers
     old_nncf_modules = sparse_quantized_model.get_nncf_modules().values()
     old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
     assert any(old_nncf_module_pre_ops)

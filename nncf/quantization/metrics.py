@@ -299,8 +299,10 @@ class MemoryCostMetric(BaseMetric):
             return precision
 
         u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-        if u_node_scope_str in self._compressed_model.activation_quantizers:
-            precision = self._compressed_model.activation_quantizers[u_node_scope_str].num_bits
+        for aq_id, aq in self._non_weight_quantizers.items():
+            if u_node_scope_str in str(aq_id.ia_op_exec_context):
+                precision = aq.num_bits
+                break
         else:
             precision = precision_enter_activation_tensor
         return precision
