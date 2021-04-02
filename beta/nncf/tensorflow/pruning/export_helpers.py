@@ -146,7 +146,7 @@ class TFConcat(DefaultMetaOp):
         """
         Return whether all input sources of node is convolutions or not.
 
-        :param node: node to determine it's sources
+        :param node: Node to determine it's sources
         :param graph: NNCF graph to work with
         :return: True if all input sources of node is convolutions
         """
@@ -168,10 +168,11 @@ class TFConcat(DefaultMetaOp):
     def generate_output_mask(cls, node: NNCFNode, graph: NNCFGraph) -> Union[tf.Tensor, None]:
         """
         Generate output mask from input masks with all None replaced by identity masks.
+        If all input masks is None return None.
 
-        :param node: node to determine it's sources
+        :param node: Node to determine it's sources
         :param graph: NNCF graph to work with
-        :return: output mask
+        :return: Output mask
         """
         previous_nodes = graph.get_previous_nodes(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]

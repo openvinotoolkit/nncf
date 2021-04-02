@@ -73,10 +73,11 @@ class PTDefaultMetaOp(DefaultMetaOp):
         """
         Propagate mask through a node using masks of all inputs and pruning mask of current node (if any).
         Should set the following attributes:
-        input_masks - list of masks of input nodes (None if there is no mask in some input)
-        output_mask - resulting mask of node operation
-        :param node: node from NNCF graph to propagate mask through it
-        :param graph: graph of model to prune
+            input_masks - list of masks of input nodes (None if there is no mask in some input);
+            output_mask - resulting mask of node operation.
+
+        :param node: Node from NNCF graph to propagate mask through it.
+        :param graph: Graph of model to prune.
         """
         raise NotImplementedError
 
@@ -84,18 +85,20 @@ class PTDefaultMetaOp(DefaultMetaOp):
     def input_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
         """
         Prune node by input_masks (if masks is not none and operation support it).
-        :param model: NNCF nectork
-        :param node: node from NNCF graph that will be prune
-        :param graph: graph of model
+
+        :param model: NNCF nectork.
+        :param node: Node from NNCF graph that will be prune.
+        :param graph: Graph of model.
         """
 
     @classmethod
     def output_prune(cls, model: NNCFNetwork, node: PTNNCFNode, graph: PTNNCFGraph):
         """
         Prune node by output_mask (if mask is not none and operation support it).
-        :param model: NNCF nectork
-        :param node: node from NNCF graph that will be prune
-        :param graph: graph of model
+
+        :param model: NNCF nectork.
+        :param node: Node from NNCF graph that will be prune.
+        :param graph: Graph of model.
         """
 
 
@@ -370,9 +373,9 @@ class PTConcat(PTDefaultMetaOp):
         """
         Return whether all input sources of node is convolutions or not.
 
-        :param node: node to determine it's sources
-        :param graph: NNCF graph to work with
-        :return: True if all input sources of node is convolutions
+        :param node: Node to determine it's sources.
+        :param graph: NNCF graph to work with.
+        :return: True If all input sources of node is convolutions.
         """
 
         for input_node in graph.get_previous_nodes(node):
@@ -389,22 +392,21 @@ class PTConcat(PTDefaultMetaOp):
         return True
 
     @classmethod
-    def generate_output_mask(
-            cls, node: PTNNCFNode, graph: PTNNCFGraph
-    ) -> Tuple[List[torch.Tensor], Union[torch.Tensor, None]]:
+    def fill_input_masks(cls, node: PTNNCFNode, graph: PTNNCFGraph) -> Union[List[torch.Tensor], None]:
         """
-        Generate output mask from input masks with all None replaced by identity masks.
+        Fill input masks with all None replaced by identity masks.
+        If all input masks is None return None.
 
-        :param node: node to determine it's sources
-        :param graph: NNCF graph to work with
-        :return: output mask
+        :param node: Node to determine it's sources.
+        :param graph: NNCF graph to work with.
+        :return: Filled input masks.
         """
         previous_nodes = graph.get_previous_nodes(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
         input_edges = graph.get_input_edges(node)
 
         if all(mask is None for mask in input_masks):
-            return [], None
+            return None
 
         device = [m for m in input_masks if m is not None][0].device
 
@@ -413,18 +415,20 @@ class PTConcat(PTDefaultMetaOp):
             if mask is None:
                 mask = torch.ones(input_edges[i][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
             filled_input_masks.append(mask)
-        return filled_input_masks, torch.cat(filled_input_masks)
+        return filled_input_masks
 
     @classmethod
     def mask_propagation(cls, node: PTNNCFNode, graph: PTNNCFGraph):
         input_masks = None
-        result_mask = None
+        output_mask = None
 
         if cls.check_concat(node, graph):
-            input_masks, result_mask = cls.generate_output_mask(node, graph)
+            input_masks = cls.fill_input_masks(node, graph)
+            if input_masks:
+                output_mask = torch.cat(input_masks)
 
         node.data['input_masks'] = input_masks
-        node.data['output_mask'] = result_mask
+        node.data['output_mask'] = output_mask
 
 
 @PT_PRUNING_OPERATOR_METATYPES.register('elementwise')
@@ -496,7 +500,7 @@ class ModelPruner(MaskPropagationAlgorithm):
         pruned_node_modules = list()
         with torch.no_grad():
             for node in self._graph.topological_sort():
-                node_cls = self.get_class_by_type_name(node.node_type)
+                node_cls = self.get_meta_operation_by_type_name(node.node_type)
                 node_module = self._model.get_module_by_scope(node.op_exec_context.scope_in_model)
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph)

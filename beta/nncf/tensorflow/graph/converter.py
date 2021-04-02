@@ -176,9 +176,12 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     raw_nodes = _prepare_raw_nodes(model)
     return _get_nncf_graph_from_raw_nodes(model_config, raw_nodes)
 
+def _prepare_shape(shape):
+    if not isinstance(shape, list):
+        return [shape]
+    return shape
 
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
-    # pylint:disable=too-many-branches
     model_config = model.get_config()
     raw_nodes = Dict()
     for layer in model_config['layers']:
@@ -191,10 +194,7 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
         if layer['inbound_nodes']:
             is_shared = len(layer['inbound_nodes']) > 1
             for i, inbound_node in enumerate(layer['inbound_nodes']):
-                input_shape = model_layer.inbound_nodes[i].input_shapes
-                if not isinstance(input_shape, list):
-                    input_shape = [input_shape]
-
+                input_shape = _prepare_shape(model_layer.inbound_nodes[i].input_shapes)
                 instance = raw_nodes[layer_name][i]
                 instance['type'] = layer_type
                 instance['dtype'] = layer_dtype
@@ -214,16 +214,13 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                     else:
                         parent_instance['out_ports'] = {parent_out_ports}
         else:
-            input_shape = model_layer.input_shape
-            if not isinstance(input_shape, list):
-                input_shape = [input_shape]
             instance = raw_nodes[layer_name][0]
             instance['type'] = layer_type
             instance['dtype'] = layer_dtype
             instance['data_format'] = data_format
             instance['is_shared'] = False
             instance['in_ports'] = []
-            instance['input_shape'] = input_shape
+            instance['input_shape'] = _prepare_shape(model_layer.input_shape)
             if layer_type in GENERAL_CONV_LAYERS:
                 module_attributes = _get_module_attributes(model_layer, instance)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
@@ -290,11 +287,9 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
 
         nncf_graph.add_node(layer_name, **attrs)
         if producer_layer is not None:
-            input_shape = model.get_layer(layer_name).input_shape
-            if isinstance(input_shape, list):
-                input_shape = input_shape[0]
+            input_shape = _prepare_shape(model.get_layer(layer_name).input_shape)
             attr = {
-                NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: input_shape,
+                NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: input_shape[0],
                 NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0
             }
             nncf_graph.add_edge(producer_layer, layer_name, **attr)
