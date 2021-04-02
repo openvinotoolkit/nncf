@@ -12,6 +12,7 @@
 """
 
 from texttable import Texttable
+from typing import List
 
 import tensorflow as tf
 
@@ -54,7 +55,7 @@ def prepare_for_tensorboard(raw_sparsity_statistics, prefix, rate_abbreviation):
     return statistics
 
 
-def strip_model_from_masks(model: tf.keras.Model, op_names: set) -> tf.keras.Model:
+def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:
     if not isinstance(model, tf.keras.Model):
         raise ValueError(
             'Expected model to be a `tf.keras.Model` instance but got: {}'.format(type(model)))
@@ -79,7 +80,7 @@ def strip_model_from_masks(model: tf.keras.Model, op_names: set) -> tf.keras.Mod
     return TFModelTransformer(model, transformations).transform()
 
 
-def apply_fn_to_op_weights(model: tf.keras.Model, op_names, fn = lambda x: x):
+def apply_fn_to_op_weights(model: tf.keras.Model, op_names: List[str], fn = lambda x: x):
     sparsifyed_layers = collect_wrapped_layers(model)
     target_ops = []
     for layer in sparsifyed_layers:

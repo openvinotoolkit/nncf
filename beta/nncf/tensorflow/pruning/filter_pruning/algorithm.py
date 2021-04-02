@@ -74,7 +74,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
-                 op_names: set,
+                 op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups: Clusterization,
                  config):
