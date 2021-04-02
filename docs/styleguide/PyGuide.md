@@ -254,10 +254,17 @@ class AccuracyMetric(ABC):
     """
 
     @abstractmethod
-    def calculate():
+    def calculate(self):
         """
         Calculate accuracy metric for model.
         """
+
+    @property
+    @abstractmethod
+    def sample_generator(self) -> `SampleGenerator`:
+      """
+      :return: The instance of `SampleGenerator`.
+      """
 
 ```
 
