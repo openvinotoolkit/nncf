@@ -206,7 +206,7 @@ class MaskrcnnModel(base_model.Model):
 
         return model_outputs
 
-    def build_loss_fn(self, keras_model):
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         filter_fn = self.make_filter_trainable_variables_fn()
         trainable_variables = filter_fn(keras_model.trainable_variables)
 
@@ -236,7 +236,8 @@ class MaskrcnnModel(base_model.Model):
                 mask_loss)
 
             l2_regularization_loss = self.weight_decay_loss(trainable_variables)
-            total_loss = model_loss + l2_regularization_loss
+            compression_loss = compression_loss_fn()
+            total_loss = model_loss + l2_regularization_loss + compression_loss
             return {
                 'total_loss': total_loss,
                 'loss': total_loss,
@@ -245,6 +246,7 @@ class MaskrcnnModel(base_model.Model):
                 'mask_loss': mask_loss,
                 'model_loss': model_loss,
                 'l2_regularization_loss': l2_regularization_loss,
+                'compression_loss': compression_loss,
                 'rpn_score_loss': rpn_score_loss,
                 'rpn_box_loss': rpn_box_loss,
             }

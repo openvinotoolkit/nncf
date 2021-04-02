@@ -47,7 +47,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
-    def calculate(self) -> Any:
+    def calculate(self, *args, **kwargs) -> Any:
         """
         Traverses through all children and calculates the total compression
         loss value.

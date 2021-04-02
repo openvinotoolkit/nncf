@@ -125,15 +125,14 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                                   training)
             self.set_layer_weight(weight_attr, layer_weight)
 
-    def registry_weight_operation(self, weights_attr, op, op_name=None):
+    def registry_weight_operation(self, weights_attr, op):
         if weights_attr not in self.weights_attr_ops:
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
-        if op_name is None:
-            op_name = 'nncf_op_{}:{}'.format(weights_attr, len(self.weights_attr_ops[weights_attr]))
+        if op.name in self.weights_attr_ops[weights_attr]:
+            raise RuntimeError('Attempt to apply one operation on layer weight twice')
 
-        self.weights_attr_ops[weights_attr][op_name] = op
-        return op_name
+        self.weights_attr_ops[weights_attr][op.name] = op
 
     def get_operation_weights(self, operation_name):
         return self._ops_weights[operation_name]
@@ -183,7 +182,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             weights_attr_ops[weights_attr] = []
             for op_name in ops:
                 op_config = tf.keras.utils.serialize_keras_object(ops[op_name])
-                op_config['name'] = op_name
                 weights_attr_ops[weights_attr].append(op_config)
         config['weights_attr_operations'] = weights_attr_ops
         return config
@@ -203,8 +201,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                     weights_attr,
                     tf.keras.layers.deserialize(
                         op_config,
-                        custom_objects=get_nncf_custom_objects()),
-                    op_config.get('name', None)
+                        custom_objects=get_nncf_custom_objects())
                 )
 
         return wrapper

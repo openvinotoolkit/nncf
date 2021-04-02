@@ -30,7 +30,7 @@ class CompressionLoss:
     and fully-connected layers to construct the loss function.
     """
 
-    def calculate(self) -> Any:
+    def calculate(self, *args, **kwargs) -> Any:
         """
         Calculates the compression loss value.
 
