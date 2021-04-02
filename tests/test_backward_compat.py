@@ -23,7 +23,6 @@ from examples.common.sample_config import SampleConfig
 from nncf.checkpoint_loading import load_state
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from tests.conftest import TEST_ROOT
@@ -157,8 +156,7 @@ def test_renamed_activation_quantizer_storage_in_state_dict():
     config = get_basic_quantization_config(input_info={
         "sample_size": [1, 3, 100, 100]
     })
-    compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     with pytest.deprecated_call():
         _ = load_state(compressed_model, old_style_sd, is_resume=True)
-
