@@ -54,6 +54,7 @@ from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
@@ -730,7 +731,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if self.debug_interface is not None:
                 self.debug_interface.register_activation_quantize_call(str(self.quantizer_storage_key))
             replica = self.compressed_context.base_module_thread_local_replica
-            return replica.activation_quantizers[self.quantizer_storage_key](*args, **kwargs)
+            storage = getattr(replica, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+            return storage[self.quantizer_storage_key](*args, **kwargs)
 
     def _build_insertion_commands_list_for_quantizer_setup(self,
                                                            quantizer_setup: SingleConfigQuantizerSetup,
@@ -1126,7 +1128,7 @@ class QuantizationController(QuantizationControllerBase):
                                                  MemoryCostMetric(target_model, self.weight_quantizers,
                                                                   self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
-            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
+            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model, self)]
             self.update_metric_store(True)
 
         params = quantization_config.get('params', None)
