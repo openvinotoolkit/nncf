@@ -20,7 +20,7 @@
         "type": "Adam",
         "schedule_type": "cosine",
         "schedule_params": {
-            "initial_lr": 1e-5
+            "base_lr": 1e-5
         }
     },
 

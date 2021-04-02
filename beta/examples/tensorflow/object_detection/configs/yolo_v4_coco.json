@@ -17,7 +17,7 @@
             "momentum": 0.95
         },
 
-        "schedule_type": "step",
+        "schedule_type": "step_warmup",
         "schedule_params": {
             "warmup_learning_rate": 1e-10,
             "warmup_steps": 1000,
