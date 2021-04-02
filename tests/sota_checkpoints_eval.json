@@ -273,7 +273,7 @@
         "VOCdevkit": {
             "ssd300_mobilenet_voc": {
                 "config": "examples/object_detection/configs/ssd300_mobilenet_voc.json",
-                "target": 86.02,
+                "target": 62.23,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc.pth",
                 "batch": 120,
@@ -282,7 +282,7 @@
             "ssd300_mobilenet_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json",
                 "reference": "ssd300_mobilenet_voc",
-                "target": 85.82,
+                "target": 62.23,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-MobileNet",
@@ -292,7 +292,7 @@
             },
             "ssd300_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc.json",
-                "target": 96.53,
+                "target": 78.28,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc.pth",
                 "batch": 120,
@@ -301,7 +301,7 @@
             "ssd300_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_int8.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 96.5,
+                "target": 78.08,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_int8.pth",
                 "model_description": "SSD300-VGG-BN",
@@ -312,7 +312,7 @@
             "ssd300_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 95.4,
+                "target": 77.62,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-VGG-BN",
@@ -323,7 +323,7 @@
             "ssd300_vgg_voc_pruning_geometric_median": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 91.98,
+                "target": 77.72,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_pruning_geometric_median.pth",
                 "batch": 32,
@@ -334,7 +334,7 @@
             },
             "ssd512_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc.json",
-                "target": 97.59,
+                "target": 80.26,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc.pth",
                 "batch": 32,
@@ -343,7 +343,7 @@
             "ssd512_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 97.37,
+                "target": 80.11,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
                 "batch": 32,
@@ -355,7 +355,7 @@
             "ssd512_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 96.66,
+                "target": 79.74,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_magnitude_sparsity_int8.pth",
                 "batch": 32,

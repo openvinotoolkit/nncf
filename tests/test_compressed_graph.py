@@ -138,7 +138,7 @@ def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=
     path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
 
     # validate .dot file manually!
-    if not os.path.exists(path_to_dot):
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(dot_dir):
             os.makedirs(dot_dir)
         nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)

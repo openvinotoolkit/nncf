@@ -32,7 +32,7 @@ from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from nncf.binarization.algo import BinarizationController
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController

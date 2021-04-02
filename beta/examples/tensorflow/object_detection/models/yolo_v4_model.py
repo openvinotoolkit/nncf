@@ -67,7 +67,7 @@ class YOLOv4Model(base_model.Model):
 
         return keras_model
 
-    def build_loss_fn(self):
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         pass
 
     def eval_metrics(self):

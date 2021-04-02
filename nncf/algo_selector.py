@@ -15,10 +15,20 @@ from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
 from nncf.api.compression import CompressionLevel
-from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController
+from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController, PTCompressionLoss
 from nncf.common.utils.registry import Registry
+import torch
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
+
+
+class ZeroCompressionLoss(PTCompressionLoss):
+    def __init__(self, device):
+        super().__init__()
+        self._device = device
+
+    def calculate(self) -> torch.Tensor:
+        return torch.zeros([], device=self._device)
 
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
@@ -32,6 +42,10 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
 
 # pylint:disable=abstract-method
 class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
+    def __init__(self, target_model):
+        super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+
     def compression_level(self) -> CompressionLevel:
         """
         Returns level of compression. Should be used on saving best checkpoints to distinguish between

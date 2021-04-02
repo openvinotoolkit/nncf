@@ -84,6 +84,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
+        self._op_names = []
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
         """
@@ -127,13 +128,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
                     if getattr(layer, attr_name) is not None:
                         transformations.register(
-                            TFInsertionCommand(
-                                target_point=TFLayerWeight(layer_name, attr_name),
-                                callable_object=BinaryMask(),
-                                priority=TransformationPriority.PRUNING_PRIORITY
-                            ))
-                minfo = PrunedLayerInfo(layer_name)
-                group_minfos.append(minfo)
+                            self._get_insertion_command_binary_mask(layer_name, attr_name)
+                        )
+                group_minfos.append(PrunedLayerInfo(layer_name))
 
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
@@ -155,13 +152,19 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                 attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
                 transformations.register(
-                    TFInsertionCommand(
-                        target_point=TFLayerWeight(layer_name, attr_name),
-                        callable_object=BinaryMask(),
-                        priority=TransformationPriority.PRUNING_PRIORITY
-                    ))
-
+                    self._get_insertion_command_binary_mask(layer_name, attr_name)
+                )
         return transformations
+
+    def _get_insertion_command_binary_mask(self, layer_name, attr_name):
+        op_name = self._get_pruning_operation_name(layer_name, attr_name)
+        self._op_names.append(op_name)
+
+        return TFInsertionCommand(
+            target_point=TFLayerWeight(layer_name, attr_name),
+            callable_object=BinaryMask(op_name),
+            priority=TransformationPriority.PRUNING_PRIORITY
+        )
 
     @staticmethod
     def _get_bn_for_node(node: NNCFNode, bn_nodes: List[NNCFNode]) -> Tuple[bool, List[NNCFNode]]:
@@ -208,6 +211,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_types_of_grouping_ops(self) -> List[str]:
         raise NotImplementedError
 
+    def _get_pruning_operation_name(self, layer_name, weight_attr_name):
+        return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
+
 
 class BasePruningAlgoController(TFCompressionAlgorithmController):
     """
@@ -217,10 +223,12 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
+                 op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
+        self._op_names = op_names
         self._prunable_types = prunable_types
         self.config = config
         params = self.config.get('params', {})
@@ -265,8 +273,8 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         wrapped_layers = collect_wrapped_layers(self._model)
         for wrapped_layer in wrapped_layers:
             for weight_attr, ops in wrapped_layer.weights_attr_ops.items():
-                for op_name, op in ops.items():
-                    if isinstance(op, BinaryMask):
+                for op_name in ops:
+                    if op_name in self._op_names:
                         mask = wrapped_layer.ops_weights[op_name]['mask']
                         mask_names.append(mask.name)
                         weights_shapes.append(list(mask.shape))
@@ -300,4 +308,4 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         return raw_pruning_statistics
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
-        return strip_model_from_masks(model)
+        return strip_model_from_masks(model, self._op_names)

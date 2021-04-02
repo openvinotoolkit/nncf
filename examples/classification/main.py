@@ -47,7 +47,7 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process

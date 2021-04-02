@@ -50,6 +50,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 
     def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
         return FilterPruningController(target_model,
+                                       self._op_names,
                                        self._prunable_types,
                                        self._pruned_layer_groups_info,
                                        self.config)
@@ -74,10 +75,11 @@ class FilterPruningController(BasePruningAlgoController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
+                 op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups: Clusterization,
                  config):
-        super().__init__(target_model, prunable_types, pruned_layer_groups, config)
+        super().__init__(target_model, op_names, prunable_types, pruned_layer_groups, config)
         params = self.config.get('params', {})
         self.frozen = False
 

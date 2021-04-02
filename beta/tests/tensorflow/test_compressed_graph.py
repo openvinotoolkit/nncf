@@ -21,7 +21,7 @@ import networkx as nx
 from beta.tests.tensorflow import test_models
 from beta.tests.tensorflow.helpers import get_empty_config, create_compressed_model_and_algo_for_test
 from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_filter_pruning_config
-from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
+from beta.tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_sparsity_config
 
 
 def get_basic_quantization_config(qconfig, input_sample_sizes=None):
@@ -113,16 +113,21 @@ class SparsityTestCaseConfiguration:
         self.graph_dir = graph_dir
 
 
-SPARSITY_ALGORITHMS = [
-    'magnitude_sparsity',
-]
+class SparsityAlgo:
+    magnitude = 'magnitude_sparsity'
+    rb = 'rb_sparsity'
 
 
-@pytest.fixture(
-    scope='function', params=SPARSITY_ALGORITHMS, ids=SPARSITY_ALGORITHMS
-)
-def _sparsity_case_config(request):
-    sparsity_algorithm = request.param
+@pytest.fixture(scope='function')
+def _magnitude_sparsity_case_config():
+    sparsity_algorithm = SparsityAlgo.magnitude
+    graph_dir = os.path.join('sparsity', sparsity_algorithm)
+    return SparsityTestCaseConfiguration(graph_dir)
+
+
+@pytest.fixture(scope='function')
+def _rb_sparsity_case_config():
+    sparsity_algorithm = SparsityAlgo.rb
     graph_dir = os.path.join('sparsity', sparsity_algorithm)
     return SparsityTestCaseConfiguration(graph_dir)
 
@@ -176,47 +181,61 @@ SKIP_MAP = {
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
         'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
         'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
-        'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349'),
-    }
+        'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight')
+    },
+    'rb_sparsity': {
+
+    },
 }
 
 
 def get_test_models_desc(algorithm):
+    def ref_name(name):
+        # Reason: graph_def change cond_true and cond_false function names
+        # regardless tf.compat.v1.reset_default_graph and
+        #            tf.keras.backend.clear_session
+        ext = '.dot' if algorithm == SparsityAlgo.rb else '.pb'
+        return name.split('.')[0] + ext
+
+    # PLEASE USE .dot FORMAT FOR ALL NETS WHICH USE tf.cond OPERATION
     return [
         pytest.param(
-            ModelDesc('densenet121.pb', test_models.DenseNet121, [1, 32, 32, 3]),
+            ModelDesc(ref_name('densenet121.pb'), test_models.DenseNet121, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('densenet121', ())
         ),
         pytest.param(
-            ModelDesc('inception_resnet_v2.pb', test_models.InceptionResNetV2, [1, 75, 75, 3]),
+            ModelDesc(ref_name('inception_resnet_v2.pb'), test_models.InceptionResNetV2, [1, 75, 75, 3]),
             marks=SKIP_MAP[algorithm].get('inception_resnet_v2', ())
         ),
-        ModelDesc('inception_v3.pb', test_models.InceptionV3, [1, 75, 75, 3]),
-        ModelDesc('mobilenet_v1.pb', test_models.MobileNet, [1, 128, 128, 3]),
-        ModelDesc('mobilenet_v2.pb', test_models.MobileNetV2, [1, 96, 96, 3]),
+        ModelDesc(ref_name('inception_v3.pb'), test_models.InceptionV3, [1, 75, 75, 3]),
+        ModelDesc(ref_name('mobilenet_v1.pb'), test_models.MobileNet, [1, 128, 128, 3]),
+        ModelDesc(ref_name('mobilenet_v2.pb'), test_models.MobileNetV2, [1, 96, 96, 3]),
         pytest.param(
-            ModelDesc('nasnet_mobile.pb', test_models.NASNetMobile, [1, 32, 32, 3]),
+            ModelDesc(ref_name('nasnet_mobile.pb'), test_models.NASNetMobile, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('nasnet_mobile', ())
         ),
-        ModelDesc('resnet50.pb', test_models.ResNet50, [1, 32, 32, 3]),
-        ModelDesc('resnet50_v2.pb', test_models.ResNet50V2, [1, 32, 32, 3]),
-        ModelDesc('vgg16.pb', test_models.VGG16, [1, 32, 32, 3]),
+        ModelDesc(ref_name('resnet50.pb'), test_models.ResNet50, [1, 32, 32, 3]),
         pytest.param(
-            ModelDesc('xception.pb', test_models.Xception, [1, 71, 71, 3]),
+            ModelDesc(ref_name('resnet50_v2.pb'), test_models.ResNet50V2, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('resnet50_v2', ())
+        ),
+        ModelDesc(ref_name('vgg16.pb'), test_models.VGG16, [1, 32, 32, 3]),
+        pytest.param(
+            ModelDesc(ref_name('xception.pb'), test_models.Xception, [1, 71, 71, 3]),
             marks=SKIP_MAP[algorithm].get('xception', ())
         ),
         pytest.param(
-            ModelDesc('retinanet.pb', test_models.RetinaNet, [1, None, None, 3]),
+            ModelDesc(ref_name('retinanet.pb'), test_models.RetinaNet, [1, None, None, 3]),
             marks=SKIP_MAP[algorithm].get('retinanet', ())
         ),
-        ModelDesc('sequential_model.pb', test_models.SequentialModel, [1, 224, 224, 3]),
-        ModelDesc('sequential_no_input_model.pb', test_models.SequentialModelNoInput, [1, 224, 224, 3]),
+        ModelDesc(ref_name('sequential_model.pb'), test_models.SequentialModel, [1, 224, 224, 3]),
+        ModelDesc(ref_name('sequential_no_input_model.pb'), test_models.SequentialModelNoInput, [1, 224, 224, 3]),
         pytest.param(
-            ModelDesc('mobilenet_v3_small.pb', test_models.MobileNetV3Small, [1, 32, 32, 3]),
+            ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
         ),
         pytest.param(
-            ModelDesc('shared_layers_model.pb', test_models.SharedLayersModel, [1, 30, 30, 3]),
+            ModelDesc(ref_name('shared_layers_model.pb'), test_models.SharedLayersModel, [1, 30, 30, 3]),
             marks=SKIP_MAP[algorithm].get('shared_layers_model', ())
         ),
         pytest.param(
@@ -224,7 +243,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mask_rcnn', ())
         ),
         pytest.param(
-            ModelDesc('yolo_v4.pb', test_models.YOLOv4, [1, None, None, 3]),
+            ModelDesc(ref_name('yolo_v4.pb'), test_models.YOLOv4, [1, None, None, 3]),
             marks=SKIP_MAP[algorithm].get('yolo_v4', ())
         ),
         pytest.param(
@@ -232,6 +251,12 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get('mobilenet_v2_slim', ())
         )
     ]
+
+
+def get_model_name(desc):
+    if isinstance(desc, ModelDesc):
+        return desc.model_name
+    return desc.values[0].model_name
 
 
 def keras_model_to_tf_graph(model):
@@ -328,12 +353,8 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
 
 
 class TestModelsGraph:
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('quantization'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('quantization')
-        ]
-    )
+    @pytest.mark.parametrize('desc', get_test_models_desc('quantization'), ids=[
+        get_model_name(m) for m in get_test_models_desc('quantization')])
     def test_quantize_network(self, desc: ModelDesc, _quantization_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_quantization_config(_quantization_case_config.qconfig,
@@ -343,27 +364,30 @@ class TestModelsGraph:
         check_model_graph(compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('magnitude_sparsity'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('magnitude_sparsity')
-        ]
-    )
-    def test_sparsity_network(self, desc: ModelDesc, _sparsity_case_config):
+    @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.magnitude), ids=[
+        get_model_name(m) for m in get_test_models_desc(SparsityAlgo.magnitude)])
+    def test_magnitude_sparsity_network(self, desc: ModelDesc, _magnitude_sparsity_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
-        config = get_basic_magnitude_sparsity_config(desc.input_sample_sizes)
+        config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.magnitude)
         config['compression']['params'] = {'schedule': 'multistep'}
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
-        check_model_graph(compressed_model, desc.ref_graph_filename, _sparsity_case_config.graph_dir,
+        check_model_graph(compressed_model, desc.ref_graph_filename, _magnitude_sparsity_case_config.graph_dir,
                           desc.rename_resource_nodes)
 
-    @pytest.mark.parametrize(
-        'desc', get_test_models_desc('filter_pruning'), ids=[
-            m.model_name if isinstance(m, ModelDesc)
-            else m.values[0].model_name for m in get_test_models_desc('filter_pruning')
-        ]
-    )
+    @pytest.mark.parametrize('desc', get_test_models_desc(SparsityAlgo.rb), ids=[
+        get_model_name(m) for m in get_test_models_desc(SparsityAlgo.rb)])
+    def test_rb_sparsity_network(self, desc: ModelDesc, _rb_sparsity_case_config):
+        model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
+        config = get_basic_sparsity_config(desc.input_sample_sizes, SparsityAlgo.rb)
+        config['compression']['params'] = {'schedule': 'multistep'}
+        compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+        check_model_graph(compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir,
+                          desc.rename_resource_nodes)
+
+    @pytest.mark.parametrize('desc', get_test_models_desc('filter_pruning'), ids=[
+        get_model_name(m) for m in get_test_models_desc('filter_pruning')])
     def test_pruning_network(self, desc: ModelDesc, _pruning_case_config):
         model = desc.model_builder(input_shape=tuple(desc.input_sample_sizes[1:]))
         config = get_basic_filter_pruning_config(desc.input_sample_sizes)
