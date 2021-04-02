@@ -13,6 +13,7 @@
     *   [2.6 Default Iterators and Operators](#s2.6-default-iterators-and-operators)
     *   [2.7 Type Annotated Code](#s2.7-type-annotated-code)
     *   [2.8 Files and Sockets](#2.8-files-and-sockets)
+    *   [2.9 Abstract Classes](#2.9-abstract-classes)
 -   [3 Python Style Rules](#s3-python-style-rules)
     *   [3.1 Line length](#s3.1-line-length)
     *   [3.2 Indentation](#s3.2-indentation)
@@ -235,6 +236,31 @@ with open("hello.txt") as hello_file:
     for line in hello_file:
         print(line)
 ```
+
+
+<a id="s2.9-abstract-classes"></a>
+<a id="29-abstract-classes"></a>
+<a id="abstract-classes"></a>
+### 2.9 Abstract Classes 
+
+When defining user abstract classes, the following template should be used:
+
+```python
+from abc import ABC, abstractmethod
+
+class AccuracyMetric(ABC):
+    """
+    Base abstract class for accuracy metrics.
+    """
+
+    @abstractmethod
+    def calculate():
+        """
+        Calculate accuracy metric for model.
+        """
+
+```
+
 
 <a id="s3-python-style-rules"></a>
 <a id="3-python-style-rules"></a>
