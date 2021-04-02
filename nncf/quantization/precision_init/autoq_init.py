@@ -113,13 +113,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             dump_dir = self._init_args.config.get('log_dir', None)
             if dump_dir is None:
                 dump_dir = DEBUG_LOG_DIR
-            self.dump_dir = Path(dump_dir) / Path("autoq_agent_dump")
+            self.dump_dir = Path(dump_dir) / Path("autoq") / Path("autoq_agent_dump")
             self.dump_dir.mkdir(parents=True, exist_ok=True)
 
             self.policy_dict = OrderedDict() #key: episode
             self.best_policy_dict = OrderedDict() #key: episode
 
-            self._init_args.config['episodic_nncfcfg'] = self.dump_dir / "episodic_nncfcfg"
+            self._init_args.config['episodic_nncfcfg'] = str(self.dump_dir / "episodic_nncfcfg")
             os.makedirs(self._init_args.config['episodic_nncfcfg'], exist_ok=True)
 
             try:
@@ -299,8 +299,10 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             episode, final_reward, _, accuracy, model_ratio, _, _, _ = episodic_info_tuple
 
             # Save nncf compression cfg
-            episode_cfgfile = self._init_args.config['episodic_nncfcfg'] / '{0:03d}_nncfcfg.json'.format(episode)
-            with safe_open(episode_cfgfile, "w") as outfile:
+            episode_cfgfile =  '{0}/{1:03d}_nncfcfg.json'.format(
+                str(self._init_args.config['episodic_nncfcfg']), episode)
+
+            with safe_open(Path(episode_cfgfile), "w") as outfile:
                 json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')
