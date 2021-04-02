@@ -248,24 +248,31 @@ When defining abstract classes, the following template should be used:
 ```python
 from abc import ABC, abstractmethod
 
-class AccuracyMetric(ABC):
-    """
-    Base abstract class for accuracy metrics.
-    """
-
+class C(ABC):
     @abstractmethod
-    def calculate(self):
-        """
-        Calculate accuracy metric for model.
-        """
-
+    def my_abstract_method(self, ...):
+        ...
+    @classmethod
+    @abstractmethod
+    def my_abstract_classmethod(cls, ...):
+        ...
+    @staticmethod
+    @abstractmethod
+    def my_abstract_staticmethod(...):
+        ...
     @property
     @abstractmethod
-    def sample_generator(self) -> `SampleGenerator`:
-      """
-      :return: The instance of `SampleGenerator`.
-      """
-
+    def my_abstract_property(self):
+        ...
+    @my_abstract_property.setter
+    @abstractmethod
+    def my_abstract_property(self, val):
+        ...
+    @abstractmethod
+    def _get_x(self):
+        ...
+    @abstractmethod
+    def _set_x(self, val):
 ```
 
 
