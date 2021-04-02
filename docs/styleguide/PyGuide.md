@@ -243,7 +243,7 @@ with open("hello.txt") as hello_file:
 <a id="abstract-classes"></a>
 ### 2.9 Abstract Classes 
 
-When defining user abstract classes, the following template should be used:
+When defining abstract classes, the following template should be used:
 
 ```python
 from abc import ABC, abstractmethod
