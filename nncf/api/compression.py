@@ -183,7 +183,6 @@ class CompressionAlgorithmController(ABC):
         :return: The instance of the `CompressionScheduler`.
         """
 
-    @abstractmethod
     def compression_level(self) -> CompressionLevel:
         """
         Returns the compression level. Should be used on saving best checkpoints

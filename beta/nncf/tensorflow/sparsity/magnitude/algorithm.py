@@ -218,3 +218,11 @@ class MagnitudeSparsityController(BaseSparsityController):
             })
 
         return raw_sparsity_statistics
+
+    @property
+    def scheduler(self):
+        return self._scheduler
+
+    @property
+    def loss(self):
+        pass

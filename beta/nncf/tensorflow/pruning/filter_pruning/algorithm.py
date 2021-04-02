@@ -231,3 +231,11 @@ class FilterPruningController(BasePruningAlgoController):
             nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.node_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
+
+    @property
+    def scheduler(self):
+        return self._scheduler
+
+    @property
+    def loss(self):
+        pass

@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from abc import ABC, abstractmethod
 from typing import Optional, TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
@@ -24,12 +24,14 @@ DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompressionAlgorithmInitializer:
+class TFCompressionAlgorithmInitializer(ABC):
+    @abstractmethod
     def call(self,
              model: ModelType,
              dataset: Optional[DatasetType] = None,
              loss: Optional[LossType] = None) -> None:
-        pass
+        """
+        """
 
     def __call__(self, *args, **kwargs) -> None:
         self.call(*args, **kwargs)
@@ -52,13 +54,14 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
             by the `CompressionAlgorithmBuilder`.
         """
         super().__init__(target_model)
-        self._initializer = TFCompressionAlgorithmInitializer()
-        #self._scheduler = CompressionScheduler()
+
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
-        self._initializer(self._model, dataset, loss)
+        """
+        """
+        pass
 
     def export_model(self, save_path: str, save_format: str = 'frozen_graph') -> None:
         """
@@ -104,4 +107,3 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `CompressionAlgorithmController`.
         """
-        return TFCompressionAlgorithmController(model)

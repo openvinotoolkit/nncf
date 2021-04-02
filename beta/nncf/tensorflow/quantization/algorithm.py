@@ -15,6 +15,7 @@ import networkx as nx
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.utils.logger import logger
+from nncf.common.schedulers import BaseCompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
@@ -229,6 +230,18 @@ class QuantizationController(TFCompressionAlgorithmController):
     def __init__(self, target_model, config):
         super().__init__(target_model)
         self._initializer = MinMaxInitializer(config)
+        self._scheduler = BaseCompressionScheduler()
 
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
+
+    @property
+    def scheduler(self):
+        return self._scheduler
+
+    @property
+    def loss(self):
+        pass
+
+    def statistics(self):
+        pass

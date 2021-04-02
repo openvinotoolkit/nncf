@@ -1311,7 +1311,7 @@ class QuantizationController(QuantizationControllerBase):
         return module_init_range_config
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
+        stats = super().statistics()
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
@@ -1633,4 +1633,4 @@ class ExperimentalQuantizationController(QuantizationController):
         """
         :return: The instance of the `CompressionScheduler`.
         """
-        self._scheduler
+        return self._scheduler

@@ -281,9 +281,6 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
 
 class PTStubCompressionScheduler(CompressionScheduler):
 
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
-
     def step(self, next_step: Optional[int] = None) -> None:
         pass
  

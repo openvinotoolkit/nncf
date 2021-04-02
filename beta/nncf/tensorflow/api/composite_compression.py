@@ -38,6 +38,14 @@ class TFCompositeCompressionAlgorithmController(
         for ctrl in self.child_ctrls:
             ctrl.initialize(dataset, loss)
 
+    @property
+    def scheduler(self):
+        return self._scheduler
+
+    @property
+    def loss(self):
+        pass
+
 
 class TFCompositeCompressionAlgorithmBuilder(
     CompositeCompressionAlgorithmBuilder, TFCompressionAlgorithmBuilder):
