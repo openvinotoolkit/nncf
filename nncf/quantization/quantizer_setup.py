@@ -8,8 +8,8 @@ from typing import Tuple
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import NNCFNetwork
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic

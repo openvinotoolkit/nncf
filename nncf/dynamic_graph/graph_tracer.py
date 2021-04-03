@@ -16,6 +16,8 @@ from copy import deepcopy
 
 import torch
 
+from nncf.dynamic_graph.graph import DynamicGraph
+
 
 class ModelInputInfo:
     FILLER_TYPE_ONES = "ones"
@@ -81,12 +83,12 @@ def create_mock_tensor(input_info: ModelInputInfo, device: str):
     raise RuntimeError
 
 
-class GraphBuilder:
+class GraphTracer:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
-    def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False) -> 'PTNNCFGraph':
+    def trace_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
+                    as_eval: bool = False) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
         from nncf.dynamic_graph.context import TracingContext

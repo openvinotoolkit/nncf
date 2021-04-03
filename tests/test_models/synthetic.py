@@ -78,7 +78,7 @@ class ManyNonEvalModules(ModelWithDummyParameter):
         if self.training:
             aux = self.aux_branch(x)
         x = self.mixed_modules(x)
-        return x, aux if self.training else x
+        return (x, aux) if self.training else x
 
 
 class PoolUnPool(ModelWithDummyParameter):

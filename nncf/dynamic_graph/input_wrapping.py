@@ -4,17 +4,19 @@ from typing import List
 
 import torch
 
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.patch_pytorch import register_operator
-from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_mock_tensor
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
 from nncf.utils import is_tensor, objwalk, is_traced_tensor
 from nncf.common.utils.logger import logger as nncf_logger
 
 
-@register_operator()
+@register_operator(name=MODEL_INPUT_OP_NAME)
 def nncf_model_input(tensor: 'torch.Tensor'):
     return tensor
 
-@register_operator()
+@register_operator(name=MODEL_OUTPUT_OP_NAME)
 def nncf_model_output(tensor: 'torch.Tensor'):
     return tensor
 
@@ -90,9 +92,3 @@ class InputInfoWrapManager:
 
         return bound_model_params.args, bound_model_params.kwargs
 
-
-# Access via _original op because by this moment the nncf_model_input name will already be wrapped by wrap_operator
-# and its __name__ attribute changed correspondingly.
-# pylint:disable=protected-access
-MODEL_INPUT_OP_NAME = nncf_model_input._original_op.__name__
-MODEL_OUTPUT_OP_NAME = nncf_model_output._original_op.__name__

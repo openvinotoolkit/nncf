@@ -3,7 +3,7 @@ import inspect
 import pytest
 import torch
 
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
 from tests.helpers import MockModel
 

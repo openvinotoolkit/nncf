@@ -22,18 +22,18 @@ from typing import Tuple
 import networkx as nx
 import pytest
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import NNCFGraph
 from nncf.dynamic_graph.graph import OperationExecutionContext
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
 from nncf.quantization.quantizer_propagation import OPERATOR_METATYPES
@@ -63,7 +63,7 @@ def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
-        node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
+        node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR] = get_mock_model_node_attrs_for_op_name(shuffled_op_names[idx])
         if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
             node[PTNNCFGraph.MODULE_ATTRIBUTES] = MagicMock()
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
@@ -77,7 +77,7 @@ def get_sequentially_connected_model_graph(op_name_keys: List[str]) -> nx.DiGrap
     actual_keys = []
     for node_key in op_name_keys:
         attrs = {
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR:
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR:
                 get_mock_model_node_attrs_for_op_name(node_key, call_order=node_key_appearances[node_key]),
         }
 
@@ -117,15 +117,15 @@ class TwoFcAfterDropout:
     def get_graph():
         graph = nx.DiGraph()
         dropout_node_attrs = {
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.input_agnostic
         }
 
         fc_1_node_attrs = {
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic
         }
 
         fc_2_node_attrs = {
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.FC_2_OPERATION_EXECUTION_CONTEXT.input_agnostic
         }
 
         graph.add_node('dropout', **dropout_node_attrs)
@@ -1577,7 +1577,7 @@ class TestQuantizerPropagationSolver:
             base_graph=TwoFcAfterDropout.get_graph(),
             retval_qps={1: MultiConfigQuantizationPoint(
                 PTTargetPoint(TargetType.OPERATOR_PRE_HOOK,
-                              ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.input_agnostic,
+                              ia_op_exec_context=TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT,
                               input_port_id=0),
                 [QuantizerConfig()],
                 [TwoFcAfterDropout.FC_1_OPERATION_EXECUTION_CONTEXT.scope_in_model])},

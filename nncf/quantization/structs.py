@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import BaseQuantizer
 
 

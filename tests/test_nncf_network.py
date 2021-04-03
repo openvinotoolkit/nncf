@@ -20,10 +20,11 @@ from typing import Tuple
 import networkx as nx
 import pytest
 import torch
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
@@ -31,22 +32,22 @@ from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import PreHookId
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.dynamic_graph.graph import NNCFGraph
-from nncf.dynamic_graph.graph import NNCFNode
+from nncf.graph.graph import PTNNCFNode
+from nncf.graph.graph import NNCFGraph
+from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.graph import OperationExecutionContext
-from nncf.dynamic_graph.graph_builder import GraphBuilder
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
-from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.graph.transformations.layout import PTTransformationLayout
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import PTInsertionPoint
 from nncf.nncf_network import PTInsertionType
 from nncf.nncf_network import PTModelTransformer
@@ -357,8 +358,8 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
     from networkx.algorithms.dag import lexicographical_topological_sort
     for curr_node_key in lexicographical_topological_sort(nx_graph):
         node = nx_graph.nodes[curr_node_key]
-        if PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR in node:
-            ia_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+        if PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR in node:
+            ia_op_exec_context = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
         else:
             ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
         module_attributes = node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
@@ -412,10 +413,10 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     scope_to_set = Scope() if scope_str is None else Scope.from_str(scope_str)
     return {
-        PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                         scope_to_set,
-                                                                         0,
-                                                                       [None]),
+        PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
+                                                                            Scope(),
+                                                                            0,
+                                                                            [None]),
     }
 
 
@@ -584,16 +585,16 @@ class TestInsertionPointGraph:
             post_hook_ip_node = ip_graph.nodes[succs[0]]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
             assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
-            assert post_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
+            assert post_hook_ip.ia_op_exec_context == nncf_node.ia_op_exec_context
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
                 pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
                 assert pre_hook_ip.target_type == TargetType.OPERATOR_PRE_HOOK
-                assert pre_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
+                assert pre_hook_ip.ia_op_exec_context == nncf_node.ia_op_exec_context
 
     def test_operator_metatype_marking(self):
-        from nncf.dynamic_graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
+        from nncf.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
@@ -644,7 +645,7 @@ class TestInsertionPointGraph:
         nncf_graph = nncf_network.get_original_graph()
 
         for nncf_node in nncf_graph.get_all_nodes():  # type: PTNNCFNode
-            scope_str = str(nncf_node.op_exec_context.input_agnostic)
+            scope_str = str(nncf_node.ia_op_exec_context)
             assert scope_str in ref_scope_vs_metatype_dict
             ref_metatype = ref_scope_vs_metatype_dict[scope_str]
             assert PTOperatorMetatypeNodeMatcher.match(nncf_node) == ref_metatype
@@ -752,7 +753,7 @@ class TestModelMultipleForward(nn.Module):
 
 
 def test_multiple_forward():
-    # Check that all convolution nodes in model have op_exec_context and module_attributes
+    # Check that all convolution nodes in model have ia_op_exec_context and module_attributes
     # for case with multiple forward of one module
     model = TestModelMultipleForward()
     config = get_basic_sparsity_plus_quantization_config()
@@ -760,5 +761,5 @@ def test_multiple_forward():
     graph = sparse_quantized_model.get_original_graph()
     for node_key in list(graph.get_all_node_keys())[1:-2]:
         node = graph.get_nx_node_by_key(node_key)
-        assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
+        assert node.get(PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)

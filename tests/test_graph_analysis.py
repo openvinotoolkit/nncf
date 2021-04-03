@@ -12,10 +12,10 @@
 """
 from collections import Counter
 
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph import NNCFGraphPatternIO
-from nncf.dynamic_graph.graph import NNCFGraphEdge
-from nncf.dynamic_graph.graph import PTNNCFNode
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph import NNCFGraphPatternIO
+from nncf.graph.graph import NNCFGraphEdge
+from nncf.graph.graph import PTNNCFNode
 
 
 def test_graph_pattern_io_building():
@@ -38,7 +38,7 @@ def test_graph_pattern_io_building():
         attrs = {
             PTNNCFGraph.ID_NODE_ATTR: idx + 1,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
         }
         graph._nx_graph.add_node(node_key, **attrs)
 
@@ -56,7 +56,7 @@ def test_graph_pattern_io_building():
         data_ = {
             PTNNCFGraph.ID_NODE_ATTR: id_,
             PTNNCFGraph.KEY_NODE_ATTR: str(id_),
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
         }
         return PTNNCFNode(id_, None, data_)
 

@@ -13,8 +13,8 @@
 
 import torch
 
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.nncf_network import  NNCFNetwork
 from nncf.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase

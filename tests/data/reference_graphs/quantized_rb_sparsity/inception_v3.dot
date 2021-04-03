@@ -717,16 +717,6 @@ strict digraph  {
 "715 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=715, scope="Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "716 Inception3/NNCFLinear[fc]/linear" [id=716, scope="Inception3/NNCFLinear[fc]", type=linear];
 "717 /nncf_model_output" [id=717, scope="", type=nncf_model_output];
-"718 Inception3/InceptionAux[AuxLogits]/avg_pool2d" [id=718, scope="Inception3/InceptionAux[AuxLogits]", type=avg_pool2d];
-"719 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/Conv2d[conv]/conv2d" [id=719, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/Conv2d[conv]", type=conv2d];
-"720 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/BatchNorm2d[bn]/batch_norm" [id=720, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/BatchNorm2d[bn]", type=batch_norm];
-"721 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/RELU" [id=721, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]", type=RELU];
-"722 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/Conv2d[conv]/conv2d" [id=722, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/Conv2d[conv]", type=conv2d];
-"723 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm" [id=723, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]", type=batch_norm];
-"724 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU" [id=724, scope="Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]", type=RELU];
-"725 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d" [id=725, scope="Inception3/InceptionAux[AuxLogits]", type=adaptive_avg_pool2d];
-"726 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear" [id=726, scope="Inception3/InceptionAux[AuxLogits]/Linear[fc]", type=linear];
-"727 /nncf_model_output" [id=727, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "2 Inception3/__mul__";
 "1 SymmetricQuantizer/symmetric_quantize" -> "6 Inception3/__mul__";
@@ -1284,7 +1274,6 @@ strict digraph  {
 "529 Inception3/InceptionC[Mixed_6e]/cat" -> "533 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
 "529 Inception3/InceptionC[Mixed_6e]/cat" -> "547 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch7x7x3_1]/NNCFConv2d[conv]/conv2d";
 "529 Inception3/InceptionC[Mixed_6e]/cat" -> "572 Inception3/InceptionD[Mixed_7a]/max_pool2d";
-"529 Inception3/InceptionC[Mixed_6e]/cat" -> "718 Inception3/InceptionAux[AuxLogits]/avg_pool2d";
 "530 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "531 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "531 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "532 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "532 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "533 Inception3/InceptionD[Mixed_7a]/BasicConv2d[branch3x3_1]/NNCFConv2d[conv]/conv2d";
@@ -1482,13 +1471,4 @@ strict digraph  {
 "714 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "715 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "715 Inception3/NNCFLinear[fc]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "716 Inception3/NNCFLinear[fc]/linear";
 "716 Inception3/NNCFLinear[fc]/linear" -> "717 /nncf_model_output";
-"718 Inception3/InceptionAux[AuxLogits]/avg_pool2d" -> "719 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/Conv2d[conv]/conv2d";
-"719 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/Conv2d[conv]/conv2d" -> "720 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/BatchNorm2d[bn]/batch_norm";
-"720 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/BatchNorm2d[bn]/batch_norm" -> "721 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/RELU";
-"721 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv0]/RELU" -> "722 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/Conv2d[conv]/conv2d";
-"722 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/Conv2d[conv]/conv2d" -> "723 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm";
-"723 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/BatchNorm2d[bn]/batch_norm" -> "724 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU";
-"724 Inception3/InceptionAux[AuxLogits]/BasicConv2d[conv1]/RELU" -> "725 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d";
-"725 Inception3/InceptionAux[AuxLogits]/adaptive_avg_pool2d" -> "726 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear";
-"726 Inception3/InceptionAux[AuxLogits]/Linear[fc]/linear" -> "727 /nncf_model_output";
 }

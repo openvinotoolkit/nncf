@@ -11,7 +11,7 @@
  limitations under the License.
 """
 # pylint:disable=relative-beyond-top-level
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
 from nncf.api.compression import CompressionLevel

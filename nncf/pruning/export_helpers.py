@@ -24,8 +24,6 @@ from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph import PTNNCFNode
 from nncf.dynamic_graph.operator_metatypes import (
     AddMetatype,
     AvgPool2dMetatype,
@@ -58,6 +56,9 @@ from nncf.dynamic_graph.operator_metatypes import (
     SubMetatype,
     TanhMetatype,
 )
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph import PTNNCFNode
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.pruning.export_utils import PTPruningOperationsMetatypeRegistry
@@ -207,7 +208,7 @@ class PTConvolution(PTDefaultMetaOp):
 
         bool_mask = torch.tensor(mask, dtype=torch.bool)
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.out_channels = int(torch.sum(mask))
@@ -253,7 +254,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
             return
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(0))
 
         node_module.in_channels = int(torch.sum(bool_mask))
@@ -271,7 +272,7 @@ class PTTransposeConvolution(PTDefaultMetaOp):
         bool_mask = torch.tensor(output_mask, dtype=torch.bool)
         new_num_channels = int(torch.sum(bool_mask))
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
         old_num_clannels = int(node_module.weight.size(1))
 
         in_channels = node_module.weight.size(0)
@@ -307,7 +308,7 @@ class PTBatchNorm(PTDefaultMetaOp):
         if input_mask is None:
             return
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         old_num_clannels = int(node_module.weight.size(0))
@@ -343,7 +344,7 @@ class GroupNorm(PTDefaultMetaOp):
         if input_mask is None:
             return
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         old_num_clannels = int(node_module.weight.size(0))
@@ -385,7 +386,7 @@ class PTConcat(PTDefaultMetaOp):
             source_nodes = get_sources_of_node(input_node, graph, PTConvolution.get_all_op_aliases() +
                                                PTStopMaskForwardOps.get_all_op_aliases() +
                                                PTInput.get_all_op_aliases())
-            sources_types = [node.op_exec_context.operator_name for node in source_nodes]
+            sources_types = [node.ia_op_exec_context.operator_name for node in source_nodes]
             if any(t in sources_types for t in PTStopMaskForwardOps.get_all_op_aliases()):
                 return False
         return True
@@ -454,7 +455,7 @@ class PTElementwise(PTDefaultMetaOp):
             return
 
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
 
         if isinstance(node_module, tuple(NNCF_WRAPPED_USER_MODULES_DICT)):
             assert node_module.target_weight_dim_for_compression == 0,\
@@ -500,7 +501,7 @@ class ModelPruner(MaskPropagationAlgorithm):
         with torch.no_grad():
             for node in self._graph.topological_sort():
                 node_cls = self.get_meta_operation_by_type_name(node.node_type)
-                node_module = self._model.get_module_by_scope(node.op_exec_context.scope_in_model)
+                node_module = self._model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
                 if node_module not in pruned_node_modules:
                     node_cls.input_prune(self._model, node, self._graph)
                     node_cls.output_prune(self._model, node, self._graph)

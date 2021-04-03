@@ -35,7 +35,7 @@ from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
     from nncf.pruning.utils import is_depthwise_conv
     from nncf.pruning.utils import is_conv_with_downsampling
-    from nncf.dynamic_graph.graph import get_module_identifier
+    from nncf.graph.graph import get_module_identifier
     from nncf.utils import should_consider_scope
 elif __nncf_backend__ == 'TensorFlow':
     from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv

@@ -19,10 +19,8 @@ import pytest
 import torch
 import torch.nn
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import OperationExecutionContext
-from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
@@ -31,21 +29,17 @@ from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.helpers import get_nodes_by_type
 
-def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecutionContext:
+def make_ia_op_exec_context_for_coalescing_test(scope_str: str) -> InputAgnosticOperationExecutionContext:
     ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
-    op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                ia_op_exec_context.scope_in_model,
-                                                ia_op_exec_context.call_order,
-                                                [TensorMeta(0, 0, [1])])
-    return op_exec_context
+    return ia_op_exec_context
 
 
 def make_insertion_point_for_coalescing_test(scope_str: str,
                                              input_port_id: int = None)\
         -> PTTargetPoint:
-    op_exec_context = make_op_exec_context_for_coalescing_test(scope_str)
+    ia_op_exec_context = make_ia_op_exec_context_for_coalescing_test(scope_str)
     retval = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
-                           ia_op_exec_context=op_exec_context.input_agnostic,
+                           ia_op_exec_context=ia_op_exec_context,
                            input_port_id=input_port_id)
     return retval
 

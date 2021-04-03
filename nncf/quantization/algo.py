@@ -26,6 +26,17 @@ from typing import Tuple
 import networkx as nx
 import numpy as np
 import torch
+from copy import deepcopy
+
+from nncf.nncf_network import LoadStateListener
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
+
+from nncf.utils import get_state_dict_names_with_modules
+
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.graph.transformations.layout import PTTransformationLayout
+from torch import nn
+
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
@@ -44,11 +55,11 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
@@ -56,10 +67,13 @@ from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
 from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import ExtraCompressionModuleType
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.nncf_network import LoadStateListener
 from nncf.nncf_network import NNCFNetwork
+from nncf.graph.transformations.commands import TransformationPriority
 from nncf.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -370,7 +384,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
             nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node.op_exec_context.input_agnostic
+            ia_op_exec_context = nncf_node.ia_op_exec_context
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
         contexts_correspond_to_single_module = True

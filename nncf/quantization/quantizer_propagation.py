@@ -30,15 +30,17 @@ from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.hw_config import HWConfig
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
@@ -285,7 +287,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 qpg_node[self.IS_IN_IGNORED_SCOPES] = False
 
                 nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                node_ia_op_exec_context = nncf_node_ref.op_exec_context.input_agnostic
+                node_ia_op_exec_context = nncf_node_ref.ia_op_exec_context
 
                 qpg_node[self.OPERATOR_METATYPE_NODE_ATTR] = PTOperatorMetatypeNodeMatcher.match(nncf_node_ref)
                 qpg_node[self.OPERATOR_SCOPE] = node_ia_op_exec_context.scope_in_model

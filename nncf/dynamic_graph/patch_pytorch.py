@@ -111,11 +111,6 @@ def torch_jit_script_wrapper(*args, **kwargs):
     return retval
 
 
-def get_arg_positions_to_quantize(op_name: str):
-    from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
-    return next((x.positions_of_args_to_quantize for x in FUNCTIONS_TO_QUANTIZE
-                 if x.name == op_name), None)
-
 
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
@@ -175,7 +170,7 @@ def patch_torch_operators():
     # patch operators
     import torch.nn.functional as F
     import torch
-    from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
+    from nncf.graph.operator_metatypes import OPERATOR_METATYPES
     for op_meta_class in OPERATOR_METATYPES.registry_dict.values():  # type: OperatorMetatype
         if op_meta_class.torch_nn_functional_patch_spec is not None:
             ps = op_meta_class.torch_nn_functional_patch_spec
