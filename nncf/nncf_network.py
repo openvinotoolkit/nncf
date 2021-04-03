@@ -69,12 +69,14 @@ from nncf.utils import get_all_modules_by_type
 from nncf.utils import get_state_dict_names_with_modules
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
+LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
+EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
 
 Module = TypeVar('Module', bound=nn.Module)
 
 
 class ExtraCompressionModuleType(Enum):
-    ACTIVATION_QUANTIZER = 0
+    EXTERNAL_QUANTIZER = 0
 
 
 class LoadStateListener:
@@ -638,8 +640,8 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """Required for backward compatibility with checkpoints that store function and activation
         quantizers directly under corresponding attributes of NNCFNetwork."""
-        if compression_module_type == ExtraCompressionModuleType.ACTIVATION_QUANTIZER:
-            return "activation_quantizers"
+        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
+            return EXTERNAL_QUANTIZERS_STORAGE_NAME
         raise RuntimeError("Unknown extra module type")
 
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):

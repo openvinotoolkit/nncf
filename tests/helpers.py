@@ -144,7 +144,7 @@ class TwoConvTestModel(nn.Module):
 
 
 def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
-                     input_info=None):
+                     input_info: Dict = None):
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 

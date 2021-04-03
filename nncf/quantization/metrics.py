@@ -299,8 +299,10 @@ class MemoryCostMetric(BaseMetric):
             return precision
 
         u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-        if u_node_scope_str in self._compressed_model.activation_quantizers:
-            precision = self._compressed_model.activation_quantizers[u_node_scope_str].num_bits
+        for aq_id, aq in self._non_weight_quantizers.items():
+            if u_node_scope_str in str(aq_id.ia_op_exec_context):
+                precision = aq.num_bits
+                break
         else:
             precision = precision_enter_activation_tensor
         return precision
@@ -337,10 +339,10 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
     NODES_GRAPH_ATTR = 'nodes'
     IS_MERGED_GRAPH_ATTR = 'is_merged'
 
-
-    def __init__(self, compressed_model: NNCFNetwork):
+    def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController'):
         super().__init__()
         self._compressed_model = compressed_model
+        self._qctrl = qctrl
         self.stat = {}
 
     def collect(self):
@@ -376,8 +378,8 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
                     scope_str = str(last_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
                     matched = False
-                    for aq_key in self._compressed_model.activation_quantizers.keys():
-                        if scope_str in aq_key:
+                    for aq_id in self._qctrl.non_weight_quantizers:
+                        if scope_str in str(aq_id.ia_op_exec_context):
                             matched = True
                             break
                     if matched:
@@ -388,7 +390,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                     scope_str = str(node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
 
                     matched = False
-                    for aq_key in self._compressed_model.activation_quantizers.keys():
+                    for aq_key in self._compressed_model.external_quantizers.keys():
                         if scope_str in aq_key:
                             matched = True
                             break
