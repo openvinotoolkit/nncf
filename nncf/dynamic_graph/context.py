@@ -30,7 +30,7 @@ import torch
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import DynamicGraph
 from nncf.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.graph import PTNNCFGraph, PTNNCFNode
+from nncf.graph.graph import PTNNCFNode
 from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name

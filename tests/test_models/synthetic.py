@@ -171,3 +171,11 @@ class EmbeddingCatLinearModel(nn.Module):
         y2 = self.embedding2(x)
         z = torch.cat([y1, y2])
         return self.linear(z)
+
+class MultiOutputSameTensorModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._dummy_param = torch.nn.Parameter(torch.ones([1]))
+
+    def forward(self, x):
+        return x, x*x, x

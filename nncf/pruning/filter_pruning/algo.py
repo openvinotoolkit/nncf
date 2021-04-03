@@ -154,7 +154,7 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
                 next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
-                next_nodes_idxs = [n.op_exec_context.scope_in_model for n in next_nodes]
+                next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
             self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 

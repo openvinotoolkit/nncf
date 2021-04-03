@@ -4,8 +4,10 @@ import pytest
 import torch
 
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
+from nncf.dynamic_graph.io_handling import InputInfoWrapManager
 from tests.helpers import MockModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.test_compressed_graph import get_basic_quantization_config
 
 TENSOR_1 = torch.ones([1]) * (-1)
 TENSOR_2 = torch.ones([1]) * (-2)
@@ -127,8 +129,8 @@ def test_input_wrapper_wrap_inputs(mocker, inputs_test_struct: InputWrappingTest
     ref_wrapping_sequence = inputs_test_struct.ref_wrapping_sequence
     stub_cpu_model = MockModel()
 
-    mocker.patch('nncf.dynamic_graph.input_wrapping.nncf_model_input')
-    from nncf.dynamic_graph.input_wrapping import nncf_model_input
+    mocker.patch('nncf.dynamic_graph.io_handling.nncf_model_input')
+    from nncf.dynamic_graph.io_handling import nncf_model_input
 
     mgr = InputInfoWrapManager(input_infos, inspect.signature(forward), stub_cpu_model)
     mgr.wrap_inputs(model_args, model_kwargs)
@@ -137,3 +139,33 @@ def test_input_wrapper_wrap_inputs(mocker, inputs_test_struct: InputWrappingTest
     test_identical_to_ref = all(map(torch.equal, ref_wrapping_sequence, test_wrapping_sequence))
 
     assert test_identical_to_ref
+
+class CatModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.dummy_parameter = torch.nn.Parameter(torch.ones([1]))
+
+    def forward(self, x, y):
+        return torch.cat([x, y])
+
+
+def test_same_input_tensor_replication(mocker):
+    config = get_basic_quantization_config(input_info=[
+        {
+            "sample_size": [1, 1]
+        },
+        {
+            "sample_size": [1, 1]
+        },
+
+    ])
+    model = CatModel()
+    model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+    test_tensor = torch.ones([1, 1])
+    clone_spy = mocker.spy(test_tensor, "clone")
+    cat_spy = mocker.spy(torch, "cat")
+    _ = model(test_tensor, test_tensor)
+    assert clone_spy.call_count == 1
+    cat_arg = cat_spy.call_args[0][0]
+    assert cat_arg[0] is not cat_arg[1]

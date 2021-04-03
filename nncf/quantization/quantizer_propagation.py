@@ -34,9 +34,7 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
-from nncf.dynamic_graph.operator_metatypes import *
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.operator_metatypes import *
 from nncf.hw_config import HWConfig
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME

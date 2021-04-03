@@ -27,8 +27,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.graph.graph import NNCFGraph
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.quantizer_propagation import QuantizationTrait
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG

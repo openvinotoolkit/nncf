@@ -25,16 +25,11 @@ from typing import TypeVar
 
 import networkx as nx
 import torch
-
-from nncf.dynamic_graph.graph import DynamicGraph
-from nncf.dynamic_graph.trace_tensor import TracedTensor
-
-from nncf.common.graph.graph import NNCFGraph
-from nncf.graph.graph_builder import GraphBuilder
-from nncf.utils import objwalk
-from nncf.graph.graph import ModuleAttributes
 from torch import nn
 
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
@@ -45,24 +40,25 @@ from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.graph.graph import NNCFNodeExpression
-from nncf.graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.graph import DynamicGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.dynamic_graph.graph_tracer import PostGraphBuildActing
 from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.graph.graph_matching import NodeExpression
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
-from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
+from nncf.dynamic_graph.io_handling import InputInfoWrapManager
+from nncf.dynamic_graph.io_handling import replicate_same_tensors
+from nncf.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.graph.graph import ModuleAttributes
+from nncf.graph.graph import NNCFNodeExpression
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.graph_matching import NodeExpression
 from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.wrappers import _get_module_attributes
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.module_operations import UpdateWeight
@@ -70,6 +66,7 @@ from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import compute_FLOPs_hook
 from nncf.utils import get_all_modules_by_type
 from nncf.utils import get_state_dict_names_with_modules
+from nncf.utils import objwalk
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
@@ -403,7 +400,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
 
-        device = next(module.parameters()).device
+        try:
+            device = next(module.parameters()).device
+        except StopIteration:
+            # Param-less model, assume CPU
+            device = 'cpu'
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -459,16 +460,20 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                           ShapeIgnoringTensorMetaComparator())
         self._load_listener = None
 
+
     @debuggable_forward
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
+            args, kwargs = replicate_same_tensors((args, kwargs))
             if not self._in_user_dummy_forward:
                 # If a user supplies own dummy forward, he is responsible for
                 # correctly wrapping inputs inside it as well.
                 args, kwargs = self._strip_traced_tensors(args, kwargs)
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
-            retval = self._wrap_outputs_fn(self.get_nncf_wrapped_model()(*args, **kwargs))
+            retval = self.get_nncf_wrapped_model()(*args, **kwargs)
+            retval = replicate_same_tensors(retval)
+            retval = self._wrap_outputs_fn(retval)
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -486,6 +491,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
+
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes

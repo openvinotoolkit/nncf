@@ -302,7 +302,6 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                   ia_op_exec_context: InputAgnosticOperationExecutionContext,
                   tensor_metas: List[TensorMeta],
                   tm_comparators: List[TensorMetaComparator]) -> Optional[DynamicGraphNode]:
-        nncf_node_candidates = []
         iter_scopes = ia_op_exec_context.scope_in_model.get_iteration_scopes()
         # compare meta information about first input nodes during the matching. During the iteration some nodes may
         # change number of inputs, e.g. on concat of hidden outputs
@@ -494,4 +493,3 @@ class DynamicGraph:
 
             all_edges.append(dynamic_graph_edge)
         return all_edges
-

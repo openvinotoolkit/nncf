@@ -11,6 +11,11 @@
  limitations under the License.
 """
 
+import os
+from abc import ABC
+from abc import abstractmethod
+from copy import deepcopy
+from functools import partial
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -18,30 +23,23 @@ from typing import Tuple
 from typing import Union
 
 import networkx as nx
-import os
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from abc import ABC
-from abc import abstractmethod
-from copy import deepcopy
-from functools import partial
 
-from nncf.dynamic_graph.context import TracingContext
-from nncf.graph.graph_builder import GraphBuilder
-from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
-
-from nncf.common.graph.transformations.commands import TargetType
 from nncf import nncf_model_input
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.hw_config import HWConfigType
 from nncf.layers import LSTMCellNNCF
 from nncf.layers import NNCF_RNN
@@ -60,6 +58,7 @@ from tests.test_models.synthetic import GatherModel
 from tests.test_models.synthetic import ManyNonEvalModules
 from tests.test_models.synthetic import MaskedFillModel
 from tests.test_models.synthetic import ModelWithDummyParameter
+from tests.test_models.synthetic import MultiOutputSameTensorModel
 from tests.test_models.synthetic import PoolUnPool
 from tests.test_models.synthetic import ReshapeModel
 from tests.test_models.synthetic import TransposeModel
@@ -721,7 +720,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
                                                                   "filler": "zeros"}),
     GeneralModelDesc(model_builder=EmbeddingCatLinearModel, input_info={"sample_size": [1, 1],
                                                                   "type": "long",
-                                                                  "filler": "zeros"})
+                                                                  "filler": "zeros"}),
+    GeneralModelDesc(model_builder=MultiOutputSameTensorModel)
 ]
 
 

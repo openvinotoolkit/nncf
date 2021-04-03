@@ -181,9 +181,9 @@ class PTNNCFGraph(NNCFGraph):
         if to_node_key not in self._nx_graph.nodes:
             err_reason = f"node {from_node_key} not in NNCFGraph"
         if from_node_id in self._output_nncf_nodes:
-            err_reason = f"cannot add edges from output node {from_node_key}"
+            err_reason = "cannot add edges *from* output nodes"
         if to_node_id in self._input_nncf_nodes:
-            err_reason = f"cannot add edges to output node {to_node_key}"
+            err_reason = "cannot add edges *to* input nodes"
 
         if err_reason is not None:
             raise ValueError(f"Cannot add edge from {from_node_key} to {to_node_key} - {err_reason}!")

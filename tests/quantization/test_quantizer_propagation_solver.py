@@ -15,24 +15,25 @@ import random
 from collections import namedtuple
 from itertools import permutations
 from typing import Dict
-from unittest.mock import MagicMock
 from typing import List
 from typing import Tuple
+from unittest.mock import MagicMock
 
 import networkx as nx
 import pytest
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
-from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.graph import OperationExecutionContext
+from nncf.dynamic_graph.wrappers import OP_NAMES_REQUIRING_MODULE_ATTRS
 from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import NNCFGraph
-from nncf.dynamic_graph.graph import OperationExecutionContext
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT
@@ -44,22 +45,23 @@ from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
 from nncf.quantization.quantizer_propagation import TransitionStatus
+from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from tests.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 from tests.test_nncf_network import get_mock_nncf_node_attrs
 from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
 
 
-def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> OperationExecutionContext:
-    return OperationExecutionContext(op_name,
-                                     Scope(),
-                                     call_order,
-                                     [None])
+def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> InputAgnosticOperationExecutionContext:
+    return InputAgnosticOperationExecutionContext(op_name,
+                                                  Scope(),
+                                                  call_order)
 
 
 def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     graph_len = len(op_name_keys)
     mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
+
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
@@ -117,7 +119,8 @@ class TwoFcAfterDropout:
     def get_graph():
         graph = nx.DiGraph()
         dropout_node_attrs = {
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.input_agnostic
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR:
+                TwoFcAfterDropout.DROPOUT_OPERATION_EXECUTION_CONTEXT.input_agnostic
         }
 
         fc_1_node_attrs = {
@@ -158,6 +161,8 @@ class TestQuantizerPropagationSolver:
         for op_meta in tested_op_metatypes:
             aliases = op_meta.get_all_aliases()
             for alias in aliases:
+                if alias in [MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME]:
+                    continue  # makes sure that no input/output nodes end up in the middle of the raph
                 tested_op_names.append(get_version_agnostic_name(alias))
 
         # Edges should be irrelevant - using random graph

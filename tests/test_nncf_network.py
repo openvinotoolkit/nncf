@@ -25,7 +25,6 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import PTNNCFGraph
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
-from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
 from nncf import register_module
@@ -35,7 +34,6 @@ from nncf.dynamic_graph.context import Scope
 from nncf.graph.graph import PTNNCFNode
 from nncf.graph.graph import NNCFGraph
 from nncf.graph.graph import NNCFNode
-from nncf.dynamic_graph.graph import OperationExecutionContext
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
@@ -79,15 +77,15 @@ def test_disable_shape_matching():
     qnet_no_shape = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo(input_shape_1), ],
                                 scopes_without_shape_matching=['MatMulModel'])  # type: NNCFNetwork
     _ = qnet_no_shape(torch.zeros(*input_shape_1))
-    graph_1 = deepcopy(qnet_no_shape.get_graph())
+    graph_1 = deepcopy(qnet_no_shape.get_dynamic_graph())
 
     _ = qnet_no_shape(torch.zeros(*input_shape_2))
-    graph_2 = deepcopy(qnet_no_shape.get_graph())
+    graph_2 = deepcopy(qnet_no_shape.get_dynamic_graph())
 
-    keys_1 = list(graph_1.get_all_node_keys())
-    keys_2 = list(graph_2.get_all_node_keys())
-    assert len(keys_1) == 3  # 1 input node + 1 operation node + 1 output node
-    assert keys_1 == keys_2
+    assert graph_1 == graph_2
+
+    nodes_1 = list(graph_1.get_all_nodes())
+    assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
     _ = qnet(torch.zeros(*input_shape_1))
@@ -95,7 +93,7 @@ def test_disable_shape_matching():
     # The second forward run should have led to an increase in registered node counts
     # since disable_shape_matching was False and the network was run with a different
     # shape of input tensor
-    assert qnet.get_graph().get_nodes_count() > graph_1.get_nodes_count()
+    assert qnet.get_dynamic_graph().get_nodes_count() > graph_1.get_nodes_count()
 
 
 def test_check_correct_modules_replacement():
@@ -356,24 +354,29 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
     from networkx.algorithms.dag import lexicographical_topological_sort
-    for curr_node_key in lexicographical_topological_sort(nx_graph):
+    for idx, curr_node_key in enumerate(lexicographical_topological_sort(nx_graph)):
         node = nx_graph.nodes[curr_node_key]
         if PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR in node:
             ia_op_exec_context = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
         else:
             ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
         module_attributes = node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
-        tensor_metas = []
+        node_id = idx
+        node = PTNNCFNode(node_id, ia_op_exec_context, {
+            PTNNCFGraph.MODULE_ATTRIBUTES: module_attributes
+        })
+        mock_graph.add_nncf_node(node)
+        key_vs_id[curr_node_key] = node_id
+
         preds = list(nx_graph.predecessors(curr_node_key))
-        for idx, pred in enumerate(preds):
+        for pred_idx, pred in enumerate(preds):
             in_edge = (pred, curr_node_key)
-            output_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
-            tensor_metas.append(TensorMeta(creator_id, output_idx,
-                                           [1, 1, 1, 1]))
-        node = mock_graph.add_node(ia_op_exec_context, tensor_metas, [], None, module_attrs=module_attributes)
-        key_vs_id[curr_node_key] = node.node_id
-        for idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
-            edge_vs_output_idx_and_creator_id[out_edge] = (idx, node.node_id)
+            _, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
+            mock_graph.add_edge_between_nncf_nodes(creator_id, node_id,
+                                                   [1, 1, 1, 1], pred_idx)
+
+        for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
+            edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)
     return mock_graph
 
 
@@ -413,10 +416,9 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     scope_to_set = Scope() if scope_str is None else Scope.from_str(scope_str)
     return {
-        PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                            Scope(),
-                                                                            0,
-                                                                            [None]),
+        PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: InputAgnosticOperationExecutionContext(op_name_to_set,
+                                                                                         scope_to_set,
+                                                                                         0)
     }
 
 

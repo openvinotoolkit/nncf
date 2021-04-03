@@ -329,7 +329,7 @@ class TestGraphStability:
         compressed_model, ctrl = model_and_ctrl_creator()
         ref_graph = deepcopy(compressed_model.get_dynamic_graph())
         ctrl.export_model('tmp.onnx')
-        curr_graph = compressed_model.get_graph()
+        curr_graph = compressed_model.get_dynamic_graph()
         assert curr_graph == ref_graph
 
     def test_dummy_forwards_do_not_inflate_dynamic_graph(self, model_and_ctrl_creator):
