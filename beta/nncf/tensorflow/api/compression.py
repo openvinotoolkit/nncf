@@ -11,11 +11,14 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Any, Dict
+
+import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.utils.save import save_model
 
@@ -107,3 +110,10 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `CompressionAlgorithmController`.
         """
+
+
+class TFZeroCompressionLoss(CompressionLoss):
+    def calculate(self, *args, **kwargs) -> Any:
+        return tf.constant(0.)
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+        return {}

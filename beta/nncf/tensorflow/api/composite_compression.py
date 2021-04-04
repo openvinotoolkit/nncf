@@ -17,6 +17,7 @@ from nncf import NNCFConfig
 from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
 from nncf.api.composite_compression import CompositeCompressionScheduler
+from nncf.api.composite_compression import CompositeCompressionLoss
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 
@@ -31,6 +32,7 @@ class TFCompositeCompressionAlgorithmController(
         super().__init__(target_model)
         self._initializer = None
         self._scheduler = CompositeCompressionScheduler()
+        self._loss = CompositeCompressionLoss()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
@@ -43,8 +45,8 @@ class TFCompositeCompressionAlgorithmController(
         return self._scheduler
 
     @property
-    def loss(self):
-        pass
+    def loss(self) -> CompositeCompressionLoss:
+        return self._loss
 
 
 class TFCompositeCompressionAlgorithmBuilder(

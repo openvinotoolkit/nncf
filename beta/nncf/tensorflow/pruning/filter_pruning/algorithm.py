@@ -15,6 +15,7 @@ from typing import List
 import tensorflow as tf
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.api.compression import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
@@ -42,7 +43,12 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 =======
 from nncf.api.compression import CompressionScheduler
+<<<<<<< 1844b17660664362944ede6ffae2722512ff7f60
 >>>>>>> Fix test auxiliary struct. Add type hints.
+=======
+from nncf.api.compression import CompressionLoss
+
+>>>>>>> After rebase.
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -92,7 +98,11 @@ class FilterPruningController(BasePruningAlgoController):
         self.all_weights = params.get('all_weights', False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
+<<<<<<< 1844b17660664362944ede6ffae2722512ff7f60
         self.set_pruning_rate(self.pruning_init)
+=======
+        self._loss = TFZeroCompressionLoss()
+>>>>>>> After rebase.
 
     def freeze(self):
         self.frozen = True
@@ -241,5 +251,10 @@ class FilterPruningController(BasePruningAlgoController):
         return self._scheduler
 
     @property
+<<<<<<< 1844b17660664362944ede6ffae2722512ff7f60
     def loss(self):
         pass
+=======
+    def loss(self) -> CompressionLoss:
+        return self._loss
+>>>>>>> After rebase.

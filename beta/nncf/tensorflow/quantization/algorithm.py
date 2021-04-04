@@ -20,6 +20,7 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.api.compression import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph import patterns as p
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
@@ -41,6 +42,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionLoss
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -233,6 +235,7 @@ class QuantizationController(TFCompressionAlgorithmController):
         super().__init__(target_model)
         self._initializer = MinMaxInitializer(config)
         self._scheduler = BaseCompressionScheduler()
+        self._loss = TFZeroCompressionLoss()
 
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
@@ -242,8 +245,8 @@ class QuantizationController(TFCompressionAlgorithmController):
         return self._scheduler
 
     @property
-    def loss(self):
-        pass
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         return {}
