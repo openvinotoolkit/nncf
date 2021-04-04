@@ -320,7 +320,7 @@ def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: str, ref_graph_ex
                                graph_to_layer_var_names_map: dict):
     nx_graph = get_nx_graph_from_tf_graph(tf_graph, graph_to_layer_var_names_map)
 
-    if not ref_graph_exist:
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None and not ref_graph_exist:
         nx.drawing.nx_pydot.write_dot(nx_graph, graph_path)
 
     check_nx_graph(nx_graph, graph_path)
