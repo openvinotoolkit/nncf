@@ -85,7 +85,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
         """
         Prune node by input_masks (if masks is not none and operation support it).
 
-        :param model: NNCF nectork.
+        :param model: NNCF network.
         :param node: Node from NNCF graph that will be prune.
         :param graph: Graph of model.
         """
@@ -95,7 +95,7 @@ class PTDefaultMetaOp(DefaultMetaOp):
         """
         Prune node by output_mask (if mask is not none and operation support it).
 
-        :param model: NNCF nectork.
+        :param model: NNCF network.
         :param node: Node from NNCF graph that will be prune.
         :param graph: Graph of model.
         """
