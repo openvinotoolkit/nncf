@@ -46,7 +46,7 @@ from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
-from nncf.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
+from nncf.common.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -557,7 +557,8 @@ class FilterPruningController(BasePruningAlgoController):
             return 1 - self.current_flops / self.full_flops
         return self.pruning_rate
 
-    def set_compression_rate(self, pruning_rate):
+    @compression_rate.setter
+    def compression_rate(self, pruning_rate):
         is_pruning_controller_frozen = self.frozen
         self.frozen = False
         self.set_pruning_rate(pruning_rate)

@@ -25,7 +25,7 @@ from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoCon
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
-from nncf.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
+from nncf.common.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')

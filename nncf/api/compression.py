@@ -258,7 +258,11 @@ class CompressionAlgorithmController:
     def compression_rate(self) -> float:
         raise NotImplementedError
 
-    def set_compression_rate(self, compression_rate: float) -> None:
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        raise NotImplementedError
+
+    def disable_scheduler(self):
         raise NotImplementedError
 
 

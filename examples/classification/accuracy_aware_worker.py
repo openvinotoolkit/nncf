@@ -1,5 +1,5 @@
 """
- Copyright (c) 2019-2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -34,7 +34,7 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
-from nncf import run_accuracy_aware_compressed_training
+from nncf import run_accuracy_aware_compressed_training, PTAccuracyAwareTrainingRunner
 from nncf.initialization import register_default_init_args
 from nncf.initialization import register_training_loop_args
 from nncf.initialization import default_criterion_fn
@@ -185,7 +185,8 @@ def main_worker(current_gpu, config: SampleConfig):
                                                   log_dir=config.log_dir)
 
         # run accuracy-aware training loop
-        model = run_accuracy_aware_compressed_training(model, compression_ctrl, nncf_config)
+        training_runner = PTAccuracyAwareTrainingRunner(nncf_config)
+        model = run_accuracy_aware_compressed_training(model, compression_ctrl, training_runner)
 
 
 if __name__ == '__main__':

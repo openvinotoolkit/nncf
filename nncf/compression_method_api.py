@@ -185,6 +185,18 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             model.enable_dynamic_graph_building()
         model.forward = original_forward
 
+    def disable_scheduler(self):
+        self._scheduler = PTStubCompressionScheduler()
+        self._scheduler.target_level = 0.0
+
+    @property
+    def compression_rate(self) -> float:
+        raise NotImplementedError
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        raise NotImplementedError
+
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """

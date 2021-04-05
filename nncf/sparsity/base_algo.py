@@ -168,5 +168,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
     def compression_rate(self):
         return self.sparsity_rate_for_model
 
-    def set_compression_rate(self, sparsity_level: float):
+    @compression_rate.setter
+    def compression_rate(self, sparsity_level: float):
         self.set_sparsity_level(sparsity_level)
