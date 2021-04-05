@@ -10,11 +10,19 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
+from typing import Union
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+
+from nncf.common.utils.backend import __nncf_backend__
+if __nncf_backend__ == 'Torch':
+    from torch import Tensor
+elif __nncf_backend__ == 'TensorFlow':
+    from tensorflow import Tensor
 
 
 class MaskPropagationAlgorithm:
@@ -57,9 +65,11 @@ class MaskPropagationAlgorithm:
             cls.mask_propagation(node, self._graph)
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph):
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[Tensor, None]]:
     """
-    Return input masks for all inputs of nx_node.
+    Returns input masks for all inputs of nx_node.
+
+    :return: Input masks.
     """
     input_masks = [input_node.data['output_mask'] for input_node in graph.get_previous_nodes(node)]
     return input_masks
