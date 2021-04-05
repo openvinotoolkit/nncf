@@ -28,11 +28,6 @@ class YOLOv4Preprocessor:
         """
         Initializes parameters for parsing annotations in the dataset.
         """
-        # TODO(Evgeny Tsykunov): add TFRecords support for YOLOv4
-        dataset_type = config.get('dataset_type', 'tfds')
-        if dataset_type != 'tfds':
-            raise ValueError('Dataset type {} does not supported by YOLOv4, use tfds dataset type'.format(dataset_type))
-
         self._max_num_instances = config.preprocessing.get('max_num_instances', 100)
         self._is_training = is_train
         self._global_batch_size = config.batch_size
