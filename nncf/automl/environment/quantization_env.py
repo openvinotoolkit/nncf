@@ -521,11 +521,15 @@ class QuantizationEnv:
         current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
         current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
 
-        current_model_bop_ratio = self.compression_ratio_calculator.run_for_quantizer_setup(self.qctrl.get_quantizer_setup_for_current_state())
+        current_model_bop_ratio = self.compression_ratio_calculator.run_for_quantizer_setup(
+            self.qctrl.get_quantizer_setup_for_current_state())
 
         reward = self.reward(quantized_score, current_model_ratio)
 
-        info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size, 'bop_ratio': current_model_bop_ratio}
+        info_set = {'model_ratio': current_model_ratio,
+                    'accuracy': quantized_score,
+                    'model_size': current_model_size,
+                    'bop_ratio': current_model_bop_ratio}
 
         obs = self.get_normalized_obs(len(collected_strategy) - 1)
         done = True
