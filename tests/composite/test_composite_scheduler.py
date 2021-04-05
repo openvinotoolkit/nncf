@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional
 
 from nncf.api.compression import CompressionScheduler
 from nncf.api.composite_compression import CompositeCompressionScheduler
@@ -29,10 +30,10 @@ class DummyScheduler(CompressionScheduler):
     def load_state(self, state):
         self.delta = state['delta']
 
-    def step(self, next_step):
+    def step(self, next_step: Optional[int] = None) -> None:
         pass
 
-    def epoch_step(self, next_epoch):
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         pass
 
 

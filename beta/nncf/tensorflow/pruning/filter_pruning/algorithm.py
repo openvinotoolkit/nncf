@@ -257,4 +257,7 @@ class FilterPruningController(BasePruningAlgoController):
 =======
     def loss(self) -> CompressionLoss:
         return self._loss
+<<<<<<< 80730293d2af89f117f66003a8e1ea1dce2903fe
 >>>>>>> After rebase.
+=======
+>>>>>>> Fix pylint.

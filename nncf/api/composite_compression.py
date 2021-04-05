@@ -224,6 +224,15 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+
 
 class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """
@@ -258,10 +267,6 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
          algorithm-specific compression during fine-tuning.
         :return: The instance of the `CompositeCompressionAlgorithmController`.
         """
-        composite_ctrl = CompositeCompressionAlgorithmController(model)
-        for builder in self.child_builders:
-            composite_ctrl.add(builder.build_controller(model))
-        return composite_ctrl
 
     def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
         """

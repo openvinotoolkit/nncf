@@ -14,7 +14,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar
 
 from nncf import NNCFConfig
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 

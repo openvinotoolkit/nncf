@@ -15,7 +15,6 @@ import logging
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.api.compression import CompressionLevel
-from nncf.api.compression import CompressionScheduler
 
 logger = logging.getLogger(__name__)
 

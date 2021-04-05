@@ -30,13 +30,13 @@ def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
     return scheduler
 
 class QuantizationControllerBaseForTest(QuantizationControllerBase):
-            @property
-            def loss(self):
-                pass
+    @property
+    def loss(self):
+        pass
 
-            @property
-            def scheduler(self):
-                pass
+    @property
+    def scheduler(self):
+        pass
 
 class QuantizationCtrlBaseSpy:
     #pylint:disable=no-member

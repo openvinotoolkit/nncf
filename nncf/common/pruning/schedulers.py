@@ -15,7 +15,6 @@ from typing import Optional
 import numpy as np
 import scipy.optimize
 
-from nncf.api.compression import CompressionScheduler
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import ExponentialDecaySchedule, BaseCompressionScheduler
 

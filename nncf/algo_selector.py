@@ -66,5 +66,5 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
         return self._loss
 
     @property
-    def scheduler(self) -> PTStubCompressionScheduler:
+    def scheduler(self) -> CompressionScheduler:
         return self._scheduler

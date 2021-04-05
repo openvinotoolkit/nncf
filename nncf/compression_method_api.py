@@ -87,15 +87,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss."""
 
-    def __init__(self, target_model: ModelType):
-        """
-        Initializes the internal state of the compression algorithm controller.
-
-        :param target_model: The model with additional modifications necessary
-            to enable algorithm-specific compression during fine-tuning built
-            by the `CompressionAlgorithmBuilder`.
-        """
-        super().__init__(target_model)
 
     def distributed(self):
         """
@@ -283,7 +274,7 @@ class PTStubCompressionScheduler(CompressionScheduler):
 
     def step(self, next_step: Optional[int] = None) -> None:
         pass
- 
+
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         pass
 
