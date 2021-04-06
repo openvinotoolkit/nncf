@@ -115,10 +115,14 @@ class PostGraphBuildActing:
 
 
 def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracing=False,
-                            wrap_inputs_fn=None):
-    from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_inputs_with_objwalk
+                            wrap_inputs_fn=None,
+                            wrap_outputs_fn=None,
+                            with_output_tracing=False):
 
     def default_dummy_forward_fn(model):
+        from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_inputs_with_objwalk
+        from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
+
         device = next(model.parameters()).device
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
         kwargs = OrderedDict()
@@ -136,7 +140,9 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                 args, kwargs = wrap_nncf_model_inputs_with_objwalk(args, kwargs)
             else:
                 args, kwargs = wrap_inputs_fn(args, kwargs)
-
+        if with_output_tracing:
+            if wrap_outputs_fn is not None:
+                return wrap_outputs_fn(model(*args, **kwargs))
+            return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
         return model(*args, **kwargs)
-
     return default_dummy_forward_fn

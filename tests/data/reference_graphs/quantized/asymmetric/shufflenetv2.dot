@@ -282,6 +282,7 @@ strict digraph  {
 "280 ShuffleNetV2/AsymmetricQuantizer/asymmetric_quantize" [id=280, scope="ShuffleNetV2/AsymmetricQuantizer", type=asymmetric_quantize];
 "281 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=281, scope="ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "282 ShuffleNetV2/NNCFLinear[linear]/linear" [id=282, scope="ShuffleNetV2/NNCFLinear[linear]", type=linear];
+"283 /nncf_model_output" [id=283, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 ShuffleNetV2/NNCFConv2d[conv1]/conv2d";
 "2 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 ShuffleNetV2/NNCFConv2d[conv1]/conv2d";
@@ -580,4 +581,5 @@ strict digraph  {
 "279 ShuffleNetV2/avg_pool2d" -> "280 ShuffleNetV2/AsymmetricQuantizer/asymmetric_quantize";
 "280 ShuffleNetV2/AsymmetricQuantizer/asymmetric_quantize" -> "282 ShuffleNetV2/NNCFLinear[linear]/linear";
 "281 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "282 ShuffleNetV2/NNCFLinear[linear]/linear";
+"282 ShuffleNetV2/NNCFLinear[linear]/linear" -> "283 /nncf_model_output";
 }

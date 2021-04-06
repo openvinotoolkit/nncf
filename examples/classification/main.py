@@ -47,7 +47,7 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.dynamic_graph.graph_builder import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process
@@ -293,31 +293,42 @@ def create_datasets(config):
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                          std=(0.229, 0.224, 0.225))
     elif dataset_config == 'cifar100':
-        normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
-                                         std=(0.2023, 0.1994, 0.2010))
+        normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
+                                         std=(0.2673, 0.2564, 0.2761))
     elif dataset_config in ['cifar10', 'mock_32x32']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 
     input_info_list = create_input_infos(config)
     image_size = input_info_list[0].shape[-1]
-    size = int(image_size / 0.875)
-    val_transform = transforms.Compose([
-        transforms.Resize(size),
-        transforms.CenterCrop(image_size),
-        transforms.ToTensor(),
-        normalize,
-    ])
+
+    if dataset_config in ['cifar10', 'cifar100']:
+        val_transform = transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.RandomCrop(image_size, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
+    else:
+        size = int(image_size / 0.875)
+        val_transform = transforms.Compose([
+            transforms.Resize(size),
+            transforms.CenterCrop(image_size),
+            transforms.ToTensor(),
+            normalize,
+        ])
+        train_transforms = transforms.Compose([
+            transforms.RandomResizedCrop(image_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ])
 
     val_dataset = get_dataset(dataset_config, config, val_transform, is_train=False)
-
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(image_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
     train_dataset = get_dataset(dataset_config, config, train_transforms, is_train=True)
 
     return train_dataset, val_dataset

@@ -13,6 +13,10 @@ strict digraph  {
 "11 MultiBranchesModel/NNCFConv2d[conv_d]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=red, id=11, label="WFQ_[B:4 M:S SGN:U PC:N]_#11_G0", scope="MultiBranchesModel/NNCFConv2d[conv_d]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
 "12 MultiBranchesModel/NNCFConv2d[conv_d]/SymmetricQuantizer/symmetric_quantize" [color=red, id=12, label="AFQ_[B:4 M:S SGN:U PC:N]_#12_G0", scope="MultiBranchesModel/NNCFConv2d[conv_d]/SymmetricQuantizer", style=filled, type=symmetric_quantize];
 "13 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d" [color=lightblue, id=13, label="conv2d_k3x3_#13", scope="MultiBranchesModel/NNCFConv2d[conv_d]", style=filled, type=conv2d];
+"14 /nncf_model_output" [id=14, label="nncf_model_output_#14", scope="", style=filled, type=nncf_model_output];
+"15 /nncf_model_output" [id=15, label="nncf_model_output_#15", scope="", style=filled, type=nncf_model_output];
+"16 /nncf_model_output" [id=16, label="nncf_model_output_#16", scope="", style=filled, type=nncf_model_output];
+"17 /nncf_model_output" [id=17, label="nncf_model_output_#17", scope="", style=filled, type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "2 MultiBranchesModel/ReLU/RELU";
 "2 MultiBranchesModel/ReLU/RELU" -> "4 MultiBranchesModel/NNCFConv2d[conv_a]/SymmetricQuantizer/symmetric_quantize";
@@ -21,9 +25,13 @@ strict digraph  {
 "2 MultiBranchesModel/ReLU/RELU" -> "12 MultiBranchesModel/NNCFConv2d[conv_d]/SymmetricQuantizer/symmetric_quantize";
 "3 MultiBranchesModel/NNCFConv2d[conv_a]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "5 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d";
 "4 MultiBranchesModel/NNCFConv2d[conv_a]/SymmetricQuantizer/symmetric_quantize" -> "5 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d";
+"5 MultiBranchesModel/NNCFConv2d[conv_a]/conv2d" -> "14 /nncf_model_output";
 "6 MultiBranchesModel/MaxPool2d[max_pool_b]/max_pool2d" -> "8 MultiBranchesModel/NNCFConv2d[conv_b]/conv2d";
 "7 MultiBranchesModel/NNCFConv2d[conv_b]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "8 MultiBranchesModel/NNCFConv2d[conv_b]/conv2d";
+"8 MultiBranchesModel/NNCFConv2d[conv_b]/conv2d" -> "15 /nncf_model_output";
 "9 MultiBranchesModel/NNCFConv2d[conv_c]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "10 MultiBranchesModel/NNCFConv2d[conv_c]/conv2d";
+"10 MultiBranchesModel/NNCFConv2d[conv_c]/conv2d" -> "16 /nncf_model_output";
 "11 MultiBranchesModel/NNCFConv2d[conv_d]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "13 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d";
 "12 MultiBranchesModel/NNCFConv2d[conv_d]/SymmetricQuantizer/symmetric_quantize" -> "13 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d";
+"13 MultiBranchesModel/NNCFConv2d[conv_d]/conv2d" -> "17 /nncf_model_output";
 }

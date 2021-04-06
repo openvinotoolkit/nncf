@@ -159,7 +159,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     :param graph: Graph to work with.
     :return: List of all last pruned nodes.
     """
-    graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
+    graph_outputs = graph.get_output_nodes()  # NNCFNodes here
 
     visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function,

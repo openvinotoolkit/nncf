@@ -18,8 +18,10 @@ import onnx
 import os
 import pytest
 from functools import partial
+from functools import reduce
 from torch import nn
 from torch.nn import DataParallel
+from torch import cuda
 
 from nncf import NNCFConfig
 from nncf.checkpoint_loading import load_state
@@ -381,3 +383,57 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
             count_custom_ops += 1
 
     assert count_custom_ops == 4
+
+
+def change_compression_algorithms_order(config):
+    # changes order of compression algorithms in config
+    def shift_list(list_for_shift):
+        shifted_list = [list_for_shift.pop()] + list_for_shift
+        return shifted_list
+
+    config_compression = list(config.get('compression', {}))
+    shifted_config_compression = shift_list(config_compression)
+    config.update({'compression': shifted_config_compression})
+    return config
+
+
+def get_basic_rb_sparsity_int8_config():
+    config = get_basic_sparsity_config()
+    config.update({
+        "compression": [
+            {
+                "algorithm": "rb_sparsity",
+                "sparsity_init": 0.02,
+                "params":
+                    {
+                        "schedule": "polynomial",
+                        "sparsity_target": 0.5,
+                        "sparsity_target_epoch": 2,
+                        "sparsity_freeze_epoch": 3
+                    },
+            },
+            {
+                "algorithm": "quantization"
+            }
+        ]
+    }
+    )
+    return config
+
+
+comp_loss_configs = [
+    get_basic_rb_sparsity_int8_config(),
+    change_compression_algorithms_order(get_basic_rb_sparsity_int8_config())
+]
+
+
+@pytest.mark.parametrize("config", comp_loss_configs,
+                         ids=[reduce(lambda x, y: x + "_" + y.get("algorithm", ""), config.get('compression', []),
+                                     'compression')
+                              for config in comp_loss_configs])
+@pytest.mark.skipif(not cuda.is_available(), reason="Since its GPU test, no need to run this without GPUs available")
+def test_compression_loss_gpu_device_compatibility(config):
+    model = BasicConvTestModel()
+    model.to(cuda.current_device())
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.loss()

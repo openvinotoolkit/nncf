@@ -245,7 +245,7 @@ def run_train(config):
                 config=config,
                 scheduler=scheduler)
 
-            loss_fn = model_builder.build_loss_fn(compress_model)
+            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
 
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables, optimizer=optimizer, step=tf.Variable(0))

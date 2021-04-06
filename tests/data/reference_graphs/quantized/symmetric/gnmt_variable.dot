@@ -313,6 +313,7 @@ strict digraph  {
 "311 GNMT/ResidualRecurrentDecoder[decoder]/SymmetricQuantizer/symmetric_quantize" [id=311, scope="GNMT/ResidualRecurrentDecoder[decoder]/SymmetricQuantizer", type=symmetric_quantize];
 "312 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=312, scope="GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "313 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/linear" [id=313, scope="GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]", type=linear];
+"314 /nncf_model_output" [id=314, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 GNMT/ResidualRecurrentEncoder[encoder]/NNCFEmbedding[embedder]/embedding";
 "3 GNMT/ResidualRecurrentEncoder[encoder]/NNCFEmbedding[embedder]/embedding" -> "4 GNMT/ResidualRecurrentEncoder[encoder]/Dropout[dropout]/dropout";
 "5 GNMT/ResidualRecurrentEncoder[encoder]/ModuleList[rnn_layers]/NNCF_RNN[0]/StackedRNN[rnn_impl]/ModuleList[inners]/VariableRecurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "6 GNMT/ResidualRecurrentEncoder[encoder]/ModuleList[rnn_layers]/NNCF_RNN[0]/StackedRNN[rnn_impl]/ModuleList[inners]/VariableRecurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
@@ -661,4 +662,5 @@ strict digraph  {
 "310 GNMT/ResidualRecurrentDecoder[decoder]/__add__" -> "311 GNMT/ResidualRecurrentDecoder[decoder]/SymmetricQuantizer/symmetric_quantize";
 "311 GNMT/ResidualRecurrentDecoder[decoder]/SymmetricQuantizer/symmetric_quantize" -> "313 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/linear";
 "312 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "313 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/linear";
+"313 GNMT/ResidualRecurrentDecoder[decoder]/Classifier[classifier]/NNCFLinear[classifier]/linear" -> "314 /nncf_model_output";
 }

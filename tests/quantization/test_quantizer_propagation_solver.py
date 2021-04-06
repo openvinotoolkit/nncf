@@ -59,7 +59,7 @@ def get_mock_model_node_attrs_for_op_name(op_name: str, call_order=0) -> Operati
 
 def get_randomly_connected_model_graph(op_name_keys: List[str]) -> nx.DiGraph:
     graph_len = len(op_name_keys)
-    mock_graph = nx.generators.gnc_graph(graph_len, seed=0)
+    mock_graph = nx.generators.gnc_graph(graph_len, None, 0)
     shuffled_op_names = random.sample(op_name_keys, len(op_name_keys))
     for idx, (_, node) in enumerate(mock_graph.nodes.items()):
         op_name = shuffled_op_names[idx]
@@ -1608,8 +1608,9 @@ class TestQuantizerPropagationSolver:
         retval = quant_prop_solver.run_on_ip_graph(ip_graph)
 
         assert retval.quantizer_setup.quantization_points == run_on_ip_graph_test_struct.retval_qps
-        assert retval.quantizer_setup.unified_scale_groups == run_on_ip_graph_test_struct.retval_unified_scale_qp_groups
-        assert retval.quantizer_setup.shared_input_operation_set_groups == \
+        assert list(retval.quantizer_setup.unified_scale_groups.values()) == \
+               run_on_ip_graph_test_struct.retval_unified_scale_qp_groups
+        assert list(retval.quantizer_setup.shared_input_operation_set_groups.values()) == \
                run_on_ip_graph_test_struct.retval_shared_input_operation_set_groups
 
         assert len(quant_prop_solver.get_active_propagating_quantizers_queue()) == expected_count_active_quant

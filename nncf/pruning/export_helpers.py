@@ -19,11 +19,11 @@ from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.dynamic_graph.operator_metatypes import NoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
+from nncf.dynamic_graph.operator_metatypes import InputNoopMetatype, HardTanhMetatype, TanhMetatype, RELUMetatype, \
     PRELUMetatype, ELUMetatype, GELUMetatype, SigmoidMetatype, SoftmaxMetatype, AvgPool2dMetatype, MaxPool2dMetatype, \
     DropoutMetatype, Conv1dMetatype, Conv2dMetatype, Conv3dMetatype, BatchNormMetatype, CatMetatype, AddMetatype, \
     SubMetatype, DivMetatype, MulMetatype, LinearMetatype, MatMulMetatype, MinMetatype, MaxMetatype, MeanMetatype, \
-    ConvTranspose2dMetatype, ConvTranspose3dMetatype, GroupNormMetatype
+    ConvTranspose2dMetatype, ConvTranspose3dMetatype, GroupNormMetatype, OutputNoopMetatype
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_utils import PTPruningOperationsMetatypeRegistry
@@ -67,11 +67,25 @@ class PTDefaultMetaOp(DefaultMetaOp):
 
 @PT_PRUNING_OPERATOR_METATYPES.register('model_input')
 class PTInput(PTDefaultMetaOp):
-    subtypes = [NoopMetatype]
+    subtypes = [InputNoopMetatype]
 
     @classmethod
     def accept_pruned_input(cls, node: PTNNCFNode):
         return False
+
+    @classmethod
+    def mask_propagation(cls, model, nx_node, graph, nx_graph):
+        nx_node['input_masks'] = []
+        nx_node['output_mask'] = None
+
+
+@PT_PRUNING_OPERATOR_METATYPES.register('model_output')
+class PTOutput(PTDefaultMetaOp):
+    subtypes = [OutputNoopMetatype]
+
+    @classmethod
+    def accept_pruned_input(cls, node: PTNNCFNode):
+        return True
 
     @classmethod
     def mask_propagation(cls, model, nx_node, graph, nx_graph):

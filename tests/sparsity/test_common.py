@@ -111,13 +111,6 @@ def magnitude_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
-            self.sparsity_init = 0
-
-        def set_sparsity_init(self, sparsity_init):
-            self.sparsity_init = sparsity_init
-
-        def get_sparsity_init(self):
-            return self.sparsity_init
 
     return MockSparsityAlgo()
 
@@ -156,12 +149,13 @@ class TestPolynomialSparsityScheduler:
 
         params = {
             "power": 2,
+            'sparsity_init': 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
             "concave": concave,
         }
-        magnitude_algo_mock.set_sparsity_init(0.1)
+
         scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
 
@@ -201,6 +195,7 @@ class TestPolynomialSparsityScheduler:
         steps_per_epoch = 3
         params = {
             "power": 2,
+            'sparsity_init': 0.1,
             'sparsity_target': 0.5,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 4,
@@ -211,7 +206,6 @@ class TestPolynomialSparsityScheduler:
         if specify_steps_per_epoch_in_config:
             params["steps_per_epoch"] = steps_per_epoch
 
-        magnitude_algo_mock.set_sparsity_init(0.1)
         scheduler = PolynomialSparsityScheduler(magnitude_algo_mock, params=params)
         mock = magnitude_algo_mock.set_sparsity_level
         mock.reset_mock()
@@ -238,13 +232,6 @@ def rb_algo_mock_(mocker):
             from nncf.sparsity.rb.loss import SparseLoss
             self.loss = SparseLoss()
             self.loss.current_sparsity = 0.3
-            self.sparsity_init = 0
-
-        def set_sparsity_init(self, sparsity_init):
-            self.sparsity_init = sparsity_init
-
-        def get_sparsity_init(self):
-            return self.sparsity_init
 
     return MockSparsityAlgo()
 
@@ -259,12 +246,12 @@ class TestAdaptiveSparsityScheduler:
     @pytest.mark.parametrize("ref_sparsity_levels", [([0.25, 0.25, 0.3, 0.35, 0.4, 0.4, 0.4])])
     def test_adaptive_scheduler_per_epoch_step(self, rb_algo_mock, ref_sparsity_levels):
         params = {
+            'sparsity_init': 0.2,
             'sparsity_target': 0.4,
             "sparsity_target_epoch": 3,
             "sparsity_freeze_epoch": 7
         }
 
-        rb_algo_mock.set_sparsity_init(0.2)
         scheduler = AdaptiveSparsityScheduler(rb_algo_mock, params=params)
         mock = rb_algo_mock.set_sparsity_level
 

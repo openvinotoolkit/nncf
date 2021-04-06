@@ -99,7 +99,8 @@ class QuantizerSpec:
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: bool,
-                 narrow_range: bool):
+                 narrow_range: bool,
+                 half_range: bool):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -107,22 +108,26 @@ class QuantizerSpec:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
-        naive case, False if all 2^`num_bits` quantizations should be used.
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+            False - the full range are used.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
+        self.half_range = half_range
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
-                   narrow_range)
+                   narrow_range,
+                   half_range)
 
 
 class QuantizationConstraints:

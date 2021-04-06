@@ -6,7 +6,15 @@ models:
         adapter: ssd
 
     datasets:
-      - name: VOC2012
+      - name: VOC2007_detection
+        data_source: VOCdevkit/VOC2007/JPEGImages
+        annotation_conversion:
+          converter: voc_detection
+          annotations_dir: VOCdevkit/VOC2007/Annotations
+          images_dir: VOCdevkit/VOC2007/JPEGImages
+          imageset_file: VOCdevkit/VOC2007/ImageSets/Main/test.txt
+        annotation: voc07.pickle
+        dataset_meta: voc07.json
         preprocessing:
           - type: resize
             size: 512

@@ -17,7 +17,7 @@ import torch
 from texttable import Texttable
 from torch import nn
 
-from nncf.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.algo_selector import COMPRESSION_ALGORITHMS, ZeroCompressionLoss
 from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
     ActivationBinarizationScaleThreshold, BaseBinarizer
 from nncf.api.compression import CompressionLevel
@@ -91,6 +91,7 @@ class BinarizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):
         super().__init__(target_model)
 
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
         self._scheduler = scheduler_cls(self, config.get("params", {}))
         from nncf.utils import is_main_process

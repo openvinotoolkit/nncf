@@ -16,6 +16,8 @@ strict digraph  {
 "14 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add__" [id=14, scope="LSTMCellNNCF/LSTMCellForwardNNCF[cell]", type=__add__];
 "15 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh" [id=15, scope="LSTMCellNNCF/LSTMCellForwardNNCF[cell]", type=tanh];
 "16 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul__" [id=16, scope="LSTMCellNNCF/LSTMCellForwardNNCF[cell]", type=__mul__];
+"17 /nncf_model_output" [id=17, scope="", type=nncf_model_output];
+"18 /nncf_model_output" [id=18, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
 "1 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
@@ -34,5 +36,7 @@ strict digraph  {
 "12 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul__" -> "14 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add__";
 "13 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul__" -> "14 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add__";
 "14 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add__" -> "15 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh";
+"14 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__add__" -> "18 /nncf_model_output";
 "15 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/tanh" -> "16 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul__";
+"16 LSTMCellNNCF/LSTMCellForwardNNCF[cell]/__mul__" -> "17 /nncf_model_output";
 }

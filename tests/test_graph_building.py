@@ -23,10 +23,28 @@ from nncf.dynamic_graph.graph import PTNNCFGraph
 from nncf.dynamic_graph.graph_builder import GraphBuilder
 from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
+from nncf.dynamic_graph.context import get_current_context
+from nncf.dynamic_graph.context import no_nncf_trace
+from nncf.dynamic_graph.context import TracingContext
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_compressed_graph import get_basic_quantization_config
 
 TEST_TRACING_CONTEXT = 'test'
+
+
+def test_no_nncf_trace_context_manager():
+    assert get_current_context() is None
+    context = TracingContext()
+
+    with context:
+        assert get_current_context().is_tracing
+        with no_nncf_trace():
+            assert not get_current_context().is_tracing
+            with no_nncf_trace():
+                assert not get_current_context().is_tracing
+            assert not get_current_context().is_tracing
+        assert get_current_context().is_tracing
+    assert get_current_context() is None
 
 
 def test_ambiguous_function():

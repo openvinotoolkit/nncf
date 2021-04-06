@@ -47,7 +47,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.os import safe_open
-
+from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
     for _qid, _q in qctrl.all_quantizations.items():
@@ -148,7 +148,7 @@ class QuantizationEnv:
         self.skip_constraint = params.skip_constraint
 
         # Bool to enable fine-tuning in each episode. Placeholder for now
-        self.finetune = params.skip_constraint
+        self.finetune = False
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
@@ -216,6 +216,12 @@ class QuantizationEnv:
                              .format(self.compression_ratio,
                                      self.min_model_size / self.orig_model_size,
                                      self.max_model_size / self.orig_model_size))
+
+        # Compression Ratio Calculation (BOP relative to 8-bit)
+        self.compression_ratio_calculator = CompressionRatioCalculator(
+            self.qmodel.get_flops_per_module(),
+            self.qctrl.get_quantizer_setup_for_current_state(),
+            self.qctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id)
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -326,6 +332,10 @@ class QuantizationEnv:
         # Annotate a min and a max value in prev_action before minmaxscaler fitting
         master_df.loc[master_df.index[0], 'prev_action'] = max(self.model_bitwidth_space)
         master_df.loc[master_df.index[-1], 'prev_action'] = min(self.model_bitwidth_space)
+
+        # add GEMM Ops to weight quantizer
+        master_df['n_op'] = master_df['state_scope'].map(self.qmodel.get_flops_per_module())
+        master_df['n_op'] = master_df['n_op'].fillna(0)
 
         return master_df, state_list
 
@@ -511,9 +521,15 @@ class QuantizationEnv:
         current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
         current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
 
+        current_model_bop_ratio = self.compression_ratio_calculator.run_for_quantizer_setup(
+            self.qctrl.get_quantizer_setup_for_current_state())
+
         reward = self.reward(quantized_score, current_model_ratio)
 
-        info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size}
+        info_set = {'model_ratio': current_model_ratio,
+                    'accuracy': quantized_score,
+                    'model_size': current_model_size,
+                    'bop_ratio': current_model_bop_ratio}
 
         obs = self.get_normalized_obs(len(collected_strategy) - 1)
         done = True
@@ -620,5 +636,5 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with safe_open(self.dump_dir / self.model_name / "_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
+        with safe_open(self.dump_dir / "{}_groups_of_adjacent_quantizers.json".format(self.model_name), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
