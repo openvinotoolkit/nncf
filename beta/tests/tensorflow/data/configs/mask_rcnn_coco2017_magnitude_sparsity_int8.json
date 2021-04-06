@@ -21,36 +21,14 @@
         }
     },
 
-    "compression": [
-        {
-            "algorithm": "magnitude_sparsity",
-            "params": {
-                "schedule": "multistep",
-                "multistep_steps": [
-                    1
-                ],
-                "multistep_sparsity_levels": [
-                    0.5,
-                    0.5
-                ]
-            }
-        },
-        {
-            "algorithm": "quantization",
-            "ignored_scopes": [
-                "{re}.*multilevel_propose_rois.*",
-                "{re}.*sample_proposals.*",
-                "{re}.*multilevel_crop_and_resize.*",
-                "{re}.*generate_detections.*",
-                "{re}.*sample_and_crop_foreground_masks.*",
-                "{re}.*decode_boxes.*",
-                "{re}.*encode_boxes.*",
-                "gt_boxes",
-                "gt_masks",
-                "image_info"
-        ]
+    "compression": {
+        "algorithm": "magnitude_sparsity",
+        "params": {
+            "schedule": "multistep",
+            "multistep_steps": [1],
+            "multistep_sparsity_levels": [0.5, 0.5]
         }
-    ],
+    },
 
     "include_mask": true,
     "model_params": {
@@ -62,7 +40,7 @@
                 }
             },
             "min_level": 2,
-            "max_level": 6,
+            "max_level": 2,
             "multilevel_features": "fpn",
             "fpn_params": {
                 "fpn_feat_dims": 256,

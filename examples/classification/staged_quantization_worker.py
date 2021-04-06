@@ -182,7 +182,7 @@ def staged_quantization_main_worker(current_gpu, config):
         config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
         kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
-        compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['compression_scheduler'])
+        compression_ctrl.scheduler.load_state(resuming_checkpoint['compression_scheduler'])
         optimizer.load_state_dict(resuming_checkpoint['optimizer'])
         optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
         if config.mode.lower() == 'train':
@@ -263,7 +263,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                 'best_acc1': best_acc1,
                 'compression_level': compression_level,
                 'optimizer': optimizer.state_dict(),
-                'compression_scheduler': compression_ctrl.scheduler.state_dict(),
+                'compression_scheduler': compression_ctrl.scheduler.get_state(),
                 'optimizer_scheduler': optimizer_scheduler.state_dict()
             }
 

@@ -22,16 +22,23 @@ from copy import deepcopy
 from torch import nn
 
 from nncf import register_module
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import Scope, PreHookId
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, NNCFGraph, OperationExecutionContext
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, PTNNCFGraph, OperationExecutionContext
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, GraphBuilder
 from nncf.dynamic_graph.operator_metatypes import NoopMetatype
 from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
-from nncf.nncf_network import NNCFNetwork, InsertionCommand, InsertionPoint, InsertionType, OperationPriority, \
-    InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.nncf_network import PTInsertionPoint
+from nncf.nncf_network import PTInsertionType
+from nncf.nncf_network import PTModelTransformer
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
 from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement, \
@@ -172,38 +179,38 @@ class TestInsertionCommands:
                                             [ModelInputInfo([1, 1, 10, 10])])  # type: NNCFNetwork
 
     conv1_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv1]')
-    point_for_conv1_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
-                                             module_scope=conv1_module_scope)
-    point_for_conv1_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+    point_for_conv1_weights = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
                                             module_scope=conv1_module_scope)
-    point_for_conv1_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
-                                                 module_scope=conv1_module_scope)
+    point_for_conv1_inputs = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                           module_scope=conv1_module_scope)
+    point_for_conv1_activations = PTTargetPoint(target_type=TargetType.POST_LAYER_OPERATION,
+                                                module_scope=conv1_module_scope)
 
     conv2_module_scope = Scope.from_str('InsertionPointTestModel/NNCFConv2d[conv2]')
-    point_for_conv2_weights = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
-                                             module_scope=conv2_module_scope)
-    point_for_conv2_inputs = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_PRE_OP,
+    point_for_conv2_weights = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
                                             module_scope=conv2_module_scope)
-    point_for_conv2_activations = InsertionPoint(insertion_type=InsertionType.NNCF_MODULE_POST_OP,
-                                                 module_scope=conv2_module_scope)
+    point_for_conv2_inputs = PTTargetPoint(target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                                           module_scope=conv2_module_scope)
+    point_for_conv2_activations = PTTargetPoint(target_type=TargetType.POST_LAYER_OPERATION,
+                                                module_scope=conv2_module_scope)
 
     linear_op_scope = Scope.from_str('InsertionPointTestModel/linear_0')
     linear_op_context = InputAgnosticOperationExecutionContext('linear',
                                                                linear_op_scope,
                                                                0)
-    point_for_linear_weight_input = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
-                                                   ia_op_exec_context=linear_op_context, input_port_id=0)
-    point_for_linear_activation = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
-                                                 ia_op_exec_context=linear_op_context)
+    point_for_linear_weight_input = PTTargetPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
+                                                  ia_op_exec_context=linear_op_context, input_port_id=0)
+    point_for_linear_activation = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
+                                                ia_op_exec_context=linear_op_context)
 
     relu_op_scope = Scope.from_str('InsertionPointTestModel/ReLU[relu]/relu')
     relu_op_context = InputAgnosticOperationExecutionContext('relu',
                                                              relu_op_scope,
                                                              0)
-    point_for_relu_inputs = InsertionPoint(insertion_type=InsertionType.OPERATOR_PRE_HOOK,
-                                           ia_op_exec_context=relu_op_context, input_port_id=0)
-    point_for_relu_activations = InsertionPoint(insertion_type=InsertionType.OPERATOR_POST_HOOK,
-                                                ia_op_exec_context=relu_op_context)
+    point_for_relu_inputs = PTTargetPoint(target_type=TargetType.OPERATOR_PRE_HOOK,
+                                          ia_op_exec_context=relu_op_context, input_port_id=0)
+    point_for_relu_activations = PTTargetPoint(target_type=TargetType.OPERATOR_POST_HOOK,
+                                               ia_op_exec_context=relu_op_context)
 
     available_points = [point_for_conv1_weights,
                         point_for_conv2_weights,
@@ -216,35 +223,34 @@ class TestInsertionCommands:
                         point_for_relu_activations,
                         point_for_relu_inputs]
 
-    @pytest.mark.parametrize("insertion_point", available_points)
-    def test_single_insertions(self, setup, insertion_point):
-        if insertion_point.insertion_type in [InsertionType.OPERATOR_PRE_HOOK, InsertionType.OPERATOR_POST_HOOK]:
+    @pytest.mark.parametrize("target_point", available_points)
+    def test_single_insertions(self, setup, target_point):
+        if target_point.target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]:
             hook = lambda x: x
         else:
             hook = BaseOp(lambda x: x)
 
-        command = InsertionCommand(insertion_point, hook)
-        self.compressed_model.register_insertion_command(command)
-        self.compressed_model.commit_compression_changes()
+        pt_ip = PTInsertionPoint(target_point)
+        self.compressed_model.insert_at_point(pt_ip, [hook])
 
         # pylint:disable=protected-access
-        if insertion_point.insertion_type == InsertionType.OPERATOR_PRE_HOOK:
+        if pt_ip.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            pre_hook_id = PreHookId(insertion_point.ia_op_exec_context, input_port_id=insertion_point.input_port_id)
+            pre_hook_id = PreHookId(target_point.ia_op_exec_context, input_port_id=target_point.input_port_id)
             assert ctx._pre_hooks[pre_hook_id][0] is hook
-        if insertion_point.insertion_type == InsertionType.OPERATOR_POST_HOOK:
+        if pt_ip.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.get_tracing_context()
-            assert ctx._post_hooks[command.insertion_point.ia_op_exec_context][0] is hook
-        if insertion_point.insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
-            module = self.compressed_model.get_module_by_scope(command.insertion_point.module_scope)
+            assert ctx._post_hooks[target_point.ia_op_exec_context][0] is hook
+        if pt_ip.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
+            module = self.compressed_model.get_module_by_scope(target_point.module_scope)
             assert module.pre_ops["0"] is hook
 
-        if insertion_point.insertion_type == InsertionType.NNCF_MODULE_POST_OP:
-            module = self.compressed_model.get_module_by_scope(command.insertion_point.module_scope)
+        if pt_ip.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
+            module = self.compressed_model.get_module_by_scope(target_point.module_scope)
             assert module.post_ops["0"] is hook
 
     priority_types = ["same", "different"]
-    insertion_types = InsertionType
+    insertion_types = TargetType
     priority_test_cases = list(itertools.product(priority_types, insertion_types))
 
     @staticmethod
@@ -258,7 +264,7 @@ class TestInsertionCommands:
         # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
-        if insertion_type in [InsertionType.NNCF_MODULE_PRE_OP, InsertionType.NNCF_MODULE_POST_OP]:
+        if insertion_type in [TargetType.OPERATION_WITH_WEIGHTS, TargetType.POST_LAYER_OPERATION]:
             hook1 = BaseOp(lambda x: x)
             hook2 = BaseOp(lambda x: 2 * x)
             hook3 = BaseOp(lambda x: 3 * x)
@@ -267,30 +273,33 @@ class TestInsertionCommands:
             hook2 = lambda x: 2 * x
             hook3 = lambda x: 3 * x
 
-        if insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
+        if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             point = self.point_for_conv2_weights
-        elif insertion_type == InsertionType.NNCF_MODULE_POST_OP:
+        elif insertion_type == TargetType.POST_LAYER_OPERATION:
             point = self.point_for_conv1_activations
-        elif insertion_type == InsertionType.OPERATOR_PRE_HOOK:
+        elif insertion_type == TargetType.OPERATOR_PRE_HOOK:
             point = self.point_for_linear_weight_input
-        elif insertion_type == InsertionType.OPERATOR_POST_HOOK:
+        elif insertion_type == TargetType.OPERATOR_POST_HOOK:
             point = self.point_for_relu_activations
+        else:
+            pytest.skip("Insertion type {} currently unsupported in PT".format(insertion_type))
 
         if priority_type == "same":
             # Same-priority commands will be executed in registration order
-            command1 = InsertionCommand(point, hook1, OperationPriority.DEFAULT_PRIORITY)
-            command2 = InsertionCommand(point, hook2, OperationPriority.DEFAULT_PRIORITY)
-            command3 = InsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
+            command1 = PTInsertionCommand(point, hook1, TransformationPriority.DEFAULT_PRIORITY)
+            command2 = PTInsertionCommand(point, hook2, TransformationPriority.DEFAULT_PRIORITY)
+            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
         else:
             # Prioritized commands will be executed in ascending priority order
-            command1 = InsertionCommand(point, hook1, OperationPriority.SPARSIFICATION_PRIORITY)
-            command2 = InsertionCommand(point, hook2, OperationPriority.QUANTIZATION_PRIORITY)
-            command3 = InsertionCommand(point, hook3, OperationPriority.DEFAULT_PRIORITY)
+            command1 = PTInsertionCommand(point, hook1, TransformationPriority.SPARSIFICATION_PRIORITY)
+            command2 = PTInsertionCommand(point, hook2, TransformationPriority.QUANTIZATION_PRIORITY)
+            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
 
-        self.compressed_model.register_insertion_command(command1)
-        self.compressed_model.register_insertion_command(command2)
-        self.compressed_model.register_insertion_command(command3)
-        self.compressed_model.commit_compression_changes()
+        layout = PTTransformationLayout()
+        layout.register(command1)
+        layout.register(command2)
+        layout.register(command3)
+        self.compressed_model = PTModelTransformer(self.compressed_model, layout).transform()
 
         hook_list = [hook1, hook2, hook3]
 
@@ -300,20 +309,20 @@ class TestInsertionCommands:
             order = [2, 0, 1]
 
         # pylint:disable=protected-access
-        if insertion_type == InsertionType.OPERATOR_PRE_HOOK:
+        if insertion_type == TargetType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             pre_hook_id = PreHookId(point.ia_op_exec_context, input_port_id=point.input_port_id)
             self.check_order(ctx._pre_hooks[pre_hook_id], hook_list, order)
-        if insertion_type == InsertionType.OPERATOR_POST_HOOK:
+        if insertion_type == TargetType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.get_tracing_context()
             self.check_order(ctx._post_hooks[point.ia_op_exec_context], hook_list, order)
 
-        if insertion_type == InsertionType.NNCF_MODULE_PRE_OP:
+        if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
-            self.check_order(list(module.pre_ops.values()), hook_list, order)
+            self.check_order([x.operand for x in module.pre_ops.values()], hook_list, order)
 
-        if insertion_type == InsertionType.NNCF_MODULE_POST_OP:
+        if insertion_type == TargetType.POST_LAYER_OPERATION:
             module = self.compressed_model.get_module_by_scope(point.module_scope)
             # Works because Pytorch ModuleDict is ordered
             self.check_order(list(module.post_ops.values()), hook_list, order)
@@ -324,7 +333,7 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
         input_edges = graph.in_edges(node_key)
         sorted_input_edges = sorted(input_edges, key=lambda x: x[0])
         for idx, edge in enumerate(sorted_input_edges):
-            graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR] = idx
+            graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR] = idx
 
 
 def get_two_branch_mock_model_graph() -> nx.DiGraph:
@@ -362,10 +371,10 @@ MOCK_OPERATOR_NAME = "conv_transpose2d"
 def get_mock_nncf_node_attrs(op_name=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     return {
-        NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                       Scope(),
-                                                                       0,
-                                                                       [None])
+        PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
+                                                                         Scope(),
+                                                                         0,
+                                                                         [None])
     }
 
 
@@ -386,10 +395,10 @@ def get_mock_model_graph_with_mergeable_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('conv2d', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('batch_norm', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
+    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -414,12 +423,12 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('conv2d', 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('C', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('batch_norm', 'D', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('D', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
+    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('C', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('batch_norm', 'D', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('D', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -442,12 +451,12 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
     for node_key in node_keys:
         mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('conv2d', 'batch_norm', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('conv2d', 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 1}),
-                               ('batch_norm', VersionAgnosticNames.RELU, {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               (VersionAgnosticNames.RELU, 'C', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
-                               ('C', 'B', {NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
+    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 1}),
+                               ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               (VersionAgnosticNames.RELU, 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+                               ('C', 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
     return mock_graph
 
 
@@ -520,7 +529,7 @@ class TestInsertionPointGraph:
                                                         0,
                                                         [None])
         node_attrs = {
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: ref_op_exec_context
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: ref_op_exec_context
         }
 
         node_key = 0
@@ -534,13 +543,13 @@ class TestInsertionPointGraph:
 
             post_hook_ip_node = ip_graph.nodes[succs[0]]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
-            assert post_hook_ip.insertion_type == InsertionType.OPERATOR_POST_HOOK
+            assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
             assert post_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
                 pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
-                assert pre_hook_ip.insertion_type == InsertionType.OPERATOR_PRE_HOOK
+                assert pre_hook_ip.target_type == TargetType.OPERATOR_PRE_HOOK
                 assert pre_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
 
     def test_operator_metatype_marking(self):
@@ -596,7 +605,7 @@ class TestInsertionPointGraph:
         for node in ip_graph.nodes().values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                scope_str = str(nncf_node_ref[NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                scope_str = str(nncf_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
                 assert scope_str in ref_scope_vs_metatype_dict
                 ref_metatype = ref_scope_vs_metatype_dict[scope_str]
                 assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
@@ -687,3 +696,29 @@ def test_temporary_clean_view():
     sparse_quantized_model.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.get_graph()
     assert graph_after_tmp_clean_view == old_graph
+
+
+class TestModelMultipleForward(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = nn.Conv2d(1, 1, 1, 1)
+        self.conv1 = nn.Conv2d(1, 1, 1, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x1 = self.conv1(x)
+        x2 = self.conv1(x)
+        return x1, x2
+
+
+def test_multiple_forward():
+    # Check that all convolution nodes in model have op_exec_context and module_attributes
+    # for case with multiple forward of one module
+    model = TestModelMultipleForward()
+    config = get_basic_sparsity_plus_quantization_config()
+    sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    graph = sparse_quantized_model.get_original_graph()
+    for node_key in list(graph.get_all_node_keys())[1:]:
+        node = graph.get_nx_node_by_key(node_key)
+        assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
+        assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)

@@ -39,6 +39,10 @@ ScaleType get_scale_type(const at::Tensor& input, const at::Tensor& input_low, c
             TORCH_CHECK(input_range.size(1) == scale_count, "Scale shape is not flat");
             return  ScaleType::PER_ACTIVATION_CHANNEL;
         }
+        // For (1x1x1x1) input/output tensors, it is assumed that input_range
+        // should be PER_WEIGHT_CHANNEL
+        if (scale_count == 1)
+            return ScaleType::PER_WEIGHT_CHANNEL;
     }
 
     return ScaleType::SINGLE_SCALE;
@@ -292,6 +296,7 @@ at::Tensor q_cuda_forward(
         at::Tensor input_low,
         at::Tensor input_range,
         int levels) {
+    at::DeviceGuard guard(input.device());
     const auto quantized_elements_count = input.numel();
 
     ScaleType scale_type = get_scale_type(input, input_low, input_range);
@@ -339,7 +344,7 @@ std::vector<at::Tensor> q_single_scale_cuda_backward(at::Tensor grad_output,
         int levels,
         int level_low,
         int level_high) {
-
+    at::DeviceGuard guard(input.device());
     const auto size = input.numel();
     auto grad_input = at::empty_like(grad_output);
 
@@ -383,7 +388,7 @@ std::vector<at::Tensor> q_scale_per_weight_channel_cuda_backward(at::Tensor grad
         int levels,
         int level_low,
         int level_high) {
-
+    at::DeviceGuard guard(input.device());
     const auto scale_count = input_range.size(0);
     const auto elements_per_scale = input.numel() / scale_count;
 
@@ -428,7 +433,7 @@ std::vector<at::Tensor> q_scale_per_activation_channel_cuda_backward(at::Tensor 
         int levels,
         int level_low,
         int level_high) {
-
+    at::DeviceGuard guard(input.device());
     const auto scale_count = input_range.size(1);
     const auto total_elements_per_scale = input.numel() / scale_count;
     const auto contiguous_elements_per_scale = input.numel() / (scale_count * input.size(0));
@@ -479,7 +484,7 @@ std::vector<at::Tensor> q_cuda_backward(
         int levels,
         int level_low,
         int level_high) {
-
+    at::DeviceGuard guard(input.device());
     ScaleType scale_type = get_scale_type(input, input_low, input_range);
 
     switch (scale_type)

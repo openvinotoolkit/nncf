@@ -11,30 +11,36 @@
  limitations under the License.
 """
 from typing import Dict
+from typing import List
 
 import numpy as np
 import torch
 from functools import partial
+from nncf.dynamic_graph.context import Scope
+
+from nncf.structures import LeGRInitArgs
 from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionLevel
-from nncf.dynamic_graph.context import Scope
-from nncf.layer_utils import _NNCFModuleMixin
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.layer_utils import _NNCFModuleMixin
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.base_algo import BasePruningAlgoBuilder, PrunedModuleInfo, BasePruningAlgoController
-from nncf.pruning.export_helpers import ModelPruner, Elementwise, Convolution, TransposeConvolution
+from nncf.pruning.export_helpers import ModelPruner
+from nncf.pruning.export_helpers import PTElementwise
+from nncf.pruning.export_helpers import PTConvolution
+from nncf.pruning.export_helpers import PTTransposeConvolution
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask, FILTER_IMPORTANCE_FUNCTIONS, \
     tensor_l2_normalizer
 from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask
-from nncf.pruning.model_analysis import Clusterization
-from nncf.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.pruning.utils import get_rounded_pruned_element_number, get_next_nodes_of_types
-from nncf.structures import LeGRInitArgs
+from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.utils import get_next_nodes_of_types, get_rounded_pruned_element_number
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
 
@@ -43,21 +49,21 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
     def create_weight_pruning_operation(self, module):
         return FilterPruningBlock(module.weight.size(module.target_weight_dim_for_compression))
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return FilterPruningController(target_model,
                                        self.pruned_module_groups_info,
                                        self.config)
 
-    def _is_pruned_module(self, module):
+    def _is_pruned_module(self, module) -> bool:
         # Currently prune only Convolutions
         return isinstance(module, tuple(NNCF_PRUNING_MODULES_DICT.keys()))
 
-    def get_op_types_of_pruned_modules(self):
+    def get_op_types_of_pruned_modules(self) -> List[str]:
         types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
         return types
 
-    def get_types_of_grouping_ops(self):
-        return Elementwise.get_all_op_aliases()
+    def get_types_of_grouping_ops(self) -> List[str]:
+        return PTElementwise.get_all_op_aliases()
 
 
 class FilterPruningController(BasePruningAlgoController):
@@ -137,13 +143,13 @@ class FilterPruningController(BasePruningAlgoController):
             if out_channels:
                 self.modules_out_channels[scope] = out_channels
 
-        prunable_types = Convolution.get_all_op_aliases() + TransposeConvolution.get_all_op_aliases()
+        prunable_types = PTConvolution.get_all_op_aliases() + PTTransposeConvolution.get_all_op_aliases()
         # 2. Init next_nodes for every pruning cluster
         for cluster in self.pruned_module_groups_info.get_all_clusters():
             next_nodes_cluster = set()
             for cluster_node in cluster.nodes:
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
-                next_nodes = get_next_nodes_of_types(self._model, nncf_cluster_node, prunable_types)
+                next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
                 next_nodes_idxs = [n.op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)

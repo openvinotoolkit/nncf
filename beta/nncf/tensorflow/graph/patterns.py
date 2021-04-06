@@ -26,7 +26,7 @@ LINEAR_OPS = reduce(operator.or_, LIST_LINEAR_OPS[1:], LIST_LINEAR_OPS[0])
 LIST_AGNOSTIC_OPS = [N(layer) for layer in LAYERS_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT]
 AG = reduce(operator.or_, LIST_AGNOSTIC_OPS[1:], LIST_AGNOSTIC_OPS[0])
 
-BN = N('BatchNormalization')
+BN = N('BatchNormalization') | N('SyncBatchNormalization')
 
 HARD_SIGMOID = (N('AddV2') + N('ReLU') + N('Mul'))
 HARD_SWISH = (N('Multiply') & (HARD_SIGMOID + N('Multiply')))

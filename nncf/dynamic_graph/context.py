@@ -22,9 +22,10 @@ from itertools import islice
 
 from nncf.debug import is_debug
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import NNCFGraph, NNCFNode
+from nncf.dynamic_graph.graph import PTNNCFGraph, PTNNCFNode
 from nncf.dynamic_graph.trace_tensor import make_input_infos
 from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.layers import ITERATION_MODULES
 from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
@@ -203,6 +204,14 @@ class Scope:
             elts = []
         return Scope([ScopeElement.from_str(s) for s in elts])
 
+    def get_iteration_scopes(self) -> List[str]:
+        results = []
+        scope_name = str(self)
+        for iter_scope in ITERATION_MODULES.registry_dict:
+            if iter_scope in scope_name:
+                results.append(iter_scope)
+        return results
+
 
 class PreHookId:
     def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
@@ -223,7 +232,7 @@ class PreHookId:
 # pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
-        self.graph = NNCFGraph()
+        self.graph = PTNNCFGraph()
 
         self._save_context = None
         self._post_hooks = {}
@@ -252,7 +261,7 @@ class TracingContext:
         self.leave()
 
     def find_operator_node(self, inputs: OperatorInput,
-                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> NNCFNode:
+                           ia_op_exec_context: InputAgnosticOperationExecutionContext) -> PTNNCFNode:
         with self._cond:
             self._n_instance += 1
         tensor_metas = make_input_infos(inputs)
@@ -476,7 +485,7 @@ class TracingContext:
         return Scope(scope_el_list)
 
     def reset_graph(self):
-        self.graph = NNCFGraph()
+        self.graph = PTNNCFGraph()
 
 
 @contextmanager

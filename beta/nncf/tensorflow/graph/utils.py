@@ -17,6 +17,7 @@ import inspect
 import tensorflow as tf
 
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.common.graph.graph import NNCFNode
 
 SHARED_OPERATION_MARK = '^'
 
@@ -42,14 +43,24 @@ def get_keras_layers_class_names():
     return keras_layers
 
 
+def get_keras_activation_names():
+    keras_activations = [activation_name for activation_name, _ in
+                    inspect.getmembers(sys.modules[tf.keras.activations.__name__], inspect.isfunction)]
+    return keras_activations
+
+
 def get_custom_objects(model):
     keras_layers = get_keras_layers_class_names()
+    keras_activations = get_keras_activation_names()
     custom_objects = {}
     for layer in model.submodules:
         if layer.__class__.__name__ == 'NNCFWrapper':
             layer = layer.layer
         if layer.__class__.__name__ not in keras_layers:
             custom_objects[layer.__class__.__name__] = layer.__class__
+        if layer.__class__.__name__ == 'Activation':
+            if layer.activation.__name__ not in keras_activations:
+                custom_objects[layer.activation.__name__] = layer.activation
     return custom_objects
 
 
@@ -114,3 +125,8 @@ def get_weight_node_name(nxgraph, node_name):
     while list(nxgraph.predecessors(node_name)):
         node_name = list(nxgraph.predecessors(node_name))[-1]
     return node_name
+
+
+def get_layer_identifier(node: NNCFNode):
+    layer_name, _ = get_original_name_and_instance_index(node.node_name)
+    return layer_name

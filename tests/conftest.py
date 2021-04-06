@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -37,6 +39,13 @@ def pytest_addoption(parser):
         "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
+        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
+                                                            "Directory must be empty or should not exist."
+                                                            "Metric keeps in "
+                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+                                                            "if param not specified"
+    )
+    parser.addoption(
         "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
     )
     parser.addoption(
@@ -54,6 +63,12 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+    )
+    parser.addoption(
+        "--onnx-dir", type=str, default=None, help="Path to converted onnx models"
+    )
+    parser.addoption(
+        "--ov-config-dir", type=str, default=None, help="Path to OpenVino configs"
     )
 
 
@@ -80,6 +95,11 @@ def sota_checkpoints_dir(request):
 @pytest.fixture(scope="module")
 def sota_data_dir(request):
     return request.config.getoption("--sota-data-dir")
+
+
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
 
 
 @pytest.fixture(scope="module")
@@ -112,3 +132,70 @@ def third_party(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
+
+
+@pytest.fixture(scope="module")
+def onnx_dir(request):
+    return request.config.getoption("--onnx-dir")
+
+
+@pytest.fixture(scope="module")
+def ov_config_dir(request):
+    return request.config.getoption("--ov-config-dir")
+
+
+@pytest.fixture(scope="function")
+def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pylint:disable=redefined-outer-name
+    if install_type is None:
+        pytest.skip("Please specify type of installation")
+    venv_path = tmp_path / 'venv'
+    venv_path.mkdir()
+
+    python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
+    pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
+
+    version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
+    if venv_type == 'virtualenv':
+        subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
+    elif venv_type == 'venv':
+        subprocess.call("python{} -m venv {}".format(version_string, venv_path), shell=True)
+        subprocess.call("{} install --upgrade pip".format(pip_with_venv), shell=True)
+        subprocess.call("{} install wheel".format(pip_with_venv), shell=True)
+
+    run_path = tmp_path / 'run'
+    run_path.mkdir()
+
+    if package_type == "pypi":
+        subprocess.run(
+            "{} install nncf".format(pip_with_venv), check=True, shell=True)
+    else:
+
+        subprocess.run(
+            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
+                python=python_executable_with_venv,
+                nncf_repo_root=PROJECT_ROOT,
+                package_type=package_type,
+                install_flag='--cpu-only' if
+                install_type == "CPU" else ''),
+            check=True,
+            shell=True,
+            cwd=PROJECT_ROOT)
+
+    return venv_path
+
+
+@pytest.fixture
+def runs_subprocess_in_precommit():
+    # PyTorch caches its CUDA memory allocations, so during the
+    # pytest execution the total memory reserved on GPUs will only grow,
+    # but it is not necessarily completely occupied at the current moment.
+    # The sub-processes are separate to the pytest process and will only see the GPU
+    # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
+    # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
+    # each time a GPU-powered subprocess is executed during a test.
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass

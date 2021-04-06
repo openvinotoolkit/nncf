@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2020-2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -12,17 +12,20 @@
 """
 
 from collections import OrderedDict
+from typing import Dict
+from typing import List
+
 from copy import deepcopy
-from typing import Dict, List
 
 from nncf.module_operations import UpdateWeight
-
 from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.quantization.layers import QUANTIZATION_MODULES, BaseQuantizer
+from nncf.quantization.layers import BaseQuantizer
+from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId
-from nncf.quantization.structs import WeightQuantizerInfo
+from nncf.quantization.quantizer_id import QuantizerId
+from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import WeightQuantizerInfo
 from nncf.structures import NNCFExtraConfigStruct
 from nncf.utils import get_all_modules_by_type
 
@@ -62,6 +65,7 @@ class WeightQuantizersHandler:
     """
     Defines weight quantizers for precision initialization in the order of execution.
     """
+
     def is_wq_scope(self, scope: 'Scope') -> bool:
         return scope[-2].calling_module_class_name == UpdateWeight.__name__
 
@@ -91,7 +95,7 @@ class WeightQuantizersHandler:
                 affected_module_scope = self.get_owning_module_scope_from_wq_scope(scope)
                 if affected_module_scope in self._wq_affected_module_scope_vs_qid_dict:
                     qid = self._wq_affected_module_scope_vs_qid_dict[affected_module_scope]
-                    if len(constraints.get_all_unique_bits(qid)) != 1:
+                    if len(constraints.get_all_unique_bitwidths(qid)) != 1:
                         self._weight_quantizers_in_execution_order_per_scope[scope] = quantizer
                         self._weight_quantizers_in_execution_order[qid] = quantizer
                     else:

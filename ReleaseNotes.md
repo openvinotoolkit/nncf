@@ -7,6 +7,23 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+
+## New in Release 1.6:
+- Added AutoQ - an AutoML-based mixed-precision initialization mode for quantization, which utilizes the power of reinforcement learning to select the best quantizer configuration for any model in terms of quality metric for a given HW architecture type.
+- NNCF now supports inserting compression operations as pre-hooks to PyTorch operations, instead of abusing the post-hooking; the flexibility of quantization setups has been improved as a result of this change.
+- Improved the pruning algorithm to group together dependent filters from different layers in the network and prune these together
+- Extended the ONNX compressed model exporting interface with an option to explicitly name input and output tensors
+- Changed the compression scheduler so that the correspondingepoch_step  and step methods should now be called in the beginning of the epoch and before the optimizer step (previously these were called in the end of the epoch and after the optimizer step respectively)
+- Data-dependent compression algorithm initialization is now specified in terms of dataset samples instead of training batches, e.g. `"num_init_samples"` should be used in place of "num_init_steps" in NNCF config files.
+- Custom user modules to be registered for compression can now be specified to be ignored for certain compression algorithms
+- Batch norm adaptation now being applied by default for all compression algorithms
+- Bumped target PyTorch version to 1.7.0
+- Custom OpenVINO operations such as "FakeQuantize" that appear in NNCF-exported ONNX models now have their ONNX `domain` set to org.openvinotoolkit
+- The quantization algorithm will now quantize nn.Embedding and nn.EmbeddingBag weights when targeting CPU
+- Added an option to optimize logarithms of quantizer scales instead of scales themselves directly, a technique which improves convergence in certain cases
+- Added reference checkpoints for filter-pruned models: UNet@Mapillary (25% of filters pruned), SSD300@VOC (40% of filters pruned)
+
+
 ## New in Release 1.5:
 - Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/compression_algorithms/Quantization.md#quantizer-setup-and-hardware-config-files).
 - HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.    

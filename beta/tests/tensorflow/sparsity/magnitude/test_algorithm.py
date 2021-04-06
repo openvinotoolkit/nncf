@@ -35,7 +35,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     sparse_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert isinstance(compression_ctrl, MagnitudeSparsityController)
-    assert compression_ctrl.sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
@@ -49,7 +49,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     for i, wrapper in enumerate(wrappers):
         ref_mask = tf.ones_like(wrapper.weights[-1]) if i == 0 else ref_mask_2
-        mask = list(wrapper.ops_weights.values())[0]
+        mask = list(wrapper.ops_weights.values())[0]['mask']
         op = list(wrapper.weights_attr_ops['kernel'].values())[0]
 
         tf.assert_equal(mask, ref_mask)
@@ -80,14 +80,14 @@ def test_can_create_magnitude_algo__without_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_steps': [1]}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-    assert compression_ctrl.sparsity_level == approx(0.1)
+    assert compression_ctrl.scheduler.current_sparsity_level == approx(0.1)
 
 
 def test_can_not_create_magnitude_algo__with_not_matched_steps_and_levels():
     config = get_basic_magnitude_sparsity_config()
     config['compression']['params'] = {'schedule': 'multistep', 'multistep_sparsity_levels': [0.1],
                                        'multistep_steps': [1, 2]}
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 
@@ -109,22 +109,22 @@ def test_magnitude_algo_binary_masks_are_applied():
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
     conv = compressed_model.layers[1]
     op_name = list(conv.ops_weights.keys())[0]
-    conv.ops_weights[op_name] = tf.ones_like(conv.weights[0])
+    conv.ops_weights[op_name] = {'mask': tf.ones_like(conv.weights[0])}
     input_ = tf.ones(input_shape)
     ref_output_1 = -4 * tf.ones((1, 4, 4, 2))
     output_1 = compressed_model(input_)
     tf.assert_equal(output_1, ref_output_1)
 
-    np_mask = conv.ops_weights[op_name].numpy()
+    np_mask = conv.ops_weights[op_name]['mask'].numpy()
     np_mask[0, 1, 0, 0] = 0
     np_mask[1, 0, 0, 1] = 0
-    conv.ops_weights[op_name] = tf.constant(np_mask)
+    conv.ops_weights[op_name] = {'mask': tf.constant(np_mask)}
     ref_output_2 = - 3 * tf.ones_like(ref_output_1)
     output_2 = compressed_model(input_)
     tf.assert_equal(output_2, ref_output_2)
 
     np_mask[0, 1, 0, 1] = 0
-    conv.ops_weights[op_name] = tf.constant(np_mask)
+    conv.ops_weights[op_name] = {'mask': tf.constant(np_mask)}
     ref_output_3 = ref_output_2.numpy()
     ref_output_3[..., 1] = -2 * np.ones_like(ref_output_1[..., 1])
     ref_output_3 = tf.constant(ref_output_3)

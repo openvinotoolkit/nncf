@@ -1,17 +1,23 @@
 import math
-
-
-from functools import partial
-from typing import Dict, Tuple, Any, Callable
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import torch
-from torch.utils.data import DataLoader
+from functools import partial
 from torch.nn.modules.loss import _Loss
+from torch.utils.data import DataLoader
 
 from nncf.progress_bar import ProgressBar
-from nncf.structures import QuantizationPrecisionInitArgs, QuantizationRangeInitArgs, \
-    BNAdaptationInitArgs, AutoQPrecisionInitArgs, LeGRInitArgs
-from nncf.utils import objwalk, is_tensor, training_mode_switcher
+from nncf.structures import AutoQPrecisionInitArgs, LeGRInitArgs
+from nncf.structures import BNAdaptationInitArgs
+from nncf.structures import QuantizationPrecisionInitArgs
+from nncf.structures import QuantizationRangeInitArgs
+from nncf.utils import is_tensor
+from nncf.utils import objwalk
+from nncf.utils import training_mode_switcher
 
 
 class InitializingDataLoader:
@@ -79,7 +85,7 @@ class PartialDataLoader:
             raise ValueError("iter_ratio must be within 0 to 1 range")
         self.data_loader = regular_data_loader
         self.batch_size = regular_data_loader.batch_size
-        self._stop_id = math.ceil(len(self.data_loader)*iter_ratio)
+        self._stop_id = math.ceil(len(self.data_loader) * iter_ratio)
         self._batch_id = 0
 
     def __iter__(self):
@@ -99,7 +105,7 @@ class PartialDataLoader:
 
 
 class DataLoaderBaseRunner:
-    def __init__(self, model, init_device: str):
+    def __init__(self, model, init_device: Optional[str]):
         self.model = model
         self.init_device = init_device
         self.progressbar_description = 'Algorithm initialization'
@@ -121,8 +127,9 @@ class DataLoaderBaseRunner:
         self.model(*args, **kwargs)
 
     def run(self, data_loader, num_init_steps):
-        original_device = next(iter(self.model.parameters())).device
-        self.model.to(self.init_device)
+        if self.init_device is not None:
+            original_device = next(iter(self.model.parameters())).device
+            self.model.to(self.init_device)
 
         self._prepare_initialization()
         device = next(self.model.parameters()).device
@@ -132,7 +139,8 @@ class DataLoaderBaseRunner:
             self._run_model_inference(data_loader, num_init_steps, device)
             self._apply_initializers()
 
-        self.model.to(original_device)
+        if self.init_device is not None:
+            self.model.to(original_device)
 
     def _prepare_initialization(self):
         raise NotImplementedError
@@ -144,6 +152,7 @@ class DataLoaderBaseRunner:
 class SimpleDataLoaderRunner(DataLoaderBaseRunner):
     def _prepare_initialization(self):
         pass
+
     def _apply_initializers(self):
         pass
 
@@ -161,6 +170,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         def func_apply_to_bns(module):
             if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
                 func(module)
+
         return func_apply_to_bns
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
@@ -209,7 +219,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
-# TODO: fix this function usage in all examples and tests (and chech whether train loader is always a train or ut can be init)
+# TODO: fix this function usage in all examples and tests (and check whether train loader is always a train or ut can be init)
 def register_default_init_args(nncf_config: 'NNCFConfig',
                                init_loader: torch.utils.data.DataLoader,
                                train_loader: torch.utils.data.DataLoader,

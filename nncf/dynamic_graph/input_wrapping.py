@@ -7,7 +7,7 @@ import torch
 from nncf.dynamic_graph.patch_pytorch import register_operator
 from nncf.dynamic_graph.graph_builder import ModelInputInfo, create_mock_tensor
 from nncf.utils import is_tensor, objwalk
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 @register_operator()

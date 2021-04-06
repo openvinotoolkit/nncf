@@ -240,6 +240,8 @@ def test_export_lstm_cell(tmp_path):
 class TestLSTM:
     def test_forward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                           empty_initial, dropout, _seed):
+        if not torch.cuda.is_available() and is_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
         p = sizes
 
@@ -285,7 +287,8 @@ class TestLSTM:
 
     def test_backward_lstm(self, sizes, bidirectional, num_layers, bias, batch_first, variable_length, sorted_, is_cuda,
                            empty_initial, dropout, _seed):
-
+        if not torch.cuda.is_available() and is_cuda is True:
+            pytest.skip("Skipping CUDA test cases for CPU only setups")
         num_directions = 2 if bidirectional else 1
 
         p = sizes
@@ -393,7 +396,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 55
+    assert onnx_num == 54
 
 
 class TestNumberOfNodes:
@@ -430,24 +433,33 @@ class TestNumberOfNodes:
 
         counters = {}
         counter_for_input_quantizer = None
+        inter_layer_reset_point_post_aq_counters = {}
         for name, quantizer in algo.all_quantizations.items():
             counter = Counter()
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
             if str(name) == '/nncf_model_input_0|OUTPUT':
                 counter_for_input_quantizer = counter
                 continue
+            if 'RNNResetPoint' in str(name):
+                inter_layer_reset_point_post_aq_counters[name] = counter
+                continue
             counters[name] = counter
         _ = model(test_data.x, test_hidden)
-        assert model.get_graph().get_nodes_count() == 112  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) + 1 == 55 # 8 WQ + 46 AQ + 1 input AQ
+        assert model.get_graph().get_nodes_count() == 111  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) + 2 == 54 # 8 WQ + 44 AQ + 1 input AQ + 1 reset point AQ
         for counter in counters.values():
             assert counter.count == p.seq_length
         assert counter_for_input_quantizer.count == 1
+        for counter in inter_layer_reset_point_post_aq_counters.values():
+            assert counter.count == 1
 
 
     def test_number_of_calling_fq_for_gnmt(self):
-        torch.cuda.set_device(0)
-        device = torch.device('cuda')
+        if torch.cuda.is_available():
+            torch.cuda.set_device(0)
+            device = torch.device('cuda')
+        else:
+            device = torch.device('cpu')
         batch_first = False
         vocab_size = 32000
         model_config = {'hidden_size': 100,
@@ -461,15 +473,9 @@ class TestNumberOfNodes:
         sequence_size = 50
         input_sample_size = [batch_size, sequence_size] if batch_first else [sequence_size, batch_size]
         config = get_empty_config(input_sample_sizes=input_sample_size)
-        config['quantizer_setup_type'] = 'pattern_based'
         config['compression'] = \
             {'algorithm': 'quantization',
-             'quantize_inputs': True,
-             'quantizable_subgraph_patterns': [["linear", "__add__"],
-                                               ["sigmoid", "__mul__", "__add__"],
-                                               ["__add__", "tanh", "__mul__"],
-                                               ["sigmoid", "__mul__"]],
-             'disable_function_quantization_hooks': True}
+             'quantize_inputs': True}
         config['scopes_without_shape_matching'] = \
             ['GNMT/ResidualRecurrentDecoder[decoder]/RecurrentAttention[att_rnn]/BahdanauAttention[attn]', ]
 
@@ -521,8 +527,8 @@ class TestNumberOfNodes:
             counters[str(name)] = counter
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
-        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 57
+        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size, name
@@ -530,8 +536,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 232  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 57
+        assert model.get_graph().get_nodes_count() == 318  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 143
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name

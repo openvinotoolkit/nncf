@@ -10,17 +10,24 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Set, List, Dict
+from typing import Dict
+from typing import Set
 
+from nncf.api.compression import CompressionLevel
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
-from nncf.module_operations import UpdateWeight
-from nncf.nncf_network import InsertionPoint, NNCFNetwork, InsertionCommand, OperationPriority, InsertionType
-from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase, ReductionShape
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.tensor_statistics.collectors import ReductionShape
+from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
 class TensorStatisticObservationPoint:
-    def __init__(self, insertion_point: InsertionPoint,
+    def __init__(self, insertion_point: PTTargetPoint,
                  reduction_shapes: Set[ReductionShape] = None):
         self.insertion_point = insertion_point
         self.reduction_shapes = reduction_shapes
@@ -32,38 +39,37 @@ class TensorStatisticObservationPoint:
         return self.insertion_point == other.insertion_point
 
 
-class TensorStatisticsCollectionBuilder(CompressionAlgorithmBuilder):
+class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config: NNCFConfig,
                  observation_points_vs_collectors: Dict[TensorStatisticObservationPoint,
                                                         TensorStatisticCollectorBase]):
         super().__init__(config)
         self._observation_points_vs_collectors = observation_points_vs_collectors
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         # Will it really suffice to use a single collector for all threads? After all, each of the threads
         # receives its own data, and should we use a thread-local collector, there would have to be a
         # separate thread reduction step involved. Still, is there a better option here than to rely on GIL?
-        retval = []  # type: List[InsertionCommand]
+        layout = PTTransformationLayout()
         for op, collector in self._observation_points_vs_collectors.items():
             hook_obj = collector.register_input
-            is_weights = op.insertion_point.insertion_type in [InsertionType.NNCF_MODULE_PRE_OP,
-                                                               InsertionType.NNCF_MODULE_POST_OP]
-            if is_weights:
-                hook_obj = UpdateWeight(hook_obj)
-            command = InsertionCommand(op.insertion_point, hook_obj,
-                                       OperationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
-            retval.append(command)
-        return retval
+            command = PTInsertionCommand(op.insertion_point, hook_obj,
+                                         TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION)
+            layout.register(command)
+        return layout
 
     def build_controller(self, target_model: NNCFNetwork) -> 'TensorStatisticsCollectionController':
         return TensorStatisticsCollectionController(target_model,
                                                     {k.insertion_point: v
                                                      for k, v in self._observation_points_vs_collectors.items()})
 
+    def _handle_frozen_layers(self, target_model: NNCFNetwork):
+        pass
 
-class TensorStatisticsCollectionController(CompressionAlgorithmController):
+
+class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
-                 ip_vs_collector_dict: Dict[InsertionPoint, TensorStatisticCollectorBase]):
+                 ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
 

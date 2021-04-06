@@ -17,18 +17,18 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
-from nncf.compression_method_api import StubCompressionScheduler
+from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from nncf.sparsity.schedulers import PolynomialSparseScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
 from tests.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement, get_empty_config
 
 
-def get_basic_sparsity_config(model_size=4, input_sample_size=None,
+def get_basic_sparsity_config(input_sample_size=None,
                               sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2,
                               sparsity_freeze_epoch=3):
     if input_sample_size is None:
@@ -37,7 +37,6 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
     config = NNCFConfig()
     config.update({
         "model": "basic_sparse_conv",
-        "model_size": model_size,
         "input_info":
             {
                 "sample_size": input_sample_size,
@@ -121,9 +120,9 @@ def test_can_create_sparse_loss_and_scheduler():
 
     assert isinstance(scheduler, PolynomialSparseScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.sparsity_target == approx(0.5)
-    assert scheduler.sparsity_target_epoch == 2
-    assert scheduler.sparsity_freeze_epoch == 3
+    assert scheduler.target_sparsity == approx(0.5)
+    assert scheduler.target_epoch == 2
+    assert scheduler.freeze_epoch == 3
 
 
 def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
@@ -234,4 +233,4 @@ def test_create_rb_algo_with_stub_scheduler():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
     # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, StubCompressionScheduler)
+    assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)

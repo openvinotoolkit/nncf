@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class ProgressBar:

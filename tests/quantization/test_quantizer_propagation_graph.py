@@ -19,7 +19,7 @@ import networkx as nx
 import pytest
 
 from nncf.nncf_network import InsertionPointGraph
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG, \
     QuantizerPropagationStateGraphNodeType, QuantizationTrait
 from tests.test_nncf_network import get_two_branch_mock_model_graph, get_mock_nncf_node_attrs, \
@@ -81,7 +81,7 @@ class TestQuantizerPropagationStateGraph:
         quant_prop_graph.run_consistency_check()
 
     def test_add_propagating_quantizer(self, mock_qp_graph):
-        ref_qconf_list = [QuantizerConfig(), QuantizerConfig(bits=6)]
+        ref_qconf_list = [QuantizerConfig(), QuantizerConfig(num_bits=6)]
 
         target_node_key = "F"
         target_ip_node_key = InsertionPointGraph.get_pre_hook_node_key(target_node_key)
@@ -234,7 +234,7 @@ class TestQuantizerPropagationStateGraph:
     def start_target_accepting_nodes(request):
         return request.param
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_backtrack_propagation_until_accepting_location(self, start_target_accepting_nodes, mock_qp_graph):
         start_ip_node_key = start_target_accepting_nodes[0]
         target_ip_node_key = start_target_accepting_nodes[1]
@@ -266,7 +266,7 @@ class TestQuantizerPropagationStateGraph:
             assert target_ip_node_key not in prop_quant.affected_ip_nodes
         assert accepting_node[QPSG.PROPAGATING_QUANTIZER_NODE_ATTR] == prop_quant
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_clone_propagating_quantizer(self, mock_qp_graph, start_target_nodes):
         start_ip_node_key = start_target_nodes[0]
         target_ip_node_key = start_target_nodes[1]
@@ -320,7 +320,7 @@ class TestQuantizerPropagationStateGraph:
     def start_target_nodes_for_two_quantizers(request):
         return request.param
 
-    @pytest.mark.dependency(depends="propagate_via_path")
+    @pytest.mark.dependency(depends=["propagate_via_path"])
     def test_remove_propagating_quantizer(self, mock_qp_graph, start_target_nodes_for_two_quantizers):
         start_ip_node_key_remove = start_target_nodes_for_two_quantizers[0]
         target_ip_node_key_remove = start_target_nodes_for_two_quantizers[1]
@@ -865,7 +865,7 @@ class TestRedundantQuantizerMerge:
                 (InsertionPointGraph.get_post_hook_node_key('C'),
                  InsertionPointGraph.get_pre_hook_node_key('F'))
             ])
-            _ = qpsg.add_propagating_quantizer([QuantizerConfig(bits=6)],
+            _ = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=6)],
                                                InsertionPointGraph.get_pre_hook_node_key('F'))
             return qpsg
 

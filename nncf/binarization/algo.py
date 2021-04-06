@@ -20,30 +20,41 @@ from torch import nn
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
     ActivationBinarizationScaleThreshold, BaseBinarizer
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.api.compression import CompressionLevel
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from nncf.layers import NNCFConv2d
-from nncf.module_operations import UpdateWeight, UpdateInputs
-from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
+from nncf.module_operations import UpdateInputs
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import QuantizationControllerBase
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
 
 
 @COMPRESSION_ALGORITHMS.register('binarization')
-class BinarizationBuilder(CompressionAlgorithmBuilder):
+class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self.mode = self.config.get('mode', BinarizationMode.XNOR)
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        return self._binarize_weights_and_module_inputs(target_model)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        layout = PTTransformationLayout()
+        commands = self._binarize_weights_and_module_inputs(target_model)
+        for command in commands:
+            layout.register(command)
+        return layout
+
 
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()
 
-    def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _binarize_weights_and_module_inputs(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
         modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
 
@@ -57,21 +68,22 @@ class BinarizationBuilder(CompressionAlgorithmBuilder):
 
             if isinstance(module, torch.nn.modules.Conv2d):
                 nncf_logger.info("Adding Weight binarizer in scope: {}".format(scope_str))
-                op_weights = UpdateWeight(
-                    self.__create_binarize_module()
-                ).to(device)
+                op_weights = self.__create_binarize_module().to(device)
 
                 nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
                 op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(module.weight.shape)).to(device)
 
-                ip = InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
-                                    module_scope=scope)
-                insertion_commands.append(InsertionCommand(ip, op_weights, OperationPriority.QUANTIZATION_PRIORITY))
+                ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                     module_scope=scope)
+                insertion_commands.append(PTInsertionCommand(ip_w, op_weights,
+                                                             TransformationPriority.QUANTIZATION_PRIORITY))
 
-                insertion_commands.append(InsertionCommand(ip, op_inputs, OperationPriority.QUANTIZATION_PRIORITY))
+                ip_i = PTTargetPoint(TargetType.PRE_LAYER_OPERATION, module_scope=scope)
+                insertion_commands.append(PTInsertionCommand(ip_i, op_inputs,
+                                                             TransformationPriority.QUANTIZATION_PRIORITY))
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
+    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
         return BinarizationController(target_model, self.config)
 
 

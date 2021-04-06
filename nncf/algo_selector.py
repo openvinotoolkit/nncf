@@ -11,20 +11,27 @@
  limitations under the License.
 """
 # pylint:disable=relative-beyond-top-level
-from .compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.nncf_network import NNCFNetwork
+
+from nncf.api.compression import CompressionLevel
+from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')
-class NoCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
-    def build_controller(self, target_model: 'NNCFNetwork') -> CompressionAlgorithmController:
+class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        return PTTransformationLayout()
+
+    def build_controller(self, target_model: 'NNCFNetwork') -> PTCompressionAlgorithmController:
         return NoCompressionAlgorithmController(target_model)
 
 
 # pylint:disable=abstract-method
-class NoCompressionAlgorithmController(CompressionAlgorithmController):
+class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def compression_level(self) -> CompressionLevel:
         """
         Returns level of compression. Should be used on saving best checkpoints to distinguish between

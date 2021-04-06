@@ -162,7 +162,7 @@ def configure_logging(sample_logger, config):
 
     nncf_log_file_handler = logging.FileHandler(osp.join(config.log_dir, NNCF_LOG_FILE_NAME))
     nncf_log_file_handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-    from nncf.nncf_logger import logger as nncf_logger
+    from nncf.common.utils.logger import logger as nncf_logger
     nncf_logger.addHandler(nncf_log_file_handler)
 
 
@@ -179,7 +179,7 @@ def is_on_first_rank(config):
                                                       and config.rank % config.ngpus_per_node == 0)
 
 
-def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu")):
+def create_code_snapshot(root, dst_path, extensions=(".py", ".json", ".cpp", ".cu", ".h", ".cuh")):
     """Creates tarball with the source code"""
     with tarfile.open(str(dst_path), "w:gz") as tar:
         for path in Path(root).rglob("*"):

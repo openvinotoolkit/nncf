@@ -33,7 +33,7 @@ from collections import OrderedDict
 from natsort import natsorted
 
 from nncf.debug import is_debug, DEBUG_LOG_DIR
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 from nncf.hw_config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer
@@ -41,11 +41,12 @@ from nncf.quantization.algo import QuantizationController, NNCFNetwork, Experime
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
-from nncf.quantization.layers import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerConfig
 
 from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_setup import QuantizationPointId
+from nncf.common.os import safe_open
 
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
@@ -61,7 +62,7 @@ class ModelSizeCalculator:
         self._nparam_map = OrderedDict()
         for qid, qconfig_space in per_quantizer_config_space.items():
             if isinstance(qid, WeightQuantizerId):
-                self._bw_space_map[qid] = [qconf.bits for qconf in qconfig_space]
+                self._bw_space_map[qid] = [qconf.num_bits for qconf in qconfig_space]
                 m = qmodel.get_module_by_scope(qid.scope)
                 self._nparam_map[qid] = np.prod(m.weight.size())
 
@@ -153,7 +154,7 @@ class QuantizationEnv:
         if self.hw_cfg_type is None:
             self.model_bitwidth_space = params.bits
         elif self.hw_cfg_type is HWConfigType.VPU:
-            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bits()
+            self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bitwidths()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
@@ -161,16 +162,31 @@ class QuantizationEnv:
         self.qconfig_space_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())  # type: Dict[QuantizerId, List[QuantizerConfig]]
         if self.hw_cfg_type is None:
             for qid in self.qconfig_space_map.keys():
-                conf = self.qctrl.all_quantizations[qid].get_current_config()
+                conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
                 conf_list_to_set = []
                 for bit in self.model_bitwidth_space:
                     bit_adjusted_conf = deepcopy(conf)
-                    bit_adjusted_conf.bits = bit
+                    bit_adjusted_conf.num_bits = bit
                     conf_list_to_set.append(bit_adjusted_conf)
                 self.qconfig_space_map[qid] = conf_list_to_set
         else:
             for qid in self.qconfig_space_map:
-                self.qconfig_space_map[qid] = self._hw_precision_constraints.get(qid)
+                conf_list_to_set = []
+                bw_vs_qconfigs_dict = self._hw_precision_constraints.get_bitwidth_vs_qconfigs_dict(qid)
+                for bitwidth, qconf_list in bw_vs_qconfigs_dict.items():
+                    target_qconf = qconf_list[0]
+                    if len(qconf_list) > 1:
+                        logger.warning("Received multiple quantizer configurations {qc_lst} for same bitwidth {bw} "
+                                       "for quantizer {q} - AutoQ can currently only choose among bitwidths, but not "
+                                       "within quantizer configuration space with the same bitwidths. Selecting {qc} "
+                                       "as the target configuration for bitwidth {bw}".format(
+                            qc_lst=";".join([str(qconf) for qconf in qconf_list]),
+                            bw=bitwidth,
+                            q=str(qid),
+                            qc=str(target_qconf)))
+                    conf_list_to_set.append(target_qconf)
+
+                self.qconfig_space_map[qid] = conf_list_to_set
 
         # Quantizer Master Table Creation
         self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
@@ -272,7 +288,7 @@ class QuantizationEnv:
         df = pd.DataFrame.from_dict(d, orient='index')
         df['qid_obj'] = df['qid'].apply(lambda x: find_qid_by_str(self.qctrl, x))
         df['qmodule'] = df['qid_obj'].apply(lambda x: self.qctrl.all_quantizations[x])
-        df['is_wt_quantizer'] = df['qmodule'].apply(lambda x: x.is_weights)
+        df['is_wt_quantizer'] = df['qid_obj'].apply(lambda x: x in self.qctrl.weight_quantizers)
         df['state_module'] = df['state_scope'].apply(self.qmodel.get_module_by_scope)
 
         quantizer_table = df.loc[natsorted(df.index)]
@@ -405,7 +421,7 @@ class QuantizationEnv:
 
     def _constrain_model_size(self, collected_strategy: List, skip=False) -> List:
         def lower_bitwidth(bw: int, qconf_space: List[QuantizerConfig]) -> int:
-            bw_space = [qconf.bits for qconf in qconf_space]
+            bw_space = [qconf.num_bits for qconf in qconf_space]
             assert bw in bw_space
             sorted_bw_space = sorted(bw_space)
             return sorted_bw_space[sorted_bw_space.index(bw)-1] if sorted_bw_space.index(bw) > 0 else bw
@@ -444,7 +460,7 @@ class QuantizationEnv:
 
         # Ensure action is in the quantizer's bitwidth space
         current_qconf_space = self.master_df.qconf_space[currently_processed_qconf_idx]
-        current_bw_space = [qconf.bits for qconf in current_qconf_space]
+        current_bw_space = [qconf.num_bits for qconf in current_qconf_space]
         if action not in current_bw_space:
             closest_bw_idx = np.argmin(np.abs(action - np.array(current_bw_space)))
             action = current_bw_space[closest_bw_idx]
@@ -469,7 +485,7 @@ class QuantizationEnv:
                                             self.master_df['qconf_space']):
             matches = []
             for qconf in qconf_space:
-                if qconf.bits == action:
+                if qconf.num_bits == action:
                     matches.append(qconf)
             assert len(matches) == 1
             for qp_id in qp_id_set:
@@ -604,6 +620,5 @@ class QuantizationEnv:
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with open(osp.join(self.dump_dir,
-                           self.model_name + "_groups_of_adjacent_quantizers.json"), "w") as DUMP_FH:
+        with safe_open(self.dump_dir / self.model_name / "_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)

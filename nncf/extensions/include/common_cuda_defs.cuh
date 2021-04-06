@@ -2,13 +2,13 @@
 #define _COMMON_CUDA_DEFS_CUH_
 
 #include <ATen/ATen.h>
+#include <ATen/DeviceGuard.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
 #include <vector>
 #include <THC/THC.h>
-
 
 const uint32_t CUDA_WARP_SIZE = 32;
 const uint32_t CUDA_TARGET_NUM_THREADS_PER_SM = 2048; // Will decide upon a number of threads per block and blocks per grid based on the workload to hit this target

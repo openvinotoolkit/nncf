@@ -20,7 +20,7 @@ from nncf.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
 from nncf.utils import in_scope_list
 from nncf.dynamic_graph.context import Scope, ScopeElement
 
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 def is_nncf_module(module):

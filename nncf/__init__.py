@@ -14,7 +14,16 @@
 from .version import __version__
 from .common.utils.backend import __nncf_backend__
 
+from .config import NNCFConfig
+
 if __nncf_backend__ == 'Torch':
+    # NNCF builds extensions based on torch load() function
+    # This function has a bug inside which patch_extension_build_function() solves
+    # This bug will be fixed in torch 1.8.0
+    from .dynamic_graph.patch_pytorch import patch_extension_build_function
+    # It must be called before importing packages containing CUDA extensions
+    patch_extension_build_function()
+
     # Required for correct COMPRESSION_ALGORITHMS registry functioning
     from .binarization import algo as binarization_algo
     from .quantization import algo as quantization_algo
@@ -28,9 +37,8 @@ if __nncf_backend__ == 'Torch':
 
     from .model_creation import create_compressed_model
     from .checkpoint_loading import load_state
-    from .config import NNCFConfig
-    from .nncf_logger import disable_logging
-    from .nncf_logger import set_log_level
+    from .common.utils.logger import disable_logging
+    from .common.utils.logger import set_log_level
     from .initialization import register_default_init_args
     from .layers import register_module
     from .dynamic_graph.patch_pytorch import register_operator
@@ -40,4 +48,7 @@ if __nncf_backend__ == 'Torch':
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",
     # so this call is moved to package __init__ to ensure this.
     from .dynamic_graph.patch_pytorch import patch_torch_operators
+
+    from .extensions import force_build_cpu_extensions, force_build_cuda_extensions
+
     patch_torch_operators()

@@ -24,7 +24,7 @@ from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
-from beta.examples.tensorflow.common.callbacks import get_callbacks
+from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.model_loader import get_model
@@ -35,6 +35,8 @@ from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
+from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 
 
 def get_argument_parser():
@@ -58,6 +60,12 @@ def get_argument_parser():
     )
     parser.add_argument('--test-every-n-epochs', default=1, type=int,
                         help='Enables running validation every given number of epochs')
+    parser.add_argument(
+        "--pretrained",
+        dest="pretrained",
+        help="Use pretrained models from the tf.keras.applications",
+        action="store_true",
+    )
     return parser
 
 
@@ -108,12 +116,15 @@ def load_checkpoint(model, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch):
+def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(model, ckpt_path) == 0:
         return 0
     initial_step = model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d', initial_epoch)
     return initial_epoch
 
@@ -170,7 +181,8 @@ def run(config):
                 initial_epoch = resume_from_checkpoint(model=compress_model,
                                                        compression_ctrl=compression_ctrl,
                                                        ckpt_path=config.ckpt_path,
-                                                       steps_per_epoch=train_steps)
+                                                       steps_per_epoch=train_steps,
+                                                       config=config)
             else:
                 logger.info('initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
@@ -184,6 +196,8 @@ def run(config):
         model_dir=config.log_dir,
         ckpt_dir=config.checkpoint_save_dir)
 
+    callbacks.append(get_progress_bar(
+        stateful_metrics=[metric.name for metric in metrics]))
     callbacks.extend(compression_callbacks)
 
     validation_kwargs = {
@@ -204,10 +218,15 @@ def run(config):
 
     logger.info('evaluation...')
     print_statistics(compression_ctrl.statistics())
-    compress_model.evaluate(
+    results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,
+        callbacks=[get_progress_bar(
+            stateful_metrics=[metric.name for metric in metrics])],
         verbose=1)
+
+    if config.metrics_dump is not None:
+        write_metrics(results[1], config.metrics_dump)
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)

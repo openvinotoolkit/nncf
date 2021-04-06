@@ -10,7 +10,10 @@
             "q8_ch": {
                 "bits": 8,
                 "mode": "symmetric",
-                "granularity": "perchannel"
+                "granularity": [
+                    "perchannel",
+                    "pertensor"
+                ]
             },
             "q4_tn": {
                 "bits": 4,
@@ -32,6 +35,9 @@
     "operations": [
         {
             "type": "Convolution",
+            "attributes": {
+                "adjust_padding": true
+            },
             "quantization": {
                 "activations": ["q8_tn", "q4_tn"],
                 "weights": ["q8_ch","q4_ch", "q2_ch"]

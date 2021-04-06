@@ -13,10 +13,10 @@
 
 from texttable import Texttable
 
-from beta.nncf.utils.logger import logger as default_logger
+from nncf.common.utils.logger import logger as nncf_logger
 
 
-def print_statistics(stats, logger=default_logger):
+def print_statistics(stats, logger=nncf_logger):
     for key, val in stats.items():
         if isinstance(val, Texttable):
             logger.info(key + '\n' + val.draw())
