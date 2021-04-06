@@ -285,6 +285,7 @@ def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref
     compressed_model.do_dummy_forward()
     # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
     compressed_model.train()
+    compressed_model.rebuild_graph()
     compressed_model.do_dummy_forward()
     check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 

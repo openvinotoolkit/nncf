@@ -253,4 +253,3 @@ class NNCFGraph:
                              key=lambda edge: self._nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR])
 
         return [self._nx_graph.edges[edge] for edge in input_edges]
-

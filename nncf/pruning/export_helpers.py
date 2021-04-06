@@ -22,9 +22,8 @@ from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
-from nncf.dynamic_graph.operator_metatypes import (
+from nncf.graph.operator_metatypes import (
     AddMetatype,
     AvgPool2dMetatype,
     BatchNormMetatype,
@@ -179,7 +178,7 @@ class PTConvolution(PTDefaultMetaOp):
         bool_mask = torch.tensor(input_mask, dtype=torch.bool)
         new_num_channels = int(torch.sum(input_mask))
 
-        node_module = model.get_module_by_scope(node.op_exec_context.scope_in_model)
+        node_module = model.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
         is_depthwise = is_depthwise_conv(node)
         old_num_clannels = int(node_module.weight.size(1))
 
