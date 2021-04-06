@@ -61,6 +61,7 @@ def create_test_quantization_env() -> QuantizationEnv:
                            params=QuantizationEnvParams(compression_ratio=0.15,
                                                         eval_subset_ratio=1.0,
                                                         skip_constraint=False,
+                                                        performant_bw=False,
                                                         finetune=False,
                                                         bits=[2, 4, 8],
                                                         dump_init_precision_data=False))
