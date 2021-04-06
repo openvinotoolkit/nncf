@@ -281,16 +281,14 @@ def run(config):
 
             scheduler = build_scheduler(
                 config=config,
-                epoch_size=train_builder.num_examples,
-                batch_size=train_builder.global_batch_size,
-                steps=steps_per_epoch)
+                steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(
                 config=config,
                 scheduler=scheduler)
 
             eval_metric = model_builder.eval_metrics()
-            loss_fn = model_builder.build_loss_fn(compress_model)
+            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
             predict_post_process_fn = model_builder.post_processing
 
             checkpoint = tf.train.Checkpoint(model=compress_model, optimizer=optimizer)

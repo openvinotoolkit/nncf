@@ -46,9 +46,10 @@ elif __nncf_backend__ == 'TensorFlow':
 
 class PruningNodeSelector:
     """
-        Determines which of the nodes with pruning types should be pruned
-        and which of them should be pruned together
+    Determines which of the nodes with pruning types should be pruned
+    and which of them should be pruned together.
     """
+
     def __init__(self,
                  pruning_operator_metatypes: PruningOperationsMetatypeRegistry,
                  prune_operations: List[str],
@@ -60,17 +61,17 @@ class PruningNodeSelector:
                  prune_downsample_convs: bool):
         """
         :param pruning_operator_metatypes: registry with operation metatypes pruning algorithm is aware of, i.e.
-        metatypes describing operations with common pruning mask application and propagation properties, e.g.
-        IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
-        Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
-        and provide some output masks
-        :param prune_operations: names of operations with prunable filters
-        :param grouping_operations: names of operations causing the need to prune connected to them operations together
-        :param ignored_scopes: ignored scopes
-        :param target_scopes: target scopes
-        :param prune_first: whether to prune first convolution or not
-        :param prune_last: whether to prune last convolution or not
-        :param prune_downsample_convs: whether to prune downsample Convolutional layers (with stride > 1) or not
+            metatypes describing operations with common pruning mask application and propagation properties, e.g.
+            IdentityMaskForwardOps unifies operations that propagate pruning masks as is (relu, swish etc.), whereas
+            Convolution unifies different convolution operations (conv1d, conv2d, conv3d) which accepts some input masks
+            and provide some output masks.
+        :param prune_operations: Names of operations with prunable filters.
+        :param grouping_operations: Names of operations causing the need to prune connected to them operations together.
+        :param ignored_scopes: Ignored scopes.
+        :param target_scopes: Target scopes.
+        :param prune_first: Whether to prune first convolution or not.
+        :param prune_last: Whether to prune last convolution or not.
+        :param prune_downsample_convs: Whether to prune downsample Convolutional layers (with stride > 1) or not.
         """
         self._pruning_operator_metatypes = pruning_operator_metatypes
         pruning_op_metatypes_dict = self._pruning_operator_metatypes.registry_dict
@@ -91,15 +92,15 @@ class PruningNodeSelector:
     def create_pruning_groups(self, graph: NNCFGraph) -> Clusterization:
         """
         This function groups ALL nodes with pruning types to groups that should be pruned together.
-        1. Create clusters for special ops (eltwises) that should be pruned together
-        2. Create groups of nodes that should be pruned together (taking into account clusters of special ops)
-        3. Add remaining single nodes
-        4. Unite clusters for Conv + Depthwise conv (should be pruned together too)
-        5. Checks for groups (all nodes in group can prune or all group can't be pruned)
+            1. Create clusters for special ops (eltwises) that should be pruned together
+            2. Create groups of nodes that should be pruned together (taking into account clusters of special ops)
+            3. Add remaining single nodes
+            4. Unite clusters for Conv + Depthwise conv (should be pruned together too)
+            5. Checks for groups (all nodes in group can prune or all group can't be pruned)
         Return groups of modules that should be pruned together.
-        :param graph: graph to work with
-        and their initialization parameters as values
-        :return: clusterisation of pruned nodes
+
+        :param graph: Fraph to work with and their initialization parameters as values.
+        :return: Clusterization of pruned nodes.
         """
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations)  # NNCFNodes here
 
@@ -183,8 +184,9 @@ class PruningNodeSelector:
 
     def _get_multiforward_nodes(self, graph: NNCFGraph):
         """
-        Found all nodes that forward several times
-        :return: list
+        Found all nodes that forward several times.
+
+        :return: List of nodes that forward several times.
         """
         ret = defaultdict(list)
         for node in graph.get_nodes_by_types(self._prune_operations):
@@ -196,10 +198,11 @@ class PruningNodeSelector:
                               can_prune: Dict[str, bool]):
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
-         connections inside the network. Otherwise the whole group cannot be pruned.
-        :param graph: graph to work with
-        :param pruned_nodes_clusterization: clusterization with pruning nodes groups
-        :param can_prune: dict with bool value: can this node be pruned or not
+        connections inside the network. Otherwise the whole group cannot be pruned.
+
+        :param graph: Graph to work with.
+        :param pruned_nodes_clusterization: Clusterization with pruning nodes groups.
+        :param can_prune: Can this node be pruned or not.
         """
         for cluster in pruned_nodes_clusterization.get_all_clusters():
             cluster_nodes_names = [get_module_identifier(n) for n in cluster.nodes]
@@ -228,11 +231,11 @@ class PruningNodeSelector:
         """
         Check whether we should prune module corresponding to provided node
         according to algorithm parameters.
-        :param graph: graph to work with
-        :param node: node to check
-        :return: (prune: bool, msg: str)
-        prune: Whether we should prune module
-        msg: additional information why we should/shouldn't prune
+
+        :param graph: Graph to work with.
+        :param node: Node to check.
+        :return: Tuple (prune, msg) where prune means whether we should/shouldn't prune module,
+            msg is additional information why we should/shouldn't prune.
         """
         prune = True
         msg = None

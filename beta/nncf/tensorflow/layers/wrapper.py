@@ -51,18 +51,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         self._track_trackable(layer, name='layer')
 
         self.weights_attr_ops = {}
-        #TODO: add
-        # self.inputs_ops = OrderedDict()
-        # self.outputs_ops = OrderedDict()
-        # self.pre_callable_attr_ops = {}
-        # self.post_callable_attr_ops = {}
-        # self.pre_hook = {}
-        # self.post_hook = {}
-
-        # TODO: add
-        # if not hasattr(self, '_batch_input_shape') and hasattr(
-        #         layer, '_batch_input_shape'):
-        #     self._batch_input_shape = self.layer._batch_input_shape
 
         self._init_layer_call_fn_args()
         self._trainable_weights = []
@@ -117,12 +105,11 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self._trainable_weights.append(weight)
 
     def call(self, inputs, training=None):
-        if training is None:
-            training = tf.keras.backend.learning_phase()
+        training = self._get_training_value(training)
 
         self._apply_ops(training)
 
-        if self._expects_training_arg:
+        if self._layer_expects_training_arg:
             outputs = self.layer.call(inputs, training=training)
         else:
             outputs = self.layer.call(inputs)
@@ -138,15 +125,14 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                                   training)
             self.set_layer_weight(weight_attr, layer_weight)
 
-    def registry_weight_operation(self, weights_attr, op, op_name=None):
+    def registry_weight_operation(self, weights_attr, op):
         if weights_attr not in self.weights_attr_ops:
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
-        if op_name is None:
-            op_name = 'nncf_op_{}:{}'.format(weights_attr, len(self.weights_attr_ops[weights_attr]))
+        if op.name in self.weights_attr_ops[weights_attr]:
+            raise RuntimeError('Attempt to apply one operation on layer weight twice')
 
-        self.weights_attr_ops[weights_attr][op_name] = op
-        return op_name
+        self.weights_attr_ops[weights_attr][op.name] = op
 
     def get_operation_weights(self, operation_name):
         return self._ops_weights[operation_name]
@@ -169,7 +155,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     def _init_layer_call_fn_args(self):
         call_full_argspec = getfullargspec(self.layer.call)
         call_fn_args = self._get_call_fn_args(call_full_argspec)
-        self._expects_training_arg = "training" in call_fn_args
+        self._layer_expects_training_arg = "training" in call_fn_args
 
     @staticmethod
     def _get_call_fn_args(call_full_argspec):
@@ -177,6 +163,16 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         if all_args and all_args[0] == 'self':
             return all_args[1:]
         return all_args
+
+    @staticmethod
+    def _get_training_value(training):
+        if training is None:
+            training = tf.keras.backend.learning_phase()
+            if tf.is_tensor(training):
+                training = tf.cast(training, tf.bool)
+            else:
+                training = bool(training)
+        return training
 
     def get_config(self):
         config = super().get_config()
@@ -186,7 +182,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             weights_attr_ops[weights_attr] = []
             for op_name in ops:
                 op_config = tf.keras.utils.serialize_keras_object(ops[op_name])
-                op_config['name'] = op_name
                 weights_attr_ops[weights_attr].append(op_config)
         config['weights_attr_operations'] = weights_attr_ops
         return config
@@ -206,8 +201,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                     weights_attr,
                     tf.keras.layers.deserialize(
                         op_config,
-                        custom_objects=get_nncf_custom_objects()),
-                    op_config.get('name', None)
+                        custom_objects=get_nncf_custom_objects())
                 )
 
         return wrapper

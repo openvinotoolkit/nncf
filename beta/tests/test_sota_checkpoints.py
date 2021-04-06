@@ -18,6 +18,7 @@ import csv
 import datetime
 from typing import Tuple, List, Optional
 
+import tensorflow as tf
 import pytest
 import subprocess
 import re
@@ -57,6 +58,8 @@ DATASET_TYPE_AVAILABILITY = {
     "segmentation": False,
 }
 
+num_gpus = len(tf.config.list_physical_devices('GPU'))
+BATCH_COEFF = num_gpus if num_gpus else 1
 
 class EvalRunParamsStruct:
     def __init__(self,
@@ -312,10 +315,10 @@ class TestSotaCheckpoints:
                     resume_file = model_dict[model_name].get('resume', {})
                 else:
                     resume_file = None
-                if model_dict[model_name].get('batch', {}):
-                    batch = model_dict[model_name].get('batch', {})
+                if model_dict[model_name].get('batch_per_gpu', {}):
+                    global_batch = model_dict[model_name]['batch_per_gpu'] * BATCH_COEFF
                 else:
-                    batch = None
+                    global_batch = None
                 if model_dict[model_name].get('mean_value', {}):
                     mean_val = model_dict[model_name].get('mean_value', {})
                 else:
@@ -329,6 +332,10 @@ class TestSotaCheckpoints:
                 diff_target_min = model_dict[model_name].get('diff_target_min') if not None else None
                 diff_target_max = model_dict[model_name].get('diff_target_max') if not None else None
                 for dataset_type in datasets[dataset_name].get('dataset_types'):
+                    # TODO(Evgeny Tsykunov): add TFRecords support for YOLOv4
+                    if 'yolo_v4' in model_name and dataset_type == 'tfrecords':
+                        continue
+
                     # Change model name to keep dataset version
                     model_name_with_datatype = model_name + '_' + dataset_type
                     param_list.append(EvalRunParamsStruct(config_name_=config_name,
@@ -340,7 +347,7 @@ class TestSotaCheckpoints:
                                                           sample_type_=sample_type_,
                                                           resume_file_=resume_file,
                                                           weights_=weights,
-                                                          batch_=batch,
+                                                          batch_=global_batch,
                                                           mean_val_=mean_val,
                                                           scale_val_=scale_val,
                                                           diff_fp32_min_=diff_fp32_min,

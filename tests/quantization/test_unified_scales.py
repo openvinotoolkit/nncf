@@ -18,8 +18,6 @@ import onnx
 import pytest
 import torch
 import torch.nn
-from onnx import numpy_helper
-
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph import OperationExecutionContext
@@ -28,9 +26,10 @@ from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from onnx import numpy_helper
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
-
+from tests.helpers import get_nodes_by_type
 
 def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecutionContext:
     ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
@@ -432,7 +431,6 @@ class QuantizerLinkingTestModel(torch.nn.Module):
 
 def test_quantizer_scale_linking(mocker):
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -485,11 +483,8 @@ def test_quantizer_scale_linking(mocker):
         assert non_shared_spy.call_count == 1
 
 
-
-
 def test_unified_scales_for_vpu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -531,45 +526,24 @@ class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
         return x
 
 
-def test_unified_scales_are_identical_in_onnx(tmp_path):
-    # pylint:disable=no-member
-    nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
-    nncf_config["input_info"] = [
-        {
-            "sample_size": [1, 1, 1, 2],
-        },
-    ]
-    nncf_config["target_device"] = "VPU"
+class TwoEmbeddingAddModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding1 = torch.nn.Embedding(10, 10)
+        self.embedding2 = torch.nn.Embedding(10, 10)
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-        SimplerModelForUnifiedScalesTesting(),
-        nncf_config)
+    def forward(self, x):
+        y1 = self.embedding1(x)
+        y2 = self.embedding2(x)
+        return y1 + y2
 
-    with torch.no_grad():
-        for quant_info in compression_ctrl.non_weight_quantizers.values():
-            if isinstance(quant_info.quantizer_module_ref, AsymmetricQuantizer):
-                quant_info.quantizer_module_ref.input_range *= torch.abs(
-                    torch.rand_like(quant_info.quantizer_module_ref.input_range))
-            else:
-                quant_info.quantizer_module_ref.scale *= torch.abs(
-                    torch.rand_like(quant_info.quantizer_module_ref.scale))
 
-    test_input1 = torch.ones([1, 1, 1, 2])
-    compressed_model.forward(test_input1)
-
-    onnx_path = tmp_path / "model.onnx"
-    compression_ctrl.export_model(onnx_path)
-
-    onnx_model = onnx.load(onnx_path)
-
+class TestsWithONNXInspection:
+    @staticmethod
     def get_fq_nodes(onnx_model: onnx.ModelProto) -> List[onnx.NodeProto]:
-        retval = []
-        for node in onnx_model.graph.node:
-            if str(node.op_type) == "FakeQuantize":
-                retval.append(node)
-        return retval
+        return get_nodes_by_type(onnx_model, "FakeQuantize")
 
+    @staticmethod
     def immediately_dominates_add_or_mul(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
         if len(node.output) != 1:
             return False
@@ -580,6 +554,18 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 return True
         return False
 
+    @staticmethod
+    def immediately_dominates_embedding(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
+        if len(node.output) != 1:
+            return False
+        output_tensor_id = node.output[0]
+        matches = [x for x in graph.node if output_tensor_id in x.input]
+        for match in matches:
+            if match.op_type in ["Gather"]:
+                return True
+        return False
+
+    @staticmethod
     def get_successor(node: onnx.NodeProto, graph: onnx.GraphProto) -> onnx.NodeProto:
         assert len(node.output) == 1  # Only single-output nodes are supported in this func
         for target_node in graph.node:
@@ -587,17 +573,20 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 return target_node
         return None
 
-    def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[List[onnx.NodeProto]]:
+    @staticmethod
+    def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[
+        List[onnx.NodeProto]]:
         output_nodes = {}  # type: Dict[str, List[onnx.NodeProto]]
         for node in nodes:
-            target_node_name = get_successor(node, graph).name
+            target_node_name = TestsWithONNXInspection.get_successor(node, graph).name
             if target_node_name not in output_nodes:
                 output_nodes[target_node_name] = []
             output_nodes[target_node_name].append(node)
         return list(output_nodes.values())
 
+    @staticmethod
     def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.GraphProto) -> \
-        Dict[str, onnx.AttributeProto]:
+            Dict[str, onnx.AttributeProto]:
         retval = {}
         for input_ in node.input:
             constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
@@ -607,14 +596,101 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 retval[input_] = numpy_helper.to_array(val.t)
         return retval
 
-    fq_nodes = get_fq_nodes(onnx_model)
-    eltwise_predicate = partial(immediately_dominates_add_or_mul, graph=onnx_model.graph)
-    eltwise_fq_nodes = list(filter(eltwise_predicate, fq_nodes))
-    fq_nodes_grouped_by_output = group_nodes_by_output_target(eltwise_fq_nodes, onnx_model.graph)
+    def test_unified_scales_are_identical_in_onnx(self, tmp_path):
+        # pylint:disable=no-member
+        nncf_config = get_quantization_config_without_range_init(model_size=1)
+        nncf_config["compression"]["quantize_outputs"] = True
+        nncf_config["input_info"] = [
+            {
+                "sample_size": [1, 1, 1, 2],
+            },
+        ]
+        nncf_config["target_device"] = "VPU"
 
-    for unified_scale_group in fq_nodes_grouped_by_output:
-        inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph) for fq_node in unified_scale_group]
-        for inputs_dict in inputs[1:]:
+        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
+            SimplerModelForUnifiedScalesTesting(),
+            nncf_config)
+
+        with torch.no_grad():
+            for quant_info in compression_ctrl.non_weight_quantizers.values():
+                if isinstance(quant_info.quantizer_module_ref, AsymmetricQuantizer):
+                    quant_info.quantizer_module_ref.input_range *= torch.abs(
+                        torch.rand_like(quant_info.quantizer_module_ref.input_range))
+                else:
+                    quant_info.quantizer_module_ref.scale *= torch.abs(
+                        torch.rand_like(quant_info.quantizer_module_ref.scale))
+
+        test_input1 = torch.ones([1, 1, 1, 2])
+        compressed_model.forward(test_input1)
+
+        onnx_path = str(tmp_path / "model.onnx")
+        compression_ctrl.export_model(onnx_path)
+
+        onnx_model = onnx.load(onnx_path)
+
+        fq_nodes = TestsWithONNXInspection.get_fq_nodes(onnx_model)
+        eltwise_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_add_or_mul,
+                                    graph=onnx_model.graph)
+        eltwise_fq_nodes = list(filter(eltwise_dominator_predicate, fq_nodes))
+        fq_nodes_grouped_by_output = TestsWithONNXInspection.group_nodes_by_output_target(eltwise_fq_nodes,
+                                                                                          onnx_model.graph)
+
+        for unified_scale_group in fq_nodes_grouped_by_output:
+            inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
+                                                                                     onnx_model.graph)
+                      for fq_node in unified_scale_group]
+            for inputs_dict in inputs[1:]:
+                curr_values = list(inputs_dict.values())
+                ref_values = list(inputs[0].values())
+                assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
+
+    def test_weight_and_act_quantizer_scale_unification(self, tmp_path):
+        # pylint:disable=no-member
+        nncf_config = get_quantization_config_without_range_init(model_size=1)
+        nncf_config["input_info"] = [
+            {
+                "sample_size": [1, 5],
+                "type": "long",
+                "filler": "zeros"
+            },
+        ]
+        nncf_config["target_device"] = "VPU"
+
+        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
+            TwoEmbeddingAddModel(),
+            nncf_config)
+
+        with torch.no_grad():
+            for quant_module in compression_ctrl.all_quantizations.values():
+                if isinstance(quant_module, AsymmetricQuantizer):
+                    quant_module.input_range *= torch.abs(
+                        torch.rand_like(quant_module.input_range))
+                else:
+                    quant_module.scale *= torch.abs(
+                        torch.rand_like(quant_module.scale))
+
+        test_input1 = torch.ones([1, 5], dtype=torch.long)
+        compressed_model.forward(test_input1)
+
+        onnx_path = str(tmp_path / "model.onnx")
+        compression_ctrl.export_model(onnx_path)
+
+        onnx_model = onnx.load(onnx_path)
+
+        fq_nodes = TestsWithONNXInspection.get_fq_nodes(onnx_model)
+        eltwise_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_add_or_mul,
+                                              graph=onnx_model.graph)
+        embedding_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_embedding,
+                                                graph=onnx_model.graph)
+        eltwise_fq_nodes = list(filter(eltwise_dominator_predicate, fq_nodes))
+        embedding_weight_fq_nodes = list(filter(embedding_dominator_predicate, fq_nodes))
+
+        fq_nodes_with_expected_unified_scales = embedding_weight_fq_nodes + eltwise_fq_nodes
+
+        unified_fq_node_inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
+                                                                                                 onnx_model.graph)
+                                  for fq_node in fq_nodes_with_expected_unified_scales]
+        for inputs_dict in unified_fq_node_inputs[1:]:
             curr_values = list(inputs_dict.values())
-            ref_values = list(inputs[0].values())
+            ref_values = list(unified_fq_node_inputs[0].values())
             assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal

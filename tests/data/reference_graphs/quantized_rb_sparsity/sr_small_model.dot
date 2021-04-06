@@ -100,6 +100,7 @@ strict digraph  {
 "98 SmallModel/__mul__" [id=98, scope=SmallModel, type=__mul__];
 "99 SmallModel/SymmetricQuantizer/symmetric_quantize" [id=99, scope="SmallModel/SymmetricQuantizer", type=symmetric_quantize];
 "100 SmallModel/add" [id=100, scope=SmallModel, type=add];
+"101 /nncf_model_output" [id=101, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "2 /nncf_model_input" -> "3 SymmetricQuantizer/symmetric_quantize";
 "3 SymmetricQuantizer/symmetric_quantize" -> "7 SmallModel/NNCFConv2d[conv_cubic1]/conv2d";
@@ -209,4 +210,5 @@ strict digraph  {
 "97 SmallModel/NNCFConv2d[conv_output]/SymmetricQuantizer/symmetric_quantize" -> "98 SmallModel/__mul__";
 "98 SmallModel/__mul__" -> "99 SmallModel/SymmetricQuantizer/symmetric_quantize";
 "99 SmallModel/SymmetricQuantizer/symmetric_quantize" -> "100 SmallModel/add";
+"100 SmallModel/add" -> "101 /nncf_model_output";
 }

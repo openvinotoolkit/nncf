@@ -161,6 +161,7 @@ strict digraph  {
 "159 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=159, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "160 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=160, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "161 ResNet/NNCFLinear[linear]/linear" [id=161, scope="ResNet/NNCFLinear[linear]", type=linear];
+"162 /nncf_model_output" [id=162, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 ResNet/NNCFConv2d[conv1]/conv2d";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -330,4 +331,5 @@ strict digraph  {
 "158 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "159 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "159 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "160 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "160 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "161 ResNet/NNCFLinear[linear]/linear";
+"161 ResNet/NNCFLinear[linear]/linear" -> "162 /nncf_model_output";
 }

@@ -16,7 +16,7 @@
         "base_lr": 0.00031,
         "schedule_type": "plateau",
         "type": "Adam",
-        "scheduler_params": {
+        "schedule_params": {
             "threshold": 0.1,
             "cooldown": 3
         },

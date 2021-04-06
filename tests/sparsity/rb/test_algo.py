@@ -17,13 +17,13 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
-from nncf.compression_method_api import PTStubCompressionScheduler
+from nncf.api.compression import CompressionLevel
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
-from nncf.common.sparsity.schedulers import PolynomialSparseScheduler
+from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from tests.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement, get_empty_config
 
@@ -118,9 +118,9 @@ def test_can_create_sparse_loss_and_scheduler():
     assert loss.target_sparsity_rate == approx(0.02)
     assert loss.p == approx(0.05)
 
-    assert isinstance(scheduler, PolynomialSparseScheduler)
+    assert isinstance(scheduler, PolynomialSparsityScheduler)
     assert scheduler.current_sparsity_level == approx(0.02)
-    assert scheduler.target_sparsity == approx(0.5)
+    assert scheduler.target_level == approx(0.5)
     assert scheduler.target_epoch == 2
     assert scheduler.freeze_epoch == 3
 
@@ -135,7 +135,7 @@ def test_sparse_algo_can_calc_sparsity_rate__for_basic_model():
     assert compression_ctrl.sparsity_rate_for_model == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
+    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
     assert len(compression_ctrl.sparsified_module_info) == 1
 
 
@@ -158,7 +158,7 @@ def test_sparse_algo_can_calc_sparsity_rate__for_2_conv_model():
     assert compression_ctrl.sparsity_rate_for_model == (
         1 - (model.nz_weights_num + model.nz_bias_num) / (model.weights_num + model.bias_num)
     )
-    assert compression_ctrl.sparsity_rate_for_sparsified_modules == 1 - model.nz_weights_num / model.weights_num
+    assert compression_ctrl.sparsity_rate_for_sparsified_modules() == 1 - model.nz_weights_num / model.weights_num
 
 
 def test_scheduler_can_do_epoch_step__with_rb_algo():
@@ -227,10 +227,8 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.sparsified_module_info[0])
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == pytest.approx(0.3)
 
-def test_create_rb_algo_with_stub_scheduler():
+def test_create_rb_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
-
-    # pylint: disable=protected-access
-    assert isinstance(compression_ctrl.scheduler, PTStubCompressionScheduler)
+    assert compression_ctrl.compression_level() == CompressionLevel.FULL

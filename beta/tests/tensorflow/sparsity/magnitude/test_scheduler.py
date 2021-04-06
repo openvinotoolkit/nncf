@@ -39,13 +39,13 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
-    assert compression_ctrl.sparsity_level == 0
+    assert compression_ctrl.scheduler.current_sparsity_level == 0.1
 
     expected_levels = [0.1, 0.5, 0.5, 0.9]
     expected_thresholds = [0.219, 0.243, 0.243, 0.371]
     for expected_level, expected_threshold in zip(expected_levels, expected_thresholds):
         scheduler.epoch_step()
-        assert compression_ctrl.sparsity_level == expected_level
+        assert compression_ctrl.scheduler.current_sparsity_level == expected_level
         assert compression_ctrl.statistics()['sparsity_threshold'] == pytest.approx(expected_threshold, 0.01)
 
 
@@ -56,11 +56,11 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
     scheduler = compression_ctrl.scheduler
 
     scheduler.epoch_step(3)
-    assert compression_ctrl.sparsity_level == 0.9
+    assert compression_ctrl.scheduler.current_sparsity_level == 0.9
     assert compression_ctrl.statistics()['sparsity_threshold'] == pytest.approx(0.371, 0.01)
 
     scheduler.epoch_step()
-    assert compression_ctrl.sparsity_level == 0.9
+    assert compression_ctrl.scheduler.current_sparsity_level == 0.9
     assert compression_ctrl.statistics()['sparsity_threshold'] == pytest.approx(0.371, 0.01)
 
 
@@ -73,10 +73,10 @@ def test_magnitude_scheduler_can_do_epoch_step__with_multistep():
     scheduler = compression_ctrl.scheduler
     assert isinstance(scheduler, MultiStepSparsityScheduler)
 
-    assert compression_ctrl.sparsity_level == 0
-    assert scheduler.sparsity_levels == [0.1, 0.5]
+    assert compression_ctrl.scheduler.current_sparsity_level == 0.1
+    assert scheduler.schedule.values == [0.1, 0.5]
 
     expected_levels = [0.1, 0.5, 0.5]
     for expected_level in expected_levels:
         scheduler.epoch_step()
-        assert compression_ctrl.sparsity_level == expected_level
+        assert compression_ctrl.scheduler.current_sparsity_level == expected_level

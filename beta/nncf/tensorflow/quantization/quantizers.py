@@ -13,7 +13,6 @@
 
 from functools import partial
 from typing import Optional
-from copy import deepcopy
 
 import tensorflow as tf
 
@@ -34,28 +33,32 @@ class TFQuantizerSpec(QuantizerSpec):
                  mode: QuantizationMode,
                  signedness_to_force: Optional[bool],
                  narrow_range: bool,
+                 half_range: bool,
                  per_channel: bool):
-        super().__init__(num_bits, mode, signedness_to_force, narrow_range)
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = per_channel
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool):
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool):
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
+                   half_range,
                    qconfig.per_channel)
 
 
 class Quantizer(NNCFOperation):
     """
-    Base class for all NNCF quantization operations
+    Base class for all NNCF quantization operations.
     """
-    def __init__(self):
+    def __init__(self, name: str):
         """
-        Initializes internal NNCF quantization operation state
+        Initializes internal NNCF quantization operation state.
+
+        :param name: Unique operation name in algorithm scope.
         """
-        super().__init__()
+        super().__init__(name)
         self.enabled = True
         self._eps = 1e-16
         self._pre_processing_fn = self._make_pre_processing_fn()
@@ -64,11 +67,11 @@ class Quantizer(NNCFOperation):
     def call(self, inputs, weights, _):
         """
         The method applies quantization to the input tensor if the quantizer is enabled,
-        otherwise, if the quantizer is disabled, the method returns the input tensor as is
+        otherwise, if the quantizer is disabled, the method returns the input tensor as is.
 
-        :param inputs: input tensor
-        :param weights: quantizer's weights
-        :return: output tensor
+        :param inputs: Input tensor.
+        :param weights: Quantizer's weights.
+        :return: Output tensor.
         """
         if not self.enabled:
             return inputs
@@ -81,21 +84,21 @@ class Quantizer(NNCFOperation):
         """
         Apply quantization to the input tensor.
 
-        :param inputs: input tensor
-        :param weights: quantizer's weights
-        :return: quantized tensor
+        :param inputs: Input tensor.
+        :param weights: Quantizer's weights.
+        :return: Quantized tensor.
         """
         raise NotImplementedError
 
     def apply_minmax_initialization(self, weights, min_values, max_values, min_range=0.1, eps=0.01):
         """
-        Initialize quantizer parameters using minimum and maximum weight values
+        Initialize quantizer parameters using minimum and maximum weight values.
 
-        :param weights: quantizer's weights
-        :param min_values: minimum weight values
-        :param max_values: maximum weight values
-        :param min_range: minimum range
-        :param eps: smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range)
+        :param weights: Quantizer's weights.
+        :param min_values: Minimum weight values.
+        :param max_values: Maximum weight values.
+        :param min_range: Minimum range.
+        :param eps: Smoothing coefficient for ranges: min_range = maximum(min_range, eps * max_range).
         """
         raise NotImplementedError
 
@@ -105,13 +108,13 @@ class Quantizer(NNCFOperation):
         The TensorFlow fake_quant_with_min_max_vars_per_channel supports only inputs tensor one of
         the shapes: [d], [b, d] [b, h, w, d]. For this reason, Quantizer transforms any inputs tensor
         to one of the supported shapes, then quantizes and then transforms quantized tensor to
-        the original inputs shape
+        the original inputs shape.
 
-        :param input_shape: shape of the input
-        :param input_type: type of the input identifies that inputs are layer weights
-                           or inputs of the layer
-        :param input_name: input name
-        :param layer: layer, where the Quantizer is registered
+        :param input_shape: Shape of the input.
+        :param input_type: Type of the input identifies that inputs are layer weights
+            or inputs of the layer.
+        :param input_name: Input name.
+        :param layer: Layer, where the Quantizer is registered.
         """
         self._pre_processing_fn, self._post_processing_fn = \
             self._make_transformation_fns(input_shape, input_type, input_name, layer)
@@ -220,6 +223,7 @@ class Quantizer(NNCFOperation):
     def get_quantizer_config(self) -> QuantizerConfig:
         """
         Used to get a current quantizer state in terms of QuantizerConfig objects.
+
         :return: A QuantizerConfig struct that corresponds to current state of the quantizer.
         """
         raise NotImplementedError
@@ -227,20 +231,17 @@ class Quantizer(NNCFOperation):
     def get_config(self):
         raise NotImplementedError
 
-    @classmethod
-    def from_config(cls, config):
-        return cls()
-
 
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
-    def __init__(self, qspec: TFQuantizerSpec):
-        super().__init__()
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
+        super().__init__(name)
         self.num_bits = qspec.num_bits
         self.per_channel = qspec.per_channel
         self.narrow_range = qspec.narrow_range
         self.signedness_to_force = qspec.signedness_to_force
+        self._half_range = qspec.half_range
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
@@ -293,32 +294,43 @@ class SymmetricQuantizer(Quantizer):
         )
 
     def get_config(self):
-        qspec = TFQuantizerSpec(num_bits=self.num_bits,
-                                mode=QuantizationMode.SYMMETRIC,
-                                signedness_to_force=self.signedness_to_force,
-                                narrow_range=self.narrow_range,
-                                per_channel=self.per_channel)
-        return deepcopy(qspec.__dict__)
+        qspec_dict = {
+            'num_bits':  self.num_bits,
+            'mode': QuantizationMode.SYMMETRIC,
+            'signedness_to_force': self.signedness_to_force,
+            'narrow_range': self.narrow_range,
+            'half_range': self._half_range,
+            'per_channel': self.per_channel,
+        }
+        config = {
+            'quantizer_spec': qspec_dict,
+            'name': self.name,
+        }
+        return config
 
     @classmethod
     def from_config(cls, config):
-        qspec = TFQuantizerSpec(num_bits=config["num_bits"],
+        qspec_dict = config['quantizer_spec']
+        qspec = TFQuantizerSpec(num_bits=qspec_dict['num_bits'],
                                 mode=QuantizationMode.SYMMETRIC,
-                                signedness_to_force=config["signedness_to_force"],
-                                narrow_range=config["narrow_range"],
-                                per_channel=config["per_channel"])
-        return cls(qspec)
+                                signedness_to_force=qspec_dict['signedness_to_force'],
+                                narrow_range=qspec_dict['narrow_range'],
+                                half_range=qspec_dict['half_range'],
+                                per_channel=qspec_dict['per_channel'])
+        name = config['name']
+        return cls(name, qspec)
 
 
 
 @NNCF_CUSTOM_OBJECTS.register()
 @NNCF_QUANTIZATION_OPERATONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
-    def __init__(self, qspec: TFQuantizerSpec):
-        super().__init__()
+    def __init__(self, name: str, qspec: TFQuantizerSpec):
+        super().__init__(name)
         self.num_bits = qspec.num_bits
         self.narrow_range = qspec.narrow_range
         self.per_channel = qspec.per_channel
+        self._half_range = qspec.half_range
 
     def build(self, input_shape, input_type, name, layer):
         shape = None
@@ -371,18 +383,28 @@ class AsymmetricQuantizer(Quantizer):
         )
 
     def get_config(self):
-        qspec = TFQuantizerSpec(self.num_bits,
-                                QuantizationMode.ASYMMETRIC,
-                                signedness_to_force=None,
-                                narrow_range=self.narrow_range,
-                                per_channel=self.per_channel)
-        return deepcopy(qspec.__dict__)
+        qspec_dict = {
+            'num_bits': self.num_bits,
+            'mode': QuantizationMode.ASYMMETRIC,
+            'signedness_to_force': None,
+            'narrow_range': self.narrow_range,
+            'half_range': self._half_range,
+            'per_channel': self.per_channel,
+        }
+        config = {
+            'quantizer_spec': qspec_dict,
+            'name': self.name,
+        }
+        return config
 
     @classmethod
     def from_config(cls, config):
-        qspec = TFQuantizerSpec(num_bits=config["num_bits"],
+        qspec_dict = config['quantizer_spec']
+        qspec = TFQuantizerSpec(num_bits=qspec_dict['num_bits'],
                                 mode=QuantizationMode.ASYMMETRIC,
                                 signedness_to_force=None,
-                                narrow_range=config["narrow_range"],
-                                per_channel=config["per_channel"])
-        return cls(qspec)
+                                narrow_range=qspec_dict['narrow_range'],
+                                half_range=qspec_dict['half_range'],
+                                per_channel=qspec_dict['per_channel'])
+        name = config['name']
+        return cls(name, qspec)

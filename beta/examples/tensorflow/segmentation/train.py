@@ -239,15 +239,13 @@ def run_train(config):
 
             scheduler = build_scheduler(
                 config=config,
-                epoch_size=train_builder.num_examples,
-                batch_size=train_builder.global_batch_size,
-                steps=steps_per_epoch)
+                steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(
                 config=config,
                 scheduler=scheduler)
 
-            loss_fn = model_builder.build_loss_fn(compress_model)
+            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
 
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables, optimizer=optimizer, step=tf.Variable(0))

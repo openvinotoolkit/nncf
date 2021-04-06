@@ -38,7 +38,7 @@ def test_graph_pattern_io_building():
         attrs = {
             PTNNCFGraph.ID_NODE_ATTR: idx + 1,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None,
+            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None
         }
         graph._nx_graph.add_node(node_key, **attrs)
 

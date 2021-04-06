@@ -27,14 +27,15 @@ def is_grouped_conv(node: NNCFNode) -> bool:
 
 def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: List[str]) -> List[NNCFNode]:
     """
-    Source is a node of source such that there is path from this node to nncf_node and on this path
-    no node has one of sources_types type.
-    :param sources_types: list of sources types
-    :param nncf_node: NNCFNode to get sources
-    :param graph: NNCF graph to work with
-    :return: list of all sources nodes
+    Source is a node of source such that there is path from this node to `nncf_node` and on this path
+    no node has one of `sources_types` type.
+
+    :param sources_types: List of sources types.
+    :param nncf_node: NNCFNode to get sources.
+    :param graph: NNCF graph to work with.
+    :return: List of all sources nodes.
     """
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -51,15 +52,16 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
     """
     Traverse nodes in the graph from nncf node to find first nodes that aren't of type from types list.
     First nodes with some condition mean nodes:
-    - for which this condition is true
-    - reachable from nncf_node such that on the path from nncf_node to this nodes there are no other nodes with
-    fulfilled condition
-    :param graph: graph to work with
-    :param nncf_node: NNCFNode to start search
-    :param types: list of types
-    :return: list of next nodes for nncf_node of type not from types list
+        - for which this condition is true
+        - reachable from `nncf_node` such that on the path from `nncf_node` to
+          this nodes there are no other nodes with fulfilled condition
+
+    :param graph: Graph to work with.
+    :param nncf_node: NNCFNode to start search.
+    :param types: List of types.
+    :return: List of next nodes for nncf_node of type not from types list.
     """
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x not in types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -74,15 +76,16 @@ def find_next_nodes_not_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: L
 
 def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[str]) -> List[NNCFNode]:
     """
-    Looking for nodes with type from types list from nncf_node such that there is path from nncf_node to this node and
-    on this path no node has one of types type.
-    :param graph: graph to work with
-    :param nncf_node: NNCFNode to start search
-    :param types: list of types to find
-    :return: list of next nodes of nncf_node with type from types list
+    Looking for nodes with type from types list from `nncf_node` such that there is path
+    from `nncf_node` to this node and on this path no node has one of types type.
+
+    :param graph: Graph to work with.
+    :param nncf_node: NNCFNode to start search.
+    :param types: List of types to find.
+    :return: List of next nodes of nncf_node with type from types list.
     """
     sources_types = types
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types,
                                         visited=visited)
     nncf_nodes = [nncf_node]
@@ -100,10 +103,11 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     Calculates number of sparsified elements (approximately sparsity rate) from total such as
     number of remaining items will be multiple of some value.
     Always rounds number of remaining elements up.
-    :param total: total elements number
-    :param sparsity_rate: prorortion of zero elements in total.
-    :param multiple_of:
-    :return: number of elements to be zeroed
+
+    :param total: Total elements number.
+    :param sparsity_rate: Prorortion of zero elements in total.
+    :param multiple_of: Number of remaining elements must be a multiple of `multiple_of`.
+    :return: Number of elements to be zeroed.
     """
     remaining_elems = math.ceil((total - total * sparsity_rate) / multiple_of) * multiple_of
     return max(total - remaining_elems, 0)
@@ -124,16 +128,17 @@ def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, vis
 
 def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
     """
-    Looking for first node in graph with type in op_types.
-    First == layer with type in op_types, that there is a path from the input such that there are no other
-    operations with type in op_types on it.
-    :param op_types: types of modules to track
-    :param graph: graph to work with
-    :return: list of all first nodes with type in op_types
+    Looking for first node in graph with type in `op_types`.
+    First == layer with type in `op_types`, that there is a path from the input such that there are no other
+    operations with type in `op_types` on it.
+
+    :param op_types: Types of modules to track.
+    :param graph: Graph to work with.
+    :return: List of all first nodes with type in `op_types`.
     """
     graph_roots = graph.get_input_nodes()  # NNCFNodes here
 
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
@@ -146,16 +151,17 @@ def get_first_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFN
 
 def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNode]:
     """
-    Looking for last node in graph with type in op_types.
-    Last == layer with type in op_types, that there is a path from this layer to the model output
-    such that there are no other operations with type in op_types on it.
-    :param op_types: types of modules to track
-    :param graph: graph to work with
-    :return: list of all last pruned nodes
-    """
-    graph_outputs = graph.get_graph_outputs()  # NNCFNodes here
+    Looking for last node in graph with type in `op_types`.
+    Last == layer with type in `op_types`, that there is a path from this layer to the model output
+    such that there are no other operations with type in `op_types` on it.
 
-    visited = {node_id: False for node_id in graph.get_all_node_idxs()}
+    :param op_types: Types of modules to track.
+    :param graph: Graph to work with.
+    :return: List of all last pruned nodes.
+    """
+    graph_outputs = graph.get_output_nodes()  # NNCFNodes here
+
+    visited = {node_id: False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function,
                                         type_check_fn=lambda x: x in op_types,
                                         visited=visited)
@@ -169,7 +175,11 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
 def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
                       pruning_types: List[str], stop_propagation_ops: List[str]) -> Optional[NNCFNode]:
     """
-    Return source convolution of node. If node has other source type or there are more than one source - return None.
+    Returns source convolution of the node. If the node has another source type or there is
+    more than one source - returns None.
+
+    :return: Source convolution of node. If the node has another source type or there is more
+        than one source - returns None.
     """
     sources = get_sources_of_node(nncf_node, graph, pruning_types + stop_propagation_ops)
     if len(sources) == 1 and sources[0].node_type in pruning_types:

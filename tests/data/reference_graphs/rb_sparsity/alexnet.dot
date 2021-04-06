@@ -36,6 +36,7 @@ strict digraph  {
 "34 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=34, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=35, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" [id=36, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]", type=linear];
+"37 /nncf_model_output" [id=37, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "1 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -72,4 +73,5 @@ strict digraph  {
 "33 AlexNet/Sequential[classifier]/ReLU[5]/RELU" -> "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
 "34 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "35 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
+"36 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" -> "37 /nncf_model_output";
 }

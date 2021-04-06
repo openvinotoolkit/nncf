@@ -145,3 +145,29 @@ class MultiBranchesModel(nn.Module):
         xc = self.conv_c(x)
         xd = self.conv_d(x)
         return xa, xb, xc, xd
+
+
+class EmbeddingSumModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = nn.Embedding(10, 10)
+        self.embeddingbag = nn.EmbeddingBag(10, 10)
+
+    def forward(self, x):
+        y1 = self.embedding(x)
+        y2 = self.embeddingbag(x)
+        return y1 + y2
+
+
+class EmbeddingCatLinearModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding1 = nn.Embedding(10, 10)
+        self.embedding2 = nn.Embedding(10, 10)
+        self.linear = nn.Linear(10, 1)
+
+    def forward(self, x):
+        y1 = self.embedding1(x)
+        y2 = self.embedding2(x)
+        z = torch.cat([y1, y2])
+        return self.linear(z)

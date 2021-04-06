@@ -28,7 +28,7 @@
             "momentum": 0.99
         },
         "schedule_type": "plateau",
-        "scheduler_params": {
+        "schedule_params": {
             "threshold": 0.001,
             "patience": 3
         },

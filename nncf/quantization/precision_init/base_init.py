@@ -52,7 +52,7 @@ class BasePrecisionInitializer:
             get_weight_quantizers_in_execution_order_per_id()
 
         self._all_quantizers_per_scope = get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
+            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
             quantization_types)
         self._all_quantizers_per_scope.update(
             self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())

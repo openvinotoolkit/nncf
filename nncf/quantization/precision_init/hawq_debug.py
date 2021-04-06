@@ -77,7 +77,7 @@ class HAWQDebugger:
             quantization_type = class_type.__name__
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
+                    model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
                     quantization_type))
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
@@ -144,11 +144,14 @@ class HAWQDebugger:
 
     @staticmethod
     def get_bitwidth_graph(algo_ctrl, model,
-                           groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers) -> PTNNCFGraph:
+                           groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+                           add_flops=False) -> PTNNCFGraph:
         # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
         # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
         # of the quantizer's bitwidth.
         # pylint:disable=too-many-branches
+        if add_flops:
+            flops_per_module = model.get_flops_per_module()
         grouped_mode = bool(groups_of_adjacent_quantizers)
         nncf_graph = model.get_graph()
         for node_key in nncf_graph.get_all_node_keys():
@@ -169,6 +172,8 @@ class HAWQDebugger:
                     padding_enabled = len(padding_values) >= 1 and padding_values.pop()
                     if padding_enabled:
                         operator_name += '_PAD'
+                    if add_flops:
+                        operator_name += f'_FLOPS:{str(flops_per_module[quantized_module_scope])}'
                 operator_name += '_#{}'.format(str(node[PTNNCFGraph.ID_NODE_ATTR]))
                 node['label'] = operator_name
                 node['style'] = 'filled'

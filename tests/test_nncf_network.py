@@ -12,26 +12,37 @@
 """
 import itertools
 from collections import Counter
+from copy import deepcopy
 from pathlib import Path
 from typing import List
+from typing import Tuple
 
 import networkx as nx
 import pytest
 import torch
-from copy import deepcopy
+from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+
+from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
+from nncf.dynamic_graph.trace_tensor import TensorMeta
 from torch import nn
 
 from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.context import Scope, PreHookId
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext, PTNNCFGraph, OperationExecutionContext
-from nncf.dynamic_graph.graph_builder import ModelInputInfo, GraphBuilder
-from nncf.dynamic_graph.operator_metatypes import NoopMetatype
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.dynamic_graph.context import PreHookId
+from nncf.dynamic_graph.context import Scope
+from nncf.dynamic_graph.graph import PTNNCFNode
+from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.graph import OperationExecutionContext
+from nncf.dynamic_graph.graph_builder import GraphBuilder
+from nncf.dynamic_graph.graph_builder import ModelInputInfo
 from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
 from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
@@ -39,10 +50,13 @@ from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import PTInsertionPoint
 from nncf.nncf_network import PTInsertionType
 from nncf.nncf_network import PTModelTransformer
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
-from tests.helpers import TwoConvTestModel, BasicConvTestModel, check_correct_nncf_modules_replacement, \
-    create_compressed_model_and_algo_for_test
+from tests.helpers import BasicConvTestModel
+from tests.helpers import TwoConvTestModel
+from tests.helpers import check_correct_nncf_modules_replacement
+from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_models.synthetic import ManyNonEvalModules
 
 
@@ -71,7 +85,7 @@ def test_disable_shape_matching():
 
     keys_1 = list(graph_1.get_all_node_keys())
     keys_2 = list(graph_2.get_all_node_keys())
-    assert len(keys_1) == 2  # 1 input node + 1 operation node
+    assert len(keys_1) == 3  # 1 input node + 1 operation node + 1 output node
     assert keys_1 == keys_2
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
@@ -137,12 +151,12 @@ def test_find_node_in_nx_graph_by_scope():
 
     # Valid scopes should be successfully found
     valid_nncf_modules = nncf_model.get_nncf_modules()
-    nodes_list = list(nncf_graph._nx_graph.nodes)
+    nodes_list = list(nncf_graph.get_all_node_ids())
     for module_scope, _ in valid_nncf_modules.items():
         graph_node = nncf_graph.find_node_in_nx_graph_by_scope(module_scope)
         assert graph_node is not None
-        assert isinstance(graph_node, dict)
-        assert graph_node['key'] in nodes_list
+        assert isinstance(graph_node, NNCFNode)
+        assert graph_node.node_id in nodes_list
 
     fake_model = BasicConvTestModel()
     fake_nncf_model = NNCFNetwork(deepcopy(fake_model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
@@ -336,50 +350,77 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
             graph.edges[edge][PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR] = idx
 
 
-def get_two_branch_mock_model_graph() -> nx.DiGraph:
-    mock_node_attrs = get_mock_nncf_node_attrs()
-    mock_graph = nx.DiGraph()
+def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
+    mock_graph = PTNNCFGraph()
+    key_vs_id = {}
+    edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
+    from networkx.algorithms.dag import lexicographical_topological_sort
+    for curr_node_key in lexicographical_topological_sort(nx_graph):
+        node = nx_graph.nodes[curr_node_key]
+        if PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR in node:
+            ia_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+        else:
+            ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
+        module_attributes = node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
+        tensor_metas = []
+        preds = list(nx_graph.predecessors(curr_node_key))
+        for idx, pred in enumerate(preds):
+            in_edge = (pred, curr_node_key)
+            output_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
+            tensor_metas.append(TensorMeta(creator_id, output_idx,
+                                           [1, 1, 1, 1]))
+        node = mock_graph.add_node(ia_op_exec_context, tensor_metas, [], None, module_attrs=module_attributes)
+        key_vs_id[curr_node_key] = node.node_id
+        for idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
+            edge_vs_output_idx_and_creator_id[out_edge] = (idx, node.node_id)
+    return mock_graph
 
-    #   (A)
-    #    |
-    #   (B)
-    #  /   \
-    # (C)   (D)
-    # |     |
-    # (E)   |
-    #  \   /
-    #   (F)
-    #    |
-    #   (G)
-    #    |
-    #   (H)
+
+def get_two_branch_mock_model_graph() -> PTNNCFGraph:
+    mock_nx_graph = nx.DiGraph()
+
+    #   (0 /A)
+    #      |
+    #   (1 /B)
+    #   /     \
+    # (2 /C) (3 /D)
+    #  |       |
+    # (4 /E)   |
+    #   \     /
+    #   (5 /F)
+    #     |
+    #   (6 /G)
+    #     |
+    #   (7 /H)
 
     node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
     for node_key in node_keys:
-        mock_graph.add_node(node_key, **mock_node_attrs)
+        mock_nx_graph.add_node(node_key)
 
-    mock_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('C', 'E'), ('E', 'F'),
-                               ('D', 'F'), ('F', 'G'), ('G', 'H')])
+    mock_nx_graph.add_edges_from([('A', 'B'), ('B', 'C'), ('B', 'D'), ('C', 'E'), ('E', 'F'),
+                                  ('D', 'F'), ('F', 'G'), ('G', 'H')])
 
-    mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
-    return mock_graph
+    mark_input_ports_lexicographically_based_on_input_node_key(mock_nx_graph)
+    return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
 MOCK_OPERATOR_NAME = "conv_transpose2d"
 
 
-def get_mock_nncf_node_attrs(op_name=None):
+def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
+    scope_to_set = Scope() if scope_str is None else Scope.from_str(scope_str)
     return {
         PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                         Scope(),
+                                                                         scope_to_set,
                                                                          0,
-                                                                         [None])
+                                                                       [None]),
     }
 
 
-def get_mock_model_graph_with_mergeable_pattern() -> nx.DiGraph:
-    mock_graph = nx.DiGraph()
+def get_mock_model_graph_with_mergeable_pattern() -> NNCFGraph:
+    mock_nx_graph = nx.DiGraph()
 
     #   (A)
     #    |
@@ -393,17 +434,17 @@ def get_mock_model_graph_with_mergeable_pattern() -> nx.DiGraph:
 
     node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B']
     for node_key in node_keys:
-        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+        mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+    mock_nx_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
-    return mock_graph
+    return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
-def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
-    mock_graph = nx.DiGraph()
+def get_mock_model_graph_with_no_mergeable_pattern() -> NNCFGraph:
+    mock_nx_graph = nx.DiGraph()
 
     #   (A)
     #    |
@@ -421,19 +462,19 @@ def get_mock_model_graph_with_no_mergeable_pattern() -> nx.DiGraph:
 
     node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C', 'D']
     for node_key in node_keys:
-        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+        mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+    mock_nx_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('C', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('batch_norm', 'D', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('D', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                (VersionAgnosticNames.RELU, 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
-    return mock_graph
+    return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
-def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
-    mock_graph = nx.DiGraph()
+def get_mock_model_graph_with_broken_output_edge_pattern() -> NNCFGraph:
+    mock_nx_graph = nx.DiGraph()
 
     #   (A)
     #    |
@@ -449,15 +490,15 @@ def get_mock_model_graph_with_broken_output_edge_pattern() -> nx.DiGraph:
 
     node_keys = ['conv2d', 'batch_norm', VersionAgnosticNames.RELU, 'A', 'B', 'C']
     for node_key in node_keys:
-        mock_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
+        mock_nx_graph.add_node(node_key, **get_mock_nncf_node_attrs(op_name=node_key))
 
-    mock_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
+    mock_nx_graph.add_edges_from([('A', 'conv2d', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'batch_norm', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('conv2d', 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 1}),
                                ('batch_norm', VersionAgnosticNames.RELU, {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                (VersionAgnosticNames.RELU, 'C', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0}),
                                ('C', 'B', {PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0})])
-    return mock_graph
+    return get_nncf_graph_from_mock_nx_graph(mock_nx_graph)
 
 
 MERGE_PATTERN_TEST_CASES = (
@@ -475,13 +516,15 @@ class TestInsertionPointGraph:
 
         ip_graph = InsertionPointGraph(mock_graph)
 
-        ref_node_len = 3 * len(mock_graph.nodes)  # 2 additional nodes per each operator node
-        ref_edge_len = 3 * len(mock_graph.edges)
+        nx_graph = mock_graph.get_nx_graph_copy()
+        ref_node_len = 3 * len(nx_graph.nodes)  # 2 additional nodes per each operator node
+        ref_edge_len = 3 * len(nx_graph.edges)
 
         assert len(ip_graph.nodes) == ref_node_len
         assert len(ip_graph.edges) == ref_edge_len
 
-        for node_key, node in mock_graph.nodes.items():
+        for nncf_node_idx in mock_graph.get_all_node_ids():
+            node_key = mock_graph.get_node_key_by_id(nncf_node_idx)
             ip_graph_op_node = ip_graph.nodes[node_key]
             assert ip_graph_op_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR
             preds = list(ip_graph.predecessors(node_key))
@@ -501,7 +544,7 @@ class TestInsertionPointGraph:
             ref_associated_ip_node_keys_set = {*pre_hook_ip_node_keys, post_hook_ip_node_key}
             assert ref_associated_ip_node_keys_set == ip_graph_op_node[
                 InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]
-            original_neighbours = mock_graph.neighbors(node_key)
+            original_neighbours = nx_graph.neighbors(node_key)
             for neighbour in original_neighbours:
                 # IP node insertion should not disrupt the graph superstructure
                 ip_graph_paths = list(nx.all_simple_paths(ip_graph, node_key, neighbour))
@@ -524,40 +567,37 @@ class TestInsertionPointGraph:
     def test_insertion_point_data_in_ip_nodes(self):
         # TODO: extend for modules
         mock_graph = nx.DiGraph()
-        ref_op_exec_context = OperationExecutionContext("baz",
-                                                        Scope.from_str("Test/Scope[foo]/bar"),
-                                                        0,
-                                                        [None])
-        node_attrs = {
-            PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: ref_op_exec_context
-        }
 
-        node_key = 0
-        mock_graph.add_node(node_key, **node_attrs)
+        mock_graph.add_node('bar')
+        mock_graph.add_node('baz')
+        mock_graph.add_edge('bar', 'baz')
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(mock_graph)
 
-        ip_graph = InsertionPointGraph(mock_graph)
+        ip_graph = InsertionPointGraph(nncf_graph)
 
-        for node_key in mock_graph.nodes.keys():
+        for nncf_node in nncf_graph.get_all_nodes():
+            node_id = nncf_node.node_id
+            node_key = nncf_graph.get_node_key_by_id(node_id)
             preds = list(ip_graph.predecessors(node_key))
             succs = list(ip_graph.successors(node_key))
 
             post_hook_ip_node = ip_graph.nodes[succs[0]]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
             assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
-            assert post_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
+            assert post_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
                 pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
                 assert pre_hook_ip.target_type == TargetType.OPERATOR_PRE_HOOK
-                assert pre_hook_ip.ia_op_exec_context == ref_op_exec_context.input_agnostic
+                assert pre_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
 
     def test_operator_metatype_marking(self):
         from nncf.dynamic_graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
-            "/" + MODEL_INPUT_OP_NAME + "_0": NoopMetatype,
+            "/" + MODEL_INPUT_OP_NAME + "_0": InputNoopMetatype,
             "ModelForMetatypeTesting/NNCFConv2d[conv_regular]/conv2d_0": Conv2dMetatype,
             "ModelForMetatypeTesting/BatchNorm2d[bn]/batch_norm_0": BatchNormMetatype,
             "ModelForMetatypeTesting/RELU_0": RELUMetatype,
@@ -566,7 +606,8 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": DepthwiseConv2dSubtype,
             "ModelForMetatypeTesting/__iadd___0": AddMetatype,
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
-            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype
+            "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
+            "/" + MODEL_OUTPUT_OP_NAME + "_0": OutputNoopMetatype,
         }
 
         class ModelForMetatypeTesting(torch.nn.Module):
@@ -600,15 +641,13 @@ class TestInsertionPointGraph:
 
         model = ModelForMetatypeTesting()
         nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
-        ip_graph = nncf_network.get_insertion_point_graph()
+        nncf_graph = nncf_network.get_original_graph()
 
-        for node in ip_graph.nodes().values():
-            if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
-                nncf_node_ref = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                scope_str = str(nncf_node_ref[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
-                assert scope_str in ref_scope_vs_metatype_dict
-                ref_metatype = ref_scope_vs_metatype_dict[scope_str]
-                assert node[InsertionPointGraph.OPERATOR_METATYPE_NODE_ATTR] == ref_metatype
+        for nncf_node in nncf_graph.get_all_nodes():  # type: PTNNCFNode
+            scope_str = str(nncf_node.op_exec_context.input_agnostic)
+            assert scope_str in ref_scope_vs_metatype_dict
+            ref_metatype = ref_scope_vs_metatype_dict[scope_str]
+            assert PTOperatorMetatypeNodeMatcher.match(nncf_node) == ref_metatype
 
     @pytest.mark.parametrize(("mock_graph_factory", "dot_file_name"),
                              MERGE_PATTERN_TEST_CASES,
@@ -659,7 +698,8 @@ def test_get_clean_shallow_copy():
     model = TwoConvTestModelWithUserModule()
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
-    assert sparse_quantized_model.activation_quantizers
+    external_quantizers = getattr(sparse_quantized_model, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+    assert external_quantizers
     old_nncf_modules = sparse_quantized_model.get_nncf_modules().values()
     old_nncf_module_pre_ops = [module.pre_ops for module in old_nncf_modules]
     assert any(old_nncf_module_pre_ops)
@@ -718,7 +758,7 @@ def test_multiple_forward():
     config = get_basic_sparsity_plus_quantization_config()
     sparse_quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
     graph = sparse_quantized_model.get_original_graph()
-    for node_key in list(graph.get_all_node_keys())[1:]:
+    for node_key in list(graph.get_all_node_keys())[1:-2]:
         node = graph.get_nx_node_by_key(node_key)
         assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)

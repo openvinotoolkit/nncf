@@ -14,6 +14,7 @@ class QuantizerConfig:
     A generic, framework-agnostic information on a configuration of a quantizer for abstract reasoning
     and determination of a quantizer setup scheme for a given model.
     """
+
     def __init__(self, num_bits: int = 8,
                  mode: QuantizationMode = QuantizationMode.SYMMETRIC,
                  signedness_to_force: Optional[bool] = None,
@@ -50,8 +51,9 @@ class QuantizerConfig:
         specifically, it might be reasonable to put quantizer A after quantizer B in tensor data control flow, so that
         the requantization will further constrain the input tensor data w.r.t. values it can take, but
         putting quantizer A after quantizer B would be unreasonable.
-        :param other: The "primary" QuantizerConfig, i.e. the one that defines an already present quantization
-        :return: True if the current config is a valid requantization for `other`, False otherwise
+
+        :param other: The "primary" QuantizerConfig, i.e. the one that defines an already present quantization.
+        :return: True if the current config is a valid requantization for `other`, False otherwise.
         """
         fail_conditions = [
             self.num_bits > other.num_bits,
@@ -67,9 +69,10 @@ class QuantizerConfig:
         """
         For two configs to be compatible in a unified scale scenario, all of their fundamental parameters
         must be aligned.
+
         :param linked_qconfig: A QuantizerConfig that is compared against the current config.
         :return: A boolean value specifying whether `linked_qconfig` is compatible with the current config in terms
-        of scale unification.
+            of scale unification.
         """
         return self.num_bits == linked_qconfig.num_bits and \
                self.mode == linked_qconfig.mode and \
@@ -80,7 +83,7 @@ class QuantizerConfig:
         """
         :param other_qconfig: A QuantizerConfig to be compared against the current config.
         :return: A boolean value specifying whether `other_config` is identical to the current config
-        in everything except the bitwidth.
+            in everything except the bitwidth.
         """
         return self.per_channel == other_qconfig.per_channel and \
                self.signedness_to_force == other_qconfig.signedness_to_force and \
@@ -92,10 +95,12 @@ class QuantizerSpec:
     A specific (potentially framework-aware) parameter struct required to initialize a
     given object that performs quantization of an input tensor.
     """
+
     def __init__(self, num_bits: int,
                  mode: QuantizationMode,
                  signedness_to_force: bool,
-                 narrow_range: bool):
+                 narrow_range: bool,
+                 half_range: bool):
         """
         :param num_bits: Bitwidth of the quantization.
         :param mode: The mode of quantization (symmetric or asymmetric).
@@ -103,22 +108,26 @@ class QuantizerSpec:
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param narrow_range: True if the range of quantized values should be narrowed as compared to the
-        naive case, False if all 2^`num_bits` quantizations should be used.
+            naive case, False if all 2^`num_bits` quantizations should be used.
+        :param half_range: If ``True`` effectively only a half of an quantizer range are used.
+            False - the full range are used.
         """
         self.num_bits = num_bits
         self.mode = mode
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
+        self.half_range = half_range
 
     def __eq__(self, other: 'QuantizerSpec'):
         return self.__dict__ == other.__dict__
 
     @classmethod
-    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool) -> 'QuantizerSpec':
+    def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> 'QuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
-                   narrow_range)
+                   narrow_range,
+                   half_range)
 
 
 class QuantizationConstraints:
@@ -132,7 +141,6 @@ class QuantizationConstraints:
         a constraint that corresponds to all 8-bit per-channel quantizers, either
         symmetric or asymmetric, either signed or unsigned.
         """
-
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
                 raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))

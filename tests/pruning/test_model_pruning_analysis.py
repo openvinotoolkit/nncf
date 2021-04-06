@@ -246,7 +246,7 @@ MODEL_ANALYSER_TEST_CASES = [
     ModelAnalyserTestStruct(
         model=TestModelResidualConnection,
         ref_can_prune={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: False, 8: False, 9: False,
-                       10: False}
+                       10: False, 11: False}
     )
 ]
 
@@ -348,8 +348,7 @@ def test_is_module_prunable(test_prunable_struct: ModulePrunableTestStruct):
     graph = nncf_model.get_original_graph()
     for module_scope_str in test_prunable_struct.is_module_prunable:
         scope = Scope.from_str(module_scope_str)
-        nx_node = graph.find_node_in_nx_graph_by_scope(scope)
-        nncf_node = graph._nx_node_to_nncf_node(nx_node)
+        nncf_node = graph.find_node_in_nx_graph_by_scope(scope)
         is_prunable, _ = algo_builder.pruning_node_selector._is_module_prunable(graph, nncf_node)
         assert is_prunable == test_prunable_struct.is_module_prunable[module_scope_str]
 

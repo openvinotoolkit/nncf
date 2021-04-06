@@ -36,6 +36,7 @@ from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.initialization import DefaultInitializingDataLoader
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.quantization.init_range import PerLayerRangeInitConfig
 from nncf.quantization.init_range import RangeInitConfig
 from nncf.quantization.init_range import RangeInitParams
@@ -278,10 +279,10 @@ class TestRangeInit:
                                       "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
                                       "AsymmetricQuantizer[op]"]
                    ]
-        group_2 = [quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/"
+        group_2 = [quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/"
                                       "SymmetricQuantizer[TwoConvTestModel/Sequential[features]"
                                       "/Sequential[0]/NNCFConv2d[0]/conv2d_0|OUTPUT]"],
-                   quantizer_str_dict["NNCFNetwork/ModuleDict[activation_quantizers]/SymmetricQuantizer"
+                   quantizer_str_dict[f"NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]/SymmetricQuantizer"
                                       "[/nncf_model_input_0|OUTPUT]"],
                    ]
 
@@ -745,6 +746,7 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
                                   signedness_to_force=None,
                                   scale_shape=tuple(test_struct.ref_scale_shape),
                                   narrow_range=test_struct.is_weights,
+                                  half_range=False,
                                   logarithm_scale=False)
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
         quantizer = q_cls(qconfig)  # type: BaseQuantizer

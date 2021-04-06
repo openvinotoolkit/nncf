@@ -31,6 +31,7 @@ strict digraph  {
 "29 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=29, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "30 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=30, scope="LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "31 LeNet/NNCFLinear[fc3]/linear" [id=31, scope="LeNet/NNCFLinear[fc3]", type=linear];
+"32 /nncf_model_output" [id=32, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 LeNet/NNCFConv2d[conv1]/conv2d";
 "2 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 LeNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -62,4 +63,5 @@ strict digraph  {
 "28 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "29 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "29 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "30 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "30 LeNet/NNCFLinear[fc3]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "31 LeNet/NNCFLinear[fc3]/linear";
+"31 LeNet/NNCFLinear[fc3]/linear" -> "32 /nncf_model_output";
 }

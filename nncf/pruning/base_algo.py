@@ -10,12 +10,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Dict
 
-from functools import partial, update_wrapper
+from functools import partial
+from functools import update_wrapper
 from texttable import Texttable
 from torch import nn
 
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -30,25 +31,14 @@ from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
-from nncf.pruning.utils import get_bn_for_module_scope
 from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
 
 
-class BatchNormInfo:
-    def __init__(self, module_scope: Scope, module: nn.Module, nncf_id: int):
-        self.module = module
-        self.module_scope = module_scope
-        self.nncf_node_id = nncf_id
-
-
 class PrunedModuleInfo:
-    BN_MODULE_NAME = 'bn_module'
-
-    def __init__(self, module_scope: Scope, module: nn.Module, operand, related_modules: Dict, node_id: int):
+    def __init__(self, module_scope: Scope, module: nn.Module, operand, node_id: int):
         self.module_scope = module_scope
         self.module = module
         self.operand = operand
-        self.related_modules = related_modules
         self.nncf_node_id = node_id
 
 
@@ -119,13 +109,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
                     )
                 )
 
-                related_modules = {}
-                if self.prune_batch_norms:
-                    bn_module, bn_scope = get_bn_for_module_scope(target_model, module_scope)
-                    related_modules[PrunedModuleInfo.BN_MODULE_NAME] = BatchNormInfo(module_scope,
-                                                                                     bn_module, bn_scope)
-
-                minfo = PrunedModuleInfo(module_scope, module, hook, related_modules, node.node_id)
+                minfo = PrunedModuleInfo(module_scope, module, hook, node.node_id)
                 group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self.pruned_module_groups_info.add_cluster(cluster)
@@ -158,6 +142,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
                  pruned_module_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self.config = config
         params = self.config.get("params", {})
         self.pruned_module_groups_info = pruned_module_groups_info
@@ -252,7 +237,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         return mask.shape
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]
         data = [header]
@@ -275,9 +260,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         table.add_rows(data)
 
         stats["pruning_statistic_by_module"] = table
-        return self.add_algo_specific_stats(stats)
-
-    def add_algo_specific_stats(self, stats):
         return stats
 
     def get_stats_for_pruned_modules(self):
@@ -296,17 +278,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
             layer_info["params_count"] = sum(p.numel() for p in minfo.module.parameters() if p.requires_grad)
 
             layer_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
-
-            if PrunedModuleInfo.BN_MODULE_NAME in minfo.related_modules and \
-                    minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module is not None:
-                bn_info = {}
-                bn_module = minfo.related_modules[PrunedModuleInfo.BN_MODULE_NAME].module
-                bn_info['w_shape'] = bn_module.weight.size()
-
-                bn_info["b_shape"] = bn_module.bias.size() if bn_module.bias is not None else []
-                bn_info['params_count'] = sum(p.numel() for p in bn_module.parameters() if p.requires_grad)
-                bn_info["mask_pr"] = self.pruning_rate_for_mask(minfo)
-                stats[str(minfo.module_scope) + '/BatchNorm'] = bn_info
 
             stats[str(minfo.module_scope)] = layer_info
 

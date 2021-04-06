@@ -13,6 +13,7 @@
     *   [2.6 Default Iterators and Operators](#s2.6-default-iterators-and-operators)
     *   [2.7 Type Annotated Code](#s2.7-type-annotated-code)
     *   [2.8 Files and Sockets](#2.8-files-and-sockets)
+    *   [2.9 Abstract Classes](#2.9-abstract-classes)
 -   [3 Python Style Rules](#s3-python-style-rules)
     *   [3.1 Line length](#s3.1-line-length)
     *   [3.2 Indentation](#s3.2-indentation)
@@ -236,6 +237,45 @@ with open("hello.txt") as hello_file:
         print(line)
 ```
 
+
+<a id="s2.9-abstract-classes"></a>
+<a id="29-abstract-classes"></a>
+<a id="abstract-classes"></a>
+### 2.9 Abstract Classes 
+
+When defining abstract classes, the following template should be used:
+
+```python
+from abc import ABC, abstractmethod
+
+class C(ABC):
+    @abstractmethod
+    def my_abstract_method(self, ...):
+        ...
+    @classmethod
+    @abstractmethod
+    def my_abstract_classmethod(cls, ...):
+        ...
+    @staticmethod
+    @abstractmethod
+    def my_abstract_staticmethod(...):
+        ...
+    @property
+    @abstractmethod
+    def my_abstract_property(self):
+        ...
+    @my_abstract_property.setter
+    @abstractmethod
+    def my_abstract_property(self, val):
+        ...
+    @abstractmethod
+    def _get_x(self):
+        ...
+    @abstractmethod
+    def _set_x(self, val):
+```
+
+
 <a id="s3-python-style-rules"></a>
 <a id="3-python-style-rules"></a>
 <a id="python-style-rules"></a>
@@ -273,7 +313,7 @@ the first line.
 
 # Aligned with opening delimiter
 foo = long_function_name(var_one, var_two,
-                        var_three, var_four)
+                         var_three, var_four)
 meal = (spam,
        beans)
 
@@ -521,14 +561,18 @@ def load_state(model: torch.nn.Module, state_dict_to_load: dict, is_resume: bool
 <a id="classes"></a>
 #### 3.5.3 Classes 
 
-Classes should have a docstring below the class definition describing the class.
+Classes should have a docstring below the class definition describing the class. If your class
+has public attributes, they should be documented here follow the same formatting as a function's
+params section.
 
 ```python
 class ModelTransformer:
     """
     Applies transformations to the model.
+
+    :param public_attribute: Public attribute description
     """
-    
+
     def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
         """
         Initializes Model Transformer
@@ -539,6 +583,7 @@ class ModelTransformer:
         """
         self._model = model
         self._transformations = transformation_layout.transformations
+        self.public_attribute = None
 
     def transform(self) -> ModelType:
         """

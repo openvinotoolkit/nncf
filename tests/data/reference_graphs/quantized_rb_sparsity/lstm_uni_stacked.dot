@@ -66,6 +66,9 @@ strict digraph  {
 "64 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" [id=64, scope="NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint", type=cat];
 "65 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=65, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
 "66 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=66, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
+"67 /nncf_model_output" [id=67, scope="", type=nncf_model_output];
+"68 /nncf_model_output" [id=68, scope="", type=nncf_model_output];
+"69 /nncf_model_output" [id=69, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
 "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -140,4 +143,7 @@ strict digraph  {
 "62 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul__" -> "63 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/cat";
 "62 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul__" -> "65 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "63 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/cat" -> "64 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat";
+"64 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" -> "69 /nncf_model_output";
+"65 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "67 /nncf_model_output";
+"66 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "68 /nncf_model_output";
 }

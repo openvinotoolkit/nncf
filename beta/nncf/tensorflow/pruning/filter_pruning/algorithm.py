@@ -27,7 +27,6 @@ from beta.nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFConvolution
 from beta.nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
-from beta.nncf.tensorflow.pruning.schedulers import PRUNING_SCHEDULERS
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import calculate_binary_mask
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_normalizer
@@ -38,6 +37,7 @@ from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -49,6 +49,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
 
     def build_controller(self, target_model: tf.keras.Model) -> TFCompressionAlgorithmController:
         return FilterPruningController(target_model,
+                                       self._op_names,
                                        self._prunable_types,
                                        self._pruned_layer_groups_info,
                                        self.config)
@@ -73,10 +74,11 @@ class FilterPruningController(BasePruningAlgoController):
 
     def __init__(self,
                  target_model: tf.keras.Model,
+                 op_names: List[str],
                  prunable_types: List[str],
                  pruned_layer_groups: Clusterization,
                  config):
-        super().__init__(target_model, prunable_types, pruned_layer_groups, config)
+        super().__init__(target_model, op_names, prunable_types, pruned_layer_groups, config)
         params = self.config.get('params', {})
         self.frozen = False
 

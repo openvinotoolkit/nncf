@@ -70,7 +70,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             self._parse_group_params(self.config, quantizer_group)
 
     def build_controller(self, model):
-        return QuantizationController(model)
+        return QuantizationController(model, self.config)
 
     def _parse_group_params(self, config, quantizer_group):
         params_dict = config.get(quantizer_group, {})
@@ -93,9 +93,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             qconfig = constraints.apply_constraints_to(qconfig)
         return qconfig
 
-    def _create_quantizer(self, qconfig: QuantizerConfig):
+    def _create_quantizer(self, name: str, qconfig: QuantizerConfig):
         quantizer_cls = NNCF_QUANTIZATION_OPERATONS.get(qconfig.mode)
-        return quantizer_cls(qconfig)
+        return quantizer_cls(name, qconfig)
 
     def get_transformation_layout(self, model):
         nxmodel = convert_keras_model_to_nxmodel(model)
@@ -117,10 +117,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if node['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            operation = self._create_quantizer(TFQuantizerSpec.from_config(qconfig,
-                                                                           narrow_range=True))
-
             weight_attr_name = QUANTIZATION_LAYERS[node['type']][WEIGHT_ATTR_NAME]
+            op_name = self._get_quantizer_operation_name(node_name, weight_attr_name)
+
+            operation = self._create_quantizer(op_name, TFQuantizerSpec.from_config(qconfig,
+                                                                           narrow_range=True,
+                                                                           half_range=False))
+
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFLayerWeight(original_node_name, weight_attr_name),
@@ -132,9 +135,10 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
-            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig,
-                                                                           narrow_range=False),
+            fake_quantize_layer = FakeQuantize(TFQuantizerSpec.from_config(qconfig, narrow_range=False,
+                                                                           half_range=False),
                                                name=fake_quantize_name)
+
             transformations.register(
                 TFInsertionCommand(
                     target_point=TFAfterLayer(original_node_name, instance_index),
@@ -217,11 +221,14 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             return '{}/fake_quantize'.format(node_name)
         return '{}/fake_quantize_{}'.format(node_name, instance_index)
 
+    def _get_quantizer_operation_name(self, layer_name, weight_attr_name):
+        return f'{layer_name}_{weight_attr_name}_quantizer'
+
 
 class QuantizationController(TFCompressionAlgorithmController):
-    def __init__(self, target_model):
+    def __init__(self, target_model, config):
         super().__init__(target_model)
-        self._initializer = MinMaxInitializer()
+        self._initializer = MinMaxInitializer(config)
 
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)

@@ -665,6 +665,7 @@ strict digraph  {
 "663 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=663, scope="DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "664 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=664, scope="DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "665 DenseNet/NNCFLinear[linear]/linear" [id=665, scope="DenseNet/NNCFLinear[linear]", type=linear];
+"666 /nncf_model_output" [id=666, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
 "1 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d";
@@ -1388,4 +1389,5 @@ strict digraph  {
 "662 DenseNet/avg_pool2d" -> "665 DenseNet/NNCFLinear[linear]/linear";
 "663 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "664 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "664 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "665 DenseNet/NNCFLinear[linear]/linear";
+"665 DenseNet/NNCFLinear[linear]/linear" -> "666 /nncf_model_output";
 }

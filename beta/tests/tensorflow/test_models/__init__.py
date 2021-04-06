@@ -12,6 +12,7 @@
 """
 
 from beta.tests.tensorflow.test_models.densenet import DenseNet121
+from beta.tests.tensorflow.test_models.mobilenet_v2_slim import HubMobileNetV2
 from beta.tests.tensorflow.test_models.inception_resnet_v2 import InceptionResNetV2
 from beta.tests.tensorflow.test_models.inception_v3 import InceptionV3
 from beta.tests.tensorflow.test_models.mobilenet import MobileNet
