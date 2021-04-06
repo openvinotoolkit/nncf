@@ -176,3 +176,53 @@ def test_evaluate_strategy(strategy, skip_bool, mocker):
             assert info_set['model_ratio'] == strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
         else:
             assert info_set['model_ratio'] == evaluated_strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
+
+
+STRATEGY_IO_LIST = [
+    [[8, 8], [8, 8]],
+    [[8, 4], [4, 4]],
+    [[8, 2], [4, 2]],
+    [[4, 8], [4, 4]],
+    [[4, 4], [4, 4]],
+    [[4, 2], [4, 2]]
+]
+
+PERFORMANT_BW_FLOW = [True, False]
+@pytest.mark.parametrize('perf_bw_bool', PERFORMANT_BW_FLOW,
+                         ids=['_'.join(['perf_bw_flow', str(s)]) for s in PERFORMANT_BW_FLOW])
+@pytest.mark.parametrize('strategy', STRATEGY_IO_LIST,
+                         ids=['_'.join(['bitwidth_strategy', str(s[0])]) for s in STRATEGY_IO_LIST])
+def test_align_bw_action(strategy, perf_bw_bool, mocker):
+    final_cfg_spy = mocker.spy(ModelSizeCalculator, "__call__")
+
+    qenv = create_test_quantization_env()
+    qenv.performant_bw = perf_bw_bool #TODO: Review
+
+    input_strategy = strategy[0]
+
+    # with constraint is skipped, non-perf bw flow should have Q.Env evaluating input strategy as is
+    output_ref = strategy[1] if perf_bw_bool is True else input_strategy
+
+    if len(input_strategy) != len(qenv.qctrl.all_quantizations):
+        with pytest.raises(AssertionError):
+            qenv.evaluate_strategy(input_strategy, skip_constraint=True)
+    else:
+        _ = qenv.evaluate_strategy(input_strategy, skip_constraint=True)
+        evaluated_strategy = list(final_cfg_spy.call_args[0][1].values())
+
+        assert evaluated_strategy == output_ref
+
+
+VPU_UMMAPPABLE_STRATEGY = [
+    [2, 8],
+    [2, 4],
+    [2, 2]
+]
+
+@pytest.mark.parametrize('strategy', VPU_UMMAPPABLE_STRATEGY,
+                         ids=['_'.join(['vpu_unmappable_strategy', str(s)]) for s in VPU_UMMAPPABLE_STRATEGY])
+def test_select_config_for_actions(strategy):
+    qenv = create_test_quantization_env()
+
+    with pytest.raises(AssertionError):
+        qenv.select_config_for_actions(strategy)
