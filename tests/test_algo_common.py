@@ -432,6 +432,7 @@ comp_loss_configs = [
                          ids=[reduce(lambda x, y: x + "_" + y.get("algorithm", ""), config.get('compression', []),
                                      'compression')
                               for config in comp_loss_configs])
+@pytest.mark.skipif(not cuda.is_available(), reason="Since its GPU test, no need to run this without GPUs available")
 def test_compression_loss_device_compatibility(config, device_type):
     model = BasicConvTestModel()
     if device_type == 'cuda':
