@@ -12,17 +12,14 @@
 """
 from typing import List
 from typing import Union
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
-from nncf.common.utils.backend import __nncf_backend__
-if __nncf_backend__ == 'Torch':
-    from torch import Tensor
-elif __nncf_backend__ == 'TensorFlow':
-    from tensorflow import Tensor
+TensorType = TypeVar('TensorType')
 
 
 class MaskPropagationAlgorithm:
@@ -65,7 +62,7 @@ class MaskPropagationAlgorithm:
             cls.mask_propagation(node, self._graph)
 
 
-def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[Tensor, None]]:
+def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Union[TensorType, None]]:
     """
     Returns input masks for all inputs of nx_node.
 
