@@ -85,7 +85,7 @@ def checkpoint_saver(config):
     model_builder = get_model_builder(config)
     model = model_builder.build_model()
 
-    compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
+    _, compress_model = create_compressed_model(model, config.nncf_config)
 
     checkpoint = tf.train.Checkpoint(model=compress_model)
     load_checkpoint(checkpoint, config.ckpt_path)
