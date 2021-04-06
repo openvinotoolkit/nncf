@@ -38,6 +38,7 @@ class HWConfigOpName:
     REDUCEMEAN = "ReduceMean"
     MAXPOOL = "MaxPool"
     REDUCEMAX = "ReduceMax"
+    REDUCESUM = "ReduceSum"
     INTERPOLATE = "Interpolate"
     MVN = "MVN"
     RESHAPE = "Reshape"

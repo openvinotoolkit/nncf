@@ -631,7 +631,7 @@ class LogicalNotMetatype(OperatorMetatype):
 @OPERATOR_METATYPES.register()
 class PowerMetatype(OperatorMetatype):
     name = "__pow__"
-    torch_tensor_patch_spec = PatchSpec([name])
+    torch_tensor_patch_spec = PatchSpec([name, "pow", "sqrt"])
     hw_config_names = [HWConfigOpName.POWER]
 
 
@@ -659,3 +659,10 @@ class CloneMetatype(OperatorMetatype):
 class PixelShuffleMetatype(OperatorMetatype):
     name = "pixel_shuffle"
     torch_nn_functional_patch_spec = PatchSpec([name])
+
+
+@OPERATOR_METATYPES.register()
+class SumMetatype(OperatorMetatype):
+    name = "sum"
+    torch_tensor_patch_spec = PatchSpec([name])
+    hw_config_names = [HWConfigOpName.REDUCESUM]
