@@ -101,7 +101,7 @@ def test_rb_sparse_target_lenet():
 
     model = tf.keras.models.load_model(MODEL_PATH)
 
-    freeze_epoch=4
+    freeze_epoch = 4
     config = get_basic_sparsity_config(sparsity_init=0.05, sparsity_target=0.3,
                                        sparsity_target_epoch=3, sparsity_freeze_epoch=freeze_epoch)
     compress_model, compress_algo = create_compressed_model_and_algo_for_test(model, config)
