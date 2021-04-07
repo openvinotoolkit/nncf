@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 from nncf.progress_bar import ProgressBar
 from nncf.structures import TrainEpochArgs
 from nncf.structures import AutoQPrecisionInitArgs
+from nncf.structures import ModelEvaluationArgs
 from nncf.structures import BNAdaptationInitArgs
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.structures import QuantizationRangeInitArgs
@@ -247,6 +248,10 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
+
+    if autoq_eval_fn:
+        nncf_config.register_extra_structs([ModelEvaluationArgs(data_loader=autoq_eval_loader,
+                                                                eval_fn=autoq_eval_fn)])
 
     return nncf_config
 

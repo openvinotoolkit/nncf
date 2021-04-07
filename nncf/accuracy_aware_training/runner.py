@@ -11,8 +11,13 @@
  limitations under the License.
 """
 
+import io
 import os.path as osp
 from shutil import copyfile
+
+import matplotlib.pyplot as plt
+import PIL.Image
+from torchvision.transforms import ToTensor
 
 import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -64,10 +69,7 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
         for key in default_parameter_values:
             setattr(self, key, accuracy_aware_config.get(key, default_parameter_values[key]))
 
-        self.uncompressed_model_accuracy = accuracy_aware_config.get('uncompressed_model_accuracy')
-        self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_drop')
-        self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy - self.maximal_accuracy_drop
-
+        self.maximal_accuracy_drop = accuracy_aware_config.get('maximal_accuracy_degradation')
         self.initial_training_phase_epochs = accuracy_aware_config.get('initial_training_phase_epochs')
 
         self.compression_rate_step = self.initial_compression_rate_step
@@ -82,6 +84,13 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
         self.tensorboard_writer = self.train_epoch_args.tensorboard_writer
         if self.tensorboard_writer is None:
             self.tensorboard_writer = SummaryWriter(self.log_dir)
+
+    def retrieve_original_accuracy(self, model):
+        if isinstance(model, (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
+            self.uncompressed_model_accuracy = model.module.original_model_accuracy
+        else:
+            self.uncompressed_model_accuracy = model.original_model_accuracy
+        self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy - self.maximal_accuracy_drop
 
     def train_epoch(self, model, compression_controller):
         compression_controller.scheduler.epoch_step()
@@ -167,9 +176,18 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
     def update_training_history(self, compression_rate, best_metric_value):
         best_accuracy_budget = best_metric_value - self.minimal_tolerable_accuracy
         self._compressed_training_history.append((compression_rate, best_accuracy_budget))
-        # todo: scatter plot in tb
-        #self.tensorboard_writer.add_scalar('compression/accuracy_aware/acc_budget_vs_comp_rate',
-        #                                   compression_rate, best_accuracy_budget)
+
+        plt.figure()
+        plt.plot(self.compressed_training_history.keys(),
+                 self.compressed_training_history.values())
+        buf = io.BytesIO()
+        plt.savefig(buf, format='jpeg')
+        buf.seek(0)
+        image = PIL.Image.open(buf)
+        image = ToTensor()(image)
+        self.tensorboard_writer.add_image('compression/accuracy_aware/acc_budget_vs_comp_rate',
+                                          image,
+                                          global_step=len(self.compressed_training_history))
 
     @property
     def compressed_training_history(self):

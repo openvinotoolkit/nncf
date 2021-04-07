@@ -53,6 +53,10 @@ class TrainingRunner(ABC):
     def reset_training(self):
         pass
 
+    @abstractmethod
+    def retrieve_original_accuracy(self, model):
+        pass
+
 
 class StubCompressionScheduler(CompressionScheduler):
 
@@ -64,6 +68,8 @@ class StubCompressionScheduler(CompressionScheduler):
 def run_accuracy_aware_compressed_training(model,
                                            compression_controller: CompressionAlgorithmController,
                                            runner: TrainingRunner):
+
+    runner.retrieve_original_accuracy(model)
 
     accuracy_aware_controller = determine_compression_variable_controller(compression_controller)
     if accuracy_aware_controller is None:
@@ -181,7 +187,7 @@ def uniform_decrease_compression_step_update(runner):
 def interpolate_compression_step_update(runner,
                                         current_compression_rate,
                                         num_curve_pts=1000,
-                                        full_compression_factor=20):
+                                        full_compression_factor=10):
     training_history = runner.compressed_training_history
     nncf_logger.info('Compressed training history: {}'.format(training_history))
     training_history[0.0] = runner.maximal_accuracy_drop

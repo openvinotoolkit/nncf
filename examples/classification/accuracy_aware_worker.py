@@ -119,13 +119,13 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, _, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, eval_loader):
-            _, top5 = validate(eval_loader, model, criterion, config)
-            return top5
+        def evaluation_fn(model, eval_loader):
+            top1, _ = validate(eval_loader, model, criterion, config)
+            return top1
 
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            evaluation_fn, val_loader, config.device)
 
     # create model
     model = load_model(model_name,
@@ -137,7 +137,9 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     resuming_model_sd, _ = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
+    compression_ctrl, model = create_compressed_model(model, nncf_config,
+                                                      resuming_state_dict=resuming_model_sd,
+                                                      should_eval_original_model=True)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)

@@ -119,6 +119,17 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
         return "autoq_precision_init_args"
 
 
+class ModelEvaluationArgs(NNCFExtraConfigStruct):
+    def __init__(self, data_loader: DataLoader,
+                 eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float]):
+        self.data_loader = data_loader
+        self.eval_fn = eval_fn
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "model_evaluation_args"
+
+
 class TrainEpochArgs(NNCFExtraConfigStruct):
     def __init__(self,
                  train_epoch_fn,

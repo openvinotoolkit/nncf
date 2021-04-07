@@ -388,11 +388,13 @@ class PTInsertionPoint:
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
                  dummy_forward_fn=None, wrap_inputs_fn=None, scopes_without_shape_matching=None,
-                 ignored_scopes=None, target_scopes=None, reset: bool = False):
+                 ignored_scopes=None, target_scopes=None, original_model_accuracy=None, reset: bool = False):
         super().__init__()
         self._set_nncf_wrapped_model(module)
         self._forward_signature = inspect.signature(module.forward)
         self.input_infos = input_infos
+
+        self._original_model_accuracy = original_model_accuracy
 
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
@@ -782,6 +784,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             module = self.get_module_by_scope(scope)
             nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
             nx_node[PTNNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
+
+    @property
+    def original_model_accuracy(self):
+        return self._original_model_accuracy
 
 
 def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:

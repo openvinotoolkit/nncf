@@ -697,10 +697,9 @@ TARGET_DEVICE_SCHEMA = {
 }
 
 ACCURACY_AWARE_SCHEMA = {
-    "uncompressed_model_accuracy": with_attributes(_NUMBER,
-                                                   description="Minimal tolerable accuracy value"),
-    "maximal_accuracy_drop": with_attributes(_NUMBER,
-                                             description="Minimal tolerable accuracy value"),
+    "maximal_accuracy_degradation": with_attributes(_NUMBER,
+                                                    description="Maximally allowed accuracy degradation"
+                                                                " of the model"),
     "initial_training_phase_epochs": with_attributes(_NUMBER,
                                                      description="Number of epochs to tune during the initial"
                                                                  "training phase"),
