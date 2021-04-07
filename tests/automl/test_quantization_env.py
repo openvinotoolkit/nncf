@@ -24,8 +24,8 @@ from nncf.quantization.precision_constraints import HardwareQuantizationConstrai
 from tests.helpers import create_mock_dataloader, BasicConvTestModel
 
 
-def create_test_quantization_env() -> QuantizationEnv:
-    model = BasicConvTestModel()
+def create_test_quantization_env(model_creator=BasicConvTestModel) -> QuantizationEnv:
+    model = model_creator()
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
     hw_config_type = HWConfigType.VPU
     hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
