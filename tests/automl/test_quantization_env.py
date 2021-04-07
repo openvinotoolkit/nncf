@@ -196,7 +196,7 @@ def test_align_bw_action(strategy, perf_bw_bool, mocker):
     final_cfg_spy = mocker.spy(ModelSizeCalculator, "__call__")
 
     qenv = create_test_quantization_env()
-    qenv.performant_bw = perf_bw_bool #TODO: Review
+    qenv.performant_bw = perf_bw_bool
 
     input_strategy = strategy[0]
 
