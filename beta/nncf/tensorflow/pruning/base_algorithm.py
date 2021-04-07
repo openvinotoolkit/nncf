@@ -49,11 +49,8 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 class PrunedLayerInfo:
-    BN_LAYER_NAME = 'bn_layer'
-
-    def __init__(self, layer_name: str, related_layers: Dict[str, List[str]]):
+    def __init__(self, layer_name: str):
         self.layer_name = layer_name
-        self.related_layers = related_layers
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
@@ -126,7 +123,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 layer = model.get_layer(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
-
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
                 for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
@@ -134,27 +130,30 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         transformations.register(
                             self._get_insertion_command_binary_mask(layer_name, attr_name)
                         )
+                group_minfos.append(PrunedLayerInfo(layer_name))
 
-                related_layers = {}
-                if self._prune_batch_norms:
-                    bn_nodes = self._get_related_batchnorms(layer_name, group, graph)
-                    for bn_node in bn_nodes:
-                        bn_layer_name = get_layer_identifier(bn_node)
-                        for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                            attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[bn_node.node_type][attr_name_key]
-                            transformations.register(
-                                self._get_insertion_command_binary_mask(bn_layer_name, attr_name)
-                            )
-                        if PrunedLayerInfo.BN_LAYER_NAME in related_layers:
-                            related_layers[PrunedLayerInfo.BN_LAYER_NAME].append(bn_layer_name)
-                        else:
-                            related_layers[PrunedLayerInfo.BN_LAYER_NAME] = [bn_layer_name]
-
-                minfo = PrunedLayerInfo(layer_name, related_layers)
-                group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
 
+        # Add masks for all spec modules, because prunable batchnorm layers can be determines
+        # at the moment of mask propagation
+        types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
+        if not self._prune_batch_norms:
+            types_spec_layers.remove('BatchNormalization')
+
+        spec_nodes = graph.get_nodes_by_types(types_spec_layers)
+        for spec_node in spec_nodes:
+            layer_name = get_layer_identifier(spec_node)
+            if layer_name in shared_layers:
+                continue
+            if is_shared(spec_node):
+                shared_layers.add(layer_name)
+            nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
+            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
+                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
+                transformations.register(
+                    self._get_insertion_command_binary_mask(layer_name, attr_name)
+                )
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):

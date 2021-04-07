@@ -488,8 +488,6 @@ class NNCFGraphPatternIO:
 class PTNNCFGraph(NNCFGraph):
 
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
-    ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
-    IN_PORT_NAME_EDGE_ATTR = 'in_port'
 
     def __init__(self):
         super().__init__()

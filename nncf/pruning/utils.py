@@ -12,6 +12,7 @@
 """
 from typing import Tuple
 from typing import Optional
+from typing import List
 
 import torch
 import numpy as np
@@ -61,3 +62,20 @@ def is_conv_with_downsampling(node: PTNNCFNode) -> bool:
     return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
+
+
+def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
+    """
+    Initialize masks in groph for mask propagation algorithm
+
+    :param graph: NNCFNetwork
+    :param nodes: list with pruned nodes
+    """
+    for node in graph.get_all_nodes():
+        node.data.pop('input_mask', None)
+        node.data.pop('output_mask', None)
+
+    for minfo in nodes:
+        mask = minfo.operand.binary_filter_pruning_mask
+        nncf_node = graph.get_nncf_node_by_id(minfo.nncf_node_id)
+        nncf_node.data['output_mask'] = mask

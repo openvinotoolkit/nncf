@@ -16,6 +16,7 @@ import tensorflow as tf
 
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -23,7 +24,6 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
-from beta.nncf.tensorflow.pruning.base_algorithm import PrunedLayerInfo
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFConvolution
 from beta.nncf.tensorflow.pruning.export_helpers import TFTransposeConvolution
@@ -34,10 +34,11 @@ from beta.nncf.tensorflow.pruning.utils import broadcast_filter_mask
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from nncf.common.pruning.model_analysis import Clusterization
-from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
+from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -87,6 +88,7 @@ class FilterPruningController(BasePruningAlgoController):
         self.all_weights = params.get('all_weights', False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
+        self.set_pruning_rate(self.pruning_init)
 
     def freeze(self):
         self.frozen = True
@@ -109,6 +111,14 @@ class FilterPruningController(BasePruningAlgoController):
     def _set_binary_masks_for_filters(self, pruning_rate: float):
         nncf_logger.debug('Setting new binary masks for pruned layers.')
         wrapped_layers = collect_wrapped_layers(self._model)
+        graph = convert_keras_model_to_nncf_graph(self._model)
+        nncf_sorted_nodes = graph.topological_sort()
+
+        # 0. Removing masks at the nodes of the graph
+        for node in nncf_sorted_nodes:
+            node.data.pop('output_mask', None)
+
+        # 1. Calculate masks
         for group in self._pruned_layer_groups_info.get_all_clusters():
             group_layer_names = [node.layer_name for node in group.nodes]
             group_filters_num = tf.constant([get_filters_num(wrapped_layer)
@@ -119,23 +129,33 @@ class FilterPruningController(BasePruningAlgoController):
 
             layers = []
             cumulative_filters_importance = tf.zeros(filters_num)
-            # 1. Calculate cumulative importance for all filters in group
+
+            # a. Calculate cumulative importance for all filters in group
             for minfo in group.nodes:
                 layer = [layer for layer in wrapped_layers if layer.layer.name == minfo.layer_name][0]
                 layers.append(layer)
                 filters_importance = self._layer_filter_importance(layer)
                 cumulative_filters_importance += filters_importance
 
-            # 2. Calculate threshold
+            # b. Calculate threshold
             num_of_sparse_elems = get_rounded_pruned_element_number(cumulative_filters_importance.shape[0],
                                                                     pruning_rate)
             threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num - 1)]
             filter_mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
-            layers = self._update_with_bn_layers(group, layers, wrapped_layers)
+            for layer in layers:
+                nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.data['original_name']][0]
+                nncf_node.data['output_mask'] = filter_mask
 
-            # 3. Set binary masks for filter
-            self._set_operation_masks(layers, filter_mask)
+        # 2. Propagating masks across the graph
+        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
+
+        # 3. Apply the masks
+        for wrapped_layer in wrapped_layers:
+            nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.data['original_name']][0]
+            if nncf_node.data['output_mask'] is not None:
+                self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
 
     def _layer_filter_importance(self, layer: NNCFWrapper):
         layer_type = layer.layer.__class__.__name__
@@ -161,7 +181,15 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.debug('Setting new binary masks for all pruned modules together.')
         filter_importances = []
         layers = []
+
         wrapped_layers = collect_wrapped_layers(self._model)
+        graph = convert_keras_model_to_nncf_graph(self._model)
+        nncf_sorted_nodes = graph.topological_sort()
+
+        # 0. Removing masks at the nodes of the graph
+        for node in nncf_sorted_nodes:
+            node.data.pop('output_mask', None)
+
         # 1. Calculate importances for all groups of  filters
         for group in self._pruned_layer_groups_info.get_all_clusters():
             group_layer_names = [node.layer_name for node in group.nodes]
@@ -189,17 +217,17 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Set binary masks for filters in grops
         for i, group in enumerate(self._pruned_layer_groups_info.get_all_clusters()):
-            layers[i] = self._update_with_bn_layers(group, layers[i], wrapped_layers)
             filter_mask = calculate_binary_mask(filter_importances[i], threshold)
-            self._set_operation_masks(layers[i], filter_mask)
+            for layer in layers[i]:
+                nncf_node = [n for n in nncf_sorted_nodes if layer.name == n.node_name][0]
+                nncf_node.data['output_mask'] = filter_mask
 
-    @staticmethod
-    def _update_with_bn_layers(group: NodesCluster,
-                               layers_to_prune: List[NNCFWrapper],
-                               wrapped_layers: List[NNCFWrapper]) -> List[NNCFWrapper]:
-        for minfo in group.nodes:
-            bn_layers = list({layer for layer in wrapped_layers
-                              if PrunedLayerInfo.BN_LAYER_NAME in minfo.related_layers
-                              and layer.layer.name in minfo.related_layers[PrunedLayerInfo.BN_LAYER_NAME]})
-            layers_to_prune += bn_layers
-        return layers_to_prune
+        # 2. Propagating masks across the graph
+        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
+
+        # 3. Apply the masks
+        for wrapped_layer in wrapped_layers:
+            nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.node_name][0]
+            if nncf_node.data['output_mask'] is not None:
+                self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
