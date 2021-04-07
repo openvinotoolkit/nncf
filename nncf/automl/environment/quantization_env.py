@@ -420,15 +420,13 @@ class QuantizationEnv:
         for i, _ in enumerate(self.groups_of_adjacent_quantizers):
             list_of_bw_space = []
 
-            for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
+            for aq in self.groups_of_adjacent_quantizers[i].activation_quantizers:
                 bw_space = bwassigner_df.bw_space[bwassigner_df.qid == str(aq[0])][0]
                 list_of_bw_space.append(bw_space)
-                # print(i, "aq", bw_space)
 
-            for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
+            for wq in self.groups_of_adjacent_quantizers[i].weight_quantizers:
                 bw_space = bwassigner_df.bw_space[bwassigner_df.qid == str(wq[0])][0]
                 list_of_bw_space.append(bw_space)
-                # print(i, "wq", bw_space)
 
             intersecting_bw_space = set.intersection(*map(set,list_of_bw_space))
             adjq_groupwise_intersecting_bw_space[i] = intersecting_bw_space
