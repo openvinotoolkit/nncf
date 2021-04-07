@@ -24,27 +24,6 @@ from beta.examples.tensorflow.object_detection.models.model_selector import get_
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
 
-def get_argument_parser():
-    parser = get_common_argument_parser(precision=False,
-                                        save_checkpoint_freq=False)
-
-    parser.add_argument(
-        '--mode',
-        '-m',
-        nargs='+',
-        choices=['train', 'test', 'export'],
-        default='train',
-        help='train: performs training and validation; test: tests the model; export: exports the model.'
-    )
-
-    parser.add_argument('--backbone-checkpoint',
-                        default=None,
-                        type=str,
-                        help='Path to backbone checkpoint.')
-
-    return parser
-
-
 def get_config_from_argv(argv, parser):
     args = parser.parse_args(args=argv)
 
@@ -96,7 +75,7 @@ def checkpoint_saver(config):
 
 
 def main(argv):
-    parser = get_argument_parser()
+    parser = get_common_argument_parser()
     config = get_config_from_argv(argv, parser)
 
     checkpoint_saver(config)
