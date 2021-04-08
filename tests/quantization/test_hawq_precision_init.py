@@ -42,7 +42,7 @@ from nncf import register_default_init_args
 from nncf.checkpoint_loading import load_state
 from nncf.debug import set_debug_log_dir
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.hw_config import HWConfigType
 from nncf.initialization import default_criterion_fn
 from nncf.quantization.adjust_padding import add_adjust_padding_nodes

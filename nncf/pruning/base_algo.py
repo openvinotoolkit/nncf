@@ -21,13 +21,13 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import PTNNCFNode
+from nncf.graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster, Clusterization
@@ -90,7 +90,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
             for node in group.nodes:
-                module_scope = node.op_exec_context.scope_in_model
+                module_scope = node.ia_op_exec_context.scope_in_model
                 module = target_model.get_module_by_scope(module_scope)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_module(module)

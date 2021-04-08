@@ -19,7 +19,12 @@ from typing import KeysView
 from typing import ValuesView
 
 import networkx as nx
+
 from nncf.common.graph.module_attributes import BaseModuleAttributes
+
+
+MODEL_INPUT_OP_NAME = "nncf_model_input"
+MODEL_OUTPUT_OP_NAME = "nncf_model_output"
 
 
 class NNCFNode:

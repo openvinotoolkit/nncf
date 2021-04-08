@@ -5,7 +5,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 
 
 class PTTargetPoint(TargetPoint):

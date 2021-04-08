@@ -10,7 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
+
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
 

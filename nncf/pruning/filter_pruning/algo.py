@@ -138,7 +138,7 @@ class FilterPruningController(BasePruningAlgoController):
         # 1. Init in/out channels for potentially prunable modules
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
-            scope = nncf_node.op_exec_context.scope_in_model
+            scope = nncf_node.ia_op_exec_context.scope_in_model
             node_module = self._model.get_module_by_scope(scope)
             in_channels, out_channels = get_in_out_channels(node_module)
             if in_channels:
@@ -154,7 +154,7 @@ class FilterPruningController(BasePruningAlgoController):
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
                 next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
-                next_nodes_idxs = [n.op_exec_context.scope_in_model for n in next_nodes]
+                next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
             self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 
@@ -186,7 +186,7 @@ class FilterPruningController(BasePruningAlgoController):
         hook_list = []
 
         for nncf_node in graph.get_all_nodes():
-            node_module = self._model.get_module_by_scope(nncf_node.op_exec_context.scope_in_model)
+            node_module = self._model.get_module_by_scope(nncf_node.ia_op_exec_context.scope_in_model)
             hook_list.append(node_module.register_forward_hook(get_node_flops_hook(self.nodes_flops)))
             hook_list.append(node_module.register_forward_hook(get_node_cost_hook()))
 
@@ -234,7 +234,7 @@ class FilterPruningController(BasePruningAlgoController):
         flops = 0
         graph = self._model.get_original_graph()
         for nncf_node in graph.get_all_nodes():
-            scope = nncf_node.op_exec_context.scope_in_model
+            scope = nncf_node.ia_op_exec_context.scope_in_model
             if scope in modules_in_channels:
                 flops += int(modules_in_channels[scope] * modules_out_channels[scope] * \
                          self.nodes_flops_cost[scope])
@@ -550,7 +550,7 @@ class FilterPruningController(BasePruningAlgoController):
         for node in graph.get_all_nodes():
             if node.node_type not in types_to_apply_mask:
                 continue
-            scope = node.op_exec_context.scope_in_model
+            scope = node.ia_op_exec_context.scope_in_model
             node_module = self.model.get_module_by_scope(scope)
             if node.data['output_mask'] is not None and node_module not in pruned_node_modules:
                 _apply_binary_mask_to_module_weight_and_bias(node_module, node.data['output_mask'], scope)

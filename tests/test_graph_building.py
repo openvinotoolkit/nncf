@@ -19,13 +19,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from nncf import nncf_model_input
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph_builder import GraphBuilder
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
+from nncf.graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.dynamic_graph.context import get_current_context
 from nncf.dynamic_graph.context import no_nncf_trace
 from nncf.dynamic_graph.context import TracingContext
+from nncf.graph.graph_builder import GraphBuilder
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_compressed_graph import get_basic_quantization_config
 
@@ -69,7 +69,7 @@ def test_ambiguous_function():
     unique_op_exec_contexts = set()
     # pylint:disable=protected-access
     for _, node in graph._nx_graph.nodes.items():
-        node_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+        node_op_exec_context = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
         assert node_op_exec_context not in unique_op_exec_contexts
 
 
@@ -316,27 +316,27 @@ class TestGraphStability:
     def model_and_ctrl_creator(self, request):
         return request.param
 
-    def test_compressed_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
+    def test_dynamic_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
         compressed_model, _ = model_and_ctrl_creator()
         input_tensor = torch.zeros(input_shapes[0])
-        ref_graph = deepcopy(compressed_model.get_graph())
+        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
         for _ in range(0, 10):
             _ = compressed_model(input_tensor)
-            curr_graph = compressed_model.get_graph()
+            curr_graph = compressed_model.get_dynamic_graph()
             assert curr_graph == ref_graph
 
-    def test_compressed_graph_is_the_same_after_export(self, model_and_ctrl_creator, tmp_path):
+    def test_dynamic_graph_is_the_same_after_export(self, model_and_ctrl_creator, tmp_path):
         compressed_model, ctrl = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.get_graph())
+        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
         ctrl.export_model('tmp.onnx')
-        curr_graph = compressed_model.get_graph()
+        curr_graph = compressed_model.get_dynamic_graph()
         assert curr_graph == ref_graph
 
-    def test_dummy_forwards_do_not_inflate_graph(self, model_and_ctrl_creator):
+    def test_dummy_forwards_do_not_inflate_dynamic_graph(self, model_and_ctrl_creator):
         compressed_model, _ = model_and_ctrl_creator()
-        ref_graph = deepcopy(compressed_model.get_graph())
+        ref_graph = deepcopy(compressed_model.get_dynamic_graph())
         compressed_model.do_dummy_forward()
-        curr_graph = deepcopy(compressed_model.get_graph())
+        curr_graph = deepcopy(compressed_model.get_dynamic_graph())
         assert curr_graph == ref_graph
 
     def test_compressed_graph_with_user_wrap_fn(self):

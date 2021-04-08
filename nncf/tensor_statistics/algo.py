@@ -17,11 +17,11 @@ from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import TransformationPriority
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 

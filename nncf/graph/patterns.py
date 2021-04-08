@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from nncf.dynamic_graph.graph import NNCFNodeExpression as N
-from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.graph.graph import NNCFNodeExpression as N
+from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
 
 LINEAR_OPS = N('linear') | N('conv2d') | N('conv_transpose2d') | N('conv3d') | \
              N('conv_transpose3d') | N('conv1d') | N('addmm')

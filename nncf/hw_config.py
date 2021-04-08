@@ -29,7 +29,7 @@ from nncf.common.os import safe_open
 from nncf.config import product_dict
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
+from nncf.graph.operator_metatypes import OPERATOR_METATYPES
 from nncf.hw_config_op_names import HWConfigOpName
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.layers import QuantizationMode
