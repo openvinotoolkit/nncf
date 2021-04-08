@@ -509,7 +509,7 @@ class QuantizationEnv:
         return self.master_df['action'].tolist()
 
     def reward(self, acc: float, model_ratio: float) -> float:
-        return (acc - self.pretrained_score) * 0.1
+        return acc/self.pretrained_score
 
     def step(self, action: Union[int, float]) -> Tuple:
         currently_processed_qconf_idx = len(self.collected_strategy)

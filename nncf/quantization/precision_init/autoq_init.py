@@ -252,8 +252,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                     del agent.memory[discard_start_index:discard_end_index]
                 # = EO Replay Buffer Management
-
+                
                 final_reward = transition_buffer[-1][0]
+                r_per_step = final_reward/len(env.master_df)
 
                 for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
                     # Revision of prev_action as it could be modified by constrainer -------
@@ -264,8 +265,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     if prev_action != s_t['prev_action']:
                         s_t['prev_action'] = prev_action
                     # EO ------------------------
-
-                    agent.observe(final_reward, s_t, a_t, done)
+                    agent.observe((i+1)*r_per_step, s_t, a_t, done)
 
                 agent.memory.append(
                     observation,
