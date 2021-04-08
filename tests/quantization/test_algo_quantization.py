@@ -281,7 +281,7 @@ def hw_config_type_(request):
 
 def test_hw_config_quantization_can_quantize_squeezenet(hw_config_type):
     config = get_squeezenet_quantization_config()
-    config["hw_config"] = hw_config_type.value
+    config["target_device"] = hw_config_type.value
     model = squeezenet1_1()
     create_compressed_model_and_algo_for_test(model, config)
 

@@ -44,7 +44,7 @@ class TestHWConfigRules:
                                                                should_be_quantize_inputs: bool = True):
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["compression"].update({"quantize_inputs": should_be_quantize_inputs})
-        nncf_config["hw_config_type"] = "mock"
+        nncf_config["target_device"] = "mock"
 
         net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
         hw_config = HWConfig.from_dict(hw_config_dict)
