@@ -24,6 +24,9 @@
         },
 	    "weights": {
             "per_channel": false
+	    },
+	    "activations": {
+            "per_channel": false
 	    }
     }
 }
