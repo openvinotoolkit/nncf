@@ -206,6 +206,46 @@ def get_common_argument_parser(**flags):
     return parser
 
 
+def get_checkpoint_argument_parser(**flags):
+    """Defines command-line arguments for checkpoint optimization, and parses them.
+
+    """
+    parser = CustomArgumentParser()
+
+    parser.add_argument(
+        '-c',
+        '--config',
+        help='Path to a config file with task/model-specific parameters.',
+        required=True)
+
+    model_init_mode = parser.add_mutually_exclusive_group()
+
+    add_argument(
+        parser=model_init_mode,
+        condition=flags.get('resume', True),
+        parameters=argument_parameters(
+            '--resume',
+            metavar='PATH',
+            type=str,
+            default=None,
+            dest='ckpt_path',
+            help='Specifies the path to the checkpoint to resume training, test or export model '
+                'from the defined checkpoint or folder with checkpoints to resume training, test '
+                'or export from the last checkpoint.'))
+
+    add_argument(
+        parser=parser,
+        condition=flags.get('checkpoint_save_dir', True),
+        parameters=argument_parameters(
+            '--checkpoint-save-dir',
+            metavar='PATH',
+            type=str,
+            default=None,
+            help='Specifies the directory for the trained model checkpoints to be saved to.'))
+
+    return parser
+
+
 def argument_parameters(*args, **kwargs):
     return (args, kwargs)
 

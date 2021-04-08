@@ -18,8 +18,7 @@ import tensorflow as tf
 from beta.nncf import create_compressed_model
 from beta.examples.tensorflow.common.logger import logger
 from beta.examples.tensorflow.common.sample_config import create_sample_config
-from beta.examples.tensorflow.common.argparser import get_common_argument_parser
-from beta.examples.tensorflow.common.utils import configure_paths
+from beta.examples.tensorflow.common.argparser import get_checkpoint_argument_parser
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
@@ -31,7 +30,6 @@ def get_config_from_argv(argv, parser):
     predefined_config = get_predefined_config(config_from_json.model)
 
     predefined_config.update(config_from_json)
-    configure_paths(predefined_config)
 
     return predefined_config
 
@@ -75,7 +73,7 @@ def checkpoint_saver(config):
 
 
 def main(argv):
-    parser = get_common_argument_parser()
+    parser = get_checkpoint_argument_parser()
     config = get_config_from_argv(argv, parser)
 
     checkpoint_saver(config)
