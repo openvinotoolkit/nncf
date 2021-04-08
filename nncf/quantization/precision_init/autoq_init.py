@@ -139,6 +139,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         env_params = QuantizationEnvParams(compression_ratio=self._params.compression_ratio,
             eval_subset_ratio=self._params.eval_subset_ratio,
             skip_constraint=self._params.skip_constraint,
+            performant_bw=True,
             finetune=self._params.finetune,
             bits=self._params.bits,
             dump_init_precision_data=self._dump_autoq_data,
@@ -297,6 +298,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
             best_policy_string = self._generate_tensorboard_logging_string(
                 bit_stats_df, env.master_df, info_tuple, env.skip_constraint)
+
+            list_of_dump_dict = []
+            for i, _ in enumerate(env.groups_of_adjacent_quantizers):
+                list_of_dump_dict.append(env.master_df.loc[env.adjq_groupwise_df_lut_keys[i], ["action"]].to_dict())
+            best_policy_string += "\t\n\t# Precision(s) per Group of Adjacent Quantizers\n\t" \
+                                    + json.dumps(list_of_dump_dict, indent=4).replace("\n","\n\t") + "\n\n"
+
             self.tb_writer.add_text('AutoQ/best_policy', best_policy_string, episode)
 
 
@@ -322,6 +330,17 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             info_tuple = (episode, final_reward, accuracy, model_ratio, bop_ratio)
             current_strategy_string = self._generate_tensorboard_logging_string(
                 bit_stats_df, env.master_df, info_tuple, env.skip_constraint)
+
+            list_of_dump_dict = []
+            for i, _ in enumerate(env.groups_of_adjacent_quantizers):
+                list_of_dump_dict.append(
+                    env.master_df.loc[
+                        env.adjq_groupwise_df_lut_keys[i], ["action", "action_aligned"]
+                    ].to_dict()
+                )
+            current_strategy_string += "\t\n\t# Precision(s) per Group of Adjacent Quantizers\n\t" \
+                                        + json.dumps(list_of_dump_dict, indent=4).replace("\n","\n\t") + "\n\n"
+
             self.tb_writer.add_text('AutoQ/current_policy', current_strategy_string, episode)
 
             # visualization over episode
