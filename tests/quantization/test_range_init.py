@@ -23,7 +23,7 @@ import torch.utils.data
 from functools import partial
 from pytest import approx
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTTargetPoint
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
@@ -34,7 +34,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.initialization import DefaultInitializingDataLoader
 from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.quantization.init_range import PerLayerRangeInitConfig

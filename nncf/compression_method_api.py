@@ -25,8 +25,8 @@ import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_mock_tensor
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger

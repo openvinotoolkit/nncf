@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
@@ -33,21 +32,6 @@ def identity_mask_propagation(nx_node, nx_graph):
     assert len(input_masks) == 1
     nx_node['input_masks'] = input_masks
     nx_node['output_mask'] = input_masks[0]
-
-
-def fill_input_masks(nx_node, nx_graph, device='cpu'):
-    """
-    Return all input masks and all input masks with all None replaced by identity masks.
-    """
-    input_edges = sorted(list(nx_graph.in_edges(nx_node['key'])), key=lambda edge: nx_graph.edges[edge]['in_port'])
-    input_masks = [nx_graph.nodes[input_node]['output_mask'] for input_node, _ in input_edges]
-
-    filled_input_masks = []
-    for i, mask in enumerate(input_masks):
-        if mask is None:
-            mask = torch.ones(nx_graph.edges[input_edges[i]]['activation_shape'][1], device=device)
-        filled_input_masks.append(mask)
-    return input_masks, filled_input_masks
 
 
 class PTPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):

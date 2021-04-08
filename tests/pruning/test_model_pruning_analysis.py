@@ -15,7 +15,7 @@ from typing import Callable
 import pytest
 
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_network import NNCFNetwork
 from nncf.pruning.export_helpers import PTIdentityMaskForwardOps
@@ -182,7 +182,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 
     # 1. Check all not pruned modules
     all_pruned_nodes = pruning_groups.get_all_nodes()
-    all_pruned_modules = [nncf_network.get_module_by_scope(node.op_exec_context.scope_in_model)
+    all_pruned_modules = [nncf_network.get_module_by_scope(node.ia_op_exec_context.scope_in_model)
                           for node in all_pruned_nodes]
     for module_name in not_pruned_modules:
         module = nncf_network.get_module_by_scope(Scope.from_str(module_name))

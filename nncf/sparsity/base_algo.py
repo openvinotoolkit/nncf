@@ -22,12 +22,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])

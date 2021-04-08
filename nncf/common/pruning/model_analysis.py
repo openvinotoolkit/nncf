@@ -277,7 +277,7 @@ class ModelAnalyzer:
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
-    def get_class_by_type_name(self, type_name: str) -> DefaultMetaOp:
+    def get_meta_operation_by_type_name(self, type_name: str) -> DefaultMetaOp:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -325,7 +325,7 @@ class ModelAnalyzer:
 
     def set_accept_pruned_input_attr(self):
         for nncf_node in self.graph.get_all_nodes():
-            cls = self.get_class_by_type_name(nncf_node.node_type)
+            cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
     def analyse_model_before_pruning(self):

@@ -20,7 +20,8 @@ from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.debug import set_debug_log_dir
-from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
+from nncf.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
+from nncf.graph.graph_builder import GraphBuilder
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS

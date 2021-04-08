@@ -20,8 +20,9 @@ import torch
 from torch import distributed as dist, nn
 from torch.nn import Module
 
-from nncf.dynamic_graph.graph_builder import GraphBuilder, ModelInputInfo, create_dummy_forward_fn
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.dynamic_graph.trace_tensor import TracedTensor
+from nncf.graph.graph_builder import GraphBuilder
 from nncf.layer_utils import _NNCFModuleMixin
 from contextlib import contextmanager
 
