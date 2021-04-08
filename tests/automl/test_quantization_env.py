@@ -191,6 +191,19 @@ def check_bw_cfg(qenv, input_strategy, output_ref):
     assert evaluated_strategy == output_ref
 
 
+def check_both_bw_assignment_modes(qenv, strategy):
+    input_strategy = strategy[0]
+
+    # qenv.performant_bw is false by default
+    output_ref = input_strategy
+    check_bw_cfg(qenv, input_strategy, output_ref)
+
+    # set qenv.performant_bw to True to enable bw_align_flow
+    qenv.performant_bw = True
+    output_ref = strategy[1]
+    check_bw_cfg(qenv, input_strategy, output_ref)
+
+
 STRATEGY_ONE_AQ_ONE_WQ_LIST = [
     [[8, 8], [8, 8]],
     [[8, 4], [4, 4]],
@@ -204,16 +217,7 @@ STRATEGY_ONE_AQ_ONE_WQ_LIST = [
                          ids=['_'.join(['bitwidth_strategy', str(s[0])]) for s in STRATEGY_ONE_AQ_ONE_WQ_LIST])
 def test_align_bw_action_one_aq_one_wq(strategy, mocker):
     qenv = create_test_quantization_env()
-    input_strategy = strategy[0]
-
-    # qenv.performant_bw is false by default
-    output_ref = input_strategy
-    check_bw_cfg(qenv, input_strategy, output_ref)
-
-    # set qenv.performant_bw to True to enable bw_align_flow
-    qenv.performant_bw = True
-    output_ref = strategy[1]
-    check_bw_cfg(qenv, input_strategy, output_ref)
+    check_both_bw_assignment_modes(qenv, strategy)
 
 
 STRATEGY_ONE_AQ_TWO_WQ_LIST = [
@@ -252,16 +256,7 @@ def test_align_bw_action_one_aq_two_wq(strategy, mocker):
             return (self.conv(x), self.conv2(x))
 
     qenv = create_test_quantization_env(model_creator=OneAQTwoWQTestModel)
-    input_strategy = strategy[0]
-
-    # qenv.performant_bw is false by default
-    output_ref = input_strategy
-    check_bw_cfg(qenv, input_strategy, output_ref)
-
-    # set qenv.performant_bw to True to enable bw_align_flow
-    qenv.performant_bw = True
-    output_ref = strategy[1]
-    check_bw_cfg(qenv, input_strategy, output_ref)
+    check_both_bw_assignment_modes(qenv, strategy)
 
 
 STRATEGY_TWO_AQ_ONE_WQ_LIST = [
@@ -300,16 +295,7 @@ def test_align_bw_action_two_aq_one_wq(strategy, mocker):
             ]
         })
 
-    input_strategy = strategy[0]
-
-    # qenv.performant_bw is false by default
-    output_ref = input_strategy
-    check_bw_cfg(qenv, input_strategy, output_ref)
-
-    # set qenv.performant_bw to True to enable bw_align_flow
-    qenv.performant_bw = True
-    output_ref = strategy[1]
-    check_bw_cfg(qenv, input_strategy, output_ref)
+    check_both_bw_assignment_modes(qenv, strategy)
 
 
 VPU_UMMAPPABLE_STRATEGY = [
