@@ -68,24 +68,25 @@ def get_common_argument_parser(**flags):
             default=None,
             help='Specifies the directory for the trained model checkpoints to be saved to.'))
 
-    execution_type = parser.add_mutually_exclusive_group()
+    if flags.get('execution_args', True):
+        execution_type = parser.add_mutually_exclusive_group()
 
-    add_argument(
-        parser=execution_type,
-        condition=flags.get('gpu_id', True),
-        parameters=argument_parameters(
-            '--gpu-id',
-            type=int,
-            metavar='N',
-            help='The ID of the GPU training will be performed on, without any parallelization.'))
+        add_argument(
+            parser=execution_type,
+            condition=flags.get('gpu_id', True),
+            parameters=argument_parameters(
+                '--gpu-id',
+                type=int,
+                metavar='N',
+                help='The ID of the GPU training will be performed on, without any parallelization.'))
 
-    add_argument(
-        parser=execution_type,
-        condition=flags.get('cpu_only', True),
-        parameters=argument_parameters(
-            '--cpu-only',
-            action='store_true',
-            help='Specifies that the computation should be performed using CPU only.'))
+        add_argument(
+            parser=execution_type,
+            condition=flags.get('cpu_only', True),
+            parameters=argument_parameters(
+                '--cpu-only',
+                action='store_true',
+                help='Specifies that the computation should be performed using CPU only.'))
 
     # Hyperparameters
     add_argument(
@@ -202,46 +203,6 @@ def get_common_argument_parser(**flags):
             type=int,
             metavar='N',
             help='Print frequency (batch iterations). Default: 10)'))
-
-    return parser
-
-
-def get_checkpoint_argument_parser(**flags):
-    """Defines command-line arguments for checkpoint optimization, and parses them.
-
-    """
-    parser = CustomArgumentParser()
-
-    parser.add_argument(
-        '-c',
-        '--config',
-        help='Path to a config file with task/model-specific parameters.',
-        required=True)
-
-    model_init_mode = parser.add_mutually_exclusive_group()
-
-    add_argument(
-        parser=model_init_mode,
-        condition=flags.get('resume', True),
-        parameters=argument_parameters(
-            '--resume',
-            metavar='PATH',
-            type=str,
-            default=None,
-            dest='ckpt_path',
-            help='Specifies the path to the checkpoint to resume training, test or export model '
-                'from the defined checkpoint or folder with checkpoints to resume training, test '
-                'or export from the last checkpoint.'))
-
-    add_argument(
-        parser=parser,
-        condition=flags.get('checkpoint_save_dir', True),
-        parameters=argument_parameters(
-            '--checkpoint-save-dir',
-            metavar='PATH',
-            type=str,
-            default=None,
-            help='Specifies the directory for the trained model checkpoints to be saved to.'))
 
     return parser
 
