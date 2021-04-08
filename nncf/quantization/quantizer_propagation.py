@@ -22,23 +22,25 @@ from typing import Callable
 from typing import Dict
 from typing import Set
 from typing import Tuple
+from typing import Type
 
 import networkx as nx
+
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.context import Scope
-from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
 from nncf.graph.operator_metatypes import *
-from nncf.hw_config import HWConfig
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.hw_config import HWConfig
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
@@ -49,6 +51,7 @@ from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.utils import in_scope_list
+
 
 class QuantizationTrait(Enum):
     """General, hardware-agnostic specifications for the relation of operators to quantization.
@@ -126,7 +129,7 @@ class PropagatingQuantizer:
         self.potential_quant_configs = quant_configs  # type: List[QuantizerConfig]
         self.affected_edges = set()
         self.affected_ip_nodes = set()  # type: Set[str]
-        self.propagation_path = []
+        self.propagation_path = []  # type: PropagationPath
         self.current_location_node_key = init_location_node_key
         self.last_accepting_location_node_key = None
         self.id = id_
@@ -232,6 +235,8 @@ class SharedAffectedOpsPropagatingQuantizerGroup:
         self.affected_op_node_keys.update(other.affected_op_node_keys)
         self.affecting_prop_quants.update(other.affecting_prop_quants)
 
+
+PropagationPath = List[Tuple[str, str]]
 
 # pylint:disable=too-many-public-methods
 class QuantizerPropagationStateGraph(nx.DiGraph):
@@ -373,7 +378,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self._pqs_after_weight_dependent_output_quantized_nodes[pq] = operator_node_key
 
     # pylint:disable=too-many-branches
-    def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: List[Tuple[str, str]]):
+    def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: PropagationPath):
         curr_node = self.nodes[prop_quantizer.current_location_node_key]
         curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = None
         surviving_quantizers = []  # type: List[PropagatingQuantizer]
@@ -720,7 +725,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             self._unified_scale_group_manager.remove_from_group(gid, prop_quantizer)
 
     def propagate_quantizer_via_path(self, prop_quantizer: PropagatingQuantizer,
-                                     path: List[Tuple[str, str]]) -> PropagatingQuantizer:
+                                     path: PropagationPath) -> PropagatingQuantizer:
         curr_node_key = prop_quantizer.current_location_node_key
         curr_node = self.nodes[curr_node_key]
         existing_quantizer = curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR]
@@ -767,29 +772,66 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         recursive_helper(node_key, ret_node_key_list)
         return ret_node_key_list
 
-    def get_paths_to_immediately_dominating_insertion_points(self, insertion_point_node_key: str) -> List[List]:
-        """Paths are lists of edges."""
-        paths = []
+    def get_paths_to_immediately_dominating_insertion_points(self, insertion_point_node_key: str) -> \
+            List[PropagationPath]:
+        group_dict = self.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
+            insertion_point_node_key,
+            set())
+        return group_dict[None]
 
-        def recursive_helper(curr_edge, curr_path, all_paths):
+    def get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
+            self,
+            insertion_point_node_key: str,
+            unified_scale_op_metatypes: Set[Type[OperatorMetatype]]) -> Dict[Optional[int], List[PropagationPath]]:
+        """Paths are lists of edges."""
+        next_group_idx = 0
+        paths = {}
+
+        def recursive_helper(curr_edge, curr_path, all_paths, curr_group):
+            nonlocal next_group_idx
             curr_path.append(curr_edge)
             curr_node_key = curr_edge[0]
             curr_node = self.nodes[curr_node_key]
             curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if curr_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT:
-                all_paths.append(curr_path)
+                if curr_group in all_paths:
+                    all_paths[curr_group].append(curr_path)
+                else:
+                    all_paths[curr_group] = [curr_path]
                 return
+            elif curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+                metatype = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
+                if metatype in unified_scale_op_metatypes and curr_group is None and \
+                        len(self.in_edges(curr_node_key)) > 1:
+                    curr_group = next_group_idx
+                    next_group_idx += 1
 
             for in_edge in self.in_edges(curr_node_key):
                 path_copy = deepcopy(curr_path)
-                recursive_helper(in_edge, path_copy, all_paths)
+                recursive_helper(in_edge, path_copy, all_paths, curr_group)
 
         for in_edge in self.in_edges(insertion_point_node_key):
             if self.nodes[in_edge[0]][QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] == \
                     QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
-                return paths
-            recursive_helper(in_edge, [], paths)
+                continue
+            recursive_helper(in_edge, [], paths, curr_group=None)
+        if not paths:
+            paths[None] = []
         return paths
+
+    # def group_paths_by_unified_scales(self, paths: List[PropagationPath]) -> \
+    #         Dict[int, List[PropagationPath]]:
+    #     path_working_set = deepcopy(paths)
+    #     max_path_len = max([len(p) for p in paths])
+    #     path_groups = {None: path_working_set}
+    #     curr_depth_idx = 0
+    #     next_group_idx = 0
+    #     for curr_depth_idx in range(max_path_len):
+    #         for curr_group_id, curr_path_group in path_groups:
+    #             path_indices_grouped_by_common_edge = {}  # type: Dict[int]
+    #             for curr_path_idx, curr_path in curr_path_group:
+    #                 curr_edge = curr_path[curr_depth_idx]
+
 
     def get_propagating_quantizers_immediately_dominated_by_node(self, node_key: str) -> Set[PropagatingQuantizer]:
         retval = set()  # type: Set[PropagatingQuantizer]
@@ -1685,13 +1727,32 @@ class QuantizerPropagationSolver:
 
         surviving_prop_quantizers = []
 
-        prop_quantizers_to_process = [curr_prop_quantizer]
+        prop_quantizers_to_process = []
         did_clone = False
 
-        for _ in range(1, len(paths)):
-            additional_prop_quantizer = quant_prop_graph.clone_propagating_quantizer(curr_prop_quantizer)
-            prop_quantizers_to_process.append(additional_prop_quantizer)
-            did_clone = True
+        unified_scale_grouped_paths = \
+            quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
+                curr_node_key, self._unified_scales_operation_set)
+
+        unified_scale_path_groups_vs_pqs = {k: [] for k in unified_scale_grouped_paths.keys() if k is not None}
+        existing_pq_assigned = False
+        for gid, path_group in unified_scale_grouped_paths.items():
+            for _ in path_group:
+                if existing_pq_assigned:
+                    pq = quant_prop_graph.clone_propagating_quantizer(curr_prop_quantizer)
+                    did_clone = True
+                else:
+                    pq = curr_prop_quantizer
+                    existing_pq_assigned = True
+
+                prop_quantizers_to_process.append(pq)
+                if gid is not None:  # None stands for non-unified scale quantizers
+                    unified_scale_path_groups_vs_pqs[gid].append(pq)
+
+        for pq_group in unified_scale_path_groups_vs_pqs.values():
+            primary_pq = pq_group[0]
+            for pq in pq_group[1:]:
+                quant_prop_graph.unify_pq_scales(primary_pq, pq)
 
         cloned_prop_quantizers = prop_quantizers_to_process if did_clone else None
 
@@ -1757,7 +1818,6 @@ class QuantizerPropagationSolver:
                     node[QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR] = \
                         self.get_allowed_quantizer_configs_for_operator(quant_det_id)
         return quant_prop_graph
-
 
     def get_operator_quantization_traits_map(self) -> Dict[OperatorMetatype, QuantizationTrait]:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
@@ -1826,6 +1886,7 @@ class QuantizerPropagationSolver:
         else:
             retval = self._hw_config.get_metatype_vs_quantizer_configs_map()
         return retval
+
 
     def debug_visualize(self, quant_prop_graph: QuantizerPropagationStateGraph, dump_path: str):
         out_graph = quant_prop_graph.get_visualized_graph()

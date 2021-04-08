@@ -24,6 +24,7 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 
 from nncf.graph.graph import PTNNCFGraph
 from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.operator_metatypes import CatMetatype
 from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
 from torch import nn
 

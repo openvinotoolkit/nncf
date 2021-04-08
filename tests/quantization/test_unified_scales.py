@@ -477,7 +477,7 @@ def test_quantizer_scale_linking(mocker):
         assert non_shared_spy.call_count == 1
 
 
-def test_unified_scales_for_vpu():
+def test_eltwise_unified_scales_for_vpu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["input_info"] = [
         {
@@ -688,3 +688,5 @@ class TestsWithONNXInspection:
             curr_values = list(inputs_dict.values())
             ref_values = list(unified_fq_node_inputs[0].values())
             assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
+
+
