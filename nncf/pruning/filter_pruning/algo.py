@@ -34,7 +34,6 @@ from nncf.pruning.base_algo import PrunedModuleInfo
 from nncf.pruning.base_algo import BasePruningAlgoController
 from nncf.pruning.export_helpers import ModelPruner
 from nncf.pruning.export_helpers import PTElementwise
-from nncf.pruning.export_helpers import PTConcat
 from nncf.pruning.export_helpers import PTConvolution
 from nncf.pruning.export_helpers import PTTransposeConvolution
 from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
