@@ -164,7 +164,9 @@ class FilterPruningController(BasePruningAlgoController):
                 next_concat_layers = get_next_nodes_of_types(graph, nncf_cluster_node, PTConcat.get_all_op_aliases())
                 for concat_layer in next_concat_layers:
                     next_nodes_after_concat = get_next_nodes_of_types(graph, concat_layer, prunable_types)
-                    next_nodes_after_concat_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes_after_concat]
+                    next_nodes_after_concat_idxs = [
+                        n.ia_op_exec_context.scope_in_model for n in next_nodes_after_concat
+                    ]
                     nodes_cluster_after_concat = nodes_cluster_after_concat.union(next_nodes_after_concat_idxs)
 
                 next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
@@ -221,7 +223,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         for group in self.pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes)
+                       group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
             num_of_sparse_elems = len(group.nodes[0].operand.binary_filter_pruning_mask) - new_out_channels_num
             for node in group.nodes:
@@ -273,7 +275,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         for group in self.pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes)
+                       group.nodes)
             # prune all nodes in cluster (by output channels)
             old_out_channels = self.modules_out_channels[group.nodes[0].module_scope]
             num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
