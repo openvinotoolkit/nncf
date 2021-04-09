@@ -16,7 +16,6 @@ from typing import Union
 
 import numpy as np
 import torch
-from collections import namedtuple
 from functools import partial
 from texttable import Texttable
 from torch import nn
@@ -51,9 +50,6 @@ from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.utils import get_filters_num, compute_FLOPs_hook
-
-
-NextNodeDesc = namedtuple('NextNodeDesc', ['scope', 'is_after_concat'])
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -154,30 +150,15 @@ class FilterPruningController(BasePruningAlgoController):
         # 2. Init next_nodes for every pruning cluster
         for cluster in self.pruned_module_groups_info.get_all_clusters():
             next_nodes_cluster = set()
-            nodes_cluster_after_concat = set()
-
             for cluster_node in cluster.nodes:
                 nncf_cluster_node = graph.get_nncf_node_by_id(cluster_node.nncf_node_id)
                 next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
-                next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
-                # Check there is a concat layer in front of the next node in order to calculate the flops correctly.
-                next_concat_layers = get_next_nodes_of_types(graph, nncf_cluster_node, PTConcat.get_all_op_aliases())
-                for concat_layer in next_concat_layers:
-                    next_nodes_after_concat = get_next_nodes_of_types(graph, concat_layer, prunable_types)
-                    next_nodes_after_concat_idxs = [
-                        n.ia_op_exec_context.scope_in_model for n in next_nodes_after_concat
-                    ]
-                    nodes_cluster_after_concat = nodes_cluster_after_concat.union(next_nodes_after_concat_idxs)
 
                 next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
-
-            self.next_nodes[cluster.id] = []
-            for next_node in list(next_nodes_cluster - {n.module_scope for n in cluster.nodes}):
-                self.next_nodes[cluster.id].append(NextNodeDesc(next_node, next_node in nodes_cluster_after_concat))
-
             self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
                                               * self.pruning_quota
+            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 
     def flops_count_init(self) -> None:
         def get_node_flops_hook(dict_to_save):
@@ -230,11 +211,8 @@ class FilterPruningController(BasePruningAlgoController):
                 tmp_out_channels[node.module_scope] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
-            for node_module_scope, is_after_concat in next_nodes:
-                if is_after_concat:
-                    tmp_in_channels[node_module_scope] -= num_of_sparse_elems
-                else:
-                    tmp_in_channels[node_module_scope] = new_out_channels_num
+            for node_module_scope in next_nodes:
+                tmp_in_channels[node_module_scope] -= num_of_sparse_elems
 
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
@@ -286,11 +264,9 @@ class FilterPruningController(BasePruningAlgoController):
 
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
-            for node_id, is_after_concat in next_nodes:
-                if is_after_concat:
-                    tmp_in_channels[node_id] -= num_of_sparse_elems
-                else:
-                    tmp_in_channels[node_id] = new_out_channels_num
+            for node_id in next_nodes:
+                tmp_in_channels[node_id] -= num_of_sparse_elems
+
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
 
@@ -536,11 +512,8 @@ class FilterPruningController(BasePruningAlgoController):
 
             # Prune in channels in all next nodes
             next_nodes = self.next_nodes[cluster.id]
-            for node_id, is_after_concat in next_nodes:
-                if is_after_concat:
-                    tmp_in_channels[node_id] -= 1
-                else:
-                    tmp_in_channels[node_id] = tmp_out_channels[cluster.nodes[0].module_scope]
+            for node_id in next_nodes:
+                tmp_in_channels[node_id] -= 1
 
             flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
             if flops < target_flops:
