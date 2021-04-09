@@ -249,4 +249,6 @@ class QuantizationController(TFCompressionAlgorithmController):
         return self._loss
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        return {}
+        stats = {}
+        stats.update(self._loss.statistics(quickly_collected_only))
+        return stats

@@ -170,3 +170,8 @@ class RBSparsityController(BaseSparsityController):
     @property
     def loss(self) -> CompressionLoss:
         return self._loss
+
+    def statistics(self, quickly_collected_only=False):
+        stats = super().statistics(quickly_collected_only)
+        stats.update(self._loss.statistics(quickly_collected_only))
+        return stats

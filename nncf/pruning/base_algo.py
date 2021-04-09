@@ -235,6 +235,7 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
+        stats.update(self._loss.statistics(quickly_collected_only))
         table = Texttable()
         header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]
         data = [header]
