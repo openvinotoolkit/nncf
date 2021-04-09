@@ -132,6 +132,8 @@ def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, 
 
 def run(config):
     strategy = get_distribution_strategy(config)
+    if config.metrics_dump is not None:
+        write_metrics(0, config.metrics_dump)
 
     model_fn, model_params = get_model(config.model,
                                        input_shape=config.get('input_info', {}).get('sample_size', None),
