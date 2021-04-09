@@ -158,10 +158,12 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nb_state = len(env.state_list)
         nb_action = 1
 
-        # set replay buffer to size of 20 episodes , can be parameterized later
+        # Control buffer length at run manager level
         if "warmup_iter_number" not in self._ddpg_hparams_override:
             self._ddpg_hparams_override["warmup_iter_number"] = 10
-        self._ddpg_hparams_override["rmsize"] = self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
+
+        self._ddpg_hparams_override["rmsize"] = \
+            self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
 
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)
@@ -192,6 +194,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
 
     def _search(self, agent: 'DDPG', env: 'QuantizationEnv') -> Tuple[pd.Series, float]:
+        # pylint: disable=too-many-branches,too-many-statements
         best_reward = -math.inf
         episode = 0
         episode_reward = 0.
@@ -229,9 +232,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                 # Replay Buffer Management
                 if agent.memory.nb_entries % (len(env.master_df)+1) > 0:
-                    raise ValueError("Logical Error in Replay buffer management, uneven episode length")
+                    raise ValueError("logical bug in buffer management, uneven episode length")
                 if agent.memory.limit % (len(env.master_df)+1) > 0:
-                    raise ValueError("replay buffer size cannot be denominated evenly by episode length")
+                    raise ValueError("replay buffer size must be divisible by episode step length")
 
                 if agent.memory.nb_entries + len(transition_buffer) >= agent.memory.limit:
                     total_reward_per_episode = agent.memory.rewards.data[::(len(transition_buffer)+1)]
@@ -245,14 +248,14 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     discard_start_index = (discard_episode)*(len(transition_buffer)+1)
                     discard_end_index = (discard_episode+1)*(len(transition_buffer)+1)
 
-                    logger.info('[RBM] episode: {:3}, total_reward_per_episode: {}'.format(episode, list(map(lambda x: '{:.5f}'.format(x), total_reward_per_episode))))
+                    logger.info('[RBM] episode: {:3}, total_reward_per_episode: {}'.format(episode, list(map('{:.5f}'.format, total_reward_per_episode))))
                     logger.info('[RBM] episode: {:3}, sorted_index_of_episodes: {}'.format(episode, sorted_index_of_episodes))
                     logger.info('[RBM] episode: {:3}, discard_episode: {}'.format(episode, discard_episode))
                     logger.info('[RBM] episode: {:3}, extract reward of discarded episode: {:.3f}'.format(episode, agent.memory.rewards[discard_start_index]))
 
-                    del agent.memory[discard_start_index:discard_end_index]
+                    agent.memory.discard(slice(discard_start_index, discard_end_index))
                 # = EO Replay Buffer Management
-                
+
                 final_reward = transition_buffer[-1][0]
                 r_per_step = final_reward/len(env.master_df)
 
@@ -273,8 +276,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     0., False
                 )
 
-                # NEW Workaround to preserve behavior where each update for each transition, 
-                # we need this out of loop above to bypass None value in replay buffer
+                # update DDPG networks, note that this loop must not be
+                # in the loop above to avoid non-numeric value in replay buffer
                 for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
                     if episode >= agent.warmup_iter_number:
                         for _ in range(agent.n_update):
