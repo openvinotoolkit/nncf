@@ -11,13 +11,10 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, Any, Dict
-
-import tensorflow as tf
+from typing import Optional, TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.utils.save import save_model
 
