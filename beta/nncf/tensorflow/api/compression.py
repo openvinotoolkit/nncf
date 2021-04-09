@@ -97,11 +97,3 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `CompressionAlgorithmController`.
         """
-
-
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
-
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        return {}

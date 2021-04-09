@@ -16,10 +16,10 @@ from typing import List, Optional, TypeVar
 from nncf import NNCFConfig
 from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from nncf.api.composite_compression import CompositeCompressionScheduler
-from nncf.api.composite_compression import CompositeCompressionLoss
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
+from nncf.common.graph.transformations.layout import TransformationLayout
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
@@ -31,22 +31,12 @@ class TFCompositeCompressionAlgorithmController(
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)
         self._initializer = None
-        self._scheduler = CompositeCompressionScheduler()
-        self._loss = CompositeCompressionLoss()
 
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
         for ctrl in self.child_ctrls:
             ctrl.initialize(dataset, loss)
-
-    @property
-    def scheduler(self) -> CompositeCompressionScheduler:
-        return self._scheduler
-
-    @property
-    def loss(self) -> CompositeCompressionLoss:
-        return self._loss
 
 
 class TFCompositeCompressionAlgorithmBuilder(
@@ -66,3 +56,9 @@ class TFCompositeCompressionAlgorithmBuilder(
         for builder in self.child_builders:
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
+
+    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
+        transformations = TFTransformationLayout()
+        for builder in self.child_builders:
+            transformations.update(builder.get_transformation_layout(model))
+        return transformations

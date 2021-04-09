@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from abc import abstractmethod
 from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import NNCFConfig
@@ -257,6 +258,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def child_builders(self) -> List[CompressionAlgorithmBuilder]:
         return self._child_builders
 
+    @abstractmethod
     def build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
         """
         Builds `CompositeCompressionAlgorithmController` to handle the additional
@@ -268,6 +270,7 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The instance of the `CompositeCompressionAlgorithmController`.
         """
 
+    @abstractmethod
     def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
         """
         Computes necessary model transformations to enable algorithm-specific
@@ -277,7 +280,3 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         :return: The instance of the `TransformationLayout` class containing
             a list of algorithm-specific modifications.
         """
-        transformations = TransformationLayout()
-        for builder in self.child_builders:
-            transformations.update(builder.get_transformation_layout(model))
-        return transformations

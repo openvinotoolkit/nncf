@@ -20,7 +20,7 @@ from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
-from beta.nncf.tensorflow.api.compression import TFZeroCompressionLoss
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand

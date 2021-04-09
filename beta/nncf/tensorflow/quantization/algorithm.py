@@ -20,7 +20,7 @@ from nncf.common.schedulers import BaseCompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.api.compression import TFZeroCompressionLoss
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph import patterns as p
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
