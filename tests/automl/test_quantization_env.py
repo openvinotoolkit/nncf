@@ -144,7 +144,7 @@ def test_reward(pretrained_score, compressed_score, model_size_ratio):
             qenv.reward(compressed_score, model_size_ratio)
     else:
         reward = qenv.reward(compressed_score, model_size_ratio)
-        assert reward == (compressed_score - pretrained_score) * 0.1
+        assert reward == compressed_score/(pretrained_score+1e-6)
 
 
 STRATEGY_LIST = [
