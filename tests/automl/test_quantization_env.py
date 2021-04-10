@@ -185,9 +185,9 @@ def check_bw_cfg(qenv, input_strategy, output_ref):
     if len(input_strategy) != len(qenv.qctrl.all_quantizations):
         with pytest.raises(AssertionError):
             qenv.evaluate_strategy(input_strategy, skip_constraint=True)
-    else:
-        _ = qenv.evaluate_strategy(input_strategy, skip_constraint=True)
-        evaluated_strategy = qenv.master_df['action'].values.tolist()
+        return
+    _ = qenv.evaluate_strategy(input_strategy, skip_constraint=True)
+    evaluated_strategy = qenv.master_df['action'].values.tolist()
     assert evaluated_strategy == output_ref
 
 

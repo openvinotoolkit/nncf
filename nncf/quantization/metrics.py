@@ -378,10 +378,11 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
                     scope_str = str(last_node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
                     matched = False
-                    for aq_id in self._qctrl.non_weight_quantizers:
-                        if scope_str in str(aq_id.ia_op_exec_context):
-                            matched = True
-                            break
+                    for aq_id, aq_info in self._qctrl.non_weight_quantizers.items():
+                        for target_point in aq_info.affected_insertions:
+                            if scope_str in str(target_point.ia_op_exec_context):
+                                matched = True
+                                break
                     if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
