@@ -799,7 +799,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 else:
                     all_paths[curr_group] = [curr_path]
                 return
-            elif curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
+
+            if curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 metatype = curr_node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
                 if metatype in unified_scale_op_metatypes and curr_group is None and \
                         len(self.in_edges(curr_node_key)) > 1:
@@ -1687,6 +1688,7 @@ class QuantizerPropagationSolver:
         # consisting of insertion points only, with reversed edges holding associated operator data?
 
         # pylint:disable=too-many-branches
+        # pylint:disable=too-many-statements
         curr_node_key = curr_prop_quantizer.current_location_node_key
         curr_node = quant_prop_graph.nodes[curr_prop_quantizer.current_location_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]

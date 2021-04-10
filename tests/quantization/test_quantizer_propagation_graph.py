@@ -35,7 +35,6 @@ from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.quantization.quantizer_propagation import PropagationPath
 from nncf.quantization.quantizer_propagation import QuantizationTrait
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
 from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
@@ -70,7 +69,7 @@ class TestQuantizerPropagationStateGraph:
         ip_graph = InsertionPointGraph(get_two_branch_mock_model_graph())
         qpsg = QPSG(ip_graph)
 
-        qpsg.nodes['5 /F'][QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
+        qpsg.nodes['5 /F'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:

@@ -224,7 +224,9 @@
         {"type": "Reshape"},
         {
             "type": "Concat",
-            "scales": "unified"
+            "attributes": {
+                "scales": "unified"
+            }
         },
         {"type": "Flatten"},
         {"type": "Squeeze"},
