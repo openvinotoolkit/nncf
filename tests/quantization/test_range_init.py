@@ -469,15 +469,16 @@ class SingleConv2dSyntheticWeightModel(torch.nn.Module):
         super().__init__()
         self.conv2d = nn.Conv2d(3, 3, 100)
 
-        for i in range(0, 100):
-            for j in range(0, 100):
-                self.conv2d.weight[0][0][i][j] = i * 100 + j
+        with torch.no_grad():
+            for i in range(0, 100):
+                for j in range(0, 100):
+                    self.conv2d.weight[0][0][i][j] = i * 100 + j
 
-        for i in range(0, 3):
-            for j in range(0, 3):
-                if not (i == 0 and j == 0):
-                    self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
-                    self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
+            for i in range(0, 3):
+                for j in range(0, 3):
+                    if not (i == 0 and j == 0):
+                        self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
+                        self.conv2d.weight[i][j] = self.conv2d.weight[0][0]
 
     def forward(self, input_):
         return self.conv2d(input_)
