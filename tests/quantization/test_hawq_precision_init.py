@@ -425,7 +425,7 @@ HAWQTestParams = namedtuple('HAWQTestParams',
                             ('iter_number', 'batch_size', 'num_data_points', 'cuda_ref_trace', 'cpu_ref_trace'))
 
 @pytest.mark.parametrize("params",
-                         (HAWQTestParams(200, 13, 100, 1.2741253927579268, 1.2741257554269734),
+                         (HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.2741257554269734),
                           HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.264643123532975),
                           HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305272578443488),
                           HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305272578443488)),
@@ -513,7 +513,7 @@ def get_requires_grad_per_param(model):
 
 
 def get_scopes_of_skipped_weight_quantizers():
-    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNReLU[18]/NNCFConv2d[0]',
+    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]',
                    'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]',
                    'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]']
     return [Scope.from_str(s) for s in scopes_list]
