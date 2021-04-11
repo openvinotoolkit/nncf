@@ -8,9 +8,10 @@ from typing import Tuple
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork
 from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.structs import UnifiedScaleType
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor_statistics.statistics import TensorStatistic
@@ -70,7 +71,12 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 
     def select_qconfig(self, qconfig: QuantizerConfig) -> SingleConfigQuantizationPoint:
         if qconfig not in self.possible_qconfigs:
-            raise ValueError("Invalid selection for a quantizer config!")
+            # Allow selecting an "unsigned" or "signed" version if "any-signed" version is present
+            qconfig_any = deepcopy(qconfig)
+            qconfig_any.signedness_to_force = None
+            if qconfig_any not in self.possible_qconfigs:
+                raise ValueError("Invalid selection for a quantizer config!")
+            qconfig = qconfig_any
         return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.scopes_of_directly_quantized_operators)
 
     def __str__(self):
@@ -171,6 +177,17 @@ class QuantizerSetupBase:
             raise RuntimeError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
         self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
 
+    def remove_unified_scale_from_point(self, qp_id: QuantizationPointId):
+        gid = self.get_unified_scale_group_id(qp_id)
+        if gid is None:
+            nncf_logger.debug("Attempted to remove QP id {} from associated unified scale group, but the QP"
+                              "is not in any unified scale group - ignoring.".format(qp_id))
+            return
+        self.unified_scale_groups[gid].discard(qp_id)
+        if not self.unified_scale_groups[gid]:
+            nncf_logger.debug("Removed last entry from a unified scale group {} - removing group itself".format(gid))
+            self.unified_scale_groups.pop(gid)
+
     def equivalent_to(self, other: 'QuantizerSetupBase') -> bool:
         this_qp_id_to_other_qp_id_dict = {}  # type: Dict[QuantizationPointId, QuantizationPointId]
 
@@ -254,12 +271,22 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
     def __init__(self):
         super().__init__()
         self.quantization_points = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
+        self._unified_scale_qpid_vs_type = {}  # type: Dict[QuantizationPointId, UnifiedScaleType]
+
+    def register_unified_scale_group_with_types(self, qp_group: List[QuantizationPointId],
+                                                us_types: List[UnifiedScaleType]) -> int:
+        assert len(qp_group) == len(us_types)
+        gid = super().register_unified_scale_group(qp_group)
+        for qp_id, us_type in zip(qp_group, us_types):
+            self._unified_scale_qpid_vs_type[qp_id] = us_type
+        return gid
 
     def select_qconfigs(self, qp_id_vs_selected_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig]) -> \
             SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()
         retval.unified_scale_groups = deepcopy(self.unified_scale_groups)
         retval.shared_input_operation_set_groups = deepcopy(self.shared_input_operation_set_groups)
+
         if Counter(qp_id_vs_selected_qconfig_dict.keys()) != Counter(self.quantization_points.keys()):
             raise ValueError("The set of quantization points for a selection is inconsistent with quantization"
                              "points in the quantizer setup!")
@@ -267,6 +294,32 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             retval.quantization_points[qp_id] = self.quantization_points[qp_id].select_qconfig(
                 qp_id_vs_selected_qconfig_dict[qp_id]
             )
+
+        # Segregate the unified scale groups into sub-groups based on what exact config was chosen.
+        for us_group in self.unified_scale_groups.values():
+            per_channel_qids = set()
+            per_tensor_qids = set()
+            for us_qid in us_group:
+                final_qconfig = retval.quantization_points[us_qid].qconfig
+                if final_qconfig.per_channel:
+                    per_channel_qids.add(us_qid)
+                else:
+                    per_tensor_qids.add(us_qid)
+
+            if per_tensor_qids:
+                for qid in per_tensor_qids:
+                    retval.remove_unified_scale_from_point(qid)
+
+                retval.register_unified_scale_group(list(per_tensor_qids))
+
+            for per_channel_qid in per_channel_qids:
+                us_type = self._unified_scale_qpid_vs_type[per_channel_qid]
+                if us_type is UnifiedScaleType.UNIFY_ONLY_PER_TENSOR:
+                    nncf_logger.debug("Per-channel quantizer config selected in a MultiConfigQuantizerSetup for a "
+                                      "unified scale point that only supports per-tensor scale unification, disabling "
+                                      "unified scales for this point.")
+                retval.remove_unified_scale_from_point(per_channel_qid)
+
         return retval
 
     def select_first_qconfig_for_each_point(self) -> SingleConfigQuantizerSetup:

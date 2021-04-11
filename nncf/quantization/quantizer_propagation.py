@@ -26,8 +26,6 @@ from typing import Type
 
 import networkx as nx
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
@@ -50,6 +48,7 @@ from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.quantization.structs import UnifiedScaleType
 from nncf.utils import in_scope_list
 
 
@@ -125,7 +124,7 @@ class PropagatingQuantizer:
        attributes etc.)"""
 
     def __init__(self, id_: int, quant_configs: List[QuantizerConfig], init_location_node_key: str,
-                 unified_scale: bool = False):
+                 unified_scale_type: Optional[UnifiedScaleType] = None):
         self.potential_quant_configs = quant_configs  # type: List[QuantizerConfig]
         self.affected_edges = set()
         self.affected_ip_nodes = set()  # type: Set[str]
@@ -133,7 +132,7 @@ class PropagatingQuantizer:
         self.current_location_node_key = init_location_node_key
         self.last_accepting_location_node_key = None
         self.id = id_
-        self.unified_scale = unified_scale
+        self.unified_scale_type = unified_scale_type
         self.affected_operator_nodes = set()
         self.quantized_input_sink_operator_nodes = set()
         self.downstream_propagating_quantizers = set()
@@ -417,10 +416,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                         self.nodes[to_node_key][
                             QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(pq)
 
-            if prop_quantizer.unified_scale:
+            if prop_quantizer.unified_scale_type is not None:
                 gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
                 for other_pq in surviving_quantizers:
-                    if other_pq.unified_scale:
+                    if other_pq.unified_scale_type is not None:
                         other_gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(
                             other_pq.id)
                         self._unified_scale_group_manager.merge_groups(gid, other_gid)
@@ -436,6 +435,18 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         else:
             raise RuntimeError("Surviving_quantizers not found !"
                                " Nodes quantized with quantizer #{} will be lost".format(prop_quantizer.id))
+
+    @staticmethod
+    def _get_major_unified_scale_type(type_list: List[Optional[UnifiedScaleType]]) -> Optional[UnifiedScaleType]:
+        """Treats input list entries as unified scale types of merged quantizers, and outputs
+        the unified scale type of the resulting merge-quantizer so that it is still compatible with the
+        downstream ops."""
+        major_unified_scale_type = None
+        if UnifiedScaleType.UNIFY_ALWAYS in type_list:
+            major_unified_scale_type = UnifiedScaleType.UNIFY_ALWAYS
+        if UnifiedScaleType.UNIFY_ONLY_PER_TENSOR in type_list:
+            major_unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR
+        return major_unified_scale_type
 
     def merge_quantizers_for_branching_node(self, quantizers_to_merge: List[PropagatingQuantizer],
                                             merged_qconf_list: List[QuantizerConfig],
@@ -453,8 +464,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         if merged_qconf_list is None:
             return None
+
+        unified_scale_types_of_merged_branches = [pq.unified_scale_type for idx, pq in enumerate(quantizers_to_merge)
+                                      if branch_qconf_lists[idx] is None]
+        merge_pq_unified_scale_type = self._get_major_unified_scale_type(unified_scale_types_of_merged_branches)
+
         merge_pq = PropagatingQuantizer(self._get_next_prop_quantizer_id(), merged_qconf_list,
-                                        target_ip_node_key)
+                                        target_ip_node_key, unified_scale_type=merge_pq_unified_scale_type)
         merge_pq.last_accepting_location_node_key = target_ip_node_key
         merge_pq.affected_ip_nodes.add(target_ip_node_key)
         target_ip_node = self.nodes[target_ip_node_key]
@@ -465,12 +481,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         unified_scale_gids_to_merge = set()
         for idx, pq in enumerate(quantizers_to_merge):
             branch_qconf_list = branch_qconf_lists[idx]
-            if branch_qconf_list is None and pq.unified_scale:
+            if branch_qconf_list is None and pq.unified_scale_type is not None:
                 gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(pq.id)
                 unified_scale_gids_to_merge.add(gid)
 
         if unified_scale_gids_to_merge:
-            merge_pq.unified_scale = True
             merge_gid = self._unified_scale_group_manager.register_group({merge_pq})
             for gid_to_merge in unified_scale_gids_to_merge:
                 self._unified_scale_group_manager.merge_groups(merge_gid, gid_to_merge)
@@ -565,16 +580,20 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         target_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = prop_quantizer
         return prop_quantizer
 
-    def unify_pq_scales(self, primary_pq: PropagatingQuantizer, secondary_pq: PropagatingQuantizer):
-        primary_pq.unified_scale = True
-        secondary_pq.unified_scale = True
+    def unify_pq_scales(self, primary_pq: PropagatingQuantizer, secondary_pq: PropagatingQuantizer,
+                        unified_scale_type: Optional[UnifiedScaleType] = None):
+        if unified_scale_type is None:
+            primary_pq.unified_scale_type = UnifiedScaleType.UNIFY_ALWAYS
+        else:
+            primary_pq.unified_scale_type = unified_scale_type
+        secondary_pq.unified_scale_type = primary_pq.unified_scale_type
         primary_gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(primary_pq.id)
         if primary_gid is None:
             primary_gid = self._unified_scale_group_manager.register_group({primary_pq})
         self._unified_scale_group_manager.add_to_group(primary_gid, secondary_pq)
 
     def add_propagating_quantizer(self, qconf_list: List[QuantizerConfig], ip_node_key: str,
-                                  unified_scale: bool = False,
+                                  unified_scale_type: Optional[UnifiedScaleType] = None,
                                   unified_scale_group_id_override: Optional[int] = None) -> PropagatingQuantizer:
         ip_node = self.nodes[ip_node_key]
         ip_type = ip_node[QuantizerPropagationStateGraph.INSERTION_POINT_DATA_NODE_ATTR].target_type
@@ -584,9 +603,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             raise RuntimeError("Can only add propagating quantizers into pre-hook spots!")
 
         prop_quantizer = PropagatingQuantizer(self._get_next_prop_quantizer_id(), qconf_list, ip_node_key,
-                                              unified_scale)
+                                              unified_scale_type)
 
-        if unified_scale:
+        if unified_scale_type is not None:
             if unified_scale_group_id_override is None:
                 self._unified_scale_group_manager.register_group({prop_quantizer})
             else:
@@ -691,7 +710,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             node = self.nodes[node_key]
             node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR].append(cloned_prop_quant)
 
-        if cloned_prop_quant.unified_scale:
+        if cloned_prop_quant.unified_scale_type is not None:
             gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
             self._unified_scale_group_manager.add_to_group(gid, cloned_prop_quant)
 
@@ -720,7 +739,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             self.nodes[node_key][QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = None
         prop_quantizer.affected_ip_nodes.clear()
         prop_quantizer.affected_edges.clear()
-        if prop_quantizer.unified_scale:
+        if prop_quantizer.unified_scale_type is not None:
             gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(prop_quantizer.id)
             self._unified_scale_group_manager.remove_from_group(gid, prop_quantizer)
 
@@ -881,7 +900,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                                        color=pq_color, label=quant_node_label)
                     out_graph.add_edge(quant_node_key, node_key,
                                        style="dashed")
-                    if prop_quantizer.unified_scale:
+                    if prop_quantizer.unified_scale_type is not None:
                         gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(
                             prop_quantizer.id)
                         if gid in unified_scale_group_vs_pq_node_id_dict:
@@ -1217,7 +1236,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         pq_sets_grouped_by_unified_scale = list(
             self._unified_scale_group_manager.get_group_vs_prop_quants_dict().values())
         for pq_set in pq_sets_grouped_by_unified_scale:
-            setup.register_unified_scale_group([pqid_vs_qpid[pq.id] for pq in pq_set])
+            setup.register_unified_scale_group_with_types([pqid_vs_qpid[pq.id] for pq in pq_set],
+                                                          [pq.unified_scale_type for pq in pq_set])
 
         setup = self._handle_output_quantizers_for_weights_as_outputs_ops(setup, pqid_vs_qpid,
                                                                           wao_op_node_key_vs_wq_id)
@@ -1732,6 +1752,8 @@ class QuantizerPropagationSolver:
         prop_quantizers_to_process = []
         did_clone = False
 
+        # TODO: include information on unified scale type in grouping; for now assuming that
+        # only concat unified scale groups appear here
         unified_scale_grouped_paths = \
             quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
                 curr_node_key, self._unified_scales_operation_set)
@@ -1753,6 +1775,7 @@ class QuantizerPropagationSolver:
 
         for pq_group in unified_scale_path_groups_vs_pqs.values():
             primary_pq = pq_group[0]
+            primary_pq.unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR  # TODO: smarter type assignment
             for pq in pq_group[1:]:
                 quant_prop_graph.unify_pq_scales(primary_pq, pq)
 
@@ -2096,7 +2119,8 @@ class QuantizerPropagationSolver:
         pred_ip_key_vs_qconf_list = list(iter(pred_ip_key_vs_qconf_dict.items()))
         main_pq_ip_key, main_pq_qconf_list = pred_ip_key_vs_qconf_list[0]
         main_prop_quantizer = quant_prop_graph.add_propagating_quantizer(
-            main_pq_qconf_list, main_pq_ip_key, is_unified_scale)
+            main_pq_qconf_list, main_pq_ip_key,
+            unified_scale_type=UnifiedScaleType.UNIFY_ALWAYS if is_unified_scale else None)
         main_prop_quantizer.last_accepting_location_node_key = main_pq_ip_key
         self._active_propagating_quantizers_queue.appendleft(main_prop_quantizer)
 
@@ -2109,7 +2133,8 @@ class QuantizerPropagationSolver:
         for additional_pq_ip_key, _ in pred_ip_key_vs_qconf_list[1:]:
             additional_pq = quant_prop_graph.add_propagating_quantizer(
                 main_pq_qconf_list, additional_pq_ip_key,
-                unified_scale=is_unified_scale, unified_scale_group_id_override=main_pq_gid)
+                unified_scale_type=UnifiedScaleType.UNIFY_ALWAYS if is_unified_scale else None,
+                unified_scale_group_id_override=main_pq_gid)
             additional_pq.last_accepting_location_node_key = additional_pq_ip_key
             self._active_propagating_quantizers_queue.appendleft(additional_pq)
 
@@ -2257,13 +2282,15 @@ class QuantizerPropagationSolver:
     def get_merged_qconfigs_for_downward_branching_case(self,
                                                         potential_qconfigs_for_each_branch: List[
                                                             List[Optional[QuantizerConfig]]]) -> \
-            Tuple[Optional[List[QuantizerConfig]], List[Optional[List[QuantizerConfig]]]]:
+            Tuple[Optional[List[QuantizerConfig]],
+                  List[Optional[List[QuantizerConfig]]]]:
         """Returns a tuple, of which the first element is the qconfig list for the quantizer to be placed
         above the branching node (i.e. that will affect all of the downward branches), and a list
         of elements which are either None (which means that the corresponding branch quantizer has been successfully
         merged, or qconfigs list to be set for the corresponding branch quantizer if it cannot be merged (e.g. if
         requantization to a lower bitwidth has to be done for this branch)"""
         # pylint:disable=too-many-branches
+
         if self._propagation_strategy == PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS:
             # Do not merge at all
             return None, potential_qconfigs_for_each_branch
@@ -2275,6 +2302,7 @@ class QuantizerPropagationSolver:
             for other_pq_list in potential_qconfigs_for_each_branch[1:]:
                 if first_pq_list_counter != Counter(other_pq_list):
                     return None, potential_qconfigs_for_each_branch
+
             return first_pq_list, [None for _ in potential_qconfigs_for_each_branch]
 
         # Attempt to produce a merged config options space
