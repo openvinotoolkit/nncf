@@ -237,8 +237,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     raise ValueError("replay buffer size must be divisible by episode step length")
 
                 if agent.memory.nb_entries + len(transition_buffer) >= agent.memory.limit:
-                    total_reward_per_episode = agent.memory.rewards.data[::(len(transition_buffer)+1)]
-                    sorted_index_of_episodes = np.argsort(total_reward_per_episode) # ascending order
+                    step_reward_per_episode = agent.memory.rewards.data[::(len(transition_buffer)+1)]
+                    sorted_index_of_episodes = np.argsort(step_reward_per_episode) # ascending order
 
                     # Retain the top 30% of highest rewarded episodes,
                     # discard by sampling an episode uniformly from the lower 70% episodes
@@ -247,11 +247,6 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
                     discard_start_index = (discard_episode)*(len(transition_buffer)+1)
                     discard_end_index = (discard_episode+1)*(len(transition_buffer)+1)
-
-                    logger.info('[RBM] episode: {:3}, total_reward_per_episode: {}'.format(episode, list(map('{:.5f}'.format, total_reward_per_episode))))
-                    logger.info('[RBM] episode: {:3}, sorted_index_of_episodes: {}'.format(episode, sorted_index_of_episodes))
-                    logger.info('[RBM] episode: {:3}, discard_episode: {}'.format(episode, discard_episode))
-                    logger.info('[RBM] episode: {:3}, extract reward of discarded episode: {:.3f}'.format(episode, agent.memory.rewards[discard_start_index]))
 
                     agent.memory.discard(slice(discard_start_index, discard_end_index))
                 # = EO Replay Buffer Management
