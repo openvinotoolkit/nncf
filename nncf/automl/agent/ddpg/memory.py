@@ -52,9 +52,8 @@ def sample_batch_indexes(low, high, size):
 class RingBuffer:
     def __init__(self, maxlen):
         self.maxlen = maxlen
-        self.start = 0
         self.length = 0
-        self.data = [None for _ in range(maxlen)]
+        self.data = []
 
     def __len__(self):
         return self.length
@@ -62,27 +61,25 @@ class RingBuffer:
     def __getitem__(self, idx):
         if idx < 0 or idx >= self.length:
             raise KeyError()
-        return self.data[(self.start + idx) % self.maxlen]
+        return self.data[idx]
 
     def __delitem__(self, subscript):
         del self.data[subscript]
-        # ring buffer length is kept constant by padding
-        # refill at the beginning section of the ring buffer
-        for _ in range(self.maxlen - len(self.data)):
-            self.data.insert(0, None)
-        self.start = 0
+        self.length = len(self.data)
 
     def append(self, v):
         if self.length < self.maxlen:
-            # We have space, simply increase the length.
-            self.length += 1
+            # We have space, simply append to data.
+            self.data.append(v)
+            self.length+=1
+
         elif self.length == self.maxlen:
-            # No space, "remove" the first item.
-            self.start = (self.start + 1) % self.maxlen
+            # No space, remove the first item then append
+            self.data.pop(0)
+            self.data.append(v)
         else:
             # This should never happen.
             raise RuntimeError()
-        self.data[(self.start + self.length - 1) % self.maxlen] = v
 
 
 def zeroed_observation(observation):
