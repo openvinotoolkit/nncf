@@ -201,8 +201,7 @@ def test_can_resume_with_manual_init(mocker):
     get_stats = mocker.spy(QuantizationBuilder, '_get_statistics_for_final_range_init')
     run_bn_adapt = mocker.spy(QuantizationController, 'run_batchnorm_adaptation')
     apply_init = mocker.spy(ManualPrecisionInitializer, 'apply_init')
-    not_called_on_resume = [get_stats, parse_range_init, run_bn_adapt]
-    all_mocks = not_called_on_resume + [apply_init]
+    all_mocks = [get_stats, parse_range_init, run_bn_adapt, apply_init]
 
     config = register_default_init_args(config, train_loader=create_mock_dataloader(config))
 
@@ -215,6 +214,5 @@ def test_can_resume_with_manual_init(mocker):
     resuming_state_dict = model.state_dict()
     _ = create_compressed_model_and_algo_for_test(AddTwoConv(), config, resuming_state_dict=resuming_state_dict)
 
-    for m in not_called_on_resume:
-        m.assert_not_called()
-    apply_init.assert_called_once()
+    for m in all_mocks:
+        m.assert_called()
