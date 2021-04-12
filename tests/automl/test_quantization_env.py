@@ -25,6 +25,7 @@ from tests.helpers import create_mock_dataloader, create_conv, BasicConvTestMode
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 
 def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cfg=None) -> QuantizationEnv:
@@ -144,8 +145,7 @@ def test_reward(pretrained_score, compressed_score, model_size_ratio):
             qenv.reward(compressed_score, model_size_ratio)
     else:
         reward = qenv.reward(compressed_score, model_size_ratio)
-        assert reward == (compressed_score - pretrained_score) * 0.1
-
+        assert reward == compressed_score * (10**(-np.floor(np.math.log(abs(pretrained_score), 10))))
 
 STRATEGY_LIST = [
     [2],
