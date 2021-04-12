@@ -954,6 +954,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             narrow_range = False
 
         device = next(target_model.parameters()).device
+        compression_lr_scale = self.config.get('compression_lr_scale', None)
 
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
@@ -968,7 +969,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             narrow_range=narrow_range,
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
-                                            half_range=half_range)
+                                            half_range=half_range,
+                                            compression_lr_scale=compression_lr_scale)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],

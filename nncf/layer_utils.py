@@ -79,3 +79,14 @@ class _NNCFModuleMixin:
             if op_results is not None:
                 results = op_results
         return results
+
+
+class CompressionParameter(nn.Parameter):
+    def __new__(cls, data=None, requires_grad=True, compression_lr_scale=None):
+        return super().__new__(cls, data, requires_grad=requires_grad)
+
+    def __init__(self, data=None, requires_grad=True, compression_lr_scale=None):
+        super().__init__()
+        if compression_lr_scale is not None and requires_grad:
+            self.register_hook(lambda grad: compression_lr_scale * grad)
+
