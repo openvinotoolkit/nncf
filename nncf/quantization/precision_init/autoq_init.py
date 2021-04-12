@@ -349,12 +349,19 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         if self._dump_autoq_data:
             episode, final_reward, _, accuracy, model_ratio, bop_ratio, _, _, _ = episodic_info_tuple
 
+            current_bitwidth_per_scope = self.get_bitwidth_per_scope(
+                env.qctrl.get_quantizer_setup_for_current_state())
+
+            current_episode_nncfcfg = deepcopy(self._init_args.config)
+            current_episode_nncfcfg['compression']['initializer']['precision'] = \
+                {"bitwidth_per_scope": current_bitwidth_per_scope}
+
             # Save nncf compression cfg
             episode_cfgfile =  '{0}/{1:03d}_nncfcfg.json'.format(
                 str(self._init_args.config['episodic_nncfcfg']), episode)
 
             with safe_open(Path(episode_cfgfile), "w") as outfile:
-                json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
+                json.dump(current_episode_nncfcfg, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')
             pd.DataFrame(
