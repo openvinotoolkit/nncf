@@ -84,9 +84,11 @@ def calc_rb_mask_decorator(fn):
     return wrapper
 
 
+@pytest.mark.parametrize('quantization', [False, True],
+                         ids=['without_quantization', 'with_quantization'])
 @patch('beta.nncf.tensorflow.sparsity.rb.operation.calc_rb_binary_mask',
        new=calc_rb_mask_decorator(calc_rb_binary_mask))
-def test_distributed_masks_are_equal():
+def test_distributed_masks_are_equal(quantization):
     # Clean output file
     try:
         os.remove(MASKS_SEEDS_PATH)
@@ -97,6 +99,8 @@ def test_distributed_masks_are_equal():
     strategy = tf.distribute.MirroredStrategy([f'GPU:{i}' for i in range(num_of_replicas)])
     with strategy.scope():
         config = NNCFConfig.from_json(CONF)
+        if quantization:
+            config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
         model = TEST_MODELS['Conv2D']()
         algo, model = create_compressed_model(model, config)
         model.add_loss(algo.loss)
