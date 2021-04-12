@@ -478,8 +478,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._range_init_params = None
         self._precision_init_type = None
         self._precision_init_params = None
-        if should_init:
+        if self.should_init:
             self._parse_init_params()
+        # TODO: remove it! It workarounds checkpoint loading for mixed precision model by forcing manual mode for init
+        self.force_manual_precision_init = self._is_force_manual_precision_init_needed()
 
         self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
 
@@ -489,6 +491,18 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
         self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
+    def _is_force_manual_precision_init_needed(self) -> bool:
+        is_needed = False
+        init_config = self.config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if not self.should_init and init_precision_config is not None:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            if precision_init_type == 'manual':
+                self._precision_init_type = precision_init_type
+                self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
+                is_needed = True
+        return is_needed
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
@@ -588,7 +602,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
-        if self.should_init:
+        if self.should_init and not self.force_manual_precision_init:
             stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
                                                                              single_config_quantizer_setup,
                                                                              self._range_init_params)
@@ -673,6 +687,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return QuantizationController(target_model,
                                       self.config,
                                       self.should_init,
+                                      self.force_manual_precision_init,
                                       self._debug_interface,
                                       self._weight_quantizers,
                                       self._non_weight_quantizers,
@@ -1088,6 +1103,7 @@ class QuantizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork,
                  quantization_config: 'NNCFConfig',
                  should_init: bool,
+                 force_manual_precision_init: bool,
                  debug_interface: 'QuantizationDebugInterface',
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
@@ -1135,7 +1151,7 @@ class QuantizationController(QuantizationControllerBase):
         params = quantization_config.get('params', None)
         self.is_staged_scheduler = bool(params)
 
-        if is_main_process() and should_init:
+        if is_main_process() and should_init and not force_manual_precision_init:
             self.run_batchnorm_adaptation(self.quantization_config)
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
@@ -1477,7 +1493,7 @@ class QuantizationDebugInterface(DebugInterface):
 class ExperimentalQuantizationBuilder(QuantizationBuilder):
     def __init__(self, quantizer_setup: SingleConfigQuantizerSetup,
                  tensor_stats_for_all_setup_variations: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
-                 hw_config: HWConfig = None):
+                 hw_config: HWConfig = None, ):
         should_init = bool(tensor_stats_for_all_setup_variations)
         super().__init__(NNCFConfig(), should_init=should_init)
         self._quantizer_setup = quantizer_setup
@@ -1537,6 +1553,7 @@ class ExperimentalQuantizationController(QuantizationController):
         super().__init__(target_model,
                          NNCFConfig(),
                          should_init=False,
+                         force_manual_precision_init=False,
                          debug_interface=None,
                          weight_quantizers=weight_quantizers,
                          non_weight_quantizers=non_weight_quantizers,

@@ -186,6 +186,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         for qp_id, qconf in final_qid_vs_qconfig_map.items():
             final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
+        str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
+        logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
         logger.info('[AutoQ] best_reward: {}'.format(best_reward))
         logger.info('[AutoQ] best_policy: {}'.format(best_policy))
         logger.info("[AutoQ] Search Complete")

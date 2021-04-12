@@ -14,7 +14,6 @@ from typing import List
 
 import os
 import pytest
-import torch.nn as nn
 
 from examples.common.model_loader import load_model
 from nncf import NNCFConfig
@@ -23,10 +22,10 @@ from tests.conftest import EXAMPLES_DIR
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.helpers import create_conv
 from tests.helpers import create_mock_dataloader
 from tests.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.test_models.synthetic import AddTwoConv
 
 
 class ManualConfigTestParamsBase:
@@ -146,43 +145,23 @@ def test_manual_single_conv(params):
         check_bitwidth_graph(ctrl, model, path_to_dot, graph_dir)
 
 
-#       fq_2
-#        \
-# fq_2 - conv_1 - fq_6
-#                   \
-#        fq_4       add
-#         \         /
-# fq_4 - conv_2 - fq_6
-#
-class ModelForTest(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = create_conv(1, 2, 2, -1, -2)
-        self.conv2 = create_conv(1, 2, 2, -1, -2)
-
-    def forward(self, x):
-        return self.conv1(x) + self.conv2(x)
-
-
 def test_quantization_configs__with_precisions_list():
-    model = ModelForTest()
-
+    model = AddTwoConv()
     config = get_quantization_config_without_range_init()
     config['compression']['initializer'].update({
         "precision": {
             "bitwidth_per_scope":
-                [[2, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv1]'],
-                 [4, 'TargetType.OPERATION_WITH_WEIGHTS ModelForTest/NNCFConv2d[conv2]']]
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]']]
         }})
     config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
-    config['quantizer_setup_type'] = 'pattern_based'
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    ref_bits = [('ModelForTest/NNCFConv2d[conv1]module_weight', 2),
-                ('ModelForTest/NNCFConv2d[conv2]module_weight', 4),
-                ('ModelForTest/NNCFConv2d[conv2]/conv2d_0|OUTPUT', 6),
-                ('ModelForTest/NNCFConv2d[conv1]/conv2d_0|OUTPUT', 6),
+    ref_bits = [('AddTwoConv/NNCFConv2d[conv1]module_weight', 2),
+                ('AddTwoConv/NNCFConv2d[conv2]module_weight', 4),
+                ('AddTwoConv/NNCFConv2d[conv2]/conv2d_0|OUTPUT', 6),
+                ('AddTwoConv/NNCFConv2d[conv1]/conv2d_0|OUTPUT', 6),
                 ('/nncf_model_input_0|OUTPUT', 6)]
 
     for key, quantizer in compression_ctrl.all_quantizations.items():
@@ -195,3 +174,47 @@ def test_quantization_configs__with_precisions_list():
     table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
     # pylint: disable=protected-access
     assert table._rows == ref_rows
+
+
+def test_can_resume_with_manual_init(mocker):
+    config = get_quantization_config_without_range_init()
+    config['compression']['initializer'].update({
+        'precision': {
+            'bitwidth_per_scope':
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]']]
+        },
+        'range': {
+            'num_init_samples': 1
+        },
+        'batchnorm_adaptation': {
+            'num_bn_adaptation_samples': 1,
+            'num_bn_forget_samples': 1
+        },
+    })
+    config['target_device'] = 'TRIAL'
+    config['compression']["activations"] = {"bits": 6}
+
+    from nncf.quantization.algo import QuantizationBuilder, QuantizationController
+    from nncf.quantization.precision_init.manual_init import ManualPrecisionInitializer
+    parse_range_init = mocker.spy(QuantizationBuilder, '_parse_range_init_params')
+    get_stats = mocker.spy(QuantizationBuilder, '_get_statistics_for_final_range_init')
+    run_bn_adapt = mocker.spy(QuantizationController, 'run_batchnorm_adaptation')
+    apply_init = mocker.spy(ManualPrecisionInitializer, 'apply_init')
+    not_called_on_resume = [get_stats, parse_range_init, run_bn_adapt]
+    all_mocks = not_called_on_resume + [apply_init]
+
+    config = register_default_init_args(config, train_loader=create_mock_dataloader(config))
+
+    model, _ = create_compressed_model_and_algo_for_test(AddTwoConv(), config)
+
+    for m in all_mocks:
+        m.assert_called()
+        m.reset_mock()
+
+    resuming_state_dict = model.state_dict()
+    _ = create_compressed_model_and_algo_for_test(AddTwoConv(), config, resuming_state_dict=resuming_state_dict)
+
+    for m in not_called_on_resume:
+        m.assert_not_called()
+    apply_init.assert_called_once()

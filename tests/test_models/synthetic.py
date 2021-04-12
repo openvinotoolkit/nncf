@@ -13,6 +13,7 @@
 import torch
 import torch.nn.functional as F
 from abc import abstractmethod
+from tests.helpers import create_conv
 from torch import nn
 from torch.nn import Dropout
 from torch.nn import Parameter
@@ -179,3 +180,21 @@ class MultiOutputSameTensorModel(torch.nn.Module):
 
     def forward(self, x):
         return x, x*x, x
+
+
+#       fq_2
+#        \
+# fq_2 - conv_1 - fq_6
+#                   \
+#        fq_4       add
+#         \         /
+# fq_4 - conv_2 - fq_6
+#
+class AddTwoConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 2, 2, -1, -2)
+        self.conv2 = create_conv(1, 2, 2, -1, -2)
+
+    def forward(self, x):
+        return self.conv1(x) + self.conv2(x)

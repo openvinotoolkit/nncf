@@ -20,7 +20,6 @@ from typing import List
 from typing import NamedTuple
 from typing import Set
 from typing import Tuple
-from typing import Union
 
 import torch
 import warnings
@@ -373,17 +372,6 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             compression_ratio = self._compression_ratio_calculator.run_for_quantizer_setup(quantizer_setup)
             compression_ratio_per_qconfig.append(compression_ratio)
         return compression_ratio_per_qconfig
-
-    @staticmethod
-    def get_bitwidth_per_scope(quantizer_setup: SingleConfigQuantizerSetup) -> List[List[Union[int, str]]]:
-        scope_vs_bitwidth = {}
-        for qp in quantizer_setup.quantization_points.values():
-            scope_vs_bitwidth[str(qp.insertion_point)] = qp.qconfig.num_bits
-        sorted_scope_vs_bitwidth = OrderedDict(sorted(scope_vs_bitwidth.items(), key=lambda x: x[0]))
-        full_bitwidth_per_scope = []
-        for scope, bitwidth in sorted_scope_vs_bitwidth.items():
-            full_bitwidth_per_scope.append([bitwidth, scope])
-        return full_bitwidth_per_scope
 
     class ParamsToRestore(NamedTuple):
         originally_disabled_gradients: List[str]
