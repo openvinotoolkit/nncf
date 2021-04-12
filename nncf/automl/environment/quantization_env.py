@@ -511,6 +511,9 @@ class QuantizationEnv:
     def reward(self, acc: float, model_ratio: float) -> float:
         def order_of_magnitude(number):
             return np.floor(np.math.log(abs(number), 10))
+
+        if self.pretrained_score == 0:
+            return acc
         order = order_of_magnitude(self.pretrained_score)
         return acc*(10**(-order))
 
