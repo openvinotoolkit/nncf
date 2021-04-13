@@ -10,14 +10,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import torch
+
 from nncf.pruning.filter_pruning.global_ranking.RL_evolution import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
-from nncf.nncf_logger import logger as nncf_logger
+from nncf.common.utils.logger import logger as nncf_logger
+import time
 
 
 class LeGR:
-    def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, generations=400, max_pruning=0.8):
+    def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, generations=400, max_pruning=0.5):
         self.GENERATIONS = generations
-
         self.pruner = LeGRPruner(pruning_ctrl, target_model)
         initial_filter_ranks = self.pruner.init_filter_ranks
         agent_hparams = {
@@ -31,6 +33,10 @@ class LeGR:
     def train_global_ranking(self):
         reward_list = []
 
+        nncf_logger.info('Start training LeGR ranking coefficients...')
+
+        generation_time = 0
+        end = time.time()
         for episode in range(self.GENERATIONS):
             state, info = self.env.reset()
 
@@ -47,11 +53,17 @@ class LeGR:
 
                 state = new_state
                 episode_reward.append(reward)
+            generation_time = time.time() - end
+            end = time.time()
 
-            nncf_logger.info('Generation = {}, reward = {}\n'.format(episode, episode_reward[0]))
+            nncf_logger.info('Generation = {episode}, '
+                             'Reward = {reward:.3f}, '
+                             'Time = {time:.3f} \n'.format(episode=episode, reward=episode_reward[0],
+                                                           time=generation_time))
             reward_list.append(episode_reward[0])
         self.env.reset()
-        nncf_logger.info('Rewards history = {}'.format(reward_list))
+        nncf_logger.info('Finished training LeGR ranking coefficients.')
+        nncf_logger.info('Evolution algorithm rewards history = {}'.format(reward_list))
 
         best_ranking = self.agent.best_action
         return best_ranking

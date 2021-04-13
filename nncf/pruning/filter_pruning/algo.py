@@ -17,37 +17,36 @@ from typing import Union
 import numpy as np
 import torch
 from functools import partial
-from nncf.dynamic_graph.context import Scope
-
-from nncf.structures import LeGRInitArgs
 from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
-from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
-from nncf.layer_utils import _NNCFModuleMixin
-from nncf.common.utils.logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork
-from nncf.pruning.base_algo import BasePruningAlgoBuilder
-from nncf.pruning.base_algo import PrunedModuleInfo
-from nncf.pruning.base_algo import BasePruningAlgoController
-from nncf.pruning.export_helpers import ModelPruner
-from nncf.pruning.export_helpers import PTElementwise
-from nncf.pruning.export_helpers import PTConvolution
-from nncf.pruning.export_helpers import PTTransposeConvolution
-from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
-from nncf.pruning.filter_pruning.functions import calculate_binary_mask
-from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
-from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock
-from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.dynamic_graph.context import Scope
+from nncf.layer_utils import _NNCFModuleMixin
+from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
+from nncf.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.nncf_network import NNCFNetwork
+from nncf.pruning.base_algo import BasePruningAlgoBuilder
+from nncf.pruning.base_algo import BasePruningAlgoController
+from nncf.pruning.base_algo import PrunedModuleInfo
+from nncf.pruning.export_helpers import ModelPruner
+from nncf.pruning.export_helpers import PTConvolution
+from nncf.pruning.export_helpers import PTElementwise
+from nncf.pruning.export_helpers import PTTransposeConvolution
+from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
+from nncf.pruning.filter_pruning.functions import calculate_binary_mask
+from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
+from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
+from nncf.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
+from nncf.structures import LeGRInitArgs
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
 
@@ -100,10 +99,13 @@ class FilterPruningController(BasePruningAlgoController):
         self.weight_importance = params.get('weight_importance', 'uniform')
         self.all_weights = params.get("all_weights", False)
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get("schedule", "baseline"))
+        self._scheduler = scheduler_cls(self, params)
 
         if self.weight_importance == 'legr':
             legr_init_args = config.get_extra_struct(LeGRInitArgs)
             legr_params = params.get("legr_params", {})
+            if 'max_pruning' not in legr_params:
+                legr_params['max_pruning'] = self._scheduler.target_level
             legr = LeGR(self, target_model, legr_init_args, **legr_params)
             self.ranking_coeffs = legr.train_global_ranking()
             nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
@@ -112,7 +114,6 @@ class FilterPruningController(BasePruningAlgoController):
             self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 
         self.set_pruning_rate(self.pruning_init)
-        self._scheduler = scheduler_cls(self, params)
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
@@ -168,8 +169,8 @@ class FilterPruningController(BasePruningAlgoController):
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
             self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 
-            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
-                                              * self.pruning_quota
+            self.pruning_quotas[cluster.id] = np.floor(self.modules_out_channels[cluster.nodes[0].module_scope]
+                                                       * self.pruning_quota)
 
     def flops_count_init(self) -> None:
         def get_node_flops_hook(dict_to_save):

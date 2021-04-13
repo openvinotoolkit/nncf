@@ -226,9 +226,8 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                train_steps_fn: Callable = None,
-                               autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
+                               validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                val_loader: torch.utils.data.DataLoader = None,
-                               validate_fn: Callable = None,
                                device='cuda') -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
@@ -239,7 +238,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                             train_loader=train_loader,
                                             train_fn=train_steps_fn,
                                             val_loader=val_loader,
-                                            val_fn=validate_fn,
+                                            val_fn=partial(validate_fn, log=False),
                                             nncf_config=nncf_config,
                                         )
                                         ])
@@ -252,11 +251,11 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                           data_loader=init_loader,
                                                                           device=device)])
 
-    if autoq_eval_fn:
+    if validate_fn:
         if not val_loader:
             val_loader = init_loader
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=val_loader,
-                                                                   eval_fn=autoq_eval_fn,
+                                                                   eval_fn=validate_fn,
                                                                    nncf_config=nncf_config)])
 
     return nncf_config

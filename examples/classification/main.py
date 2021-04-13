@@ -139,24 +139,19 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def autoq_eval_fn(model, eval_loader):
-            _, top5, _ = validate(eval_loader, model, criterion, config)
-            return top5
-
         def train_steps_fn(loader, model, optimizer, steps):
             train_steps(loader, model, criterion, train_criterion_fn, optimizer, config, steps)
 
-        def validate_fn(eval_loader, model):
-            top1, top5, loss = validate(eval_loader, model, criterion, config, False)
-            return top1, loss
+        def validate_fn(model, eval_loader, log=True):
+            top1, top5, loss = validate(eval_loader, model, criterion, config, log)
+            return top1, top5, loss
 
         nncf_config = register_default_init_args(
             nncf_config, init_loader, train_loader,
             criterion, train_criterion_fn,
             train_steps_fn,
-            autoq_eval_fn,
-            val_loader,
             validate_fn,
+            val_loader,
             config.device)
 
     # create model

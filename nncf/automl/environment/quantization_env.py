@@ -404,7 +404,7 @@ class QuantizationEnv:
         self.qctrl.disable_activation_quantization()
 
         with torch.no_grad():
-            self.pretrained_score = self.eval_fn(self.qmodel, self.eval_loader)
+            _, self.pretrained_score, _ = self.eval_fn(self.qmodel, self.eval_loader)
             logger.info("Pretrained Score: {:.3f}".format(self.pretrained_score))
 
         self.qctrl.enable_weight_quantization()
@@ -418,7 +418,7 @@ class QuantizationEnv:
         if finetune:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
         with torch.no_grad():
-            quantized_score = self.eval_fn(self.qmodel, self.eval_loader)
+            _, quantized_score, _ = self.eval_fn(self.qmodel, self.eval_loader)
             logger.info("[Q.Env] Quantized Score: {:.3f}".format(quantized_score))
         return quantized_score
 
