@@ -170,7 +170,3 @@ class RBSparsityController(BaseSparsityController):
             })
 
         return raw_sparsity_statistics
-
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        return stats
