@@ -19,7 +19,6 @@ import torch
 import torch.nn.functional as F
 import warnings
 from torch import nn
-from torch.nn import Parameter
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
@@ -71,7 +70,7 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
     ):
         super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
                          bias, padding_mode)
-        self._set_padding_value(Parameter(torch.zeros([1]), requires_grad=False))
+        self.register_buffer(NNCF_PADDING_VALUE_ATTR_NAME, torch.zeros([1]))
 
     def get_padding_value_ref(self):
         return getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)
