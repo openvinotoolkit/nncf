@@ -63,10 +63,15 @@ if python_version < (3, 6):
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
+if "--cpu-only" in sys.argv:
+    print("WARNING: --cpu-only option for NNCF setup.py is deprecated and will "
+          "be ignored. CPU/GPU support will be determined by the torch package.")
+    sys.argv.remove("--cpu-only")
 
 if not os.environ.get('NNCF_SKIP_INSTALLING_TORCH'):
     INSTALL_REQUIRES.extend(["torch>=1.5.0, <=1.8.1, !=1.8.0"])
 else:
+    print("Skipping torch installation for NNCF.")
     DEPENDENCY_LINKS = []
 
 
