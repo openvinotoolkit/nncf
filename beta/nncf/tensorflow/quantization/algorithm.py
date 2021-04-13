@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from typing import Dict
 import networkx as nx
 
 from nncf.common.graph.transformations.commands import TransformationPriority
