@@ -236,7 +236,6 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._model = stripped_model
 
 
-
 class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """
     The `CompositeCompressionAlgorithmBuilder` class stores a group of
