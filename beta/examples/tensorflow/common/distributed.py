@@ -30,7 +30,7 @@ def get_distribution_strategy(config):
             raise RuntimeError('GPU with id = {id} was not found in the specified '
                                'CUDA_VISIBLE_DEVICES environment variable. '
                                'Please do not export the CUDA_VISIBLE_DEVICES environment variable '
-                               'or specify GPU with id = {id} in it'.format(id = _gpu_id))
+                               'or specify GPU with id = {id} in it'.format(id=_gpu_id))
 
     num_gpus = len(tf.config.list_physical_devices('GPU'))
 

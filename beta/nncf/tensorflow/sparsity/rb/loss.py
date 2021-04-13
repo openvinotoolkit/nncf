@@ -27,7 +27,7 @@ class SparseLoss(CompressionLoss):
         self.disabled = tf.Variable(False, trainable=False)
 
     def disable(self):
-        tf.cond(self.disabled,
+        tf.cond(tf.cast(self.disabled, tf.bool),
                 lambda: None,
                 self._disable)
 
@@ -38,7 +38,7 @@ class SparseLoss(CompressionLoss):
             op.freeze(op_weights)
 
     def calculate(self, *args, **kwargs):
-        return tf.cond(self.disabled,
+        return tf.cond(tf.cast(self.disabled, tf.bool),
                        lambda: tf.constant(0.),
                        self._calculate)
 
