@@ -478,8 +478,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._range_init_params = None
         self._precision_init_type = None
         self._precision_init_params = None
-        if should_init:
+        if self.should_init:
             self._parse_init_params()
+        else:
+            # TODO: remove it! It workarounds checkpoint loading for mixed precision model by forcing manual init
+            self._force_manual_precision_init()
 
         self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
 
@@ -489,6 +492,18 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
         self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
+    def _force_manual_precision_init(self):
+        init_config = self.config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if init_precision_config is not None:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            if precision_init_type == 'manual':
+                # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
+                self._range_init_params = self._parse_range_init_params(init_config)
+                self.should_init = True
+                self._precision_init_type = precision_init_type
+                self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
