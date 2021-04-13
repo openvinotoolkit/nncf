@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from abc import abstractmethod
 from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import NNCFConfig
@@ -20,7 +19,6 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.graph.transformations.layout import TransformationLayout
 
 ModelType = TypeVar('ModelType')
 
@@ -261,26 +259,3 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     @property
     def child_builders(self) -> List[CompressionAlgorithmBuilder]:
         return self._child_builders
-
-    @abstractmethod
-    def build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
-        """
-        Builds `CompositeCompressionAlgorithmController` to handle the additional
-        modules, parameters, and hooks inserted into the model to enable
-        algorithm-specific compression.
-
-        :param model: The model with additional modifications necessary to enable
-         algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompositeCompressionAlgorithmController`.
-        """
-
-    @abstractmethod
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
-        """
-        Computes necessary model transformations to enable algorithm-specific
-        compression.
-
-        :param model: The original uncompressed model.
-        :return: The instance of the `TransformationLayout` class containing
-            a list of algorithm-specific modifications.
-        """

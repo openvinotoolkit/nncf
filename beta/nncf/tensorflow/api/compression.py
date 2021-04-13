@@ -83,14 +83,3 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         transformer = TFModelTransformer(model, transformation_layout)
         transformed_model = transformer.transform()
         return transformed_model
-
-    def build_controller(self, model: ModelType) -> TFCompressionAlgorithmController:
-        """
-        Builds `CompressionAlgorithmController` to handle the additional modules,
-        parameters, and hooks inserted into the model to enable algorithm-specific
-        compression.
-
-        :param model: The model with additional modifications necessary to enable
-            algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompressionAlgorithmController`.
-        """

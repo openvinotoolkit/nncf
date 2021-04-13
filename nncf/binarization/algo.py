@@ -195,4 +195,3 @@ class BinarizationController(QuantizationControllerBase):
         table.add_rows(table_data)
         nncf_logger.info(table.draw())
         nncf_logger.info("Total binarized MAC share: {:.1f}%".format(ops_bin / ops_total * 100))
-

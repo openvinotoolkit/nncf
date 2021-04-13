@@ -35,7 +35,7 @@ class ZeroCompressionLoss(PTCompressionLoss):
         self._device = device
 
     def calculate(self) -> torch.Tensor:
-        return 0
+        return torch.zeros([], device=self._device)
 
 
 @COMPRESSION_ALGORITHMS.register('NoCompressionAlgorithmBuilder')

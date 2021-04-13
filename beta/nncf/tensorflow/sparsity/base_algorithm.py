@@ -59,7 +59,8 @@ class BaseSparsityController(TFCompressionAlgorithmController, SparsityControlle
         stats = super().statistics(quickly_collected_only)
         raw_sparsity_statistics = self.raw_statistics()
         header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        return stats.update(convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header))
+        stats.update(convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header))
+        return stats
 
     def raw_statistics(self):
         raise NotImplementedError
