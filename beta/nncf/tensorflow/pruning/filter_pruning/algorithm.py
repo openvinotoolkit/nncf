@@ -244,7 +244,3 @@ class FilterPruningController(BasePruningAlgoController):
             nncf_node = [n for n in nncf_sorted_nodes if wrapped_layer.name == n.node_name][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
-
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        return stats
