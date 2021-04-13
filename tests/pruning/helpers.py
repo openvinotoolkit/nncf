@@ -16,7 +16,9 @@ from nncf.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.helpers import create_conv, create_transpose_conv, create_depthwise_conv
+from tests.helpers import create_conv
+from tests.helpers import create_transpose_conv
+from tests.helpers import create_depthwise_conv
 
 
 class PruningTestModel(nn.Module):
@@ -343,6 +345,50 @@ class TestModelGroupNorm(nn.Module):
         x = self.gn1(x)
         x = self.conv2(x)
         x = self.gn2(x)
+        return x
+
+
+class PruningTestWideModelConcat(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 1, 1, 1)
+        self.conv3 = create_conv(512, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.conv4 = create_conv(2048, 2048, 1, 1, 1)
+        for i in range(2048):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x = self.conv4(x)
+        return x
+
+
+class PruningTestWideModelEltwise(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 1, 1, 1)
+        self.conv3 = create_conv(512, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.conv4 = create_conv(1024, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x) + self.conv3(x)
+        x = self.conv4(x)
         return x
 
 

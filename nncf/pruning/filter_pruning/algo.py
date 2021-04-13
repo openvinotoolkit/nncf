@@ -17,14 +17,13 @@ from typing import Union
 import numpy as np
 import torch
 from functools import partial
-
-from nncf.dynamic_graph.context import Scope
 from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.dynamic_graph.context import Scope
 from nncf.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layer_utils import _NNCFModuleMixin
@@ -156,10 +155,9 @@ class FilterPruningController(BasePruningAlgoController):
 
                 next_nodes_idxs = [n.ia_op_exec_context.scope_in_model for n in next_nodes]
                 next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
-            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
-
             self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
                                               * self.pruning_quota
+            self.next_nodes[cluster.id] = list(next_nodes_cluster - {n.module_scope for n in cluster.nodes})
 
     def flops_count_init(self) -> None:
         def get_node_flops_hook(dict_to_save):
@@ -205,14 +203,15 @@ class FilterPruningController(BasePruningAlgoController):
 
         for group in self.pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes)
+                       group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
+            num_of_sparse_elems = len(group.nodes[0].operand.binary_filter_pruning_mask) - new_out_channels_num
             for node in group.nodes:
                 tmp_out_channels[node.module_scope] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
             for node_module_scope in next_nodes:
-                tmp_in_channels[node_module_scope] = new_out_channels_num
+                tmp_in_channels[node_module_scope] -= num_of_sparse_elems
 
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
@@ -253,7 +252,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         for group in self.pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes)
+                       group.nodes)
             # prune all nodes in cluster (by output channels)
             old_out_channels = self.modules_out_channels[group.nodes[0].module_scope]
             num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
@@ -265,7 +264,8 @@ class FilterPruningController(BasePruningAlgoController):
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
             for node_id in next_nodes:
-                tmp_in_channels[node_id] = new_out_channels_num
+                tmp_in_channels[node_id] -= num_of_sparse_elems
+
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops
 
