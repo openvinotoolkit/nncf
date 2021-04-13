@@ -19,7 +19,6 @@ from nncf.api.composite_compression import CompositeCompressionAlgorithmControll
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-from nncf.common.graph.transformations.layout import TransformationLayout
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
