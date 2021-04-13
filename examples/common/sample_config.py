@@ -105,10 +105,17 @@ class SampleConfig(Dict):
 
 
 def create_sample_config(args, parser) -> SampleConfig:
-    nncf_config = NNCFConfig.from_json(args.config)
-
     sample_config = SampleConfig.from_json(args.config)
     sample_config.update_from_args(args, parser)
-    sample_config.nncf_config = nncf_config
 
+    file_path = Path(args.config).resolve()
+    with safe_open(file_path) as f:
+        loaded_json = json.load(f)
+
+    if sample_config.get("target_device") is not None:
+        target_device = sample_config.pop("target_device")
+        loaded_json["target_device"] = target_device
+
+    nncf_config = NNCFConfig.from_dict(loaded_json)
+    sample_config.nncf_config = nncf_config
     return sample_config

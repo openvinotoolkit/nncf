@@ -24,10 +24,9 @@ def get_common_argument_parser():
     parser.add_argument('-c', '--config', help='Path to a config file with task/model-specific parameters',
                         required=True)
 
-    parser.add_argument('--hw-config', help='Type of the hardware configuration for compression algorithms',
+    parser.add_argument('--target-device', help='Type of the hardware configuration for compression algorithms',
                         type=str,
-                        default=None,
-                        dest="hw_config_type",
+                        dest="target_device",
                         choices=[t.value for t in HWConfigType])
 
     parser.add_argument(
