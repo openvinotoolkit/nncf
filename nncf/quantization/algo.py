@@ -1148,6 +1148,14 @@ class QuantizationController(QuantizationControllerBase):
             self._scheduler = scheduler_cls(self, params)
 
     @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
         return self._groups_of_adjacent_quantizers
 
@@ -1314,7 +1322,6 @@ class QuantizationController(QuantizationControllerBase):
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
-        stats.update(self._loss.statistics(quickly_collected_only))
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
@@ -1325,13 +1332,6 @@ class QuantizationController(QuantizationControllerBase):
                     stats[add_info] = table
         return stats
 
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
 
 class QuantizationDebugInterface(DebugInterface):
     QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME = 'quantized_modules'
@@ -1568,6 +1568,14 @@ class ExperimentalQuantizationController(QuantizationController):
                 self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
         self.hw_config = hw_config
 
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()
         retval.shared_input_operation_set_groups = self._initial_quantizer_setup.shared_input_operation_set_groups
@@ -1616,11 +1624,3 @@ class ExperimentalQuantizationController(QuantizationController):
         new_builder.apply_to(new_model)
         new_ctrl = new_builder.build_controller(new_model)
         return new_ctrl, new_model
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler

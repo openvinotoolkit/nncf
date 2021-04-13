@@ -237,9 +237,6 @@ class QuantizationController(TFCompressionAlgorithmController):
         self._scheduler = BaseCompressionScheduler()
         self._loss = TFZeroCompressionLoss()
 
-    def initialize(self, dataset=None, loss=None):
-        self._initializer(self._model, dataset, loss)
-
     @property
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
@@ -248,7 +245,9 @@ class QuantizationController(TFCompressionAlgorithmController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
+    def initialize(self, dataset=None, loss=None):
+        self._initializer(self._model, dataset, loss)
+
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        stats = {}
-        stats.update(self._loss.statistics(quickly_collected_only))
+        stats = super().statistics(quickly_collected_only)
         return stats

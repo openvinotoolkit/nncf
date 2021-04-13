@@ -77,6 +77,14 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
         self._scheduler = PTStubCompressionScheduler()
         self._loss = ZeroCompressionLoss('cpu')
 
+    @property
+    def loss(self) -> ZeroCompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> PTStubCompressionScheduler:
+        return self._scheduler
+
     def start_collection(self):
         for collector in self.ip_vs_collector_dict.values():
             collector.enable()
@@ -87,11 +95,3 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
 
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
-
-    @property
-    def loss(self) -> ZeroCompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> PTStubCompressionScheduler:
-        return self._scheduler

@@ -125,6 +125,14 @@ class MagnitudeSparsityController(BaseSparsityController):
         self._loss = TFZeroCompressionLoss()
         self.set_sparsity_level(sparsity_init)
 
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
     def freeze(self):
         self._frozen = True
 
@@ -223,15 +231,6 @@ class MagnitudeSparsityController(BaseSparsityController):
 
         return raw_sparsity_statistics
 
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
-        stats.update(self._loss.statistics(quickly_collected_only))
         return stats

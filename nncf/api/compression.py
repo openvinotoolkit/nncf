@@ -191,7 +191,6 @@ class CompressionAlgorithmController(ABC):
         :return: The compression level of the target model.
         """
 
-    @abstractmethod
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Returns a dictionary of printable statistics.
@@ -201,6 +200,7 @@ class CompressionAlgorithmController(ABC):
             need to keep track of statistics on each training batch/step/iteration.
         :return: A dictionary of printable statistics.
         """
+        return self.loss.statistics(quickly_collected_only)
 
     def prepare_for_export(self) -> None:
         """

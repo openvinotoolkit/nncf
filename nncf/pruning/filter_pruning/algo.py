@@ -106,6 +106,14 @@ class FilterPruningController(BasePruningAlgoController):
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
 
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
@@ -626,11 +634,3 @@ class FilterPruningController(BasePruningAlgoController):
         if actual_pruning_level >= target_pruning_level:
             return CompressionLevel.FULL
         return CompressionLevel.PARTIAL
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler

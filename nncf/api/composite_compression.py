@@ -55,6 +55,10 @@ class CompositeCompressionLoss(CompressionLoss):
 
         :return: The compression loss value.
         """
+
+        if len(self._child_losses) == 0:
+            raise RuntimeError("Cannot calculate the loss value because the number of child loss is 0.")
+
         result_loss = 0
         for loss in self._child_losses:
             result_loss += loss()
@@ -165,6 +169,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._scheduler = CompositeCompressionScheduler()
 
     @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
     def child_ctrls(self) -> List[CompressionAlgorithmController]:
         return self._child_ctrls
 
@@ -224,14 +236,6 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         for ctrl in self.child_ctrls:
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
 
 
 

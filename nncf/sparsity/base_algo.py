@@ -83,6 +83,14 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
         self.sparsified_module_info = sparsified_module_info
 
     @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
     def sparsified_weights_count(self):
         count = 0
         for minfo in self.sparsified_module_info:
@@ -135,7 +143,6 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
-        stats.update(self._loss.statistics(quickly_collected_only))
         table = Texttable()
         header = ["Name", "Weight's Shape", "SR", "% weights"]
         data = [header]
@@ -162,11 +169,3 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
     def compression_level(self) -> CompressionLevel:
         return CompressionLevel.FULL
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler

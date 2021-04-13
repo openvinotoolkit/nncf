@@ -95,6 +95,14 @@ class FilterPruningController(BasePruningAlgoController):
         self.set_pruning_rate(self.pruning_init)
         self._loss = TFZeroCompressionLoss()
 
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
     def freeze(self):
         self.frozen = True
 
@@ -237,15 +245,6 @@ class FilterPruningController(BasePruningAlgoController):
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([wrapped_layer], nncf_node.data['output_mask'])
 
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
-        stats.update(self._loss.statistics(quickly_collected_only))
         return stats

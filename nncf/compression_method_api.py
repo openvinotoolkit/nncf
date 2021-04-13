@@ -105,7 +105,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             statistics on each train batch/step/iteration.
         :return: A dictionary of printable statistics.
         """
-        stats = {}
+        stats = super().statistics(quickly_collected_only)
         if hasattr(self._model, 'statistics'):
             stats.update(self._model.statistics(quickly_collected_only))
         return stats

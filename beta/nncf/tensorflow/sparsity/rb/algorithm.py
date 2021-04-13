@@ -103,6 +103,14 @@ class RBSparsityController(BaseSparsityController):
         self._scheduler = scheduler_cls(self, params)
         self.set_sparsity_level(sparsity_init)
 
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)
 
@@ -163,15 +171,6 @@ class RBSparsityController(BaseSparsityController):
 
         return raw_sparsity_statistics
 
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
-
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
-        stats.update(self._loss.statistics(quickly_collected_only))
         return stats

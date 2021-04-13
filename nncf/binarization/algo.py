@@ -103,6 +103,14 @@ class BinarizationController(QuantizationControllerBase):
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()
 
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
     def _set_binarization_status(self, condition_fn: Callable[[BaseBinarizer], bool],
                                  apply_fn: Callable[[BaseBinarizer], None]):
         if self._model is not None:
@@ -188,10 +196,3 @@ class BinarizationController(QuantizationControllerBase):
         nncf_logger.info(table.draw())
         nncf_logger.info("Total binarized MAC share: {:.1f}%".format(ops_bin / ops_total * 100))
 
-    @property
-    def loss(self) -> CompressionLoss:
-        return self._loss
-
-    @property
-    def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
