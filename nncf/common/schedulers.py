@@ -149,10 +149,7 @@ class ExponentialDecaySchedule:
 
 class BaseCompressionScheduler(CompressionScheduler):
     """
-    Implements the logic of compression method control during the training process.
-    May change the method hyperparameters in regards to the current training step
-    or epoch. For example, the sparsity method can smoothly increase the sparsity
-    rate over several epochs.
+    Contains the implementation of the basic functionality of the scheduler.
 
     The `step()` and `epoch_step()` methods of the compression scheduler must be
     called at the beginning of each training step and epoch, respectively.
