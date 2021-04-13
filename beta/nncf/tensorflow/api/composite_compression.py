@@ -57,7 +57,7 @@ class TFCompositeCompressionAlgorithmBuilder(
             composite_ctrl.add(builder.build_controller(model))
         return composite_ctrl
 
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
+    def get_transformation_layout(self, model: ModelType) -> TFTransformationLayout:
         transformations = TFTransformationLayout()
         for builder in self.child_builders:
             transformations.update(builder.get_transformation_layout(model))
