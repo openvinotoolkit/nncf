@@ -247,7 +247,3 @@ class QuantizationController(TFCompressionAlgorithmController):
 
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
-
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        stats = super().statistics(quickly_collected_only)
-        return stats
