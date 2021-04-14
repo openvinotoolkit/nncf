@@ -86,7 +86,14 @@ class NNCFGraph:
         :param node_id: Id of the node.
         :return: Node in a graph with such id.
         """
-        return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
+        return self.get_node_by_key(self.get_node_key_by_id(node_id))
+
+    def get_node_by_key(self, key: str):
+        """
+        :param key: key (node_name) of the node.
+        :return: NNCFNode in a graph with such key.
+        """
+        return self._nx_node_to_nncf_node(self._nx_graph.nodes[key])
 
     def get_input_nodes(self) -> List[NNCFNode]:
         """

@@ -70,3 +70,9 @@ class TFPruningOperationsMetatypeRegistry(PruningOperationsMetatypeRegistry):
     @staticmethod
     def get_version_agnostic_name(name):
         return name
+
+
+def get_original_layer_type(layer: tf.keras.layers.Layer):
+    if isinstance(layer, NNCFWrapper):
+        layer = layer.layer
+    return type(layer)

@@ -56,6 +56,10 @@ GENERAL_CONV_LAYERS = [
     'Conv3DTranspose'
 ]
 
+LINEAR_LAYERS = [
+    'Dense'
+]
+
 KERAS_LAYERS_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT = [
     'Cropping1D',
     'Cropping2D',

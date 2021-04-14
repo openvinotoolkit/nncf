@@ -17,13 +17,14 @@ import networkx as nx
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
-from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
+from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
+from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def convert_keras_model_to_nxmodel(model):
@@ -176,10 +177,12 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     raw_nodes = _prepare_raw_nodes(model)
     return _get_nncf_graph_from_raw_nodes(model_config, raw_nodes)
 
+
 def _prepare_shape(shape):
     if not isinstance(shape, list):
         return [shape]
     return shape
+
 
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
     model_config = model.get_config()
@@ -299,16 +302,19 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
 
 
 def _get_module_attributes(layer: tf.keras.layers.Layer, attrs: dict) -> ConvolutionModuleAttributes:
-    channel_axis = -1 if attrs['data_format'] == 'channels_last' else 1
+    channel_axis = get_input_channel_axis(layer)
     if isinstance(layer, NNCFWrapper):
         strides = layer.layer.strides[0]
         groups = layer.layer.groups
+        kernel_size = layer.layer.kernel_size
     else:
         strides = layer.strides[0]
         groups = layer.groups
+        kernel_size = layer.kernel_size
 
     return ConvolutionModuleAttributes(layer.trainable,
                                        layer.get_input_shape_at(0)[channel_axis],
                                        layer.get_output_shape_at(0)[channel_axis],
+                                       kernel_size,
                                        strides,
                                        groups)

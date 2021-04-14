@@ -49,8 +49,10 @@ from nncf.common.utils.logger import logger as nncf_logger
 
 
 class PrunedLayerInfo:
-    def __init__(self, layer_name: str):
+    def __init__(self, layer_name: str, node_id: int):
         self.layer_name = layer_name
+        self.nncf_node_id = node_id
+        self.key = self.layer_name
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
@@ -84,6 +86,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
+        self._graph = None
         self._op_names = []
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
@@ -104,8 +107,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :return: The instance of the `TransformationLayout` class containing
             a list of pruning mask insertions.
         """
-        graph = convert_keras_model_to_nncf_graph(model)
-        groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
+        self._graph = convert_keras_model_to_nncf_graph(model)
+        groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
         transformations = TFTransformationLayout()
         shared_layers = set()
@@ -130,7 +133,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         transformations.register(
                             self._get_insertion_command_binary_mask(layer_name, attr_name)
                         )
-                group_minfos.append(PrunedLayerInfo(layer_name))
+                group_minfos.append(PrunedLayerInfo(layer_name, node.node_id))
 
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
@@ -141,7 +144,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         if not self._prune_batch_norms:
             types_spec_layers.remove('BatchNormalization')
 
-        spec_nodes = graph.get_nodes_by_types(types_spec_layers)
+        spec_nodes = self._graph.get_nodes_by_types(types_spec_layers)
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
             if layer_name in shared_layers:
@@ -256,7 +259,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_target and pruning_flops_target:
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
         if pruning_flops_target:
-            raise Exception('Pruning by flops is not supported in NNCF TensorFlow yet.')
+            self.prune_flops = True
 
     def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()

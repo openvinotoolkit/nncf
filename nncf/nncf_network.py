@@ -815,6 +815,7 @@ def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttribut
         module.weight.requires_grad,
         module.in_channels,
         module.out_channels,
+        module.kernel_size,
         module.stride,
         module.groups
     )

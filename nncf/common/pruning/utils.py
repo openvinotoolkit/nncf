@@ -10,9 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import math
+
 from functools import partial
-from typing import List, Tuple, Optional
+import math
+import numpy as np
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -185,6 +190,85 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
     if len(sources) == 1 and sources[0].node_type in pruning_types:
         return sources[0]
     return None
+
+
+def get_conv_in_out_channels(graph: NNCFGraph):
+    in_channels, out_channels = {}, {}
+    for node in graph.get_all_nodes():
+        if isinstance(node.module_attributes, ConvolutionModuleAttributes):
+            name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+                else node.node_name
+            in_channels[name] = node.module_attributes.in_channels
+            out_channels[name] = node.module_attributes.out_channels
+    return in_channels, out_channels
+
+
+def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
+                           prunable_types: List[str]) -> Dict[int, List[str]]:
+    next_nodes, pruning_quotas = {}, {}
+    for cluster in pruned_groups_info.get_all_clusters():
+        next_nodes_cluster = set()
+        cluster_nodes = set()
+        for cluster_node in cluster.nodes:
+            nncf_cluster_node = graph.get_node_by_key(cluster_node.key)
+            nncf_cluster_node_scope = nncf_cluster_node.ia_op_exec_context.scope_in_model \
+                if hasattr(nncf_cluster_node, 'ia_op_exec_context') \
+                else nncf_cluster_node.node_name
+            cluster_nodes.add(nncf_cluster_node_scope)
+            curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
+
+            next_nodes_idxs = [n.ia_op_exec_context.scope_in_model if hasattr(n, 'ia_op_exec_context')
+                               else n.node_name for n in curr_next_nodes]
+            next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
+        next_nodes[cluster.id] = list(next_nodes_cluster - cluster_nodes)
+    return next_nodes
+
+
+def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
+                conv_op_types: List[str], linear_op_types: List[str],
+                input_channels: dict = None, output_channels: dict = None):
+    flops = {}
+    input_channels = input_channels or {}
+    output_channels = output_channels or {}
+    for node in graph.get_nodes_by_types(conv_op_types):
+        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+            else node.node_name
+        num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
+        num_out_channels = output_channels.get(name, node.module_attributes.out_channels)
+        flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
+                      num_in_channels * num_out_channels * np.prod(output_shapes[name])
+
+    for node in graph.get_nodes_by_types(linear_op_types):
+        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+            else node.node_name
+        flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
+
+    return flops
+
+
+def calculate_in_out_channel_in_uniformly_pruned_model(pruning_groups, pruning_rate,
+                                                       full_input_channels, full_output_channels,
+                                                       pruning_groups_next_nodes):
+    tmp_in_channels = full_input_channels.copy()
+    tmp_out_channels = full_output_channels.copy()
+
+    for group in pruning_groups:
+        layer_name = group.nodes[0].key
+        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.key] for node in
+                   group.nodes)
+        # Prune all nodes in cluster (by output channels)
+        old_out_channels = full_output_channels[layer_name]
+        num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
+        new_out_channels_num = old_out_channels - num_of_sparse_elems
+
+        for node in group.nodes:
+            tmp_out_channels[node.key] = new_out_channels_num
+
+        # Prune in_channels in all next nodes of cluster
+        for node_id in pruning_groups_next_nodes[group.id]:
+            tmp_in_channels[node_id] = new_out_channels_num
+
+    return tmp_in_channels, tmp_out_channels
 
 
 class PruningOperationsMetatypeRegistry(Registry):

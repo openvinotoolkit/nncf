@@ -15,6 +15,7 @@ from functools import partial
 from functools import update_wrapper
 from texttable import Texttable
 from torch import nn
+from typing import List
 
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
@@ -40,6 +41,7 @@ class PrunedModuleInfo:
         self.module = module
         self.operand = operand
         self.nncf_node_id = node_id
+        self.key = self.module_scope
 
 
 class NodeInfo:
@@ -61,8 +63,9 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         self.prune_batch_norms = params.get('prune_batch_norms', True)
         self.prune_downsample_convs = params.get('prune_downsample_convs', False)
 
+        self._prunable_types = self.get_op_types_of_pruned_modules()
         self.pruning_node_selector = PruningNodeSelector(PT_PRUNING_OPERATOR_METATYPES,
-                                                         self.get_op_types_of_pruned_modules(),
+                                                         self._prunable_types,
                                                          self.get_types_of_grouping_ops(),
                                                          self.ignored_scopes,
                                                          self.target_scopes,
@@ -116,7 +119,8 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
         return insertion_commands
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return BasePruningAlgoController(target_model, self.pruned_module_groups_info, self._params)
+        return BasePruningAlgoController(target_model, self._prunable_types,
+                                         self.pruned_module_groups_info, self._params)
 
     def create_weight_pruning_operation(self, module):
         raise NotImplementedError
@@ -139,10 +143,12 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
 class BasePruningAlgoController(PTCompressionAlgorithmController):
     def __init__(self, target_model: NNCFNetwork,
+                 prunable_types: List[str],
                  pruned_module_groups_info: Clusterization,
                  config):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._prunable_types = prunable_types
         self.config = config
         params = self.config.get("params", {})
         self.pruned_module_groups_info = pruned_module_groups_info
