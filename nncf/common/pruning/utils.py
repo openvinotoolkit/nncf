@@ -197,7 +197,9 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     for node in graph.get_all_nodes():
         if isinstance(node.module_attributes, ConvolutionModuleAttributes):
             name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-                else node.node_name
+                else node.data['original_name']
+            if name in in_channels and name in out_channels:
+                continue
             in_channels[name] = node.module_attributes.in_channels
             out_channels[name] = node.module_attributes.out_channels
     return in_channels, out_channels
@@ -205,20 +207,20 @@ def get_conv_in_out_channels(graph: NNCFGraph):
 
 def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
                            prunable_types: List[str]) -> Dict[int, List[str]]:
-    next_nodes, pruning_quotas = {}, {}
+    next_nodes = {}
     for cluster in pruned_groups_info.get_all_clusters():
         next_nodes_cluster = set()
         cluster_nodes = set()
         for cluster_node in cluster.nodes:
-            nncf_cluster_node = graph.get_node_by_key(cluster_node.key)
+            nncf_cluster_node = graph.get_node_by_id(cluster_node.nncf_node_id)
             nncf_cluster_node_scope = nncf_cluster_node.ia_op_exec_context.scope_in_model \
                 if hasattr(nncf_cluster_node, 'ia_op_exec_context') \
-                else nncf_cluster_node.node_name
+                else nncf_cluster_node.data['original_name']
             cluster_nodes.add(nncf_cluster_node_scope)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
             next_nodes_idxs = [n.ia_op_exec_context.scope_in_model if hasattr(n, 'ia_op_exec_context')
-                               else n.node_name for n in curr_next_nodes]
+                               else n.data['original_name'] for n in curr_next_nodes]
             next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
         next_nodes[cluster.id] = list(next_nodes_cluster - cluster_nodes)
     return next_nodes
@@ -232,7 +234,9 @@ def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_types(conv_op_types):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else node.node_name
+            else node.data['original_name']
+        if name in flops:
+            continue
         num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
         num_out_channels = output_channels.get(name, node.module_attributes.out_channels)
         flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
@@ -240,7 +244,7 @@ def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
 
     for node in graph.get_nodes_by_types(linear_op_types):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else node.node_name
+            else node.data['original_name']
         flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
 
     return flops

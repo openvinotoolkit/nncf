@@ -19,7 +19,6 @@ import tensorflow as tf
 
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
 from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
@@ -39,6 +38,7 @@ from beta.nncf.tensorflow.pruning.filter_pruning.functions import tensor_l2_norm
 from beta.nncf.tensorflow.pruning.utils import broadcast_filter_mask
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
+from beta.nncf.tensorflow.pruning.utils import is_valid_shape
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
@@ -174,12 +174,24 @@ class FilterPruningController(BasePruningAlgoController):
                 channel_axis = get_input_channel_axis(layer_)
                 dims_slice = slice(channel_axis - layer_.rank, channel_axis) \
                     if layer.data_format == 'channels_last' else slice(channel_axis + 1, None)
-                self._layers_in_shapes[layer_.name] = layer.get_input_shape_at(0)[dims_slice]
-                self._layers_out_shapes[layer_.name] = layer.get_output_shape_at(0)[dims_slice]
+                in_shape = layer.get_input_shape_at(0)[dims_slice]
+                out_shape = layer.get_output_shape_at(0)[dims_slice]
+
+                if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+                    raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+
+                self._layers_in_shapes[layer_.name] = in_shape
+                self._layers_out_shapes[layer_.name] = out_shape
 
             elif type(layer_).__name__ in LINEAR_LAYERS:
-                self._layers_in_shapes[layer_.name] = layer.get_input_shape_at(0)[1:]
-                self._layers_out_shapes[layer_.name] = layer.get_output_shape_at(0)[1:]
+                in_shape = layer.get_input_shape_at(0)[1:]
+                out_shape = layer.get_output_shape_at(0)[1:]
+
+                if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
+                    raise RuntimeError(f'Input/output shape is not defined for layer `{layer.name}` ')
+
+                self._layers_in_shapes[layer_.name] = in_shape
+                self._layers_out_shapes[layer_.name] = out_shape
 
         self._nodes_flops = count_flops(self._original_graph, self._layers_in_shapes, self._layers_out_shapes,
                                         conv_op_types=GENERAL_CONV_LAYERS,
@@ -208,7 +220,7 @@ class FilterPruningController(BasePruningAlgoController):
             # c. Initialize masks
             filter_mask = calculate_binary_mask(cumulative_filters_importance, threshold)
             for node in group.nodes:
-                nncf_node = self._original_graph.get_node_by_key(node.key)
+                nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
                 nncf_node.data['output_mask'] = filter_mask
 
         # 2. Propagating masks across the graph
@@ -216,8 +228,9 @@ class FilterPruningController(BasePruningAlgoController):
         mask_propagator.mask_propagation()
 
         # 3. Apply masks to the model
+        nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
-            nncf_node = self._original_graph.get_node_by_key(layer.layer.name)
+            nncf_node = [n for n in nncf_sorted_nodes if layer.layer.name == n.data['original_name']][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -244,14 +257,14 @@ class FilterPruningController(BasePruningAlgoController):
             filter_importances[group.id] = cumulative_filters_importance
 
         # b. Calculate one threshold for all weights
-        importances = tf.concat(filter_importances.values(), axis=0)
+        importances = tf.concat(list(filter_importances.values()), 0)
         threshold = sorted(importances)[int(pruning_rate * importances.shape[0])]
 
         # c. Initialize masks
         for group in self._pruned_layer_groups_info.get_all_clusters():
             filter_mask = calculate_binary_mask(filter_importances[group.id], threshold)
             for node in group.nodes:
-                nncf_node = self._original_graph.get_node_by_key(node.key)
+                nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
                 nncf_node.data['output_mask'] = filter_mask
 
         # 2. Propagate masks across the graph
@@ -259,8 +272,9 @@ class FilterPruningController(BasePruningAlgoController):
         mask_propagator.mask_propagation()
 
         # 3. Apply masks to the model
+        nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
-            nncf_node = self._original_graph.get_node_by_key(layer.layer.name)
+            nncf_node = [n for n in nncf_sorted_nodes if layer.layer.name == n.data['original_name']][0]
             if nncf_node.data['output_mask'] is not None:
                 self._set_operation_masks([layer], nncf_node.data['output_mask'])
 
@@ -275,8 +289,9 @@ class FilterPruningController(BasePruningAlgoController):
         wrapped_layers = collect_wrapped_layers(self._model)
         masks = []
 
+        nncf_sorted_nodes = self._original_graph.topological_sort()
         for layer in wrapped_layers:
-            nncf_node = self._original_graph.get_node_by_key(layer.layer.name)
+            nncf_node = [n for n in nncf_sorted_nodes if layer.layer.name == n.data['original_name']][0]
             nncf_node.data['output_mask'] = tf.ones(get_filters_num(layer))
 
         # 1. Calculate importances for all groups of filters. Initialize masks.
@@ -320,7 +335,7 @@ class FilterPruningController(BasePruningAlgoController):
                 # 3. Add masks to the graph and propagate them
                 for group in self._pruned_layer_groups_info.get_all_clusters():
                     for node in group.nodes:
-                        nncf_node = self._original_graph.get_node_by_key(node.key)
+                        nncf_node = self._original_graph.get_node_by_id(node.nncf_node_id)
                         nncf_node.data['output_mask'] = masks[group.id]
 
                 mask_propagator = MaskPropagationAlgorithm(self._original_graph, TF_PRUNING_OPERATOR_METATYPES)
@@ -328,8 +343,9 @@ class FilterPruningController(BasePruningAlgoController):
 
                 # 4. Set binary masks to the model
                 self.current_flops = flops
+                nncf_sorted_nodes = self._original_graph.topological_sort()
                 for layer in wrapped_layers:
-                    nncf_node = self._original_graph.get_node_by_key(layer.name)
+                    nncf_node = [n for n in nncf_sorted_nodes if layer.layer.name == n.data['original_name']][0]
                     if nncf_node.data['output_mask'] is not None:
                         self._set_operation_masks([layer], nncf_node.data['output_mask'])
                 return
