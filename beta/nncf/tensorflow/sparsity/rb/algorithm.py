@@ -32,6 +32,8 @@ from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.utils.node import is_ignored
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
@@ -100,6 +102,14 @@ class RBSparsityController(BaseSparsityController):
         scheduler_cls = SPARSITY_SCHEDULERS.get(schedule_type)
         self._scheduler = scheduler_cls(self, params)
         self.set_sparsity_level(sparsity_init)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)

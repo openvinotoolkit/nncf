@@ -283,4 +283,4 @@ class TestAdaptiveSparsityScheduler:
             rb_algo_mock.loss.current_sparsity = loss_current_sparsity[epoch_idx]
             self.run_epoch(steps_per_epoch, scheduler, mock)
             expected_level = ref_sparsity_levels[epoch_idx]
-            mock.assert_called_once_with(pytest.approx(expected_level))
+            mock.assert_called_once_with(expected_level)
