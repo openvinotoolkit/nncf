@@ -159,7 +159,7 @@ def get_scale_zp_from_input_low_input_high(level_low: int, level_high: int,
                                            input_low: torch.Tensor, input_high: torch.Tensor) -> \
         Tuple[torch.Tensor, torch.Tensor, Optional[int]]:
     levels = level_high - level_low + 1
-    assert levels in [255, 256], "Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
+    assert 0 < levels <= 256, f"Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
 
     y_scale = (input_high - input_low) / (level_high - level_low)
     y_zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
