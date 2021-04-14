@@ -21,7 +21,7 @@ from nncf.algo_selector import COMPRESSION_ALGORITHMS
 
 @COMPRESSION_ALGORITHMS.register('const_sparsity')
 class ConstSparsityBuilder(BaseSparsityAlgoBuilder):
-    def create_weight_sparsifying_operation(self, module, compression_lr_scale):
+    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
         return BinaryMask(module.weight.size())
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:

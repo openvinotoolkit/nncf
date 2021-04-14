@@ -91,13 +91,13 @@ def dorefa_binarize_op(x):
 
 # Activation binarization module
 class ActivationBinarizationScaleThreshold(ActivationBinarizer):
-    def __init__(self, input_shape, enabled=False, compression_lr_scale=None, desc=""):
+    def __init__(self, input_shape, enabled=False, compression_lr_multiplier=None, desc=""):
         super().__init__(enabled)
 
         self.input_shape = input_shape
 
         self.scale = CompressionParameter(torch.Tensor([0]), requires_grad=enabled,
-                                          compression_lr_scale=compression_lr_scale)
+                                          compression_lr_multiplier=compression_lr_multiplier)
         self.scale.data.zero_()
 
         # Need scale_initialized as buffer for it to appear in the model state dict
@@ -105,7 +105,7 @@ class ActivationBinarizationScaleThreshold(ActivationBinarizer):
 
         threshold_shape = get_per_channel_scale_shape(self.input_shape, is_weights=False)
         self.threshold = CompressionParameter(torch.ones(threshold_shape), requires_grad=enabled,
-                                              compression_lr_scale=compression_lr_scale)
+                                              compression_lr_multiplier=compression_lr_multiplier)
         self.threshold.data.zero_()
         self.bin = activation_bin_scale_threshold_op
 

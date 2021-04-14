@@ -57,17 +57,17 @@ class PTQuantizerSpec(QuantizerSpec):
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
-                 compression_lr_scale: float):
+                 compression_lr_multiplier: float):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
-        self.compression_lr_scale = compression_lr_scale
+        self.compression_lr_multiplier = compression_lr_multiplier
 
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
                     half_range: bool, scale_shape: Tuple[int],
-                    logarithm_scale: bool, compression_lr_scale: float) -> 'PTQuantizerSpec':
+                    logarithm_scale: bool, compression_lr_multiplier: float) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
@@ -75,7 +75,7 @@ class PTQuantizerSpec(QuantizerSpec):
                    half_range,
                    scale_shape,
                    logarithm_scale,
-                   compression_lr_scale)
+                   compression_lr_multiplier)
 
 
 class BaseQuantizer(nn.Module):
@@ -87,7 +87,7 @@ class BaseQuantizer(nn.Module):
         self._is_using_log_scale_storage = qspec.logarithm_scale
         self._half_range = qspec.half_range
         self._num_bits = CompressionParameter(torch.IntTensor([qspec.num_bits]), requires_grad=False,
-                                              compression_lr_scale=qspec.compression_lr_scale)
+                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
         OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
         self.level_high = None
         self.level_low = None
@@ -332,12 +332,12 @@ class SymmetricQuantizer(BaseQuantizer):
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
         self.signed_tensor = CompressionParameter(torch.IntTensor([0]), requires_grad=False,
-                                                  compression_lr_scale=qspec.compression_lr_scale)
+                                                  compression_lr_multiplier=qspec.compression_lr_multiplier)
         self.collect_scale_statistics = False
 
         setattr(self, self._SCALE_PARAM_STORAGE_ATTR,
                 CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
-                                     compression_lr_scale=qspec.compression_lr_scale))
+                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
             self.eps = 0
@@ -485,10 +485,10 @@ class AsymmetricQuantizer(BaseQuantizer):
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
         self.input_low = CompressionParameter(torch.zeros(self.scale_shape), requires_grad=True,
-                                              compression_lr_scale=qspec.compression_lr_scale)
+                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
         setattr(self, self._INPUT_RANGE_PARAM_STORAGE_ATTR,
                 CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
-                                     compression_lr_scale=qspec.compression_lr_scale))
+                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
 
         if self._is_using_log_scale_storage:
             self._input_range_param_storage.data.log_()
