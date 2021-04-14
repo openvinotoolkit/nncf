@@ -288,7 +288,7 @@ def test_are_symmetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path)
     are_symmetric_fq_nodes_are_exported_correct_with_saturation_fix(tmp_path, compression_ctrl)
 
 
-def test_are_assymetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
+def test_are_asymmetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path):
     in_out_ch = [[1, 3], [3, 5], [5, 7], [7, 10]]
     model = EightConvTestModel(in_out_ch)
     nncf_config = get_config_for_export_mode(False)

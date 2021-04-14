@@ -267,18 +267,21 @@ class BaseQuantizer(nn.Module):
             x, y_scale, y_zero_point, per_channel_idx = self._prepare_qdq_export_quantization(x)
 
             if self.per_channel:
-                if get_torch_version_tuple() < (1, 8, 0):
+                if EXPORT_ONNX_OPSET_VERSION < 13:
                     if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
                             torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                         y_scale, y_zero_point = y_scale[0], y_zero_point[0]
                         nncf_logger.warning("Exporting a per-channel quantizers with identical per-channel scales"
                                             "as per-tensor QuantizeLinear-DequantizeLinear pair to work around ONNX "
-                                            "opset 10 limitations")
+                                            "opset <13 limitations")
                         return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
                     raise RuntimeError(
                         "PyTorch export to ONNX using QuantizeLinear-DequantizeLinear "
                         "doesn't support per channel quantization in torch version {}".format(
                             torch.__version__))
+                assert per_channel_idx is not None
+            else:
+                per_channel_idx = None
 
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, per_channel_idx)
         raise RuntimeError('Unknown export mode')

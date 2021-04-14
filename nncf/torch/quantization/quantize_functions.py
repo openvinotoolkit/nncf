@@ -146,7 +146,7 @@ class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
         return dequantized
 
     @staticmethod
-    def forward(ctx, input_, y_scale, y_zero_pointi, per_channel_idx: Optional[int] = None):
+    def forward(ctx, input_, y_scale, y_zero_point, per_channel_idx: Optional[int] = None):
         return input_
 
     @staticmethod
@@ -159,7 +159,7 @@ def get_scale_zp_from_input_low_input_high(level_low: int, level_high: int,
                                            input_low: torch.Tensor, input_high: torch.Tensor) -> \
         Tuple[torch.Tensor, torch.Tensor, Optional[int]]:
     levels = level_high - level_low + 1
-    assert 0 < levels <= 256, f"Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
+    assert levels == 256, "Can only export to INT8 256-level ONNX Quantize/Dequantize pairs"
 
     y_scale = (input_high - input_low) / (level_high - level_low)
     y_zero_point = (level_low * input_high - level_high * input_low) / (input_high - input_low)
@@ -173,12 +173,11 @@ def get_scale_zp_from_input_low_input_high(level_low: int, level_high: int,
 
     _, per_channel_idx = get_channel_count_and_dim_idx(list(y_scale.shape))
 
-    if len(y_scale.shape) > 1:
+    if len(y_scale.shape) > 1 or y_scale.numel() > 1:
         y_scale = torch.squeeze(y_scale)
         y_zero_point = torch.squeeze(y_zero_point)
         return y_scale, y_zero_point, per_channel_idx
-    else:
-        return y_scale, y_zero_point, None
+    return y_scale, y_zero_point, None
 
 
 @register_operator()
