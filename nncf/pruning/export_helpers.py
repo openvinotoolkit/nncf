@@ -400,7 +400,7 @@ class PTConcat(PTDefaultMetaOp):
         :param graph: NNCF graph to work with.
         :return: Filled input masks.
         """
-        previous_nodes = graph.get_previous_nodes(node)
+        previous_nodes = graph.get_previous_nodes_sorted_by_in_port(node)
         input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
         input_edges = graph.get_input_edges(node)
 
