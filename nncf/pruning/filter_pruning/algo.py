@@ -22,6 +22,8 @@ from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.utils import calculate_in_out_channel_in_uniformly_pruned_model
@@ -105,6 +107,14 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):

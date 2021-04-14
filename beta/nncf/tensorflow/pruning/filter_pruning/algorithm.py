@@ -26,6 +26,7 @@ from beta.nncf.tensorflow.layers.common import LINEAR_LAYERS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoBuilder
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
@@ -40,6 +41,8 @@ from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_valid_shape
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
@@ -51,6 +54,7 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
+
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -117,6 +121,15 @@ class FilterPruningController(BasePruningAlgoController):
         scheduler_cls = PRUNING_SCHEDULERS.get(params.get('schedule', 'exponential'))
         self._scheduler = scheduler_cls(self, params)
         self.set_pruning_rate(self.pruning_init)
+        self._loss = TFZeroCompressionLoss()
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)

@@ -29,11 +29,19 @@ def create_staged_scheduler(ctrl_spy, w_start=2, a_start=1):
     scheduler = StagedQuantizationScheduler(ctrl_spy.get_mocked_algo(), params)
     return scheduler
 
+class QuantizationControllerBaseForTest(QuantizationControllerBase):
+    @property
+    def loss(self):
+        pass
+
+    @property
+    def scheduler(self):
+        pass
 
 class QuantizationCtrlBaseSpy:
     #pylint:disable=no-member
     def __init__(self, mocker):
-        self._mocked_ctrl = QuantizationControllerBase(mocker.stub)
+        self._mocked_ctrl = QuantizationControllerBaseForTest(mocker.stub)
         mocker.patch.object(self._mocked_ctrl, 'enable_weight_quantization')
         mocker.patch.object(self._mocked_ctrl, 'enable_activation_quantization')
         mocker.patch.object(self._mocked_ctrl, 'disable_weight_quantization')
