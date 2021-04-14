@@ -157,7 +157,7 @@ def patch_extension_build_function():
     The bug must be fixed with a new PyTorch 1.8.0
     """
     import torch.utils.cpp_extension
-    from nncf.utils import get_torch_version_tuple
+    from nncf.torch.utils import get_torch_version_tuple
     try:
         torch_version_tuple = get_torch_version_tuple()
     except ValueError as e:
@@ -165,9 +165,7 @@ def patch_extension_build_function():
                        'Cannot parse a PyTorch version with the error {}'.format(e))
         return
 
-    if torch_version_tuple >= (1, 8, 0):
-        return
-
+    if torch_version_tuple < (1, 8, 0):
         def sort_arch_flags(func):
             def wrapped(*args, **kwargs):
                 flags = func(*args, **kwargs)

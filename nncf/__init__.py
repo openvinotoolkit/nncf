@@ -17,8 +17,6 @@ try:
     import torch
 except ImportError:
     torch = None
-    from .utils import get_torch_version_tuple
-    EXPORT_ONNX_OPSET_VERSION = 10 if get_torch_version_tuple() < (1, 8, 0) else 13
 
 try:
     import tensorflow as tf

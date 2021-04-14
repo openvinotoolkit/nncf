@@ -18,9 +18,10 @@ import torch
 
 from nncf.common.exporter import Exporter
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.torch.utils import get_torch_version_tuple
 
+EXPORT_ONNX_OPSET_VERSION = 10 if get_torch_version_tuple() < (1, 8, 0) else 13
 
-EXPORT_ONNX_OPSET_VERSION = 13
 
 class PTExporter(Exporter):
     """

@@ -20,7 +20,9 @@ from typing import Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.common.utils.debug import is_debug
+from nncf.torch.exporter import EXPORT_ONNX_OPSET_VERSION
+from nncf.torch.functions import clamp
 from torch import distributed
 
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -29,21 +31,19 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
-from nncf.dynamic_graph.context import no_nncf_trace
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
-from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
-from nncf.quantization.quantize_functions import ExportQuantizeToFakeQuantize
-from nncf.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
-from nncf.quantization.quantize_functions import TuneRange
-from nncf.quantization.quantize_functions import asymmetric_quantize
-from nncf.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
-from nncf.quantization.quantize_functions import symmetric_quantize
-from nncf.utils import get_flat_tensor_contents_string
-from nncf.utils import get_torch_version_tuple
-from nncf.utils import is_tracing_state
-from nncf.utils import no_jit_trace
+from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
+from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
+from nncf.torch.quantization.quantize_functions import TuneRange
+from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
+from nncf.torch.quantization.quantize_functions import symmetric_quantize
+from nncf.torch.utils import get_flat_tensor_contents_string
+from nncf.torch.utils import is_tracing_state
+from nncf.torch.utils import no_jit_trace
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')

@@ -16,6 +16,7 @@ from typing import Tuple
 import torch
 import warnings
 
+from nncf.torch.tensor_statistics.reduction import get_channel_count_and_dim_idx
 from nncf.torch.utils import add_domain
 
 from .extensions import QuantizedFunctionsCPU, QuantizedFunctionsCUDA

@@ -17,13 +17,13 @@ import onnx
 import pytest
 import torch
 
-from nncf import EXPORT_ONNX_OPSET_VERSION
 from nncf import NNCFConfig
+from nncf.torch.exporter import EXPORT_ONNX_OPSET_VERSION
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import QuantizerExportMode
-from nncf.torch.utils import get_torch_version_tuple
+from tests.torch.helpers import get_nodes_by_type
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.test_helpers import TwoConvTestModel

@@ -29,6 +29,7 @@ from tests.torch.helpers import create_conv
 from tests.torch.helpers import get_empty_config
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.quantization.test_hawq_precision_init import check_bitwidth_graph
+from tests.torch.quantization.test_unified_scales import resolve_constant_node_inputs_to_values
 from tests.torch.test_compressed_graph import GeneralModelDesc
 from tests.torch.test_helpers import load_exported_onnx_version
 from tests.torch.test_models.synthetic import MultiBranchesModel
@@ -199,17 +200,32 @@ def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
     num_model_nodes = 0
     num_adjust_pad_nodes = 0
     num_other_nodes = 0
+
+    if EXPORT_ONNX_OPSET_VERSION < 11:
+        EXPECTED_MODEL_OP_NAMES = ['Conv', 'Relu', 'MaxPool', 'Constant']
+    else:
+        EXPECTED_MODEL_OP_NAMES = ['Conv', 'Relu', 'MaxPool', 'Constant',
+                                   'ConstantOfShape', 'Concat', 'Reshape', 'Slice',
+                                   'Transpose', 'Cast']
     # pylint:disable=no-member
     for node in onnx_model_proto.graph.node:
         op_type = node.op_type
         if op_type == 'FakeQuantize':
             num_fq += 1
-        elif op_type in ['Conv', 'Constant', 'Relu', 'MaxPool']:
+        elif op_type in EXPECTED_MODEL_OP_NAMES:
             num_model_nodes += 1
         elif op_type in ['Pad']:
-            pad_value_attr = node.attribute[2]
-            assert pad_value_attr.f == 0.5
-            num_adjust_pad_nodes += 1
+            if EXPORT_ONNX_OPSET_VERSION < 11:
+                pad_value_attr = node.attribute[2]
+                assert pad_value_attr.f == 0.5
+                num_adjust_pad_nodes += 1
+            elif EXPORT_ONNX_OPSET_VERSION >= 11:
+                mode = node.attribute[0]
+                assert mode.s == b'constant'
+                const_inputs = resolve_constant_node_inputs_to_values(node, onnx_model_proto.graph)
+                assert len(const_inputs.values()) == 1
+                pad_constant_value = list(const_inputs.values())[0]
+                assert pad_constant_value == 0.5
         else:
             num_other_nodes += 1
             print(op_type)
