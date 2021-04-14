@@ -57,7 +57,7 @@ class PTQuantizerSpec(QuantizerSpec):
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
                  logarithm_scale: bool,
-                 compression_lr_multiplier: float):
+                 compression_lr_multiplier: float = None):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
