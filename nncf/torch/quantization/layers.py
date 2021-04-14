@@ -11,28 +11,39 @@
  limitations under the License.
 """
 from enum import Enum
-from typing import Dict, List, Tuple, Optional
+from functools import partial
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import torch
 import torch.nn as nn
-from functools import partial
-
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from torch import distributed
 
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
-from nncf.common.utils.debug import is_debug
-from nncf.torch.functions import clamp
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
+from nncf.common.utils.registry import Registry
+from nncf.dynamic_graph.context import no_nncf_trace
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.torch.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
-    ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from nncf.torch.layer_utils import COMPRESSION_MODULES, CompressionParameter
-from nncf.common.utils.registry import Registry
-from nncf.torch.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
+from nncf.quantization.quantize_functions import ExportQuantizeToFakeQuantize
+from nncf.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
+from nncf.quantization.quantize_functions import TuneRange
+from nncf.quantization.quantize_functions import asymmetric_quantize
+from nncf.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
+from nncf.quantization.quantize_functions import symmetric_quantize
+from nncf.utils import get_flat_tensor_contents_string
+from nncf.utils import get_torch_version_tuple
+from nncf.utils import is_tracing_state
+from nncf.utils import no_jit_trace
 
 QUANTIZATION_MODULES = Registry('quantization_modules')
 INITIALIZABLE_MODULES = Registry('initializable_modules')
@@ -234,7 +245,8 @@ class BaseQuantizer(nn.Module):
             levels = level_high - level_low + 1
         return x, levels, input_low, input_high
 
-    def _prepare_qdq_export_quantization(self, x: torch.Tensor):
+    def _prepare_qdq_export_quantization(self, x: torch.Tensor) -> \
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Optional[int]]:
         x, level_high, level_low, input_low, input_high = self._prepare_export_quantization(x)
         with no_jit_trace():
             y_scale, y_zero_point, per_channel_idx = get_scale_zp_from_input_low_input_high(level_low,
@@ -253,6 +265,21 @@ class BaseQuantizer(nn.Module):
                                                       input_high)
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
             x, y_scale, y_zero_point, per_channel_idx = self._prepare_qdq_export_quantization(x)
+
+            if self.per_channel:
+                if get_torch_version_tuple() < (1, 8, 0):
+                    if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
+                            torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
+                        y_scale, y_zero_point = y_scale[0], y_zero_point[0]
+                        nncf_logger.warning("Exporting a per-channel quantizers with identical per-channel scales"
+                                            "as per-tensor QuantizeLinear-DequantizeLinear pair to work around ONNX "
+                                            "opset 10 limitations")
+                        return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+                    raise RuntimeError(
+                        "PyTorch export to ONNX using QuantizeLinear-DequantizeLinear "
+                        "doesn't support per channel quantization in torch version {}".format(
+                            torch.__version__))
+
             return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, per_channel_idx)
         raise RuntimeError('Unknown export mode')
 

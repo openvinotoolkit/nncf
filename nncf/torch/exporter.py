@@ -20,6 +20,8 @@ from nncf.common.exporter import Exporter
 from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 
 
+EXPORT_ONNX_OPSET_VERSION = 13
+
 class PTExporter(Exporter):
     """
     This class provides export of the compressed model to the ONNX format.
@@ -80,7 +82,7 @@ class PTExporter(Exporter):
                               input_names=self._input_names,
                               output_names=self._output_names,
                               enable_onnx_checker=False,
-                              opset_version=10,
+                              opset_version=EXPORT_ONNX_OPSET_VERSION,
                               # Do not fuse Conv+BN in ONNX. May cause dropout elements to appear in ONNX.
                               training=True)
             model.enable_dynamic_graph_building()

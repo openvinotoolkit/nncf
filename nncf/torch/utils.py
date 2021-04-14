@@ -12,10 +12,12 @@
 """
 from collections import OrderedDict
 from typing import Dict
+from typing import Tuple
 
 import numpy as np
 import random
 import torch
+from pkg_resources import parse_version
 from torch import distributed as dist, nn
 from torch.nn import Module, Parameter
 
@@ -295,3 +297,8 @@ def default_distributed_unwrapper(model: nn.Module):
     if isinstance(model, (torch.nn.parallel.DataParallel, torch.nn.parallel.DistributedDataParallel)):
         return model.module
     return model
+
+def get_torch_version_tuple() -> Tuple[int, int, int]:
+    torch_version = parse_version(torch.__version__).base_version
+    torch_version_tuple = tuple(map(int, torch_version.split('.')))
+    return torch_version_tuple
