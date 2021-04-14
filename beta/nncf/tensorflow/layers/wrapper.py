@@ -65,14 +65,63 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     @trainable.setter
     def trainable(self, value):
         self.layer.trainable = value
+        # Trainable property of all operations follows the global trainable property of NNCFWrapper
+        self.set_ops_trainable(value)
+
+    def set_ops_trainable(self, value):
+        for ops in self.weights_attr_ops.values():
+            for op in ops.values():
+                op.trainable = value
 
     @property
     def trainable_weights(self):
-        return self._trainable_weights + self.layer.trainable_weights
+        trainable_weights_by_definition = self._trainable_weights + self.layer.trainable_weights
+        trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+        if self.trainable:
+            weights = trainable_weights_by_definition
+            for trainable_weight_off in trainable_ops_weights_off:
+                weights.remove(trainable_weight_off)
+            return weights
+        else:
+            return [] + trainable_ops_weights_on
 
     @property
     def non_trainable_weights(self):
-        return self._non_trainable_weights + self.layer.non_trainable_weights
+        trainable_weights_by_definition = self._trainable_weights + self.layer.trainable_weights
+        non_trainable_weights_by_definition = self._non_trainable_weights + self.layer.non_trainable_weights
+        trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+        if self.trainable:
+            return non_trainable_weights_by_definition + trainable_ops_weights_off
+        else:
+            weights = trainable_weights_by_definition
+            for trainable_weight_on in trainable_ops_weights_on:
+                weights.remove(trainable_weight_on)
+            return non_trainable_weights_by_definition + weights
+
+    def classify_trainable_ops_weights(self):
+        """
+        Classifies operation trainable weights by trainable property of corresponding operation.
+        Note: Operation with trainable weights can be switched off from training.
+              Operation trainable property can be adjusted
+              to be different from NNCFWrapper global trainable property.
+
+        :return trainable_ops_weights_on: list of trainable operation weights
+                which is getting updated during training.
+        :return trainable_ops_weights_off: list of trainable operation weights
+                which is NOT getting updated during training.
+        """
+        trainable_ops_weights_on = []
+        trainable_ops_weights_off = []
+        for ops in self.weights_attr_ops.values():
+            for op_name, op in ops.items():
+                op_weights = self._ops_weights[op_name]
+                for weight_val in op_weights.values():
+                    if weight_val.trainable:
+                        if op.trainable:
+                            trainable_ops_weights_on.append(weight_val)
+                        else:
+                            trainable_ops_weights_off.append(weight_val)
+        return trainable_ops_weights_on, trainable_ops_weights_off
 
     @property
     def updates(self):

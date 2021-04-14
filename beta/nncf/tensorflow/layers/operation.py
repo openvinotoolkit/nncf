@@ -34,6 +34,7 @@ class NNCFOperation:
         """
         self._call_pre_hooks = OrderedDict()
         self._name = name
+        self.trainable = True
 
     @property
     def name(self):
