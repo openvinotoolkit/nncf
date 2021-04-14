@@ -158,6 +158,13 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nb_state = len(env.state_list)
         nb_action = 1
 
+        # Control buffer length at run manager level
+        if "warmup_iter_number" not in self._ddpg_hparams_override:
+            self._ddpg_hparams_override["warmup_iter_number"] = 10
+
+        self._ddpg_hparams_override["rmsize"] = \
+            self._ddpg_hparams_override["warmup_iter_number"] * (len(env.master_df)+1)
+
         # Instantiate Automation Agent
         agent = DDPG(nb_state, nb_action, self._iter_number, hparam_override=self._ddpg_hparams_override)
 
@@ -179,6 +186,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         for qp_id, qconf in final_qid_vs_qconfig_map.items():
             final_quantizer_setup.quantization_points[qp_id].qconfig = qconf
 
+        str_bw = [str(element) for element in self.get_bitwidth_per_scope(final_quantizer_setup)]
+        logger.info('\n'.join(['[AutoQ]\n\"bitwidth_per_scope\": [', ',\n'.join(str_bw), ']']))
         logger.info('[AutoQ] best_reward: {}'.format(best_reward))
         logger.info('[AutoQ] best_policy: {}'.format(best_policy))
         logger.info("[AutoQ] Search Complete")
@@ -187,6 +196,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
 
     def _search(self, agent: 'DDPG', env: 'QuantizationEnv') -> Tuple[pd.Series, float]:
+        # pylint: disable=too-many-branches,too-many-statements
         best_reward = -math.inf
         episode = 0
         episode_reward = 0.
@@ -222,7 +232,29 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     .format(episode, episode_reward, info['accuracy'], info['model_ratio'],
                     info['model_size']/8e6, info['bop_ratio']))
 
+                # Replay Buffer Management
+                if agent.memory.nb_entries % (len(env.master_df)+1) > 0:
+                    raise ValueError("logical bug in buffer management, uneven episode length")
+                if agent.memory.limit % (len(env.master_df)+1) > 0:
+                    raise ValueError("replay buffer size must be divisible by episode step length")
+
+                if agent.memory.nb_entries + len(transition_buffer) >= agent.memory.limit:
+                    step_reward_per_episode = agent.memory.rewards.data[::(len(transition_buffer)+1)]
+                    sorted_index_of_episodes = np.argsort(step_reward_per_episode) # ascending order
+
+                    # Retain the top 30% of highest rewarded episodes,
+                    # discard by sampling an episode uniformly from the lower 70% episodes
+                    discard_candidates = sorted_index_of_episodes[:int(len(sorted_index_of_episodes)*.7)]
+                    discard_episode = np.random.choice(discard_candidates)
+
+                    discard_start_index = (discard_episode)*(len(transition_buffer)+1)
+                    discard_end_index = (discard_episode+1)*(len(transition_buffer)+1)
+
+                    agent.memory.discard(slice(discard_start_index, discard_end_index))
+                # = EO Replay Buffer Management
+
                 final_reward = transition_buffer[-1][0]
+                r_per_step = final_reward/len(env.master_df)
 
                 for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
                     # Revision of prev_action as it could be modified by constrainer -------
@@ -233,17 +265,20 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                     if prev_action != s_t['prev_action']:
                         s_t['prev_action'] = prev_action
                     # EO ------------------------
-
-                    agent.observe(final_reward, s_t, a_t, done)
-                    if episode >= agent.warmup_iter_number:
-                        for _ in range(agent.n_update):
-                            agent.update_policy()
+                    agent.observe(r_per_step, s_t, a_t, done)
 
                 agent.memory.append(
                     observation,
                     agent.select_action(observation, episode=episode),
                     0., False
                 )
+
+                # update DDPG networks, note that this loop must not be
+                # in the loop above to avoid non-numeric value in replay buffer
+                for i, (_, s_t, _, a_t, done) in enumerate(transition_buffer):
+                    if episode >= agent.warmup_iter_number:
+                        for _ in range(agent.n_update):
+                            agent.update_policy()
 
                 # reset
                 observation = None
@@ -314,12 +349,19 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         if self._dump_autoq_data:
             episode, final_reward, _, accuracy, model_ratio, bop_ratio, _, _, _ = episodic_info_tuple
 
+            current_bitwidth_per_scope = self.get_bitwidth_per_scope(
+                env.qctrl.get_quantizer_setup_for_current_state())
+
+            current_episode_nncfcfg = deepcopy(self._init_args.config)
+            current_episode_nncfcfg['compression']['initializer']['precision'] = \
+                {"bitwidth_per_scope": current_bitwidth_per_scope}
+
             # Save nncf compression cfg
             episode_cfgfile =  '{0}/{1:03d}_nncfcfg.json'.format(
                 str(self._init_args.config['episodic_nncfcfg']), episode)
 
             with safe_open(Path(episode_cfgfile), "w") as outfile:
-                json.dump(self._init_args.config, outfile, indent=4, sort_keys=False)
+                json.dump(current_episode_nncfcfg, outfile, indent=4, sort_keys=False)
 
             self.policy_dict[episode] = env.master_df['action'].astype('int')
             pd.DataFrame(
@@ -331,15 +373,16 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             current_strategy_string = self._generate_tensorboard_logging_string(
                 bit_stats_df, env.master_df, info_tuple, env.skip_constraint)
 
-            list_of_dump_dict = []
-            for i, _ in enumerate(env.groups_of_adjacent_quantizers):
-                list_of_dump_dict.append(
-                    env.master_df.loc[
-                        env.adjq_groupwise_df_lut_keys[i], ["action", "action_aligned"]
-                    ].to_dict()
-                )
-            current_strategy_string += "\t\n\t# Precision(s) per Group of Adjacent Quantizers\n\t" \
-                                        + json.dumps(list_of_dump_dict, indent=4).replace("\n","\n\t") + "\n\n"
+            if env.performant_bw is True:
+                list_of_dump_dict = []
+                for i, _ in enumerate(env.groups_of_adjacent_quantizers):
+                    list_of_dump_dict.append(
+                        env.master_df.loc[
+                            env.adjq_groupwise_df_lut_keys[i], ["action", "action_aligned"]
+                        ].to_dict()
+                    )
+                current_strategy_string += "\t\n\t# Precision(s) per Group of Adjacent Quantizers\n\t" \
+                                            + json.dumps(list_of_dump_dict, indent=4).replace("\n","\n\t") + "\n\n"
 
             self.tb_writer.add_text('AutoQ/current_policy', current_strategy_string, episode)
 

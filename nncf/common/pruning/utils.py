@@ -266,7 +266,7 @@ def calculate_in_out_channel_in_uniformly_pruned_model(pruning_groups, pruning_r
 
         # Prune in_channels in all next nodes of cluster
         for node_id in pruning_groups_next_nodes[group.id]:
-            tmp_in_channels[node_id] = new_out_channels_num
+            tmp_in_channels[node_id] -= num_of_sparse_elems
 
     return tmp_in_channels, tmp_out_channels
 

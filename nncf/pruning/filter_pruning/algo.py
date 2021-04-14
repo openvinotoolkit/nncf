@@ -201,14 +201,15 @@ class FilterPruningController(BasePruningAlgoController):
 
         for group in self.pruned_module_groups_info.get_all_clusters():
             assert all(tmp_out_channels[group.nodes[0].module_scope] == tmp_out_channels[node.module_scope] for node in
-                        group.nodes)
+                       group.nodes)
             new_out_channels_num = int(sum(group.nodes[0].operand.binary_filter_pruning_mask))
+            num_of_sparse_elems = len(group.nodes[0].operand.binary_filter_pruning_mask) - new_out_channels_num
             for node in group.nodes:
                 tmp_out_channels[node.module_scope] = new_out_channels_num
             # Prune in_channels in all next nodes of cluster
             next_nodes = self.next_nodes[group.id]
             for node_module_scope in next_nodes:
-                tmp_in_channels[node_module_scope] = new_out_channels_num
+                tmp_in_channels[node_module_scope] -= num_of_sparse_elems
 
         flops = self._calculate_flops_in_pruned_model(tmp_in_channels, tmp_out_channels)
         return flops

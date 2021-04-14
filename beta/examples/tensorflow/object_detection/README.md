@@ -113,6 +113,15 @@ python main.py \
 --to-h5=../../results/retinanet_coco_int8.h5
 ```
 
+### Save Checkpoint without Optimizer
+To reduce memory footprint (if no further training is scheduled) it is useful to save the checkpoint without optimizer. Use the following command:
+```bash
+python ../common/prepare_checkpoint.py \
+--config=configs/quantization/retinanet_coco_int8.json \
+--resume=<path_to_trained_model_checkpoint> \
+--checkpoint-save-dir=<path_to_save_optimized_model_checkpoint>
+```
+
 ### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).

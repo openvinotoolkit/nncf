@@ -13,7 +13,10 @@
 import pytest
 
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.pruning.helpers import get_basic_pruning_config, PruningTestModel
+from tests.pruning.helpers import get_basic_pruning_config
+from tests.pruning.helpers import PruningTestModel
+from tests.pruning.helpers import PruningTestWideModelConcat
+from tests.pruning.helpers import PruningTestWideModelEltwise
 
 
 @pytest.mark.parametrize(
@@ -72,3 +75,35 @@ def test_init_params_for_flops_calculation(model, ref_params):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     for key, value in ref_params.items():
         assert getattr(compression_ctrl, key) == value
+
+
+@pytest.mark.parametrize(
+    ("model", "all_weights", "ref_full_flops", "ref_current_flops", "ref_sizes"),
+    (
+        (PruningTestWideModelConcat, False, 671154176, 402311168, [400, 792, 792, 1584]),
+        (PruningTestWideModelEltwise, False, 268500992, 157402112, [392, 784, 784, 784]),
+        (PruningTestWideModelConcat, True, 671154176, 402578304, [441, 821, 822, 1473]),
+        (PruningTestWideModelEltwise, True, 268500992, 161036544, [393, 855, 855, 685])
+    )
+)
+def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, ref_current_flops, ref_sizes):
+    # Need check models with large size of layers because in other case
+    # different value of pruning rate give the same final size of model
+    config = get_basic_pruning_config([1, 1, 8, 8])
+    config['compression']['algorithm'] = 'filter_pruning'
+    config['compression']['pruning_init'] = 0.4
+    config['compression']['params']['pruning_flops_target'] = 0.4
+    config['compression']['params']['prune_first_conv'] = True
+    config['compression']['params']['prune_last_conv'] = True
+    config['compression']['params']['all_weights'] = all_weights
+    model = model()
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    assert compression_ctrl.full_flops == ref_full_flops
+    assert compression_ctrl.current_flops == ref_current_flops
+
+    for i in range(0, 4):
+        node = getattr(compressed_model, f"conv{i+1}")
+        op = list(node.pre_ops.values())[0]
+        mask = op.operand.binary_filter_pruning_mask
+        assert int(sum(mask)) == ref_sizes[i]
