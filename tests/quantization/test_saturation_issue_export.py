@@ -376,4 +376,4 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         input_name = sess.get_inputs()[0].name
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
-        assert np.allclose(torch_out.numpy(), onnx_out, rtol=1, atol=1e-3)
+        assert np.allclose(torch_out.numpy(), onnx_out, rtol=1e-5, atol=1e-3)
