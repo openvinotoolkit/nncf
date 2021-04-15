@@ -193,10 +193,7 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
 
 
 def get_original_node_name(node_name: str):
-    result = node_name.split('^')
-    original_name = result[0]
-    instance_index = 0 if len(result) == 1 else int(result[1])
-    return original_name
+    return node_name.split('^')[0]
 
 
 def get_conv_in_out_channels(graph: NNCFGraph):

@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-import tensorflow as tf
-
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
