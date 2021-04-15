@@ -183,7 +183,7 @@ class NNCFGraph:
         Returns producer nodes of provided node sorted by 'in_port'.
 
         :param node: Consumer node.
-        :return: List of producers nodes of provided node.
+        :return: List of producers nodes of provided node sorted by in_port.
         """
         in_edges = sorted(list(self._nx_graph.in_edges(node.data['key'])),
                        key=lambda edge: self._nx_graph.edges[edge]['in_port'])
