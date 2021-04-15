@@ -178,6 +178,19 @@ class NNCFGraph:
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
 
+    def get_previous_nodes_sorted_by_in_port(self, node: NNCFNode) -> List[NNCFNode]:
+        """
+        Returns producer nodes of provided node sorted by 'in_port'.
+
+        :param node: Consumer node.
+        :return: List of producers nodes of provided node sorted by in_port.
+        """
+        in_edges = sorted(list(self._nx_graph.in_edges(node.data['key'])),
+                       key=lambda edge: self._nx_graph.edges[edge]['in_port'])
+        nx_node_keys = [p for p, _ in in_edges]
+
+        return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
+
     def traverse_graph(self,
                        curr_node: NNCFNode,
                        traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
