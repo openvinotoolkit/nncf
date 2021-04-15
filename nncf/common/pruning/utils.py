@@ -192,12 +192,19 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
     return None
 
 
+def get_original_node_name(node_name: str):
+    result = node_name.split('^')
+    original_name = result[0]
+    instance_index = 0 if len(result) == 1 else int(result[1])
+    return original_name
+
+
 def get_conv_in_out_channels(graph: NNCFGraph):
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
         if isinstance(node.module_attributes, ConvolutionModuleAttributes):
             name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-                else node.data['original_name']
+                else get_original_node_name(node.node_name)
             if name in in_channels and name in out_channels:
                 continue
             in_channels[name] = node.module_attributes.in_channels
@@ -215,12 +222,12 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
             nncf_cluster_node = graph.get_node_by_id(cluster_node.nncf_node_id)
             nncf_cluster_node_scope = nncf_cluster_node.ia_op_exec_context.scope_in_model \
                 if hasattr(nncf_cluster_node, 'ia_op_exec_context') \
-                else nncf_cluster_node.data['original_name']
+                else get_original_node_name(nncf_cluster_node.node_name)
             cluster_nodes.add(nncf_cluster_node_scope)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
             next_nodes_idxs = [n.ia_op_exec_context.scope_in_model if hasattr(n, 'ia_op_exec_context')
-                               else n.data['original_name'] for n in curr_next_nodes]
+                               else get_original_node_name(n.node_name) for n in curr_next_nodes]
             next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
         next_nodes[cluster.id] = list(next_nodes_cluster - cluster_nodes)
     return next_nodes
@@ -234,7 +241,7 @@ def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
     output_channels = output_channels or {}
     for node in graph.get_nodes_by_types(conv_op_types):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else node.data['original_name']
+            else get_original_node_name(node.node_name)
         if name in flops:
             continue
         num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
@@ -244,7 +251,7 @@ def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
 
     for node in graph.get_nodes_by_types(linear_op_types):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
-            else node.data['original_name']
+            else get_original_node_name(node.node_name)
         flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
 
     return flops

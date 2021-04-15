@@ -109,6 +109,10 @@ def get_original_name_and_instance_index(node_name):
     return original_name, instance_index
 
 
+def get_original_name(node_name):
+    return get_original_name_and_instance_index(node_name)[0]
+
+
 def get_layer_to_graph_nodes_map(model, node_names):
     layer_to_nodes_map = {layer.name: {'type': layer.__class__.__name__,
                                        'nodes': []}
