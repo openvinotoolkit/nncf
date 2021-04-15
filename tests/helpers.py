@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import pytest
 from typing import Dict
 from typing import Callable
 from typing import Any
@@ -169,7 +170,15 @@ def get_grads(variables):
 def check_equal(test, reference, rtol=1e-4):
     for i, (x, y) in enumerate(zip(test, reference)):
         x = x.cpu().detach().numpy()
+        y = y.cpu().detach().numpy()
         np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
+
+
+def check_not_equal(test, reference, rtol=1e-4):
+    for i, (x, y) in enumerate(zip(test, reference)):
+        x = x.cpu().detach().numpy()
+        y = y.cpu().detach().numpy()
+        assert pytest.approx(x, rel=rtol) != y
 
 
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,

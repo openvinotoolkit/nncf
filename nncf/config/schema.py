@@ -412,6 +412,7 @@ QUANTIZATION_SCHEMA = {
         "algorithm": {
             "const": QUANTIZATION_ALGO_NAME_IN_CONFIG
         },
+        "compression_lr_multiplier": _NUMBER,
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "weights": with_attributes(WEIGHTS_GROUP_SCHEMA,
                                    description="Constraints to be applied to model weights quantization only."),
@@ -478,6 +479,7 @@ BINARIZATION_SCHEMA = {
         "algorithm": {
             "const": BINARIZATION_ALGO_NAME_IN_CONFIG
         },
+        "compression_lr_multiplier": _NUMBER,
         "initializer": QUANTIZATION_INITIALIZER_SCHEMA,
         "mode": with_attributes(_STRING,
                                 description="Selects the mode of binarization - either 'xnor' for XNOR binarization,"
@@ -588,6 +590,7 @@ RB_SPARSITY_SCHEMA = {
         "algorithm": {
             "const": RB_SPARSITY_ALGO_NAME_IN_CONFIG
         },
+        "compression_lr_multiplier": _NUMBER,
         "sparsity_init": with_attributes(_NUMBER,
                                          description="Initial value of the sparsity level applied to the "
                                                      "model"),
@@ -729,6 +732,7 @@ ROOT_NNCF_CONFIG_SCHEMA = {
         # Validation of each separate compression description schema occurs in a separate step.
         # This is required for better user feedback, since holistic schema validation is uninformative
         # if there is an error in one of the compression configs.
+        "compression_lr_multiplier": _NUMBER,
         "compression": make_object_or_array_of_objects_schema(BASIC_COMPRESSION_ALGO_SCHEMA),
         "target_device": with_attributes(TARGET_DEVICE_SCHEMA,
                                          description="The target device, the specificity of which will be taken into "
