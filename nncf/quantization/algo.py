@@ -33,10 +33,13 @@ from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -1112,6 +1115,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
@@ -1157,6 +1161,14 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     @property
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
@@ -1570,6 +1582,14 @@ class ExperimentalQuantizationController(QuantizationController):
             else:
                 self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
         self.hw_config = hw_config
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()

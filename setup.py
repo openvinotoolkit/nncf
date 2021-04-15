@@ -63,50 +63,15 @@ if python_version < (3, 6):
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
 
-TORCH_VERSION = "1.7.0"
-TORCHVISION_VERSION = "0.8.1"
-CUDA_VERSION = "102"
-IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER = True
-
-TORCH_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torch-{tv}{whl_mode}-cp{ver}-cp{' \
-                            'ver}m-linux_x86_64.whl'
-TORCHVISION_SOURCE_URL_TEMPLATE = 'https://download.pytorch.org/whl/{mode}/torchvision-{tvv}{whl_mode}-cp{ver}-cp{' \
-                                  'ver}m-linux_x86_64.whl'
-WHL_MODE_TEMPLATE = '%2B{mode}'
-
 if "--cpu-only" in sys.argv:
-    mode = 'cpu'
-    whl_mode = WHL_MODE_TEMPLATE.format(mode=mode)
-    TORCH_SOURCE_URL = TORCH_SOURCE_URL_TEMPLATE.format(
-        tv=TORCH_VERSION,
-        ver=version_string,
-        mode=mode,
-        whl_mode=whl_mode)
-    TORCHVISION_SOURCE_URL = TORCHVISION_SOURCE_URL_TEMPLATE.format(
-        tvv=TORCHVISION_VERSION,
-        ver=version_string,
-        mode=mode,
-        whl_mode=whl_mode)
+    print("WARNING: --cpu-only option for NNCF setup.py is deprecated and will "
+          "be ignored. CPU/GPU support will be determined by the torch package.")
     sys.argv.remove("--cpu-only")
-else:
-    mode = "cu{}".format(CUDA_VERSION)
-    whl_mode = '' if IS_CUDA_VER_DEFAULT_FOR_CURRENT_TORCH_VER else WHL_MODE_TEMPLATE.format(mode=mode)
-    TORCH_SOURCE_URL = TORCH_SOURCE_URL_TEMPLATE.format(
-        tv=TORCH_VERSION,
-        ver=version_string,
-        mode=mode,
-        whl_mode=whl_mode)
-    TORCHVISION_SOURCE_URL = TORCHVISION_SOURCE_URL_TEMPLATE.format(
-        tvv=TORCHVISION_VERSION,
-        ver=version_string,
-        mode=mode,
-        whl_mode=whl_mode)
 
 if not os.environ.get('NNCF_SKIP_INSTALLING_TORCH'):
-    DEPENDENCY_LINKS = [TORCH_SOURCE_URL, TORCHVISION_SOURCE_URL]
-    INSTALL_REQUIRES.extend([f"torch @ {TORCH_SOURCE_URL}",
-                             f"torchvision @ {TORCHVISION_SOURCE_URL}"])
+    INSTALL_REQUIRES.extend(["torch>=1.5.0, <=1.8.1, !=1.8.0"])
 else:
+    print("Skipping torch installation for NNCF.")
     DEPENDENCY_LINKS = []
 
 
@@ -129,7 +94,6 @@ setup(
                                     "examples", "examples.*",
                                     "tools", "tools.*",
                                     "beta", "beta.*"]),
-    dependency_links=DEPENDENCY_LINKS,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",

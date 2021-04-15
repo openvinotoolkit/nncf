@@ -10,12 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from abc import ABC, abstractmethod
 from typing import Optional, TypeVar
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionScheduler
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.utils.save import save_model
 
@@ -24,12 +23,15 @@ DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompressionAlgorithmInitializer:
+class TFCompressionAlgorithmInitializer(ABC):
+    @abstractmethod
     def call(self,
              model: ModelType,
              dataset: Optional[DatasetType] = None,
              loss: Optional[LossType] = None) -> None:
-        pass
+        """
+        Initializes minimum and maximum quantization ranges.
+        """
 
     def __call__(self, *args, **kwargs) -> None:
         self.call(*args, **kwargs)
@@ -43,22 +45,10 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
     compression scheduler and compression loss.
     """
 
-    def __init__(self, target_model: ModelType):
-        """
-        Initializes the internal state of the compression algorithm controller.
-
-        :param target_model: The model with additional modifications necessary
-            to enable algorithm-specific compression during fine-tuning built
-            by the `CompressionAlgorithmBuilder`.
-        """
-        super().__init__(target_model)
-        self._initializer = TFCompressionAlgorithmInitializer()
-        self._scheduler = CompressionScheduler()
-
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
-        self._initializer(self._model, dataset, loss)
+        pass
 
     def export_model(self, save_path: str, save_format: str = 'frozen_graph') -> None:
         """
@@ -93,15 +83,3 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         transformer = TFModelTransformer(model, transformation_layout)
         transformed_model = transformer.transform()
         return transformed_model
-
-    def build_controller(self, model: ModelType) -> TFCompressionAlgorithmController:
-        """
-        Builds `CompressionAlgorithmController` to handle the additional modules,
-        parameters, and hooks inserted into the model to enable algorithm-specific
-        compression.
-
-        :param model: The model with additional modifications necessary to enable
-            algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompressionAlgorithmController`.
-        """
-        return TFCompressionAlgorithmController(model)
