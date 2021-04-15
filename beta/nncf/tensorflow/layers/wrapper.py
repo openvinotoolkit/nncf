@@ -56,6 +56,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         self._trainable_weights = []
         self._non_trainable_weights = []
         self._ops_weights = {}
+        self._op_build = False
         self._layer_weights = {}
 
     @property
@@ -76,27 +77,39 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
     @property
     def trainable_weights(self):
         trainable_weights_by_definition = self._trainable_weights + self.layer.trainable_weights
-        trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+
+        if self._op_build:
+            trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+        else:
+            trainable_ops_weights_on, trainable_ops_weights_off = [], []
+
         if self.trainable:
             weights = trainable_weights_by_definition
             for trainable_weight_off in trainable_ops_weights_off:
                 weights.remove(trainable_weight_off)
-            return weights
+            outputs = weights
         else:
-            return [] + trainable_ops_weights_on
+            outputs = trainable_ops_weights_on
+        return outputs
 
     @property
     def non_trainable_weights(self):
         trainable_weights_by_definition = self._trainable_weights + self.layer.trainable_weights
         non_trainable_weights_by_definition = self._non_trainable_weights + self.layer.non_trainable_weights
-        trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+
+        if self._op_build:
+            trainable_ops_weights_on, trainable_ops_weights_off = self.classify_trainable_ops_weights()
+        else:
+            trainable_ops_weights_on, trainable_ops_weights_off = [], []
+
         if self.trainable:
-            return non_trainable_weights_by_definition + trainable_ops_weights_off
+            outputs = non_trainable_weights_by_definition + trainable_ops_weights_off
         else:
             weights = trainable_weights_by_definition
             for trainable_weight_on in trainable_ops_weights_on:
                 weights.remove(trainable_weight_on)
-            return non_trainable_weights_by_definition + weights
+            outputs = non_trainable_weights_by_definition + weights
+        return outputs
 
     def classify_trainable_ops_weights(self):
         """
@@ -152,6 +165,7 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                     weight.shape, InputType.WEIGHTS, weight_attr, self)
             self._layer_weights[weight_attr] = weight
             self._trainable_weights.append(weight)
+        self._op_build = True
 
     def call(self, inputs, training=None):
         training = self._get_training_value(training)
