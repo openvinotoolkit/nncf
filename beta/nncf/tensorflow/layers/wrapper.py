@@ -113,14 +113,14 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
 
     def classify_trainable_ops_weights(self):
         """
-        Classifies operation trainable weights by trainable property of corresponding operation.
+        Classifies operation trainable weights by trainable property of the corresponding operation.
         Note: Operation with trainable weights can be switched off from training.
               Operation trainable property can be adjusted
               to be different from NNCFWrapper global trainable property.
 
-        :return trainable_ops_weights_on: list of trainable operation weights
+        :return trainable_ops_weights_on: List of trainable operation weights
                 which is getting updated during training.
-        :return trainable_ops_weights_off: list of trainable operation weights
+        :return trainable_ops_weights_off: List of trainable operation weights
                 which is NOT getting updated during training.
         """
         trainable_ops_weights_on = []
@@ -129,11 +129,13 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             for op_name, op in ops.items():
                 op_weights = self._ops_weights[op_name]
                 for weight_val in op_weights.values():
-                    if weight_val.trainable:
-                        if op.trainable:
-                            trainable_ops_weights_on.append(weight_val)
-                        else:
-                            trainable_ops_weights_off.append(weight_val)
+                    if not weight_val.trainable:
+                        continue
+
+                    if op.trainable:
+                        trainable_ops_weights_on.append(weight_val)
+                    else:
+                        trainable_ops_weights_off.append(weight_val)
         return trainable_ops_weights_on, trainable_ops_weights_off
 
     @property
