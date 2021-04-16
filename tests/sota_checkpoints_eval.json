@@ -296,7 +296,8 @@
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc.pth",
                 "batch": 120,
-                "model_description": "SSD300-VGG-BN"
+                "model_description": "SSD300-VGG-BN",
+                "diff_target_max": 0.3
             },
             "ssd300_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_int8.json",
@@ -338,7 +339,8 @@
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc.pth",
                 "batch": 32,
-                "model_description": "SSD512-VGG-BN"
+                "model_description": "SSD512-VGG-BN",
+                "diff_target_max": 0.4
             },
             "ssd512_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_int8.json",
