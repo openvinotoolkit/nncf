@@ -145,7 +145,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             self._pruned_layer_groups_info.add_cluster(cluster)
 
         # Propagating masks across the graph to detect spec_nodes that will be pruned
-        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator = MaskPropagationAlgorithm(self._graph, TF_PRUNING_OPERATOR_METATYPES)
         mask_propagator.mask_propagation()
 
         # Add masks for all spec modules, because prunable batchnorm layers can be determines
