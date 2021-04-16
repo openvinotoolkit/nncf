@@ -11,12 +11,14 @@
  limitations under the License.
 """
 
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 
 TF_COMPRESSION_ALGORITHMS = Registry('compression algorithm')
 
@@ -26,9 +28,23 @@ class NoCompressionAlgorithmBuilder(TFCompressionAlgorithmBuilder):
     def get_transformation_layout(self, _):
         return TransformationLayout()
 
+    def build_controller(self, model) -> CompressionAlgorithmController:
+        return NoCompressionAlgorithmController(model)
+
 
 class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
-    pass
+    def __init__(self, target_model):
+        super().__init__(target_model)
+        self._loss = TFZeroCompressionLoss()
+        self._scheduler = StubCompressionScheduler()
+
+    @property
+    def loss(self) -> TFZeroCompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> StubCompressionScheduler:
+        return self._scheduler
 
 
 def get_compression_algorithm_builder(config):
