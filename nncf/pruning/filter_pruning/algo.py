@@ -26,8 +26,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
-from nncf.common.pruning.utils import calculate_in_out_channel_in_uniformly_pruned_model
-from nncf.common.pruning.utils import count_flops
+from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import count_flops_for_nodes
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
@@ -195,9 +195,10 @@ class FilterPruningController(BasePruningAlgoController):
 
         self._model.do_dummy_forward(force_eval=True)
 
-        self.nodes_flops = count_flops(graph, in_shapes, out_shapes,
-                                       conv_op_types=[v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT],
-                                       linear_op_types=['linear'])
+        self.nodes_flops = count_flops_for_nodes(graph, in_shapes, out_shapes,
+                                                 conv_op_types=[v.op_func_name
+                                                                for v in NNCF_GENERAL_CONV_MODULES_DICT],
+                                                 linear_op_types=['linear'])
         for h in hook_list:
             h.remove()
 
@@ -256,7 +257,7 @@ class FilterPruningController(BasePruningAlgoController):
         :return: flops number in pruned model
         """
         tmp_in_channels, tmp_out_channels = \
-            calculate_in_out_channel_in_uniformly_pruned_model(
+            calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_groups=self.pruned_module_groups_info.get_all_clusters(),
                 pruning_rate=pruning_rate,
                 full_input_channels=self.modules_in_channels,

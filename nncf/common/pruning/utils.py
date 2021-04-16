@@ -18,6 +18,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -197,6 +198,15 @@ def get_original_node_name(node_name: str):
 
 
 def get_conv_in_out_channels(graph: NNCFGraph):
+    """
+    Collects the number of input and output channels for each convolution in the graph.
+
+    :param graph: NNCFGraph
+    :return Dictionary with the number of input channels to convolution layers:
+            {node_name: input_channels_num}
+            Dictionary with the number of output channels from convolution layers:
+            {node_name: output_channels_num}
+    """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
         if isinstance(node.module_attributes, ConvolutionModuleAttributes):
@@ -211,6 +221,14 @@ def get_conv_in_out_channels(graph: NNCFGraph):
 
 def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
                            prunable_types: List[str]) -> Dict[int, List[str]]:
+    """
+    Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input.
+
+    :param graph: NNCFGraph.
+    :param pruned_groups_info: `Clusterization` of pruning groups.
+    :param prunable_types: Types of nodes that will be returned.
+    :return Dictionary of next node names by cluster {cluster_id: [node_name]}.
+    """
     next_nodes = {}
     for cluster in pruned_groups_info.get_all_clusters():
         next_nodes_cluster = set()
@@ -230,9 +248,26 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
     return next_nodes
 
 
-def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
-                conv_op_types: List[str], linear_op_types: List[str],
-                input_channels: dict = None, output_channels: dict = None):
+def count_flops_for_nodes(graph: NNCFGraph,
+                          input_shapes: Dict[str, tuple], output_shapes: Dict[str, tuple],
+                          conv_op_types: List[str], linear_op_types: List[str],
+                          input_channels: Dict[str, int] = None, output_channels: Dict[str, int] = None):
+    """
+    Counts the number FLOPs in the model for convolution and fully connected layers.
+
+    :param graph: NNCFGraph.
+    :param input_shapes: Dictionary of input dimension shapes for convolutions and
+                         fully connected layers. E.g {node_name: (height, width)}
+    :param output_shapes: Dictionary of output dimension shapes for convolutions and
+                          fully connected layers. E.g {node_name: (height, width)}
+    :param conv_op_types: List of framework specific types of convolutions
+    :param linear_op_types: List of framework specific types of linear/fully connected layers
+    :param input_channels: Dictionary of input channels number in convolutions.
+                           If not specified, taken from the graph. {node_name: channels_num}
+    :param output_channels: Dictionary of output channels number in convolutions.
+                            If not specified, taken from the graph. {node_name: channels_num}
+    :return Dictionary of FLOPs number {node_name: flops_num}
+    """
     flops = {}
     input_channels = input_channels or {}
     output_channels = output_channels or {}
@@ -254,9 +289,22 @@ def count_flops(graph: NNCFGraph, input_shapes: dict, output_shapes: dict,
     return flops
 
 
-def calculate_in_out_channel_in_uniformly_pruned_model(pruning_groups, pruning_rate,
-                                                       full_input_channels, full_output_channels,
-                                                       pruning_groups_next_nodes):
+def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_rate: float,
+                                                        full_input_channels: Dict[Union[str, 'Scope'], int],
+                                                        full_output_channels: Dict[Union[str, 'Scope'], int],
+                                                        pruning_groups_next_nodes: Dict[int, List[str]]):
+    """
+    Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
+    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+
+    :param pruning_groups: `Clusterization` of pruning groups.
+    :param pruning_rate: Target pruning rate.
+    :param full_input_channels:  A dictionary of input channels number in original model.
+    :param full_output_channels: A dictionary of output channels number in original model.
+    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+    :return Dictionary of new input channels number {node_name: channels_num}
+    :return Dictionary of new output channels number {node_name: channels_num}
+    """
     tmp_in_channels = full_input_channels.copy()
     tmp_out_channels = full_output_channels.copy()
 
@@ -273,8 +321,8 @@ def calculate_in_out_channel_in_uniformly_pruned_model(pruning_groups, pruning_r
             tmp_out_channels[node.key] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster
-        for node_id in pruning_groups_next_nodes[group.id]:
-            tmp_in_channels[node_id] -= num_of_sparse_elems
+        for node_name in pruning_groups_next_nodes[group.id]:
+            tmp_in_channels[node_name] -= num_of_sparse_elems
 
     return tmp_in_channels, tmp_out_channels
 

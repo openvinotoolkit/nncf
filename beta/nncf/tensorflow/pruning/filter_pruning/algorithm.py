@@ -49,8 +49,8 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
-from nncf.common.pruning.utils import calculate_in_out_channel_in_uniformly_pruned_model
-from nncf.common.pruning.utils import count_flops
+from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
+from nncf.common.pruning.utils import count_flops_for_nodes
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
@@ -206,9 +206,11 @@ class FilterPruningController(BasePruningAlgoController):
                 self._layers_in_shapes[layer_.name] = in_shape
                 self._layers_out_shapes[layer_.name] = out_shape
 
-        self._nodes_flops = count_flops(self._original_graph, self._layers_in_shapes, self._layers_out_shapes,
-                                        conv_op_types=GENERAL_CONV_LAYERS,
-                                        linear_op_types=LINEAR_LAYERS)
+        self._nodes_flops = count_flops_for_nodes(self._original_graph,
+                                                  self._layers_in_shapes,
+                                                  self._layers_out_shapes,
+                                                  conv_op_types=GENERAL_CONV_LAYERS,
+                                                  linear_op_types=LINEAR_LAYERS)
 
     def _set_binary_masks_for_pruned_layers_groupwise(self, pruning_rate: float):
         nncf_logger.debug('Setting new binary masks for pruned layers.')
@@ -342,11 +344,13 @@ class FilterPruningController(BasePruningAlgoController):
             for node_name in self._next_nodes[group_id]:
                 tmp_in_channels[node_name] -= 1
 
-            flops = sum(count_flops(self._original_graph, self._layers_in_shapes, self._layers_out_shapes,
-                                    input_channels=tmp_in_channels,
-                                    output_channels=tmp_out_channels,
-                                    conv_op_types=GENERAL_CONV_LAYERS,
-                                    linear_op_types=LINEAR_LAYERS).values())
+            flops = sum(count_flops_for_nodes(self._original_graph,
+                                              self._layers_in_shapes,
+                                              self._layers_out_shapes,
+                                              input_channels=tmp_in_channels,
+                                              output_channels=tmp_out_channels,
+                                              conv_op_types=GENERAL_CONV_LAYERS,
+                                              linear_op_types=LINEAR_LAYERS).values())
             if flops <= target_flops:
                 # 3. Add masks to the graph and propagate them
                 for group in self._pruned_layer_groups_info.get_all_clusters():
@@ -399,17 +403,19 @@ class FilterPruningController(BasePruningAlgoController):
 
     def _calculate_flops_in_uniformly_pruned_model(self, pruning_rate):
         tmp_in_channels, tmp_out_channels = \
-            calculate_in_out_channel_in_uniformly_pruned_model(
+            calculate_in_out_channels_in_uniformly_pruned_model(
                 pruning_groups=self._pruned_layer_groups_info.get_all_clusters(),
                 pruning_rate=pruning_rate,
                 full_input_channels=self._layers_in_channels,
                 full_output_channels=self._layers_out_channels,
                 pruning_groups_next_nodes=self._next_nodes)
-        flops = sum(count_flops(self._original_graph, self._layers_in_shapes, self._layers_out_shapes,
-                                input_channels=tmp_in_channels,
-                                output_channels=tmp_out_channels,
-                                conv_op_types=GENERAL_CONV_LAYERS,
-                                linear_op_types=LINEAR_LAYERS).values())
+        flops = sum(count_flops_for_nodes(self._original_graph,
+                                          self._layers_in_shapes,
+                                          self._layers_out_shapes,
+                                          input_channels=tmp_in_channels,
+                                          output_channels=tmp_out_channels,
+                                          conv_op_types=GENERAL_CONV_LAYERS,
+                                          linear_op_types=LINEAR_LAYERS).values())
         return flops
 
     def _calculate_filters_importance_in_group(self, group: NodesCluster,
