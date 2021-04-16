@@ -125,6 +125,7 @@ def _get_module_attributes(module: TorchModule, operator_name: str) -> ModuleAtt
         module.weight.requires_grad,
         module.in_channels,
         module.out_channels,
+        module.kernel_size,
         module.stride,
         module.groups
     )

@@ -58,6 +58,14 @@ def get_filters_num(layer: NNCFWrapper):
     return filters_num
 
 
+def is_valid_shape(shape):
+    if shape is None:
+        return False
+    if None in shape:
+        return False
+    return True
+
+
 def broadcast_filter_mask(filter_mask, shape, dim):
     broadcasted_filter_mask = tf.zeros(shape)
     meta_shape = np.ones(len(shape), dtype=np.int64)
