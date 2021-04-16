@@ -22,6 +22,8 @@ limitations under the License.
 # python update_eval_results.py --results path/to/metrics.json --config path/to/sota_checkpoints_eval.json
 # -o path/to/new_config.json
 
+
+#pylint:skip-file
 import json
 from collections import OrderedDict
 from typing import List, Optional
@@ -30,7 +32,10 @@ from typing import List, Optional
 from mdutils import MdUtils
 import argparse
 
-BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.6.0/'
+from tests.test_sota_checkpoints import DIFF_FP32_MAX_GLOBAL
+from tests.test_sota_checkpoints import DIFF_FP32_MIN_GLOBAL
+
+BASE_PYTORCH_CHECKPOINT_URL = 'https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/'
 
 SAMPLE_TYPE_TO_SAMPLE_DISPLAY_NAME_DICT = {
     'classification': 'Classification',
@@ -142,11 +147,48 @@ def get_results_table_rows(per_sample_config_dict,
     return rows
 
 
-def update_target_metrics(config_dict: dict, model_name_to_metric_dict):
+def update_target_metrics_and_thresholds(config_dict: dict, model_name_to_metric_dict):
     for sample_name in config_dict:
         for dataset_name in config_dict[sample_name]:
-            for model_name in config_dict[sample_name][dataset_name]:
-                config_dict[sample_name][dataset_name][model_name]["target"] = model_name_to_metric_dict[model_name]
+            dataset_dict = config_dict[sample_name][dataset_name]
+            for model_name in dataset_dict:
+                model_dict = config_dict[sample_name][dataset_name][model_name]
+                model_dict["target"] = model_name_to_metric_dict[model_name]
+                if "reference" not in model_dict:
+                    continue
+                ref_model_name = model_dict["reference"]
+                if ref_model_name not in model_name_to_metric_dict:
+                    continue
+
+                ref_model_dict = model_name_to_metric_dict[ref_model_name]
+
+                if "diff_fp32_min" in model_dict:
+                    diff_fp32_min_value = model_dict["diff_fp32_min"]
+                    actual_diff_fp32 = model_name_to_metric_dict[model_name] - \
+                                       model_name_to_metric_dict[ref_model_name]
+                    if diff_fp32_min_value < DIFF_FP32_MIN_GLOBAL:  # model has special thresholds larger than global
+                        if actual_diff_fp32 > diff_fp32_min_value:  # ...but it actually shows better results
+                            if actual_diff_fp32 > DIFF_FP32_MIN_GLOBAL:
+                                del model_dict["diff_fp32_min"]  # no "diff_fp32_min" means use global
+                            else:
+                                model_dict["diff_fp32_min"] = round(actual_diff_fp32 - 0.05)  # tighten the threshold
+                    if actual_diff_fp32 < diff_fp32_min_value:
+                        print(f"Warning: model {model_name} scores less ({actual_diff_fp32}) "
+                              f"than the FP32 min threshold {diff_fp32_min_value}")
+
+                if "diff_fp32_max" in model_dict:
+                    diff_fp32_max_value = model_dict["diff_fp32_max"]
+                    actual_diff_fp32 = model_name_to_metric_dict[model_name] - \
+                                       model_name_to_metric_dict[ref_model_name]
+                    if diff_fp32_max_value > DIFF_FP32_MAX_GLOBAL:  # model has special thresholds larger than global
+                        if actual_diff_fp32 > diff_fp32_max_value:  # ...but it actually shows better results
+                            if actual_diff_fp32 < DIFF_FP32_MAX_GLOBAL:
+                                del model_dict["diff_fp32_max"]  # no "diff_fp32_max" means use global
+                            else:
+                                model_dict["diff_fp32_max"] = round(actual_diff_fp32 + 0.05, 1)  # tighten the threshold
+                    if actual_diff_fp32 > diff_fp32_max_value:
+                        print(f"Warning: model {model_name} scores more ({actual_diff_fp32}) "
+                              f"than the FP32 max threshold {diff_fp32_max_value}")
 
 
 def get_display_dataset_name(data_name):
@@ -155,7 +197,7 @@ def get_display_dataset_name(data_name):
     elif data_name == 'camvid':
         dataset_name = 'CamVid'
     elif data_name == 'VOCdevkit':
-        dataset_name = 'VOC12+07 train, VOC12 eval'
+        dataset_name = 'VOC12+07 train, VOC07 eval'
     else:
         dataset_name = "Mapillary"
     return dataset_name
@@ -231,6 +273,6 @@ mdfile.create_md_file()
 delete_four_head_lines(overview_file_name)
 
 if args.output is not None:
-    update_target_metrics(sota_checkpoints_eval, measured_metrics)
+    update_target_metrics_and_thresholds(sota_checkpoints_eval, measured_metrics)
     with open(output, "w") as write_file:
         json.dump(sota_checkpoints_eval, write_file, indent=4)
