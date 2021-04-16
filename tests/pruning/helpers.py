@@ -159,7 +159,7 @@ class PruningTestModelConcatBN(nn.Module):
         self.relu = nn.ReLU()
         self.conv4 = create_conv(32, 16, 1, 10, 0)
         for i in range(16):
-            self.conv4.weight.data[i] += i
+            self.conv4.weight.data[i] += 16 - i
         self.conv5 = create_conv(48, 16, 1, 10, 0)
 
         self.bn = nn.BatchNorm2d(16)
@@ -177,7 +177,7 @@ class PruningTestModelConcatBN(nn.Module):
         x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
         x1 = self.bn1(x)
         x1 = self.conv4(x1)
-        x = torch.cat([x, x1], dim=1)
+        x = torch.cat([x1, x], dim=1)
         x = self.bn2(x)
         x = self.conv5(x)
         return x

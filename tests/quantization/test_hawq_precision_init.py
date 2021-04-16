@@ -425,10 +425,10 @@ HAWQTestParams = namedtuple('HAWQTestParams',
                             ('iter_number', 'batch_size', 'num_data_points', 'cuda_ref_trace', 'cpu_ref_trace'))
 
 @pytest.mark.parametrize("params",
-                         (HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.2741257554269734),
-                          HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.264643123532975),
-                          HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305272578443488),
-                          HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305272578443488)),
+                         (HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.274125503581261),
+                          HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.2646428162034615),
+                          HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305243724338203),
+                          HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305243724338203)),
                          ids=('until_threshold', 'until_num_iter', 'batch_eq_num_data', 'batch_larger_num_data'))
 def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, params: HAWQTestParams, mocker):
     config = get_squeezenet_quantization_config(batch_size=params.batch_size)

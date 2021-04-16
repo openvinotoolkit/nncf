@@ -45,6 +45,7 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -119,11 +120,16 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             group_minfos = []
             for node in group.nodes:
                 layer_name = get_layer_identifier(node)
+                layer = model.get_layer(layer_name)
+
+                # Add output_mask to nodes to run mask_propagation
+                # and detect spec_nodes that will be pruned.
+                # It should be done for all nodes of shared layer.
+                node.data['output_mask'] = tf.ones(node.module_attributes.out_channels)
                 if layer_name in shared_layers:
                     continue
                 if is_shared(node):
                     shared_layers.add(layer_name)
-                layer = model.get_layer(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
@@ -138,6 +144,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
 
+        # Propagating masks across the graph to detect spec_nodes that will be pruned
+        mask_propagator = MaskPropagationAlgorithm(graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
+
         # Add masks for all spec modules, because prunable batchnorm layers can be determines
         # at the moment of mask propagation
         types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
@@ -147,6 +157,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         spec_nodes = self._graph.get_nodes_by_types(types_spec_layers)
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
+            if spec_node.data['output_mask'] is None:
+                # Skip nodes that will not be pruned
+                continue
             if layer_name in shared_layers:
                 continue
             if is_shared(spec_node):

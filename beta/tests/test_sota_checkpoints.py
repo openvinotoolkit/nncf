@@ -524,7 +524,7 @@ class TestSotaCheckpoints:
         if eval_test_struct.model_name_.startswith('mask_'):
             self.write_error_in_csv('AC does not support mask models yet', csv_result, eval_test_struct.model_name_)
             pytest.fail('AC does not support mask models yet')
-        if eval_test_struct.reference_ and eval_test_struct.model_name_ != 'retinanet_int8_w_sym_t_a_sym_t':
+        if eval_test_struct.reference_ and not config.is_file():
             self.make_config(config, eval_test_struct.reference_)
         save_cmd = f'{sys.executable} examples/tensorflow/{eval_test_struct.sample_type_}/{file}' \
                    f' --mode export --config {eval_test_struct.config_name_}' \
