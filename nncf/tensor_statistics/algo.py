@@ -17,7 +17,7 @@ from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.compression_method_api import PTStubCompressionScheduler
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.config import NNCFConfig
 from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.graph.transformations.commands import PTInsertionCommand
@@ -74,7 +74,7 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
                  ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
-        self._scheduler = PTStubCompressionScheduler()
+        self._scheduler = StubCompressionScheduler()
         self._loss = ZeroCompressionLoss('cpu')
 
     @property
@@ -82,7 +82,7 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
         return self._loss
 
     @property
-    def scheduler(self) -> PTStubCompressionScheduler:
+    def scheduler(self) -> StubCompressionScheduler:
         return self._scheduler
 
     def start_collection(self):

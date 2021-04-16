@@ -228,3 +228,18 @@ class BaseCompressionScheduler(CompressionScheduler):
             'current_step': self.current_step,
             'current_epoch': self.current_epoch
         }
+
+
+class StubCompressionScheduler(CompressionScheduler):
+
+    def step(self, next_step: Optional[int] = None) -> None:
+        pass
+
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        pass
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        pass
+
+    def get_state(self) -> Dict[str, object]:
+        pass

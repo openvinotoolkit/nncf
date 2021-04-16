@@ -37,7 +37,6 @@ from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 
 ModelType = TypeVar('ModelType')
 
@@ -268,18 +267,3 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         algo_name = self._registered_name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'
-
-
-class PTStubCompressionScheduler(CompressionScheduler):
-
-    def step(self, next_step: Optional[int] = None) -> None:
-        pass
-
-    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
-        pass
-
-    def load_state(self, state: Dict[str, object]) -> None:
-        pass
-
-    def get_state(self) -> Dict[str, object]:
-        pass
