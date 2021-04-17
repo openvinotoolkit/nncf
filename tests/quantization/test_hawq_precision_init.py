@@ -440,10 +440,12 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
     criterion = nn.CrossEntropyLoss()
     ref_trace = params.cpu_ref_trace
+    rtol = 1e-7
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
         ref_trace = params.cuda_ref_trace
+        rtol = 1e-9
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -468,7 +470,7 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     trace_estimator = HessianTraceEstimator(model, default_criterion_fn, criterion, device, data_loader,
                                             params.num_data_points)
     actual_state = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
-    assert math.isclose(actual_state.item(), ref_trace, rel_tol=1e-09)
+    assert math.isclose(actual_state.item(), ref_trace, rel_tol=rtol)
 
 
 def get_size_of_search_space(m, L):
