@@ -40,6 +40,14 @@ class NNCFOperation:
     def name(self):
         return self._name
 
+    @property
+    def trainable(self):
+        return self._trainable
+
+    @trainable.setter
+    def trainable(self, value):
+        self._trainable = value
+
     def build(self, input_shape, input_type, name, layer):
         """
         This method can be used to create weights that depend on the shape(s)
@@ -94,11 +102,3 @@ class NNCFOperation:
     @classmethod
     def from_config(cls, config):
         return cls(**config)
-
-    @property
-    def trainable(self):
-        return self._trainable
-
-    @trainable.setter
-    def trainable(self, value):
-        self._trainable = value
