@@ -248,10 +248,13 @@ class TestMmdetection:
                        check=True, shell=True, cwd=self.MMDET_PATH)
         subprocess.run(
             "{}; pip install mmcv-full==1.2.0 "
-            "-f https://download.openmmlab.com/mmcv/dist/cu102/torch1.7.0/index.html".format(self.activate_venv),
+            "-f https://download.openmmlab.com/mmcv/dist/cu102/torch{}/index.html".format(self.activate_venv,
+                                                                                          BKC_TORCH_VERSION),
             check=True, shell=True,
             cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install onnx onnxruntime".format(self.activate_venv), check=True, shell=True,
+                       cwd=self.MMDET_PATH)
+        subprocess.run("{}; pip install torchvision".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
         subprocess.run("{}; pip install -r requirements/build.txt".format(self.activate_venv), check=True, shell=True,
                        cwd=self.MMDET_PATH)
