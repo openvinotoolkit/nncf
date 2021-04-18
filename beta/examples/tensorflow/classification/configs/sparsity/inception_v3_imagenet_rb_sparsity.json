@@ -1,18 +1,19 @@
 {
-    "model": "ResNet50",
+    "model": "InceptionV3",
     "pretrained": true,
-
     "input_info": {
-      "sample_size": [1, 224, 224, 3]
+        "sample_size": [1, 299, 299, 3]
     },
-    "batch_size" : 256,
-    "epochs": 55,
-    "optimizer": {
+
+    "batch_size": 256,
+    "epochs": 40,
+
+     "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "boundaries": [20, 30, 40, 45],
-            "values": [1e-3, 5e-4, 1e-4, 1e-5, 1e-6]
+            "boundaries": [20, 25, 30],
+            "values": [1e-3, 1e-4, 1e-5, 1e-6]
         }
     },
 
@@ -23,9 +24,9 @@
         "algorithm": "rb_sparsity",
         "sparsity_init": 0.02,
         "params": {
-            "sparsity_target": 0.8,
-            "sparsity_target_epoch": 18,
-            "sparsity_freeze_epoch": 35
+            "sparsity_target": 0.61,
+            "sparsity_target_epoch": 5,
+            "sparsity_freeze_epoch": 10
         }
     }
 }
