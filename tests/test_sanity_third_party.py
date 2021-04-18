@@ -16,6 +16,8 @@ import os
 import pytest
 import sys
 import subprocess
+
+from nncf import BKC_TORCH_VERSION
 from tests.test_sanity_sample import Command
 from tests.conftest import PROJECT_ROOT
 
@@ -62,7 +64,8 @@ class TestTransformers:
         subprocess.call("virtualenv -ppython{} {}".format(version_string, self.VENV_TRANS_PATH), shell=True)
         subprocess.run("{} pip uninstall setuptools -y && pip install setuptools".format(self.activate_venv),
                        check=True, shell=True)
-        subprocess.run("{} && pip install torch==1.7.0".format(self.activate_venv),
+        subprocess.run("{} && pip install torch=={}".format(self.activate_venv,
+                                                            BKC_TORCH_VERSION),
                        check=True, shell=True)
         subprocess.run("{} && git clone https://github.com/huggingface/transformers".format(self.activate_venv),
                        check=True, shell=True, cwd=self.VENV_TRANS_PATH)
