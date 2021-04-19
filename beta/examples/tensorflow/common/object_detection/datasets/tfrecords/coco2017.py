@@ -140,7 +140,7 @@ def parse_record(record, include_mask=False, model=None, is_train=None):
                         lambda: tf.zeros_like(parsed_tensors['image/object/class/label'], dtype=tf.bool))
 
     def _convert_labels_to_80_classes(parsed_tensors):
-        # 0..90 --> 0..79
+        # 1..90 --> 0..79
         match = tf.constant([1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
                              11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
                              22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
