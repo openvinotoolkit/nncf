@@ -89,7 +89,7 @@ setup(
     description="Neural Networks Compression Framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/openvinotoolkit/nncf_pytorch",
+    url="https://github.com/openvinotoolkit/nncf",
     packages=find_packages(exclude=["tests", "tests.*",
                                     "examples", "examples.*",
                                     "tools", "tools.*",
