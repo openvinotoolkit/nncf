@@ -65,11 +65,20 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
 
     @trainable.setter
     def trainable(self, value):
+        """
+        By default, trainable property of operations follows the trainable property of the layer:
+        - To freeze both wrapped layer weights and op weights -> layer.trainable = False
+        - To unfreeze both wrapped layer weights and op weights -> layer.trainable = True
+        """
         self.layer.trainable = value
-        # Trainable property of all operations follows the global trainable property of NNCFWrapper
         self.set_ops_trainable(value)
 
     def set_ops_trainable(self, value):
+        """
+        Introduction of trainable property to the operations gives the following additional options:
+        - Frozen wrapped layer weights, unfrozen op weights -> layer.trainable = False; layer.set_ops_trainable(True)
+        - Unfrozen wrapped layer weights, frozen op weights -> layer.trainable = True; layer.set_ops_trainable(False)
+        """
         for ops in self.weights_attr_ops.values():
             for op in ops.values():
                 op.trainable = value
