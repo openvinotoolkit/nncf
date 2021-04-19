@@ -48,31 +48,29 @@ def get_sparsity_config():
     return config
 
 
-def add_local_multiplier(config, multiplier):
+def modify_config(config, multiplier, multiplier_location, use_algo_list=False):
     config = copy.deepcopy(config)
-    if isinstance(config['compression'], list):
-        for algo in config['compression']:
+
+    if use_algo_list:
+        config['compression'] = [config['compression']]
+
+    if multiplier_location in ['local', 'both']:
+        algorithms = []
+        if isinstance(config['compression'], list):
+            algorithms = config['compression']
+        else:
+            algorithms.append(config['compression'])
+
+        for algo in algorithms:
             algo.update({
                 'compression_lr_multiplier': multiplier
             })
-    else:
-        config['compression'].update({
+
+    if multiplier_location in ['global', 'both']:
+        config.update({
             'compression_lr_multiplier': multiplier
         })
-    return config
 
-
-def add_global_multiplier(config, multiplier):
-    config = copy.deepcopy(config)
-    config.update({
-        'compression_lr_multiplier': multiplier
-    })
-    return config
-
-
-def add_redefined_multiplier(config, multiplier):
-    config = add_global_multiplier(config, 10 * multiplier + 10)
-    config = add_local_multiplier(config, multiplier)
     return config
 
 
@@ -100,7 +98,7 @@ def make_train_steps(config, num_steps=1):
 
         for i in range(num_steps):
             optimizer.zero_grad()
-            x = torch.rand(config["input_info"]["sample_size"])
+            x = torch.rand(config['input_info']['sample_size'])
             y = model(x)
             loss = (y ** 2).sum()
 
@@ -110,19 +108,16 @@ def make_train_steps(config, num_steps=1):
     return model.parameters()
 
 
-@pytest.mark.parametrize("get_config", [
+@pytest.mark.parametrize('get_config', [
     get_quantization_config,
     get_sparsity_config
 ])
-@pytest.mark.parametrize("add_multiplier", [
-    add_local_multiplier,
-    add_global_multiplier,
-    add_redefined_multiplier
-])
-@pytest.mark.parametrize("multiplier", [0, 1, 10])
-def test_gradients(get_config, add_multiplier, multiplier):
+@pytest.mark.parametrize('multiplier', [0, 1, 10])
+@pytest.mark.parametrize('multiplier_location', ['local', 'global', 'both'])
+@pytest.mark.parametrize('use_algo_list', [True, False])
+def test_gradients(get_config, multiplier, multiplier_location, use_algo_list):
     base_config = get_config()
-    config_with_multiplier = add_multiplier(base_config, multiplier)
+    config_with_multiplier = modify_config(base_config, multiplier, multiplier_location, use_algo_list)
 
     ref_params, ref_compression_params = divide_params(make_train_steps(base_config))
     target_params, target_compression_params = divide_params(make_train_steps(config_with_multiplier))
@@ -134,26 +129,22 @@ def test_gradients(get_config, add_multiplier, multiplier):
     check_equal(ref_compression_grads, target_compression_grads)
 
 
-@pytest.mark.parametrize("get_config", [
+@pytest.mark.parametrize('get_config', [
     get_quantization_config,
     get_sparsity_config
 ])
-@pytest.mark.parametrize("add_multiplier", [
-    add_local_multiplier,
-    add_global_multiplier,
-    add_redefined_multiplier
-])
-@pytest.mark.parametrize("multiplier", [0, 1])
-def test_parameters(get_config, add_multiplier, multiplier):
+@pytest.mark.parametrize('multiplier', [0, 1])
+@pytest.mark.parametrize('multiplier_location', ['local', 'global', 'both'])
+@pytest.mark.parametrize('use_algo_list', [True, False])
+def test_parameters(get_config, multiplier, multiplier_location, use_algo_list):
     base_config = get_config()
-    config_with_multiplier = add_multiplier(base_config, multiplier=multiplier)
+    config_with_multiplier = modify_config(base_config, multiplier, multiplier_location, use_algo_list)
 
     orig_params, orig_compression_params = divide_params(make_train_steps(base_config, num_steps=0))
     params, compression_params = divide_params(make_train_steps(config_with_multiplier))
 
     if multiplier == 0:
-        check_not_equal(orig_params, params)
         check_equal(orig_compression_params, compression_params)
     else:
-        check_not_equal(orig_params, params)
         check_not_equal(orig_compression_params, compression_params)
+    check_not_equal(orig_params, params)
