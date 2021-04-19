@@ -139,8 +139,9 @@ def main_worker(current_gpu, config: SampleConfig):
         train_dataset, val_dataset = create_datasets(config)
         train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-        def train_steps_fn(loader, model, optimizer, steps):
-            train_steps(loader, model, criterion, train_criterion_fn, optimizer, config, steps)
+        def train_steps_fn(loader, model, optimizer, compression_ctrl, train_steps):
+            train_epoch(loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, 0, config,
+                        train_iters=train_steps, log_training_info=False)
 
         def validate_fn(model, eval_loader, log=True):
             top1, top5, loss = validate(eval_loader, model, criterion, config, log)
@@ -381,7 +382,8 @@ def create_data_loaders(config, train_dataset, val_dataset):
     return train_loader, train_sampler, val_loader, init_loader
 
 
-def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config):
+def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config,
+                train_iters=None, log_training_info=True):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -389,6 +391,9 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
     criterion_losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
+
+    if train_iters is None:
+        train_iters = len(train_loader)
 
     compression_scheduler = compression_ctrl.scheduler
 
@@ -433,7 +438,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % config.print_freq == 0:
+        if i % config.print_freq == 0 and log_training_info:
             logger.info(
                 '{rank}: '
                 'Epoch: [{0}][{1}/{2}] '
@@ -451,7 +456,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                     rank='{}:'.format(config.rank) if config.multiprocessing_distributed else ''
                 ))
 
-        if is_main_process():
+        if is_main_process() and log_training_info:
             global_step = len(train_loader) * epoch
             config.tb.add_scalar("train/learning_rate", get_lr(optimizer), i + global_step)
             config.tb.add_scalar("train/criterion_loss", criterion_losses.avg, i + global_step)
@@ -464,45 +469,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
                 if isinstance(stat_value, (int, float)):
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
-
-def train_steps(train_loader, model, criterion, criterion_fn, optimizer, config, steps=None):
-    losses = AverageMeter()
-    criterion_losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
-
-    # switch to train mode
-    model.train()
-    if steps is None:
-        steps = len(train_loader)
-
-    for i, (input_, target) in enumerate(train_loader):
-        # measure data loading time
-        input_ = input_.to(config.device)
-        target = target.to(config.device)
-
-        # compute output
-        output = model(input_)
-        criterion_loss = criterion_fn(output, target, criterion)
-
-        # compute compression loss
-        loss = criterion_loss
-
-        if isinstance(output, InceptionOutputs):
-            output = output.logits
-        # measure accuracy and record loss
-        acc1, acc5 = accuracy(output, target, topk=(1, 5))
-        losses.update(loss.item(), input_.size(0))
-        criterion_losses.update(criterion_loss.item(), input_.size(0))
-        top1.update(acc1, input_.size(0))
-        top5.update(acc5, input_.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        if i >= steps:
+        if i >= train_iters:
             break
 
 

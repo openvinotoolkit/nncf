@@ -228,7 +228,8 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_steps_fn: Callable = None,
                                validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                val_loader: torch.utils.data.DataLoader = None,
-                               device='cuda') -> 'NNCFConfig':
+                               device='cuda',
+                               legr_train_optimizer=None) -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
                                                                   device=device),
@@ -239,6 +240,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                             train_fn=train_steps_fn,
                                             val_loader=val_loader,
                                             val_fn=partial(validate_fn, log=False),
+                                            train_optimizer=legr_train_optimizer,
                                             nncf_config=nncf_config,
                                         )
                                         ])

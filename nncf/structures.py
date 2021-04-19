@@ -121,15 +121,18 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
 
 
 class LeGRInitArgs(NNCFExtraConfigStruct):
-    def __init__(self, train_loader,
+    def __init__(self,
+                 train_loader,
                  train_fn,
                  val_loader,
                  val_fn,
+                 train_optimizer,
                  nncf_config: 'NNCFConfig'):
         self.train_loader = train_loader
         self.train_steps_fn = train_fn
         self.val_loader = val_loader
         self.val_fn = val_fn
+        self.train_optimizer = train_optimizer
         self.config = nncf_config
 
     @classmethod

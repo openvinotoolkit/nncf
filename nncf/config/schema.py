@@ -679,6 +679,8 @@ FILTER_PRUNING_SCHEMA = {
                                                  description="Whether to setting gradients corresponding to zeroed"
                                                              " filters to zero during training, `True` by default.",
                                                  default=True),
+                    "save_ranking_coeffs_path": with_attributes(_STRING),
+                    "load_ranking_coeffs_path": with_attributes(_STRING),
                     "legr_params":
                                 {
                                     "type": "object",

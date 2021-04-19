@@ -13,7 +13,7 @@
 import queue
 import numpy as np
 import torch
-from copy import deepcopy
+from copy import deepcopy, copy
 from torch import optim
 
 from nncf.utils import get_filters_num
@@ -128,7 +128,7 @@ class EvolutionOptimizer():
 
 
 class LeGREvolutionEnv():
-    def __init__(self, filter_pruner, model, train_loader, val_loader, train_fn, val_fn, config,
+    def __init__(self, filter_pruner, model, train_loader, val_loader, train_fn, train_optimizer, val_fn, config,
                  train_steps, pruning_max):
         self.loss_as_reward = True
         self.prune_target = pruning_max
@@ -136,6 +136,7 @@ class LeGREvolutionEnv():
         # Train/test params
         self.train_loader, self.val_loader = train_loader, val_loader
         self.train_fn = train_fn
+        self.train_optimizer = train_optimizer
         self.validate_fn = val_fn
         self.config = config
 
@@ -155,11 +156,14 @@ class LeGREvolutionEnv():
         return torch.zeros(1), [self.full_flops, self.rest]
 
     def train_steps(self, steps):
-        optimizer = optim.SGD(self.model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4, nesterov=True)
-        self.train_fn(self.train_loader, self.model, optimizer, steps)
+        if self.train_optimizer is None:
+            # Default optimizer in the case when the user did not provide a custom optimizer
+            self.train_optimizer = optim.SGD(self.model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4,
+                                             nesterov=True)
+        self.train_fn(self.train_loader, self.model, self.train_optimizer, self.filter_pruner, steps)
 
     def get_reward(self):
-        return self.validate_fn(self.val_loader, self.model)
+        return self.validate_fn(self.model, self.val_loader)
 
     def step(self, action):
         self.last_act = action
@@ -168,7 +172,7 @@ class LeGREvolutionEnv():
         reduced = self.filter_pruner.prune(self.prune_target, action)
         self.train_steps(self.steps)
 
-        acc, loss = self.get_reward()
+        acc, _, loss = self.get_reward()
         loss = loss.item()
         if self.loss_as_reward:
             reward = -loss
@@ -182,11 +186,15 @@ class LeGREvolutionEnv():
 class LeGRPruner:
     def __init__(self, filter_pruner_ctrl, model):
         self.filter_pruner = filter_pruner_ctrl
+        self.scheduler = copy(self.filter_pruner.scheduler)
         self.model = model
         self.model_params_copy = None
         self._save_model_weights()
         self.init_filter_ranks = {minfo.module_scope: self.filter_pruner.filter_importance(minfo.module.weight)
                                   for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes()}
+
+    def loss(self):
+        return self.filter_pruner.loss()
 
     def _save_model_weights(self):
         self.model_params_copy = deepcopy(self.model.state_dict())
@@ -196,13 +204,14 @@ class LeGRPruner:
 
     def reset_masks(self):
         for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
-            mask = self.filter_pruner._get_mask(minfo)
-            mask = torch.ones(get_filters_num(minfo.module)).to(
+            new_mask = torch.ones(get_filters_num(minfo.module)).to(
                     minfo.module.weight.device)
+            self.filter_pruner._set_mask(minfo, new_mask)
 
     def reset(self):
         self._restore_model_weights()
         self.reset_masks()
+        self.scheduler = copy(self.filter_pruner.scheduler)
 
     def get_flops_number_in_model(self):
         return self.filter_pruner.full_flops

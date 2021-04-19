@@ -19,6 +19,7 @@ import torch
 from functools import partial
 from texttable import Texttable
 from torch import nn
+import json
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
@@ -106,18 +107,36 @@ class FilterPruningController(BasePruningAlgoController):
             legr_params = params.get("legr_params", {})
             if 'max_pruning' not in legr_params:
                 legr_params['max_pruning'] = self._scheduler.target_level
-            legr = LeGR(self, target_model, legr_init_args, **legr_params)
-            self.ranking_coeffs = legr.train_global_ranking()
-            nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
+
+            if params.get('load_ranking_coeffs_path'):
+                coeffs_path = params.get('load_ranking_coeffs_path')
+                nncf_logger.info('Loading ranking coefficients from file {}'.format(coeffs_path))
+                loaded_coeffs = json.load(open(coeffs_path, 'r'))
+                self.ranking_coeffs = {Scope.from_str(key): loaded_coeffs[key] for key in loaded_coeffs}
+            else:
+                legr = LeGR(self, target_model, legr_init_args, **legr_params)
+                self.ranking_coeffs = legr.train_global_ranking()
+                nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
                                                                          for scope in self.ranking_coeffs}))
         else:
             self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
+
+        # Saving ranking coefficients to the specified file
+        if params.get('save_ranking_coeffs_path'):
+            nncf_logger.info('Saving ranking coefficients to the file {}'.format(params.get('save_ranking_coeffs_path')))
+            readable_coeffs = {str(scope): self.ranking_coeffs[scope] for scope in
+                               self.ranking_coeffs}
+            json.dump(readable_coeffs, open(params.get('save_ranking_coeffs_path'), 'w'))
 
         self.set_pruning_rate(self.pruning_init)
 
     @staticmethod
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
+
+    @staticmethod
+    def _set_mask(minfo: PrunedModuleInfo, mask):
+        minfo.operand.binary_filter_pruning_mask = mask
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)
@@ -469,9 +488,9 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 1. Initialize masks
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            pruning_module = minfo.operand
-            pruning_module.binary_filter_pruning_mask = torch.ones(get_filters_num(minfo.module)).to(
+            new_mask = torch.ones(get_filters_num(minfo.module)).to(
                 minfo.module.weight.device)
+            self._set_mask(minfo, new_mask)
 
         # 2. Calculate filter importances for all prunable groups
         filter_importances = []

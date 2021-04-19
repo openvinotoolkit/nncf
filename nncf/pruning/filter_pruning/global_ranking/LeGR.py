@@ -10,8 +10,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import torch
-
 from nncf.pruning.filter_pruning.global_ranking.RL_evolution import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
 from nncf.common.utils.logger import logger as nncf_logger
 import time
@@ -26,8 +24,9 @@ class LeGR:
             'generations': self.GENERATIONS
         }
         self.agent = EvolutionOptimizer(initial_filter_ranks, agent_hparams)
-        self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader, legr_init_args.val_loader,
-                                    legr_init_args.train_steps_fn, legr_init_args.val_fn, legr_init_args.config,
+        self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader,
+                                    legr_init_args.val_loader, legr_init_args.train_steps_fn, legr_init_args.train_optimizer,
+                                    legr_init_args.val_fn, legr_init_args.config,
                                     train_steps, max_pruning)
 
     def train_global_ranking(self):
