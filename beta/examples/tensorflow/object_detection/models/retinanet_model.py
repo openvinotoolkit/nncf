@@ -43,7 +43,6 @@ class RetinanetModel(base_model.Model):
                                                       params.model_params.architecture.num_classes)
         self._box_loss_fn = losses.RetinanetBoxLoss(params.model_params.loss_params)
         self._box_loss_weight = params.model_params.loss_params.box_loss_weight
-        self._keras_model = None
 
         # Predict function.
         self._generate_detections_fn = postprocess_ops.MultilevelDetectionGenerator(
@@ -53,7 +52,7 @@ class RetinanetModel(base_model.Model):
 
         # Input layer.
         self._input_layer = tf.keras.layers.Input(
-            shape=(None, None, params.input_info.sample_size[-1]),
+            shape=(params.input_info.sample_size[1:]),
             name='',
             dtype=tf.float32)
 
@@ -69,12 +68,9 @@ class RetinanetModel(base_model.Model):
 
         return model_outputs
 
-    def build_loss_fn(self):
-        if self._keras_model is None:
-            raise ValueError('build_loss_fn() must be called after build_model().')
-
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         filter_fn = self.make_filter_trainable_variables_fn()
-        trainable_variables = filter_fn(self._keras_model.trainable_variables)
+        trainable_variables = filter_fn(keras_model.trainable_variables)
 
         def _total_loss_fn(labels, outputs):
             cls_loss = self._cls_loss_fn(outputs['cls_outputs'],
@@ -86,7 +82,8 @@ class RetinanetModel(base_model.Model):
 
             model_loss = cls_loss + self._box_loss_weight * box_loss
             l2_regularization_loss = self.weight_decay_loss(trainable_variables)
-            total_loss = model_loss + l2_regularization_loss
+            compression_loss = compression_loss_fn()
+            total_loss = model_loss + l2_regularization_loss + compression_loss
 
             return {
                 'total_loss': total_loss,
@@ -94,30 +91,26 @@ class RetinanetModel(base_model.Model):
                 'box_loss': box_loss,
                 'model_loss': model_loss,
                 'l2_regularization_loss': l2_regularization_loss,
+                'compression_loss': compression_loss,
             }
 
         return _total_loss_fn
 
     def build_model(self, weights=None, is_training=None):
-        if self._keras_model is None:
-            with keras_utils.maybe_enter_backend_graph():
-                outputs = self.model_outputs(self._input_layer, is_training)
+        with keras_utils.maybe_enter_backend_graph():
+            outputs = self.model_outputs(self._input_layer, is_training)
+            keras_model = tf.keras.models.Model(inputs=self._input_layer, outputs=outputs, name='retinanet')
 
-                model = tf.keras.models.Model(inputs=self._input_layer,
-                                              outputs=outputs, name='retinanet')
-                assert model is not None, 'Fail to build tf.keras.Model.'
-                self._keras_model = model
+        if self._checkpoint_path:
+            logger.info('Init backbone')
+            init_checkpoint_fn = self.make_restore_checkpoint_fn()
+            init_checkpoint_fn(keras_model)
 
-            if self._checkpoint_path:
-                logger.info('Init backbone')
-                init_checkpoint_fn = self.make_restore_checkpoint_fn()
-                init_checkpoint_fn(self._keras_model)
+        if weights:
+            logger.info('Loaded pretrained weights from {}'.format(weights))
+            keras_model.load_weights(weights)
 
-            if weights:
-                logger.info('Loaded pretrained weights from {}'.format(weights))
-                self._keras_model.load_weights(weights)
-
-        return self._keras_model
+        return keras_model
 
     def post_processing(self, labels, outputs):
         required_output_fields = ['cls_outputs', 'box_outputs']
@@ -131,7 +124,7 @@ class RetinanetModel(base_model.Model):
             outputs['box_outputs'], outputs['cls_outputs'], labels['anchor_boxes'],
             labels['image_info'][:, 1:2, :])
         # Discards the old output tensors to save memory. The `cls_outputs` and
-        # `box_outputs` are pretty big and could potentiall lead to memory issue.
+        # `box_outputs` are pretty big and could potentially lead to memory issue.
         outputs = {
             'source_id': labels['source_id'],
             'image_info': labels['image_info'],

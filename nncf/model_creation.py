@@ -10,25 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from copy import deepcopy
 from os import path as osp
-from typing import Callable, Any, Tuple, List, Dict
+from typing import Callable, Any, Tuple, Dict
 
-from nncf.checkpoint_loading import load_state
-from nncf.hw_config import HWConfigType
 from torch.nn import Module
 
-from nncf.compression_method_api import CompressionAlgorithmController, CompressionAlgorithmBuilder
+from nncf.checkpoint_loading import load_state
+from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.debug import set_debug_log_dir
-from nncf.dynamic_graph.graph_builder import GraphBuilder, create_input_infos, create_dummy_forward_fn
+from nncf.dynamic_graph.graph_tracer import create_input_infos, create_dummy_forward_fn
+from nncf.graph.graph_builder import GraphBuilder
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.quantization.structs import QuantizerSetupType
-from nncf.hw_config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 
-from nncf.nncf_logger import logger
+from nncf.common.utils.logger import logger
 
 
 def get_compression_algorithm(config):
@@ -37,41 +35,13 @@ def get_compression_algorithm(config):
     return COMPRESSION_ALGORITHMS.get(algorithm_key)
 
 
-def create_compression_algorithm_builders(config: NNCFConfig,
-                                          should_init: bool = True) -> List[CompressionAlgorithmBuilder]:
-    compression_config_json_section = config.get('compression', {})
-    compression_config_json_section = deepcopy(compression_config_json_section)
-
-    hw_config_type = None
-    quantizer_setup_type_str = config.get("quantizer_setup_type", "propagation_based")
-    quantizer_setup_type = QuantizerSetupType.from_str(quantizer_setup_type_str)
-    if quantizer_setup_type == QuantizerSetupType.PROPAGATION_BASED:
-        target_device = config.get("target_device", "ANY")
-        if target_device != 'TRIAL':
-            hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
-
-    if isinstance(compression_config_json_section, dict):
-        compression_config = NNCFConfig(compression_config_json_section)
-        compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        compression_config["hw_config_type"] = hw_config_type
-        compression_config['quantizer_setup_type'] = quantizer_setup_type
-        return [get_compression_algorithm(compression_config)(compression_config, should_init=should_init), ]
-    retval = []
-    for algo_config in compression_config_json_section:
-        algo_config = NNCFConfig(algo_config)
-        algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
-        algo_config["hw_config_type"] = hw_config_type
-        algo_config['quantizer_setup_type'] = quantizer_setup_type
-        retval.append(get_compression_algorithm(algo_config)(algo_config, should_init=should_init))
-    return retval
-
-
 def create_compressed_model(model: Module, config: NNCFConfig,
                             resuming_state_dict: dict = None,
                             dummy_forward_fn: Callable[[Module], Any] = None,
                             wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-                            dump_graphs=True,) \
-    -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
+                            wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+                            dump_graphs=True, ) \
+    -> Tuple[PTCompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
@@ -86,7 +56,10 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     the internal graph representation via tracing. Specifying this is useful when the original training pipeline
     has special formats of data loader output or has additional *forward* arguments other than input tensors.
     Otherwise, the *forward* call of the model during graph tracing will be made with mock tensors according
-    to the shape specified in the config object.
+    to the shape specified in the config object. The dummy_forward_fn code MUST contain calls to nncf.nncf_model_input
+    functions made with each compressed model input tensor in the underlying model's args/kwargs tuple, and these
+    calls should be exactly the same as in the wrap_inputs_fn function code (see below); if dummy_forward_fn is
+    specified, then wrap_inputs_fn also must be specified.
     :param wrap_inputs_fn: if supplied, will be used on the module's input arguments during a regular, non-dummy
     forward call before passing the inputs to the underlying compressed model. This is required if the model's input
     tensors that are important for compression are not supplied as arguments to the model's forward call directly, but
@@ -96,12 +69,18 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     supplied model's args and kwargs that is important for compression (e.g. quantization) with an nncf.nncf_model_input
     function, which is a no-operation function and marks the tensors as inputs to be traced by NNCF in the internal
     graph representation. Output is the tuple of (args, kwargs), where args and kwargs are the same as were supplied in
-    input, but each tensor in the original input.
+    input, but each tensor in the original input. Must be specified if dummy_forward_fn is specified.
     :param dump_graphs: Whether or not should also dump the internal graph representation of the
     original and compressed models in the .dot format into the log directory.
     :return: A controller for the compression algorithm (or algorithms, in which case the controller
     is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
     as an object of NNCFNetwork."""
+
+    if dummy_forward_fn is not None and wrap_inputs_fn is None:
+        raise ValueError("A custom dummy forward function was specified, but the corresponding input wrapping function "
+                         "was not. In case a custom dummy forward function is specified for purposes of NNCF graph "
+                         "building, then the wrap_inputs_fn parameter MUST also be specified and be consistent with "
+                         "the input wrapping done in dummy_forward_fn.")
 
     # Compress model that will be deployed for the inference on target device. No need to compress parts of the
     # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with weights.
@@ -131,29 +110,35 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
+                                   wrap_outputs_fn=wrap_outputs_fn,
                                    ignored_scopes=ignored_scopes,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)
 
     should_init = resuming_state_dict is None
-    compression_algo_builder_list = create_compression_algorithm_builders(config, should_init=should_init)
+    composite_builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
+    composite_builder.apply_to(compressed_model)
 
-    for builder in compression_algo_builder_list:
-        compressed_model = builder.apply_to(compressed_model)
-    compression_ctrl = compressed_model.commit_compression_changes()
+    compression_ctrl = composite_builder.build_controller(compressed_model)
+
+    # Required to ensure that the model leaving create_compressed_model has correct compressed graph.
+    # In particular, this is currently required for correct functioning of RNNs.
+    compressed_model.rebuild_graph()
 
     try:
         if resuming_state_dict is not None:
             load_state(compressed_model, resuming_state_dict, is_resume=True)
     finally:
-        if dump_graphs and is_main_process() and compression_algo_builder_list:
+        if dump_graphs and is_main_process() and composite_builder:
             if dummy_forward_fn is None:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=
                                                         create_dummy_forward_fn(input_info_list,
-                                                                                with_input_tracing=False))
+                                                                                with_input_tracing=False,
+                                                                                with_output_tracing=False))
             else:
                 compressed_graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
 
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+
     return compression_ctrl, compressed_model

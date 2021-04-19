@@ -39,6 +39,10 @@ ScaleType get_scale_type(const at::Tensor& input, const at::Tensor& input_low, c
             TORCH_CHECK(input_range.size(1) == scale_count, "Scale shape is not flat");
             return  ScaleType::PER_ACTIVATION_CHANNEL;
         }
+        // For (1x1x1x1) input/output tensors, it is assumed that input_range
+        // should be PER_WEIGHT_CHANNEL
+        if (scale_count == 1)
+            return ScaleType::PER_WEIGHT_CHANNEL;
     }
 
     return ScaleType::SINGLE_SCALE;

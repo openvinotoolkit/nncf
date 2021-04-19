@@ -89,13 +89,17 @@ class BaseDatasetBuilder(ABC):
         if builder is None:
             raise ValueError('Unknown dataset type {}'.format(self._dataset_type))
 
+        # TODO(Evgeny Tsykunov): add TFRecords support for YOLOv4
+        if self._config.model == 'YOLOv4' and self._dataset_type == 'tfrecords':
+            raise ValueError('YOLOv4 does not support TFRecords, use TFDS dataset type')
+
         dataset = builder()
         dataset = self._pipeline(dataset)
 
         return dataset
 
     def _load_tfds(self):
-        logger.info('Using TFDS to load data.')
+        logger.info('Using TFDS to load {} data.'.format(self._split))
 
         set_hard_limit_num_open_files()
 
@@ -121,7 +125,7 @@ class BaseDatasetBuilder(ABC):
         return dataset
 
     def _load_tfrecords(self):
-        logger.info('Using TFRecords to load data')
+        logger.info('Using TFRecords to load {} data.'.format(self._split))
 
         dataset_key = self._dataset_name.replace('/', '')
         if dataset_key in self._tfrecord_datasets:

@@ -14,14 +14,12 @@
 import logging
 import sys
 
-EXAMPLE_LOGGER_NAME = "example"
+logger = logging.getLogger("example")
+logger.propagate = False
 
-root = logging.RootLogger(logging.WARNING)
-manager = logging.Manager(root)
-logger = manager.getLogger(EXAMPLE_LOGGER_NAME)
-
-logger.setLevel(logging.INFO)
-hdl = logging.StreamHandler(stream=sys.stdout)
-hdl.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
-hdl.setLevel(logging.INFO)
-logger.addHandler(hdl)
+if not logger.hasHandlers():
+    logger.setLevel(logging.INFO)
+    hdl = logging.StreamHandler(stream=sys.stdout)
+    hdl.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+    hdl.setLevel(logging.INFO)
+    logger.addHandler(hdl)

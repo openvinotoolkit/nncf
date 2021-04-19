@@ -16,25 +16,39 @@ from typing import List
 
 from texttable import Texttable
 
-from nncf.compression_method_api import CompressionAlgorithmBuilder, CompressionAlgorithmController, CompressionLevel
+from nncf.algo_selector import ZeroCompressionLoss
+from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.sparsity.controller import SparsityController
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
-from nncf.module_operations import UpdateWeight
-from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import InsertionCommand, InsertionPoint, InsertionType, OperationPriority
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
 
 
-class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
+class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self._sparsified_module_info = []
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        return self._sparsify_weights(target_model)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        layout = PTTransformationLayout()
+        commands = self._sparsify_weights(target_model)
+        for command in commands:
+            layout.register(command)
+        return layout
 
-    def _sparsify_weights(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _sparsify_weights(self, target_model: NNCFNetwork) -> List[PTInsertionCommand]:
         device = next(target_model.parameters()).device
         sparsified_modules = target_model.get_nncf_modules_by_module_names(self.compressed_nncf_module_names)
         insertion_commands = []
@@ -47,33 +61,34 @@ class BaseSparsityAlgoBuilder(CompressionAlgorithmBuilder):
 
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
             operation = self.create_weight_sparsifying_operation(module)
-            hook = UpdateWeight(operation).to(device)
-            insertion_commands.append(InsertionCommand(InsertionPoint(InsertionType.NNCF_MODULE_PRE_OP,
-                                                                      module_scope=module_scope),
-                                                       hook, OperationPriority.SPARSIFICATION_PRIORITY))
+            hook = operation.to(device)
+            insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
+                                                                       module_scope=module_scope),
+                                                         hook, TransformationPriority.SPARSIFICATION_PRIORITY))
             self._sparsified_module_info.append(
-                SparseModuleInfo(scope_str, module, hook.operand))
+                SparseModuleInfo(scope_str, module, hook))
 
         return insertion_commands
-
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
-        return BaseSparsityAlgoController(target_model, self._sparsified_module_info)
 
     def create_weight_sparsifying_operation(self, target_module):
         raise NotImplementedError
 
 
-class BaseSparsityAlgoController(CompressionAlgorithmController):
+class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
 
-    def freeze(self):
-        raise NotImplementedError
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
-    def set_sparsity_level(self, sparsity_level: float):
-        raise NotImplementedError
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     @property
     def sparsified_weights_count(self):
@@ -82,12 +97,15 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
             count = count + minfo.module.weight.view(-1).size(0)
         return max(count, 1)
 
-    @property
-    def sparsity_rate_for_sparsified_modules(self):
+    def sparsity_rate_for_sparsified_modules(self, target_sparsified_module_info=None):
+        if target_sparsified_module_info is None:
+            target_sparsified_module_info = self.sparsified_module_info
+        else:
+            target_sparsified_module_info = [target_sparsified_module_info]
+
         nonzero = 0
         count = 0
-
-        for minfo in self.sparsified_module_info:
+        for minfo in target_sparsified_module_info:
             mask = minfo.operand.apply_binary_mask(minfo.module.weight)
             nonzero = nonzero + mask.nonzero().size(0)
             count = count + mask.view(-1).size(0)
@@ -124,7 +142,7 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
         return 1 - nonzero / max(count, 1)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "SR", "% weights"]
         data = [header]
@@ -144,12 +162,9 @@ class BaseSparsityAlgoController(CompressionAlgorithmController):
         table.add_rows(data)
 
         stats["sparsity_statistic_by_module"] = table
-        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules
+        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
         stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
 
-        return self.add_algo_specific_stats(stats)
-
-    def add_algo_specific_stats(self, stats):
         return stats
 
     def compression_level(self) -> CompressionLevel:

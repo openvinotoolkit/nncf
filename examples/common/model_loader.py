@@ -18,6 +18,7 @@ from functools import partial
 
 import examples.common.models as custom_models
 from examples.common.example_logger import logger
+import examples.common.restricted_pickle_module as restricted_pickle_module
 from nncf import load_state
 from nncf.utils import safe_thread_call
 
@@ -44,14 +45,15 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
         raise Exception("Undefined model name")
     loaded_model = safe_thread_call(load_model_fn)
     if not pretrained and weights_path is not None:
-        sd = torch.load(weights_path, map_location='cpu')
+        sd = torch.load(weights_path, map_location='cpu', pickle_module=restricted_pickle_module)
         load_state(loaded_model, sd, is_resume=False)
     return loaded_model
 
 
 def load_resuming_model_state_dict_and_checkpoint_from_path(resuming_checkpoint_path):
     logger.info('Resuming from checkpoint {}...'.format(resuming_checkpoint_path))
-    resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+    resuming_checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu',
+                                     pickle_module=restricted_pickle_module)
     # use checkpoint itself in case only the state dict was saved,
     # i.e. the checkpoint was created with `torch.save(module.state_dict())`
     resuming_model_state_dict = resuming_checkpoint.get('state_dict', resuming_checkpoint)
@@ -61,6 +63,7 @@ def load_resuming_model_state_dict_and_checkpoint_from_path(resuming_checkpoint_
 def load_resuming_checkpoint(resuming_checkpoint_path: str):
     if osp.isfile(resuming_checkpoint_path):
         logger.info("=> loading checkpoint '{}'".format(resuming_checkpoint_path))
-        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu')
+        checkpoint = torch.load(resuming_checkpoint_path, map_location='cpu',
+                                pickle_module=restricted_pickle_module)
         return checkpoint
     raise FileNotFoundError("no checkpoint found at '{}'".format(resuming_checkpoint_path))

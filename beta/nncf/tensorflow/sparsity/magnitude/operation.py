@@ -35,16 +35,18 @@ class BinaryMask(NNCFOperation):
             trainable=False,
             aggregation=tf.VariableAggregation.MEAN)
 
-        return mask  # TODO: should be a dictionary
+        return {
+            'mask': mask
+        }
 
     def call(self, inputs, weights, _):
-        return apply_mask(inputs, weights)
+        return apply_mask(inputs, weights['mask'])
 
 
 @NNCF_CUSTOM_OBJECTS.register()
 class BinaryMaskWithWeightsBackup(BinaryMask):
-    def __init__(self, w_name_to_bkup=None):
-        super().__init__()
+    def __init__(self, name: str, w_name_to_bkup: str = None):
+        super().__init__(name)
         self.w_name_to_bkup = w_name_to_bkup
         self.bkup_var = None
 
@@ -53,8 +55,8 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
         return super().build(input_shape, input_type, name, layer)
 
     def call(self, inputs, weights, _):
-        self.bkup_var.assign(tf.where(weights > 0.5, inputs, self.bkup_var))
-        return apply_mask(self.bkup_var, weights)
+        self.bkup_var.assign(tf.where(weights['mask'] > 0.5, inputs, self.bkup_var))
+        return apply_mask(self.bkup_var, weights['mask'])
 
     @staticmethod
     def _create_bkup_weights(layer, w_name):
@@ -69,8 +71,6 @@ class BinaryMaskWithWeightsBackup(BinaryMask):
         return bkup_var
 
     def get_config(self):
-        return {'w_name_to_bkup': self.w_name_to_bkup}
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(config['w_name_to_bkup'])
+        config = super().get_config()
+        config['w_name_to_bkup'] = self.w_name_to_bkup
+        return config

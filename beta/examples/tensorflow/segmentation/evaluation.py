@@ -29,6 +29,8 @@ from beta.examples.tensorflow.common.sample_config import SampleConfig
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
@@ -39,7 +41,6 @@ def get_argument_parser():
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         to_h5=False,
-                                        print_freq=False,
                                         dataset_type=False)
 
     parser.add_argument(
@@ -86,6 +87,14 @@ def get_config_from_argv(argv, parser):
     return sample_config
 
 
+def get_dataset_builders(config, num_devices):
+    val_builder = COCODatasetBuilder(config=config,
+                                     is_train=False,
+                                     num_devices=num_devices)
+
+    return val_builder
+
+
 def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled')
     if tf.io.gfile.isdir(ckpt_path):
@@ -107,13 +116,32 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def evaluate(test_step, metric, test_dist_dataset):
+def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     """Runs evaluation steps and aggregate metrics"""
-    for x in test_dist_dataset:
+    timer = Timer()
+    timer.tic()
+
+    logger.info('Testing...')
+    for batch_idx, x in enumerate(test_dist_dataset):
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
 
-    return metric.result()
+        if batch_idx % print_freq == 0:
+            time = timer.toc(average=False)
+            logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
+            timer.tic()
+
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
+
+    timer.reset()
+
+    logger.info('Evaluating predictions...')
+    timer.tic()
+    result = metric.result()
+    timer.toc(average=False)
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
+
+    return result
 
 
 def create_test_step_fn(strategy, model, predict_post_process_fn):
@@ -139,16 +167,13 @@ def create_test_step_fn(strategy, model, predict_post_process_fn):
 
 def run_evaluation(config, eval_timeout=None):
     """Runs evaluation on checkpoint save directory"""
-
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The evaluation.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
     strategy = get_distribution_strategy(config)
+    if config.metrics_dump is not None:
+        write_metrics(0, config.metrics_dump)
 
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-    dataset_builder = COCODatasetBuilder(config=config, is_train=False, num_devices=num_devices)
+    dataset_builder = get_dataset_builders(config, strategy.num_replicas_in_sync)
     dataset = dataset_builder.build()
+    num_batches = dataset_builder.steps_per_epoch
     test_dist_dataset = strategy.experimental_distribute_dataset(dataset)
 
     # We use `model_batch_size` to create input layer for model
@@ -172,10 +197,9 @@ def run_evaluation(config, eval_timeout=None):
         if config.ckpt_path:
             load_checkpoint(checkpoint, config.ckpt_path)
 
-        logger.info('Evaluation...')
         statistics = compression_ctrl.statistics()
         print_statistics(statistics)
-        metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+        metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
         eval_metric.reset_states()
         logger.info('Test metric = {}'.format(metric_result))
 
@@ -194,8 +218,7 @@ def run_evaluation(config, eval_timeout=None):
             status.expect_partial()
             logger.info('Checkpoint file {} found and restoring from checkpoint'.format(checkpoint_path))
             logger.info('Checkpoint step: {}'.format(checkpoint.step.numpy()))
-            logger.info('Evaluation...')
-            metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+            metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
 
             current_step = checkpoint.step.numpy()
             validation_summary_writer(metrics=metric_result, step=current_step)
@@ -204,6 +227,9 @@ def run_evaluation(config, eval_timeout=None):
             logger.info('Validation metric = {}'.format(metric_result))
 
         validation_summary_writer.close()
+
+    if config.metrics_dump is not None:
+        write_metrics(metric_result['AP'], config.metrics_dump)
 
 
 def export(config):
@@ -228,6 +254,10 @@ def main(argv):
     tf.get_logger().setLevel('INFO')
     parser = get_argument_parser()
     config = get_config_from_argv(argv, parser)
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     if 'train' in config.mode or 'test' in config.mode:
         run_evaluation(config)

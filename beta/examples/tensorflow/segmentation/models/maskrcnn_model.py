@@ -63,7 +63,6 @@ class MaskrcnnModel(base_model.Model):
         # For eval metrics.
         self._params = params
         self._checkpoint_prefix = 'resnet50/'
-        self._keras_model = None
 
         self._include_mask = params.get('include_mask', False)
 
@@ -207,12 +206,9 @@ class MaskrcnnModel(base_model.Model):
 
         return model_outputs
 
-    def build_loss_fn(self):
-        if self._keras_model is None:
-            raise ValueError('build_loss_fn() must be called after build_model().')
-
+    def build_loss_fn(self, keras_model, compression_loss_fn):
         filter_fn = self.make_filter_trainable_variables_fn()
-        trainable_variables = filter_fn(self._keras_model.trainable_variables)
+        trainable_variables = filter_fn(keras_model.trainable_variables)
 
         def _total_loss_fn(labels, outputs):
             rpn_score_loss = self._rpn_score_loss_fn(outputs['rpn_score_outputs'],
@@ -240,7 +236,8 @@ class MaskrcnnModel(base_model.Model):
                 mask_loss)
 
             l2_regularization_loss = self.weight_decay_loss(trainable_variables)
-            total_loss = model_loss + l2_regularization_loss
+            compression_loss = compression_loss_fn()
+            total_loss = model_loss + l2_regularization_loss + compression_loss
             return {
                 'total_loss': total_loss,
                 'loss': total_loss,
@@ -249,6 +246,7 @@ class MaskrcnnModel(base_model.Model):
                 'mask_loss': mask_loss,
                 'model_loss': model_loss,
                 'l2_regularization_loss': l2_regularization_loss,
+                'compression_loss': compression_loss,
                 'rpn_score_loss': rpn_score_loss,
                 'rpn_box_loss': rpn_box_loss,
             }
@@ -313,24 +311,21 @@ class MaskrcnnModel(base_model.Model):
         return input_layer
 
     def build_model(self, weights=None, is_training=None):
-        if self._keras_model is None:
-            input_layers = self.build_input_layers(self._params, is_training)
-            with keras_utils.maybe_enter_backend_graph():
-                outputs = self.model_outputs(input_layers, is_training)
-                model = tf.keras.models.Model(inputs=input_layers, outputs=outputs, name='maskrcnn')
-                assert model is not None, 'Fail to build tf.keras.Model.'
-                self._keras_model = model
+        input_layers = self.build_input_layers(self._params, is_training)
+        with keras_utils.maybe_enter_backend_graph():
+            outputs = self.model_outputs(input_layers, is_training)
+            keras_model = tf.keras.models.Model(inputs=input_layers, outputs=outputs, name='maskrcnn')
 
-            if self._checkpoint_path:
-                logger.info('Init backbone')
-                init_checkpoint_fn = self.make_restore_checkpoint_fn()
-                init_checkpoint_fn(self._keras_model)
+        if self._checkpoint_path:
+            logger.info('Init backbone')
+            init_checkpoint_fn = self.make_restore_checkpoint_fn()
+            init_checkpoint_fn(keras_model)
 
-            if weights:
-                logger.info('Loaded pretrained weights from {}'.format(weights))
-                _restore_baseline_weights(self._keras_model, weights)
+        if weights:
+            logger.info('Loaded pretrained weights from {}'.format(weights))
+            _restore_baseline_weights(keras_model, weights)
 
-        return self._keras_model
+        return keras_model
 
     def post_processing(self, labels, outputs):
         required_output_fields = ['class_outputs', 'box_outputs']

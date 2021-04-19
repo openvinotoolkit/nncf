@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 
 
 class QuantizerId:

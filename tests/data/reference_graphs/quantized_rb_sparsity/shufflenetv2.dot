@@ -396,6 +396,7 @@ strict digraph  {
 "394 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=394, scope="ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "395 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=395, scope="ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "396 ShuffleNetV2/NNCFLinear[linear]/linear" [id=396, scope="ShuffleNetV2/NNCFLinear[linear]", type=linear];
+"397 /nncf_model_output" [id=397, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 ShuffleNetV2/NNCFConv2d[conv1]/conv2d";
 "2 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -808,4 +809,5 @@ strict digraph  {
 "393 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "394 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "394 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "395 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "395 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "396 ShuffleNetV2/NNCFLinear[linear]/linear";
+"396 ShuffleNetV2/NNCFLinear[linear]/linear" -> "397 /nncf_model_output";
 }

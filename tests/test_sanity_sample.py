@@ -12,30 +12,36 @@
 """
 
 import json
+import os
 import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
-from enum import Enum, auto
+from enum import Enum
+from enum import auto
 from pathlib import Path
 from typing import Dict
 
-import os
 import pytest
-import tempfile
 import torch
 
 # pylint: disable=redefined-outer-name
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
-from examples.common.utils import get_name, is_staged_quantization
-from nncf.compression_method_api import CompressionLevel
+from examples.common.utils import get_name
+from examples.common.utils import is_staged_quantization
+from nncf.api.compression import CompressionLevel
+from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
-from nncf.quantization.layers import QuantizerConfig
-from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
+from nncf.hw_config import HWConfigType
+from tests.conftest import EXAMPLES_DIR
+from tests.conftest import PROJECT_ROOT
+from tests.conftest import TEST_ROOT
 
+NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
 
 class Command:
     def __init__(self, cmd, path=None):
@@ -65,6 +71,8 @@ class Command:
             print(err)
 
     def run(self, timeout=3600, assert_returncode_zero=True):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
 
         def target():
             start_time = time.time()
@@ -132,7 +140,7 @@ class ConfigFactory:
 def create_command_line(args, sample_type):
     python_path = PROJECT_ROOT.as_posix()
     executable = EXAMPLES_DIR.joinpath(sample_type, 'main.py').as_posix()
-    cli_args = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
+    cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
     return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
         path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
     )
@@ -244,13 +252,15 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--dist-url": "tcp://127.0.0.1:8987"
     }
 
-    if multiprocessing_distributed:
-        args["--multiprocessing-distributed"] = None
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    elif multiprocessing_distributed:
+        args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
@@ -258,8 +268,8 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
 
 @pytest.mark.parametrize(
     "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(name=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(name=["train_dataparallel"]))],
+        pytest.param(True, marks=pytest.mark.dependency(name="train_distributed")),
+        pytest.param(False, marks=pytest.mark.dependency(name="train_dataparallel"))],
     ids=['distributed', 'dataparallel'])
 def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     checkpoint_save_dir = os.path.join(case_common_dirs["checkpoint_save_dir"],
@@ -270,15 +280,17 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 2,
         "--checkpoint-save-dir": checkpoint_save_dir,
         "--dist-url": "tcp://127.0.0.1:8989"
     }
 
-    if multiprocessing_distributed:
-        args["--multiprocessing-distributed"] = None
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    elif multiprocessing_distributed:
+        args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
@@ -302,14 +314,16 @@ def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--weights": ckpt_path,
         "--dist-url": "tcp://127.0.0.1:8987"
     }
 
-    if multiprocessing_distributed:
-        args["--multiprocessing-distributed"] = None
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    elif multiprocessing_distributed:
+        args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
@@ -338,7 +352,7 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 3,
         "--checkpoint-save-dir": checkpoint_save_dir,
@@ -346,8 +360,10 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
         "--dist-url": "tcp://127.0.0.1:8986"
     }
 
-    if multiprocessing_distributed:
-        args["--multiprocessing-distributed"] = None
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+    elif multiprocessing_distributed:
+        args["--multiprocessing-distributed"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
@@ -373,6 +389,9 @@ def test_export_with_resume(config, tmp_path, multiprocessing_distributed, case_
         "--resume": ckpt_path,
         "--to-onnx": onnx_path
     }
+
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
@@ -400,6 +419,9 @@ def test_export_with_pretrained(tmp_path):
         "--to-onnx": onnx_path
     }
 
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+
     runner = Command(create_command_line(args, "classification"))
     runner.run()
     assert os.path.exists(onnx_path)
@@ -422,16 +444,17 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
         "--data": config["dataset_path"],
         "--config": config_factory.serialize(),
         "--log-dir": tmp_path,
-        "--batch-size": config["batch_size"] * torch.cuda.device_count(),
+        "--batch-size": config["batch_size"] * NUM_DEVICES,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
         "--epochs": 1,
-        "--cpu-only": None
+        "--cpu-only": True
     }
 
     # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
     # mocked train function
     mocker.patch("examples.common.utils.SafeMLFLow")
-    command_line = " ".join(key if val is None else "{} {}".format(key, val) for key, val in args.items())
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
     if config["sample_type"] == "classification":
         import examples.classification.main as sample
         mocked_printing = mocker.patch('examples.classification.main.print_statistics')
@@ -574,7 +597,7 @@ class TestCaseDescriptor:
 
 class HAWQDescriptor(TestCaseDescriptor):
     batch_size_init: int = 0
-    set_chosen_config_spy = None
+    get_qsetup_spy = None
     hessian_trace_estimator_spy = None
 
     def batch_for_init(self, batch_size_init: int):
@@ -597,15 +620,16 @@ class HAWQDescriptor(TestCaseDescriptor):
 
     def setup_spy(self, mocker):
         from nncf.quantization.init_precision import HAWQPrecisionInitializer
-        self.set_chosen_config_spy = mocker.spy(HAWQPrecisionInitializer, "set_chosen_config")
+        self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
         from nncf.quantization.hessian_trace import HessianTraceEstimator
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
-        bitwidth_list = self.set_chosen_config_spy.call_args[0][1]
-        assert len(bitwidth_list) == self.n_weight_quantizers
+        qconfig_sequence = self.get_qsetup_spy.call_args[0][1]
+        assert len(qconfig_sequence) == self.n_weight_quantizers
+        all_precisions = {qc.num_bits for qc in qconfig_sequence}
         # with default compression ratio = 1.5 all precisions should be different from the default one
-        assert set(bitwidth_list) != {QuantizerConfig().bits}
+        assert all_precisions != {QuantizerConfig().num_bits}
 
         init_data_loader = self.hessian_trace_estimator_spy.call_args[0][5]
         expected_batch_size = self.batch_size_init if self.batch_size_init else self.batch_size
@@ -615,9 +639,14 @@ class HAWQDescriptor(TestCaseDescriptor):
 class AutoQDescriptor(TestCaseDescriptor):
     subset_ratio_: float = 1.0
     BITS = [2, 4, 8]
+    debug_dump: bool = False
 
     def subset_ratio(self, subset_ratio_: float):
         self.subset_ratio_ = subset_ratio_
+        return self
+
+    def dump_debug(self, debug_dump: bool):
+        self.debug_dump = debug_dump
         return self
 
     def get_precision_section(self) -> Dict:
@@ -625,20 +654,22 @@ class AutoQDescriptor(TestCaseDescriptor):
                 "bits": AutoQDescriptor.BITS,
                 "iter_number": 2,
                 "compression_ratio": 0.15,
-                "eval_subset_ratio": self.subset_ratio_}
+                "eval_subset_ratio": self.subset_ratio_,
+                "dump_init_precision_data": self.debug_dump}
 
     def __str__(self):
         sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
-        return super().__str__() + '_autoq' + sr
+        dd = '_dump_debug' if self.debug_dump else ''
+        return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
-        from nncf.nncf_network import NNCFNetwork
-        self.commit_compression_changes_spy = mocker.spy(NNCFNetwork, 'commit_compression_changes')
+        from nncf.quantization.algo import QuantizationBuilder
+        self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
 
     def validate_spy(self):
-        ctrl = self.commit_compression_changes_spy.spy_return
+        ctrl = self.builder_spy.spy_return
         final_bits = [qm.num_bits for qm in ctrl.all_quantizations.values()]
-        assert set(final_bits) != {QuantizerConfig().bits}
+        assert set(final_bits) != {QuantizerConfig().num_bits}
         assert all([bit in AutoQDescriptor.BITS for bit in final_bits])
 
 
@@ -682,11 +713,11 @@ TEST_CASE_DESCRIPTORS = [
     inception_v3_desc(AutoQDescriptor()).batch(2),
     inception_v3_desc(AutoQDescriptor()).staged(),
     resnet18_desc(AutoQDescriptor()).batch(2),
-    resnet18_desc(AutoQDescriptor()).batch(2).staged(),
+    resnet18_desc(AutoQDescriptor()).batch(2).staged().dump_debug(True),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(2),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
-    ssd300_vgg_desc(AutoQDescriptor()),
-    unet_desc(AutoQDescriptor()),
+    ssd300_vgg_desc(AutoQDescriptor()).batch(2).dump_debug(True),
+    unet_desc(AutoQDescriptor()).dump_debug(True),
     icnet_desc(AutoQDescriptor())
 ]
 
@@ -714,7 +745,11 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
         "--batch-size": desc.batch_size,
         "--workers": 0,  # Workaround for the PyTorch MultiProcessingDataLoader issue
     }
-    command_line = " ".join(f'{key} {val}' for key, val in args.items())
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
     # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
     # SafeMLFLow, which happens with a mocked train function
     if desc.sample_type == SampleType.CLASSIFICATION:
@@ -736,3 +771,35 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     sample.main(shlex.split(command_line))
 
     desc.validate_spy()
+
+
+@pytest.mark.parametrize('target_device', [x.value for x in HWConfigType])
+def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_path, target_device):
+    config_dict = {
+        "input_info":
+            {
+                "sample_size": [1, 1, 32, 32],
+            },
+        "compression": {
+            "algorithm": "quantization"
+        },
+    }
+    config_factory = ConfigFactory(config_dict, tmp_path / 'config.json')
+    args = {
+        "--data": str(tmp_path),
+        "--config": config_factory.serialize(),
+        "--log-dir": tmp_path,
+        "--batch-size": 1,
+        "--target-device": target_device,
+    }
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
+    import examples.classification.main as sample
+    start_worker_mock = mocker.patch("examples.classification.main.start_worker")
+    sample.main(shlex.split(command_line))
+
+    config = start_worker_mock.call_args[0][1].nncf_config
+    assert config["target_device"] == target_device

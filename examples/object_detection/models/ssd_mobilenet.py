@@ -14,6 +14,7 @@
 import torch
 import torch.nn as nn
 
+from examples.common import restricted_pickle_module
 from examples.common.example_logger import logger
 from examples.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
 from nncf.checkpoint_loading import load_state
@@ -111,7 +112,8 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
         # may be used to perform arbitrary code execution during unpickling. Only load the data you
         # trust.
         #
-        basenet_weights = torch.load(config.basenet)['state_dict']
+        basenet_weights = torch.load(config.basenet,
+                                     pickle_module=restricted_pickle_module)['state_dict']
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace('model.', '')

@@ -12,7 +12,6 @@
 """
 
 import subprocess
-import sys
 import pytest
 import shutil
 from tests.conftest import TEST_ROOT, PROJECT_ROOT
@@ -20,42 +19,28 @@ from tests.conftest import TEST_ROOT, PROJECT_ROOT
 INSTALL_CHECKS_FILENAME = 'install_checks.py'
 
 
-@pytest.fixture(name="package_type", params=["install", "develop", "sdist", "bdist_wheel", "pypi"])
+@pytest.fixture(name="venv_type",
+                params=["virtualenv", "venv"])
+def venv_type_(request):
+    return request.param
+
+
+@pytest.fixture(name="package_type",
+                params=["install", "develop", "sdist", "bdist_wheel",
+                        "pip_pypi", "pip_local", "pip_e_local"])
 def package_type_(request):
     return request.param
 
 
-def test_install(install_type, tmp_path, package_type):
-    if install_type is None:
-        pytest.skip("Please specify type of installation")
-    venv_path = tmp_path / 'venv'
-    venv_path.mkdir()
+def test_install(tmp_venv_with_nncf, install_type, tmp_path, package_type):
+    venv_path = tmp_venv_with_nncf
 
-    version_string = "{}.{}".format(sys.version_info[0], sys.version_info[1])
-    subprocess.call("virtualenv -ppython{} {}".format(version_string, venv_path), shell=True)
     python_executable_with_venv = ". {0}/bin/activate && {0}/bin/python".format(venv_path)
     pip_with_venv = ". {0}/bin/activate && {0}/bin/pip".format(venv_path)
 
     run_path = tmp_path / 'run'
-    run_path.mkdir()
 
     shutil.copy(TEST_ROOT / INSTALL_CHECKS_FILENAME, run_path)
-
-    if package_type == "pypi":
-        subprocess.run(
-            "{} install nncf".format(pip_with_venv), check=True, shell=True)
-    else:
-
-        subprocess.run(
-            "{python} {nncf_repo_root}/setup.py {package_type} {install_flag}".format(
-                python=python_executable_with_venv,
-                nncf_repo_root=PROJECT_ROOT,
-                package_type=package_type,
-                install_flag='--cpu-only' if
-                install_type == "CPU" else ''),
-            check=True,
-            shell=True,
-            cwd=PROJECT_ROOT)
 
     # Do additional install step for sdist/bdist packages
     if package_type == "sdist":

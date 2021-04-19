@@ -14,18 +14,27 @@
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Type, List, Dict, Set, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Type
 
 import addict as ad
 import jstyleson as json
 import warnings
 
-from nncf.config import product_dict
-from nncf.definitions import NNCF_PACKAGE_ROOT_DIR, HW_CONFIG_RELATIVE_DIR
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
-from nncf.hw_config_op_names import HWConfigOpName
-from nncf.quantization.layers import QuantizerConfig, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from nncf.common.os import safe_open
+from nncf.config import product_dict
+from nncf.definitions import HW_CONFIG_RELATIVE_DIR
+from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
+from nncf.graph.operator_metatypes import OPERATOR_METATYPES
+from nncf.hw_config_op_names import HWConfigOpName
+from nncf.quantization.layers import AsymmetricQuantizer
+from nncf.quantization.layers import QuantizationMode
+from nncf.quantization.layers import QuantizerConfig
+from nncf.quantization.layers import SymmetricQuantizer
 
 
 class HWConfigType(Enum):
@@ -43,6 +52,7 @@ class HWConfigType(Enum):
             return HWConfigType.VPU
         raise RuntimeError("Unknown HW config type string")
 
+
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     'ANY': HWConfigType.CPU.value,
     'CPU': HWConfigType.CPU.value,
@@ -50,6 +60,7 @@ HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     'GPU': HWConfigType.GPU.value,
     'TRIAL': None
 }
+
 
 def get_metatypes_by_hw_config_name(hw_config_name: HWConfigOpName) -> List['OperatorMetatype']:
     retval = []
@@ -64,6 +75,7 @@ class HWConfig(list):
     ATTRIBUTES_NAME = "attributes"
     SCALE_ATTRIBUTE_NAME = "scales"
     UNIFIED_TYPE_NAME = "unified"
+    ADJUST_PADDING_ATTRIBUTE_NAME = "adjust_padding"
 
     TYPE_TO_CONF_NAME_DICT = {
         HWConfigType.CPU: "cpu.json",
@@ -148,7 +160,7 @@ class HWConfig(list):
         raise RuntimeError("Invalid quantization granularity specified in HW config")
 
     @staticmethod
-    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict, for_weights=False):
+    def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
         bits = quantization_subdict["bits"]
         mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
@@ -170,11 +182,10 @@ class HWConfig(list):
                     "Invalid value of quantizer parameter `level_high`.\
                          The parameter must be consistent with other parameters!"
 
-        return QuantizerConfig(bits=bits,
+        return QuantizerConfig(num_bits=bits,
                                mode=mode,
                                per_channel=is_per_channel,
-                               signedness_to_force=signedness_to_force,
-                               is_weights=for_weights)
+                               signedness_to_force=signedness_to_force)
 
     @staticmethod
     def is_qconf_list_corresponding_to_unspecified_op(qconf_list: Optional[List[QuantizerConfig]]):
@@ -207,7 +218,7 @@ class HWConfig(list):
             qconf_list_with_possible_duplicates = []
             for hw_config_qconf_dict in allowed_qconfs:
                 qconf_list_with_possible_duplicates.append(
-                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict, for_weights))
+                    self.get_qconf_from_hw_config_subdict(hw_config_qconf_dict))
 
             qconf_list = list(OrderedDict.fromkeys(qconf_list_with_possible_duplicates))
 
@@ -216,17 +227,27 @@ class HWConfig(list):
 
         return retval
 
-    def get_operations_with_unified_scales(self) -> Set[Type['OperatorMetatype']]:
-        retval = set()
+    def _get_operations_with_attribute_values(self, attribute_name_per_its_value: Dict[str, Any]) -> \
+        Set[Type['OperatorMetatype']]:
+        result = set()
         for op_dict in self:
-            if self.ATTRIBUTES_NAME in op_dict:
-                if self.SCALE_ATTRIBUTE_NAME in op_dict[self.ATTRIBUTES_NAME]:
-                    if op_dict[self.ATTRIBUTES_NAME][self.SCALE_ATTRIBUTE_NAME] == self.UNIFIED_TYPE_NAME:
-                        hw_config_op_name = op_dict.type  # type: HWConfigOpName
-                        metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
-                        if not metatypes:
-                            warnings.warn(
-                                "Operation name {} in HW config is not registered in NNCF under any supported "
-                                "operation metatype - will be ignored".format(hw_config_op_name))
-                        retval.update(metatypes)
-        return retval
+            if self.ATTRIBUTES_NAME not in op_dict:
+                continue
+            for attr_name, attr_value in attribute_name_per_its_value.items():
+                is_value_matched = op_dict[self.ATTRIBUTES_NAME][attr_name] == attr_value
+                is_attr_set = attr_name in op_dict[self.ATTRIBUTES_NAME]
+                if is_value_matched and is_attr_set:
+                    hw_config_op_name = op_dict.type  # type: HWConfigOpName
+                    metatypes = get_metatypes_by_hw_config_name(hw_config_op_name)
+                    if not metatypes:
+                        warnings.warn(
+                            "Operation name {} in HW config is not registered in NNCF under any supported "
+                            "operation metatype - will be ignored".format(hw_config_op_name))
+                    result.update(metatypes)
+        return result
+
+    def get_operations_with_unified_scales(self) -> Set[Type['OperatorMetatype']]:
+        return self._get_operations_with_attribute_values({self.SCALE_ATTRIBUTE_NAME: self.UNIFIED_TYPE_NAME})
+
+    def get_operations_with_adjusted_paddings(self) -> Set[Type['OperatorMetatype']]:
+        return self._get_operations_with_attribute_values({self.ADJUST_PADDING_ATTRIBUTE_NAME: True})

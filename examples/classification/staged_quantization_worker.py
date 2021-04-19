@@ -32,7 +32,7 @@ from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
     print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from nncf.binarization.algo import BinarizationController
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.model_creation import create_compressed_model
 from nncf.quantization.algo import QuantizationController
@@ -182,10 +182,10 @@ def staged_quantization_main_worker(current_gpu, config):
         config.start_epoch = resuming_checkpoint['epoch']
         best_acc1 = resuming_checkpoint['best_acc1']
         kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint['original_model_state_dict'])
-        compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['compression_scheduler'])
-        optimizer.load_state_dict(resuming_checkpoint['optimizer'])
-        optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
+        compression_ctrl.scheduler.load_state(resuming_checkpoint['compression_scheduler'])
         if config.mode.lower() == 'train':
+            optimizer.load_state_dict(resuming_checkpoint['optimizer'])
+            optimizer_scheduler.load_state_dict(resuming_checkpoint['optimizer_scheduler'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
         else:
@@ -263,7 +263,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                 'best_acc1': best_acc1,
                 'compression_level': compression_level,
                 'optimizer': optimizer.state_dict(),
-                'compression_scheduler': compression_ctrl.scheduler.state_dict(),
+                'compression_scheduler': compression_ctrl.scheduler.get_state(),
                 'optimizer_scheduler': optimizer_scheduler.state_dict()
             }
 

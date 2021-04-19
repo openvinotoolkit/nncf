@@ -15,6 +15,7 @@ import os
 import torch
 import torch.nn as nn
 
+from examples.common import restricted_pickle_module
 from examples.common.example_logger import logger
 from examples.object_detection.layers import L2Norm
 from examples.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
@@ -80,7 +81,8 @@ class SSD_VGG(nn.Module):
             # trust.
             #
             self.load_state_dict(torch.load(base_file,
-                                            map_location=lambda storage, loc: storage))
+                                            map_location=lambda storage, loc: storage,
+                                            pickle_module=restricted_pickle_module))
             logger.debug('Finished!')
         else:
             logger.error('Sorry only .pth and .pkl files supported.')
@@ -161,7 +163,8 @@ def build_ssd_vgg(cfg, size, num_classes, config):
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
         logger.debug('Loading base network...')
-        basenet_weights = torch.load(config.basenet)
+        basenet_weights = torch.load(config.basenet,
+                                     pickle_module=restricted_pickle_module)
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace('features.', '')

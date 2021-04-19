@@ -14,6 +14,7 @@
 import os
 import torch
 
+from examples.common import restricted_pickle_module
 from nncf.checkpoint_loading import load_state
 
 
@@ -47,7 +48,7 @@ def save_checkpoint(model, optimizer, epoch, miou, compression_level, compressio
         'compression_level': compression_level,
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict(),
-        'scheduler': compression_scheduler.state_dict()
+        'scheduler': compression_scheduler.get_state()
     }
     torch.save(checkpoint, checkpoint_path)
     return checkpoint_path
@@ -83,7 +84,8 @@ def load_checkpoint(model, model_path, device_name, optimizer=None, compression_
     # may be used to perform arbitrary code execution during unpickling. Only load the data you
     # trust.
     #
-    checkpoint = torch.load(model_path, map_location=device_name)
+    checkpoint = torch.load(model_path, map_location=device_name,
+                            pickle_module=restricted_pickle_module)
     load_state(model, checkpoint['state_dict'], is_resume=True)
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -91,6 +93,6 @@ def load_checkpoint(model, model_path, device_name, optimizer=None, compression_
     miou = checkpoint['miou']
 
     if "scheduler" in checkpoint and compression_scheduler is not None:
-        compression_scheduler.load_state_dict(checkpoint['scheduler'])
+        compression_scheduler.load_state(checkpoint['scheduler'])
 
     return model, optimizer, epoch, miou, compression_scheduler

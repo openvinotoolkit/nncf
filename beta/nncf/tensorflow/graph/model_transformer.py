@@ -16,8 +16,9 @@ from collections import namedtuple
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.graph.transformations.commands import TargetType
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 from beta.nncf.tensorflow.graph.utils import get_custom_objects
 from beta.nncf.tensorflow.graph.utils import get_weight_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
@@ -29,33 +30,32 @@ WeightOperations = namedtuple('WeightOperations',
                               ('weights_attr_name', 'operations'))
 
 
-class ModelTransformer:
+class TFModelTransformer(ModelTransformer):
     """
     Applies transformations to a Keras model graph.
     """
     def __init__(self, model, transformation_layout):
         """
-        Constructor
+        Initializes Model Transformer
 
         :param model: Keras model to be transformed
-        :param transformation_layout: list of transformations
+        :param transformation_layout: List of transformations
         """
         if not is_sequential_or_functional_model(model):
             raise ValueError(
                 'Only tf.keras sequential or functional models can be transformed.')
 
-        self._model = model
+        super().__init__(model, transformation_layout)
         self._model_config = model.get_config()
         self._custom_objects = dict(
             list(get_custom_objects(model).items()) + list(get_nncf_custom_objects().items())
         )
-        self._transformations = transformation_layout.transformations
         self._name_mapping = {}
 
     def transform(self):
         """ Applies transformations to the Keras model.
 
-        :return: transformed Keras model
+        :return: The transformed Keras model
         """
         layer_weights_map = {}
         for layer in self._model.layers:
@@ -144,7 +144,7 @@ class ModelTransformer:
     def _insert(self, target_point, insertion_objects):
         target_layer_name = self._get_target_layer_name(target_point)
 
-        if target_point.type == TargetType.WEIGHT_OPERATION:
+        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             weight_operations = [
                 WeightOperations(target_point.weights_attr_name, insertion_objects)]
             self._insert_weight_operations(target_layer_name, weight_operations)
@@ -165,7 +165,7 @@ class ModelTransformer:
         weight_operations = []
         for cmd in commands:
             if cmd.type != TransformationType.INSERT or \
-                    cmd.target_point.type != TargetType.WEIGHT_OPERATION:
+                    cmd.target_point.type != TargetType.OPERATION_WITH_WEIGHTS:
                 raise TypeError('Multiple insertion transform does not support command: '
                                 'command type - {}; target point type - {}'
                                 .format(cmd.type, cmd.target_point.type))
@@ -180,7 +180,7 @@ class ModelTransformer:
     def _remove(self, target_point):
         target_layer_name = self._get_target_layer_name(target_point)
 
-        if target_point.type == TargetType.WEIGHT_OPERATION:
+        if target_point.type == TargetType.OPERATION_WITH_WEIGHTS:
             self._remove_weight_operation(
                 target_layer_name,
                 target_point.weights_attr_name,
@@ -194,7 +194,7 @@ class ModelTransformer:
 
         def find_weights_operation(operations, name):
             for op in operations:
-                if op['name'] == name:
+                if op['config']['name'] == name:
                     return op
             return None
 

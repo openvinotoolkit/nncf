@@ -581,3 +581,115 @@ class MaskrcnnHead(tf.keras.layers.Layer):
                         [batch_indices, mask_indices, class_indices], axis=2)
                     mask_outputs = tf.gather_nd(mask_outputs, gather_indices)
             return mask_outputs
+
+
+class YOLOv4:
+    """YOLOv4 neck and head"""
+
+    def DarknetConv2D_BN_Leaky(self, *args, **kwargs):
+        """Darknet Convolution2D followed by SyncBatchNormalization and LeakyReLU."""
+        no_bias_kwargs = {'use_bias': False}
+        no_bias_kwargs.update(kwargs)
+        return nn_ops.compose(
+            nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
+            tf.keras.layers.experimental.SyncBatchNormalization(),
+            tf.keras.layers.LeakyReLU(alpha=0.1))
+
+    def Spp_Conv2D_BN_Leaky(self, x, num_filters):
+        y1 = tf.keras.layers.MaxPooling2D(pool_size=(5,5), strides=(1,1), padding='same')(x)
+        y2 = tf.keras.layers.MaxPooling2D(pool_size=(9,9), strides=(1,1), padding='same')(x)
+        y3 = tf.keras.layers.MaxPooling2D(pool_size=(13,13), strides=(1,1), padding='same')(x)
+
+        y = nn_ops.compose(
+                tf.keras.layers.Concatenate(),
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))([y3, y2, y1, x])
+        return y
+
+    def make_yolo_head(self, x, num_filters):
+        """6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer"""
+        x = nn_ops.compose(
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)),
+                self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)),
+                self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))(x)
+
+        return x
+
+    def make_yolo_spp_head(self, x, num_filters):
+        """6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer"""
+        x = nn_ops.compose(
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)),
+                self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))(x)
+
+        x = self.Spp_Conv2D_BN_Leaky(x, num_filters)
+
+        x = nn_ops.compose(
+                self.DarknetConv2D_BN_Leaky(num_filters*2, (3,3)),
+                self.DarknetConv2D_BN_Leaky(num_filters, (1,1)))(x)
+
+        return x
+
+    def __call__(self, feature_maps, feature_channel_nums, num_anchors, num_classes):
+        f1, f2, f3 = feature_maps
+        f1_channel_num, f2_channel_num, f3_channel_num = feature_channel_nums
+
+        # feature map 1 head (19x19 for 608 input)
+        x1 = self.make_yolo_spp_head(f1, f1_channel_num // 2)
+
+        # upsample fpn merge for feature map 1 & 2
+        x1_upsample = nn_ops.compose(
+            self.DarknetConv2D_BN_Leaky(f2_channel_num // 2, (1, 1)),
+            tf.keras.layers.UpSampling2D(2))(x1)
+
+        x2 = self.DarknetConv2D_BN_Leaky(f2_channel_num // 2, (1, 1))(f2)
+        x2 = tf.keras.layers.Concatenate()([x2, x1_upsample])
+
+        # feature map 2 head (38x38 for 608 input)
+        x2 = self.make_yolo_head(x2, f2_channel_num // 2)
+
+        # upsample fpn merge for feature map 2 & 3
+        x2_upsample = nn_ops.compose(
+            self.DarknetConv2D_BN_Leaky(f3_channel_num // 2, (1, 1)),
+            tf.keras.layers.UpSampling2D(2))(x2)
+
+        x3 = self.DarknetConv2D_BN_Leaky(f3_channel_num // 2, (1, 1))(f3)
+        x3 = tf.keras.layers.Concatenate()([x3, x2_upsample])
+
+        # feature map 3 head & output (76x76 for 608 input)
+        # x3, y3 = make_last_layers(x3, f3_channel_num//2, num_anchors*(num_classes+5))
+        x3 = self.make_yolo_head(x3, f3_channel_num // 2)
+        y3 = nn_ops.compose(
+            self.DarknetConv2D_BN_Leaky(f3_channel_num, (3, 3)),
+            nn_ops.DarknetConv2D(num_anchors * (num_classes + 5), (1, 1), name='predict_conv_3'))(x3)
+
+        # downsample fpn merge for feature map 3 & 2
+        x3_downsample = nn_ops.compose(
+            tf.keras.layers.ZeroPadding2D(((1, 0), (1, 0))),
+            self.DarknetConv2D_BN_Leaky(f2_channel_num // 2, (3, 3), strides=(2, 2)))(x3)
+
+        x2 = tf.keras.layers.Concatenate()([x3_downsample, x2])
+
+        # feature map 2 output (38x38 for 608 input)
+        # x2, y2 = make_last_layers(x2, 256, num_anchors*(num_classes+5))
+        x2 = self.make_yolo_head(x2, f2_channel_num // 2)
+        y2 = nn_ops.compose(
+            self.DarknetConv2D_BN_Leaky(f2_channel_num, (3, 3)),
+            nn_ops.DarknetConv2D(num_anchors * (num_classes + 5), (1, 1), name='predict_conv_2'))(x2)
+
+        # downsample fpn merge for feature map 2 & 1
+        x2_downsample = nn_ops.compose(
+            tf.keras.layers.ZeroPadding2D(((1, 0), (1, 0))),
+            self.DarknetConv2D_BN_Leaky(f1_channel_num // 2, (3, 3), strides=(2, 2)))(x2)
+
+        x1 = tf.keras.layers.Concatenate()([x2_downsample, x1])
+
+        # feature map 1 output (19x19 for 608 input)
+        # x1, y1 = make_last_layers(x1, f1_channel_num//2, num_anchors*(num_classes+5))
+        x1 = self.make_yolo_head(x1, f1_channel_num // 2)
+        y1 = nn_ops.compose(
+            self.DarknetConv2D_BN_Leaky(f1_channel_num, (3, 3)),
+            nn_ops.DarknetConv2D(num_anchors * (num_classes + 5), (1, 1), name='predict_conv_1'))(x1)
+
+        return y1, y2, y3

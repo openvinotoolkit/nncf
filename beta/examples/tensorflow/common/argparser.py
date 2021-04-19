@@ -26,6 +26,14 @@ def get_common_argument_parser(**flags):
         help='Path to a config file with task/model-specific parameters.',
         required=True)
 
+    add_argument(
+        parser=parser,
+        condition=flags.get('metrics_dump', True),
+        parameters=argument_parameters(
+            '--metrics-dump',
+            type=str,
+            help='Name of metrics collecting .json file'))
+
     model_init_mode = parser.add_mutually_exclusive_group()
 
     add_argument(
@@ -60,24 +68,25 @@ def get_common_argument_parser(**flags):
             default=None,
             help='Specifies the directory for the trained model checkpoints to be saved to.'))
 
-    execution_type = parser.add_mutually_exclusive_group()
+    if flags.get('execution_args', True):
+        execution_type = parser.add_mutually_exclusive_group()
 
-    add_argument(
-        parser=execution_type,
-        condition=flags.get('gpu_id', True),
-        parameters=argument_parameters(
-            '--gpu-id',
-            type=int,
-            metavar='N',
-            help='The ID of the GPU training will be performed on, without any parallelization.'))
+        add_argument(
+            parser=execution_type,
+            condition=flags.get('gpu_id', True),
+            parameters=argument_parameters(
+                '--gpu-id',
+                type=int,
+                metavar='N',
+                help='The ID of the GPU training will be performed on, without any parallelization.'))
 
-    add_argument(
-        parser=execution_type,
-        condition=flags.get('cpu_only', True),
-        parameters=argument_parameters(
-            '--cpu-only',
-            action='store_true',
-            help='Specifies that the computation should be performed using CPU only.'))
+        add_argument(
+            parser=execution_type,
+            condition=flags.get('cpu_only', True),
+            parameters=argument_parameters(
+                '--cpu-only',
+                action='store_true',
+                help='Specifies that the computation should be performed using CPU only.'))
 
     # Hyperparameters
     add_argument(

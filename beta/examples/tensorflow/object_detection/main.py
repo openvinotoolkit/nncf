@@ -30,18 +30,20 @@ from beta.examples.tensorflow.common.optimizer import build_optimizer
 from beta.examples.tensorflow.common.sample_config import create_sample_config
 from beta.examples.tensorflow.common.scheduler import build_scheduler
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import Timer
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
+from beta.examples.tensorflow.common.utils import write_metrics
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 from beta.examples.tensorflow.object_detection.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.object_detection.models.model_selector import get_model_builder
 
 
 def get_argument_parser():
     parser = get_common_argument_parser(precision=False,
-                                        save_checkpoint_freq=False,
-                                        print_freq=False)
+                                        save_checkpoint_freq=False)
 
     parser.add_argument(
         '--mode',
@@ -72,9 +74,7 @@ def get_config_from_argv(argv, parser):
     return predefined_config
 
 
-def get_dataset_builders(config, strategy):
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-
+def get_dataset_builders(config, num_devices):
     train_builder = COCODatasetBuilder(config=config,
                                        is_train=True,
                                        num_devices=num_devices)
@@ -107,13 +107,16 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch):
+def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(checkpoint_manager.checkpoint, ckpt_path) == 0:
         return 0
     optimizer = checkpoint_manager.checkpoint.optimizer
     initial_step = optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d (global step %d)', initial_epoch, initial_step)
     return initial_epoch, initial_step
 
@@ -167,16 +170,18 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer):
+    epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, num_test_batches, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     validation_summary_writer = SummaryWriter(log_dir, 'validation')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
+    timer = Timer()
+    timer.tic()
 
-    logger.info('Training started')
+    logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
-        logger.info('Epoch {}/{}'.format(epoch, epochs))
+        logger.info('Epoch: {}/{}'.format(epoch, epochs))
         compression_ctrl.scheduler.epoch_step(epoch)
 
         for step, x in enumerate(train_dist_dataset):
@@ -198,12 +203,13 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
-            if step % 100 == 0:
-                logger.info('Step {}/{}'.format(step, steps_per_epoch))
+            if step % print_freq == 0:
+                time = timer.toc(average=False)
+                logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
+                timer.tic()
 
-        logger.info('Evaluation...')
-        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+        test_metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, print_freq)
         validation_summary_writer(metrics=test_metric_result, step=optimizer.iterations.numpy())
         eval_metric.reset_states()
         logger.info('Validation metric = {}'.format(test_metric_result))
@@ -221,22 +227,43 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
     compression_summary_writer.close()
 
 
-def evaluate(test_step, metric, test_dist_dataset):
+def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
     """Runs evaluation steps and aggregate metrics"""
-    for x in test_dist_dataset:
+    timer = Timer()
+    timer.tic()
+
+    logger.info('Testing...')
+    for batch_idx, x in enumerate(test_dist_dataset):
         labels, outputs = test_step(x)
         metric.update_state(labels, outputs)
 
-    return metric.result()
+        if batch_idx % print_freq == 0:
+            time = timer.toc(average=False)
+            logger.info('Predict for batch: {}/{} Time: {:.3f} sec'.format(batch_idx, num_batches, time))
+            timer.tic()
+
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
+
+    timer.reset()
+
+    logger.info('Evaluating predictions...')
+    timer.tic()
+    result = metric.result()
+    timer.toc(average=False)
+    logger.info('Total time: {:.3f} sec'.format(timer.total_time))
+
+    return result
 
 
 def run(config):
     strategy = get_distribution_strategy(config)
+    if config.metrics_dump is not None:
+        write_metrics(0, config.metrics_dump)
 
     # Create dataset
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
     datasets = [builder.build() for builder in builders]
-    train_builder, _ = builders
+    train_builder, test_builder = builders
     train_dataset, test_dataset = datasets
     train_dist_dataset = strategy.experimental_distribute_dataset(train_dataset)
     test_dist_dataset = strategy.experimental_distribute_dataset(test_dataset)
@@ -244,6 +271,7 @@ def run(config):
     # Training parameters
     epochs = config.epochs
     steps_per_epoch = train_builder.steps_per_epoch
+    num_test_batches = test_builder.steps_per_epoch
 
     # Create model builder
     model_builder = get_model_builder(config)
@@ -255,16 +283,14 @@ def run(config):
 
             scheduler = build_scheduler(
                 config=config,
-                epoch_size=train_builder.num_examples,
-                batch_size=train_builder.global_batch_size,
-                steps=steps_per_epoch)
+                steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(
                 config=config,
                 scheduler=scheduler)
 
             eval_metric = model_builder.eval_metrics()
-            loss_fn = model_builder.build_loss_fn()
+            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
             predict_post_process_fn = model_builder.post_processing
 
             checkpoint = tf.train.Checkpoint(model=compress_model, optimizer=optimizer)
@@ -275,23 +301,26 @@ def run(config):
                 initial_epoch, initial_step = resume_from_checkpoint(checkpoint_manager,
                                                                      compression_ctrl,
                                                                      config.ckpt_path,
-                                                                     steps_per_epoch)
+                                                                     steps_per_epoch,
+                                                                     config)
             else:
-                logger.info('initialization...')
+                logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if 'train' in config.mode:
-        logger.info('Training...')
         train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_dataset, initial_epoch, initial_step,
-              epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer)
+            epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
+            config.print_freq)
 
-    logger.info('Evaluation...')
     print_statistics(compression_ctrl.statistics())
-    metric_result = evaluate(test_step, eval_metric, test_dist_dataset)
+    metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
+
+    if config.metrics_dump is not None:
+        write_metrics(metric_result['AP'], config.metrics_dump)
 
     if 'export' in config.mode:
         save_path, save_format = get_saving_parameters(config)

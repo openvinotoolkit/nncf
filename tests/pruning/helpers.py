@@ -16,7 +16,9 @@ from nncf.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig
-from tests.helpers import create_conv, create_transpose_conv
+from tests.helpers import create_conv
+from tests.helpers import create_transpose_conv
+from tests.helpers import create_depthwise_conv
 
 
 class PruningTestModel(nn.Module):
@@ -39,16 +41,16 @@ class TestModelDiffConvs(nn.Module):
     def __init__(self):
         super().__init__()
         # Usual conv
-        self.conv1 = create_conv(1, 3, 2, 9, -2)
+        self.conv1 = create_conv(1, 32, 2, 9, -2)
         self.relu = nn.ReLU()
         # Depthwise conv
-        self.conv2 = nn.Conv2d(3, 3, 1, groups=3)
+        self.conv2 = nn.Conv2d(32, 32, 1, groups=32)
 
         # Downsample conv
-        self.conv3 = create_conv(3, 8, 3, -10, 0, stride=2)
+        self.conv3 = create_conv(32, 32, 3, -10, 0, stride=2)
 
         # Group conv
-        self.conv4 = nn.Conv2d(8, 4, 1, groups=4)
+        self.conv4 = nn.Conv2d(32, 16, 1, groups=8)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -142,6 +144,45 @@ class PruningTestModelConcat(nn.Module):
         return x
 
 
+class PruningTestModelConcatBN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+
+        self.conv2 = create_conv(16, 16, 1, 2, -2)
+        self.conv3 = create_conv(16, 16, 1, 2, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.relu = nn.ReLU()
+        self.conv4 = create_conv(32, 16, 1, 10, 0)
+        for i in range(16):
+            self.conv4.weight.data[i] += 16 - i
+        self.conv5 = create_conv(48, 16, 1, 10, 0)
+
+        self.bn = nn.BatchNorm2d(16)
+        self.bn.bias = torch.nn.Parameter(torch.ones(16))
+
+        self.bn1 = nn.BatchNorm2d(32)
+        self.bn1.bias = torch.nn.Parameter(torch.ones(32))
+
+        self.bn2 = nn.BatchNorm2d(48)
+        self.bn2.bias = torch.nn.Parameter(torch.ones(48))
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x1 = self.bn1(x)
+        x1 = self.conv4(x1)
+        x = torch.cat([x1, x], dim=1)
+        x = self.bn2(x)
+        x = self.conv5(x)
+        return x
+
+
 class PruningTestModelEltwise(nn.Module):
     def __init__(self):
         super().__init__()
@@ -194,6 +235,160 @@ class BigPruningTestModel(nn.Module):
         x = self.relu(x)
         x = self.conv3(x)
         x = x.view(1, -1)
+        return x
+
+
+class TestShuffleUnit(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 downsample):
+        super().__init__()
+        self.downsample = downsample
+        mid_channels = out_channels // 2
+
+        self.compress_conv1 = create_conv((in_channels if self.downsample else mid_channels), mid_channels, 1, 1, -2)
+        self.dw_conv2 = create_depthwise_conv(mid_channels, 3, 2, -2, padding=1, stride=(2 if self.downsample else 1))
+        self.expand_conv3 = create_conv(mid_channels, mid_channels, 1, 1, -2)
+
+        if downsample:
+            self.dw_conv4 = create_depthwise_conv(in_channels, 3, 2, -2, padding=1, stride=2)
+            self.expand_conv5 = create_conv(in_channels, mid_channels, 1, 1, -2)
+
+        self.activ = nn.ReLU(inplace=True)
+
+
+    def forward(self, x):
+        if self.downsample:
+            y1 = self.dw_conv4(x)
+            y1 = self.expand_conv5(y1)
+            y1 = self.activ(y1)
+            x2 = x
+        else:
+            y1, x2 = torch.chunk(x, chunks=2, dim=1)
+
+        y2 = self.compress_conv1(x2)
+        y2 = self.activ(y2)
+        y2 = self.dw_conv2(y2)
+        y2 = self.expand_conv3(y2)
+
+        y2 = self.activ(y2)
+        if not self.downsample:
+            y2 = y2 + x2
+        x = torch.cat((y1, y2), dim=1)
+        return x
+
+
+class TestModelShuffleNetUnit(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 16, 1, 1, -2)
+        self.unit1 = TestShuffleUnit(16, 16, False)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.unit1(x)
+        return x
+
+class TestModelShuffleNetUnitDW(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 16, 1, 1, -2)
+        self.unit1 = TestShuffleUnit(16, 32, True)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.unit1(x)
+        return x
+
+
+class TestModelMultipleForward(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(2, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.conv3 = create_conv(2, 16, 1, 1, -2)
+        # Wights of conv3 is initialized to check difference masks
+        self.conv4 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x1 = self.conv1(x)
+        x2 = self.conv2(x)
+        x3 = self.conv3(x)
+        x1 = self.conv4(x1)
+        x2 = self.conv4(x2)
+        x3 = self.conv4(x3)
+
+        return x1, x2, x3
+
+
+class TestModelGroupNorm(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv1.weight.data[i] += i
+        self.gn1 = nn.GroupNorm(16, 16)  # Instance Normalization
+        self.conv2 = create_conv(16, 16, 1, 1, -2)
+        for i in range(16):
+            self.conv2.weight.data[i] += i
+        self.gn2 = nn.GroupNorm(2, 16)  # Group Normalization
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.gn1(x)
+        x = self.conv2(x)
+        x = self.gn2(x)
+        return x
+
+
+class PruningTestWideModelConcat(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 1, 1, 1)
+        self.conv3 = create_conv(512, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.conv4 = create_conv(2048, 2048, 1, 1, 1)
+        for i in range(2048):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = torch.cat([self.conv2(x), self.conv3(x)], dim=1)
+        x = self.conv4(x)
+        return x
+
+
+class PruningTestWideModelEltwise(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 1, 1, 1)
+        self.conv3 = create_conv(512, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.conv4 = create_conv(1024, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv4.weight.data[i] += i
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x) + self.conv3(x)
+        x = self.conv4(x)
         return x
 
 

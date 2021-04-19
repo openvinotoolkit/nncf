@@ -81,3 +81,39 @@ def get_basic_magnitude_sparsity_config(input_sample_size=None):
             }
         })
     return config
+
+
+def get_basic_filter_pruning_config(input_sample_size=None):
+    if input_sample_size is None:
+        input_sample_size = [1, 4, 4, 1]
+    config = NNCFConfig({
+        "model": "basic_prune_conv",
+        "input_info":
+            {
+                "sample_size": input_sample_size,
+            },
+        "compression":
+            {
+                "algorithm": "filter_pruning",
+                "params": {}
+            }
+        })
+    return config
+
+
+def get_basic_sparsity_config(input_sample_size=None, algo='magnitude_sparsity'):
+    if input_sample_size is None:
+        input_sample_size = [1, 4, 4, 1]
+    config = NNCFConfig({
+        "model": "basic_sparse_conv",
+        "input_info":
+            {
+                "sample_size": input_sample_size,
+            },
+        "compression":
+            {
+                "algorithm": algo,
+                "params": {}
+            }
+    })
+    return config

@@ -34,7 +34,7 @@ from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
@@ -312,7 +312,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         best_miou = resuming_checkpoint['miou']
 
         if "scheduler" in resuming_checkpoint and compression_ctrl.scheduler is not None:
-            compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
+            compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
         logger.info("Resuming from model: Start epoch = {0} "
                     "| Best mean IoU = {1:.4f}".format(start_epoch, best_miou))
         config.start_epoch = start_epoch

@@ -19,8 +19,11 @@ from torch import Tensor
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
+from nncf.common.os import safe_open
 from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
+
+from nncf.common.utils.logger import logger
 
 
 class CustomTraceFunction:
@@ -109,11 +112,6 @@ def torch_jit_script_wrapper(*args, **kwargs):
     return retval
 
 
-def get_arg_positions_to_quantize(op_name: str):
-    from nncf.dynamic_graph.function_input_quantization import FUNCTIONS_TO_QUANTIZE
-    return next((x.positions_of_args_to_quantize for x in FUNCTIONS_TO_QUANTIZE
-                 if x.name == op_name), None)
-
 
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
@@ -129,12 +127,10 @@ _ORIG_JIT_SCRIPT = None
 
 
 def patch_torch_jit_script():
-
-    # These two import statements are required, otherwise we get a
+    # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
     # pylint:disable=unused-import,redefined-outer-name,reimported
     import torch
-    import torchvision
 
     orig = getattr(torch.jit, "script")
     global _ORIG_JIT_SCRIPT
@@ -175,7 +171,7 @@ def patch_torch_operators():
     # patch operators
     import torch.nn.functional as F
     import torch
-    from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
+    from nncf.graph.operator_metatypes import OPERATOR_METATYPES
     for op_meta_class in OPERATOR_METATYPES.registry_dict.values():  # type: OperatorMetatype
         if op_meta_class.torch_nn_functional_patch_spec is not None:
             ps = op_meta_class.torch_nn_functional_patch_spec
@@ -188,7 +184,7 @@ def patch_torch_operators():
             patch_namespace_by_patchspec(TracedTensor, ps)
 
     # Patch __repr__ methods so that debugging does not add new nodes to the graph
-    patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly))
+    patch_namespace_opname(TracedTensor, PatchedOperatorInfo("__repr__", ForwardTraceOnly()))
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
     torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
@@ -204,3 +200,60 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
+
+
+def patch_extension_build_function():
+    """
+    The function patches PyTorch and fix a bug inside CUDA extensions building;
+    The bug must be fixed with a new PyTorch 1.8.0
+    """
+    import torch.utils.cpp_extension
+    try:
+        torch_version_numbers = torch.__version__.split('+')[0]
+        split_torch_version = list(map(int, torch_version_numbers.split('.')))
+    except ValueError as e:
+        logger.warning('Skip applying a patch to building extension with a reason: '
+                       'Cannot parse a PyTorch version with the error {}'.format(e))
+        return
+
+    if split_torch_version < [1, 8, 0]:
+        if torch.__version__ not in ('1.5.1', '1.7.0', '1.7.1'):
+            logger.warning('Skip applying a patch to building extension with a reason: '
+                           'PyTorch version is not supported for this')
+            return
+
+        def sort_arch_flags(func):
+            def wrapped(*args, **kwargs):
+                flags = func(*args, **kwargs)
+                return sorted(flags)
+
+            return wrapped
+
+        # pylint:disable=protected-access
+        torch.utils.cpp_extension._get_cuda_arch_flags = \
+            sort_arch_flags(torch.utils.cpp_extension._get_cuda_arch_flags)
+
+    else:
+        import re
+        import sys
+        from pathlib import Path
+
+        # A hackish backport of the https://github.com/pytorch/pytorch/pull/56015 fix.
+        def remove_nvcc_dep_build(func):
+            def wrapped(*args, **kwargs):
+                func(*args, **kwargs)
+                if len(args) > 0:
+                    target_ninja_file_path = args[0]
+                else:
+                    target_ninja_file_path = kwargs['path']
+                with safe_open(Path(target_ninja_file_path), 'r') as ninja_build_file:
+                    ninja_file_contents = ninja_build_file.read()
+                with safe_open(Path(target_ninja_file_path), 'w') as ninja_build_file:
+                    ninja_build_file.write(re.sub(r'--generate-dependencies-with-compile --dependency-output \$out\.d',
+                                                  '', ninja_file_contents))
+            return wrapped
+
+        if sys.platform != 'win32':
+            # pylint:disable=protected-access
+            torch.utils.cpp_extension._write_ninja_file = \
+                remove_nvcc_dep_build(torch.utils.cpp_extension._write_ninja_file)

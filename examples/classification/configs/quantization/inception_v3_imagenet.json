@@ -8,10 +8,11 @@
     "batch_size" : 144,
     "epochs": 5,
     "multiprocessing_distributed" : true,
+
     "optimizer": {
         "type": "Adam",
-        "base_lr": 1e-6,
         "schedule_type": "multistep",
+        "base_lr": 1e-6,
         "steps": [
             1
         ]

@@ -12,8 +12,9 @@
 """
 import logging
 
-from nncf.algo_selector import Registry
-from nncf.compression_method_api import CompressionScheduler, CompressionLevel
+from nncf.common.utils.registry import Registry
+from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.api.compression import CompressionLevel
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ QUANTIZATION_SCHEDULERS = Registry("quantization_schedulers")
 
 
 @QUANTIZATION_SCHEDULERS.register("staged")
-class StagedQuantizationScheduler(CompressionScheduler):
+class StagedQuantizationScheduler(BaseCompressionScheduler):
     def __init__(self, quantization_ctrl: 'QuantizationController', params=None):
         super().__init__()
         if params is None:
@@ -47,20 +48,20 @@ class StagedQuantizationScheduler(CompressionScheduler):
         if should_call_init:
             self.algo.init_range()
 
-    def load_state_dict(self, state_dict):
-        super().load_state_dict(state_dict)
+    def load_state(self, state):
+        super().load_state(state)
         # Just enables/disables quantizers without calling initialization of ranges, because it's called on epoch_step
         # in the end of previous epoch before saving the scheduler's state dict.
         self._set_quantization_status()
 
     def _set_quantization_status(self):
-        if self.current_epoch >= self.activations_quant_start_epoch:
+        if max(self.current_epoch, 0) >= self.activations_quant_start_epoch:
             self.algo.enable_activation_quantization()
             logger.info('Enabled quantization of activations')
         else:
             self.algo.disable_activation_quantization()
             logger.info('Disabled quantization of activations')
-        if self.current_epoch >= self.weights_quant_start_epoch:
+        if max(self.current_epoch, 0) >= self.weights_quant_start_epoch:
             self.algo.enable_weight_quantization()
             logger.info('Enabled quantization of weights')
         else:

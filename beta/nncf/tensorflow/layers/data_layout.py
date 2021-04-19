@@ -13,7 +13,10 @@
 
 from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
+from beta.nncf.tensorflow.layers.common import CHANNEL_AXES
+from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
+from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 
 
 def get_channel_size(input_shape, input_type, input_name, layer):
@@ -37,13 +40,21 @@ def get_data_format(layer):
 
 
 def get_input_channel_axis(layer):
+    original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
     data_format = get_data_format(layer)
+    class_name = original_layer.__class__.__name__
+    if class_name in GENERAL_CONV_LAYERS:
+        return -1 if data_format == 'channels_last' else -1 - original_layer.rank
+    if class_name in ['BatchNormalization', 'LayerNormalization']:
+        return original_layer.axis
+
     return -1 if data_format == 'channels_last' else 1
 
 
 def get_weight_channel_axis(layer, weight_attr):
     original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
     class_name = original_layer.__class__.__name__
-    if class_name in LAYERS_WITH_WEIGHTS and weight_attr == LAYERS_WITH_WEIGHTS[class_name]['weight_attr_name']:
-        return LAYERS_WITH_WEIGHTS[class_name].get('channel_axes', -1)
+    if class_name in ALL_LAYERS_WITH_WEIGHTS \
+            and weight_attr == ALL_LAYERS_WITH_WEIGHTS[class_name][WEIGHT_ATTR_NAME]:
+        return ALL_LAYERS_WITH_WEIGHTS[class_name].get(CHANNEL_AXES, -1)
     return -1

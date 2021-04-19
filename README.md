@@ -77,8 +77,16 @@ See [third_party_integration](./third_party_integration) for examples of code mo
 ## System requirements
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
-- NVidia CUDA\* Toolkit 10.2
-- PyTorch\* 1.7 or later.
+- NVidia CUDA\* Toolkit 10.2 or later^
+- PyTorch\* 1.5 or later (1.8.0 not supported, 1.8.1 supported)
+
+*NOTE:* The best known PyTorch version for the current NNCF is 1.8.1, and it is highly recommended to use it.
+
+^ If a torch package built for specific CUDA version is already present in the environment into which NNCF is being installed,
+and if it has a matching base version, then the CUDA version for which the present torch package is targeted will be used.
+
+Otherwise NNCF will install the latest available torch version from pip, which is targeted to the CUDA version of PyTorch packaging strategy's choosing.
+For PyTorch 1.8.1, the default CUDA is 10.2.
 
 ## Installation
 We suggest to install or use the package in the [Python virtual environment](https://docs.python.org/3/tutorial/venv.html).
@@ -91,10 +99,8 @@ We suggest to install or use the package in the [Python virtual environment](htt
 
 2) Install the package and its dependencies by running the following in the repository root directory:
 
-- For CPU & GPU-powered execution:
 `python setup.py install`
-- For CPU-only installation
-`python setup.py install --cpu-only`
+
 
 _NB_: For launching example scripts in this repository, we recommend replacing the `install` option above with `develop` and setting the `PYTHONPATH` variable to the root of the checked-out repository.
 
@@ -110,7 +116,7 @@ Use one of the Dockerfiles in the [docker](./docker) directory to build an image
 
 **NOTE**: If you want to use sample training scripts provided in the NNCF repository under `examples`, you should install the corresponding Python package dependencies:
 ```
-pip install examples/requirements.txt
+pip install -r examples/requirements.txt
 ```
 
 ## Contributing
@@ -139,46 +145,49 @@ Quick jump to sample type:
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|ResNet-50|INT8|ImageNet|76.04|75.97|
-|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.04|76.31|
-|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.04|75.21|
-|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.04|75.73|
-|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.04|75.57|
-|Inception V3|INT8|ImageNet|77.31|76.97|
-|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.31|76.95|
-|MobileNet V2|INT8|ImageNet|71.75|71.32|
-|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.75|71.03|
-|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.75|70.94|
-|SqueezeNet V1.1|INT8|ImageNet|58.24|58.04|
-|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.24|58.77|
-|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.68|61.57|
-|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.68|61.65|
-|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.68|69.19|
-|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.68|69.29|
-|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|73.26|72.72|
-|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.72|68.89|
+|ResNet-50|INT8|ImageNet|76.16|76.42|
+|ResNet-50|INT8 (per-tensor only)|ImageNet|76.16|76.37|
+|ResNet-50|Mixed, 44.8% INT8 / 55.2% INT4|ImageNet|76.16|76.2|
+|ResNet-50|INT8 + Sparsity 61% (RB)|ImageNet|76.16|75.43|
+|ResNet-50|INT8 + Sparsity 50% (RB)|ImageNet|76.16|75.55|
+|ResNet-50|Filter pruning, 40%, geometric median criterion|ImageNet|76.16|75.62|
+|Inception V3|INT8|ImageNet|77.34|78.25|
+|Inception V3|INT8 + Sparsity 61% (RB)|ImageNet|77.34|77.58|
+|MobileNet V2|INT8|ImageNet|71.93|71.35|
+|MobileNet V2|INT8 (per-tensor only)|ImageNet|71.93|71.3|
+|MobileNet V2|Mixed, 46.6% INT8 / 53.4% INT4|ImageNet|71.93|70.92|
+|MobileNet V2|INT8 + Sparsity 52% (RB)|ImageNet|71.93|71.11|
+|SqueezeNet V1.1|INT8|ImageNet|58.24|58.28|
+|SqueezeNet V1.1|INT8 (per-tensor only)|ImageNet|58.24|58.26|
+|SqueezeNet V1.1|Mixed, 54.7% INT8 / 45.3% INT4|ImageNet|58.24|58.9|
+|ResNet-18|XNOR (weights), scale/threshold (activations)|ImageNet|69.8|61.63|
+|ResNet-18|DoReFa (weights), scale/threshold (activations)|ImageNet|69.8|61.61|
+|ResNet-18|Filter pruning, 40%, magnitude criterion|ImageNet|69.8|69.26|
+|ResNet-18|Filter pruning, 40%, geometric median criterion|ImageNet|69.8|69.32|
+|ResNet-34|Filter pruning, 40%, geometric median criterion|ImageNet|73.3|72.73|
+|GoogLeNet|Filter pruning, 40%, geometric median criterion|ImageNet|69.75|68.82|
 
 #### Object detection
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|86.02|85.82|
-|SSD300-BN|INT8|VOC12+07 train, VOC12 eval|96.53|96.5|
-|SSD300-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|96.53|95.4|
-|SSD300-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC12 eval|96.53|91.98|
-|SSD512-BN|INT8|VOC12+07 train, VOC12 eval|97.59|97.37|
-|SSD512-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC12 eval|97.59|96.66|
+|SSD300-MobileNet|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|62.23|62.94|
+|SSD300-VGG-BN|INT8|VOC12+07 train, VOC07 eval|78.28|77.96|
+|SSD300-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|78.28|77.59|
+|SSD300-VGG-BN|Filter pruning, 40%, geometric median criterion|VOC12+07 train, VOC07 eval|78.28|77.72|
+|SSD512-VGG-BN|INT8|VOC12+07 train, VOC07 eval|80.26|80.12|
+|SSD512-VGG-BN|INT8 + Sparsity 70% (Magnitude)|VOC12+07 train, VOC07 eval|80.26|79.67|
 
 #### Semantic segmentation
 
 |Model|Compression algorithm|Dataset|PyTorch FP32 baseline|PyTorch compressed accuracy|
 | :---: | :---: | :---: | :---: | :---: |
-|UNet|INT8|CamVid|71.95|71.66|
-|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|71.72|
-|ICNet|INT8|CamVid|67.89|67.78|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.16|
-|UNet|INT8|Mapillary|56.23|56.1|
-|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|56.01|
+|UNet|INT8|CamVid|71.95|71.8|
+|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|71.95|72.03|
+|ICNet|INT8|CamVid|67.89|67.86|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.89|67.18|
+|UNet|INT8|Mapillary|56.23|55.87|
+|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|56.23|55.65|
 |UNet|Filter pruning, 25%, geometric median criterion|Mapillary|56.23|55.62|
 
 

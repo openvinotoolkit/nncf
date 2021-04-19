@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,89 +11,89 @@
  limitations under the License.
 """
 
-from beta.nncf.tensorflow.graph.transformations.commands import Layer
-from beta.nncf.tensorflow.graph.transformations.commands import MultipleInsertionCommands
-from beta.nncf.tensorflow.graph.transformations.commands import TargetType
-from beta.nncf.tensorflow.graph.transformations.commands import TransformationType
+from typing import Callable, Optional
 
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.transformations.commands import TransformationType
+from nncf.common.graph.transformations.layout import TransformationLayout
+from beta.nncf.tensorflow.graph.transformations.commands import TFMultipleInsertionCommands
+from beta.nncf.tensorflow.graph.transformations.commands import TFLayer
 
-OPERATION_POINTS = [
+GRAPH_NODE_TYPES = [
     TargetType.LAYER,
-    TargetType.WEIGHT_OPERATION
+    TargetType.OPERATION_WITH_WEIGHTS
 ]
 
 
-class TransformationLayout:
-    def __init__(self):
-        self._transformations = []
-        self._removed_target_points = []
-
-    @property
-    def transformations(self):
-        return self._transformations
-
-    def register(self, transformation):
-        if transformation.target_point in self._removed_target_points:
+class TFTransformationLayout(TransformationLayout):
+    def register(self, transformation: TransformationCommand) -> None:
+        if transformation.type == TransformationType.REMOVE:
             self._transformations.append(transformation)
-        elif transformation.type == TransformationType.REMOVE:
-            self._register_removal_transformation(transformation)
         elif transformation.type == TransformationType.INSERT:
             self._register_insertion_transformation(transformation)
         elif transformation.type == TransformationType.MULTI_INSERT:
             self._register_multiple_insertion_transformation(transformation)
 
-    def update(self, other):
-        for transformation in other.transformations:
-            self.register(transformation)
+    def _register_insertion_transformation(self, transformation: TransformationCommand) -> None:
+        start_idx = self._find_transformation(
+            lambda t: t.type == TransformationType.REMOVE and \
+                      is_object_removed(t.target_point, transformation.target_point),
+            reverse=True
+        )
+        start_idx = 0 if start_idx is None else start_idx + 1
 
-    def _register_removal_transformation(self, transformation):
-        self._removed_target_points.append(transformation.target_point)
-        self._transformations.append(transformation)
-
-    def _register_insertion_transformation(self, transformation):
         idx = self._find_transformation(
-            transformation,
-            lambda t0, t1: t0.check_command_compatibility(t1)
+            lambda t: t.check_command_compatibility(transformation),
+            start_idx=start_idx
         )
         if idx is not None:
             self.transformations[idx] = self.transformations[idx] + transformation
             return
 
         idx = self._find_transformation(
-            transformation,
-            lambda t0, t1: t0.type == TransformationType.MULTI_INSERT and \
-                           t0.check_insertion_command(t1)
+            lambda t: t.type == TransformationType.MULTI_INSERT and \
+                      t.check_insertion_command(transformation),
+            start_idx=start_idx
         )
         if idx is not None:
             self.transformations[idx].add_insertion_command(transformation)
             return
 
         idx = self._find_transformation(
-            transformation,
-            lambda t0, t1: t0.type == TransformationType.INSERT and \
-                           self.check_target_point(t0.target_point, t1.target_point)
+            lambda t: t.type == TransformationType.INSERT and \
+                      check_target_points(t.target_point, transformation.target_point),
+            start_idx=start_idx
         )
         if idx is not None:
-            self.transformations.append(
-                MultipleInsertionCommands(
-                    target_point=Layer(transformation.target_point.layer_name),
-                    check_target_point_fn=self.check_target_point,
-                    commands=[self.transformations.pop(idx), transformation]
-                ))
+            self.transformations[idx] = TFMultipleInsertionCommands(
+                    target_point=TFLayer(transformation.target_point.layer_name),
+                    check_target_points_fn=check_target_points,
+                    commands=[self.transformations[idx], transformation]
+                )
             return
+
         self.transformations.append(transformation)
 
-    def _register_multiple_insertion_transformation(self, transformation):
+    def _register_multiple_insertion_transformation(self, transformation: TransformationCommand) -> None:
+        start_idx = self._find_transformation(
+            lambda t: t.type == TransformationType.REMOVE and \
+                      is_object_removed(t.target_point, transformation.target_point),
+            reverse=True
+        )
+        start_idx = 0 if start_idx is None else start_idx + 1
+
         idx = self._find_transformation(
-            transformation,
-            lambda t0, t1: t0.check_command_compatibility(t1)
+            lambda t: t.check_command_compatibility(transformation),
+            start_idx = start_idx
         )
         if idx is not None:
             self.transformations[idx] = self.transformations[idx] + transformation
             return
 
         merged_transformations = []
-        for t in self.transformations:
+        for t in self.transformations[start_idx:]:
             if transformation.check_insertion_command(t):
                 transformation.add_insertion_command(t)
                 merged_transformations.append(t)
@@ -101,14 +101,32 @@ class TransformationLayout:
             self.transformations.remove(t)
         self.transformations.append(transformation)
 
-    def _find_transformation(self, transformation, condition):
-        for idx, t in enumerate(self.transformations):
-            if condition(t, transformation):
+    def _find_transformation(self,
+                             condition: Callable,
+                             start_idx: int = 0,
+                             reverse: bool = False) ->Optional[int]:
+        transformations_iterator = reversed(list(enumerate(self.transformations[start_idx:]))) \
+            if reverse else enumerate(self.transformations[start_idx:])
+        for idx, t in transformations_iterator:
+            if condition(t):
                 return idx
         return None
 
-    @staticmethod
-    def check_target_point(tp0, tp1):
-        return tp0.type in OPERATION_POINTS and \
-               tp1.type in OPERATION_POINTS and \
-               tp0.layer_name == tp1.layer_name
+
+def check_target_points(tp0: TargetPoint, tp1: TargetPoint) -> bool:
+    return tp0.type in GRAPH_NODE_TYPES and \
+           tp1.type in GRAPH_NODE_TYPES and \
+           tp0.layer_name == tp1.layer_name
+
+
+def is_object_removed(removed_target: TargetPoint, command_target: TargetPoint) -> bool:
+    layer_removed = removed_target.type == TargetType.LAYER and \
+                    command_target.type in GRAPH_NODE_TYPES and \
+                    removed_target.layer_name == command_target.layer_name
+
+    operation_removed = removed_target.type == TargetType.OPERATION_WITH_WEIGHTS and \
+                        removed_target.type == command_target.type and \
+                        removed_target.layer_name == command_target.layer_name and \
+                        removed_target.weights_attr_name == command_target.weights_attr_name
+
+    return layer_removed or operation_removed

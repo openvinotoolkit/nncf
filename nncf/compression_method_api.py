@@ -13,33 +13,37 @@
 
 """
 @package docstring
-This package defines the API for the NNCF compression methods, so that the user could
+This package defines the API for the NNCF compression methods so that the user could
 extend the existing algorithms.
 """
-import functools
 import numpy
 from copy import copy
-from enum import Enum
 from functools import partial
-from typing import List
+from typing import List, Tuple, Optional, TypeVar, Dict
 
 import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_mock_tensor
+from nncf.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.nncf_logger import logger as nncf_logger
-from nncf.nncf_network import NNCFNetwork, InsertionCommand
+from nncf.common.utils.logger import logger as nncf_logger
+from nncf.nncf_network import NNCFNetwork
+from nncf.nncf_network import PTModelTransformer
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
+from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionLoss
 
+ModelType = TypeVar('ModelType')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
 
 
-class CompressionLoss(nn.Module):
+class PTCompressionLoss(nn.Module, CompressionLoss):
     """
     Used to calculate additional loss to be added to the base loss during the
     training process. It uses the model graph to measure variables and activations
@@ -48,119 +52,40 @@ class CompressionLoss(nn.Module):
     and fully-connected layers to construct the loss function.
     """
 
-    def forward(self):
+    def calculate(self) -> torch.Tensor:
         """
-        Returns the compression loss value.
+        Calculates the compression loss value.
+
+        :return: The compression loss value.
         """
         return torch.zeros([])
 
-    def statistics(self, quickly_collected_only=False):
+    def forward(self) -> torch.Tensor:
+        """
+        Overriding  forward function of the base nn.Module class
+
+        :return: The compression loss value.
+        """
+        return self.calculate()
+
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Returns a dictionary of printable statistics.
 
-        Args:
-            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
-            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
+        :param quickly_collected_only: Enables collection of the statistics that
+            don't take too much time to compute. Can be helpful for the case when
+            need to keep track of statistics on each training batch/step/iteration.
+        :return: A dictionary of printable statistics.
         """
         return {}
 
 
-class CompressionScheduler:
-    """
-    Implements the logic of compression method control during the training process.
-    May change the method hyperparameters in regards to the current training step or
-    epoch. For example, the sparsity method can smoothly increase the sparsity rate
-    over several epochs.
-    """
-
-    def __init__(self):
-        self.current_step = -1 # Global step - count of all step during training
-        self._steps_in_current_epoch = 0
-        self._current_epoch = -1
-
-    def step(self, next_step=None):
-        """
-        Should be called before each optimizer step during training.
-        Arguments:
-            `next_step` - specifies the initial "next" step which should be set now
-        """
-        self.current_step = self.current_step + 1 if next_step is None else next_step
-        self._steps_in_current_epoch += 1
-
-    def epoch_step(self, next_epoch=None):
-        """
-        Should be called before each training epoch.
-        Arguments:
-            `next` - specifies the initial "next" epoch which should be set now
-        """
-        if next_epoch is None:
-            self._current_epoch += 1
-        else:
-            self._current_epoch = next_epoch
-        self._steps_in_current_epoch = 0
-
-    def load_state_dict(self, state_dict):
-        self.__dict__.update(state_dict)
-
-    def state_dict(self):
-        default_keys = {'current_step', '_current_epoch'}
-        return {key: val for key, val in self.__dict__.items() if key in default_keys}
-
-    def initialize(self):
-        pass
-
-    @property
-    def current_epoch(self):
-        return 0 if self._current_epoch == -1 else self._current_epoch
-
-@functools.total_ordering
-class CompressionLevel(Enum):
-    NONE = 0
-    PARTIAL = 1
-    FULL = 2
-
-    # pylint:disable=comparison-with-callable
-    def __add__(self, other: 'CompressionLevel') -> 'CompressionLevel':
-        """
-        Defines compression level of a composite compression controller, consist of two algorithms, where `self` is
-        compression level of first algorithm and other - compression level of second one.
-            NONE    & NONE    = NONE
-            PARTIAL & PARTIAL = PARTIAL
-            FULL    & FULL    = FULL
-            NONE    & PARTIAL = PARTIAL
-            NONE    & FULL    = PARTIAL
-            PARTIAL & FULL    = PARTIAL
-        Args:
-            other: instance of another compression level
-        Returns:
-            common compression level of two algorithms
-        """
-        if self.value == other.value:
-            return self
-        return CompressionLevel.PARTIAL
-
-    def __lt__(self, other: 'CompressionLevel') -> bool:
-        return self.value < other.value
-
-
-class CompressionAlgorithmController:
+class PTCompressionAlgorithmController(CompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss."""
 
-    def __init__(self, target_model: NNCFNetwork):
-        self._model = target_model
-        self._loss = CompressionLoss()
-        self._scheduler = CompressionScheduler()
-
-    @property
-    def loss(self):
-        return self._loss
-
-    @property
-    def scheduler(self):
-        return self._scheduler
 
     def distributed(self):
         """
@@ -170,22 +95,16 @@ class CompressionAlgorithmController:
         should be made inside this function.
         """
 
-    def compression_level(self) -> CompressionLevel:
-        """
-        Returns level of compression. Should be used on saving best checkpoints to distinguish between
-        uncompressed, partially compressed and fully compressed models.
-        """
-        raise NotImplementedError()
-
     def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
 
-        Args:
-            quickly_collected_only: enables collection the statistics that don't take too much time to compute.
-            Can be helpful for the case when need to keep track statistics on each train batch/step/iteration.
+        :param quickly_collected_only: Enables collection the statistics that don't take
+            too much time to compute. Can be helpful for the case when need to keep track
+            statistics on each train batch/step/iteration.
+        :return: A dictionary of printable statistics.
         """
-        stats = self._loss.statistics()
+        stats = super().statistics(quickly_collected_only)
         if hasattr(self._model, 'statistics'):
             stats.update(self._model.statistics(quickly_collected_only))
         return stats
@@ -223,18 +142,19 @@ class CompressionAlgorithmController:
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
-    def prepare_for_export(self):
-        pass
-
     # pylint: disable=keyword-arg-before-vararg
-    def export_model(self, filename, input_names: List[str] = None, output_names: List[str] = None, *args, **kwargs):
+    def export_model(self,
+                     save_path: str,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     *args, **kwargs) -> None:
         """
         Used to export the compressed model for inference into the ONNX format.
         Makes method-specific preparations of the model graph,
         (e.g. removing auxiliary layers that were used for the model compression),
         then exports the model and dumps it into the output file.
         Parameters:
-            `filename` - a path to the file for the exported model to be saved into.
+            `save_path` - a path to the file for the exported model to be saved into.
             `input_names` - list of input tensors names (optional).
             `output_names` - list of output tensors names (optional).
             *args, **kwargs - if the model's `forward` requires additional parameters
@@ -252,16 +172,19 @@ class CompressionAlgorithmController:
         model.forward = partial(model.forward, *args, **kwargs)
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
+            # Should call this, otherwise the operations executed during export will end up in graph
+            model.disable_dynamic_graph_building()
             torch.onnx.export(model, tuple(input_tensor_list),
-                              filename, input_names=input_names,
+                              save_path, input_names=input_names,
                               output_names=output_names,
                               enable_onnx_checker=False,
                               opset_version=10,
                               training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
+            model.enable_dynamic_graph_building()
         model.forward = original_forward
 
 
-class CompressionAlgorithmBuilder:
+class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     """
     Determines which modifications should be made to the original FP32 model in
     order to enable algorithm-specific compression during fine-tuning. Operates
@@ -276,14 +199,21 @@ class CompressionAlgorithmBuilder:
           `config` - a dictionary that contains parameters of compression method
           `should_init` - if False, trainable parameter initialization will be skipped during building
         """
-        self.config = config
-        self.should_init = should_init
+        super().__init__(config, should_init)
+        self.ignored_scopes = None
+        self.target_scopes = None
         if not isinstance(self.config, list):
             self.ignored_scopes = self.config.get('ignored_scopes')
             self.target_scopes = self.config.get('target_scopes')
         self.compressed_nncf_module_names = self._nncf_module_types_to_compress()
 
-    def apply_to(self, target_model: NNCFNetwork) -> NNCFNetwork:
+    def apply_to(self, model: NNCFNetwork) -> NNCFNetwork:
+        transformation_layout = self.get_transformation_layout(model)
+        transformer = PTModelTransformer(model, transformation_layout)
+        transformed_model = transformer.transform()
+        return transformed_model
+
+    def get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         """
         Applies algorithm-specific modifications to the model. Hooks to be executed during model
         forward operation may be registered using NNCFNetwork command insertion methods. Additional
@@ -292,27 +222,32 @@ class CompressionAlgorithmBuilder:
         :param target_model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
-        self._model = target_model  # type: NNCFNetwork
-        insertion_commands = self._apply_to(target_model)
+        layout = self._get_transformation_layout(target_model)
+        self._handle_frozen_layers(target_model)
+        return layout
 
-        for command in insertion_commands:
-            target_model.register_insertion_command(command)
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
+        raise NotImplementedError()
 
-        target_model.register_algorithm(self)
-        return target_model
+    def _handle_frozen_layers(self, target_model: NNCFNetwork):
+        scopes_of_frozen_layers = []
+        for scope, module in target_model.get_nncf_modules().items():
+            if not module.weight.requires_grad:
+                if should_consider_scope(str(scope), self.target_scopes, self.ignored_scopes):
+                    scopes_of_frozen_layers.append(str(scope))
+        scopes_to_print = '\n'.join(scopes_of_frozen_layers)
+        if len(scopes_of_frozen_layers) > 0:
+            is_allowed, reason = self._are_frozen_layers_allowed()
+            if is_allowed:
+                nncf_logger.warning('{}, compressing them without tuning weights.\n'
+                               'Frozen layers:\n'
+                               '{}'.format(reason, scopes_to_print))
+            else:
+                raise RuntimeError(f'{reason}.\n'
+                                   f'Please unfreeze them or put into the Ignored Scope.\n'
+                                   f'Frozen Layers:\n'
+                                   f'{scopes_to_print}')
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
-        return []
-
-    def build_controller(self, target_model: NNCFNetwork) -> CompressionAlgorithmController:
-        """
-        Should be called once the compressed model target_model is fully constructed (i.e. hooks are applied and
-        modules are in place. Returns a CompressionAlgorithmController object containing information
-        and references to the compressed model or specific modules thereof required for the corresponding compression
-        scheduler operation or compression loss calculation.
-        :param target_model: An instance of NNCFNetwork with current algorithm already applied
-        :return: A CompressionAlgorithmController object.
-        """
 
     def _should_consider_scope(self, scope_str: str) -> bool:
         return should_consider_scope(scope_str, self.target_scopes, self.ignored_scopes)
@@ -329,8 +264,6 @@ class CompressionAlgorithmBuilder:
                 filtered_nncf_module_names_list.append(module.__name__)
         return filtered_nncf_module_names_list
 
-
-class StubCompressionScheduler(CompressionScheduler):
-
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
+    def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
+        algo_name = self._registered_name.replace('_', ' ')
+        return False, f'Frozen layers are not allowed for {algo_name}'

@@ -20,6 +20,7 @@ from pathlib import Path
 import torch
 import torch.utils.data as data
 
+from examples.common import restricted_pickle_module
 from examples.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.sample_config import create_sample_config, SampleConfig
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -29,7 +30,7 @@ from examples.common.distributed import DistributedSampler
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
@@ -41,7 +42,7 @@ from examples.object_detection.eval import test_net
 from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
 from nncf import create_compressed_model, load_state
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.utils import is_main_process
 
 
@@ -177,7 +178,7 @@ def main_worker(current_gpu, config):
     #################################
 
     if resuming_checkpoint_path is not None and config.mode.lower() == 'train' and config.to_onnx is None:
-        compression_ctrl.scheduler.load_state_dict(resuming_checkpoint['scheduler'])
+        compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
         optimizer.load_state_dict(resuming_checkpoint.get('optimizer', optimizer.state_dict()))
         config.start_iter = resuming_checkpoint.get('iter', 0) + 1
 
@@ -260,7 +261,8 @@ def create_model(config: SampleConfig, resuming_model_sd: dict = None):
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get('weights')
     if weights:
-        sd = torch.load(weights, map_location='cpu')
+        sd = torch.load(weights, map_location='cpu',
+                        pickle_module=restricted_pickle_module)
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
@@ -355,7 +357,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
                     'state_dict': net.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'iter': iteration,
-                    'scheduler': compression_ctrl.scheduler.state_dict(),
+                    'scheduler': compression_ctrl.scheduler.get_state(),
                     'compression_level': compression_level,
                 }, str(checkpoint_file_path))
                 make_additional_checkpoints(checkpoint_file_path,

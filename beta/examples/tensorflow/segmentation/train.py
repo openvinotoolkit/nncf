@@ -35,6 +35,8 @@ from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import serialize_config
 from beta.examples.tensorflow.common.utils import SummaryWriter
+from beta.examples.tensorflow.common.utils import Timer
+from beta.examples.tensorflow.common.utils import get_scheduler_state
 from beta.examples.tensorflow.segmentation.models.model_selector import get_predefined_config
 from beta.examples.tensorflow.segmentation.models.model_selector import get_model_builder
 
@@ -44,9 +46,9 @@ def get_argument_parser():
                                         precision=False,
                                         save_checkpoint_freq=False,
                                         export_args=False,
-                                        print_freq=False,
                                         dataset_type=False,
-                                        cpu_only=False)
+                                        cpu_only=False,
+                                        metrics_dump=False)
 
     parser.add_argument('--backbone-checkpoint',
                         default=None,
@@ -78,13 +80,7 @@ def get_config_from_argv(argv, parser):
     return sample_config
 
 
-def get_dataset_builders(config, strategy):
-    if config.dataset_type != 'tfrecords':
-        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
-                           'Please use TFRecords.')
-
-    num_devices = strategy.num_replicas_in_sync if strategy else 1
-
+def get_dataset_builders(config, num_devices):
     train_builder = COCODatasetBuilder(config=config,
                                        is_train=True,
                                        num_devices=num_devices)
@@ -119,13 +115,16 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch):
+def resume_from_checkpoint(checkpoint_manager, compression_ctrl, ckpt_path, steps_per_epoch, config):
     if load_checkpoint(checkpoint_manager.checkpoint, ckpt_path) == 0:
         return 0
     optimizer = checkpoint_manager.checkpoint.optimizer
     initial_step = optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
-    compression_ctrl.scheduler.load_state(initial_step, steps_per_epoch)
+
+    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.scheduler.load_state(scheduler_state)
+
     logger.info('Resuming from epoch %d (global step %d)', initial_epoch, initial_step)
     return initial_epoch, initial_step
 
@@ -158,14 +157,17 @@ def create_train_step_fn(strategy, model, loss_fn, optimizer):
 
 
 def train(train_step, train_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer):
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, log_dir, optimizer, print_freq):
 
     train_summary_writer = SummaryWriter(log_dir, 'train')
     compression_summary_writer = SummaryWriter(log_dir, 'compression')
 
-    logger.info('Training started')
+    timer = Timer()
+    timer.tic()
+
+    logger.info('Training...')
     for epoch in range(initial_epoch, epochs):
-        logger.info('Epoch {}/{}'.format(epoch, epochs))
+        logger.info('Epoch: {}/{}'.format(epoch, epochs))
         compression_ctrl.scheduler.epoch_step(epoch)
 
         for step, x in enumerate(train_dist_dataset):
@@ -190,9 +192,11 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
             train_summary_writer(metrics=train_metric_result, step=optimizer.iterations.numpy())
 
-            if step % 100 == 0:
-                logger.info('Step {}/{}'.format(step, steps_per_epoch))
+            if step % print_freq == 0:
+                time = timer.toc(average=False)
+                logger.info('Step: {}/{} Time: {:.3f} sec'.format(step, steps_per_epoch, time))
                 logger.info('Training metric = {}'.format(train_metric_result))
+                timer.tic()
 
         statistics = compression_ctrl.statistics()
         print_statistics(statistics)
@@ -210,7 +214,8 @@ def run_train(config):
     strategy = get_distribution_strategy(config)
 
     # Create dataset
-    builders = get_dataset_builders(config, strategy)
+    builders = get_dataset_builders(config, strategy.num_replicas_in_sync)
+
     datasets = [builder.build() for builder in builders]
     train_builder, _ = builders
     train_dataset, calibration_dataset = datasets
@@ -234,15 +239,13 @@ def run_train(config):
 
             scheduler = build_scheduler(
                 config=config,
-                epoch_size=train_builder.num_examples,
-                batch_size=train_builder.global_batch_size,
-                steps=steps_per_epoch)
+                steps_per_epoch=steps_per_epoch)
 
             optimizer = build_optimizer(
                 config=config,
                 scheduler=scheduler)
 
-            loss_fn = model_builder.build_loss_fn()
+            loss_fn = model_builder.build_loss_fn(compress_model, compression_ctrl.loss)
 
             variables = get_variables(compress_model)
             checkpoint = tf.train.Checkpoint(variables=variables, optimizer=optimizer, step=tf.Variable(0))
@@ -253,16 +256,16 @@ def run_train(config):
                 initial_epoch, initial_step = resume_from_checkpoint(checkpoint_manager,
                                                                      compression_ctrl,
                                                                      config.ckpt_path,
-                                                                     steps_per_epoch)
+                                                                     steps_per_epoch,
+                                                                     config)
             else:
                 logger.info('Initialization...')
                 compression_ctrl.initialize(dataset=calibration_dataset)
 
     train_step = create_train_step_fn(strategy, compress_model, loss_fn, optimizer)
 
-    logger.info('Training...')
     train(train_step, train_dist_dataset, initial_epoch, initial_step,
-          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer)
+          epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, config.print_freq)
 
     logger.info('Compression statistics')
     print_statistics(compression_ctrl.statistics())
@@ -276,6 +279,10 @@ def main(argv):
 
     nncf_root = Path(__file__).absolute().parents[3]
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
+
+    if config.dataset_type != 'tfrecords':
+        raise RuntimeError('The train.py does not support TensorFlow Datasets (TFDS). '
+                           'Please use TFRecords.')
 
     run_train(config)
 

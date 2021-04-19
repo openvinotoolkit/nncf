@@ -55,7 +55,7 @@ def make_optimizer(params_to_optimize, config):
         raise KeyError("Unknown optimizer type: {}".format(optim_type))
 
     scheduler_type = optim_config.get('schedule_type', 'step').lower()
-    scheduler_params = optim_config.get("scheduler_params", {})
+    scheduler_params = optim_config.get("schedule_params", optim_config.get("scheduler_params", {}))
 
     gamma = optim_config.get('gamma', 0.1)
     if scheduler_type == 'multistep':
@@ -65,15 +65,17 @@ def make_optimizer(params_to_optimize, config):
         scheduler = StepLR(optim, step_size=optim_config.get('step', 30), gamma=gamma,
                            **scheduler_params)
     elif scheduler_type == 'plateau':
-        scheduler_params = optim_config.get("scheduler_params", {'threshold': 0.1})
+        if not scheduler_params:
+            scheduler_params = {'threshold': 0.1}
         scheduler = ReduceLROnPlateau(optim, factor=gamma, mode='max', threshold_mode='abs',
                                       **scheduler_params)
     elif scheduler_type == 'poly':
-        scheduler_params = optim_config.get("scheduler_params", {'power': 0.9})
+        if not scheduler_params:
+            scheduler_params = {'power': 0.9}
         power = scheduler_params.power
         poly_lambda = lambda epoch: (1 - epoch / config.epochs) ** power
         scheduler = LambdaLR(optim, poly_lambda)
-    elif scheduler_type == 'exp':
+    elif scheduler_type == 'exponential':
         scheduler = ExponentialLR(optim, gamma)
     else:
         raise KeyError("Unknown scheduler type: {}".format(scheduler_type))

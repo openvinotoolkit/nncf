@@ -6,14 +6,14 @@
     },
 
     "batch_size": 256,
-    "epochs": 27,
+    "epochs": 40,
 
      "optimizer": {
-        "type": "adam",
+        "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "boundaries": [20, 23, 26],
-            "values": [1e-4, 1e-5, 1e-6, 1e-7]
+            "boundaries": [20, 28],
+            "values": [1e-4, 1e-5, 1e-6]
         }
     },
 

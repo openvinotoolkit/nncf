@@ -11,334 +11,307 @@
 """
 from collections import Counter
 from functools import partial
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
 import onnx
 import pytest
 import torch
 import torch.nn
-from onnx import numpy_helper
-
-from nncf.dynamic_graph.graph import OperationExecutionContext, InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.nncf_network import InsertionInfo
-from nncf.quantization.algo import PatternBasedQuantizerSetupGenerator
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from onnx import numpy_helper
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+from tests.helpers import get_nodes_by_type
 
-
-def make_op_exec_context_for_coalescing_test(scope_str: str) -> OperationExecutionContext:
+def make_ia_op_exec_context_for_coalescing_test(scope_str: str) -> InputAgnosticOperationExecutionContext:
     ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
-    op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                ia_op_exec_context.scope_in_model,
-                                                ia_op_exec_context.call_order,
-                                                [TensorMeta(0, 0, [1])])
-    return op_exec_context
+    return ia_op_exec_context
 
 
-def make_insertion_info_for_coalescing_test(scope_str: str,
-                                            linked_insertion_infos: List[InsertionInfo] = None,
-                                            in_port_id: int = None)\
-        -> InsertionInfo:
-    op_exec_context = make_op_exec_context_for_coalescing_test(scope_str)
-    retval = InsertionInfo(op_exec_context, in_port_id=in_port_id)
-    if linked_insertion_infos is not None:
-        retval.link_insertion_infos(linked_insertion_infos)
+def make_insertion_point_for_coalescing_test(scope_str: str,
+                                             input_port_id: int = None)\
+        -> PTTargetPoint:
+    ia_op_exec_context = make_ia_op_exec_context_for_coalescing_test(scope_str)
+    retval = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
+                           ia_op_exec_context=ia_op_exec_context,
+                           input_port_id=input_port_id)
     return retval
 
 
-@pytest.mark.parametrize("input_insertion_infos, linked_scopes_groups_list, ref_coalesced_insertion_infos",
-                         # ref_coalesced_insertion_infos == None means that the coalescing should raise an exception
+@pytest.mark.parametrize("input_insertion_points, linked_scopes_groups_list, ref_coalesced_ip_lists",
+                         # ref_coalesced_ip_lists == None means that the coalescing should raise an exception
                          [
                              # 0 - Empty linked scopes list
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
-                                     )
+                                         input_port_id=1
+                                     ),
                                  ],
                                  [],
-                                 # Same as input
+                                 # Each coalesced list has one entry
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                     ), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
-                                     )
+                                         input_port_id=1
+                                     ), ]
                                  ],
                              ),
                              # 1 - Linked scope only affects 1 operation
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
                                      )
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0"]],
-                                 # Same as input
+                                 # Each coalesced list has one entry
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                         input_port_id=0
+                                     ), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
-                                     )
+                                     ), ]
                                  ]
                              ),
                              # 2 - Same as 1 but with multiple groups
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
+                                         input_port_id=1
                                      )
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0"], ["Foo/Xyz[leet]/__add___0"]],
-                                 # Same as input again
+                                 # Each coalesced list has one entry again
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                         input_port_id=0
+                                     ), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
-                                     )
+                                         input_port_id=1
+                                     ), ]
                                  ]
                              ),
                              # 3 - Single group affecting some of the scopes
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
+                                         input_port_id=1
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=1
+                                         input_port_id=1
                                      )
                                  ],
                                  [["Foo/Xyz[leet]/matmul_0", "Foo/Xyz[leet]/__add___0", "Foo/Baz[bar]/linear_0"]],
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=1,
-                                         linked_insertion_infos=[
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Baz[bar]/linear_0",
-                                                 in_port_id=0
-                                             ),
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Xyz[leet]/__add___0",
-                                                 in_port_id=1
-                                             ),
-                                         ]
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                         input_port_id=1),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Baz[bar]/linear_0",
+                                             input_port_id=0),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Xyz[leet]/__add___0",
+                                             input_port_id=1),
+                                     ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
-                                     )
+                                     ), ]
                                  ]
                              ),
 
                              # 4 - Multiple groups, each affecting one operation
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
                                  ],
                                  [["Foo/Baz[bar]/linear_0"], ["Foo/Asdf[jkl]/softmax_0"]],
                                  [
-                                     # Same as input
-                                     make_insertion_info_for_coalescing_test(
+                                     # Each coalesced list has one entry again
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Baz[bar]/linear_0"), ],
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Asdf[jkl]/softmax_0"), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/linear_0"
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                         input_port_id=0), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=0
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
+                                         input_port_id=0), ],
+                                     [make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=0
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/softmax_0"
-                                     ),
+                                         input_port_id=0), ],
                                  ]
                              ),
 
                              # 5 - Multiple groups affecting multiple operations without overlapping
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
-                                         in_port_id=1
+                                         input_port_id=1
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_1",
-                                         in_port_id=0
+                                         input_port_id=0
                                      ),
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0",
                                    "Foo/Baz[bar]/linear_0"],
                                   ["Foo/Asdf[jkl]/softmax_1", "Foo/Xyz[leet]/__add___0"]],
                                  [
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0",
-                                         linked_insertion_infos=[
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Baz[bar]/linear_0",
-                                                 in_port_id=0
-                                             ),
-                                         ]
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/softmax_1",
-                                         in_port_id=0,
-                                         linked_insertion_infos=[
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Xyz[leet]/__add___0",
-                                                 in_port_id=1
-                                             ),
-                                         ]
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/matmul_0"
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/softmax_0"
-                                     ),
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Baz[bar]/conv2d_0"),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Baz[bar]/linear_0",
+                                             input_port_id=0),
+                                     ],
+                                     [make_insertion_point_for_coalescing_test(
+                                                 "Foo/Asdf[jkl]/softmax_1",
+                                                 input_port_id=0),
+                                     make_insertion_point_for_coalescing_test(
+                                         "Foo/Xyz[leet]/__add___0",
+                                         input_port_id=1), ],
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Xyz[leet]/matmul_0"), ],
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Asdf[jkl]/softmax_0"), ]
                                  ]
                              ),
 
                              # 6 - A variation of 5
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0",
-                                         in_port_id=0,
+                                         input_port_id=0,
                                      ),
                                  ],
                                  [["Foo/Baz[bar]/conv2d_0", "Foo/Baz[bar]/linear_0", "Foo/Xyz[leet]/matmul_0"],
                                   ["Foo/Asdf[jkl]/softmax_0", "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"]],
                                  [
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Baz[bar]/conv2d_0",
-                                         linked_insertion_infos=[
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Baz[bar]/linear_0"
-                                             ),
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Xyz[leet]/matmul_0"
-                                             )
-                                         ]
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Asdf[jkl]/softmax_0",
-                                         linked_insertion_infos=[
-                                             make_insertion_info_for_coalescing_test(
-                                                 "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0",
-                                                 in_port_id=0,
-                                             ),
-                                         ]
-                                     ),
-                                     make_insertion_info_for_coalescing_test(
-                                         "Foo/Xyz[leet]/__add___0"
-                                     ),
+                                     [
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Baz[bar]/conv2d_0"),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Baz[bar]/linear_0"
+                                         ),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Xyz[leet]/matmul_0"
+                                         )
+                                     ],
+                                     [
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Asdf[jkl]/softmax_0"),
+                                         make_insertion_point_for_coalescing_test(
+                                             "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0",
+                                             input_port_id=0)
+                                     ],
+                                     [make_insertion_point_for_coalescing_test(
+                                         "Foo/Xyz[leet]/__add___0"),]
                                  ]
                              ),
 
                              # 7 - Overlapping groups
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=1,
+                                         input_port_id=1,
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"
                                      ),
                                  ],
@@ -352,27 +325,27 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
 
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0,
+                                         input_port_id=0,
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0",
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0",
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=1,
+                                         input_port_id=1,
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"
                                      ),
                                  ],
@@ -385,24 +358,24 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                              # 9 - No match for an operation specified in the group
                              (
                                  [
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/conv2d_0",
-                                         in_port_id=0,
+                                         input_port_id=0,
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Baz[bar]/linear_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/__add___0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Xyz[leet]/matmul_0",
-                                         in_port_id=1,
+                                         input_port_id=1,
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/softmax_0"
                                      ),
-                                     make_insertion_info_for_coalescing_test(
+                                     make_insertion_point_for_coalescing_test(
                                          "Foo/Asdf[jkl]/Qwer[tyu]/conv2d_0"
                                      ),
                                  ],
@@ -412,18 +385,20 @@ def make_insertion_info_for_coalescing_test(scope_str: str,
                                  None
                              ),
                          ])
-def test_insertion_info_coalescing(input_insertion_infos: List[InsertionInfo],
-                                   linked_scopes_groups_list: List[List[str]],
-                                   ref_coalesced_insertion_infos: List[InsertionInfo]):
-    if ref_coalesced_insertion_infos is None:
+def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
+                                    linked_scopes_groups_list: List[List[str]],
+                                    ref_coalesced_ip_lists: List[List[PTTargetPoint]]):
+    if ref_coalesced_ip_lists is None:
         with pytest.raises(RuntimeError):
-            _ = PatternBasedQuantizerSetupGenerator.coalesce_insertion_infos(input_insertion_infos,
-                                                                             linked_scopes_groups_list)
+            _ = QuantizerPropagationSolver.coalesce_insertion_points(input_insertion_points,
+                                                                     linked_scopes_groups_list)
     else:
-        test_coalesced_insertion_infos = PatternBasedQuantizerSetupGenerator.coalesce_insertion_infos(
-            input_insertion_infos,
+        test_coalesced_ip_lists = QuantizerPropagationSolver.coalesce_insertion_points(
+            input_insertion_points,
             linked_scopes_groups_list)
-        assert Counter(test_coalesced_insertion_infos) == Counter(ref_coalesced_insertion_infos)
+        assert len(test_coalesced_ip_lists) == len(ref_coalesced_ip_lists)
+        for idx, test_list in enumerate(test_coalesced_ip_lists):
+            assert Counter(test_list) == Counter(ref_coalesced_ip_lists[idx])
 
 
 class QuantizerLinkingTestModel(torch.nn.Module):
@@ -448,11 +423,8 @@ class QuantizerLinkingTestModel(torch.nn.Module):
         return tuple(x + y for x, y in zip(path1_results, path2_results))
 
 
-def test_quantizer_scale_linking():
+def test_quantizer_scale_linking(mocker):
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config['quantizer_setup_type'] = 'pattern_based'
-    nncf_config["compression"]["quantize_outputs"] = True
-    nncf_config["compression"]["quantize_inputs"] = False
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -462,7 +434,7 @@ def test_quantizer_scale_linking():
         }
     ]
     nncf_config["compression"]["activations"] = {
-        "linked_quantizer_scopes": [
+        "unified_scale_ops": [
             [
                 # Note: Assuming that quantizers are attached as a post-op to the specified operation
                 "QuantizerLinkingTestModel/Path[path2]/__mul___0",
@@ -480,66 +452,33 @@ def test_quantizer_scale_linking():
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(QuantizerLinkingTestModel(),
                                                                                    nncf_config)
 
-    # 2 paths x 3 quantizers - 1 because two are shared in one path
-    assert len(compression_ctrl.non_weight_quantizers) == 5
+    # 18 inputs to quantize (14 regular + 4 linked),
+    # 8 quantization points left after propagation, out of these 3 are linked
+    assert len(compression_ctrl.non_weight_quantizers) == 6
+
+    shared_quantizer_id = NonWeightQuantizerId(
+        InputAgnosticOperationExecutionContext.from_str("/nncf_model_input_0"))
+
+    non_shared_spies = []
+    for aq_id, aq_info in compression_ctrl.non_weight_quantizers.items():
+        quantizer = aq_info.quantizer_module_ref
+        spy = mocker.spy(quantizer, 'forward')
+        if aq_id == shared_quantizer_id:
+            shared_spy = spy
+        else:
+            non_shared_spies.append(spy)
 
     test_input1 = torch.ones([1, 1, 1, 1])
     test_input2 = 2 * test_input1
+    compressed_model(test_input1, test_input2)
 
-    non_shared_mul_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path1]/__mul___0"))
-
-    non_shared_add_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path1]/__add___0"))
-
-    shared_quantizer_id = NonWeightQuantizerId(
-        InputAgnosticOperationExecutionContext.from_str("QuantizerLinkingTestModel/Path[path2]/__add___0"))
-
-    non_shared_mul_quantizer = compression_ctrl.non_weight_quantizers[non_shared_mul_quantizer_id].quantizer_module_ref
-    non_shared_add_quantizer = compression_ctrl.non_weight_quantizers[non_shared_add_quantizer_id].quantizer_module_ref
-    shared_quantizer = compression_ctrl.non_weight_quantizers[shared_quantizer_id].quantizer_module_ref
-
-    old_scale = 765.0  # so that the quantum is equal to 3
-    with torch.no_grad():
-        for quantizer in compression_ctrl.all_quantizations.values():
-            quantizer.scale.fill_(old_scale)
-
-    # Expected outputs without compression - 6, 12, 8. Scale deliberately set to preserve the values
-    uncompressed_expected_outputs = (6.0 * torch.ones([1]), 12.0 * torch.ones([1]), 18.0 * torch.ones([1]))
-    outputs_with_shared_scale_1 = compressed_model(test_input1, test_input2)
-
-    for uncomp_out, comp_out_1 in zip(uncompressed_expected_outputs, outputs_with_shared_scale_1):
-        assert torch.allclose(uncomp_out, comp_out_1)
-
-    # Specifically clip the shared quantizer's outputs by setting scale to 1.0
-    new_shared_scale = 1.0
-    with torch.no_grad():
-        shared_quantizer.scale.fill_(new_shared_scale)
-    outputs_with_shared_scale_2 = compressed_model(test_input1, test_input2)
-
-    # __add___0 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[0], 4.0 * torch.ones([1]))
-    # __mul___0 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[1], 7.0 * torch.ones([1]))
-    # __add___1 outputs
-    assert torch.allclose(outputs_with_shared_scale_2[2], 12.0 * torch.ones([1]))
-
-    # Clipping the non-shared quantizers at the same position in the path as the two shared ones
-    # in the same manner is required to simulate the same grad input for both the shared quantizers
-    # and the unshared ones
-    with torch.no_grad():
-        non_shared_mul_quantizer.scale.fill_(new_shared_scale)
-        non_shared_add_quantizer.scale.fill_(new_shared_scale)
-    final_output = compressed_model(test_input1, test_input2)[2]
-    final_output.backward()
-
-    assert torch.allclose(shared_quantizer.scale.grad,
-                          non_shared_mul_quantizer.scale.grad + non_shared_add_quantizer.scale.grad)
+    assert shared_spy.call_count == 3
+    for non_shared_spy in non_shared_spies:
+        assert non_shared_spy.call_count == 1
 
 
 def test_unified_scales_for_vpu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
     nncf_config["input_info"] = [
         {
             "sample_size": [1, 1, 1, 1],
@@ -581,45 +520,24 @@ class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
         return x
 
 
-def test_unified_scales_are_identical_in_onnx(tmp_path):
-    # pylint:disable=no-member
-    nncf_config = get_quantization_config_without_range_init(model_size=1)
-    nncf_config["compression"]["quantize_outputs"] = True
-    nncf_config["input_info"] = [
-        {
-            "sample_size": [1, 1, 1, 2],
-        },
-    ]
-    nncf_config["target_device"] = "VPU"
+class TwoEmbeddingAddModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding1 = torch.nn.Embedding(10, 10)
+        self.embedding2 = torch.nn.Embedding(10, 10)
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
-        SimplerModelForUnifiedScalesTesting(),
-        nncf_config)
+    def forward(self, x):
+        y1 = self.embedding1(x)
+        y2 = self.embedding2(x)
+        return y1 + y2
 
-    with torch.no_grad():
-        for quant_info in compression_ctrl.non_weight_quantizers.values():
-            if isinstance(quant_info.quantizer_module_ref, AsymmetricQuantizer):
-                quant_info.quantizer_module_ref.input_range *= torch.abs(
-                    torch.rand_like(quant_info.quantizer_module_ref.input_range))
-            else:
-                quant_info.quantizer_module_ref.scale *= torch.abs(
-                    torch.rand_like(quant_info.quantizer_module_ref.scale))
 
-    test_input1 = torch.ones([1, 1, 1, 2])
-    compressed_model.forward(test_input1)
-
-    onnx_path = tmp_path / "model.onnx"
-    compression_ctrl.export_model(onnx_path)
-
-    onnx_model = onnx.load(onnx_path)
-
+class TestsWithONNXInspection:
+    @staticmethod
     def get_fq_nodes(onnx_model: onnx.ModelProto) -> List[onnx.NodeProto]:
-        retval = []
-        for node in onnx_model.graph.node:
-            if str(node.op_type) == "FakeQuantize":
-                retval.append(node)
-        return retval
+        return get_nodes_by_type(onnx_model, "FakeQuantize")
 
+    @staticmethod
     def immediately_dominates_add_or_mul(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
         if len(node.output) != 1:
             return False
@@ -630,6 +548,18 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 return True
         return False
 
+    @staticmethod
+    def immediately_dominates_embedding(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
+        if len(node.output) != 1:
+            return False
+        output_tensor_id = node.output[0]
+        matches = [x for x in graph.node if output_tensor_id in x.input]
+        for match in matches:
+            if match.op_type in ["Gather"]:
+                return True
+        return False
+
+    @staticmethod
     def get_successor(node: onnx.NodeProto, graph: onnx.GraphProto) -> onnx.NodeProto:
         assert len(node.output) == 1  # Only single-output nodes are supported in this func
         for target_node in graph.node:
@@ -637,17 +567,20 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 return target_node
         return None
 
-    def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[List[onnx.NodeProto]]:
+    @staticmethod
+    def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[
+        List[onnx.NodeProto]]:
         output_nodes = {}  # type: Dict[str, List[onnx.NodeProto]]
         for node in nodes:
-            target_node_name = get_successor(node, graph).name
+            target_node_name = TestsWithONNXInspection.get_successor(node, graph).name
             if target_node_name not in output_nodes:
                 output_nodes[target_node_name] = []
             output_nodes[target_node_name].append(node)
         return list(output_nodes.values())
 
+    @staticmethod
     def resolve_constant_node_inputs_to_values(node: onnx.NodeProto, graph: onnx.GraphProto) -> \
-        Dict[str, onnx.AttributeProto]:
+            Dict[str, onnx.AttributeProto]:
         retval = {}
         for input_ in node.input:
             constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
@@ -657,14 +590,101 @@ def test_unified_scales_are_identical_in_onnx(tmp_path):
                 retval[input_] = numpy_helper.to_array(val.t)
         return retval
 
-    fq_nodes = get_fq_nodes(onnx_model)
-    eltwise_predicate = partial(immediately_dominates_add_or_mul, graph=onnx_model.graph)
-    eltwise_fq_nodes = list(filter(eltwise_predicate, fq_nodes))
-    fq_nodes_grouped_by_output = group_nodes_by_output_target(eltwise_fq_nodes, onnx_model.graph)
+    def test_unified_scales_are_identical_in_onnx(self, tmp_path):
+        # pylint:disable=no-member
+        nncf_config = get_quantization_config_without_range_init(model_size=1)
+        nncf_config["compression"]["quantize_outputs"] = True
+        nncf_config["input_info"] = [
+            {
+                "sample_size": [1, 1, 1, 2],
+            },
+        ]
+        nncf_config["target_device"] = "VPU"
 
-    for unified_scale_group in fq_nodes_grouped_by_output:
-        inputs = [resolve_constant_node_inputs_to_values(fq_node, onnx_model.graph) for fq_node in unified_scale_group]
-        for inputs_dict in inputs[1:]:
+        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
+            SimplerModelForUnifiedScalesTesting(),
+            nncf_config)
+
+        with torch.no_grad():
+            for quant_info in compression_ctrl.non_weight_quantizers.values():
+                if isinstance(quant_info.quantizer_module_ref, AsymmetricQuantizer):
+                    quant_info.quantizer_module_ref.input_range *= torch.abs(
+                        torch.rand_like(quant_info.quantizer_module_ref.input_range))
+                else:
+                    quant_info.quantizer_module_ref.scale *= torch.abs(
+                        torch.rand_like(quant_info.quantizer_module_ref.scale))
+
+        test_input1 = torch.ones([1, 1, 1, 2])
+        compressed_model.forward(test_input1)
+
+        onnx_path = str(tmp_path / "model.onnx")
+        compression_ctrl.export_model(onnx_path)
+
+        onnx_model = onnx.load(onnx_path)
+
+        fq_nodes = TestsWithONNXInspection.get_fq_nodes(onnx_model)
+        eltwise_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_add_or_mul,
+                                    graph=onnx_model.graph)
+        eltwise_fq_nodes = list(filter(eltwise_dominator_predicate, fq_nodes))
+        fq_nodes_grouped_by_output = TestsWithONNXInspection.group_nodes_by_output_target(eltwise_fq_nodes,
+                                                                                          onnx_model.graph)
+
+        for unified_scale_group in fq_nodes_grouped_by_output:
+            inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
+                                                                                     onnx_model.graph)
+                      for fq_node in unified_scale_group]
+            for inputs_dict in inputs[1:]:
+                curr_values = list(inputs_dict.values())
+                ref_values = list(inputs[0].values())
+                assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
+
+    def test_weight_and_act_quantizer_scale_unification(self, tmp_path):
+        # pylint:disable=no-member
+        nncf_config = get_quantization_config_without_range_init(model_size=1)
+        nncf_config["input_info"] = [
+            {
+                "sample_size": [1, 5],
+                "type": "long",
+                "filler": "zeros"
+            },
+        ]
+        nncf_config["target_device"] = "VPU"
+
+        compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
+            TwoEmbeddingAddModel(),
+            nncf_config)
+
+        with torch.no_grad():
+            for quant_module in compression_ctrl.all_quantizations.values():
+                if isinstance(quant_module, AsymmetricQuantizer):
+                    quant_module.input_range *= torch.abs(
+                        torch.rand_like(quant_module.input_range))
+                else:
+                    quant_module.scale *= torch.abs(
+                        torch.rand_like(quant_module.scale))
+
+        test_input1 = torch.ones([1, 5], dtype=torch.long)
+        compressed_model.forward(test_input1)
+
+        onnx_path = str(tmp_path / "model.onnx")
+        compression_ctrl.export_model(onnx_path)
+
+        onnx_model = onnx.load(onnx_path)
+
+        fq_nodes = TestsWithONNXInspection.get_fq_nodes(onnx_model)
+        eltwise_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_add_or_mul,
+                                              graph=onnx_model.graph)
+        embedding_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_embedding,
+                                                graph=onnx_model.graph)
+        eltwise_fq_nodes = list(filter(eltwise_dominator_predicate, fq_nodes))
+        embedding_weight_fq_nodes = list(filter(embedding_dominator_predicate, fq_nodes))
+
+        fq_nodes_with_expected_unified_scales = embedding_weight_fq_nodes + eltwise_fq_nodes
+
+        unified_fq_node_inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,
+                                                                                                 onnx_model.graph)
+                                  for fq_node in fq_nodes_with_expected_unified_scales]
+        for inputs_dict in unified_fq_node_inputs[1:]:
             curr_values = list(inputs_dict.values())
-            ref_values = list(inputs[0].values())
+            ref_values = list(unified_fq_node_inputs[0].values())
             assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal

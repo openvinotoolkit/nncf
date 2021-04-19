@@ -12,11 +12,14 @@
 """
 from collections import Counter
 
-from nncf.dynamic_graph.graph import NNCFGraph, NNCFGraphPatternIO, NNCFGraphEdge, NNCFNode
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph import NNCFGraphPatternIO
+from nncf.graph.graph import NNCFGraphEdge
+from nncf.graph.graph import PTNNCFNode
 
 
 def test_graph_pattern_io_building():
-    graph = NNCFGraph()
+    graph = PTNNCFGraph()
     #   1
     # /   \
     # 2   |
@@ -33,23 +36,29 @@ def test_graph_pattern_io_building():
     node_keys = ['1', '2', '3', '4', '5', '6', '7', '8']
     for idx, node_key in enumerate(node_keys):
         attrs = {
-            NNCFGraph.ID_NODE_ATTR: idx + 1,
-            NNCFGraph.KEY_NODE_ATTR: node_key,
-            NNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: None,
+            PTNNCFGraph.ID_NODE_ATTR: idx + 1,
+            PTNNCFGraph.KEY_NODE_ATTR: node_key,
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
         }
         graph._nx_graph.add_node(node_key, **attrs)
 
-    edge_attr = {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: None}
+    edge_attr = {PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: None}
     graph._nx_graph.add_edges_from([('1', '2'), ('1', '4'), ('2', '3'), ('3', '4'), ('4', '5'),
                                     ('4', '6'), ('4', '7'), ('5', '8')], **edge_attr)
     graph._node_id_to_key_dict.update({k + 1: v for k, v in enumerate(node_keys)})
 
     def make_mock_edge(from_id: int, to_id: int):
-        return NNCFGraphEdge(NNCFNode(from_id, None),
-                             NNCFNode(to_id, None), None)
+
+        return NNCFGraphEdge(make_mock_node(from_id),
+                             make_mock_node(to_id), None)
 
     def make_mock_node(id_: int):
-        return NNCFNode(id_, None)
+        data_ = {
+            PTNNCFGraph.ID_NODE_ATTR: id_,
+            PTNNCFGraph.KEY_NODE_ATTR: str(id_),
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
+        }
+        return PTNNCFNode(id_, None, data_)
 
     ref_patterns_and_ios = [
         (['1', '2'], NNCFGraphPatternIO(input_edges=[],

@@ -124,13 +124,25 @@ For asymmetric:
 For symmetric:
 ![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
 
+---
+**NOTE**
+
+There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 8-bit matrix calculations with tensors which elements are close to the maximum or saturated.
+AVX2 and AVX512 utilize a 16-bit register to store the result of operations on tensors. In case when tensors are saturated the buffer overflow happens.
+This leads to accuracy degradation.
+
+To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used. 
+This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set.
+
+---
 
 #### Mixed-Precision Quantization
 
 Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks. 
 Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values, 
-choosing ultra-low bitwidth could noticeably affect the model's accuracy.
-A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers.
+choosing ultra-low bitwidth could noticeably affect the model's accuracy. A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers. NNCF provides two automatic precision assignment algorithms, namely **HAWQ** and **AutoQ**.
+
+#### HAWQ
 NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
@@ -191,7 +203,7 @@ For automatic mixed-precision selection it's recommended to use the following te
         "base_lr": 3.1e-4,
         "schedule_type": "plateau",
         "type": "Adam",
-        "scheduler_params": {
+        "schedule_params": {
             "threshold": 0.1,
             "cooldown": 3
         },
@@ -230,6 +242,54 @@ file.
 
 ---
 
+#### AutoQ
+NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out ```_get_layer_attr``` in [```quantization_env.py```](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/automl/environment/quantization_env.py#L333) for the featurization of different network layer types. 
+
+When the agent enters a state/quantizer, it receives the state features and forward passes them through its network. The output of the forward pass is a scalar continuous action output which is subsequently mapped to the bitwidth options of the particular quantizer. The episode terminates after the prediction of the last quantizer and a complete layer-wise mixed-precision policy is obtained. To ensure a policy fits in the user-specified compression ratio, the policy is post processed by reducing the precision sequentially from the last quantizer until the compression ratio is met.
+
+To evaluate the goodness of a policy, NNCF backend quantizes the workload accordingly and performs evaluation with the user-registered function. The evaluated score, together with the state embedding, predicted action are appended to an experience vault to serve for DDPG learning. The learning is carried out by sampling the data point from the experience vault for supervised training of the DDPG network. This process typically happens at a fixed interval. In the current implementation, it is performed after each episode evaluation. For bootstrapping, exploration and diversity of experience, noise is added to action output. As the episodic iterations progress, the noise magnitude is gradually reduced to zero, a deterministic mixed-precision policy is converged at the end of the episodes. NNCF currently keeps track of the best policy and uses it for fine tuning.
+
+```
+    "target_device": "VPU",
+    "compression": {
+        "algorithm": "quantization",
+        "initializer": {
+            "precision": {
+                "type": "autoq",
+                "bits": [2, 4, 8],
+                "iter_number": 300,
+                "compression_ratio": 0.15,
+                "eval_subset_ratio": 0.20,
+                "dump_init_precision_data": true
+            }
+        }
+    }
+```
+
+The snippet above demonstrates the specification of AutoQ in NNCF config. ```target_device``` determines the bitwidth choices available for a particular layer. ```bits``` also defines the precision space of quantizer but it is only active in the absence of target device. 
+
+```iter_number``` is synonymous to the number of episodes. A good choice depends on the number of quantizers in a workload and also the number of bitwidth choice. The larger the number, more episodes are required.
+
+```compression_ratio``` is the target model size after quantization, relative to total parameters size in FP32. E.g. uniformly int8 quantized model is 0.25 in compression ratio, 0.125 for uniform int4 quantization.
+
+```eval_subset_ratio``` is ratio of dataset to be used for evaluation for each iteration. It is used by the callback function. (See below).
+
+```dump_init_precision_data``` dumps AutoQ's episodic metrics as tensorboard events, viewable in Tensorboard.
+
+As briefly mentioned earlier, user is required to register a callback function for policy evaluation. The interface of the callback is a model object and torch loader object. The callback must return a scalar metric. The callback function and a torch loader are registered via ```register_default_init_args```.
+
+Following is an example of wrapping ImageNet validation loop as a callback. Top5 accuracy is chosen as the scalar objective metric. ```autoq_eval_fn``` and ```val_loader``` are registered in the call of ```register_default_init_args```.
+
+```
+    def autoq_eval_fn(model, eval_loader):
+        _, top5 = validate(eval_loader, model, criterion, config)
+        return top5
+
+    nncf_config = register_default_init_args(
+            nncf_config, init_loader, criterion, train_criterion_fn,
+            autoq_eval_fn, val_loader, config.device)
+```
+
 #### Batch-norm statistics adaptation
 
 After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
@@ -259,11 +319,11 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
             "bitwidth_per_scope": [ // Manual settings for the quantizer bitwidths. Scopes are used to identify the weight quantizers. The same number of bits is assigned to adjacent activation quantizers. By default bitwidth is taken from global quantization parameters from `weights` and `activations` sections above
                 [
                     4,
-                    "MobileNetV2/Sequential[features]/InvertedResidual[8]/Sequential[conv]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]"
+                    "InsertionType.NNCF_MODULE_PRE_OP MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]"
                 ], // A tuple of a bitwidth and a scope
                 [
                     4,
-                    "ModuleDict/AsymmetricQuantizer[MobileNetV2/Sequential[features]/InvertedResidual[15]/Sequential[conv]/ReLU6[5]/hardtanh_0]"
+                    "TargetType.OPERATOR_POST_HOOK MobileNetV2/Sequential[features]/ConvBNReLU[0]/ReLU6[2]/hardtanh_0",
                 ]
             ]
         }

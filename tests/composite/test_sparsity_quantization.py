@@ -1,6 +1,7 @@
 from nncf.composite_compression import CompositeCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.quantization.layers import SymmetricQuantizer
 from nncf.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.utils import get_all_modules_by_type, get_all_modules
@@ -44,7 +45,8 @@ def test_can_quantize_inputs_for_sparsity_plus_quantization():
     assert isinstance(nncf_module.pre_ops['1'], UpdateWeight)
     assert isinstance(nncf_module.pre_ops['1'].op, SymmetricQuantizer)
 
-    input_quantizer = get_all_modules(sparse_quantized_model)['NNCFNetwork/ModuleDict[activation_quantizers]']
+    input_quantizer = get_all_modules(
+        sparse_quantized_model)[f'NNCFNetwork/ModuleDict[{EXTERNAL_QUANTIZERS_STORAGE_NAME}]']
 
     assert len(input_quantizer) == 1
     assert isinstance(list(input_quantizer.values())[0], SymmetricQuantizer)
