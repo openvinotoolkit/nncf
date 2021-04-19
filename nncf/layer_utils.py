@@ -82,6 +82,13 @@ class _NNCFModuleMixin:
 
 
 class CompressionParameter(nn.Parameter):
+    '''
+    The class that should be used in all compression algorithms instead of torch.nn.Parameter.
+
+    This class utilize `compression_lr_multiplier` parameter from :class:`nncf.NNCFConfig`
+    to increase/decrease gradients for compression algorithms' parameters.
+    '''
+
     def __new__(cls, data=None, requires_grad=True, compression_lr_multiplier=None):
         return super().__new__(cls, data, requires_grad=requires_grad)
 
