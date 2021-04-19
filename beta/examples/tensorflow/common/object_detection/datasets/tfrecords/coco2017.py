@@ -50,7 +50,7 @@ def parse_record(record, include_mask=False, model=None, is_train=None):
 
     def _decode_image(parsed_tensors, model):
         """Decodes the image and set its static shape."""
-        if model=='YOLOv4':
+        if model == 'YOLOv4':
             image = tf.image.decode_jpeg(parsed_tensors['image/encoded'], channels=3, dct_method='INTEGER_ACCURATE')
         else:
             image = tf.io.decode_image(parsed_tensors['image/encoded'], channels=3)
@@ -156,7 +156,7 @@ def parse_record(record, include_mask=False, model=None, is_train=None):
         return labels
 
     labels = parsed_tensors['image/object/class/label']
-    if model=="YOLOv4" and is_train:
+    if model == "YOLOv4" and is_train:
             labels = _convert_labels_to_80_classes(parsed_tensors)
 
     decoded_tensors = {
