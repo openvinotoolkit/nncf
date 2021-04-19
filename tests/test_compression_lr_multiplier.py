@@ -13,13 +13,19 @@
 
 import contextlib
 import copy
+
 import pytest
 import torch
+from torch import nn
 from torch.optim import SGD
 
 from nncf.layer_utils import CompressionParameter
-from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test,\
-    get_grads, check_equal, check_not_equal
+from nncf.layer_utils import CompressionParameter
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import check_equal
+from tests.helpers import check_not_equal
+from tests.helpers import get_grads
+from tests.helpers import LeNet
 from tests.quantization.test_algo_quantization import get_quantization_config_without_range_init
 from tests.sparsity.rb.test_algo import get_basic_sparsity_config
 
@@ -33,12 +39,12 @@ def torch_seed():
 
 
 def get_quantization_config():
-    config = get_quantization_config_without_range_init()
+    config = get_quantization_config_without_range_init(LeNet.INPUT_SIZE)
     return config
 
 
 def get_sparsity_config():
-    config = get_basic_sparsity_config()
+    config = get_basic_sparsity_config([1, 1, LeNet.INPUT_SIZE, LeNet.INPUT_SIZE])
     return config
 
 
@@ -84,13 +90,17 @@ def divide_params(params):
 
 def make_train_steps(config, num_steps=1):
     with torch_seed():
-        model = TwoConvTestModel()
+        model = LeNet()
         model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+        for param in model.parameters():
+            if param.requires_grad:
+                nn.init.normal_(param)
         optimizer = SGD(model.parameters(), lr=0.1)
 
         for i in range(num_steps):
             optimizer.zero_grad()
-            x = torch.ones(config["input_info"]["sample_size"])
+            x = torch.rand(config["input_info"]["sample_size"])
             y = model(x)
             loss = (y ** 2).sum()
 
