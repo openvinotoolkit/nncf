@@ -13,6 +13,7 @@
 import torch
 import torch.nn.functional as F
 from abc import abstractmethod
+from tests.helpers import create_conv
 from torch import nn
 from torch.nn import Dropout
 from torch.nn import Parameter
@@ -78,7 +79,7 @@ class ManyNonEvalModules(ModelWithDummyParameter):
         if self.training:
             aux = self.aux_branch(x)
         x = self.mixed_modules(x)
-        return x, aux if self.training else x
+        return (x, aux) if self.training else x
 
 
 class PoolUnPool(ModelWithDummyParameter):
@@ -145,3 +146,55 @@ class MultiBranchesModel(nn.Module):
         xc = self.conv_c(x)
         xd = self.conv_d(x)
         return xa, xb, xc, xd
+
+
+class EmbeddingSumModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = nn.Embedding(10, 10)
+        self.embeddingbag = nn.EmbeddingBag(10, 10)
+
+    def forward(self, x):
+        y1 = self.embedding(x)
+        y2 = self.embeddingbag(x)
+        return y1 + y2
+
+
+class EmbeddingCatLinearModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding1 = nn.Embedding(10, 10)
+        self.embedding2 = nn.Embedding(10, 10)
+        self.linear = nn.Linear(10, 1)
+
+    def forward(self, x):
+        y1 = self.embedding1(x)
+        y2 = self.embedding2(x)
+        z = torch.cat([y1, y2])
+        return self.linear(z)
+
+class MultiOutputSameTensorModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._dummy_param = torch.nn.Parameter(torch.ones([1]))
+
+    def forward(self, x):
+        return x, x*x, x
+
+
+#       fq_2
+#        \
+# fq_2 - conv_1 - fq_6
+#                   \
+#        fq_4       add
+#         \         /
+# fq_4 - conv_2 - fq_6
+#
+class AddTwoConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 2, 2, -1, -2)
+        self.conv2 = create_conv(1, 2, 2, -1, -2)
+
+    def forward(self, x):
+        return self.conv1(x) + self.conv2(x)

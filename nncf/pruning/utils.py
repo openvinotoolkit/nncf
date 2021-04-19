@@ -12,6 +12,7 @@
 """
 from typing import Tuple
 from typing import Optional
+from typing import List
 
 import torch
 import numpy as np
@@ -19,7 +20,7 @@ import numpy as np
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.layers import NNCF_DECONV_MODULES_DICT
-from nncf.dynamic_graph.graph import PTNNCFNode
+from nncf.graph.graph import PTNNCFNode
 from nncf.dynamic_graph.context import Scope
 from nncf.nncf_network import NNCFNetwork
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
@@ -28,7 +29,7 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
     successors = graph.get_successor_nncf_nodes(conv_node.node_id)
     for succ in successors:
-        if succ.op_exec_context.operator_name == 'batch_norm':
+        if succ.ia_op_exec_context.operator_name == 'batch_norm':
             return succ
     return None
 
@@ -44,7 +45,7 @@ def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> T
     module_graph_node = graph.find_node_in_nx_graph_by_scope(module_scope)
     bn_graph_node = get_bn_node_for_conv(graph, module_graph_node)
     if bn_graph_node:
-        bn_scope = bn_graph_node.op_exec_context.scope_in_model
+        bn_scope = bn_graph_node.ia_op_exec_context.scope_in_model
         bn_module = target_model.get_module_by_scope(bn_scope)
         return bn_module, bn_scope
     return None, None
@@ -61,3 +62,20 @@ def is_conv_with_downsampling(node: PTNNCFNode) -> bool:
     return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
+
+
+def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
+    """
+    Initialize masks in groph for mask propagation algorithm
+
+    :param graph: NNCFNetwork
+    :param nodes: list with pruned nodes
+    """
+    for node in graph.get_all_nodes():
+        node.data.pop('input_mask', None)
+        node.data.pop('output_mask', None)
+
+    for minfo in nodes:
+        mask = minfo.operand.binary_filter_pruning_mask
+        nncf_node = graph.get_nncf_node_by_id(minfo.nncf_node_id)
+        nncf_node.data['output_mask'] = mask

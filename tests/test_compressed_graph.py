@@ -11,6 +11,11 @@
  limitations under the License.
 """
 
+import os
+from abc import ABC
+from abc import abstractmethod
+from copy import deepcopy
+from functools import partial
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -18,30 +23,23 @@ from typing import Tuple
 from typing import Union
 
 import networkx as nx
-import os
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from abc import ABC
-from abc import abstractmethod
-from copy import deepcopy
-from functools import partial
 
-from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
-
-from nncf.common.graph.transformations.commands import TargetType
 from nncf import nncf_model_input
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph_builder import GraphBuilder
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
-from nncf.dynamic_graph.graph_builder import create_input_infos
-from nncf.dynamic_graph.graph_builder import create_mock_tensor
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.hw_config import HWConfigType
 from nncf.layers import LSTMCellNNCF
 from nncf.layers import NNCF_RNN
@@ -54,16 +52,19 @@ from tests.helpers import get_empty_config
 from tests.modules.seq2seq.gnmt import GNMT
 from tests.modules.test_rnn import replace_lstm
 from tests.test_models.synthetic import ArangeModel
+from tests.test_models.synthetic import EmbeddingCatLinearModel
+from tests.test_models.synthetic import EmbeddingSumModel
 from tests.test_models.synthetic import GatherModel
 from tests.test_models.synthetic import ManyNonEvalModules
 from tests.test_models.synthetic import MaskedFillModel
 from tests.test_models.synthetic import ModelWithDummyParameter
+from tests.test_models.synthetic import MultiOutputSameTensorModel
 from tests.test_models.synthetic import PoolUnPool
 from tests.test_models.synthetic import ReshapeModel
 from tests.test_models.synthetic import TransposeModel
 
 
-def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info=None):
+def get_basic_quantization_config(quantization_type='symmetric', input_sample_sizes=None, input_info: Dict = None):
     config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {"algorithm": "quantization",
                              "activations": {
@@ -138,7 +139,7 @@ def check_nx_graph(nx_graph: nx.DiGraph, path_to_dot, graph_dir, sort_dot_graph=
     path_to_dot = os.path.abspath(os.path.join(dot_dir, path_to_dot))
 
     # validate .dot file manually!
-    if not os.path.exists(path_to_dot):
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         if not os.path.exists(dot_dir):
             os.makedirs(dot_dir)
         nx.drawing.nx_pydot.write_dot(nx_graph, path_to_dot)
@@ -284,6 +285,7 @@ def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref
     compressed_model.do_dummy_forward()
     # internal wrapped model is still in eval mode, switch to the train mode to make sure training graph is ok
     compressed_model.train()
+    compressed_model.rebuild_graph()
     compressed_model.do_dummy_forward()
     check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 
@@ -489,7 +491,7 @@ class BaseDesc(IModelDesc):
 class GeneralModelDesc(BaseDesc):
     def __init__(self,
                  input_sample_sizes: Union[Tuple[List[int], ...], List[int]] = None,
-                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info=None):
+                 model_name: str = None, wrap_inputs_fn: Callable = None, model_builder=None, input_info: Dict = None):
         super().__init__(input_sample_sizes, model_name, wrap_inputs_fn, input_info)
         if not model_name and hasattr(model_builder, '__name__'):
             self.model_name = model_builder.__name__
@@ -687,8 +689,8 @@ SYNTHETIC_MODEL_DESC_LIST = [
                           input_info=[{"sample_size": [1], "type": "long"}, {"sample_size": [2]}]),
     SingleLayerModelDesc(model_name='embedding_bag', layer=F.embedding_bag,
                          wrap_inputs_fn=partial(n_inputs_fn, nargs=3),
-                         input_info=[{"sample_size": [1, 1]},
-                                     {"sample_size": [1], "type": "long", "filler": "zeros"},
+                         input_info=[{"sample_size": [1], "type": "long", "filler": "zeros"},
+                                     {"sample_size": [1, 1]},
                                      {"sample_size": [1], "type": "long", "filler": "zeros"}]),
 
     SingleLayerModelDesc(model_name='softmax', layer=F.softmax),
@@ -713,7 +715,14 @@ SYNTHETIC_MODEL_DESC_LIST = [
     SingleLayerModelDesc(model_name='pixel_shuffle', layer=partial(F.pixel_shuffle, upscale_factor=1),
                          input_sample_sizes=([1, 1, 1, 1])),
 
-    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1]))
+    GeneralModelDesc(model_builder=ManyNonEvalModules, input_sample_sizes=([1, 1, 1, 1])),
+    GeneralModelDesc(model_builder=EmbeddingSumModel, input_info={"sample_size": [1, 1],
+                                                                  "type": "long",
+                                                                  "filler": "zeros"}),
+    GeneralModelDesc(model_builder=EmbeddingCatLinearModel, input_info={"sample_size": [1, 1],
+                                                                  "type": "long",
+                                                                  "filler": "zeros"}),
+    GeneralModelDesc(model_builder=MultiOutputSameTensorModel)
 ]
 
 
@@ -732,27 +741,7 @@ def test_synthetic_model_quantization(synthetic_model_desc: IModelDesc):
                       os.path.join('quantized', 'synthetic_model'))
 
 
-def test_iterate_module_list():
-    class Net(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.ml = nn.ModuleList([nn.Conv2d(1, 1, 1), nn.Conv2d(1, 1, 1)])
-
-        def forward(self, x):
-            return [self.ml[0](x), self.ml[1](x)]
-
-    net = Net()
-
-    context = TracingContext()
-    with context:
-        _ = net(torch.zeros(1, 1, 1, 1))
-
-    check_graph(context.graph, 'case_iterate_module_list.dot', 'original')
-
-
 def test_output_quantization(_case_config):
-    # TODO: Add support "quantize_outputs" option in propagation mode.
-    pytest.skip()
     model = test_models.UNet()
     input_shape = [1, 3, 360, 480]
 
@@ -835,7 +824,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
 
             assert len(matching_graph_op_nodes) == 1  # Isn't correct when NNCF module has more than 1 graph node
 
-            op_name = matching_graph_op_nodes[0][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+            op_name = matching_graph_op_nodes[0][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].operator_name
             ia_op_exec_context = InputAgnosticOperationExecutionContext(op_name, module_scope, 0)
             str_qconfig = str(qconfig)
             quantizers_weights_attr[ia_op_exec_context] = str_qconfig
@@ -852,7 +841,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
     nx_graph = graph._nx_graph
     nodes = deepcopy(nx_graph.nodes)
     for node_name, node in sorted(nodes.items()):
-        ia_op_exec_context_for_node = nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+        ia_op_exec_context_for_node = nx_graph.nodes[node_name][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
         node_scope = str(ia_op_exec_context_for_node)
         if ia_op_exec_context_for_node in pre_hooked_quantizers_activations_attr:
             in_port_id, qconf_str = pre_hooked_quantizers_activations_attr[ia_op_exec_context_for_node]
@@ -861,7 +850,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
                 label=label,
                 color="purple",
                 id=node[PTNNCFGraph.ID_NODE_ATTR],
-                op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                ia_op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
             )
 
             node_scope_for_input = node_scope + '|IN' + str(in_port_id)
@@ -888,7 +877,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
                 label=label,
                 color="purple",
                 id=node[PTNNCFGraph.ID_NODE_ATTR],
-                op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                ia_op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
             )
 
             # Adding a post-hook quantizer for the op
@@ -903,7 +892,7 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph,
         if ia_op_exec_context_for_node in quantizers_weights_attr:
             label = "Quantizer: {}".format(quantizers_weights_attr[ia_op_exec_context_for_node])
             nx_graph.add_node(node_scope, label=label, color="purple", id=node[PTNNCFGraph.ID_NODE_ATTR],
-                              op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+                              ia_op_exec_context=nx_graph.nodes[node_name][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
             nx_graph.add_edge(node_scope, node_name)
 
     return graph

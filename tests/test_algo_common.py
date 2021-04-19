@@ -10,22 +10,30 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import itertools
-from typing import Dict, List
-
 import copy
-import onnx
+import itertools
 import os
-import pytest
 from functools import partial
+from functools import reduce
+from typing import Dict
+from typing import List
+
+import onnx
+import pytest
+from torch import cuda
 from torch import nn
 from torch.nn import DataParallel
 
 from nncf import NNCFConfig
-from nncf.checkpoint_loading import load_state
+from nncf.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLevel
+from nncf.checkpoint_loading import load_state
 from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
-from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test
+from nncf.hw_config import HWConfigType
+from tests.helpers import BasicConvTestModel
+from tests.helpers import create_compressed_model_and_algo_for_test
+from tests.helpers import get_empty_config
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from tests.sparsity.rb.test_algo import get_basic_sparsity_config
@@ -332,6 +340,7 @@ def test_ordinary_load(algo, _model_wrapper, is_resume):
 
     assert num_loaded == len(model_save.state_dict())
 
+
 def test_can_export_compressed_model_with_input_output_names(tmp_path):
     test_path = str(tmp_path.joinpath('test.onnx'))
     target_input_names = ['input1', 'input2']
@@ -357,6 +366,7 @@ def test_can_export_compressed_model_with_input_output_names(tmp_path):
     assert curr_input_names == target_input_names
     assert curr_output_names == target_output_names
 
+
 def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_path):
     test_path = str(tmp_path.joinpath('test.onnx'))
 
@@ -381,3 +391,82 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
             count_custom_ops += 1
 
     assert count_custom_ops == 4
+
+
+def change_compression_algorithms_order(config):
+    # changes order of compression algorithms in config
+    def shift_list(list_for_shift):
+        shifted_list = [list_for_shift.pop()] + list_for_shift
+        return shifted_list
+
+    config_compression = list(config.get('compression', {}))
+    shifted_config_compression = shift_list(config_compression)
+    config.update({'compression': shifted_config_compression})
+    return config
+
+
+def get_basic_rb_sparsity_int8_config():
+    config = get_basic_sparsity_config()
+    config.update({
+        "compression": [
+            {
+                "algorithm": "rb_sparsity",
+                "sparsity_init": 0.02,
+                "params":
+                    {
+                        "schedule": "polynomial",
+                        "sparsity_target": 0.5,
+                        "sparsity_target_epoch": 2,
+                        "sparsity_freeze_epoch": 3
+                    },
+            },
+            {
+                "algorithm": "quantization"
+            }
+        ]
+    }
+    )
+    return config
+
+
+comp_loss_configs = [
+    get_basic_rb_sparsity_int8_config(),
+    change_compression_algorithms_order(get_basic_rb_sparsity_int8_config())
+]
+
+
+@pytest.mark.parametrize("config", comp_loss_configs,
+                         ids=[reduce(lambda x, y: x + "_" + y.get("algorithm", ""), config.get('compression', []),
+                                     'compression')
+                              for config in comp_loss_configs])
+@pytest.mark.skipif(not cuda.is_available(), reason="Since its GPU test, no need to run this without GPUs available")
+def test_compression_loss_gpu_device_compatibility(config):
+    model = BasicConvTestModel()
+    model.to(cuda.current_device())
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    compression_ctrl.loss()
+
+
+@pytest.mark.parametrize('algo_name, target_device',
+                         list(itertools.product(
+                             list(COMPRESSION_ALGORITHMS.registry_dict.keys()),
+                             list([x.value for x in HWConfigType]))))
+def test_target_device_is_propagated_to_algos(mocker, algo_name, target_device):
+    if algo_name == NoCompressionAlgorithmBuilder.__name__:
+        pytest.skip()
+    model = BasicConvTestModel()
+    config = NNCFConfig.from_dict({
+        "input_info":
+        {
+            "sample_size": [1, 1, 32, 32],
+        },
+        "compression": {
+            "algorithm": algo_name
+        },
+        "target_device": target_device
+    })
+
+    import nncf
+    compression_builder_init_spy = mocker.spy(nncf.api.compression.CompressionAlgorithmBuilder, '__init__')
+    create_compressed_model_and_algo_for_test(model, config)
+    assert compression_builder_init_spy.call_args[0][1]["hw_config_type"] == HWConfigType.from_str(target_device)

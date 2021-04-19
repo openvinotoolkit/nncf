@@ -19,11 +19,10 @@ from copy import deepcopy
 from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
 from nncf.api.composite_compression import CompositeCompressionLoss
-from nncf.api.composite_compression import CompositeCompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import PTCompressionLoss
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.hw_config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.nncf_network import NNCFNetwork
 from nncf.nncf_network import PTModelTransformer
@@ -121,7 +120,6 @@ class PTCompositeCompressionAlgorithmController(
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)
         self._loss = PTCompositeCompressionLoss()
-        self._scheduler = CompositeCompressionScheduler()
 
     def distributed(self):
         for ctrl in self.child_ctrls:

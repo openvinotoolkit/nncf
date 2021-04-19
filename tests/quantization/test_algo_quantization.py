@@ -41,6 +41,7 @@ from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.layers import PTQuantizerSpec
 from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.quantization.layers import SymmetricQuantizer
+from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_id import WeightQuantizerId
 from nncf.utils import get_all_modules_by_type
@@ -74,6 +75,7 @@ def test_quantization_configs__with_defaults():
                                        mode=QuantizationMode.SYMMETRIC,
                                        signedness_to_force=True,
                                        narrow_range=True,
+                                       half_range=False,
                                        scale_shape=model.wq_scale_shape_per_channel,
                                        logarithm_scale=False)
     for wq_info in weight_quantizers.values():
@@ -83,6 +85,7 @@ def test_quantization_configs__with_defaults():
                                            mode=QuantizationMode.SYMMETRIC,
                                            signedness_to_force=None,
                                            narrow_range=False,
+                                           half_range=False,
                                            scale_shape=(1, ),
                                            logarithm_scale=False)
     for aq_info in activation_quantizer_infos.values():
@@ -117,6 +120,7 @@ def test_quantization_configs__custom():
                                        signedness_to_force=None,
                                        scale_shape=model.wq_scale_shape_per_channel,
                                        narrow_range=True,
+                                       half_range=False,
                                        logarithm_scale=False)
     for wq_info in weight_quantizers.values():
         compare_qspecs(ref_weight_qspec, wq_info.quantizer_module_ref)
@@ -126,6 +130,7 @@ def test_quantization_configs__custom():
                                            signedness_to_force=True,
                                            scale_shape=(1, ),
                                            narrow_range=False,
+                                           half_range=False,
                                            logarithm_scale=False)
 
     for aq_info in activation_quantizer_infos.values():
@@ -200,11 +205,12 @@ def get_path_to_keys(tmp_path, rank):
 
 def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
     model = resnet50(pretrained=False)
-    quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    _, qctrl = create_compressed_model_and_algo_for_test(model, config)
     path = get_path_to_keys(tmp_path, current_gpu)
     print(path)
     with open(path, 'w') as f:
-        f.writelines("%s\n" % key for key in quant_model.activation_quantizers.keys())
+        for aq_id in qctrl.non_weight_quantizers:
+            f.writelines("%s\n" % str(aq_id))
 
 
 def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_subprocess_in_precommit):
@@ -231,19 +237,18 @@ def test_load_state_sets_initialized_flag():
     config = get_quantization_config_without_range_init()
 
     model = TwoConvTestModel()
-    quant_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    quant_model, qctrl = create_compressed_model_and_algo_for_test(model, config)
 
     load_state(quant_model, {
         'module.features.0.0.pre_ops.0.op.signed_tensor': torch.tensor([1.0]),  # quantizer of 1st conv's weights
         'module.features.1.0.pre_ops.0.op.scale': torch.ones(1, 1, 1, 1)  # quantizer of 2nd conv's weights
     })
 
-    quantizers = get_all_modules_by_type(quant_model, 'SymmetricQuantizer')
-    for scope, module in quantizers.items():
-        if 'activation_quantizers' in str(scope) or 'UpdateInputs' in str(scope):
-            assert not module.initialized
-        else:
-            assert module.initialized
+    for wq_info in qctrl.weight_quantizers.values():
+        assert wq_info.quantizer_module_ref.initialized
+
+    for aq_info in qctrl.non_weight_quantizers.values():
+        assert not aq_info.quantizer_module_ref.initialized
 
 
 def test_quantizers_have_proper_narrow_range_set():
@@ -265,7 +270,7 @@ def test_quantizers_have_proper_narrow_range_set():
             for op in module.pre_ops.values():
                 assert isinstance(op, (UpdateWeight, UpdateInputs))
                 assert op.operand.narrow_range == isinstance(op, UpdateWeight)
-    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER).items():
+    for _, aq in quant_model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER).items():
         assert aq.narrow_range is False
 
 
@@ -276,7 +281,7 @@ def hw_config_type_(request):
 
 def test_hw_config_quantization_can_quantize_squeezenet(hw_config_type):
     config = get_squeezenet_quantization_config()
-    config["hw_config"] = hw_config_type.value
+    config["target_device"] = hw_config_type.value
     model = squeezenet1_1()
     create_compressed_model_and_algo_for_test(model, config)
 
@@ -366,7 +371,7 @@ def test_quantize_inputs():
         }
     ]
 
-    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    model, qctrl = create_compressed_model_and_algo_for_test(model, config)
     REF_QUANTIZED_INPUT_MODULE_SCOPES = [
         '/nncf_model_input_0|OUTPUT',
         '/nncf_model_input_1|OUTPUT',
@@ -374,11 +379,17 @@ def test_quantize_inputs():
         '/nncf_model_input_3|OUTPUT',
         '/nncf_model_input_4|OUTPUT'
     ]
-    actual_input_quantizer_str_scopes =\
-         [str_scope for str_scope in model.activation_quantizers if 'nncf_model_input' in str_scope]
+    actual_input_quantizer_str_scopes = \
+        [str(aq_id) for aq_id in qctrl.non_weight_quantizers if 'nncf_model_input' in str(aq_id)]
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
     for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
-        assert isinstance(model.activation_quantizers[ref_qinput_scope_str], SymmetricQuantizer)
+        matches = []
+        for aq_id in qctrl.non_weight_quantizers:
+            if str(aq_id) == ref_qinput_scope_str:
+                matches.append(aq_id)
+        assert len(matches) == 1
+        quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
+        assert isinstance(quantizer, SymmetricQuantizer)
 
 
 
@@ -448,3 +459,70 @@ def test_quantizer_ordering(requanting_qconf: QuantizerConfig,
                             base_qconf: QuantizerConfig, is_valid_requant: bool):
     test_result = requanting_qconf.is_valid_requantization_for(base_qconf)
     assert test_result == is_valid_requant
+
+class QuantizeOutputsTestModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv3 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv4 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+        self.conv5 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3)
+
+
+    def forward(self, x):
+        self.conv5(x)
+        return self.conv1(x), self.conv2(x), self.conv3(x), self.conv4(x)
+
+
+def test_quantize_outputs():
+    config = get_quantization_config_without_range_init()
+    config["input_info"] = [
+        {
+            "sample_size": [2, 3, 32, 32],
+        }
+    ]
+    model = QuantizeOutputsTestModel()
+    config['compression']['quantize_outputs'] = True
+    model, qctrl = create_compressed_model_and_algo_for_test(model, config)
+    REF_QUANTIZED_OUTPUT_MODULE_SCOPES = [
+        'QuantizeOutputsTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv2]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv3]/conv2d_0|OUTPUT',
+        'QuantizeOutputsTestModel/NNCFConv2d[conv4]/conv2d_0|OUTPUT'
+    ]
+    actual_output_quantizer_str_scopes =\
+         [str(aq_id) for aq_id in qctrl.non_weight_quantizers if 'nncf_model_input' not in str(aq_id)]
+    assert len(REF_QUANTIZED_OUTPUT_MODULE_SCOPES) == len(actual_output_quantizer_str_scopes)
+
+    for ref_qinput_scope_str in REF_QUANTIZED_OUTPUT_MODULE_SCOPES:
+        matches = []
+        for aq_id in qctrl.non_weight_quantizers:
+            if str(aq_id) == ref_qinput_scope_str:
+                matches.append(aq_id)
+        assert len(matches) == 1
+        quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
+        assert isinstance(quantizer, SymmetricQuantizer)
+
+def test_quantize_outputs_with_scope_overrides():
+    config = get_quantization_config_without_range_init()
+    config["input_info"] = [
+        {
+            "sample_size": [2, 3, 32, 32],
+        }
+    ]
+    model = QuantizeOutputsTestModel()
+    config['compression']['quantize_outputs'] = True
+    config['target_device'] = "TRIAL"
+    config['compression']['scope_overrides'] = {
+        "nncf_model_output_0": {
+            "bits": 4,
+            "mode": "asymmetric",
+        }
+    }
+    model, ctrl = create_compressed_model_and_algo_for_test(model, config)
+    output_quantizers =\
+        [ q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
+    for q in output_quantizers:
+        assert q.num_bits == 4
+        assert isinstance(q, AsymmetricQuantizer)

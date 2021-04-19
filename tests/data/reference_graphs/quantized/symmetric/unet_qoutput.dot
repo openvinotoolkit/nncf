@@ -113,6 +113,8 @@ strict digraph  {
 "111 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize" [id=111, scope="UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer", type=symmetric_quantize];
 "112 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=112, scope="UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "113 UNet/NNCFConv2d[last]/conv2d" [id=113, scope="UNet/NNCFConv2d[last]", type=conv2d];
+"114 UNet/NNCFConv2d[last]/SymmetricQuantizer/symmetric_quantize" [id=114, scope="UNet/NNCFConv2d[last]/SymmetricQuantizer", type=symmetric_quantize];
+"115 /nncf_model_output" [id=115, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
 "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
@@ -230,4 +232,6 @@ strict digraph  {
 "110 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/RELU" -> "111 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize";
 "111 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/SymmetricQuantizer/symmetric_quantize" -> "113 UNet/NNCFConv2d[last]/conv2d";
 "112 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "113 UNet/NNCFConv2d[last]/conv2d";
+"113 UNet/NNCFConv2d[last]/conv2d" -> "114 UNet/NNCFConv2d[last]/SymmetricQuantizer/symmetric_quantize";
+"114 UNet/NNCFConv2d[last]/SymmetricQuantizer/symmetric_quantize" -> "115 /nncf_model_output";
 }

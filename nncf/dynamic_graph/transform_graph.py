@@ -23,6 +23,7 @@ from nncf.dynamic_graph.context import Scope, ScopeElement
 from nncf.common.utils.logger import logger as nncf_logger
 
 
+
 def is_nncf_module(module):
     for nncf_module_name in NNCF_MODULES:
         if module.__class__.__name__ == nncf_module_name:

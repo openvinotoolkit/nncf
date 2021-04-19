@@ -320,6 +320,7 @@ strict digraph  {
 "318 Inception3/adaptive_avg_pool2d" [id=318, scope=Inception3, type=adaptive_avg_pool2d];
 "319 Inception3/dropout" [id=319, scope=Inception3, type=dropout];
 "320 Inception3/NNCFLinear[fc]/linear" [id=320, scope="Inception3/NNCFLinear[fc]", type=linear];
+"321 /nncf_model_output" [id=321, scope="", type=nncf_model_output];
 "/nncf_model_input_0" [color=purple, id=0, label="Quantizer: B:8 M:S SGN:ANY PC:N", scope="", type=nncf_model_input];
 "Inception3/__mul___0" [color=purple, id=1, label="Quantizer: B:8 M:S SGN:ANY PC:N", scope=Inception3, type=__mul__];
 "Inception3/BasicConv2d[Conv2d_1a_3x3]/RELU_0" [color=purple, id=10, label="Quantizer: B:8 M:S SGN:ANY PC:N", scope="Inception3/BasicConv2d[Conv2d_1a_3x3]", type=RELU];
@@ -877,6 +878,7 @@ strict digraph  {
 "317 Inception3/InceptionE[Mixed_7c]/cat" -> "318 Inception3/adaptive_avg_pool2d";
 "318 Inception3/adaptive_avg_pool2d" -> "Inception3/adaptive_avg_pool2d_0";
 "319 Inception3/dropout" -> "320 Inception3/NNCFLinear[fc]/linear";
+"320 Inception3/NNCFLinear[fc]/linear" -> "321 /nncf_model_output";
 "/nncf_model_input_0" -> "1 Inception3/__mul__";
 "/nncf_model_input_0" -> "3 Inception3/__mul__";
 "/nncf_model_input_0" -> "5 Inception3/__mul__";

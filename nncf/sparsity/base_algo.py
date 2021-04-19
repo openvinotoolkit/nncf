@@ -16,16 +16,21 @@ from typing import List
 
 from texttable import Texttable
 
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.sparsity.controller import SparsityController
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
@@ -65,24 +70,25 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         return insertion_commands
 
-    def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        return BaseSparsityAlgoController(target_model, self._sparsified_module_info)
-
     def create_weight_sparsifying_operation(self, target_module):
         raise NotImplementedError
 
 
-class BaseSparsityAlgoController(PTCompressionAlgorithmController):
+class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityController):
     def __init__(self, target_model: NNCFNetwork,
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
 
-    def freeze(self):
-        raise NotImplementedError
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
-    def set_sparsity_level(self, sparsity_level: float):
-        raise NotImplementedError
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     @property
     def sparsified_weights_count(self):
@@ -91,12 +97,15 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
             count = count + minfo.module.weight.view(-1).size(0)
         return max(count, 1)
 
-    @property
-    def sparsity_rate_for_sparsified_modules(self):
+    def sparsity_rate_for_sparsified_modules(self, target_sparsified_module_info=None):
+        if target_sparsified_module_info is None:
+            target_sparsified_module_info = self.sparsified_module_info
+        else:
+            target_sparsified_module_info = [target_sparsified_module_info]
+
         nonzero = 0
         count = 0
-
-        for minfo in self.sparsified_module_info:
+        for minfo in target_sparsified_module_info:
             mask = minfo.operand.apply_binary_mask(minfo.module.weight)
             nonzero = nonzero + mask.nonzero().size(0)
             count = count + mask.view(-1).size(0)
@@ -133,7 +142,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         return 1 - nonzero / max(count, 1)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         table = Texttable()
         header = ["Name", "Weight's Shape", "SR", "% weights"]
         data = [header]
@@ -153,12 +162,9 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController):
         table.add_rows(data)
 
         stats["sparsity_statistic_by_module"] = table
-        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules
+        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
         stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
 
-        return self.add_algo_specific_stats(stats)
-
-    def add_algo_specific_stats(self, stats):
         return stats
 
     def compression_level(self) -> CompressionLevel:

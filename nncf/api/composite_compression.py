@@ -19,7 +19,6 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.graph.transformations.layout import TransformationLayout
 
 ModelType = TypeVar('ModelType')
 
@@ -47,13 +46,17 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
-    def calculate(self) -> Any:
+    def calculate(self, *args, **kwargs) -> Any:
         """
         Traverses through all children and calculates the total compression
         loss value.
 
         :return: The compression loss value.
         """
+
+        if len(self._child_losses) == 0:
+            raise RuntimeError("Cannot calculate the loss value because the number of child loss is 0.")
+
         result_loss = 0
         for loss in self._child_losses:
             result_loss += loss()
@@ -164,6 +167,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._scheduler = CompositeCompressionScheduler()
 
     @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
     def child_ctrls(self) -> List[CompressionAlgorithmController]:
         return self._child_ctrls
 
@@ -247,32 +258,3 @@ class CompositeCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     @property
     def child_builders(self) -> List[CompressionAlgorithmBuilder]:
         return self._child_builders
-
-    def build_controller(self, model: ModelType) -> CompositeCompressionAlgorithmController:
-        """
-        Builds `CompositeCompressionAlgorithmController` to handle the additional
-        modules, parameters, and hooks inserted into the model to enable
-        algorithm-specific compression.
-
-        :param model: The model with additional modifications necessary to enable
-         algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompositeCompressionAlgorithmController`.
-        """
-        composite_ctrl = CompositeCompressionAlgorithmController(model)
-        for builder in self.child_builders:
-            composite_ctrl.add(builder.build_controller(model))
-        return composite_ctrl
-
-    def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
-        """
-        Computes necessary model transformations to enable algorithm-specific
-        compression.
-
-        :param model: The original uncompressed model.
-        :return: The instance of the `TransformationLayout` class containing
-            a list of algorithm-specific modifications.
-        """
-        transformations = TransformationLayout()
-        for builder in self.child_builders:
-            transformations.update(builder.get_transformation_layout(model))
-        return transformations

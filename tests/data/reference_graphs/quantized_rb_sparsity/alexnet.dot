@@ -52,6 +52,7 @@ strict digraph  {
 "50 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=50, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "51 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=51, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "52 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" [id=52, scope="AlexNet/Sequential[classifier]/NNCFLinear[6]", type=linear];
+"53 /nncf_model_output" [id=53, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 AlexNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 AlexNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -104,4 +105,5 @@ strict digraph  {
 "49 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "50 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "50 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "51 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
 "51 AlexNet/Sequential[classifier]/NNCFLinear[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "52 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear";
+"52 AlexNet/Sequential[classifier]/NNCFLinear[6]/linear" -> "53 /nncf_model_output";
 }

@@ -1,14 +1,15 @@
 from collections import Counter
+from copy import deepcopy
 from typing import Dict
 from typing import List
+from typing import Optional
+from typing import Set
 from typing import Tuple
-
-from copy import deepcopy
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.quantization.layers import QuantizerConfig
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -31,9 +32,6 @@ class QuantizationPointBase:
     def is_weight_quantization_point(self) -> bool:
         return self.insertion_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
 
-    def assign_input_shape(self, input_shape):
-        raise NotImplementedError
-
     def get_all_scale_shapes(self, input_shape: Tuple[int]) -> List[Tuple[int]]:
         raise NotImplementedError
 
@@ -46,9 +44,6 @@ class SingleConfigQuantizationPoint(QuantizationPointBase):
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
         self.qconfig = deepcopy(qconfig)
-
-    def assign_input_shape(self, input_shape):
-        self.qconfig.input_shape = input_shape
 
     def __str__(self):
         return str(self.insertion_point) + ' ' + str(self.qconfig)
@@ -63,16 +58,20 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
     def __init__(self, insertion_point: PTTargetPoint, possible_qconfigs: List[QuantizerConfig],
                  scopes_of_directly_quantized_operators: List['Scope']):
         super().__init__(insertion_point, scopes_of_directly_quantized_operators)
-        self.possible_qconfigs = deepcopy(possible_qconfigs)
+        self.possible_qconfigs = possible_qconfigs
+
+    @property
+    def possible_qconfigs(self):
+        return deepcopy(self._possible_qconfigs)
+
+    @possible_qconfigs.setter
+    def possible_qconfigs(self, qconfigs: List[QuantizerConfig]):
+        self._possible_qconfigs = deepcopy(qconfigs)
 
     def select_qconfig(self, qconfig: QuantizerConfig) -> SingleConfigQuantizationPoint:
         if qconfig not in self.possible_qconfigs:
             raise ValueError("Invalid selection for a quantizer config!")
         return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.scopes_of_directly_quantized_operators)
-
-    def assign_input_shape(self, input_shape):
-        for qconfig in self.possible_qconfigs:
-            qconfig.input_shape = input_shape
 
     def __str__(self):
         return str(self.insertion_point) + ' ' + ';'.join([str(qc) for qc in self.possible_qconfigs])
@@ -89,8 +88,10 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 class QuantizerSetupBase:
     def __init__(self):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, QuantizationPointBase]
-        self.unified_scale_groups = []  # type: List[Set[QuantizationPointId]]
-        self.shared_input_operation_set_groups = []  # type: List[Set[QuantizationPointId]]
+        self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self.shared_input_operation_set_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self._next_unified_scale_gid = 0
+        self._next_shared_inputs_gid = 0
 
     def add_independent_quantization_point(self, qp: QuantizationPointBase):
         if self.quantization_points.keys():
@@ -99,19 +100,30 @@ class QuantizerSetupBase:
             new_id = 0
         self.quantization_points[new_id] = qp
 
-    def add_unified_scale_group(self, qp_group: List[QuantizationPointBase]):
-        if self.quantization_points.keys():
-            new_start_id = max(self.quantization_points.keys()) + 1
-        else:
-            new_start_id = 0
-        new_points_dict = {new_start_id + i: qp for i, qp in enumerate(qp_group)}
-        self.quantization_points.update(new_points_dict)
-        self.unified_scale_groups.append(set(new_points_dict.keys()))
+    def register_unified_scale_group(self, qp_group: List[QuantizationPointId]) -> int:
+        for qp_id in qp_group:
+            gid = self.get_unified_scale_group_id(qp_id) is not None
+            if gid:
+                raise RuntimeError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+        gid = self._next_unified_scale_gid
+        self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
+        self._next_unified_scale_gid += 1
+        return gid
+
+    def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
+        for qp_id in qp_group:
+            gid = self.get_shared_inputs_group_id(qp_id) is not None
+            if gid:
+                raise RuntimeError("QP id {} is already in shared input group {}".format(qp_id, gid))
+        gid = self._next_shared_inputs_gid
+        self.shared_input_operation_set_groups[self._next_shared_inputs_gid] = set(qp_group)
+        self._next_shared_inputs_gid += 1
+        return gid
 
     def __discard_independent(self, id_: QuantizationPointId):
         if id_ in self.quantization_points:
             self.quantization_points.pop(id_)
-        for unified_scale_group in self.unified_scale_groups:
+        for unified_scale_group in self.unified_scale_groups.values():
             unified_scale_group.discard(id_)
 
     def discard(self, id_: QuantizationPointId, keep_shared_input_qps: bool = False):
@@ -122,16 +134,88 @@ class QuantizerSetupBase:
             # entire group has to be removed from the setup, otherwise an operation would have a mix between
             # quantized and unquantized inputs.
             indices_to_delete = []
-            for idx, shared_input_operation_set_group in enumerate(self.shared_input_operation_set_groups):
+            for gid, shared_input_operation_set_group in self.shared_input_operation_set_groups.items():
                 if id_ in shared_input_operation_set_group:
                     shared_input_operation_set_group.discard(id_)
-                    indices_to_delete.append(idx)
+                    indices_to_delete.append(gid)
 
             if not keep_shared_input_qps:
                 for idx in sorted(indices_to_delete, reverse=True):
                     for additional_id in self.shared_input_operation_set_groups[idx]:
                         self.__discard_independent(additional_id)
                     del self.shared_input_operation_set_groups[idx]
+
+    def get_unified_scale_group_id(self,
+                                   qp_id: QuantizationPointId) -> Optional[int]:
+        for gid, unified_scale_group in self.unified_scale_groups.items():
+            if qp_id in unified_scale_group:
+                return gid
+        return None
+
+    def get_shared_inputs_group_id(self,
+                                   qp_id: QuantizationPointId) -> Optional[int]:
+        for gid, shared_inputs_group in self.shared_input_operation_set_groups.items():
+            if qp_id in shared_inputs_group:
+                return gid
+        return None
+
+    def register_existing_qp_id_in_unified_scale_group(self, qp_id: QuantizationPointId, unified_scale_gid: int):
+        gid = self.get_unified_scale_group_id(qp_id)
+        if gid is not None:
+            raise RuntimeError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+        self.unified_scale_groups[unified_scale_gid].add(qp_id)
+
+    def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int):
+        gid = self.get_shared_inputs_group_id(qp_id)
+        if gid is not None:
+            raise RuntimeError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
+        self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
+
+    def equivalent_to(self, other: 'QuantizerSetupBase') -> bool:
+        this_qp_id_to_other_qp_id_dict = {}  # type: Dict[QuantizationPointId, QuantizationPointId]
+
+        def _compare_qps(first: 'QuantizerSetupBase', second: 'QuantizerSetupBase') -> bool:
+            for this_qp_id, this_qp in first.quantization_points.items():
+                matches = []  # type: List[QuantizationPointId]
+                for other_qp_id, other_qp in second.quantization_points.items():
+                    if this_qp == other_qp:
+                        matches.append(other_qp_id)
+                if len(matches) == 0:
+                    return False
+                assert len(matches) == 1  # separate quantization points should not compare equal to each other
+                this_qp_id_to_other_qp_id_dict[this_qp_id] = matches[0]
+            return True
+
+        def _compare_shared_input_groups(first: 'QuantizerSetupBase', second: 'QuantizerSetupBase') -> bool:
+            for this_same_input_group_set in first.shared_input_operation_set_groups.values():
+                translated_id_set = set(this_qp_id_to_other_qp_id_dict[this_qp_id]
+                                        for this_qp_id in this_same_input_group_set)
+                matches = []
+
+                for other_shared_inputs_group in second.shared_input_operation_set_groups.values():
+                    if translated_id_set == other_shared_inputs_group:
+                        matches.append(other_shared_inputs_group)
+                if not matches:
+                    return False
+                assert len(matches) == 1  # shared inputs group entries should be present in only one group
+            return True
+
+        def _compare_unified_scale_groups(first: 'QuantizerSetupBase', second: 'QuantizerSetupBase') -> bool:
+            for this_unified_scales_group in first.unified_scale_groups.values():
+                translated_id_set = set(this_qp_id_to_other_qp_id_dict[this_qp_id]
+                                        for this_qp_id in this_unified_scales_group)
+                matches = []
+                for other_unified_scales_group in second.unified_scale_groups.values():
+                    if translated_id_set == other_unified_scales_group:
+                        matches.append(other_unified_scales_group)
+                if not matches:
+                    return False
+                assert len(matches) == 1  # unified scale group entries should be present in only one group
+            return True
+
+        return _compare_qps(self, other) and _compare_qps(other, self) and \
+               _compare_shared_input_groups(self, other) and _compare_shared_input_groups(self, other) and \
+               _compare_unified_scale_groups(self, other) and _compare_unified_scale_groups(self, other)
 
 
 class SingleConfigQuantizerSetup(QuantizerSetupBase):

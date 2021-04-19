@@ -34,7 +34,7 @@ from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer

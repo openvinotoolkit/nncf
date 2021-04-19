@@ -17,9 +17,12 @@ from typing import Union
 from typing import List
 from typing import Tuple
 
+import onnx
 import numpy as np
 import torch
+
 from copy import deepcopy
+from onnx import numpy_helper
 from torch import nn
 from torch.nn import Module
 
@@ -27,7 +30,7 @@ from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
@@ -141,7 +144,7 @@ class TwoConvTestModel(nn.Module):
 
 
 def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
-                     input_info=None):
+                     input_info: Dict = None):
     if input_sample_sizes is None:
         input_sample_sizes = [1, 1, 4, 4]
 
@@ -182,7 +185,7 @@ def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
     return model, algo
 
 
-def create_nncf_model_and_algo_builder(model: NNCFNetwork, config: NNCFConfig,
+def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
                                        dummy_forward_fn: Callable[[Module], Any] = None,
                                        wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
                                        resuming_state_dict: dict = None):
@@ -259,3 +262,32 @@ def create_mock_dataloader(config, num_samples=1):
                                               num_workers=0,  # Workaround
                                               shuffle=False, drop_last=True)
     return data_loader
+
+
+# ONNX graph helpers
+def get_nodes_by_type(onnx_model: onnx.ModelProto, node_type: str) -> List[onnx.NodeProto]:
+    retval = []
+    for node in onnx_model.graph.node:
+        if str(node.op_type) == node_type:
+            retval.append(node)
+    return retval
+
+
+def get_all_inputs_for_graph_node(node: onnx.NodeProto, graph: onnx.GraphProto) -> \
+        Dict[str, onnx.AttributeProto]:
+    retval = {}
+    for input_ in node.input:
+        constant_input_nodes = [x for x in graph.node if input_ in x.output and x.op_type == "Constant"]
+        for x in graph.initializer:
+            if input_ == x.name:
+                weight_tensor = x
+                retval[input_] = numpy_helper.to_array(weight_tensor)
+                # Only one weight tensor could be
+                break
+
+        for constant_input_node in constant_input_nodes:
+            assert len(constant_input_node.attribute) == 1
+            val = constant_input_node.attribute[0]
+            retval[input_] = numpy_helper.to_array(val.t)
+
+    return retval

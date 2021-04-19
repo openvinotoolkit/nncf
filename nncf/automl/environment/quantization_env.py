@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import os
 import logging
 
 import os.path as osp
@@ -47,7 +48,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.os import safe_open
-
+from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
     for _qid, _q in qctrl.all_quantizations.items():
@@ -101,6 +102,7 @@ class QuantizationEnvParams:
     def __init__(self, compression_ratio: float,
                  eval_subset_ratio: float,
                  skip_constraint: bool,
+                 performant_bw: bool,
                  finetune: bool,
                  bits: List[int],
                  dump_init_precision_data: bool = False,
@@ -108,6 +110,7 @@ class QuantizationEnvParams:
         self.compression_ratio = compression_ratio
         self.eval_subset_ratio = eval_subset_ratio
         self.skip_constraint = skip_constraint
+        self.performant_bw = performant_bw
         self.finetune = finetune
         self.bits = bits
         self.dump_init_precision_data = dump_init_precision_data
@@ -147,8 +150,14 @@ class QuantizationEnv:
         # Bool to disable hard resource constraint
         self.skip_constraint = params.skip_constraint
 
+        # Bool to enable bw alignment of adj. Q group to lower precision
+        self.performant_bw = params.performant_bw
+
         # Bool to enable fine-tuning in each episode. Placeholder for now
-        self.finetune = params.skip_constraint
+        self.finetune = False
+
+        # Counter for number of evaluate_strategy calls
+        self._n_eval = 0
 
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
@@ -189,7 +198,7 @@ class QuantizationEnv:
                 self.qconfig_space_map[qid] = conf_list_to_set
 
         # Quantizer Master Table Creation
-        self._groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
+        self.groups_of_adjacent_quantizers = self.qctrl._groups_of_adjacent_quantizers
         self.quantizer_table = self._create_quantizer_table()
 
         # Create master dataframe to keep track of quantizable layers and their attributes
@@ -204,6 +213,10 @@ class QuantizationEnv:
         self.state_scaler = MinMaxScaler()
         self.state_scaler.fit(self.master_df[self.state_list])
 
+        # Mapping required for quantizer BW alignment flow
+        self.adjq_groupwise_intersecting_bw_space = self._create_map_of_adjq_groupid_to_common_bw_space()
+        self.adjq_groupwise_df_lut_keys = self._create_map_of_adjq_groupid_to_df_lut_keys()
+
         # Model Size Calculation
         self.model_size_calculator = ModelSizeCalculator(self.qmodel, self.qconfig_space_map)
         self.orig_model_size = self.model_size_calculator.fp_model_size
@@ -216,6 +229,12 @@ class QuantizationEnv:
                              .format(self.compression_ratio,
                                      self.min_model_size / self.orig_model_size,
                                      self.max_model_size / self.orig_model_size))
+
+        # Compression Ratio Calculation (BOP relative to 8-bit)
+        self.compression_ratio_calculator = CompressionRatioCalculator(
+            self.qmodel.get_flops_per_module(),
+            self.qctrl.get_quantizer_setup_for_current_state(),
+            self.qctrl.groups_of_adjacent_quantizers.weight_qp_id_per_activation_qp_id)
 
         # Evaluate and store metric score of pretrained model
         self._evaluate_pretrained_model()
@@ -250,7 +269,7 @@ class QuantizationEnv:
         # Create a mapping of qid to its adjacent quantizer group id
         adjq_gid_map = OrderedDict.fromkeys(self.qctrl.all_quantizations.keys())
         for qid in self.qctrl.all_quantizations:
-            adjq_gid_map[qid] = self._groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
+            adjq_gid_map[qid] = self.groups_of_adjacent_quantizers.get_group_id_for_quantizer(qid)
 
         assert len(set(self.qconfig_space_map.keys()) - set(adjq_gid_map.keys())) == 0, \
             "both qconfig_space_map and adjq_gid_map must have exact keys."
@@ -327,6 +346,10 @@ class QuantizationEnv:
         master_df.loc[master_df.index[0], 'prev_action'] = max(self.model_bitwidth_space)
         master_df.loc[master_df.index[-1], 'prev_action'] = min(self.model_bitwidth_space)
 
+        # add GEMM Ops to weight quantizer
+        master_df['n_op'] = master_df['state_scope'].map(self.qmodel.get_flops_per_module())
+        master_df['n_op'] = master_df['n_op'].fillna(0)
+
         return master_df, state_list
 
 
@@ -386,6 +409,42 @@ class QuantizationEnv:
             raise ValueError("qid is an instance of unexpected class {}".format(qid.__class__.__name__))
 
         return pd.Series(feature)
+
+
+    def _create_map_of_adjq_groupid_to_common_bw_space(self) -> Dict:
+        # Extracting common bitwidth space per group of quantizer
+        bwassigner_df = deepcopy(self.master_df)
+        bwassigner_df['bw_space'] = list(map(lambda x: [qc.num_bits for qc in x], bwassigner_df.qconf_space.values))
+
+        adjq_groupwise_intersecting_bw_space = dict()
+        for i, _ in enumerate(self.groups_of_adjacent_quantizers):
+            list_of_bw_space = []
+
+            for aq in self.groups_of_adjacent_quantizers[i].activation_quantizers:
+                bw_space = bwassigner_df.bw_space[bwassigner_df.qid == str(aq[0])][0]
+                list_of_bw_space.append(bw_space)
+
+            for wq in self.groups_of_adjacent_quantizers[i].weight_quantizers:
+                bw_space = bwassigner_df.bw_space[bwassigner_df.qid == str(wq[0])][0]
+                list_of_bw_space.append(bw_space)
+
+            intersecting_bw_space = set.intersection(*map(set,list_of_bw_space))
+            adjq_groupwise_intersecting_bw_space[i] = intersecting_bw_space
+
+        return adjq_groupwise_intersecting_bw_space
+
+    def _create_map_of_adjq_groupid_to_df_lut_keys(self) -> Dict:
+        adjq_groupwise_df_lut_keys = dict()
+
+        for i, _ in enumerate(self.groups_of_adjacent_quantizers):
+            group_members = []
+            for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
+                group_members.append(self.master_df.index[self.master_df.qid == str(aq[0])][0])
+            for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
+                group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
+            adjq_groupwise_df_lut_keys[i] = natsorted(group_members)
+
+        return adjq_groupwise_df_lut_keys
 
 
     def _evaluate_pretrained_model(self):
@@ -450,7 +509,13 @@ class QuantizationEnv:
         return self.master_df['action'].tolist()
 
     def reward(self, acc: float, model_ratio: float) -> float:
-        return (acc - self.pretrained_score) * 0.1
+        def order_of_magnitude(number):
+            return np.floor(np.math.log(abs(number), 10))
+
+        if self.pretrained_score == 0:
+            return acc
+        order = order_of_magnitude(self.pretrained_score)
+        return acc*(10**(-order))
 
     def step(self, action: Union[int, float]) -> Tuple:
         currently_processed_qconf_idx = len(self.collected_strategy)
@@ -498,7 +563,17 @@ class QuantizationEnv:
             collected_strategy = self._constrain_model_size(collected_strategy)
         self.master_df['action'] = collected_strategy # This must be after constraint
 
-        configs_to_set = self.select_config_for_actions(self.master_df['action'])
+        if self.performant_bw:
+            self._align_bw_action()
+            configs_to_set = self.select_config_for_actions(self.master_df['action_aligned'])
+
+            if self._dump_autoq_data or is_debug():
+                self._dump_adjacent_quantizer_group_alignment()
+
+            self.master_df['action'] = self.master_df['action_aligned']
+        else:
+            configs_to_set = self.select_config_for_actions(self.master_df['action'])
+
         self._apply_quantizer_configs_to_model(configs_to_set)
 
         for idx, qid in zip(self.master_df.index, self.master_df['qid']):
@@ -511,12 +586,19 @@ class QuantizationEnv:
         current_model_size = self.model_size_calculator(self._get_quantizer_bitwidth())
         current_model_ratio = self.model_size_calculator.get_model_size_ratio(self._get_quantizer_bitwidth())
 
+        current_model_bop_ratio = self.compression_ratio_calculator.run_for_quantizer_setup(
+            self.qctrl.get_quantizer_setup_for_current_state())
+
         reward = self.reward(quantized_score, current_model_ratio)
 
-        info_set = {'model_ratio': current_model_ratio, 'accuracy': quantized_score, 'model_size': current_model_size}
+        info_set = {'model_ratio': current_model_ratio,
+                    'accuracy': quantized_score,
+                    'model_size': current_model_size,
+                    'bop_ratio': current_model_bop_ratio}
 
         obs = self.get_normalized_obs(len(collected_strategy) - 1)
         done = True
+        self._n_eval += 1
 
         return obs, reward, done, info_set
 
@@ -612,13 +694,68 @@ class QuantizationEnv:
     def _dump_groups_of_adjacent_quantizers(self):
         adj_quantizer_groups = []
 
-        for i, _ in enumerate(self._groups_of_adjacent_quantizers):
+        for i, _ in enumerate(self.groups_of_adjacent_quantizers):
             group_members = []
-            for _, aq in enumerate(self._groups_of_adjacent_quantizers[i].activation_quantizers):
+            for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(aq[0])][0])
-            for _, wq in enumerate(self._groups_of_adjacent_quantizers[i].weight_quantizers):
+            for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
                 group_members.append(self.master_df.index[self.master_df.qid == str(wq[0])][0])
             adj_quantizer_groups.append(natsorted(group_members))
 
-        with safe_open(self.dump_dir / self.model_name / "_groups_of_adjacent_quantizers.json", "w") as DUMP_FH:
+        with safe_open(self.dump_dir / "{}_groups_of_adjacent_quantizers.json".format(self.model_name), "w") as DUMP_FH:
             json.dump(natsorted(adj_quantizer_groups), DUMP_FH, indent=4)
+
+
+    def _align_bw_action(self):
+        # align bw action per group of adjacent quantizer
+        # this alignment aims to realize GEMM compute in a lower precision
+
+        self.master_df['action_aligned']=0
+
+        for i, _ in enumerate(self.groups_of_adjacent_quantizers):
+            # Collect all actions of a group
+            list_of_action = []
+
+            for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
+                list_of_action.append( self.master_df.action[self.master_df.qid == str(aq[0])][0] )
+
+            for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
+                list_of_action.append( self.master_df.action[self.master_df.qid == str(wq[0])][0] )
+
+            # Get the minimum prediction bw of a group
+            group_min_predicted_bw = min(list_of_action)
+
+            # Access and get the intersecting bw among all quantizers in a group
+            intersecting_bw_space = self.adjq_groupwise_intersecting_bw_space[i]
+
+            # Determine the lowest realizable hardware precision given current action of the groups
+            if not group_min_predicted_bw in intersecting_bw_space:
+                group_final_min_bw = min(intersecting_bw_space)
+            else:
+                group_final_min_bw = group_min_predicted_bw
+
+            # Assignment Routine
+            for _, aq in enumerate(self.groups_of_adjacent_quantizers[i].activation_quantizers):
+                self.master_df.loc[self.master_df.qid == str(aq[0]), "action_aligned"] = group_final_min_bw
+
+            for _, wq in enumerate(self.groups_of_adjacent_quantizers[i].weight_quantizers):
+                if self.master_df.loc[self.master_df.qid == str(wq[0]), "action"][0] > group_final_min_bw:
+                    self.master_df.loc[self.master_df.qid == str(wq[0]), "action_aligned"] = group_final_min_bw
+                else:
+                    self.master_df.loc[self.master_df.qid == str(wq[0]), "action_aligned"] = \
+                        self.master_df.loc[self.master_df.qid == str(wq[0]), "action"][0]
+
+    def _dump_adjacent_quantizer_group_alignment(self):
+        list_of_dump_dict = []
+        for i, _ in enumerate(self.groups_of_adjacent_quantizers):
+            list_of_dump_dict.append(
+                self.master_df.loc[
+                    self.adjq_groupwise_df_lut_keys[i],
+                    ["action", "action_aligned"]
+                ].to_dict()
+            )
+
+        os.makedirs(self.dump_dir / 'bw_alignment', exist_ok=True)
+        with safe_open(
+            self.dump_dir / 'bw_alignment/{0:03d}_bw_alignment.json'.format(self._n_eval) , "w") as DUMP_FH:
+            json.dump(list_of_dump_dict, DUMP_FH, indent=4)

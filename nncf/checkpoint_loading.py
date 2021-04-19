@@ -10,12 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import warnings
 from enum import Enum
 from typing import Dict
 from typing import List
 from typing import Set
 
 import re
+from typing import Tuple
+
 import torch
 
 from nncf.common.utils.logger import logger as nncf_logger
@@ -171,6 +174,7 @@ class KeyMatcher:
 
         clipped_key_to_model_key_dict = dict(zip(clipped_keys, self.model_state_dict.keys()))
 
+
         norm_clipped_keys = {}
         collisions = []
         for clipped_key, orig_key in clipped_key_to_model_key_dict.items():
@@ -179,10 +183,18 @@ class KeyMatcher:
                 collisions.append(clipped_key)
             norm_clipped_keys[normalized_key] = orig_key
 
+        has_legacy_storage_keys = False
         for (saved_key, saved_value) in self.state_dict_to_load.items():
             clipped_saved_key = saved_key
             for pattern in clip_patterns:
                 clipped_saved_key = clipped_saved_key.replace(pattern, '')
+
+            clipped_saved_key, did_replace = self._replace_legacy_act_quantizer_storage_name(
+                clipped_saved_key
+            )
+
+            if did_replace:
+                has_legacy_storage_keys = True
 
             if clipped_saved_key in clipped_key_to_model_key_dict:
                 key = clipped_key_to_model_key_dict[clipped_saved_key]
@@ -196,8 +208,30 @@ class KeyMatcher:
                     self._check_parameter_size(key, saved_value)
                 else:
                     self._processed_keys.add_key(saved_key, ProcessedKeyStatus.UNEXPECTED)
+
+        if has_legacy_storage_keys:
+            warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '
+                          'The "activation_quantizers" storage key is replaced with '
+                          '"external_quantizers" in newer versions of NNCF, and support '
+                          'for the legacy storage key will be dropped in a future release. '
+                          'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
+                          'checkpoint file again.', category=DeprecationWarning)
+
         self._processed_keys.add_skipped_and_missing_keys(self.model_state_dict)
         return self._new_dict
+
+    @staticmethod
+    def _replace_legacy_act_quantizer_storage_name(checkpoint_key : str) -> Tuple[str, bool]:
+
+        from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
+        from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+        did_replace = False
+        splits = checkpoint_key.split('.')
+        if splits[0] == LEGACY_ACT_STORAGE_NAME:
+            did_replace = True
+            splits[0] = EXTERNAL_QUANTIZERS_STORAGE_NAME
+        reconstructed_key = '.'.join(splits)
+        return reconstructed_key, did_replace
 
     def handle_problematic_keys(self):
         """

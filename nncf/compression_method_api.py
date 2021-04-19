@@ -19,14 +19,14 @@ extend the existing algorithms.
 import numpy
 from copy import copy
 from functools import partial
-from typing import List, Tuple, Optional, TypeVar
+from typing import List, Tuple, Optional, TypeVar, Dict
 
 import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_builder import create_mock_tensor
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
@@ -36,9 +36,8 @@ from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.compression import CompressionLevel
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
+from nncf.common.schedulers import StubCompressionScheduler
 
 ModelType = TypeVar('ModelType')
 
@@ -70,6 +69,17 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+        """
+        Returns a dictionary of printable statistics.
+
+        :param quickly_collected_only: Enables collection of the statistics that
+            don't take too much time to compute. Can be helpful for the case when
+            need to keep track of statistics on each training batch/step/iteration.
+        :return: A dictionary of printable statistics.
+        """
+        return {}
+
 
 class PTCompressionAlgorithmController(CompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
@@ -77,17 +87,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss."""
 
-    def __init__(self, target_model: ModelType):
-        """
-        Initializes the internal state of the compression algorithm controller.
-
-        :param target_model: The model with additional modifications necessary
-            to enable algorithm-specific compression during fine-tuning built
-            by the `CompressionAlgorithmBuilder`.
-        """
-        super().__init__(target_model)
-        self._loss = PTCompressionLoss()
-        self._scheduler = CompressionScheduler()
 
     def distributed(self):
         """
@@ -144,12 +143,11 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
-    # pylint: disable=keyword-arg-before-vararg
     def export_model(self,
                      save_path: str,
                      input_names: Optional[List[str]] = None,
                      output_names: Optional[List[str]] = None,
-                     *args, **kwargs) -> None:
+                     model_args = None) -> None:
         """
         Used to export the compressed model for inference into the ONNX format.
         Makes method-specific preparations of the model graph,
@@ -159,9 +157,16 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             `save_path` - a path to the file for the exported model to be saved into.
             `input_names` - list of input tensors names (optional).
             `output_names` - list of output tensors names (optional).
-            *args, **kwargs - if the model's `forward` requires additional parameters
-            during export, specify these here.
+            `model_args` - tuple of additional positional and keyword arguments which are
+                required for the model's `forward` during export. Should be specified in
+                the following format:
+                    - (a, b, {'x': None, 'y': y}) for positional and keyword arguments
+                    - (a, b, {}) for positional arguments only
+                    - ({'x': None, 'y': y},) for keyword arguments only
         """
+        if model_args is None:
+            model_args = ({},)
+
         self.prepare_for_export()
         model = self._model.eval().cpu()
         input_tensor_list = []
@@ -171,6 +176,8 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             single_batch_info.shape = input_shape
             input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
         original_forward = model.forward
+        args = model_args[:-1]
+        kwargs = model_args[-1]
         model.forward = partial(model.forward, *args, **kwargs)
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
@@ -186,7 +193,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         model.forward = original_forward
 
     def disable_scheduler(self):
-        self._scheduler = PTStubCompressionScheduler()
+        self._scheduler = StubCompressionScheduler()
         self._scheduler.target_level = 0.0
 
     @property
@@ -196,6 +203,7 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
     @compression_rate.setter
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
+
 
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
@@ -281,9 +289,3 @@ class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         algo_name = self._registered_name.replace('_', ' ')
         return False, f'Frozen layers are not allowed for {algo_name}'
-
-
-class PTStubCompressionScheduler(CompressionScheduler):
-
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL

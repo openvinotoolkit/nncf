@@ -6,7 +6,7 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import get_current_context, OperatorInput
-from nncf.dynamic_graph.graph import ModuleAttributes
+from nncf.graph.graph import ModuleAttributes
 from nncf.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.dynamic_graph.trace_tensor import trace_tensors
 from nncf.layers import ITERATION_MODULES
@@ -125,6 +125,7 @@ def _get_module_attributes(module: TorchModule, operator_name: str) -> ModuleAtt
         module.weight.requires_grad,
         module.in_channels,
         module.out_channels,
+        module.kernel_size,
         module.stride,
         module.groups
     )

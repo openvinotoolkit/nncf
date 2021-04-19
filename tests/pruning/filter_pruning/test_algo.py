@@ -12,6 +12,7 @@
 """
 import pytest
 import torch
+import numpy as np
 
 from examples.common.optimizer import make_optimizer, get_parameter_groups
 from nncf.module_operations import UpdateWeight
@@ -229,8 +230,8 @@ def test_applying_masks(prune_bn):
         # Can not check bias because bias initialized with zeros
 
 @pytest.mark.parametrize('prune_bn',
-                         [False,
-                          True]
+                         (False,
+                          True)
                          )
 def test_applying_masks_for_bn_after_concat(prune_bn):
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
@@ -252,6 +253,15 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
             # Check that mask was not applied for batch_norm module
             assert sum(bn_module.weight) == len(bn_module.weight)
             assert sum(bn_module.bias) == len(bn_module.bias)
+
+    # Check output mask of concat layers
+    ref_concat_masks = [
+        [0] * 8 + [1] * 8 + [0] * 8 + [1] * 8,
+        [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8
+    ]
+    graph = pruned_model.get_original_graph()
+    for i, node in enumerate(graph.get_nodes_by_types(['concat'])):
+        assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
 
 
 @pytest.mark.parametrize('zero_grad',
@@ -331,7 +341,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
 
 
-def test_clasters_for_multiple_forward():
+def test_clusters_for_multiple_forward():
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = False

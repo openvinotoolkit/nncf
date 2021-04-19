@@ -11,9 +11,11 @@
  limitations under the License.
 """
 
+import shutil
 # pylint:disable=too-many-lines
 from collections import Counter
 from collections import OrderedDict
+from copy import deepcopy
 from pathlib import Path
 from string import Template
 from typing import Dict
@@ -23,25 +25,21 @@ from typing import Tuple
 
 import networkx as nx
 import numpy as np
-import shutil
 import torch
-from copy import deepcopy
-
-from nncf.nncf_network import LoadStateListener
-from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
-
-from nncf.utils import get_state_dict_names_with_modules
-
-from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -52,19 +50,21 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import ExtraCompressionModuleType
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
+from nncf.nncf_network import LoadStateListener
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
 from nncf.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.quantization.adjust_padding import CalculatePaddingAdjustment
 from nncf.quantization.init_precision import PrecisionInitializerFactory
@@ -84,6 +84,7 @@ from nncf.quantization.metrics import MemoryCostMetric
 from nncf.quantization.metrics import NetworkQuantizationShareMetric
 from nncf.quantization.metrics import NetworkQuantizationShareMetricBuildTimeInfo
 from nncf.quantization.metrics import ShareEdgesQuantizedDataPath
+from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
 from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitParams
@@ -111,6 +112,7 @@ from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.tensor_statistics.statistics import TensorStatistic
 from nncf.utils import get_scale_shape
+from nncf.utils import get_state_dict_names_with_modules
 from nncf.utils import in_scope_list
 from nncf.utils import is_main_process
 from nncf.utils import should_consider_scope
@@ -236,8 +238,6 @@ class QuantizerSetupGeneratorBase:
             module = modules[module_scope]
             if qconfig_list is not None:
                 qconfig_list_copy = deepcopy(qconfig_list)
-                for qconfig in qconfig_list_copy:
-                    qconfig.input_shape = module.weight.shape
                 quantized_modules_with_potential_qconfig.append(QuantizableModule(module,
                                                                                   module_scope,
                                                                                   qconfig_list_copy))
@@ -339,7 +339,8 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             quantizable_modules=quantizable_modules,
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints,
-            additional_unified_scale_op_scopes=self._unified_scale_ops)
+            additional_unified_scale_op_scopes=self._unified_scale_ops,
+            quantize_outputs=self._quantize_outputs)
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
             self.hw_config,
@@ -373,7 +374,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
             nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node.op_exec_context.input_agnostic
+            ia_op_exec_context = nncf_node.ia_op_exec_context
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
         contexts_correspond_to_single_module = True
@@ -461,7 +462,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._debug_interface = QuantizationDebugInterface() if is_debug() else None
         self._weight_quantizers = OrderedDict()  # Quantizers applied via UpdateWeights
         self._non_weight_quantizers = OrderedDict()  # All the other quantizers
-        self._processed_activation_quantizer_insertion_points = set()  # type: Set[PTTargetPoint]
+        self._processed_insertion_points = set()  # type: Set[PTTargetPoint]
         self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()  # type: GroupsOfAdjacentQuantizers
         self._setup_to_module_id_translation_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
         self.eval_ops_exec_ctx = []
@@ -480,8 +481,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._range_init_params = None
         self._precision_init_type = None
         self._precision_init_params = None
-        if should_init:
+        if self.should_init:
             self._parse_init_params()
+        else:
+            # TODO: remove it! It workarounds checkpoint loading for mixed precision model by forcing manual init
+            self._force_manual_precision_init()
 
         self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
 
@@ -489,6 +493,20 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             group_name = quantizer_group.value
             params_dict = self.config.get(group_name, {})
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
+
+        self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
+    def _force_manual_precision_init(self):
+        init_config = self.config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if init_precision_config is not None:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            if precision_init_type == 'manual':
+                # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
+                self._range_init_params = self._parse_range_init_params(init_config)
+                self.should_init = True
+                self._precision_init_type = precision_init_type
+                self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
@@ -585,7 +603,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return precision_init_type, precision_init_params
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
-        target_model.register_compression_module_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
+        target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
         if self.should_init:
@@ -613,7 +631,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
         # pylint: disable=protected-access
-        target_model.sort_compression_modules(ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
+        target_model.sort_compression_modules(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
         if self._debug_interface is not None:
             target_model.debug_interface.add_interface(self._debug_interface)
@@ -684,29 +702,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         quantizer_cls = QUANTIZATION_MODULES.get(quantizer_spec.mode)
         return quantizer_cls(quantizer_spec)
 
-    def _add_single_weight_quantizer(self, target_model: NNCFNetwork, insertion_point: PTTargetPoint,
-                                     qconfig: QuantizerConfig,
-                                     range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> Tuple[
-        WeightQuantizerId, PTInsertionCommand]:
-        device = next(target_model.parameters()).device
-        quantizer_id = WeightQuantizerId(insertion_point.module_scope)
-        module = target_model.get_module_by_scope(insertion_point.module_scope)
-        scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
-        use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-        qspec = PTQuantizerSpec.from_config(qconfig, narrow_range=True,
-                                            scale_shape=tuple(scale_shape),
-                                            logarithm_scale=use_logarithm_scale)
-        quantizer = self.__create_quantize_module(qspec).to(device)
-        if range_init_minmax_values is not None:
-            quantizer.apply_minmax_init(range_init_minmax_values[0], range_init_minmax_values[1],
-                                        log_module_name=str(insertion_point))
-        op = quantizer.to(device)
-        self._weight_quantizers[quantizer_id] = WeightQuantizerInfo(quantizer,
-                                                                    target_model.get_module_by_scope(
-                                                                        insertion_point.module_scope
-                                                                    ))
-        command = PTInsertionCommand(insertion_point, op, TransformationPriority.QUANTIZATION_PRIORITY)
-        return quantizer_id, command
 
     @staticmethod
     def _get_adjust_padding_args(quantization_point: SingleConfigQuantizationPoint,
@@ -741,7 +736,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 commands.append(PTInsertionCommand(insertion_point, op, TransformationPriority.DEFAULT_PRIORITY))
         return commands
 
-    class ActivationQuantizationHook:
+    class ExternalQuantizerCallHook:
         """Cannot simply register the quantizer module as a callable hook, since we need to call
         a thread-local version of the quantizer module during base module execution."""
 
@@ -755,7 +750,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if self.debug_interface is not None:
                 self.debug_interface.register_activation_quantize_call(str(self.quantizer_storage_key))
             replica = self.compressed_context.base_module_thread_local_replica
-            return replica.activation_quantizers[self.quantizer_storage_key](*args, **kwargs)
+            storage = getattr(replica, EXTERNAL_QUANTIZERS_STORAGE_NAME)
+            return storage[self.quantizer_storage_key](*args, **kwargs)
 
     def _build_insertion_commands_list_for_quantizer_setup(self,
                                                            quantizer_setup: SingleConfigQuantizerSetup,
@@ -768,7 +764,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
 
-        for unified_scales_group in quantizer_setup.unified_scale_groups:
+        for unified_scales_group in quantizer_setup.unified_scale_groups.values():
             for us_qp_id in unified_scales_group:
                 non_unified_scales_quantization_point_ids.discard(us_qp_id)
 
@@ -785,8 +781,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             qp = quantizer_setup.quantization_points[qp_id]
             ip = qp.insertion_point
             qconfig = quantizer_setup.quantization_points[qp_id].qconfig
-            quantizer_module_id = None
-            commands = []
 
             range_init_minmax_values = None
             if minmax_values_for_range_init:
@@ -797,15 +791,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 else:
                     range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
 
-            if qp.is_activation_quantization_point():
-                quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
+            quantizer_module_id, commands = self._quantize_at_points_by_single_module(target_model,
                                                                                       [ip, ],
                                                                                       qconfig,
                                                                                       range_init_minmax_values)
-            elif qp.is_weight_quantization_point():
-                quantizer_module_id, command = self._add_single_weight_quantizer(target_model, ip, qconfig,
-                                                                                 range_init_minmax_values)
-                commands = [command]
 
             qp_id_vs_quant_module_id_dict[qp_id] = quantizer_module_id
             insertion_commands += commands
@@ -846,20 +835,21 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             op_type = PTOperatorMetatypeNodeMatcher.match(graph_node)
             is_adjust_padding_applicable = op_type in adjust_padding_operation_set
             if self._should_setup_adjust_pad_ops and is_adjust_padding_applicable:
-                found_groups = filter(lambda group: wqp_id in group, quantizer_setup.shared_input_operation_set_groups)
-                for found_group in found_groups:
-                    def activation_qp_matches_scope_filter_fn(qp_id_):
-                        qp_ = quantizer_setup.quantization_points[qp_id_]
-                        is_scope_matched = module_scope in qp_.scopes_of_directly_quantized_operators
-                        return qp_.is_activation_quantization_point() and is_scope_matched
+                gid = quantizer_setup.get_shared_inputs_group_id(wqp_id)
+                shared_input_group = quantizer_setup.shared_input_operation_set_groups[gid]
 
-                    for qp_id in filter(activation_qp_matches_scope_filter_fn, found_group):
-                        quantizer_module_id = qp_id_vs_quant_module_id_dict[qp_id]
-                        activation_quantizer = self._non_weight_quantizers[quantizer_module_id].quantizer_module_ref
-                        args = self._get_adjust_padding_args(wqp, activation_quantizer, target_model,
-                                                             list(quantizer_setup.quantization_points.values()))
-                        if args:
-                            adjust_padding_args.extend(args)
+                def activation_qp_matches_scope_filter_fn(qp_id_):
+                    qp_ = quantizer_setup.quantization_points[qp_id_]
+                    is_scope_matched = module_scope in qp_.scopes_of_directly_quantized_operators
+                    return qp_.is_activation_quantization_point() and is_scope_matched
+
+                for qp_id in filter(activation_qp_matches_scope_filter_fn, shared_input_group):
+                    quantizer_module_id = qp_id_vs_quant_module_id_dict[qp_id]
+                    activation_quantizer = self._non_weight_quantizers[quantizer_module_id].quantizer_module_ref
+                    args = self._get_adjust_padding_args(wqp, activation_quantizer, target_model,
+                                                         list(quantizer_setup.quantization_points.values()))
+                    if args:
+                        adjust_padding_args.extend(args)
         return adjust_padding_args
 
     def _build_commands_for_single_unified_scale_group(self,
@@ -872,18 +862,19 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         qp_ids_list_for_current_group = list(unified_scales_group)
 
         # The primary insertion point (to be associated with the actual quantizer module, not just hooks to it)
-        # will be determined based on the string representation of said insertion point, to avoid random selection
-        sorted_qp_ids = sorted(qp_ids_list_for_current_group,
-                               key=lambda x: str(quantizer_setup.quantization_points[x].insertion_point))
-
-        # Currently only the unified scales for activation quantizers are supported.
-        assert all([quantizer_setup.quantization_points[qp_id].is_activation_quantization_point() for qp_id in
-                    sorted_qp_ids])
+        # will be determined based on the string representation of said insertion point, to avoid random selection.
+        # Weight insertion points are given priority.
+        weight_qp_ids = [qp_id for qp_id in qp_ids_list_for_current_group
+            if quantizer_setup.quantization_points[qp_id].is_weight_quantization_point()]
+        act_qp_ids = [qp_id for qp_id in qp_ids_list_for_current_group
+            if quantizer_setup.quantization_points[qp_id].is_activation_quantization_point()]
+        ip_str_repr_key_lambda = lambda x: str(quantizer_setup.quantization_points[x].insertion_point)
+        sorted_wqp_ids = sorted(weight_qp_ids, key=ip_str_repr_key_lambda)
+        sorted_aqp_ids = sorted(act_qp_ids, key=ip_str_repr_key_lambda)
+        sorted_qp_ids = sorted_wqp_ids + sorted_aqp_ids
 
         primary_qp_id = sorted_qp_ids[0]
         linked_qp_ids = sorted_qp_ids[1:]
-        insertion_points = [quantizer_setup.quantization_points[primary_qp_id].insertion_point, ] + \
-                           [quantizer_setup.quantization_points[qp_id].insertion_point for qp_id in linked_qp_ids]
         qconfig = quantizer_setup.quantization_points[primary_qp_id].qconfig
         linked_qconfigs = [quantizer_setup.quantization_points[qp_id].qconfig for qp_id in linked_qp_ids]
         for linked_qconfig in linked_qconfigs:
@@ -917,10 +908,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             if min_values is not None and max_values is not None:
                 range_init_minmax_values = min_values, max_values
 
-        quantizer_module_id, commands = self._add_single_activation_quantizer(target_model,
-                                                                              insertion_points,
-                                                                              qconfig,
-                                                                              range_init_minmax_values)
+        insertion_points = [quantizer_setup.quantization_points[qp_id].insertion_point for qp_id in sorted_qp_ids]
+        quantizer_module_id, commands = self._quantize_at_points_by_single_module(target_model,
+                                                                                  insertion_points,
+                                                                                  qconfig,
+                                                                                  range_init_minmax_values)
         return quantizer_module_id, commands
 
     def _select_final_qconfig(self, quantizer_config_list: List[QuantizerConfig]) -> QuantizerConfig:
@@ -928,79 +920,152 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         # in the HW config, where they are sorted by descending order of priority
         return quantizer_config_list[0]
 
-    def _add_single_activation_quantizer(self, target_model: NNCFNetwork,
-                                         insertion_points: List[PTTargetPoint],
-                                         qconfig: QuantizerConfig,
-                                         range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
-            Tuple[NonWeightQuantizerId, List[PTInsertionCommand]]:
-        """Will return one or more insertion commands - depending on whether insertion_points has one or
-        more entries. The first insertion point in the list will be associated with the actual quantizer
-        module, while the rest will still have quantization enabled, but the quantization at these points
-        will share the quantizer module with the first."""
+    def _quantize_at_points_by_single_module(self, target_model: NNCFNetwork,
+                                             insertion_points: List[PTTargetPoint],
+                                             qconfig: QuantizerConfig,
+                                             range_init_minmax_values: Tuple[torch.Tensor, torch.Tensor] = None) -> \
+            Tuple[QuantizerId, List[PTInsertionCommand]]:
+        """Will generate insertion commands for quantization at possibly multiple points
+        in the network using one and the same trainable quantizer module. The trainable
+        quantizer module will be saved either inside the weightable module which weights
+        it quantizes (for single-point weight quantization), or in a NNCFNetwork wrapper
+        module (i.e. in a storage external to the original module).
+        :param: target_model - the model to be quantized.
+        :param: insertion_points - a list of target points for quantization using one
+        quantizer module
+        :param: qconfig - the QuantizerConfig for the resulting quantizer module
+        :param: range_init_minmax_values - a pair of minimum and maximum values of input statistics
+        for initializing the quantizer's trainable parameters
+        :return: A tuple with the identifier of the new quantizer module and a list of
+        insertion commands registering this module for quantization at spots described by
+        insertion_points."""
+        #pylint:disable=too-many-branches
+        #pylint:disable=too-many-statements
         if not insertion_points:
-            raise RuntimeError("No insertion points to put an activation quantizer into!")
-        primary_ip = insertion_points[0]
+            raise RuntimeError("No insertion points to put quantizers into!")
 
-        ia_op_exec_context = primary_ip.ia_op_exec_context
-        operator_scope_str = str(ia_op_exec_context)
+        def is_weights(ip: PTTargetPoint) -> bool:
+            return ip.module_scope is not None
+
+        # The scale shapes for all insertion points must match, otherwise it is impossible to quantize them all
+        # using a single module
+        scale_shapes = []  # type: List[List[int]]
+        for ip in insertion_points:
+            if is_weights(ip):
+                module = target_model.get_module_by_scope(ip.module_scope)
+                scale_shape = get_scale_shape(module.weight.shape, is_weights=True, per_channel=qconfig.per_channel)
+                scale_shapes.append(scale_shape)
+            else:
+                input_shape = target_model.get_input_shape_for_insertion_point(ip)
+                scale_shapes.append(get_scale_shape(list(input_shape),
+                                                    is_weights=False, per_channel=qconfig.per_channel))
+        if not all([shape == scale_shapes[0] for shape in scale_shapes]):
+            raise RuntimeError("Scale shapes for the insertion points do not match!")
+        scale_shape = scale_shapes[0]
+
+        primary_ip = insertion_points[0]
+        if is_weights(primary_ip):
+            use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
+            narrow_range = True
+        else:
+            use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
+            narrow_range = False
+
         device = next(target_model.parameters()).device
-        use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.WEIGHTS]
-        input_shape = target_model.get_input_shape_for_insertion_point(primary_ip)
-        scale_shape = get_scale_shape(list(input_shape), is_weights=False, per_channel=qconfig.per_channel)
+
+        half_range = False
+        if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
+            if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
+                nncf_logger.warning('A saturation issue fix will be applied. '
+                                    'Now all weight quantizers will effectively use only 7 bits out of 8 bits '
+                                    'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
+                                    'Please take a look at the documentation for a detailed information. ')
+                half_range = True
+
         qspec = PTQuantizerSpec.from_config(qconfig,
-                                            narrow_range=False,
+                                            narrow_range=narrow_range,
                                             scale_shape=tuple(scale_shape),
-                                            logarithm_scale=use_logarithm_scale)
+                                            logarithm_scale=use_logarithm_scale,
+                                            half_range=half_range)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],
                                         max_values=range_init_minmax_values[1],
                                         log_module_name=str(primary_ip))
 
-        qids = [NonWeightQuantizerId(ip.ia_op_exec_context, ip.input_port_id) for ip in insertion_points]
+        qids = []  # type: List[QuantizerId]
+        for ip in insertion_points:
+            if is_weights(ip):
+                qids.append(WeightQuantizerId(ip.module_scope))
+            else:
+                qids.append(NonWeightQuantizerId(ip.ia_op_exec_context, ip.input_port_id))
+
         serialized_insertions_list = [str(x) for x in qids]
-        quantizer_storage_key = ";".join(serialized_insertions_list)
-
-        assert quantizer_storage_key not in target_model.get_compression_modules_by_type(
-            ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
-
-        target_model.add_compression_module(quantizer_storage_key, quantizer,
-                                            ExtraCompressionModuleType.ACTIVATION_QUANTIZER)
-
-        quantizer_id = NonWeightQuantizerId(ia_op_exec_context, primary_ip.input_port_id)
-
+        external_quantizer_storage_key = ";".join(serialized_insertions_list)
         if len(insertion_points) > 1:
             nncf_logger.info(
-                "Processing linked activation quantizer group:\n {}\n".format("\n".join(serialized_insertions_list)))
+                "Processing linked quantizer group:\n {}\n".format("\n".join(serialized_insertions_list)))
 
-        self._non_weight_quantizers[quantizer_id] = \
-            NonWeightQuantizerInfo(quantizer, insertion_points)
+        if is_weights(primary_ip):
+            primary_qid = WeightQuantizerId(primary_ip.module_scope)
+            self._weight_quantizers[primary_qid] = WeightQuantizerInfo(quantizer,
+                                                                       target_model.get_module_by_scope(
+                                                                           primary_ip.module_scope
+                                                                       ),
+                                                                       insertion_points)
+        else:
+            primary_qid = NonWeightQuantizerId(primary_ip.ia_op_exec_context, primary_ip.input_port_id)
+            self._non_weight_quantizers[primary_qid] = \
+                NonWeightQuantizerInfo(quantizer, insertion_points)
+
+        if not (is_weights(primary_ip) and len(insertion_points) == 1):
+            assert external_quantizer_storage_key not in target_model.get_compression_modules_by_type(
+                ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
+
+            target_model.add_compression_module(external_quantizer_storage_key, quantizer,
+                                                ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
         insertion_commands = []
         for curr_insertion_point in insertion_points:
-            if curr_insertion_point in self._processed_activation_quantizer_insertion_points:
+            if curr_insertion_point in self._processed_insertion_points:
                 raise RuntimeError(
-                    "Ambiguous call to {fn} with call order {co} in current scope. "
-                    "Cannot insert quantization hooks "
-                    "automatically!".format(fn=ia_op_exec_context.operator_name, co=ia_op_exec_context.call_order)
+                    "Insertion point {} already quantized!".format(str(curr_insertion_point))
                 )
-            self._processed_activation_quantizer_insertion_points.add(curr_insertion_point)
+            self._processed_insertion_points.add(curr_insertion_point)
 
-            nncf_logger.info("Adding {}{} Activation Quantize in scope: {}".format(
-                "signed" if quantizer.signed else "unsigned",
-                " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
-                operator_scope_str
-            ))
+            if is_weights(curr_insertion_point):
+                nncf_logger.info("Performing {}{} weight quantization for: {}".format(
+                    "signed" if quantizer.signed else "unsigned",
+                    " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
+                    str(curr_insertion_point)))
+                if len(insertion_points) == 1:
+                    # For backward compatibility, if only one weight is quantized by a single quantizer,
+                    # insert UpdateWeight ops with a genuine quantizer module
+                    callable_obj = quantizer
+                else:
+                    # Otherwise use external quantizer module storage since the quantization points will have to
+                    # share the single module and this would be impossible for multiple weight quantizer sharing if
+                    # the corresponding UpdateWeights operations contained real modules (these would simply get copied
+                    # by PyTorch internals)
+                    callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
+                                                                  external_quantizer_storage_key,
+                                                                  self._debug_interface)
+            else:
+                nncf_logger.info("Performing {}{} activation quantization for: {}".format(
+                    "signed" if quantizer.signed else "unsigned",
+                    " logarithm_scale" if quantizer.is_using_log_scale_storage else "",
+                    str(curr_insertion_point)
+                ))
+                # Hooks will be identical for each affected ia_op_exec_context in the linked scenario
+                # - will call one and the same quantizer
+                callable_obj = self.ExternalQuantizerCallHook(target_model.get_tracing_context(),
+                                                          external_quantizer_storage_key,
+                                                          self._debug_interface)
 
-            # Hooks will be identical for each affected ia_op_exec_context in the linked scenario
-            # - will call one and the same quantizer
-            hook = self.ActivationQuantizationHook(target_model.get_tracing_context(),
-                                                   quantizer_storage_key,
-                                                   self._debug_interface)
-
-            insertion_commands.append(
-                PTInsertionCommand(curr_insertion_point, hook, TransformationPriority.QUANTIZATION_PRIORITY))
-        return quantizer_id, insertion_commands
+            insertion_commands.append(PTInsertionCommand(curr_insertion_point,
+                                                         callable_obj,
+                                                         TransformationPriority.QUANTIZATION_PRIORITY))
+        return primary_qid, insertion_commands
 
     def _are_frozen_layers_allowed(self) -> Tuple[bool, str]:
         message_template = Template('Frozen layers are$denial allowed for $algo_prefix quantization')
@@ -1049,6 +1114,8 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_metric_info: NetworkQuantizationShareMetricBuildTimeInfo = None,
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
@@ -1081,7 +1148,7 @@ class QuantizationController(QuantizationControllerBase):
                                                  MemoryCostMetric(target_model, self.weight_quantizers,
                                                                   self.non_weight_quantizers)]
             # These metrics are collected once here and are not updated when the method .statistics() is called
-            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model)]
+            self.stable_metric_collectors = [ShareEdgesQuantizedDataPath(target_model, self)]
             self.update_metric_store(True)
 
         params = quantization_config.get('params', None)
@@ -1094,6 +1161,14 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     @property
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
@@ -1261,7 +1336,7 @@ class QuantizationController(QuantizationControllerBase):
         return module_init_range_config
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
+        stats = super().statistics(quickly_collected_only)
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         stats["ratio_of_enabled_quantizations"] = num_enabled_quantization * multiplier
@@ -1303,7 +1378,7 @@ class QuantizationDebugInterface(DebugInterface):
                                              quantizers_in_nncf_modules.keys()]  # type: List[str]
 
         activation_quantizer_id_list = owner_model.get_compression_modules_by_type(
-            ExtraCompressionModuleType.ACTIVATION_QUANTIZER).keys()  # type: List[str]
+            ExtraCompressionModuleType.EXTERNAL_QUANTIZER).keys()  # type: List[str]
         self.call_trackers[self.QUANTIZERS_IN_NNCF_MODULES_TRACKER_NAME].init_with_key_list(
             nncf_module_quantizations_id_list)
         self.call_trackers[self.ACTIVATION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
@@ -1507,6 +1582,14 @@ class ExperimentalQuantizationController(QuantizationController):
             else:
                 self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
         self.hw_config = hw_config
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()

@@ -124,6 +124,17 @@ For asymmetric:
 For symmetric:
 ![\\input\_low^{*} = 0 \\ input\_range^{*} = scale](https://latex.codecogs.com/png.latex?%5C%5Cinput%5C_low%5E%7B*%7D%20%3D%200%20%5C%5C%20input%5C_range%5E%7B*%7D%20%3D%20scale)
 
+---
+**NOTE**
+
+There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 8-bit matrix calculations with tensors which elements are close to the maximum or saturated.
+AVX2 and AVX512 utilize a 16-bit register to store the result of operations on tensors. In case when tensors are saturated the buffer overflow happens.
+This leads to accuracy degradation.
+
+To fix this issue inside NNCF, weight tensors are quantized in 8 bits but only 7 bits are effectively used. 
+This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` set.
+
+---
 
 #### Mixed-Precision Quantization
 

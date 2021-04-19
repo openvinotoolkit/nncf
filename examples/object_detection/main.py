@@ -30,7 +30,7 @@ from examples.common.distributed import DistributedSampler
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
@@ -42,7 +42,7 @@ from examples.object_detection.eval import test_net
 from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
 from nncf import create_compressed_model, load_state
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.utils import is_main_process
 
 

@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D).
+- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
 - Support [TensorFlow Datasets (TFDS)](https://www.tensorflow.org/datasets) and TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
@@ -113,6 +113,15 @@ python main.py \
 --to-h5=../../results/retinanet_coco_int8.h5
 ```
 
+### Save Checkpoint without Optimizer
+To reduce memory footprint (if no further training is scheduled) it is useful to save the checkpoint without optimizer. Use the following command:
+```bash
+python ../common/prepare_checkpoint.py \
+--config=configs/quantization/retinanet_coco_int8.json \
+--resume=<path_to_trained_model_checkpoint> \
+--checkpoint-save-dir=<path_to_save_optimized_model_checkpoint>
+```
+
 ### Export to OpenVINO™ Intermediate Representation (IR)
 
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
@@ -141,4 +150,6 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 |RetinaNet|INT8 w:sym,per-tensor a:sym,per-tensor |COCO2017|33.3|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_int8_w_sym_t_a_sym_t.tar.gz)|
 |RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_sparsity_50.tar.gz)|
 |RetinaNet|Filter Pruning 40%|COCO2017|32.7|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/retinanet_pruning_40.tar.gz)|
-
+|YOLOv4|None|COCO2017|47.04|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4.tar.gz)|
+|YOLOv4|INT8 w:sym,per-channel a:asym,per-tensor |COCO2017|46.20|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_int8_w_sym_ch_a_asym_t.tar.gz)|
+|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/tensorflow/models/develop/yolo_v4_sparsity_50.tar.gz)|

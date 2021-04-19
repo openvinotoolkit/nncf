@@ -17,21 +17,27 @@ import torch
 from texttable import Texttable
 from torch import nn
 
-from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.binarization.layers import BINARIZATION_MODULES, BinarizationMode, WeightBinarizer, ActivationBinarizer, \
-    ActivationBinarizationScaleThreshold, BaseBinarizer
+from nncf.algo_selector import COMPRESSION_ALGORITHMS, ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.binarization.layers import BINARIZATION_MODULES
+from nncf.binarization.layers import BinarizationMode
+from nncf.binarization.layers import WeightBinarizer
+from nncf.binarization.layers import ActivationBinarizer
+from nncf.binarization.layers import ActivationBinarizationScaleThreshold
+from nncf.binarization.layers import BaseBinarizer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateInputs
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import QuantizationControllerBase
 from nncf.quantization.schedulers import QUANTIZATION_SCHEDULERS
@@ -49,7 +55,6 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
         for command in commands:
             layout.register(command)
         return layout
-
 
     def __create_binarize_module(self):
         return BINARIZATION_MODULES.get(self.mode)()
@@ -91,11 +96,20 @@ class BinarizationController(QuantizationControllerBase):
     def __init__(self, target_model: NNCFNetwork, config: NNCFConfig):
         super().__init__(target_model)
 
+        self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
         self._scheduler = scheduler_cls(self, config.get("params", {}))
         from nncf.utils import is_main_process
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     def _set_binarization_status(self, condition_fn: Callable[[BaseBinarizer], bool],
                                  apply_fn: Callable[[BaseBinarizer], None]):

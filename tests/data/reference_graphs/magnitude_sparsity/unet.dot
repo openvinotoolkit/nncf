@@ -90,6 +90,7 @@ strict digraph  {
 "88 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/RELU" [id=88, scope="UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]", type=RELU];
 "89 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" [id=89, scope="UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]", type=apply_binary_mask];
 "90 UNet/NNCFConv2d[last]/conv2d" [id=90, scope="UNet/NNCFConv2d[last]", type=conv2d];
+"91 /nncf_model_output" [id=91, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
 "1 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d";
 "2 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/NNCFConv2d[0]/conv2d" -> "3 UNet/ModuleList[down_path]/UNetConvBlock[0]/Sequential[block]/BatchNorm2d[1]/batch_norm";
@@ -184,4 +185,5 @@ strict digraph  {
 "87 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/BatchNorm2d[4]/batch_norm" -> "88 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/RELU";
 "88 UNet/ModuleList[up_path]/UNetUpBlock[3]/UNetConvBlock[conv_block]/Sequential[block]/ReLU[5]/RELU" -> "90 UNet/NNCFConv2d[last]/conv2d";
 "89 UNet/NNCFConv2d[last]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask" -> "90 UNet/NNCFConv2d[last]/conv2d";
+"90 UNet/NNCFConv2d[last]/conv2d" -> "91 /nncf_model_output";
 }

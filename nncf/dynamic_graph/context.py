@@ -28,13 +28,14 @@ from typing import Union
 import torch
 
 from nncf.debug import is_debug
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph, PTNNCFNode
-from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.graph import DynamicGraph
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import PTNNCFNode
+from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.layers import ITERATION_MODULES
-from nncf.dynamic_graph.graph import ModuleAttributes
+from nncf.graph.graph import ModuleAttributes
 from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
@@ -49,6 +50,7 @@ class InputIndexEntry:
         self.path = path
         self.getter = getter
         self.setter = setter
+
 
 class TupleRebuildingSetter:
     def __init__(self, idx_to_set, current_tuple, previous_level_setter_for_current_tuple):
@@ -76,7 +78,7 @@ class OperatorInput:
         op_kwargs_index_entries = []
         self._nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
 
-        #pylint:disable=unnecessary-comprehension
+        # pylint:disable=unnecessary-comprehension
         self._index = {idx: entry for idx, entry in
                        enumerate(op_args_index_entries + op_kwargs_index_entries)}
 
@@ -241,7 +243,7 @@ class PreHookId:
 # pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
-        self.graph = PTNNCFGraph()
+        self.graph = DynamicGraph()
 
         self._save_context = None
         self._post_hooks = {}
@@ -510,17 +512,18 @@ class TracingContext:
         return Scope(scope_el_list)
 
     def reset_graph(self):
-        self.graph = PTNNCFGraph()
+        self.graph = DynamicGraph()
 
 
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
-    if ctx is not None:
+    if ctx is not None and ctx.is_tracing:
         ctx.disable_tracing()
-    yield
-    if ctx is not None:
+        yield
         ctx.enable_tracing()
+    else:
+        yield
 
 
 def get_current_context() -> TracingContext:

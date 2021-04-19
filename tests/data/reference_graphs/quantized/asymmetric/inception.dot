@@ -345,6 +345,7 @@ strict digraph  {
 "343 GoogLeNet/AvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize" [id=343, scope="GoogLeNet/AvgPool2d[avgpool]/AsymmetricQuantizer", type=asymmetric_quantize];
 "344 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=344, scope="GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
 "345 GoogLeNet/NNCFLinear[linear]/linear" [id=345, scope="GoogLeNet/NNCFLinear[linear]", type=linear];
+"346 /nncf_model_output" [id=346, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
 "2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
@@ -717,4 +718,5 @@ strict digraph  {
 "342 GoogLeNet/AvgPool2d[avgpool]/avg_pool2d" -> "343 GoogLeNet/AvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize";
 "343 GoogLeNet/AvgPool2d[avgpool]/AsymmetricQuantizer/asymmetric_quantize" -> "345 GoogLeNet/NNCFLinear[linear]/linear";
 "344 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "345 GoogLeNet/NNCFLinear[linear]/linear";
+"345 GoogLeNet/NNCFLinear[linear]/linear" -> "346 /nncf_model_output";
 }

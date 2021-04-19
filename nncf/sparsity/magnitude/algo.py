@@ -19,7 +19,6 @@ from texttable import Texttable
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.compression_method_api import PTStubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
 from nncf.sparsity.layers import BinaryMask
@@ -35,37 +34,33 @@ class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
         return BinaryMask(module.weight.size()).to(device)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:
-        params = self.config.get("params", {})
-        return MagnitudeSparsityController(target_model, self._sparsified_module_info,
-                                           self.config,
-                                           params.get('weight_importance', 'normed_abs'))
+        return MagnitudeSparsityController(target_model, self._sparsified_module_info, self.config)
 
 
 @ACCURACY_AWARE_CONTROLLERS.register('magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityAlgoController):
-    def __init__(self, target_model: NNCFNetwork,
-                 sparsified_module_info: List[SparseModuleInfo],
-                 config, weight_importance: str):
+    def __init__(self, target_model: NNCFNetwork, sparsified_module_info: List[SparseModuleInfo], config):
         super().__init__(target_model, sparsified_module_info)
-        self.config = config
-        params = self.config.get("params", {})
-        self.weight_importance = WEIGHT_IMPORTANCE_FUNCTIONS.get(weight_importance)
-        self.sparsity_level_mode = params.get("sparsity_level_setting_mode", "global")
-        self._scheduler = None
-        self.sparsity_init = self.config.get("sparsity_init", 0)
-        if self.sparsity_level_mode == 'global':
-            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get("schedule", "polynomial"))
-            self._scheduler = scheduler_cls(self, params)
-        else:
-            self._scheduler = PTStubCompressionScheduler()
+        self._config = config
+        params = self._config.get('params', {})
 
-        self.set_sparsity_level(self.sparsity_init)
+        self._weight_importance_fn = WEIGHT_IMPORTANCE_FUNCTIONS[params.get('weight_importance', 'normed_abs')]
+        self._mode = params.get('sparsity_level_setting_mode', 'global')
+        self._scheduler = None
+        sparsity_init = self._config.get('sparsity_init', 0)
+
+        if self._mode == 'global':
+            params['sparsity_init'] = sparsity_init
+            scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
+            self._scheduler = scheduler_cls(self, params)
+
+        self.set_sparsity_level(sparsity_init)
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics()
-        if self.sparsity_level_mode == 'global':
+        stats = super().statistics(quickly_collected_only)
+        if self._mode == 'global':
             stats['sparsity_threshold'] =\
-                 self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+                 self._select_threshold(self.sparsity_rate_for_sparsified_modules(), self.sparsified_module_info)
         else:
             table = Texttable()
             header = ["Name", "Per-layer sparsity threshold"]
@@ -75,7 +70,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
                 drow = {h: 0 for h in header}
                 drow["Name"] = minfo.module_name
                 drow['Per-layer sparsity threshold'] =\
-                     self._select_threshold(self.sparsity_rate_for_sparsified_modules, self.sparsified_module_info)
+                     self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
                 row = [drow[h] for h in header]
                 data.append(row)
             table.add_rows(data)
@@ -99,7 +94,7 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         threshold = self._select_threshold(sparsity_level, target_sparsified_module_info_list)
         self._set_masks_for_threshold(threshold, target_sparsified_module_info_list)
         if run_batchnorm_adaptation:
-            self.run_batchnorm_adaptation(self.config)
+            self.run_batchnorm_adaptation(self._config)
 
     def _select_threshold(self, sparsity_level, target_sparsified_module_info_list):
         all_weights = self._collect_all_weights(target_sparsified_module_info_list)
@@ -113,23 +108,21 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
         for layer in target_sparsified_module_info_list:
             if not layer.operand.frozen:
                 layer.operand.binary_mask = calc_magnitude_binary_mask(layer.module.weight,
-                                                                       self.weight_importance,
+                                                                       self._weight_importance_fn,
                                                                        threshold_val)
-
 
     def _collect_all_weights(self, target_sparsified_module_info_list: List[SparseModuleInfo]):
         all_weights = []
         for minfo in target_sparsified_module_info_list:
-            all_weights.append(self.weight_importance(minfo.module.weight).view(-1))
+            all_weights.append(self._weight_importance_fn(minfo.module.weight).view(-1))
         return all_weights
 
-    def create_weight_sparsifying_operation(self, module):
-        return BinaryMask(module.weight.size())
-
     def compression_level(self) -> CompressionLevel:
-        if self.scheduler is not None:
-            return self.scheduler.compression_level()
-        return CompressionLevel.NONE
+        if self._mode == 'local':
+            return CompressionLevel.FULL
 
-    def get_sparsity_init(self):
-        return self.sparsity_init
+        if self.scheduler.current_sparsity_level == 0:
+            return CompressionLevel.NONE
+        if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
+            return CompressionLevel.FULL
+        return CompressionLevel.PARTIAL

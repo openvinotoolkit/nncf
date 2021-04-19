@@ -21,7 +21,7 @@ import torch
 from torch import Tensor
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.graph.graph import PTNNCFGraph
 from nncf.layers import NNCFConv2d
 from nncf.nncf_network import ExtraCompressionModuleType
 from nncf.nncf_network import NNCFNetwork
@@ -77,7 +77,7 @@ class HAWQDebugger:
             quantization_type = class_type.__name__
             all_quantizations.update(
                 get_all_modules_by_type(
-                    model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
+                    model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
                     quantization_type))
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
@@ -157,9 +157,9 @@ class HAWQDebugger:
         for node_key in nncf_graph.get_all_node_keys():
             node = nncf_graph.get_nx_node_by_key(node_key)
             color = ''
-            if node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR]:
-                operator_name = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-                quantized_module_scope = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic.scope_in_model
+            if node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]:
+                operator_name = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                quantized_module_scope = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
                 module = model.get_module_by_scope(quantized_module_scope)
                 if isinstance(module, NNCFConv2d):
                     color = 'lightblue'
@@ -195,7 +195,7 @@ class HAWQDebugger:
                 raise AttributeError('Failed to get any nodes by scope={}'.format(str(quantized_module_scope)))
             wq_nodes = []
             for pot_wq_node in nodes:
-                if 'UpdateWeight' in str(pot_wq_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic):
+                if 'UpdateWeight' in str(pot_wq_node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]):
                     wq_nodes.append(pot_wq_node)
             assert len(wq_nodes) == 1
 

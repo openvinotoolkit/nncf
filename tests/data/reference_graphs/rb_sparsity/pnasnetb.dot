@@ -477,6 +477,7 @@ strict digraph  {
 "475 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=475, scope="PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "476 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=476, scope="PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "477 PNASNet/NNCFLinear[linear]/linear" [id=477, scope="PNASNet/NNCFLinear[linear]", type=linear];
+"478 /nncf_model_output" [id=478, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
 "1 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
@@ -1014,4 +1015,5 @@ strict digraph  {
 "474 PNASNet/avg_pool2d" -> "477 PNASNet/NNCFLinear[linear]/linear";
 "475 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "476 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "476 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "477 PNASNet/NNCFLinear[linear]/linear";
+"477 PNASNet/NNCFLinear[linear]/linear" -> "478 /nncf_model_output";
 }

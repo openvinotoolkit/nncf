@@ -14,6 +14,7 @@
 from collections import OrderedDict
 from typing import Dict
 from typing import List
+from typing import Union
 
 from copy import deepcopy
 
@@ -52,13 +53,24 @@ class BasePrecisionInitializer:
             get_weight_quantizers_in_execution_order_per_id()
 
         self._all_quantizers_per_scope = get_all_modules_by_type(
-            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.ACTIVATION_QUANTIZER),
+            self._model.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER),
             quantization_types)
         self._all_quantizers_per_scope.update(
             self._quantizers_handler.get_all_weight_quantizers_in_execution_order_per_scope())
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
         raise NotImplementedError
+
+    @staticmethod
+    def get_bitwidth_per_scope(quantizer_setup: SingleConfigQuantizerSetup) -> List[List[Union[int, str]]]:
+        scope_vs_bitwidth = {}
+        for qp in quantizer_setup.quantization_points.values():
+            scope_vs_bitwidth[str(qp.insertion_point)] = qp.qconfig.num_bits
+        sorted_scope_vs_bitwidth = OrderedDict(sorted(scope_vs_bitwidth.items(), key=lambda x: x[0]))
+        full_bitwidth_per_scope = []
+        for scope, bitwidth in sorted_scope_vs_bitwidth.items():
+            full_bitwidth_per_scope.append([bitwidth, scope])
+        return full_bitwidth_per_scope
 
 
 class WeightQuantizersHandler:

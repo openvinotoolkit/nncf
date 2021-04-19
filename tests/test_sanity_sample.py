@@ -12,29 +12,34 @@
 """
 
 import json
+import os
 import shlex
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 import time
-from enum import Enum, auto
+from enum import Enum
+from enum import auto
 from pathlib import Path
 from typing import Dict
 
-import os
 import pytest
-import tempfile
 import torch
 
 # pylint: disable=redefined-outer-name
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
-from examples.common.utils import get_name, is_staged_quantization
-from nncf.compression_method_api import CompressionLevel
-from nncf.config import NNCFConfig
+from examples.common.utils import get_name
+from examples.common.utils import is_staged_quantization
+from nncf.api.compression import CompressionLevel
 from nncf.common.quantization.structs import QuantizerConfig
-from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
+from nncf.config import NNCFConfig
+from nncf.hw_config import HWConfigType
+from tests.conftest import EXAMPLES_DIR
+from tests.conftest import PROJECT_ROOT
+from tests.conftest import TEST_ROOT
 
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
 
@@ -634,9 +639,14 @@ class HAWQDescriptor(TestCaseDescriptor):
 class AutoQDescriptor(TestCaseDescriptor):
     subset_ratio_: float = 1.0
     BITS = [2, 4, 8]
+    debug_dump: bool = False
 
     def subset_ratio(self, subset_ratio_: float):
         self.subset_ratio_ = subset_ratio_
+        return self
+
+    def dump_debug(self, debug_dump: bool):
+        self.debug_dump = debug_dump
         return self
 
     def get_precision_section(self) -> Dict:
@@ -644,11 +654,13 @@ class AutoQDescriptor(TestCaseDescriptor):
                 "bits": AutoQDescriptor.BITS,
                 "iter_number": 2,
                 "compression_ratio": 0.15,
-                "eval_subset_ratio": self.subset_ratio_}
+                "eval_subset_ratio": self.subset_ratio_,
+                "dump_init_precision_data": self.debug_dump}
 
     def __str__(self):
         sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
-        return super().__str__() + '_autoq' + sr
+        dd = '_dump_debug' if self.debug_dump else ''
+        return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
         from nncf.quantization.algo import QuantizationBuilder
@@ -701,11 +713,11 @@ TEST_CASE_DESCRIPTORS = [
     inception_v3_desc(AutoQDescriptor()).batch(2),
     inception_v3_desc(AutoQDescriptor()).staged(),
     resnet18_desc(AutoQDescriptor()).batch(2),
-    resnet18_desc(AutoQDescriptor()).batch(2).staged(),
+    resnet18_desc(AutoQDescriptor()).batch(2).staged().dump_debug(True),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(2),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
-    ssd300_vgg_desc(AutoQDescriptor()),
-    unet_desc(AutoQDescriptor()),
+    ssd300_vgg_desc(AutoQDescriptor()).batch(2).dump_debug(True),
+    unet_desc(AutoQDescriptor()).dump_debug(True),
     icnet_desc(AutoQDescriptor())
 ]
 
@@ -759,3 +771,35 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     sample.main(shlex.split(command_line))
 
     desc.validate_spy()
+
+
+@pytest.mark.parametrize('target_device', [x.value for x in HWConfigType])
+def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_path, target_device):
+    config_dict = {
+        "input_info":
+            {
+                "sample_size": [1, 1, 32, 32],
+            },
+        "compression": {
+            "algorithm": "quantization"
+        },
+    }
+    config_factory = ConfigFactory(config_dict, tmp_path / 'config.json')
+    args = {
+        "--data": str(tmp_path),
+        "--config": config_factory.serialize(),
+        "--log-dir": tmp_path,
+        "--batch-size": 1,
+        "--target-device": target_device,
+    }
+    if not torch.cuda.is_available():
+        args["--cpu-only"] = True
+
+    arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
+    command_line = " ".join(arg_list)
+    import examples.classification.main as sample
+    start_worker_mock = mocker.patch("examples.classification.main.start_worker")
+    sample.main(shlex.split(command_line))
+
+    config = start_worker_mock.call_args[0][1].nncf_config
+    assert config["target_device"] == target_device

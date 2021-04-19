@@ -74,6 +74,7 @@ strict digraph  {
 "72 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=72, scope="VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "73 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=73, scope="VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "74 VGG/NNCFLinear[classifier]/linear" [id=74, scope="VGG/NNCFLinear[classifier]", type=linear];
+"75 /nncf_model_output" [id=75, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 VGG/Sequential[features]/NNCFConv2d[0]/conv2d";
 "1 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 VGG/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 VGG/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -148,4 +149,5 @@ strict digraph  {
 "71 VGG/Sequential[features]/AvgPool2d[44]/avg_pool2d" -> "74 VGG/NNCFLinear[classifier]/linear";
 "72 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "73 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "73 VGG/NNCFLinear[classifier]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "74 VGG/NNCFLinear[classifier]/linear";
+"74 VGG/NNCFLinear[classifier]/linear" -> "75 /nncf_model_output";
 }

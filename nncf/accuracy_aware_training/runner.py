@@ -25,7 +25,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import nncf.accuracy_aware_training.restricted_pickle_module as restricted_pickle_module
 from nncf.initialization import TrainEpochArgs
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.accuracy_aware_training.algo import TrainingRunner
 from nncf.accuracy_aware_training.utils import is_main_process, print_statistics, configure_paths
