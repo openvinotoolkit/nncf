@@ -157,7 +157,7 @@ def parse_record(record, include_mask=False, model=None, is_train=None):
 
     labels = parsed_tensors['image/object/class/label']
     if model == "YOLOv4" and is_train:
-            labels = _convert_labels_to_80_classes(parsed_tensors)
+        labels = _convert_labels_to_80_classes(parsed_tensors)
 
     decoded_tensors = {
         'image': image,
