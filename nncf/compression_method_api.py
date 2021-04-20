@@ -163,6 +163,9 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
                     - (a, b, {}) for positional arguments only
                     - ({'x': None, 'y': y},) for keyword arguments only
         """
+        if model_args is None:
+            model_args = ({},)
+
         self.prepare_for_export()
         model = self._model.eval().cpu()
         input_tensor_list = []
