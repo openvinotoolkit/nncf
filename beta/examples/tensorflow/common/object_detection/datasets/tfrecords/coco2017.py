@@ -28,7 +28,7 @@ def coco2017(config, is_train):
     return COCO2017(config, is_train)
 
 
-def parse_record(record, include_mask=False):
+def parse_record(record, include_mask=False, model=None, is_train=None):
     """Parse a COCO2017 record from a serialized string Tensor.
 
     Args:
@@ -48,9 +48,12 @@ def parse_record(record, include_mask=False):
             - groundtruth_instance_masks_png: a string tensor of shape [None].
     """
 
-    def _decode_image(parsed_tensors):
+    def _decode_image(parsed_tensors, model):
         """Decodes the image and set its static shape."""
-        image = tf.io.decode_image(parsed_tensors['image/encoded'], channels=3)
+        if model == 'YOLOv4':
+            image = tf.image.decode_jpeg(parsed_tensors['image/encoded'], channels=3, dct_method='INTEGER_ACCURATE')
+        else:
+            image = tf.io.decode_image(parsed_tensors['image/encoded'], channels=3)
         image.set_shape([None, None, 3])
         return image
 
@@ -125,7 +128,7 @@ def parse_record(record, include_mask=False):
             else:
                 parsed_tensors[k] = tf.sparse.to_dense(parsed_tensors[k], default_value=0)
 
-    image = _decode_image(parsed_tensors)
+    image = _decode_image(parsed_tensors, model)
     boxes = _decode_boxes(parsed_tensors)
     areas = _decode_areas(parsed_tensors)
 
@@ -136,12 +139,32 @@ def parse_record(record, include_mask=False):
                         lambda: tf.cast(parsed_tensors['image/object/is_crowd'], tf.bool),
                         lambda: tf.zeros_like(parsed_tensors['image/object/class/label'], dtype=tf.bool))
 
+    def _convert_labels_to_80_classes(parsed_tensors):
+        # 1..90 --> 0..79
+        match = tf.constant([1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                             11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                             22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+                             35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+                             46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+                             56, 57, 58, 59, 60, 61, 62, 63, 64, 65,
+                             67, 70, 72, 73, 74, 75, 76, 77, 78, 79,
+                             80, 81, 82, 84, 85, 86, 87, 88, 89, 90], dtype=tf.int64)
+
+        labels = parsed_tensors['image/object/class/label']
+        labels = tf.reshape(labels, (tf.shape(labels)[0], 1))
+        labels = tf.where(tf.equal(match, labels))[:, -1]
+        return labels
+
+    labels = parsed_tensors['image/object/class/label']
+    if model == "YOLOv4" and is_train:
+        labels = _convert_labels_to_80_classes(parsed_tensors)
+
     decoded_tensors = {
         'image': image,
         'source_id': parsed_tensors['image/source_id'],
         'height': parsed_tensors['image/height'],
         'width': parsed_tensors['image/width'],
-        'groundtruth_classes': parsed_tensors['image/object/class/label'],
+        'groundtruth_classes': labels,
         'groundtruth_is_crowd': is_crowds,
         'groundtruth_area': areas,
         'groundtruth_boxes': boxes,

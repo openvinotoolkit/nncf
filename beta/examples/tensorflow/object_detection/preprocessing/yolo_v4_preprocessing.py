@@ -91,7 +91,6 @@ class YOLOv4Preprocessor:
     def _parse_train_data(self, data):
         """Parses data for training"""
         image = data['image']
-        filename = data['source_filename']
         groundtruth_classes = data['groundtruth_classes']
         groundtruth_boxes = data['groundtruth_boxes']
 
@@ -110,7 +109,6 @@ class YOLOv4Preprocessor:
         out = {}
         out['image'] = image
         out['box'] = box
-        out['filename'] = filename
         out['source_id'] = data['source_id']
 
         return out
@@ -202,7 +200,7 @@ class YOLOv4Preprocessor:
                             y_true[l][b, j, i, k, 5+c] = 1
         return y_true
 
-    def _preprocess2(self, image_data, box_data, filename):
+    def _preprocess2(self, image_data, box_data):
         image_data = image_data.numpy()
         box_data = box_data.numpy()
 
@@ -221,11 +219,10 @@ class YOLOv4Preprocessor:
     def _parse_train_data2(self, data):
         image_data = data['image']
         box_data = data['box']
-        filename = data['filename']
         im_shape = image_data.shape
 
         image_data, out0, out1, out2 = tf.py_function(self._preprocess2,
-                                                      [image_data, box_data, filename],
+                                                      [image_data, box_data],
                                                       [tf.float32, tf.float32, tf.float32, tf.float32])
         image_data.set_shape(im_shape)
         out0.set_shape([im_shape[0], 19, 19, 3, 85])
@@ -335,7 +332,6 @@ class YOLOv4Preprocessor:
 
         decoded_tensors = {
             'image': image,
-            'source_filename': features_dict['image/filename'],
             'source_id': tf.cast(features_dict['image/id'], tf.int32),
             'groundtruth_classes': labels,
             'groundtruth_is_crowd': features_dict['objects']['is_crowd'],

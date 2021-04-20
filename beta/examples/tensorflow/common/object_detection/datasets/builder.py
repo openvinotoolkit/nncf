@@ -62,7 +62,8 @@ class COCODatasetBuilder(BaseDatasetBuilder):
         tfds_decoder, preprocess_input_fn = get_preprocess_input_fn(self._config, self._is_train)
 
         if self._dataset_type == 'tfrecords':
-            decoder_fn = partial(self._dataset_loader.decoder, include_mask=self._include_mask)
+            decoder_fn = partial(self._dataset_loader.decoder, include_mask=self._include_mask,
+                                 model=self._config.model, is_train=self._is_train)
         else:
             decoder_fn = tfds_decoder
 
