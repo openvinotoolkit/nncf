@@ -26,7 +26,6 @@ from torch.optim import SGD
 from nncf import NNCFConfig
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import check_equal
-from tests.helpers import check_not_equal
 from tests.helpers import get_grads
 from tests.helpers import LeNet
 from tests.quantization.test_algo_quantization import get_quantization_config_without_range_init
@@ -34,17 +33,17 @@ from tests.sparsity.rb.test_algo import get_basic_sparsity_config
 
 
 ALGO_NAME_TO_PATH_MAP = {
-        'quantization': 'nncf.quantization',
-        'rb_sparsity': 'nncf.sparsity.rb'
+    'quantization': 'nncf.quantization',
+    'rb_sparsity': 'nncf.sparsity.rb'
 }
 
 
 @contextlib.contextmanager
-def torch_seed():
-    seed = torch.seed()
-    torch.manual_seed(0)
-    yield
+def set_torch_seed(seed=42):
+    saved_seed = torch.seed()
     torch.manual_seed(seed)
+    yield
+    torch.manual_seed(saved_seed)
 
 
 def get_quantization_config() -> NNCFConfig:
@@ -72,7 +71,7 @@ def add_multiplier_to_config(config: NNCFConfig, local_multiplier: float = None,
     config = copy.deepcopy(config)
 
     if local_multiplier is not None:
-        algorithms =  get_config_algorithms(config)
+        algorithms = get_config_algorithms(config)
 
         for algo in algorithms:
             algo.update({
@@ -122,7 +121,7 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
     return res_config
 
 
-def get_configs_merging_params() -> List[Dict]:
+def get_configs_building_params() -> List[Dict]:
     res = []
     get_orig_config_fns = [get_quantization_config, get_sparsity_config]
     num_orig_configs = len(get_orig_config_fns)
@@ -168,17 +167,17 @@ def get_configs_merging_params() -> List[Dict]:
     return res
 
 
-@pytest.fixture(params=get_configs_merging_params())
-def merged_configs(request) -> Tuple[NNCFConfig, NNCFConfig]:
-    orig_configs = [get_orig_config_fn() for get_orig_config_fn in request.param['get_orig_config_fns']]
-    orig_config = merge_configs(orig_configs, request.param['use_algo_list'])
+@pytest.fixture(params=get_configs_building_params())
+def ref_and_target_configs(request) -> Tuple[NNCFConfig, NNCFConfig]:
+    ref_configs = [get_ref_config_fn() for get_ref_config_fn in request.param['get_orig_config_fns']]
+    ref_config = merge_configs(ref_configs, request.param['use_algo_list'])
 
     target_configs = [add_multiplier_to_config(config, local_multiplier=multiplier)
-                      for config, multiplier in zip(orig_configs, request.param['multipliers'])]
+                      for config, multiplier in zip(ref_configs, request.param['multipliers'])]
     target_config = merge_configs(target_configs, request.param['use_algo_list'])
     target_config = add_multiplier_to_config(target_config, global_multiplier=request.param['global_multiplier'])
 
-    return orig_config, target_config
+    return ref_config, target_config
 
 
 def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.Parameter]]:
@@ -207,7 +206,7 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.
 
 
 def get_params_after_train_steps(config: NNCFConfig, num_steps: int = 1) -> Dict[str, Iterable[nn.Parameter]]:
-    with torch_seed():
+    with set_torch_seed():
         model = LeNet()
         model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
@@ -228,8 +227,8 @@ def get_params_after_train_steps(config: NNCFConfig, num_steps: int = 1) -> Dict
     return get_params_grouped_by_algorithms(model)
 
 
-def test_not_empty_parameters(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
-    base_config, config_with_multiplier = merged_configs
+def test_if_algorithms_add_params(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
+    base_config, config_with_multiplier = ref_and_target_configs
 
     algo_to_params = get_params_after_train_steps(config_with_multiplier)
     algo_names = get_multipliers_from_config(base_config).keys()
@@ -237,8 +236,8 @@ def test_not_empty_parameters(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
     assert sorted(algo_to_params.keys()) == sorted(list(algo_names) + ['regular'])
 
 
-def test_gradient_values(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
-    base_config, config_with_multiplier = merged_configs
+def test_how_multipliers_affect_grads(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
+    base_config, config_with_multiplier = ref_and_target_configs
 
     ref_params = get_params_after_train_steps(base_config)
     target_params = get_params_after_train_steps(config_with_multiplier)
@@ -247,15 +246,14 @@ def test_gradient_values(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
 
     for algo in multipliers:
         ref_grads = get_grads(ref_params[algo])
-        target_grads = get_grads(target_params[algo])
-
         ref_grads = [multipliers[algo] * grad for grad in ref_grads]
+        target_grads = get_grads(target_params[algo])
 
         check_equal(ref_grads, target_grads)
 
 
-def test_parameter_values(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
-    base_config, config_with_multiplier = merged_configs
+def test_how_multipliers_affect_params_change(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
+    base_config, config_with_multiplier = ref_and_target_configs
 
     orig_params = get_params_after_train_steps(config_with_multiplier, num_steps=0)
     params = get_params_after_train_steps(config_with_multiplier, num_steps=1)
@@ -266,4 +264,5 @@ def test_parameter_values(merged_configs: Tuple[NNCFConfig, NNCFConfig]):
         if multipliers[algo] == 0:
             check_equal(orig_params[algo], params[algo])
         else:
-            check_not_equal(orig_params[algo], params[algo])
+            with pytest.raises(AssertionError):
+                check_equal(orig_params[algo], params[algo])
