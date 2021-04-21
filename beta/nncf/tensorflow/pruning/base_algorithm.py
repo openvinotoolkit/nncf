@@ -118,6 +118,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             for node in group.nodes:
                 layer_name = get_layer_identifier(node)
                 layer = model.get_layer(layer_name)
+                group_minfos.append(PrunedLayerInfo(node.node_name, node.node_id))
 
                 # Add output_mask to nodes to run mask_propagation
                 # and detect spec_nodes that will be pruned.
@@ -141,7 +142,6 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         self._get_insertion_command_binary_mask(
                             layer_name, node.metatype.bias_attr_name)
                     )
-                group_minfos.append(PrunedLayerInfo(layer_name, node.node_id))
 
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)

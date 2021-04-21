@@ -98,6 +98,13 @@ def collect_wrapped_layers(model):
     return wrapped_layers
 
 
+def get_layer_by_original_name(model: tf.keras.Model, name: str):
+    for layer in model.layers:
+        if isinstance(layer, NNCFWrapper) and layer.layer.name == name or layer.name == name:
+            return layer
+    raise ValueError(f'No such layer: {name}.')
+
+
 def get_expanded_node_name(layer_name, instance_index, is_shared):
     if is_shared:
         return '{}{}{}'.format(layer_name, SHARED_OPERATION_MARK, instance_index)
