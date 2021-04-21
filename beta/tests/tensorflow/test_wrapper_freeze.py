@@ -11,28 +11,58 @@
  limitations under the License.
 """
 
-from addict import Dict
+import tensorflow as tf
 
-from beta.tests.tensorflow.helpers import get_basic_conv_test_model
-from beta.nncf import NNCFConfig
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from beta.nncf.tensorflow.layers.operation import NNCFOperation
 
 
-def get_basic_quantization_config(model_size=4):
-    config = NNCFConfig()
-    config.update(Dict({
-        "model": "basic_quant_conv",
-        "input_info":
-            {
-                "sample_size": [1, model_size, model_size, 1],
-            },
-        "compression":
-            {
-                "algorithm": "quantization",
-            }
-    }))
-    return config
+class MaskOperation(NNCFOperation):
+    def build(self, input_shape, input_type, name, layer):
+        mask_trainable = layer.add_weight(
+            name + '_mask_trainable',
+            shape=input_shape,
+            initializer=tf.keras.initializers.Constant(1.0),
+            trainable=True)
+
+        mask_non_trainable = layer.add_weight(
+            name + '_mask_non_trainable',
+            shape=input_shape,
+            initializer=tf.keras.initializers.Constant(1.0),
+            trainable=False)
+
+        return {
+            'mask_trainable': mask_trainable,
+            'mask_non_trainable': mask_non_trainable
+        }
+
+    def call(self, inputs, weights, _):
+        return self.apply_mask(inputs, weights['mask_trainable'], weights['mask_non_trainable'])
+
+    def apply_mask(self, weights, mask1, mask2):
+        return weights * mask1 * mask2
+
+
+def registry_and_build_op(layer):
+    op_name = 'masking_op'
+    mask_op = MaskOperation(op_name)
+    layer.registry_weight_operation('kernel', mask_op)
+    layer.build((1,))
+
+
+def get_model_for_test():
+    model = tf.keras.Sequential(
+        [
+            tf.keras.layers.Input(shape=(5, 5, 1)),
+            NNCFWrapper(tf.keras.layers.Conv2D(2, 3, activation="relu", name="layer1")),
+            (tf.keras.layers.Dense(4, name="layer2")),
+        ]
+    )
+
+    for layer in model.layers:
+        if isinstance(layer, NNCFWrapper):
+            registry_and_build_op(layer)
+    return model
 
 
 def check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights):
@@ -45,42 +75,47 @@ def check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
 
 def test_wrapper_weights_freeze():
-    config = get_basic_quantization_config()
-    model = get_basic_conv_test_model()
-    model, _ = create_compressed_model_and_algo_for_test(model, config)
+    model = get_model_for_test()
 
-    ref_trainable_weights = ['nncf_wrapper_conv2d/kernel_scale:0', 'nncf_wrapper_conv2d/kernel:0',
-                             'nncf_wrapper_conv2d/bias:0']
-    ref_non_trainable_weights = ['nncf_wrapper_conv2d/kernel_signed:0']
+    # Initial state check
+    ref_trainable_weights = ['kernel_mask_trainable:0', 'nncf_wrapper_layer1/kernel:0',
+                             'nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/bias:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
+    # Switching off whole layer from training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.trainable = False
     ref_trainable_weights = []
-    ref_non_trainable_weights = ['nncf_wrapper_conv2d/kernel_signed:0', 'nncf_wrapper_conv2d/bias:0',
-                                 'nncf_wrapper_conv2d/kernel_scale:0', 'nncf_wrapper_conv2d/kernel:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'nncf_wrapper_layer1/kernel:0',
+                                 'nncf_wrapper_layer1/bias:0', 'kernel_mask_trainable:0',
+                                 'nncf_wrapper_layer1/kernel:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
+    # Operation weights are enabled for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(True)
-    ref_trainable_weights = ['nncf_wrapper_conv2d/kernel_scale:0']
-    ref_non_trainable_weights = ['nncf_wrapper_conv2d/kernel_signed:0', 'nncf_wrapper_conv2d/bias:0',
-                                 'nncf_wrapper_conv2d/kernel:0']
+    ref_trainable_weights = ['kernel_mask_trainable:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'nncf_wrapper_layer1/kernel:0',
+                                 'nncf_wrapper_layer1/bias:0', 'nncf_wrapper_layer1/kernel:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
+    # All weights are enabled for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.trainable = True
-    ref_trainable_weights = ['nncf_wrapper_conv2d/kernel_scale:0', 'nncf_wrapper_conv2d/kernel:0',
-                             'nncf_wrapper_conv2d/bias:0']
-    ref_non_trainable_weights = ['nncf_wrapper_conv2d/kernel_signed:0']
+    ref_trainable_weights = ['kernel_mask_trainable:0', 'nncf_wrapper_layer1/kernel:0',
+                             'nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/bias:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
+    # Operation weights are disable for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(False)
-    ref_trainable_weights = ['nncf_wrapper_conv2d/kernel:0', 'nncf_wrapper_conv2d/bias:0']
-    ref_non_trainable_weights = ['nncf_wrapper_conv2d/kernel_signed:0', 'nncf_wrapper_conv2d/kernel_scale:0']
+    ref_trainable_weights = ['nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/kernel:0',
+                             'nncf_wrapper_layer1/bias:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'kernel_mask_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
