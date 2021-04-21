@@ -142,12 +142,11 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
 
-    # pylint: disable=keyword-arg-before-vararg
     def export_model(self,
                      save_path: str,
                      input_names: Optional[List[str]] = None,
                      output_names: Optional[List[str]] = None,
-                     *args, **kwargs) -> None:
+                     model_args = None) -> None:
         """
         Used to export the compressed model for inference into the ONNX format.
         Makes method-specific preparations of the model graph,
@@ -157,9 +156,16 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             `save_path` - a path to the file for the exported model to be saved into.
             `input_names` - list of input tensors names (optional).
             `output_names` - list of output tensors names (optional).
-            *args, **kwargs - if the model's `forward` requires additional parameters
-            during export, specify these here.
+            `model_args` - tuple of additional positional and keyword arguments which are
+                required for the model's `forward` during export. Should be specified in
+                the following format:
+                    - (a, b, {'x': None, 'y': y}) for positional and keyword arguments
+                    - (a, b, {}) for positional arguments only
+                    - ({'x': None, 'y': y},) for keyword arguments only
         """
+        if model_args is None:
+            model_args = ({},)
+
         self.prepare_for_export()
         model = self._model.eval().cpu()
         input_tensor_list = []
@@ -169,6 +175,8 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             single_batch_info.shape = input_shape
             input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
         original_forward = model.forward
+        args = model_args[:-1]
+        kwargs = model_args[-1]
         model.forward = partial(model.forward, *args, **kwargs)
         # pylint:disable=unexpected-keyword-arg
         with torch.no_grad():
