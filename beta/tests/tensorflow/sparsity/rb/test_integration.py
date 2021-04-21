@@ -166,7 +166,7 @@ def test_rb_sparse_target_lenet(distributed, quantized):
             metrics=metrics,
         )
 
-    compress_model.fit(dataset, epochs=5,
+    compress_model.fit(dataset, epochs=5, validation_split=0.1,
                        callbacks=[tf.keras.callbacks.ReduceLROnPlateau(),
                                   get_progress_bar(
                                       stateful_metrics=['loss'] + [metric.name for metric in metrics]),
