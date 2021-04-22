@@ -13,10 +13,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar
 
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.common.compression import BaseCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from beta.nncf.tensorflow.utils.save import save_model
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
@@ -37,7 +36,7 @@ class TFCompressionAlgorithmInitializer(ABC):
         self.call(*args, **kwargs)
 
 
-class TFCompressionAlgorithmController(CompressionAlgorithmController):
+class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable algorithm-specific compression.
@@ -49,20 +48,6 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
         pass
-
-    def export_model(self, save_path: str, save_format: str = 'frozen_graph') -> None:
-        """
-        Used to export the compressed model to the Frozen Graph, TensorFlow SavedModel,
-        or Keras H5 formats. Makes method-specific preparations of the model, (e.g.
-        removing auxiliary layers that were used for the model compression), then
-        exports the model in the specified path.
-
-        :param save_path: The path to export model.
-        :param save_format: Saving format (`frozen_graph` for Frozen Graph,
-            `tf` for Tensorflow SavedModel, `h5` for Keras H5 format).
-        """
-        self.prepare_for_export()
-        save_model(self.model, save_path, save_format)
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
