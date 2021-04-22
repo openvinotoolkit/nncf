@@ -838,6 +838,8 @@ Always use a `.py` filename extension. Never use dashes.
 -   Place related classes and top-level functions together in a
     module.
 -   Use CapWords for class names, but lower\_with\_under.py for module names.
+-   Use the word "layer" (instead of "module") in the `nncf.common` module to
+    refer to the building block of neural networks.
 
 <a id="s3.10.3-framework-specific-class-naming"></a>
 <a id="3103-framework-specific-class-naming"></a>
