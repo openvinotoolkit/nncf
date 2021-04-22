@@ -143,6 +143,17 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
+    # Synchronize all processes if run in distributed mode
     if is_dist_avail_and_initialized():
-        barrier()
+        try:
+            barrier()
+        except RuntimeError as err:
+            logger.warning(err)
+            logger.warning(
+                "NNCF continues work, while does not guarantee that "
+                "the processes will finish model's compression at the same time. "
+                "If your training pipeline demands the processes be synchronized, please, "
+                "keep attention to that error")
+            return compression_ctrl, compressed_model
+
     return compression_ctrl, compressed_model
