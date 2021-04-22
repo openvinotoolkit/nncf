@@ -292,12 +292,10 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
         targets = [anno.requires_grad_(False).to(config.device) for anno in targets]
 
         # forward
-        print(f'Comp model inputs size: {images.size()}')
         out = net(images)
-        print(f'Comp model outputs size: {out[1].size()}')
         # backprop
         loss_l, loss_c = criterion(out, targets)
-        loss_comp = compression_ctrl.loss((out[0], out[1]), images)
+        loss_comp = compression_ctrl.loss(out, images)
         loss = loss_l + loss_c + loss_comp
         batch_loss += loss
         loss.backward()

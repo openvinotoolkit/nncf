@@ -1,12 +1,14 @@
 from typing import List
 
 from copy import deepcopy
+from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
 from torch import nn
 import torch
 from functools import reduce
 from nncf import NNCFConfig
 
-from nncf.nncf_network import NNCFNetwork, InsertionCommand
+from nncf.nncf_network import NNCFNetwork, PTModelTransformer
+from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import CompressionLevel
@@ -38,24 +40,27 @@ class KDLossCalculator(PTCompressionLoss):
         if input_ is None or target is None:
             raise ValueError('KDLoss entries cannot be None. Check compression loss arguments.')
 
-        def is_loss(obj):
+        def is_not_loss(obj):
             if not isinstance(obj, torch.Tensor):
-                return False
-            if obj.requires_grad:
                 return True
-            return False
+            if obj.requires_grad:
+                return False
+            return True
 
         def tensors_to_list(obj):
             if isinstance(obj, torch.Tensor):
                 return [obj]
             else:
                 return list(obj.values() if isinstance(obj, dict) else obj)
-        with torch.no_grad():
-            ref_outputs = self.original_model(target)
-        ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_loss, lambda x: x))
-        print(f'kd loss outputs {ref_loss_outputs[0].size()}')
-        print(f'KDModel parameters device {next(self.original_model.parameters()).device}')
-        compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_loss, lambda x: x))
+
+        def remove_none_from_iterable(obj):
+            pass
+        ref_outputs = self.original_model(target)
+        ref_loss_outputs = filter(lambda x: x is not None, tensors_to_list(objwalk(ref_outputs, is_not_loss, lambda x: None)))
+        ref_loss_outputs = list(ref_loss_outputs)
+        for idx, item in enumerate(ref_loss_outputs):
+            ref_loss_outputs[idx] = ref_loss_outputs[idx].detach()
+        compressed_model_loss_outputs = list(filter(lambda x: x is not None, tensors_to_list(objwalk(input_, is_not_loss, lambda x: None))))
         # check for shapes zip is not reliable
         return self.scale * reduce(
             lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
@@ -72,10 +77,9 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
         self.scale = config.get('scale', 1)
         self.is_softmax = config.get('is_softmax', False)
 
-    def _apply_to(self, target_model: NNCFNetwork) -> List[InsertionCommand]:
+    def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
-        #self.original_model = torch.nn.DataParallel(self.original_model)
-        return []
+        return PTTransformationLayout()
 
     def build_controller(self, target_model):
         return KnowledgeDistillationController(target_model, self.original_model, self.scale, self.is_softmax)
