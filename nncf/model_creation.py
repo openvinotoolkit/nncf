@@ -14,6 +14,7 @@ from os import path as osp
 from typing import Callable, Any, Tuple, Dict
 
 from torch.nn import Module
+from torch.distributed import barrier
 
 from nncf.checkpoint_loading import load_state
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
@@ -24,6 +25,7 @@ from nncf.dynamic_graph.graph_tracer import create_input_infos, create_dummy_for
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
+from nncf.utils import is_dist_avail_and_initialized
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 
 from nncf.common.utils.logger import logger
@@ -141,4 +143,6 @@ def create_compressed_model(model: Module, config: NNCFConfig,
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
 
+    if is_dist_avail_and_initialized():
+        barrier()
     return compression_ctrl, compressed_model
