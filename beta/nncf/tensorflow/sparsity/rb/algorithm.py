@@ -13,11 +13,12 @@
 
 import tensorflow as tf
 from tensorflow.python.keras.utils.layer_utils import count_params
-from typing import List
+from typing import List, Dict
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SparsityScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -33,7 +34,6 @@ from beta.nncf.tensorflow.sparsity.rb.functions import binary_mask
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
@@ -104,7 +104,7 @@ class RBSparsityController(BaseSparsityController):
         self.set_sparsity_level(sparsity_init)
 
     @property
-    def scheduler(self) -> CompressionScheduler:
+    def scheduler(self) -> SparsityScheduler:
         return self._scheduler
 
     @property
@@ -116,6 +116,11 @@ class RBSparsityController(BaseSparsityController):
 
     def freeze(self):
         self._loss.disable()
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        super().load_state(state)
+        if self.scheduler.current_epoch >= self.scheduler.freeze_epoch:
+            self.freeze()
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}

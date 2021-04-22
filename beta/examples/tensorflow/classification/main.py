@@ -37,7 +37,7 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
-from beta.examples.tensorflow.common.utils import get_scheduler_state
+from beta.examples.tensorflow.common.utils import get_controller_state
 
 
 def get_argument_parser():
@@ -123,8 +123,8 @@ def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, 
     initial_step = model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
 
-    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
-    compression_ctrl.scheduler.load_state(scheduler_state)
+    controller_state = get_controller_state(initial_step, steps_per_epoch, config)
+    compression_ctrl.load_state(controller_state)
 
     logger.info('Resuming from epoch %d', initial_epoch)
     return initial_epoch

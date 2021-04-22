@@ -211,6 +211,27 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
                 result += current_level
         return result
 
+    def load_state(self, states: Dict[str, object]) -> None:
+        """
+        Calls `load_state()` method for all children.
+
+        :param state: Output of `get_state()` method.
+        """
+        for ctrl, state in zip(self.child_ctrls, states):
+            ctrl.load_state(state)
+
+    def get_state(self):
+        """
+        Returns the composite compression controller state. This state contains
+        the state of all children.
+
+        :return: The composite compression controller state.
+        """
+        result = []
+        for ctrl in self.child_ctrls:
+            result.append(ctrl.get_state())
+        return result
+
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Traverses through all children and returns a sum-up dictionary of

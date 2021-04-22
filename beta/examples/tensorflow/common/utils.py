@@ -197,6 +197,10 @@ class Timer:
         self.average_time = 0.
 
 
+def get_controller_state(num_steps, steps_per_epoch, config):
+    return get_scheduler_state(num_steps, steps_per_epoch, config)
+
+
 def get_scheduler_state(num_steps, steps_per_epoch, config):
     current_step = num_steps - 1
     current_epoch = current_step // steps_per_epoch

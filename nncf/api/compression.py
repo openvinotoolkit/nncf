@@ -182,6 +182,22 @@ class CompressionAlgorithmController(ABC):
         :return: The instance of the `CompressionScheduler`.
         """
 
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression controller state.
+
+        :param state: Output of `get_state()` method.
+        """
+        self.scheduler.load_state(state)
+
+    def get_state(self):
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
+        """
+        return self.scheduler.get_state()
+
     def compression_level(self) -> CompressionLevel:
         """
         Returns the compression level. Should be used on saving best checkpoints
