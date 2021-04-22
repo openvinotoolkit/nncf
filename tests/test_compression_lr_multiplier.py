@@ -167,8 +167,9 @@ def get_configs_building_params() -> List[Dict]:
     return res
 
 
-@pytest.fixture(params=get_configs_building_params())
-def ref_and_target_configs(request) -> Tuple[NNCFConfig, NNCFConfig]:
+@pytest.fixture(name='ref_and_target_configs',
+                params=get_configs_building_params())
+def ref_and_target_configs_(request) -> Tuple[NNCFConfig, NNCFConfig]:
     ref_configs = [get_ref_config_fn() for get_ref_config_fn in request.param['get_orig_config_fns']]
     ref_config = merge_configs(ref_configs, request.param['use_algo_list'])
 
@@ -208,14 +209,14 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.
 def get_params_after_train_steps(config: NNCFConfig, num_steps: int = 1) -> Dict[str, Iterable[nn.Parameter]]:
     with set_torch_seed():
         model = LeNet()
-        model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+        model, _compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
         for param in model.parameters():
             if param.requires_grad:
                 nn.init.normal_(param)
         optimizer = SGD(model.parameters(), lr=0.1)
 
-        for i in range(num_steps):
+        for _ in range(num_steps):
             optimizer.zero_grad()
             x = torch.rand(config['input_info']['sample_size'])
             y = model(x)
@@ -253,7 +254,7 @@ def test_how_multipliers_affect_grads(ref_and_target_configs: Tuple[NNCFConfig, 
 
 
 def test_how_multipliers_affect_params_change(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
-    base_config, config_with_multiplier = ref_and_target_configs
+    _base_config, config_with_multiplier = ref_and_target_configs
 
     orig_params = get_params_after_train_steps(config_with_multiplier, num_steps=0)
     params = get_params_after_train_steps(config_with_multiplier, num_steps=1)

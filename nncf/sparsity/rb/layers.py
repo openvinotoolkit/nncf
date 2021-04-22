@@ -14,7 +14,6 @@
 
 
 import torch
-import torch.nn as nn
 
 from nncf.sparsity.layers import BinaryMask
 from .functions import calc_rb_binary_mask, binary_mask

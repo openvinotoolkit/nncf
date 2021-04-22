@@ -72,8 +72,10 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
 
                 nncf_logger.info("Adding Activation binarizer in scope: {}".format(scope_str))
                 compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
-                op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(module.weight.shape,
-                                                                              compression_lr_multiplier=compression_lr_multiplier)).to(device)
+                op_inputs = UpdateInputs(ActivationBinarizationScaleThreshold(
+                    module.weight.shape,
+                    compression_lr_multiplier=compression_lr_multiplier
+                )).to(device)
 
                 ip_w = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                      module_scope=scope)
