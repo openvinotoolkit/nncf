@@ -197,6 +197,7 @@ class BaseQuantizer(nn.Module):
 
     @property
     def scale_shape(self) -> Tuple[int, ...]:
+        # Per-tensor scale shapes are (1,)
         return self._scale_shape
 
     def broadcast_initialized_params(self, src: int = 0):
@@ -258,7 +259,8 @@ class BaseQuantizer(nn.Module):
         numel = 1
         for el in self.scale_shape:
             numel *= el
-        return numel > 1
+        is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
+        return not is_per_tensor
 
 
 class QuantizersSwitcher:

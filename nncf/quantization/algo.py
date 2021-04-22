@@ -1605,7 +1605,7 @@ class ExperimentalQuantizationController(QuantizationController):
             quant_module = self.all_quantizations[quant_module_id]
             qconfig = quant_module.get_quantizer_config()
             qpid_vs_selected_qconfig[qp_id] = qconfig
-        return self._quantizer_setup.select_qconfigs(qpid_vs_selected_qconfig)
+        return self._quantizer_setup.select_qconfigs(qpid_vs_selected_qconfig, strict=False)
 
     def is_new_setup_requires_regeneration(self, quantizer_setup: SingleConfigQuantizerSetup) -> bool:
         current_setup = self.get_quantizer_setup_for_current_state()

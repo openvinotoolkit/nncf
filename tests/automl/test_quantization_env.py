@@ -21,6 +21,7 @@ from nncf.hw_config import HWConfigType, HWConfig
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.helpers import create_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch
@@ -40,21 +41,28 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(),
                                                     nncf_network,
                                                     hw_config=hw_config).generate_setup()
-    experimental_builder = ExperimentalQuantizationBuilder(setup, {}, hw_config)
+    dummy_multi_setup = MultiConfigQuantizerSetup.from_single_config_setup(setup)
+    for qp in dummy_multi_setup.quantization_points.values():
+        qconf_constraint_list = []
+        qconf = qp.possible_qconfigs[0]
+        bit_set = [8, 4, 2] if 'conv' in str(qp.insertion_point) else [8, 4]
+        for bits in bit_set:
+            adj_qconf = deepcopy(qconf)
+            adj_qconf.num_bits = bits
+            qconf_constraint_list.append(adj_qconf)
+        qp.possible_qconfigs = qconf_constraint_list
+    experimental_builder = ExperimentalQuantizationBuilder(dummy_multi_setup,
+                                                           setup,
+                                                           {}, hw_config)
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
     experimental_ctrl = experimental_builder.build_controller(nncf_network)
     data_loader = create_mock_dataloader(input_info_cfg)
     constraints = HardwareQuantizationConstraints()
-    for qid in experimental_ctrl.all_quantizations:
-        qconf_constraint_list = []
-        qconf = experimental_ctrl.all_quantizations[qid].get_quantizer_config()
-        bit_set = [8, 4, 2] if 'conv' in str(qid) else [8, 4]
-        for bits in bit_set:
-            adj_qconf = deepcopy(qconf)
-            adj_qconf.num_bits = bits
-            qconf_constraint_list.append(adj_qconf)
-        constraints.add(qid, qconf_constraint_list)
+    for qid, qp_id_set in experimental_ctrl.module_id_to_qp_id_translation_dict.items():
+        first_qp_id_for_this_quantizer_module = next(iter(qp_id_set))
+        qconfigs = dummy_multi_setup.quantization_points[first_qp_id_for_this_quantizer_module].possible_qconfigs
+        constraints.add(qid, qconfigs)
 
     return QuantizationEnv(nncf_network,
                            experimental_ctrl,

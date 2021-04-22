@@ -75,7 +75,10 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
             qconfig_any = deepcopy(qconfig)
             qconfig_any.signedness_to_force = None
             if qconfig_any not in self.possible_qconfigs:
-                raise ValueError("Invalid selection for a quantizer config!")
+                raise ValueError("Invalid selection for a quantizer config - "
+                                 "tried to select {} among [{}]".format(qconfig,
+                                                                        ",".join(
+                                                                            [str(q) for q in self.possible_qconfigs])))
             qconfig = qconfig_any
         return SingleConfigQuantizationPoint(self.insertion_point, qconfig, self.scopes_of_directly_quantized_operators)
 
@@ -281,7 +284,8 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             self._unified_scale_qpid_vs_type[qp_id] = us_type
         return gid
 
-    def select_qconfigs(self, qp_id_vs_selected_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig]) -> \
+    def select_qconfigs(self, qp_id_vs_selected_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig],
+                        strict: bool =True) -> \
             SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()
         retval.unified_scale_groups = deepcopy(self.unified_scale_groups)
@@ -291,9 +295,16 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             raise ValueError("The set of quantization points for a selection is inconsistent with quantization"
                              "points in the quantizer setup!")
         for qp_id in self.quantization_points:
-            retval.quantization_points[qp_id] = self.quantization_points[qp_id].select_qconfig(
-                qp_id_vs_selected_qconfig_dict[qp_id]
-            )
+            if strict:
+                retval.quantization_points[qp_id] = self.quantization_points[qp_id].select_qconfig(
+                    qp_id_vs_selected_qconfig_dict[qp_id]
+                )
+            else:
+                multi_qp = self.quantization_points[qp_id]
+                qconfig = qp_id_vs_selected_qconfig_dict[qp_id]
+                retval.quantization_points[qp_id] = SingleConfigQuantizationPoint(
+                    multi_qp.insertion_point, qconfig,
+                    multi_qp.scopes_of_directly_quantized_operators)
 
         # Segregate the unified scale groups into sub-groups based on what exact config was chosen.
         for us_group in self.unified_scale_groups.values():
@@ -327,3 +338,22 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         for qp_id, qp in self.quantization_points.items():
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)
+
+    @classmethod
+    def from_single_config_setup(cls, single_conf_setup: SingleConfigQuantizerSetup) -> 'MultiConfigQuantizerSetup':
+        retval = cls()
+        for qp_id, qp in single_conf_setup.quantization_points.items():
+            multi_pt = MultiConfigQuantizationPoint(
+                insertion_point=qp.insertion_point,
+                possible_qconfigs=[deepcopy(qp.qconfig)],
+                scopes_of_directly_quantized_operators=qp.scopes_of_directly_quantized_operators)
+            retval.quantization_points[qp_id] = multi_pt
+        for qp_set in single_conf_setup.unified_scale_groups.values():
+            qp_list = list(qp_set)
+            qp_types = [UnifiedScaleType.UNIFY_ALWAYS for _ in qp_list]
+            retval.register_unified_scale_group_with_types(qp_list,
+                                                           qp_types)
+        for qp_set in single_conf_setup.shared_input_operation_set_groups.values():
+            qp_list = list(qp_set)
+            retval.register_shared_inputs_group(qp_list)
+        return retval
