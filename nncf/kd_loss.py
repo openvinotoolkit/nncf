@@ -55,12 +55,11 @@ class KDLossCalculator(PTCompressionLoss):
 
         def remove_none_from_iterable(obj):
             pass
-        ref_outputs = self.original_model(target)
-        ref_loss_outputs = filter(lambda x: x is not None, tensors_to_list(objwalk(ref_outputs, is_not_loss, lambda x: None)))
-        ref_loss_outputs = list(ref_loss_outputs)
-        for idx, item in enumerate(ref_loss_outputs):
-            ref_loss_outputs[idx] = ref_loss_outputs[idx].detach()
-        compressed_model_loss_outputs = list(filter(lambda x: x is not None, tensors_to_list(objwalk(input_, is_not_loss, lambda x: None))))
+        with torch.no_grad():
+            ref_outputs = self.original_model(target)
+        ref_loss_outputs = tensors_to_list(objwalk(ref_outputs, is_not_loss, lambda x: x))
+        compressed_model_loss_outputs = tensors_to_list(objwalk(input_, is_not_loss, lambda x: x))
+        #compressed_model_loss_outputs = list(filter(lambda x: x is not None, tensors_to_list(objwalk(input_, is_not_loss, lambda x: None))))
         # check for shapes zip is not reliable
         return self.scale * reduce(
             lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
@@ -79,6 +78,7 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
+        #self.original_model = torch.nn.DataParallel(self.original_model)
         return PTTransformationLayout()
 
     def build_controller(self, target_model):
