@@ -362,12 +362,25 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
 
 @contextmanager
 def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
-    is_original_mode_training = model.training
+    saved_state = {}
+
+    def helper_save_state(module):
+        for ch in module.children():
+            saved_state[ch] = ch.training
+            helper_save_state(ch)
+
+    def helper_load_state(module, state):
+        for ch in module.children():
+            ch.train(saved_state[ch])
+            helper_load_state(ch, state)
+
+    helper_save_state(model)
     model.train(is_training)
     try:
         yield
     finally:
-        model.train(is_original_mode_training)
+        helper_load_state(model, saved_state)
+        del saved_state
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
@@ -389,3 +402,12 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContex
 def add_domain(name_operator: str) -> str:
     from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
+
+
+def print_model_nodes(module, func):
+    for ch in module.children():
+        if len(list(ch.children())) == 0:
+            print(ch)
+            print(ch.training)
+        else:
+            print_model_nodes(ch)
