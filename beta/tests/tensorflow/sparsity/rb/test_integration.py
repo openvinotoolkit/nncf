@@ -104,9 +104,14 @@ def test_rb_sparse_target_lenet(distributed, quantized):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
-    (x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    x_test, y_test = x_test[:2], y_test[:2]
+
     x_train = tf.transpose(tf.reshape(x_train, (-1, 1, 28, 28)), (0, 2, 3, 1))
+    x_test = tf.transpose(tf.reshape(x_test, (-1, 1, 28, 28)), (0, 2, 3, 1))
+
     x_train = x_train / 255
+    x_test = x_test / 255
 
     batch_size = 128
     if distributed:
@@ -117,10 +122,12 @@ def test_rb_sparse_target_lenet(distributed, quantized):
 
     tf.keras.backend.clear_session()
     with strategy.scope():
-        dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+        dataset_train = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+        dataset_test = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
-        dataset = dataset.with_options(options)
+        dataset_train = dataset_train.with_options(options)
+        dataset_test = dataset_test.with_options(options)
 
         model = get_lenet_model()
         model.load_weights(MODEL_PATH)
@@ -166,12 +173,11 @@ def test_rb_sparse_target_lenet(distributed, quantized):
             metrics=metrics,
         )
 
-    compress_model.fit(dataset, epochs=5, validation_split=0.1,
+    compress_model.fit(dataset_train, validation_data=dataset_test, epochs=5,
                        callbacks=[tf.keras.callbacks.ReduceLROnPlateau(),
                                   get_progress_bar(
                                       stateful_metrics=['loss'] + [metric.name for metric in metrics]),
                                   *get_callbacks(
-                                      model_checkpoint=False,
                                       include_tensorboard=True,
                                       track_lr=False,
                                       write_model_weights=False,
