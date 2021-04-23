@@ -402,12 +402,3 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContex
 def add_domain(name_operator: str) -> str:
     from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
-
-
-def print_model_nodes(module, func):
-    for ch in module.children():
-        if len(list(ch.children())) == 0:
-            print(ch)
-            print(ch.training)
-        else:
-            print_model_nodes(ch)
