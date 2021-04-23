@@ -63,7 +63,6 @@ class BaseSparsityController(TFCompressionAlgorithmController, SparsityControlle
         stats.update(convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header))
         return stats
 
-
     @abstractmethod
     def raw_statistics(self):
-        ...
+        pass
