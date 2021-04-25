@@ -88,6 +88,8 @@ class CompressionParameter(nn.Parameter):
 
     This class utilize `compression_lr_multiplier` parameter from :class:`nncf.NNCFConfig`
     to increase/decrease gradients for compression algorithms' parameters.
+
+    N.B. If you want to set `requires_grad` parameter, please only use `requires_grad_` method.
     """
 
     def __new__(cls, data: torch.Tensor = None, requires_grad: bool = True, compression_lr_multiplier: float = None):
@@ -102,5 +104,13 @@ class CompressionParameter(nn.Parameter):
             compression_lr_multiplier: Multiplier for gradient values
         """
         super().__init__()
-        if compression_lr_multiplier is not None and requires_grad:
-            self.register_hook(lambda grad: compression_lr_multiplier * grad)
+        self._compression_lr_multiplier = compression_lr_multiplier
+        self.requires_grad_(requires_grad)
+
+    def _apply_compression_lr_multiplier(self):
+        if self.requires_grad and self._compression_lr_multiplier is not None:
+            self.register_hook(lambda grad: self._compression_lr_multiplier * grad)
+
+    def requires_grad_(self, requires_grad=True):
+        super().requires_grad_(requires_grad)
+        self._apply_compression_lr_multiplier()

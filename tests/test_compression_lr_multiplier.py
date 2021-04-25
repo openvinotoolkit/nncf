@@ -34,7 +34,8 @@ from tests.sparsity.rb.test_algo import get_basic_sparsity_config
 
 ALGO_NAME_TO_PATH_MAP = {
     'quantization': 'nncf.quantization',
-    'rb_sparsity': 'nncf.sparsity.rb'
+    'rb_sparsity': 'nncf.sparsity.rb',
+    'binarization': 'nncf.binarization'
 }
 
 
@@ -53,6 +54,29 @@ def get_quantization_config() -> NNCFConfig:
 
 def get_sparsity_config() -> NNCFConfig:
     config = get_basic_sparsity_config([1, 1, LeNet.INPUT_SIZE, LeNet.INPUT_SIZE])
+    return config
+
+
+def get_binarization_config() -> NNCFConfig:
+    config = NNCFConfig()
+    config.update({
+        "model": "resnet18",
+
+        "input_info": {
+            "sample_size": [1, 1, LeNet.INPUT_SIZE, LeNet.INPUT_SIZE]
+        },
+
+        "compression": [
+            {
+                "algorithm": "binarization",
+                "mode": "xnor",
+                "params": {
+                    "activations_quant_start_epoch": 0,
+                    "weights_quant_start_epoch": 0
+                }
+            }
+        ]
+    })
     return config
 
 
@@ -123,7 +147,7 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
 def get_configs_building_params() -> List[Dict]:
     res = []
-    get_orig_config_fns = [get_quantization_config, get_sparsity_config]
+    get_orig_config_fns = [get_quantization_config, get_sparsity_config, get_binarization_config]
     num_orig_configs = len(get_orig_config_fns)
 
     for global_multiplier in [0, 1, 10]:
@@ -191,17 +215,20 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.
             cls_name_to_params[full_cls_name] = []
         cls_name_to_params[full_cls_name].extend(params)
 
-    algo_name_to_params = {'regular': []}
+    algo_name_to_params = {}
     for cls_name, params in cls_name_to_params.items():
         params = [param for param in params if param.requires_grad]
-        for algo_name, algo_path in ALGO_NAME_TO_PATH_MAP.items():
-            if algo_path in cls_name:
-                if algo_name not in algo_name_to_params:
-                    algo_name_to_params[algo_name] = []
-                algo_name_to_params[algo_name].extend(params)
-                break
-        else:
-            algo_name_to_params['regular'].extend(params)
+        if len(params) == 0:
+            continue
+
+        algo_name = 'regular'
+        for cur_algo_name, cur_algo_path in ALGO_NAME_TO_PATH_MAP.items():
+            if cur_algo_path in cls_name:
+                algo_name = cur_algo_name
+
+        if algo_name not in algo_name_to_params:
+            algo_name_to_params[algo_name] = []
+        algo_name_to_params[algo_name].extend(params)
 
     return algo_name_to_params
 
@@ -215,6 +242,11 @@ def get_params_after_train_steps(config: NNCFConfig, num_steps: int = 1) -> Dict
             if param.requires_grad:
                 nn.init.normal_(param)
         optimizer = SGD(model.parameters(), lr=0.1)
+
+        # This block is needed to initialize scale in the binarization algorithm
+        with torch.no_grad():
+            x = torch.rand(config['input_info']['sample_size'])
+            model(x)
 
         for _ in range(num_steps):
             optimizer.zero_grad()
@@ -237,7 +269,7 @@ def test_if_algorithms_add_params(ref_and_target_configs: Tuple[NNCFConfig, NNCF
     assert sorted(algo_to_params.keys()) == sorted(list(algo_names) + ['regular'])
 
 
-def test_how_multipliers_affect_grads(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
+def test_if_setting_multipliers_multiplies_grads_values(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
     base_config, config_with_multiplier = ref_and_target_configs
 
     ref_params = get_params_after_train_steps(base_config)
@@ -245,7 +277,7 @@ def test_how_multipliers_affect_grads(ref_and_target_configs: Tuple[NNCFConfig, 
     multipliers = get_multipliers_from_config(config_with_multiplier)
     multipliers['regular'] = 1
 
-    for algo in multipliers:
+    for algo in ref_params:
         ref_grads = get_grads(ref_params[algo])
         ref_grads = [multipliers[algo] * grad for grad in ref_grads]
         target_grads = get_grads(target_params[algo])
@@ -253,7 +285,7 @@ def test_how_multipliers_affect_grads(ref_and_target_configs: Tuple[NNCFConfig, 
         check_equal(ref_grads, target_grads)
 
 
-def test_how_multipliers_affect_params_change(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
+def test_if_setting_multipliers_affects_model_params_training(ref_and_target_configs: Tuple[NNCFConfig, NNCFConfig]):
     _base_config, config_with_multiplier = ref_and_target_configs
 
     orig_params = get_params_after_train_steps(config_with_multiplier, num_steps=0)
@@ -261,7 +293,7 @@ def test_how_multipliers_affect_params_change(ref_and_target_configs: Tuple[NNCF
     multipliers = get_multipliers_from_config(config_with_multiplier)
     multipliers['regular'] = 1
 
-    for algo in multipliers:
+    for algo in orig_params:
         if multipliers[algo] == 0:
             check_equal(orig_params[algo], params[algo])
         else:
