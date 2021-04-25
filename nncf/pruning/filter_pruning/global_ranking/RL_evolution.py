@@ -11,6 +11,8 @@
  limitations under the License.
 """
 import queue
+from functools import partial
+
 import numpy as np
 import torch
 from copy import deepcopy, copy
@@ -19,8 +21,10 @@ from torch import optim
 from nncf.utils import get_filters_num
 
 
-class EvolutionOptimizer():
-    def __init__(self, initial_filter_ranks, hparams):
+class EvolutionOptimizer:
+    def __init__(self, initial_filter_ranks, hparams, random_seed):
+        np.random.seed(random_seed)
+
         # Optimizer hyper-params
         self.POPULATIONS = hparams.get('POPULATIONS', 64)
         self.GENERATIONS = hparams.get('GENERATIONS', 400)
@@ -127,7 +131,7 @@ class EvolutionOptimizer():
             self._save_episode_info(reward)
 
 
-class LeGREvolutionEnv():
+class LeGREvolutionEnv:
     def __init__(self, filter_pruner, model, train_loader, val_loader, train_fn, train_optimizer, val_fn, config,
                  train_steps, pruning_max):
         self.loss_as_reward = True
@@ -137,6 +141,9 @@ class LeGREvolutionEnv():
         self.train_loader, self.val_loader = train_loader, val_loader
         self.train_fn = train_fn
         self.train_optimizer = train_optimizer
+        if self.train_optimizer is None:
+            # Default optimizer when the user did not provide a custom optimizer
+            self.train_optimizer = partial(optim.SGD,lr=1e-2, momentum=0.9, weight_decay=5e-4, nesterov=True)
         self.validate_fn = val_fn
         self.config = config
 
@@ -152,15 +159,11 @@ class LeGREvolutionEnv():
         self.full_flops = self.filter_pruner.get_flops_number_in_model()
         self.rest = self.full_flops
         self.last_act = (1, 0)
-
         return torch.zeros(1), [self.full_flops, self.rest]
 
     def train_steps(self, steps):
-        if self.train_optimizer is None:
-            # Default optimizer in the case when the user did not provide a custom optimizer
-            self.train_optimizer = optim.SGD(self.model.parameters(), lr=1e-2, momentum=0.9, weight_decay=5e-4,
-                                             nesterov=True)
-        self.train_fn(self.train_loader, self.model, self.train_optimizer, self.filter_pruner, steps)
+        optimizer = self.train_optimizer(self.model.parameters())
+        self.train_fn(self.train_loader, self.model, optimizer, self.filter_pruner, steps)
 
     def get_reward(self):
         return self.validate_fn(self.model, self.val_loader)

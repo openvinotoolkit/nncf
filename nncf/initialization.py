@@ -11,13 +11,14 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.progress_bar import ProgressBar
-from nncf.structures import AutoQPrecisionInitArgs, LeGRInitArgs
+from nncf.structures import AutoQPrecisionInitArgs, LeGRInitArgs, DistributedCallbacksArgs
 from nncf.structures import BNAdaptationInitArgs
 from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.structures import QuantizationRangeInitArgs
-from nncf.utils import is_tensor
+from nncf.utils import is_tensor, default_distributed_unwrapper, default_distributed_wrapper
 from nncf.utils import objwalk
 from nncf.utils import training_mode_switcher
+from nncf.common.utils.logger import logger as nncf_logger
 
 
 class InitializingDataLoader:
@@ -229,6 +230,8 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                val_loader: torch.utils.data.DataLoader = None,
                                device='cuda',
+                               distributed_callbacks: Tuple[Callable, Callable] = None,
+                               execution_parameters: 'ExecutionParameters' = None,
                                legr_train_optimizer=None) -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
@@ -260,4 +263,10 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                    eval_fn=validate_fn,
                                                                    nncf_config=nncf_config)])
 
+    if distributed_callbacks is None:
+        if execution_parameters is None:
+            nncf_logger.info('Please, provide execution parameters for optimal model initialization')
+        distributed_callbacks = (partial(default_distributed_wrapper, execution_parameters=execution_parameters),
+                                 default_distributed_unwrapper)
+    nncf_config.register_extra_structs([DistributedCallbacksArgs(*distributed_callbacks)])
     return nncf_config

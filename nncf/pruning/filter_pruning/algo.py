@@ -47,7 +47,7 @@ from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
 from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
-from nncf.structures import LeGRInitArgs
+from nncf.structures import LeGRInitArgs, DistributedCallbacksArgs
 from nncf.utils import get_filters_num, compute_FLOPs_hook
 
 
@@ -103,6 +103,10 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler = scheduler_cls(self, params)
 
         if self.weight_importance == 'legr':
+            # Wrapping model for parallelization
+            distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
+            target_model = distributed_wrapping_init_args.wrap_model(target_model)
+
             legr_init_args = config.get_extra_struct(LeGRInitArgs)
             legr_params = params.get("legr_params", {})
             if 'max_pruning' not in legr_params:
@@ -118,6 +122,8 @@ class FilterPruningController(BasePruningAlgoController):
                 self.ranking_coeffs = legr.train_global_ranking()
                 nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
                                                                          for scope in self.ranking_coeffs}))
+            # Unwrapping model
+            target_model = distributed_wrapping_init_args.unwrap_model(target_model)
         else:
             self.ranking_coeffs = {node.module_scope: (1, 0) for node in self.pruned_module_groups_info.get_all_nodes()}
 

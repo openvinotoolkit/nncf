@@ -687,13 +687,16 @@ FILTER_PRUNING_SCHEMA = {
                                     "properties": {
                                         "generations": with_attributes(_NUMBER,
                                                                        description="Number of generations for evolution"
-                                                                                   "algorithm"),
+                                                                                   "algorithm."),
                                         "train_steps": with_attributes(_NUMBER,
                                                                        description="Number of training steps to estimate"
-                                                                                   "pruned model accuracy"),
+                                                                                   "pruned model accuracy."),
                                         "max_pruning": with_attributes(_NUMBER,
                                                                        description="Maximum possible pruning level for "
-                                                                                   "the model to train LeGR algo on it.")
+                                                                                   "the model to train LeGR algo on it."),
+                                        "random_seed": with_attributes(_NUMBER,
+                                                                       description="Random seed for LeGR coefficients"
+                                                                                   " generation.")
                                     }
                                 },
 

@@ -13,6 +13,7 @@
 
 import torch
 import torch.multiprocessing as mp
+
 from examples.common.sample_config import SampleConfig
 
 
@@ -28,6 +29,12 @@ class ExecutionMode:
 
     # Single node with 1 process utilising all local GPUs
     GPU_DATAPARALLEL = "gpu_dataparallel"
+
+
+class ExecutionParameters:
+    def __init__(self, cpu_only: bool, current_gpu):
+        self.cpu_only = cpu_only
+        self.current_gpu = current_gpu
 
 
 def get_execution_mode(config):

@@ -38,7 +38,7 @@ from torchvision.models import InceptionOutputs
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_execution_mode, \
-    prepare_model_for_execution, start_worker
+    prepare_model_for_execution, start_worker, ExecutionParameters
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
@@ -147,13 +147,18 @@ def main_worker(current_gpu, config: SampleConfig):
             top1, top5, loss = validate(eval_loader, model, criterion, config, log)
             return top1, top5, loss
 
+        execution_params = ExecutionParameters(config.cpu_only,
+                                               config.current_gpu)
+
         nncf_config = register_default_init_args(
             nncf_config, init_loader, train_loader,
             criterion, train_criterion_fn,
             train_steps_fn,
             validate_fn,
             val_loader,
-            config.device)
+            config.device,
+            execution_parameters=execution_params,
+            )
 
     # create model
     model = load_model(model_name,

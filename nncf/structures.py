@@ -138,3 +138,15 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
     @classmethod
     def get_id(cls) -> str:
         return "legr_init_args"
+
+
+class DistributedCallbacksArgs(NNCFExtraConfigStruct):
+    def __init__(self,
+                 wrapping_callback: Callable,
+                 unwrapping_callback: Callable):
+        self.wrap_model = wrapping_callback
+        self.unwrap_model = unwrapping_callback
+
+    @classmethod
+    def get_id(cls) -> str:
+        return "distributed_callbacks_args"
