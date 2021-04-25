@@ -184,7 +184,7 @@ class FilterPruningController(BasePruningAlgoController):
         Collects input/output shapes of convolutional and dense layers,
         calculates corresponding layerwise FLOPs
         """
-        for node in self._original_graph.get_nodes_by_types(GENERAL_CONV_LAYER_METATYPES):
+        for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_index(node.node_name)
             layer = get_layer_by_original_name(self._model, node_name)
             layer_ = layer.layer if isinstance(layer, NNCFWrapper) else layer
@@ -201,7 +201,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._layers_in_shapes[node.node_name] = in_shape
             self._layers_out_shapes[node.node_name] = out_shape
 
-        for node in self._original_graph.get_nodes_by_types(LINEAR_LAYER_METATYPES):
+        for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_index(node.node_name)
             layer = get_layer_by_original_name(self._model, node_name)
 
@@ -429,7 +429,7 @@ class FilterPruningController(BasePruningAlgoController):
         :return a list of filter importance scores
         """
         group_layers = [get_layer_by_original_name(model=self._model,
-                                                   name=get_original_name(node.layer_name))
+                                                   name=get_original_name(node.key))
                         for node in group.nodes]
         group_filters_num = tf.constant([get_filters_num(layer) for layer in group_layers])
         filters_num = group_filters_num[0]

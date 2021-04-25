@@ -26,12 +26,16 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
+from nncf.common.pruning.statistics import FilterPruningStatistics
 from nncf.common.pruning.utils import calculate_in_out_channels_in_uniformly_pruned_model
 from nncf.common.pruning.utils import count_flops_for_nodes
 from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-from nncf.common.pruning.schedulers import PRUNING_SCHEDULERS
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.context import Scope
@@ -53,10 +57,7 @@ from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.utils import get_filters_num
-from nncf.common.pruning.statistics import PrunedLayerSummary
-from nncf.common.pruning.statistics import PrunedModelStatistics
-from nncf.common.pruning.statistics import FilterPruningStatistics
-from nncf.common.statistics import NNCFStatistics
+from nncf.torch.utils import is_main_process
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -167,7 +168,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].module_scope] \
+            self.pruning_quotas[cluster.id] = self.modules_out_channels[cluster.nodes[0].key] \
                                               * self.pruning_quota
 
     def flops_count_init(self) -> None:
@@ -175,14 +176,17 @@ class FilterPruningController(BasePruningAlgoController):
             ctx = self._model.get_tracing_context()
 
             def compute_in_out_shapes_hook(module, input_, output):
+                node = ctx.graph.get_all_nodes()[-1]
+                if ctx.scope != node.op_exec_context.scope_in_model:
+                    return
                 if isinstance(module, tuple(NNCF_GENERAL_CONV_MODULES_DICT.values())):
-                    out_shapes_dict_to_save[ctx.scope] = output.shape[2:]
+                    out_shapes_dict_to_save[node.node_key] = output.shape[2:]
                 if isinstance(module, nn.Linear):
-                    out_shapes_dict_to_save[ctx.scope] = output.shape[-1]
+                    out_shapes_dict_to_save[node.node_key] = output.shape[-1]
                     if len(input_[0].shape) == 1:
-                        in_shapes_dict_to_save[ctx.scope] = input_[0].shape[0]
+                        in_shapes_dict_to_save[node.node_key] = input_[0].shape[0]
                     else:
-                        in_shapes_dict_to_save[ctx.scope] = input_[0].shape[1:]
+                        in_shapes_dict_to_save[node.node_key] = input_[0].shape[1:]
 
             return compute_in_out_shapes_hook
 
@@ -207,12 +211,17 @@ class FilterPruningController(BasePruningAlgoController):
         hook_list = []
         in_shapes, out_shapes = {}, {}
 
+        modules_with_hooks = []
         for nncf_node in graph.get_all_nodes():
-            node_module = self._model.get_module_by_scope(nncf_node.ia_op_exec_context.scope_in_model)
-            hook_list.append(node_module.register_forward_hook(get_in_out_shapes_hook(in_shapes, out_shapes)))
-            hook_list.append(node_module.register_forward_hook(get_node_cost_hook()))
+            scope = nncf_node.ia_op_exec_context.scope_in_model
+            if scope not in modules_with_hooks:
+                node_module = self._model.get_module_by_scope(scope)
+                hook_list.append(node_module.register_forward_hook(get_in_out_shapes_hook(in_shapes, out_shapes)))
+                hook_list.append(node_module.register_forward_hook(get_node_cost_hook()))
+                modules_with_hooks.append(scope)
 
-        self._model.do_dummy_forward(force_eval=True)
+        if is_main_process():
+            self._model.do_dummy_forward(force_eval=True)
 
         self.nodes_flops = count_flops_for_nodes(graph, in_shapes, out_shapes,
                                                  conv_op_metatypes=[
