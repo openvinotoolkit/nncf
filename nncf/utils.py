@@ -12,6 +12,8 @@
 """
 from collections import OrderedDict
 from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
+from typing import Tuple
+from typing import Type
 
 import numpy as np
 import random
@@ -311,14 +313,40 @@ def maybe_get_iterator(obj):
     return it
 
 
+def to_tuple(lst: List,
+             named_tuple_class: Type = None,
+             named_tuple_fields: List[str] = None) -> Tuple:
+    # Able to produce namedtuples if a corresponding parameter is given
+    if named_tuple_fields is None:
+        return tuple(lst)
+    return named_tuple_class(*lst)
+
+
+def is_tuple(obj) -> bool:
+    return isinstance(obj, tuple)
+
+
+def is_named_tuple(obj) -> bool:
+    return is_tuple(obj) and (obj.__class__ != tuple)
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     """Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application."""
+    #pylint:disable=too-many-nested-blocks
+    #pylint:disable=too-many-branches
     if memo is None:
         memo = set()
 
-    is_tuple = isinstance(obj, tuple)
-    if is_tuple:
+    named_tuple_class = None
+    named_tuple_fields = None
+    if is_named_tuple(obj):
+        named_tuple_class = obj.__class__
+        #pylint:disable=protected-access
+        named_tuple_fields = obj._fields
+
+    was_tuple = is_tuple(obj)
+    if was_tuple:
         obj = list(obj)
 
     iterator = maybe_get_iterator(obj)
@@ -327,30 +355,34 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         if id(obj) not in memo:
             memo.add(id(obj))
             indices_to_apply_fn_to = set()
-            indices_vs_tuples_to_assign = {}  # type: Dict[Any, list]
+            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
             for idx, value in iterator(obj):
                 next_level_it = maybe_get_iterator(value)
                 if next_level_it is None:
                     if unary_predicate(value):
                         indices_to_apply_fn_to.add(idx)
                 else:
-                    if isinstance(value, tuple):
+                    if is_tuple(value):
                         processed_tuple = objwalk(value, unary_predicate, apply_fn, memo)
-                        indices_vs_tuples_to_assign[idx] = processed_tuple
+                        if is_named_tuple(value):
+                            indices_vs_named_tuple_data[idx] = processed_tuple, value.__class__, value._fields
+                        else:
+                            indices_vs_named_tuple_data[idx] = processed_tuple, None, None
                     else:
                         objwalk(value, unary_predicate, apply_fn)
             for idx in indices_to_apply_fn_to:
                 obj[idx] = apply_fn(obj[idx])
-            for idx, tpl in indices_vs_tuples_to_assign.items():
-                obj[idx] = tuple(tpl)
+            for idx, tpl_data in indices_vs_named_tuple_data.items():
+                tpl, n_tpl_class, n_tpl_fields = tpl_data
+                obj[idx] = to_tuple(tpl, n_tpl_class, n_tpl_fields)
 
             memo.remove(id(obj))
     else:
         if unary_predicate(obj):
             return apply_fn(obj)
 
-    if is_tuple:
-        return tuple(obj)
+    if was_tuple:
+        return to_tuple(obj, named_tuple_class, named_tuple_fields)
 
     return obj
 

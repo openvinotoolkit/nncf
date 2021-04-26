@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from collections import namedtuple
+from typing import Any
 
 import pytest
 from functools import partial
@@ -97,3 +98,23 @@ def test_objwalk(objwalk_objects):
     test_obj = objwalk(start_obj, is_target_class, fn_to_apply)
 
     assert test_obj == ref_obj
+
+def assert_named_tuples_are_equal(ref_named_tuple: tuple, test_obj: Any):
+    assert test_obj.__class__.__qualname__ == ref_named_tuple.__class__.__qualname__
+    assert hasattr(test_obj, "_fields")
+    assert all([f in test_obj._fields for f in ref_named_tuple._fields])
+    assert all([f in ref_named_tuple._fields for f in test_obj._fields])
+
+
+def test_objwalk_retains_named_tuple():
+    named_tuple = NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL),
+                             field2=NamedTuple(field1=ObjwalkTestClass(OBJWALK_INIT_VAL),
+                                               field2=-8))
+
+    def is_target_class(obj):
+        return isinstance(obj, ObjwalkTestClass)
+
+    fn_to_apply = partial(ObjwalkTestClass.member_fn, val=OBJWALK_REF_VAL)
+    test_obj = objwalk(named_tuple, is_target_class, fn_to_apply)
+    assert_named_tuples_are_equal(named_tuple, test_obj)
+    assert_named_tuples_are_equal(named_tuple.field2, test_obj.field2)

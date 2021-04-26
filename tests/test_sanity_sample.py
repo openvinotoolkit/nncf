@@ -149,13 +149,14 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["mock_32x32", "mock_32x32", "mock_32x32", "mock_32x32"],
+    "classification": ["mock_32x32", "mock_299x299", "mock_32x32", "mock_32x32"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
 
 CONFIGS = {
     "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
+                       TEST_ROOT.joinpath("data", "configs", "inception_v3_mock_dataset.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_pruning_magnitude.json")],
@@ -165,7 +166,7 @@ CONFIGS = {
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256, 256, 128],
+    "classification": [256, 32, 256, 256, 128],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }
@@ -291,12 +292,20 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--cpu-only"] = True
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
+    elif config['nncf_config']["model"] == "inception_v3":
+        pytest.skip("InceptionV3 may not be trained in DataParallel "
+                    "because it outputs namedtuple, which DP seems to be unable "
+                    "to support even still.")
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
 @pytest.mark.parametrize(
@@ -369,7 +378,11 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
 @pytest.mark.parametrize(
