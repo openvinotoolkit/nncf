@@ -4,7 +4,7 @@
         "sample_size": [1, 608, 608, 3]
     },
 
-    "epochs": 1,
+    "epochs": 2,
     "batch_size": 63,
     "workers": 16,
 

@@ -954,9 +954,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
             if self.hw_config.target_device in ['CPU', 'ANY'] and qconfig.num_bits == 8:
                 nncf_logger.warning('A saturation issue fix will be applied. '
-                                    'Now all weight quantizers will effectively use only 7 bits out of 8 bits '
+                                    'Now all weight quantizers will effectively use only 7 bits out of 8 bits. '
                                     'This resolves the saturation issue problem on AVX2 and AVX-512 machines. '
-                                    'Please take a look at the documentation for a detailed information. ')
+                                    'Please take a look at the documentation for a detailed information.')
                 half_range = True
 
         qspec = PTQuantizerSpec.from_config(qconfig,

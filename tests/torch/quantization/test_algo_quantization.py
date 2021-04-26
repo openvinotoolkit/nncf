@@ -547,7 +547,7 @@ def test_quantize_outputs_with_scope_overrides():
     register_bn_adaptation_init_args(config)
     model, ctrl = create_compressed_model_and_algo_for_test(model, config)
     output_quantizers =\
-        [ q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
+        [q for qid, q in ctrl.all_quantizations.items() if isinstance(qid, NonWeightQuantizerId)][:-1]
     for q in output_quantizers:
         assert q.num_bits == 4
         assert isinstance(q, AsymmetricQuantizer)

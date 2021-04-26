@@ -11,8 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
-from typing import List
-from typing import TypeVar
+from typing import List, TypeVar
 
 import torch.nn
 
@@ -54,13 +53,13 @@ class PTCompositeCompressionAlgorithmBuilder(
         compression_config_json_section = deepcopy(compression_config_json_section)
 
         hw_config_type = None
-        target_device = config.get("target_device", "ANY")
-        global_compression_lr_multiplier = config.get("compression_lr_multiplier", None)
+        target_device = config.get('target_device', 'ANY')
+        global_compression_lr_multiplier = config.get('compression_lr_multiplier', None)
         if target_device != 'TRIAL':
             hw_config_type = HWConfigType.from_str(HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device])
 
-        global_ignored_scopes = config.get("ignored_scopes")
-        global_target_scopes = config.get("target_scopes")
+        global_ignored_scopes = config.get('ignored_scopes')
+        global_target_scopes = config.get('target_scopes')
         if isinstance(compression_config_json_section, dict):
             compression_config = NNCFConfig(compression_config_json_section)
             compression_config = self._extend_with_globals(
@@ -93,19 +92,19 @@ class PTCompositeCompressionAlgorithmBuilder(
                              global_target_scopes: List[str],
                              global_compression_lr_multiplier: float) -> NNCFConfig:
         if global_hw_config_type is not None:
-            algo_config["hw_config_type"] = global_hw_config_type
+            algo_config['hw_config_type'] = global_hw_config_type
         if global_ignored_scopes is not None:
-            if "ignored_scopes" in algo_config:
-                algo_config["ignored_scopes"].extend(global_ignored_scopes)
+            if 'ignored_scopes' in algo_config:
+                algo_config['ignored_scopes'].extend(global_ignored_scopes)
             else:
-                algo_config["ignored_scopes"] = global_ignored_scopes
+                algo_config['ignored_scopes'] = global_ignored_scopes
         if global_target_scopes is not None:
-            if "target_scopes" in algo_config:
-                algo_config["target_scopes"].extend(global_target_scopes)
+            if 'target_scopes' in algo_config:
+                algo_config['target_scopes'].extend(global_target_scopes)
             else:
-                algo_config["target_scopes"] = global_target_scopes
-        if "compression_lr_multiplier" not in algo_config:
-            algo_config["compression_lr_multiplier"] = global_compression_lr_multiplier
+                algo_config['target_scopes'] = global_target_scopes
+        if 'compression_lr_multiplier' not in algo_config:
+            algo_config['compression_lr_multiplier'] = global_compression_lr_multiplier
         return algo_config
 
     def __bool__(self):

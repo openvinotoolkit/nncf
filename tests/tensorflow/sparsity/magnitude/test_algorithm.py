@@ -20,10 +20,15 @@ from pytest import approx
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from nncf.tensorflow.sparsity.magnitude.functions import normed_magnitude
-from tests.tensorflow.helpers import check_equal, create_compressed_model_and_algo_for_test, \
-    get_mock_model, get_empty_config, get_basic_conv_test_model
-from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model, \
-    get_basic_magnitude_sparsity_config, ref_mask_2, ref_mask_1
+from tests.tensorflow.helpers import check_equal
+from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from tests.tensorflow.helpers import get_mock_model
+from tests.tensorflow.helpers import get_empty_config
+from tests.tensorflow.helpers import get_basic_conv_test_model
+from tests.tensorflow.sparsity.magnitude.test_helpers import get_magnitude_test_model
+from tests.tensorflow.sparsity.magnitude.test_helpers import ref_mask_2
+from tests.tensorflow.sparsity.magnitude.test_helpers import ref_mask_1
+from tests.tensorflow.sparsity.magnitude.test_helpers import get_basic_magnitude_sparsity_config
 from nncf.tensorflow.sparsity.magnitude.algorithm import MagnitudeSparsityController
 
 

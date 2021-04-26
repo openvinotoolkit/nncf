@@ -5,14 +5,14 @@
         "sample_size": [1, 224, 224, 3]
     },
 
-    "batch_size": 200,
-    "epochs": 90,
+    "batch_size": 256,
+    "epochs": 80,
 
     "optimizer": {
         "type": "adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
-            "boundaries": [40, 70],
+            "boundaries": [35, 65],
             "values": [1e-4, 1e-5, 1e-6]
         }
     },
@@ -21,25 +21,12 @@
     "dataset_type": "tfds",
 
     "compression":[
-    {
-        "algorithm": "magnitude_sparsity",
+        {
+            "algorithm": "rb_sparsity",
+            "sparsity_init": 0.01,
             "params": {
-                "schedule": "multistep",
-                "multistep_steps": [
-                    5,
-                    10,
-                    15,
-                    20,
-                    25
-                ],
-                "multistep_sparsity_levels": [
-                    0.1,
-                    0.15,
-                    0.20,
-                    0.25,
-                    0.30,
-                    0.35
-                ],
+                "sparsity_target": 0.42,
+                "sparsity_target_epoch": 25,
                 "sparsity_freeze_epoch": 45
             }
         },
@@ -55,5 +42,5 @@
                 "bits": 8,
                 "per_channel": false
             }
-    }]
+        }]
 }

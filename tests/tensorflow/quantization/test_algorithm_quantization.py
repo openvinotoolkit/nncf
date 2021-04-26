@@ -11,13 +11,10 @@
  limitations under the License.
 """
 
-from addict import Dict
-
 import tensorflow as tf
 from tensorflow.python.keras import layers
 import pytest
 
-from nncf import NNCFConfig
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
 from nncf.tensorflow.layers.operation import InputType
@@ -27,35 +24,15 @@ from nncf.tensorflow.quantization.algorithm import QuantizationController
 from nncf.tensorflow.quantization.quantizers import Quantizer, TFQuantizerSpec
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_basic_conv_test_model
+from tests.tensorflow.quantization.utils import get_basic_quantization_config
 from nncf.common.quantization.structs import QuantizationMode
-
-
-def get_basic_quantization_config(model_size=4):
-    config = NNCFConfig()
-    config.update(Dict({
-        "model": "basic_quant_conv",
-        "input_info":
-            {
-                "sample_size": [1, model_size, model_size, 1],
-            },
-        "compression":
-            {
-                "algorithm": "quantization",
-            }
-    }))
-    return config
-
-
-def get_basic_asym_quantization_config(model_size=4):
-    config = get_basic_quantization_config(model_size)
-    config['compression']['activations'] = {'mode': 'asymmetric'}
-    return config
 
 
 def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.num_bits == quantizer.num_bits
     assert qspec.per_channel == quantizer.per_channel
     assert qspec.narrow_range == quantizer.narrow_range
+    assert qspec.half_range == quantizer.half_range
     assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATONS.get(qspec.mode))
     if qspec.mode == QuantizationMode.SYMMETRIC:
         # pylint: disable=protected-access
@@ -94,8 +71,8 @@ def test_quantization_configs__with_defaults():
                                        num_bits=8,
                                        signedness_to_force=None,
                                        per_channel=False,
-                                       narrow_range=True,
-                                       half_range=False)
+                                       narrow_range=False,
+                                       half_range=True)
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
 
@@ -146,6 +123,80 @@ def test_quantization_configs__custom():
                                            narrow_range=False,
                                            half_range=False)
     for wq in activation_quantizers:
+        compare_qspecs(ref_activation_qspec, wq)
+
+
+def test_quantization_configs__disable_saturation_fix():
+    model = get_basic_conv_test_model()
+
+    config = get_basic_quantization_config()
+    config['compression'].update({
+        'disable_saturation_fix': True
+    })
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    assert isinstance(compression_ctrl, QuantizationController)
+    activation_quantizers, weight_quantizers = get_quantizers(compression_model)
+
+    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                       num_bits=8,
+                                       signedness_to_force=None,
+                                       per_channel=False,
+                                       narrow_range=True,
+                                       half_range=False)
+    for wq in weight_quantizers:
+        compare_qspecs(ref_weight_qspec, wq)
+
+    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=None,
+                                           per_channel=False,
+                                           narrow_range=False,
+                                           half_range=False)
+    for wq in activation_quantizers:
+        compare_qspecs(ref_activation_qspec, wq)
+
+
+@pytest.mark.parametrize('disabled', [False, True], ids=['enabled', 'disabled'])
+def test_export_saturatuion_fix(disabled):
+    model = get_basic_conv_test_model()
+    config = get_basic_quantization_config()
+    config['compression'].update({
+        'disable_saturation_fix': disabled
+    })
+    compression_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    activation_quantizers_be, weight_quantizers_be = get_quantizers(compression_model)
+    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                       num_bits=8,
+                                       signedness_to_force=None,
+                                       per_channel=False,
+                                       narrow_range=disabled,
+                                       half_range=not disabled)
+    for wq in weight_quantizers_be:
+        compare_qspecs(ref_weight_qspec, wq)
+
+    ref_activation_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                           num_bits=8,
+                                           signedness_to_force=None,
+                                           per_channel=False,
+                                           narrow_range=False,
+                                           half_range=False)
+    for wq in activation_quantizers_be:
+        compare_qspecs(ref_activation_qspec, wq)
+
+    compression_ctrl.export_model('/tmp/test.pb')
+    activation_quantizers_ae, weight_quantizers_ae = get_quantizers(compression_model)
+
+    ref_weight_qspec = TFQuantizerSpec(mode=QuantizationMode.SYMMETRIC,
+                                       num_bits=8,
+                                       signedness_to_force=None,
+                                       per_channel=False,
+                                       narrow_range=disabled,
+                                       half_range=False)
+    for wq in weight_quantizers_ae:
+        compare_qspecs(ref_weight_qspec, wq)
+
+    for wq in activation_quantizers_ae:
         compare_qspecs(ref_activation_qspec, wq)
 
 
@@ -377,7 +428,6 @@ class LayerDeck:
         if self.inputs is not None:
             return tuple(self.inputs.shape)
         return None
-
 
 
 class Conv1D(LayerDeck):

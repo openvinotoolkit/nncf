@@ -34,7 +34,7 @@
            "per_channel": true
        },
         "activations": {
-            "mode": "symmetric",
+            "mode": "asymmetric",
             "bits": 8,
             "per_channel": false
         }

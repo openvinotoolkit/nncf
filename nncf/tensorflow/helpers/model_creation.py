@@ -23,12 +23,14 @@ def create_compression_algorithm_builder(config):
     if isinstance(compression_config, dict):
         compression_config = NNCFConfig(compression_config)
         compression_config.register_extra_structs(config.get_all_extra_structs_for_copy())
+        compression_config['target_device'] = config.get('target_device', 'ANY')
         return get_compression_algorithm_builder(compression_config)(compression_config)
     if isinstance(compression_config, list):
         composite_builder = TFCompositeCompressionAlgorithmBuilder()
         for algo_config in compression_config:
             algo_config = NNCFConfig(algo_config)
             algo_config.register_extra_structs(config.get_all_extra_structs_for_copy())
+            algo_config['target_device'] = config.get('target_device', 'ANY')
             composite_builder.add(get_compression_algorithm_builder(algo_config)(algo_config))
         return composite_builder
     return None
