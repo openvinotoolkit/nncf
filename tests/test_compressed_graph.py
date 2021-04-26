@@ -287,6 +287,8 @@ def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref
     compressed_model.train()
     compressed_model.rebuild_graph()
     compressed_model.do_dummy_forward()
+    graph = compressed_model.get_graph()
+    graph.dump_graph("/home/aleksei/dumped_graphs/compressed_graph.dot")
     check_graph(compressed_model.get_graph(), ref_dot_file_name, ref_dot_file_directory)
 
 
