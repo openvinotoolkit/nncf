@@ -20,6 +20,7 @@ import torch
 from torch import distributed as dist, nn
 from torch.nn import Module
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.graph.graph_builder import GraphBuilder
@@ -360,27 +361,35 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
+def save_module_training_state(module: torch.nn.Module, saved_state: Dict) -> None:
+    for ch in module.children():
+        saved_state[ch] = ch.training
+        save_module_training_state(ch, saved_state)
+
+
+def load_module_training_state(module: torch.nn.Module, state: Dict[str: bool], strict=False) -> None:
+    for ch in module.children():
+        try:
+            ch.train(state[ch])
+        except KeyError as err:
+            # if the modules name changed during forward as LSTM block in our examples
+            if strict:
+                nncf_logger.error(err)
+                return
+            pass
+        finally:
+            load_module_training_state(ch, state)
+
+
 @contextmanager
 def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
     saved_state = {}
-
-    def helper_save_state(module):
-        for ch in module.children():
-            saved_state[ch] = ch.training
-            helper_save_state(ch)
-
-    def helper_load_state(module, state):
-        for ch in module.children():
-            ch.train(saved_state[ch])
-            helper_load_state(ch, state)
-
-    helper_save_state(model)
+    save_module_training_state(model, saved_state)
     model.train(is_training)
     try:
         yield
     finally:
-        helper_load_state(model, saved_state)
-        del saved_state
+        load_module_training_state(model, saved_state)
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
