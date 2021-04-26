@@ -367,7 +367,7 @@ def save_module_training_state(module: torch.nn.Module, saved_state: Dict) -> No
         save_module_training_state(ch, saved_state)
 
 
-def load_module_training_state(module: torch.nn.Module, state: Dict[str: bool], strict=False) -> None:
+def load_module_training_state(module: torch.nn.Module, state: Dict[str, bool], strict=False) -> None:
     for ch in module.children():
         try:
             ch.train(state[ch])
