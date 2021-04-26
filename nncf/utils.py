@@ -361,13 +361,13 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def save_module_training_state(module: torch.nn.Module, saved_state: Dict) -> None:
+def save_module_training_state(module: torch.nn.Module, saved_state: Dict[torch.nn.Module, bool]) -> None:
     for ch in module.children():
         saved_state[ch] = ch.training
         save_module_training_state(ch, saved_state)
 
 
-def load_module_training_state(module: torch.nn.Module, state: Dict[str, bool], strict=False) -> None:
+def load_module_training_state(module: torch.nn.Module, state: Dict[torch.nn.Module, bool], strict=False) -> None:
     for ch in module.children():
         try:
             ch.train(state[ch])
