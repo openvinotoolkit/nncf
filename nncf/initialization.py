@@ -177,14 +177,14 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         return func_apply_to_bns
 
     @contextmanager
-    def _bn_training_state_switcher(self):
-        def save_original_bn_training_state(module):
+    def _bn_training_state_switcher(self) -> None:
+        def save_original_bn_training_state(module: torch.nn.Module):
             self.original_training_state[module] = module.training
 
-        def set_bn_training_state(module, state):
+        def set_bn_training_state(module: torch.nn.Module, state: Dict[str, bool]):
             module.training = state
 
-        def restore_original_bn_training_state(module):
+        def restore_original_bn_training_state(module: torch.nn.Module):
             module.training = self.original_training_state[module]
 
         self.model.apply(self._apply_to_batchnorms(save_original_bn_training_state))
@@ -195,14 +195,14 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
             self.model.apply(self._apply_to_batchnorms(restore_original_bn_training_state))
 
     @contextmanager
-    def _bn_momentum_switcher(self):
+    def _bn_momentum_switcher(self) -> None:
         def set_bn_momentum(module, momentum_value):
             module.momentum = momentum_value
 
-        def save_original_bn_momentum(module):
+        def save_original_bn_momentum(module: torch.nn.Module):
             self.original_momenta_values[module] = module.momentum
 
-        def restore_original_bn_momentum(module):
+        def restore_original_bn_momentum(module: torch.nn.Module):
             module.momentum = self.original_momenta_values[module]
 
         self.model.apply(self._apply_to_batchnorms(save_original_bn_momentum))
