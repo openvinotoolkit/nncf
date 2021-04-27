@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, TypeVar
+from typing import Any, Dict, Optional, TypeVar, List, Tuple
 
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -209,15 +209,30 @@ class CompressionAlgorithmController(ABC):
         self._model = self.strip_model(self._model)
 
     @abstractmethod
-    def export_model(self, save_path: str, *args, **kwargs) -> None:
+    def export_model(self,
+                     save_path: str,
+                     save_format: Optional[str] = None,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
         """
-        Used to export the compressed model for deployment. Makes method-specific
-        preparations of the model, (e.g. removing auxiliary layers that were used
-        for the model compression), then exports the model in the specified path.
+        Exports the compressed model to the specified format for deployment.
 
-        :param save_path: The path to export model.
-        :param args: Advanced export options.
-        :param kwargs: Advanced export options
+        Makes method-specific preparations of the model, (e.g. removing auxiliary
+        layers that were used for the model compression), then exports the model to
+        the specified path.
+
+        :param save_path: The path where the model will be saved.
+        :param save_format: Saving format. The default format will
+            be used if `save_format` is not specified.
+        :param input_names: Names to be assigned to the input tensors of the model.
+        :param output_names: Names to be assigned to the output tensors of the model.
+        :param model_args: Tuple of additional positional and keyword arguments
+            which are required for the model's forward during export. Should be
+            specified in the following format:
+                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+                - (a, b, {}) for positional arguments only.
+                - ({'x': None, 'y': y},) for keyword arguments only.
         """
 
     def strip_model(self, model: ModelType) -> ModelType:
