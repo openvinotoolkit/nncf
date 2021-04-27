@@ -17,6 +17,13 @@ from functools import partial
 from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
+<<<<<<< HEAD
+=======
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+>>>>>>> shapes calculation using graph edges
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -193,10 +200,6 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
     return None
 
 
-def get_original_node_name(node_name: str):
-    return node_name.split('^')[0]
-
-
 def get_conv_in_out_channels(graph: NNCFGraph):
     """
     Collects the number of input and output channels for each convolution in the graph.
@@ -257,8 +260,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
                          fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
                           fully connected layers. E.g {node_name: (height, width)}
-    :param conv_op_types: List of metatypes defining convolution operations.
-    :param linear_op_types: List of metatypes defining linear/fully connected operations.
+    :param conv_op_metatypes: List of metatypes defining convolution operations.
+    :param linear_op_metatypes: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
                            If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
@@ -283,8 +286,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
 
 
 def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_rate: float,
-                                                        full_input_channels: Dict[Union[str, 'Scope'], int],
-                                                        full_output_channels: Dict[Union[str, 'Scope'], int],
+                                                        full_input_channels: Dict[str, int],
+                                                        full_output_channels: Dict[str, int],
                                                         pruning_groups_next_nodes: Dict[int, List[str]]):
     """
     Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
