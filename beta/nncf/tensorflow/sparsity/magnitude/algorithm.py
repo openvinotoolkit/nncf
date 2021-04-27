@@ -103,7 +103,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         return MagnitudeSparsityController(model, self.config, self._op_names)
 
 
-class MagnitudeSparsityController(BaseSparsityController):
+class MagnitudeSparsityController(BaseSparsityController): # pylint: disable=too-many-ancestors
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.

@@ -65,6 +65,20 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression loss state.
+
+        :param state: Output of `get_state()` method.
+        """
+
+    def get_state(self) -> None:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Returns a dictionary of printable statistics.

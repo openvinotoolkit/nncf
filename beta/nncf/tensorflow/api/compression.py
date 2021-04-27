@@ -12,6 +12,8 @@
 """
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar, Dict
+import json
+import tensorflow as tf
 
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -36,7 +38,7 @@ class TFCompressionAlgorithmInitializer(ABC):
         self.call(*args, **kwargs)
 
 
-class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
+class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.train.experimental.PythonState):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable algorithm-specific compression.
@@ -55,7 +57,8 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
         :param state: Output of `get_state()` method.
         """
-        self.scheduler.load_state(state)
+        self.scheduler.load_state(state['scheduler_state'])
+        self.loss.load_state(state['loss_state'])
 
     def get_state(self) -> Dict[str, object]:
         """
@@ -63,7 +66,28 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
         :return: The compression controller state.
         """
-        return self.scheduler.get_state()
+        return {
+            'scheduler_state': self.scheduler.get_state(),
+            'loss_state': self.loss.get_state()
+        }
+
+    def serialize(self) -> str:
+        """
+        Callback to serialize the object by tf.train.experimental.PythonState.
+
+        :return: State of the compression scheduler.
+        """
+        string_value = json.dumps(self.get_state())
+        return string_value
+
+    def deserialize(self, state: str) -> None:
+        """
+        Callback to deserialize the object by tf.train.experimental.PythonState.
+
+        :param state: State of the compression controller.
+        """
+        state = json.loads(state)
+        self.load_state(state)
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

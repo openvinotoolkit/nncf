@@ -28,16 +28,15 @@ def get_callbacks(model_checkpoint: bool = True,
                   write_model_weights: bool = True,
                   initial_step: int = 0,
                   model_dir: str = None,
-                  ckpt_dir: str = None) -> List[tf.keras.callbacks.Callback]:
+                  checkpoint_manager: tf.train.CheckpointManager = None) -> List[tf.keras.callbacks.Callback]:
     """Get all callbacks."""
     model_dir = model_dir or ''
-    ckpt_dir = ckpt_dir or model_dir
     callbacks = []
     if model_checkpoint:
-        ckpt_full_path = os.path.join(ckpt_dir, 'model.ckpt-{epoch:04d}')
-        callbacks.append(
-            tf.keras.callbacks.ModelCheckpoint(
-                ckpt_full_path, save_weights_only=True, verbose=1))
+        if not checkpoint_manager:
+            raise ValueError('model_checkpoint param is True but '
+                             'checkpoint manager not provided by checkpoint_manager argument')
+        callbacks.append(CustomModelCheckpoint(checkpoint_manager))
     if include_tensorboard:
         callbacks.append(
             CustomTensorBoard(
@@ -65,16 +64,17 @@ def get_scalar_from_tensor(t: tf.Tensor) -> int:
 
 
 class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
-    """A customized TensorBoard callback that tracks additional datapoints.
+    """
+    A customized TensorBoard callback that tracks additional datapoints.
 
     Metrics tracked:
     - Global learning rate
 
     Attributes:
-      log_dir: the path of the directory where to save the log files to be parsed
+      log_dir: The path of the directory where to save the log files to be parsed
         by TensorBoard.
-      track_lr: `bool`, whether or not to track the global learning rate.
-      initial_step: the initial step, used for preemption recovery.
+      track_lr: `bool`, Whether or not to track the global learning rate.
+      initial_step: The initial step, used for preemption recovery.
       **kwargs: Additional arguments for backwards compatibility. Possible key is
         `period`.
     """
@@ -143,3 +143,12 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
             optimizer = optimizer._optimizer  # pylint:disable=protected-access
 
         return optimizer
+
+
+class CustomModelCheckpoint(tf.keras.callbacks.Callback):
+    """Callback which manage to save checkpoint every epoch during the training."""
+    def __init__(self, checkpoint_manager):
+        self._checkpoint_manager = checkpoint_manager
+
+    def on_epoch_end(self, epoch, logs=None):
+        self._checkpoint_manager.save()

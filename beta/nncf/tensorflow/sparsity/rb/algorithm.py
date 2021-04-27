@@ -85,7 +85,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         return RBSparsityController(model, self.config, self._op_names)
 
 
-class RBSparsityController(BaseSparsityController):
+class RBSparsityController(BaseSparsityController): # pylint: disable=too-many-ancestors
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model, op_names)
         sparsity_init = config.get('sparsity_init', 0)
@@ -116,11 +116,6 @@ class RBSparsityController(BaseSparsityController):
 
     def freeze(self):
         self._loss.disable()
-
-    def load_state(self, state: Dict[str, object]) -> None:
-        super().load_state(state)
-        if self.scheduler.current_epoch >= self.scheduler.freeze_epoch:
-            self.freeze()
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}

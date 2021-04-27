@@ -25,3 +25,9 @@ class TFZeroCompressionLoss(CompressionLoss):
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         return {}
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        pass
+
+    def get_state(self) -> None:
+        pass
