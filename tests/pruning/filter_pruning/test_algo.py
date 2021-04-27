@@ -31,6 +31,7 @@ from tests.pruning.helpers import BigPruningTestModel
 from tests.pruning.helpers import TestModelMultipleForward
 from tests.pruning.helpers import PruningTestModelConcatBN
 
+
 def create_pruning_algo_with_config(config):
     """
     Create filter_pruning with default params.
@@ -229,6 +230,7 @@ def test_applying_masks(prune_bn):
         assert sum(bn_module.weight) == len(bn_module.weight)
         # Can not check bias because bias initialized with zeros
 
+
 @pytest.mark.parametrize('prune_bn',
                          (False,
                           True)
@@ -260,7 +262,7 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
         [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8
     ]
     graph = pruned_model.get_original_graph()
-    for i, node in enumerate(graph.get_nodes_by_types(['concat'])):
+    for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
         assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
 
 
