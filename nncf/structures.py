@@ -10,13 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 import torch
+from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.config.structure import NNCFExtraConfigStruct
+import torch.nn
 
 
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
@@ -142,11 +144,30 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
 
 class DistributedCallbacksArgs(NNCFExtraConfigStruct):
     def __init__(self,
-                 wrapping_callback: Callable,
-                 unwrapping_callback: Callable):
+                 wrapping_callback: Callable[[nn.Module], nn.Module],
+                 unwrapping_callback: Callable[[nn.Module], nn.Module]):
+        """
+        Pair of callbacks that needed for distributed training of the model: wrapping model with wrapping_callback for
+        distributed training, and after all training steps unwrapping model to the initial not-distributed state with
+        unwrapping_callback.
+        :param wrapping_callback: Callback that wraps model for distributed training with any necessary structure (for
+        example, torch.nn.DataParallel or any custom class), returns wrapped model ready for distributed training
+        :param unwrapping_callback: Callback for unwrapping model wrapped with wrapping_callback, returns original model
+        """
         self.wrap_model = wrapping_callback
         self.unwrap_model = unwrapping_callback
 
     @classmethod
     def get_id(cls) -> str:
         return "distributed_callbacks_args"
+
+
+class ExecutionParameters:
+    def __init__(self, cpu_only: bool, current_gpu: Optional[int]):
+        """
+        Parameters that is necessary for distributed training of the model.
+        :param cpu_only: whether cpu-only mode is using for training
+        :param current_gpu: id of GPU that should be used for training (if only one of all is used)
+        """
+        self.cpu_only = cpu_only
+        self.current_gpu = current_gpu

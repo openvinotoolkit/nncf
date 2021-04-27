@@ -31,12 +31,6 @@ class ExecutionMode:
     GPU_DATAPARALLEL = "gpu_dataparallel"
 
 
-class ExecutionParameters:
-    def __init__(self, cpu_only: bool, current_gpu):
-        self.cpu_only = cpu_only
-        self.current_gpu = current_gpu
-
-
 def get_execution_mode(config):
     if config.cpu_only:
         return ExecutionMode.CPU_ONLY

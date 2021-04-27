@@ -41,7 +41,7 @@ model = resnet50()
 nncf_config = NNCFConfig.from_json("resnet50_int8.json")
 
 # Provide data loaders for compression algorithm initialization, if necessary
-nncf_config = register_default_init_args(nncf_config, train_loader, loss_criterion)
+nncf_config = register_default_init_args(nncf_config, train_loader, criterion=loss_criterion)
 
 # Apply the specified compression algorithms to the model
 comp_ctrl, compressed_model = create_compressed_model(model, nncf_config)

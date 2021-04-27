@@ -139,8 +139,8 @@ def staged_quantization_main_worker(current_gpu, config):
             return top5
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            nncf_config, init_loader, criterion=criterion, criterion_fn=train_criterion_fn,
+            validate_fn=autoq_eval_fn, val_loader=val_loader, device=config.device)
 
     # create model
     model_name = config['model']

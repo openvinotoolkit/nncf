@@ -38,7 +38,8 @@ from torchvision.models import InceptionOutputs
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_execution_mode, \
-    prepare_model_for_execution, start_worker, ExecutionParameters
+    prepare_model_for_execution, start_worker
+from nncf.structures import ExecutionParameters
 from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
@@ -151,12 +152,14 @@ def main_worker(current_gpu, config: SampleConfig):
                                                config.current_gpu)
 
         nncf_config = register_default_init_args(
-            nncf_config, init_loader, train_loader,
-            criterion, train_criterion_fn,
-            train_steps_fn,
-            validate_fn,
-            val_loader,
-            config.device,
+            nncf_config, init_loader,
+            train_loader=train_loader,
+            criterion=criterion,
+            criterion_fn=train_criterion_fn,
+            train_steps_fn=train_steps_fn,
+            validate_fn=validate_fn,
+            val_loader=val_loader,
+            device=config.device,
             execution_parameters=execution_params,
             )
 

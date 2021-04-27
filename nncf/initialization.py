@@ -220,33 +220,35 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
     return criterion(outputs, target)
 
 
-# TODO: fix this function usage in all examples and tests (and check whether train loader is always a train or ut can be init)
 def register_default_init_args(nncf_config: 'NNCFConfig',
                                init_loader: torch.utils.data.DataLoader,
-                               train_loader: torch.utils.data.DataLoader,
+                               train_loader: torch.utils.data.DataLoader = None,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
-                               train_steps_fn: Callable = None,
+                               train_steps_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module, torch.optim.Optimizer,
+                                                         'CompressionAlgorithmController', Optional[int]], type(None)] = None,
                                validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                val_loader: torch.utils.data.DataLoader = None,
-                               device='cuda',
+                               device: str = None,
                                distributed_callbacks: Tuple[Callable, Callable] = None,
                                execution_parameters: 'ExecutionParameters' = None,
-                               legr_train_optimizer=None) -> 'NNCFConfig':
+                               legr_train_optimizer: torch.optim.Optimizer = None) -> 'NNCFConfig':
 
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=init_loader,
                                                                   device=device),
                                         BNAdaptationInitArgs(data_loader=init_loader,
                                                              device=device),
-                                        LeGRInitArgs(
-                                            train_loader=train_loader,
-                                            train_fn=train_steps_fn,
-                                            val_loader=val_loader,
-                                            val_fn=partial(validate_fn, log=False),
-                                            train_optimizer=legr_train_optimizer,
-                                            nncf_config=nncf_config,
-                                        )
+
                                         ])
+    if train_loader and train_steps_fn and val_loader and validate_fn:
+        nncf_config.register_extra_structs([LeGRInitArgs(
+            train_loader=train_loader,
+            train_fn=train_steps_fn,
+            val_loader=val_loader,
+            val_fn=partial(validate_fn, log=False),
+            train_optimizer=legr_train_optimizer,
+            nncf_config=nncf_config,
+        )])
 
     if criterion:
         if not criterion_fn:

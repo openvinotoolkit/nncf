@@ -32,7 +32,7 @@ The framework is designed so that the modifications to your original training co
  passing training data via `nncf_config` prior to starting the compression fine-tuning properly:
     ```python
     from nncf import register_default_init_args
-    nncf_config = register_default_init_args(nncf_config, train_loader, criterion)
+    nncf_config = register_default_init_args(nncf_config, train_loader, criterion=criterion)
     ```
     Training data loaders should be attached to the NNCFConfig object as part of a library-defined structure. `register_default_init_args` is a helper
     method that registers the necessary structures for all available initializations (currently quantizer range and precision initialization) by taking 

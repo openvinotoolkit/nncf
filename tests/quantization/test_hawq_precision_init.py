@@ -350,7 +350,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, criterion=criterion)
 
     mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
@@ -416,7 +416,7 @@ def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
     if not dataset_dir:
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
-    config = register_default_init_args(config, train_loader, train_loader, criterion)
+    config = register_default_init_args(config, train_loader, criterion=criterion)
 
     create_compressed_model_and_algo_for_test(model, config)
 
@@ -566,8 +566,8 @@ def precision_init_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     model = safe_thread_call(partial(mobilenet_v2, pretrained=True))
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
-    config = register_default_init_args(config, data_loader, None, criterion,
-                                        autoq_eval_fn=lambda *x: 0, val_loader=data_loader)
+    config = register_default_init_args(config, data_loader, criterion=criterion,
+                                        validate_fn=lambda *x: 0, val_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
