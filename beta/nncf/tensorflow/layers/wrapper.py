@@ -50,9 +50,6 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
         super().__init__(layer, **kwargs)
         self._track_trackable(layer, name='layer')
 
-        if 'name' not in kwargs:
-            self.layer._name = '_{}'.format(layer.name)
-
         self.weights_attr_ops = {}
 
         self._init_layer_call_fn_args()
