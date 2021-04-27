@@ -37,6 +37,6 @@ def test_training_mode_switcher(_seed, model):
     save_model_training_state(model)
 
     with training_mode_switcher(model, True):
-        pass
+        None
 
     compare_saved_model_state_and_current_model_state(model)
