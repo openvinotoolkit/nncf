@@ -11,7 +11,7 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Dict
 
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -48,6 +48,22 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
         pass
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression controller state.
+
+        :param state: Output of `get_state()` method.
+        """
+        self.scheduler.load_state(state)
+
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
+        """
+        return self.scheduler.get_state()
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

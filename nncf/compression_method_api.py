@@ -92,6 +92,22 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         should be made inside this function.
         """
 
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression controller state.
+
+        :param state: Output of `get_state()` method.
+        """
+        self.scheduler.load_state(state)
+
+    def get_state(self) -> None:
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
+        """
+        return self.scheduler.get_state()
+
     def statistics(self, quickly_collected_only=False):
         """
         Returns a dictionary of printable statistics.
