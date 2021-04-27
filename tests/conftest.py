@@ -16,8 +16,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from nncf.utils import manual_seed
-from torch.backends import cudnn
 
 TEST_ROOT = Path(__file__).parent.absolute()
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
@@ -205,12 +203,6 @@ def tmp_venv_with_nncf(install_type, tmp_path, package_type, venv_type):  # pyli
 
     return venv_path
 
-
-@pytest.fixture(scope='session')
-def _seed():
-    manual_seed(0)
-    cudnn.deterministic = True
-    cudnn.benchmark = False
 
 @pytest.fixture
 def runs_subprocess_in_precommit():

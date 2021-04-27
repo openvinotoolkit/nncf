@@ -4,10 +4,12 @@ from nncf.utils import training_mode_switcher
 
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, MockModel
 from tests.quantization.test_saturation_issue_export import DepthWiseConvTestModel, EightConvTestModel
+# pylint:disable=unused-import
+from tests.modules.test_rnn import _seed
 
 @pytest.mark.parametrize('model', [BasicConvTestModel(), TwoConvTestModel(), MockModel(),
                                    DepthWiseConvTestModel(), EightConvTestModel()])
-def test_training_mode_switcher(model, _seed):
+def test_training_mode_switcher(_seed, model):
     saved_model_state = {}
 
     def save_model_training_state(module):
@@ -31,6 +33,7 @@ def test_training_mode_switcher(model, _seed):
 
     randomly_change_model_training_state(model)
 
+    saved_model_state = {}
     save_model_training_state(model)
 
     with training_mode_switcher(model, True):
