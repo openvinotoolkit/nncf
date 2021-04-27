@@ -39,7 +39,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
-    correct_wrappers = [wrapper for wrapper in wrappers if wrapper.layer.name in conv_names]
+    correct_wrappers = [wrapper for wrapper in wrappers if wrapper.name in conv_names]
 
     assert len(conv_names) == len(wrappers)
     assert len(conv_names) == len(correct_wrappers)

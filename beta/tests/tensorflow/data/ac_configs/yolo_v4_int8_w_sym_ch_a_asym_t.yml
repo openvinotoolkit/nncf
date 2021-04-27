@@ -13,9 +13,9 @@ models:
           anchor_masks: [[0,1,2],[3,4,5],[6,7,8]]
           raw_output: True
           outputs:
-            - yolo_v4/nncf_wrapper_predict_conv_3/BiasAdd/Add
-            - yolo_v4/nncf_wrapper_predict_conv_2/BiasAdd/Add
-            - yolo_v4/nncf_wrapper_predict_conv_1/BiasAdd/Add
+            - yolo_v4/predict_conv_3/BiasAdd/Add
+            - yolo_v4/predict_conv_2/BiasAdd/Add
+            - yolo_v4/predict_conv_1/BiasAdd/Add
     datasets:
       - name: ms_coco_detection_80_class_without_background
         data_source: MSCOCO/val2017

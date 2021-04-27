@@ -45,10 +45,13 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
                     input=layer.__class__.__name__))
 
         if 'name' not in kwargs:
-            kwargs['name'] = '{}_{}'.format('nncf_wrapper', layer.name)
+            kwargs['name'] = layer.name
 
         super().__init__(layer, **kwargs)
         self._track_trackable(layer, name='layer')
+
+        if 'name' not in kwargs:
+            self.layer._name = '_{}'.format(layer.name)
 
         self.weights_attr_ops = {}
 
