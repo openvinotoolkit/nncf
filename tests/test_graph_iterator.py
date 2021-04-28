@@ -17,7 +17,7 @@ import pytest
 import torch.nn.functional as F
 from torch.nn import Module, Conv2d, BatchNorm2d, ReLU, MaxPool2d, Sequential, AvgPool2d, init
 
-from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.utils import get_all_modules_by_type, get_module_by_node_name, get_all_node_names, \
     apply_by_node_name, set_module_by_node_name, parse_node_name
 

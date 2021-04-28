@@ -45,15 +45,15 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
 
 
 class PrunedLayerInfo:
-    BN_LAYER_NAME = 'bn_layer'
-
-    def __init__(self, layer_name: str, related_layers: Dict[str, List[str]]):
+    def __init__(self, layer_name: str, node_id: int):
         self.layer_name = layer_name
-        self.related_layers = related_layers
+        self.nncf_node_id = node_id
+        self.key = self.layer_name
 
 
 class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
@@ -87,6 +87,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                                                           self._prune_downsample_convs)
 
         self._pruned_layer_groups_info = None
+        self._graph = None
         self._op_names = []
 
     def apply_to(self, model: tf.keras.Model) -> tf.keras.Model:
@@ -107,8 +108,8 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :return: The instance of the `TransformationLayout` class containing
             a list of pruning mask insertions.
         """
-        graph = convert_keras_model_to_nncf_graph(model)
-        groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(graph)
+        self._graph = convert_keras_model_to_nncf_graph(model)
+        groups_of_nodes_to_prune = self._pruning_node_selector.create_pruning_groups(self._graph)
 
         transformations = TFTransformationLayout()
         shared_layers = set()
@@ -119,14 +120,18 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             group_minfos = []
             for node in group.nodes:
                 layer_name = get_layer_identifier(node)
+                layer = model.get_layer(layer_name)
+
+                # Add output_mask to nodes to run mask_propagation
+                # and detect spec_nodes that will be pruned.
+                # It should be done for all nodes of shared layer.
+                node.data['output_mask'] = tf.ones(node.module_attributes.out_channels)
                 if layer_name in shared_layers:
                     continue
                 if is_shared(node):
                     shared_layers.add(layer_name)
-                layer = model.get_layer(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
-
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
                 for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
                     attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
@@ -134,27 +139,37 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                         transformations.register(
                             self._get_insertion_command_binary_mask(layer_name, attr_name)
                         )
+                group_minfos.append(PrunedLayerInfo(layer_name, node.node_id))
 
-                related_layers = {}
-                if self._prune_batch_norms:
-                    bn_nodes = self._get_related_batchnorms(layer_name, group, graph)
-                    for bn_node in bn_nodes:
-                        bn_layer_name = get_layer_identifier(bn_node)
-                        for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                            attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[bn_node.node_type][attr_name_key]
-                            transformations.register(
-                                self._get_insertion_command_binary_mask(bn_layer_name, attr_name)
-                            )
-                        if PrunedLayerInfo.BN_LAYER_NAME in related_layers:
-                            related_layers[PrunedLayerInfo.BN_LAYER_NAME].append(bn_layer_name)
-                        else:
-                            related_layers[PrunedLayerInfo.BN_LAYER_NAME] = [bn_layer_name]
-
-                minfo = PrunedLayerInfo(layer_name, related_layers)
-                group_minfos.append(minfo)
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
             self._pruned_layer_groups_info.add_cluster(cluster)
 
+        # Propagating masks across the graph to detect spec_nodes that will be pruned
+        mask_propagator = MaskPropagationAlgorithm(self._graph, TF_PRUNING_OPERATOR_METATYPES)
+        mask_propagator.mask_propagation()
+
+        # Add masks for all spec modules, because prunable batchnorm layers can be determines
+        # at the moment of mask propagation
+        types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
+        if not self._prune_batch_norms:
+            types_spec_layers.remove('BatchNormalization')
+
+        spec_nodes = self._graph.get_nodes_by_types(types_spec_layers)
+        for spec_node in spec_nodes:
+            layer_name = get_layer_identifier(spec_node)
+            if spec_node.data['output_mask'] is None:
+                # Skip nodes that will not be pruned
+                continue
+            if layer_name in shared_layers:
+                continue
+            if is_shared(spec_node):
+                shared_layers.add(layer_name)
+            nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
+            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
+                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
+                transformations.register(
+                    self._get_insertion_command_binary_mask(layer_name, attr_name)
+                )
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):
@@ -257,7 +272,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_target and pruning_flops_target:
             raise ValueError('Only one parameter from \'pruning_target\' and \'pruning_flops_target\' can be set.')
         if pruning_flops_target:
-            raise Exception('Pruning by flops is not supported in NNCF TensorFlow yet.')
+            self.prune_flops = True
 
     def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
         raw_pruning_statistics = self.raw_statistics()

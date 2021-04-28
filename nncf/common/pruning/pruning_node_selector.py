@@ -35,7 +35,7 @@ from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
     from nncf.pruning.utils import is_depthwise_conv
     from nncf.pruning.utils import is_conv_with_downsampling
-    from nncf.dynamic_graph.graph import get_module_identifier
+    from nncf.graph.graph import get_module_identifier
     from nncf.utils import should_consider_scope
 elif __nncf_backend__ == 'TensorFlow':
     from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
@@ -99,7 +99,7 @@ class PruningNodeSelector:
             5. Checks for groups (all nodes in group can prune or all group can't be pruned)
         Return groups of modules that should be pruned together.
 
-        :param graph: Fraph to work with and their initialization parameters as values.
+        :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations)  # NNCFNodes here

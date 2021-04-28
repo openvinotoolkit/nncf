@@ -37,11 +37,13 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
                  weight_requires_grad: bool,
                  in_channels: int,
                  out_channels: int,
-                 stride: Tuple[int, int],
+                 kernel_size: Tuple[int, ...],
+                 stride: Tuple[int, ...],
                  groups: int):
         super().__init__(weight_requires_grad)
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.kernel_size = kernel_size
         self.stride = stride
         self.groups = groups
 
@@ -50,6 +52,7 @@ class ConvolutionModuleAttributes(BaseModuleAttributes):
                and super().__eq__(other) \
                and self.in_channels == other.in_channels \
                and self.out_channels == other.out_channels \
+               and self.kernel_size == other.kernel_size \
                and self.stride == other.stride \
                and self.groups == other.groups
 

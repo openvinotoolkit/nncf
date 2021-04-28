@@ -16,17 +16,24 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.hw_config import HWConfigType, HWConfig
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from tests.helpers import create_mock_dataloader, BasicConvTestModel
+from tests.helpers import create_mock_dataloader, create_conv, BasicConvTestModel
+
+import torch
+import torch.nn as nn
+import numpy as np
 
 
-def create_test_quantization_env() -> QuantizationEnv:
-    model = BasicConvTestModel()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
+def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cfg=None) -> QuantizationEnv:
+    if input_info_cfg is None:
+        input_info_cfg = {"input_info":{"sample_size": [1, 1, 4, 4]}}
+
+    model = model_creator()
+    nncf_network = NNCFNetwork(model, input_infos=create_input_infos(input_info_cfg))
     hw_config_type = HWConfigType.VPU
     hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
     hw_config = HWConfig.from_json(hw_config_path)
@@ -37,10 +44,7 @@ def create_test_quantization_env() -> QuantizationEnv:
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
     experimental_ctrl = experimental_builder.build_controller(nncf_network)
-    data_loader = create_mock_dataloader(
-            {
-                "sample_size": [1, 1, 4, 4],
-            })
+    data_loader = create_mock_dataloader(input_info_cfg)
     constraints = HardwareQuantizationConstraints()
     for qid in experimental_ctrl.all_quantizations:
         qconf_constraint_list = []
@@ -61,6 +65,7 @@ def create_test_quantization_env() -> QuantizationEnv:
                            params=QuantizationEnvParams(compression_ratio=0.15,
                                                         eval_subset_ratio=1.0,
                                                         skip_constraint=False,
+                                                        performant_bw=False,
                                                         finetune=False,
                                                         bits=[2, 4, 8],
                                                         dump_init_precision_data=False))
@@ -140,8 +145,7 @@ def test_reward(pretrained_score, compressed_score, model_size_ratio):
             qenv.reward(compressed_score, model_size_ratio)
     else:
         reward = qenv.reward(compressed_score, model_size_ratio)
-        assert reward == (compressed_score - pretrained_score) * 0.1
-
+        assert reward == compressed_score * (10**(-np.floor(np.math.log(abs(pretrained_score), 10))))
 
 STRATEGY_LIST = [
     [2],
@@ -175,3 +179,135 @@ def test_evaluate_strategy(strategy, skip_bool, mocker):
             assert info_set['model_ratio'] == strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
         else:
             assert info_set['model_ratio'] == evaluated_strategy[-1]/qenv.model_size_calculator.FLOAT_BITWIDTH
+
+
+def check_bw_cfg(qenv, input_strategy, output_ref):
+    if len(input_strategy) != len(qenv.qctrl.all_quantizations):
+        with pytest.raises(AssertionError):
+            qenv.evaluate_strategy(input_strategy, skip_constraint=True)
+    else:
+        _ = qenv.evaluate_strategy(input_strategy, skip_constraint=True)
+        evaluated_strategy = qenv.master_df['action'].values.tolist()
+    assert evaluated_strategy == output_ref
+
+
+def check_both_bw_assignment_modes(qenv, strategy):
+    input_strategy = strategy[0]
+
+    # qenv.performant_bw is false by default
+    output_ref = input_strategy
+    check_bw_cfg(qenv, input_strategy, output_ref)
+
+    # set qenv.performant_bw to True to enable bw_align_flow
+    qenv.performant_bw = True
+    output_ref = strategy[1]
+    check_bw_cfg(qenv, input_strategy, output_ref)
+
+
+STRATEGY_ONE_AQ_ONE_WQ_LIST = [
+    [[8, 8], [8, 8]],
+    [[8, 4], [4, 4]],
+    [[8, 2], [4, 2]],
+    [[4, 8], [4, 4]],
+    [[4, 4], [4, 4]],
+    [[4, 2], [4, 2]]
+]
+
+@pytest.mark.parametrize('strategy', STRATEGY_ONE_AQ_ONE_WQ_LIST,
+                         ids=['_'.join(['bitwidth_strategy', str(s[0])]) for s in STRATEGY_ONE_AQ_ONE_WQ_LIST])
+def test_align_bw_action_one_aq_one_wq(strategy, mocker):
+    qenv = create_test_quantization_env()
+    check_both_bw_assignment_modes(qenv, strategy)
+
+
+STRATEGY_ONE_AQ_TWO_WQ_LIST = [
+    [[4, 2, 2], [4, 2, 2]],
+    [[4, 2, 4], [4, 2, 4]],
+    [[4, 2, 8], [4, 2, 4]],
+    [[4, 4, 2], [4, 4, 2]],
+    [[4, 4, 4], [4, 4, 4]],
+    [[4, 4, 8], [4, 4, 4]],
+    [[4, 8, 2], [4, 4, 2]],
+    [[4, 8, 4], [4, 4, 4]],
+    [[4, 8, 8], [4, 4, 4]],
+    [[8, 2, 2], [4, 2, 2]],
+    [[8, 2, 4], [4, 2, 4]],
+    [[8, 2, 8], [4, 2, 4]],
+    [[8, 4, 2], [4, 4, 2]],
+    [[8, 4, 4], [4, 4, 4]],
+    [[8, 4, 8], [4, 4, 4]],
+    [[8, 8, 2], [4, 4, 2]],
+    [[8, 8, 4], [4, 4, 4]],
+    [[8, 8, 8], [8, 8, 8]]
+]
+
+@pytest.mark.parametrize('strategy', STRATEGY_ONE_AQ_TWO_WQ_LIST,
+                         ids=['_'.join(['bitwidth_strategy', str(s[0])]) for s in STRATEGY_ONE_AQ_TWO_WQ_LIST])
+def test_align_bw_action_one_aq_two_wq(strategy, mocker):
+    class OneAQTwoWQTestModel(BasicConvTestModel):
+        def __init__(self):
+            super().__init__()
+            self.conv2 = create_conv(
+                self.in_channels, self.out_channels,
+                self.kernel_size, self.weight_init,
+                self.bias_init)
+
+        def forward(self, x):
+            return (self.conv(x), self.conv2(x))
+
+    qenv = create_test_quantization_env(model_creator=OneAQTwoWQTestModel)
+    check_both_bw_assignment_modes(qenv, strategy)
+
+
+STRATEGY_TWO_AQ_ONE_WQ_LIST = [
+    [[4, 4, 2], [4, 4, 2]],
+    [[4, 4, 4], [4, 4, 4]],
+    [[4, 4, 8], [4, 4, 4]],
+    [[4, 8, 2], [4, 4, 2]],
+    [[4, 8, 4], [4, 4, 4]],
+    [[4, 8, 8], [4, 4, 4]],
+    [[8, 4, 2], [4, 4, 2]],
+    [[8, 4, 4], [4, 4, 4]],
+    [[8, 4, 8], [4, 4, 4]],
+    [[8, 8, 2], [4, 4, 2]],
+    [[8, 8, 4], [4, 4, 4]],
+    [[8, 8, 8], [8, 8, 8]]
+]
+
+@pytest.mark.parametrize('strategy', STRATEGY_TWO_AQ_ONE_WQ_LIST,
+                         ids=['_'.join(['bitwidth_strategy', str(s[0])]) for s in STRATEGY_TWO_AQ_ONE_WQ_LIST])
+def test_align_bw_action_two_aq_one_wq(strategy, mocker):
+    class TwoAQOneWQTestModel(BasicConvTestModel):
+        def __init__(self):
+            super().__init__()
+            self.act1 = nn.ReLU(inplace=True)
+            self.act2 = nn.ReLU(inplace=True)
+
+        def forward(self, x1, x2):
+            return self.conv(torch.cat([self.act1(x1), self.act2(x2)]))
+
+    qenv = create_test_quantization_env(
+        model_creator=TwoAQOneWQTestModel,
+        input_info_cfg={
+            "input_info": [
+                {"sample_size": [1, 1, 4, 4]},
+                {"sample_size": [1, 1, 4, 4]}
+            ]
+        })
+
+    check_both_bw_assignment_modes(qenv, strategy)
+
+
+VPU_UMMAPPABLE_STRATEGY = [
+    [2, 8],
+    [2, 4],
+    [2, 2]
+]
+
+@pytest.mark.parametrize('strategy', VPU_UMMAPPABLE_STRATEGY,
+                         ids=['_'.join(['vpu_unmappable_strategy', str(s)]) for s in VPU_UMMAPPABLE_STRATEGY])
+def test_select_config_for_actions(strategy):
+    qenv = create_test_quantization_env()
+
+    with pytest.raises(AssertionError):
+        qenv.select_config_for_actions(strategy)

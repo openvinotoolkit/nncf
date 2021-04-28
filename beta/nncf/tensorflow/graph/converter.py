@@ -17,12 +17,14 @@ import networkx as nx
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
-from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
+from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
+from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
+from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def convert_keras_model_to_nxmodel(model):
@@ -52,6 +54,9 @@ def convert_keras_model_to_nxmodel(model):
 def _get_layer_type(layer):
     if layer['class_name'] == 'TensorFlowOpLayer':
         return layer['config']['node_def']['op']
+    if layer['class_name'] == 'NNCFWrapper':
+        # Return class_name of wrapped layer
+        return layer['config']['layer']['class_name']
     return layer['class_name']
 
 
@@ -173,6 +178,12 @@ def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     return _get_nncf_graph_from_raw_nodes(model_config, raw_nodes)
 
 
+def _prepare_shape(shape):
+    if not isinstance(shape, list):
+        return [shape]
+    return shape
+
+
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
     model_config = model.get_config()
     raw_nodes = Dict()
@@ -181,19 +192,23 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
         layer_type = _get_layer_type(layer)
         layer_dtype = _get_layer_dtype(layer)
         data_format = layer['config'].get('data_format')
+        model_layer = model.get_layer(layer_name)
+
         if layer['inbound_nodes']:
             is_shared = len(layer['inbound_nodes']) > 1
             for i, inbound_node in enumerate(layer['inbound_nodes']):
+                input_shape = _prepare_shape(model_layer.inbound_nodes[i].input_shapes)
                 instance = raw_nodes[layer_name][i]
                 instance['type'] = layer_type
                 instance['dtype'] = layer_dtype
                 instance['data_format'] = data_format
                 instance['is_shared'] = is_shared
+                instance['input_shape'] = input_shape
                 instance['in_ports'] = list(range(len(inbound_node)))
                 if not instance['out_ports']:
                     instance['out_ports'] = set()
                 if layer_type in GENERAL_CONV_LAYERS:
-                    module_attributes = _get_module_attributes(model.get_layer(layer_name), instance)
+                    module_attributes = _get_module_attributes(model_layer, instance)
                     instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
                 for parent_name, parent_instance_index, parent_out_ports, _ in inbound_node:
                     parent_instance = raw_nodes[parent_name][parent_instance_index]
@@ -208,8 +223,9 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
             instance['data_format'] = data_format
             instance['is_shared'] = False
             instance['in_ports'] = []
+            instance['input_shape'] = _prepare_shape(model_layer.input_shape)
             if layer_type in GENERAL_CONV_LAYERS:
-                module_attributes = _get_module_attributes(model.get_layer(layer_name), instance)
+                module_attributes = _get_module_attributes(model_layer, instance)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
 
     outputs = model_config['output_layers']
@@ -234,18 +250,22 @@ def _update_graph_with_raw_nodes(graph: Union[nx.DiGraph, NNCFGraph],
     for original_name, instances in raw_nodes.items():
         for i, attributes in instances.items():
             node_name = get_expanded_node_name(original_name, i, attributes['is_shared'])
-            graph.add_node(node_name, **attributes)
+            graph.add_node(node_name, original_name=original_name, **attributes)
 
     for layer in model_config['layers']:
         layer_name = layer['name']
         for i, inbound_nodes in enumerate(layer['inbound_nodes']):
             is_shared = raw_nodes[layer_name][i]['is_shared']
             node_full_name = get_expanded_node_name(layer_name, i, is_shared=is_shared)
-            for producer_name, producer_instance, *_ in inbound_nodes:
+            for k, inbound_node in enumerate(inbound_nodes):
+                producer_name, producer_instance, *_ = inbound_node
                 is_shared = raw_nodes[producer_name][producer_instance]['is_shared']
                 producer_full_name = get_expanded_node_name(producer_name, producer_instance, is_shared=is_shared)
-                graph.add_edge(producer_full_name, node_full_name)
-
+                attr = {
+                    NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: raw_nodes[layer_name][i]['input_shape'][k],
+                    NNCFGraph.IN_PORT_NAME_EDGE_ATTR: k
+                }
+                graph.add_edge(producer_full_name, node_full_name, **attr)
     return graph
 
 
@@ -270,16 +290,31 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
 
         nncf_graph.add_node(layer_name, **attrs)
         if producer_layer is not None:
-            nncf_graph.add_edge(producer_layer, layer_name)
+            input_shape = _prepare_shape(model.get_layer(layer_name).input_shape)
+            attr = {
+                NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: input_shape[0],
+                NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0
+            }
+            nncf_graph.add_edge(producer_layer, layer_name, **attr)
         producer_layer = layer_name
 
     return nncf_graph
 
 
 def _get_module_attributes(layer: tf.keras.layers.Layer, attrs: dict) -> ConvolutionModuleAttributes:
-    channel_axis = -1 if attrs['data_format'] == 'channels_last' else 1
+    channel_axis = get_input_channel_axis(layer)
+    if isinstance(layer, NNCFWrapper):
+        strides = layer.layer.strides[0]
+        groups = layer.layer.groups
+        kernel_size = layer.layer.kernel_size
+    else:
+        strides = layer.strides[0]
+        groups = layer.groups
+        kernel_size = layer.kernel_size
+
     return ConvolutionModuleAttributes(layer.trainable,
                                        layer.get_input_shape_at(0)[channel_axis],
                                        layer.get_output_shape_at(0)[channel_axis],
-                                       layer.strides[0],
-                                       layer.groups)
+                                       kernel_size,
+                                       strides,
+                                       groups)

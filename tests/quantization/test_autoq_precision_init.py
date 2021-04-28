@@ -76,10 +76,10 @@ class AutoQConfigBuilder(BaseConfigBuilder):
                 'precision': {
                     "type": "autoq",
                     "bits": [2, 4, 8],
-                    "iter_number": 2,
+                    "iter_number": 3,
                     "compression_ratio": 0.15,
                     "eval_subset_ratio": 1.0,
-                    "warmup_iter_number": 1
+                    "warmup_iter_number": 2
                 },
                 'range': {
                     'num_init_samples': num_init_samples

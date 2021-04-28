@@ -10,17 +10,17 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
-from nncf.dynamic_graph.operator_metatypes import OperatorMetatype
+from nncf.graph.graph import PTNNCFNode
+from nncf.graph.operator_metatypes import OPERATOR_METATYPES
+from nncf.graph.operator_metatypes import OperatorMetatype
 
 
 class PTOperatorMetatypeNodeMatcher:
     @classmethod
     def match(cls, nncf_node: PTNNCFNode) -> OperatorMetatype:
-        op_exec_context = nncf_node.op_exec_context
+        ia_op_exec_context = nncf_node.ia_op_exec_context
         module_attributes = nncf_node.module_attributes
-        op_name = op_exec_context.operator_name
+        op_name = ia_op_exec_context.operator_name
         op_arch = OPERATOR_METATYPES.get_operator_metatype_by_op_name(op_name)
         if op_arch.subtypes:
             subtype = op_arch.determine_subtype(module_attributes=module_attributes)

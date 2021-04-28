@@ -19,12 +19,12 @@ from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.schedulers import ExponentialDecaySchedule
 from nncf.common.schedulers import MultiStepSchedule
 from nncf.common.sparsity.controller import SparsityController
-from nncf.api.compression import CompressionScheduler
+from nncf.common.schedulers import BaseCompressionScheduler
 
 SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
 
 
-class SparsityScheduler(CompressionScheduler):
+class SparsityScheduler(BaseCompressionScheduler):
     """
     This is the class from which all sparsity schedulers inherit.
 

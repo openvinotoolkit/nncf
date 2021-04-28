@@ -87,6 +87,8 @@ Quick jump to the samples:
 |MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor |ImageNet|71.85|71.96|
 |MobileNet V2|Sparsity 35% (Magnitude)|ImageNet|71.85|72.36|
 |MobileNet V2|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 35% (Magnitude)|ImageNet|71.85|72.17|
+|MobileNet V3 small|INT8 w:sym,per-channel a:sym,per-tensor |ImageNet|68.38|67.51|
+|MobileNet V3 small|INT8 w:sym,per-channel a:asym,per-tensor + Sparsity 35% (Magnitude)|ImageNet|68.38|67.81|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor|ImageNet|75.04|75.04|
 |ResNet50|Sparsity 50% (Magnitude)|ImageNet|75.04|75|
 |ResNet50|INT8 w:sym,per-tensor a:sym,per-tensor + Sparsity 50% (Magnitude)|ImageNet|75.04|74.46|

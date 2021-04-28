@@ -22,6 +22,6 @@ models:
           - type: resize_prediction_boxes
         metrics:
           - type: map
-            integral: max
+            integral: 11point
             ignore_difficult: True
             presenter: print_scalar

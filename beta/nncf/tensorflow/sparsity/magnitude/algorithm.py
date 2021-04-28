@@ -16,8 +16,11 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.api.compression import CompressionScheduler
+from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -119,7 +122,16 @@ class MagnitudeSparsityController(BaseSparsityController):
         params['sparsity_init'] = sparsity_init
         scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
         self._scheduler = scheduler_cls(self, params)
+        self._loss = TFZeroCompressionLoss()
         self.set_sparsity_level(sparsity_init)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     def freeze(self):
         self._frozen = True

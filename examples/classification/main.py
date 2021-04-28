@@ -49,7 +49,7 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.api.compression import CompressionLevel
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process
 from examples.classification.common import set_seed, load_resuming_checkpoint

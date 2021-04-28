@@ -26,14 +26,20 @@ from typing import Tuple
 import networkx as nx
 import numpy as np
 import torch
+from torch import nn
+
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -44,11 +50,10 @@ from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import TracingContext
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.hw_config import HWConfig
 from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
@@ -111,7 +116,6 @@ from nncf.utils import get_state_dict_names_with_modules
 from nncf.utils import in_scope_list
 from nncf.utils import is_main_process
 from nncf.utils import should_consider_scope
-from torch import nn
 
 
 class QuantizerSetupGeneratorBase:
@@ -370,7 +374,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         ia_op_exec_contexts_list = []  # type: List[InputAgnosticOperationExecutionContext]
         for ip_graph_op_node in ip_graph_node_list:
             nncf_node = ip_graph_op_node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = nncf_node.op_exec_context.input_agnostic
+            ia_op_exec_context = nncf_node.ia_op_exec_context
             ia_op_exec_contexts_list.append(ia_op_exec_context)
 
         contexts_correspond_to_single_module = True
@@ -477,8 +481,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._range_init_params = None
         self._precision_init_type = None
         self._precision_init_params = None
-        if should_init:
+        if self.should_init:
             self._parse_init_params()
+        else:
+            # TODO: remove it! It workarounds checkpoint loading for mixed precision model by forcing manual init
+            self._force_manual_precision_init()
 
         self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
 
@@ -488,6 +495,18 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
         self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
+    def _force_manual_precision_init(self):
+        init_config = self.config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if init_precision_config is not None:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            if precision_init_type == 'manual':
+                # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
+                self._range_init_params = self._parse_range_init_params(init_config)
+                self.should_init = True
+                self._precision_init_type = precision_init_type
+                self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
@@ -953,6 +972,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             narrow_range = False
 
         device = next(target_model.parameters()).device
+        compression_lr_multiplier = self.config.get('compression_lr_multiplier', None)
 
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
@@ -967,7 +987,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             narrow_range=narrow_range,
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
-                                            half_range=half_range)
+                                            half_range=half_range,
+                                            compression_lr_multiplier=compression_lr_multiplier)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],
@@ -1096,6 +1117,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
@@ -1141,6 +1163,14 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     @property
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
@@ -1554,6 +1584,14 @@ class ExperimentalQuantizationController(QuantizationController):
             else:
                 self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
         self.hw_config = hw_config
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()

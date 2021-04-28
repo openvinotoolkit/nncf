@@ -7,6 +7,28 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 1.7:
+- Adjust Padding feature to support accurate execution of U4 on VPU - when setting "target_device" to "VPU", the training-time padding values for quantized convolutions will be adjusted to better reflect VPU inference process.
+- Weighted layers that are "frozen" (i.e. have requires_grad set to False at compressed model creation time) are no longer considered for compression, to better handle transfer learning cases.
+- Quantization algorithm now sets up quantizers without giving an option for requantization, which guarantees best performance, although at some cost to quantizer configuration flexibility.
+- Pruning models with FCOS detection heads and instance normalization operations now supported
+- Added a mean percentile initializer for the quantization algorithm
+- Now possible to additionally quantize model outputs (separate control for each output quantization is supported)
+- Models quantized for CPU now use effective 7-bit quantization for weights - the ONNX-exported model is still configured to use 8 bits for quantization, but only the middle 128 quanta of the total possible 256 are actually used, which allows for better OpenVINO inference accuracy alignment with PyTorch on non-VNNI CPUs
+- Bumped target PyTorch version to 1.8.1 and relaxed package requirements constraints to allow installation into environments with PyTorch >=1.5.0
+
+Notable bugfixes:
+- Fixed bias pruning in depthwise convolution
+- Made per-tensor quantization available for all operations that support per-channel quantization 
+- Fixed progressive training performance degradation when an output tensor of an NNCF-compressed model is reused as its input.
+- `pip install .` path of installing NNCF from a checked-out repository is now supported.
+- Nested `with no_nncf_trace()` blocks now function as expected.
+- NNCF compression API now formally abstract to guard against virtual function calls
+- Now possible to load AutoQ and HAWQ-produced checkpoints to evaluate them or export to ONNX
+
+Removed features:
+- Pattern-based quantizer setup mode for quantization algorithm - due to its logic, it did not guarantee that all required operation inputs are ultimately quantized.
+
 
 ## New in Release 1.6:
 - Added AutoQ - an AutoML-based mixed-precision initialization mode for quantization, which utilizes the power of reinforcement learning to select the best quantizer configuration for any model in terms of quality metric for a given HW architecture type.

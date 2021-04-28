@@ -47,6 +47,12 @@ def pytest_addoption(parser):
                                                             "PROJECT_ROOT/test_results/metrics_dump_timestamp "
                                                             "if param not specified"
     )
+    parser.addoption(
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
+    )
+    parser.addoption(
+        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -67,3 +73,13 @@ def metrics_dump_dir(request):
 @pytest.fixture(scope="module")
 def dataset_dir(request):
     return request.config.getoption("--data")
+
+
+@pytest.fixture(scope="module")
+def ov_data_dir(request):
+    return request.config.getoption("--ov-data-dir")
+
+
+@pytest.fixture(scope="session")
+def openvino(request):
+    return request.config.getoption("--run-openvino-eval")

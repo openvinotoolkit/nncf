@@ -10,20 +10,27 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 # pylint:disable=relative-beyond-top-level
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+import torch
+
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
 from nncf.api.compression import CompressionLevel
-from .compression_method_api import PTCompressionAlgorithmBuilder, PTCompressionAlgorithmController, PTCompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.compression_method_api import PTCompressionAlgorithmController
+
+from nncf.compression_method_api import PTCompressionLoss
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.registry import Registry
-import torch
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
 
 class ZeroCompressionLoss(PTCompressionLoss):
-    def __init__(self, device):
+    def __init__(self, device: str):
         super().__init__()
         self._device = device
 
@@ -45,6 +52,7 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def __init__(self, target_model):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = StubCompressionScheduler()
 
     def compression_level(self) -> CompressionLevel:
         """
@@ -52,3 +60,11 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
         uncompressed, partially compressed and fully compressed models.
         """
         return CompressionLevel.NONE
+
+    @property
+    def loss(self) -> ZeroCompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler

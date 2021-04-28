@@ -76,7 +76,7 @@ def test_get_first_pruned_layers(model, ref_first_module_names):
 
     first_pruned_nodes = get_first_nodes_of_type(pruned_model.get_original_graph(),
                                                  FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    first_pruned_modules = [pruned_model.get_module_by_scope(n.op_exec_context.scope_in_model)
+    first_pruned_modules = [pruned_model.get_module_by_scope(n.ia_op_exec_context.scope_in_model)
                             for n in first_pruned_nodes]
     ref_first_modules = [getattr(pruned_model, module_name) for module_name in ref_first_module_names]
     assert set(first_pruned_modules) == set(ref_first_modules)
@@ -95,7 +95,7 @@ def test_get_last_pruned_layers(model, ref_last_module_names):
 
     last_pruned_nodes = get_last_nodes_of_type(pruned_model.get_original_graph(),
                                                FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    last_pruned_modules = [pruned_model.get_module_by_scope(n.op_exec_context.scope_in_model)
+    last_pruned_modules = [pruned_model.get_module_by_scope(n.ia_op_exec_context.scope_in_model)
                            for n in last_pruned_nodes]
     ref_last_modules = [getattr(pruned_model, module_name) for module_name in ref_last_module_names]
     assert set(last_pruned_modules) == set(ref_last_modules)

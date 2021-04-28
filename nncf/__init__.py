@@ -11,12 +11,23 @@
  limitations under the License.
 """
 
-from .version import __version__
 from .common.utils.backend import __nncf_backend__
-
 from .config import NNCFConfig
+from .version import __version__
 
 if __nncf_backend__ == 'Torch':
+
+    from .version import BKC_TORCH_VERSION
+    import torch
+    from pkg_resources import parse_version
+    if parse_version(BKC_TORCH_VERSION).base_version != parse_version(torch.__version__).base_version:
+        import warnings
+        warnings.warn("NNCF provides best results with torch=={bkc}, "
+                      "while current torch version is {curr} - consider switching to torch=={bkc}".format(
+            bkc=BKC_TORCH_VERSION,
+            curr=torch.__version__
+        ))
+
     # NNCF builds extensions based on torch load() function
     # This function has a bug inside which patch_extension_build_function() solves
     # This bug will be fixed in torch 1.8.0
@@ -42,7 +53,8 @@ if __nncf_backend__ == 'Torch':
     from .initialization import register_default_init_args
     from .layers import register_module
     from .dynamic_graph.patch_pytorch import register_operator
-    from .dynamic_graph.input_wrapping import nncf_model_input
+    from .dynamic_graph.io_handling import nncf_model_input
+    from .dynamic_graph.io_handling import nncf_model_output
 
     # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",

@@ -13,8 +13,8 @@
 import logging
 
 from nncf.common.utils.registry import Registry
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.api.compression import CompressionLevel
-from nncf.api.compression import CompressionScheduler
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ QUANTIZATION_SCHEDULERS = Registry("quantization_schedulers")
 
 
 @QUANTIZATION_SCHEDULERS.register("staged")
-class StagedQuantizationScheduler(CompressionScheduler):
+class StagedQuantizationScheduler(BaseCompressionScheduler):
     def __init__(self, quantization_ctrl: 'QuantizationController', params=None):
         super().__init__()
         if params is None:

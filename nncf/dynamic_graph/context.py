@@ -28,13 +28,14 @@ from typing import Union
 import torch
 
 from nncf.debug import is_debug
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.dynamic_graph.graph import PTNNCFGraph, PTNNCFNode
-from nncf.dynamic_graph.graph import NNCFNode
+from nncf.dynamic_graph.graph import DynamicGraph
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import PTNNCFNode
+from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.trace_tensor import TensorMeta
-from nncf.dynamic_graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.layers import ITERATION_MODULES
-from nncf.dynamic_graph.graph import ModuleAttributes
+from nncf.graph.graph import ModuleAttributes
 from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
@@ -242,7 +243,7 @@ class PreHookId:
 # pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
-        self.graph = PTNNCFGraph()
+        self.graph = DynamicGraph()
 
         self._save_context = None
         self._post_hooks = {}
@@ -511,7 +512,7 @@ class TracingContext:
         return Scope(scope_el_list)
 
     def reset_graph(self):
-        self.graph = PTNNCFGraph()
+        self.graph = DynamicGraph()
 
 
 @contextmanager

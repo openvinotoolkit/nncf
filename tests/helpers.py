@@ -24,13 +24,14 @@ import torch
 from copy import deepcopy
 from onnx import numpy_helper
 from torch import nn
+from torch.nn import functional as F
 from torch.nn import Module
 
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
@@ -143,6 +144,35 @@ class TwoConvTestModel(nn.Module):
         return 2
 
 
+class LeNet(nn.Module):
+    INPUT_SIZE = 28
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 6, (5, 5), padding=2)
+        self.conv2 = nn.Conv2d(6, 16, (5, 5))
+
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        x = x.view(-1, self.num_flat_features(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
+
+
 def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None,
                      input_info: Dict = None):
     if input_sample_sizes is None:
@@ -166,9 +196,16 @@ def get_grads(variables):
     return [var.grad.clone() for var in variables]
 
 
+def to_numpy(tensor: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
+    if isinstance(tensor, torch.Tensor):
+        return tensor.cpu().detach().numpy()
+    return tensor
+
+
 def check_equal(test, reference, rtol=1e-4):
     for i, (x, y) in enumerate(zip(test, reference)):
-        x = x.cpu().detach().numpy()
+        x = to_numpy(x)
+        y = to_numpy(y)
         np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
 
 

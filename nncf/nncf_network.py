@@ -25,13 +25,11 @@ from typing import TypeVar
 
 import networkx as nx
 import torch
-from nncf.dynamic_graph.trace_tensor import TracedTensor
-
-from nncf.common.graph.graph import NNCFGraph
-from nncf.utils import objwalk
-from nncf.dynamic_graph.graph import ModuleAttributes
 from torch import nn
 
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
@@ -42,24 +40,25 @@ from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import TracingContext
-from nncf.dynamic_graph.graph import NNCFNodeExpression
-from nncf.dynamic_graph.graph import PTNNCFGraph
+from nncf.dynamic_graph.graph import DynamicGraph
 from nncf.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
-from nncf.dynamic_graph.graph_builder import GraphBuilder
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.graph_builder import PostGraphBuildActing
-from nncf.dynamic_graph.graph_builder import create_dummy_forward_fn
-from nncf.dynamic_graph.graph_matching import NodeExpression
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
-from nncf.dynamic_graph.input_wrapping import InputInfoWrapManager
-from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.dynamic_graph.graph_tracer import PostGraphBuildActing
+from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.dynamic_graph.io_handling import InputInfoWrapManager
+from nncf.dynamic_graph.io_handling import replicate_same_tensors
+from nncf.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.dynamic_graph.patch_pytorch import ignore_scope
+from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.wrappers import _get_module_attributes
+from nncf.graph.graph import ModuleAttributes
+from nncf.graph.graph import NNCFNodeExpression
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.graph_matching import NodeExpression
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.hw_config import HWConfig
-from nncf.layers import NNCF_GENERAL_CONV_MODULES_DICT
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.module_operations import UpdateWeight
@@ -67,6 +66,7 @@ from nncf.quantization.layers import QUANTIZATION_MODULES
 from nncf.utils import compute_FLOPs_hook
 from nncf.utils import get_all_modules_by_type
 from nncf.utils import get_state_dict_names_with_modules
+from nncf.utils import objwalk
 
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
@@ -153,7 +153,7 @@ class InsertionPointGraph(nx.DiGraph):
         node_keys_working_set = [deepcopy(node_key) for node_key in self.nodes.keys()]
         for operator_node_key in node_keys_working_set:
             original_node = self.nodes[operator_node_key][InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-            ia_op_exec_context = original_node.op_exec_context.input_agnostic
+            ia_op_exec_context = original_node.ia_op_exec_context
 
             operator_node = self.nodes[operator_node_key]
 
@@ -230,7 +230,7 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.dynamic_graph.graph_matching import search_all
+        from nncf.graph.graph_matching import search_all
         matches = search_all(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) == 1:
@@ -315,7 +315,7 @@ class InsertionPointGraph(nx.DiGraph):
         quantize should be the input operation; outputs should only be produced by one output node."""
         # TODO: Implement "repeating expressions" so that any number of "mergeable" operations
         # immediately following a linear/convolutional/matrix op are merged into one block
-        import nncf.dynamic_graph.patterns as p
+        import nncf.graph.patterns as p
         full_pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS | \
                        p.ARITHMETIC + p.ANY_BN_ACT_COMBO | p.ANY_BN_ACT_COMBO
         if additional_patterns is not None:
@@ -333,8 +333,7 @@ class InsertionPointGraph(nx.DiGraph):
         for node in self.nodes().values():
             if node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 nncf_graph_node = node[InsertionPointGraph.REGULAR_NODE_REF_NODE_ATTR]
-                op_exec_context = nncf_graph_node.op_exec_context
-                op_scope = op_exec_context.input_agnostic.scope_in_model
+                op_scope = nncf_graph_node.ia_op_exec_context.scope_in_model
                 if op_scope in scope:
                     matching_ip_graph_op_nodes_list.append(node)
         return matching_ip_graph_op_nodes_list
@@ -401,7 +400,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
 
-        device = next(module.parameters()).device
+        try:
+            device = next(module.parameters()).device
+        except StopIteration:
+            # Param-less model, assume CPU
+            device = 'cpu'
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -443,10 +446,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._original_graph = self._graph_builder.build_graph(nncf_wrapped_model, _orig_context,
                                                                as_eval=True)
-        self._mark_original_graph_nodes_with_module_attributes()
+        self._compressed_graph = None
 
         self._compressed_context = TracingContext()
-
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False, with_output_tracing=False)
         self._in_user_dummy_forward = False
@@ -458,16 +460,20 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
                                                           ShapeIgnoringTensorMetaComparator())
         self._load_listener = None
 
+
     @debuggable_forward
     def forward(self, *args, **kwargs):
         with self._compressed_context as ctx:  # type: TracingContext
             ctx.base_module_thread_local_replica = self
+            args, kwargs = replicate_same_tensors((args, kwargs))
             if not self._in_user_dummy_forward:
                 # If a user supplies own dummy forward, he is responsible for
                 # correctly wrapping inputs inside it as well.
                 args, kwargs = self._strip_traced_tensors(args, kwargs)
                 args, kwargs = self._wrap_inputs_fn(args, kwargs)
-            retval = self._wrap_outputs_fn(self.get_nncf_wrapped_model()(*args, **kwargs))
+            retval = self.get_nncf_wrapped_model()(*args, **kwargs)
+            retval = replicate_same_tensors(retval)
+            retval = self._wrap_outputs_fn(retval)
         return retval
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
@@ -485,6 +491,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
+
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
@@ -538,8 +545,11 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return super().__getattr__(name)
 
     def get_graph(self) -> PTNNCFGraph:
-        if self._compressed_context.graph.get_nodes_count() == 0:
+        if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graph is None:
             self.rebuild_graph()
+        return self._compressed_graph
+
+    def get_dynamic_graph(self) -> DynamicGraph:
         return self._compressed_context.graph
 
     def get_original_graph(self) -> PTNNCFGraph:
@@ -594,7 +604,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False,
                                                                          with_output_tracing=False)
         builder = GraphBuilder(dummy_forward_fn)
-        _ = builder.build_graph(self, self._compressed_context)
+        self._compressed_graph = builder.build_graph(self, self._compressed_context)
 
     def post_build_graph_actions(self):
         # Reset initialization flags (`initialized`) for all quantization modules
@@ -788,19 +798,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         result = []
         eval_graph = graph_builder.build_graph(model, as_eval=True)
         for nncf_node in eval_graph.get_all_nodes():
-            op_exec_context = nncf_node.op_exec_context
-            if op_exec_context:
-                result.append(str(op_exec_context.input_agnostic))
+            ia_op_exec_context = nncf_node.ia_op_exec_context
+            if ia_op_exec_context:
+                result.append(str(ia_op_exec_context))
         return result
-
-    def _mark_original_graph_nodes_with_module_attributes(self):
-        node_types = [v.op_func_name for v in NNCF_GENERAL_CONV_MODULES_DICT] + ["group_norm"]
-        for node in self._original_graph.get_nodes_by_types(node_types):
-            scope = node.op_exec_context.scope_in_model
-            input_agnostic = node.op_exec_context.input_agnostic
-            module = self.get_module_by_scope(scope)
-            nx_node = self._original_graph.find_node_in_nx_graph_by_input_agnostic(input_agnostic)
-            nx_node[PTNNCFGraph.MODULE_ATTRIBUTES] = _get_module_attributes(module, node.op_exec_context.operator_name)
 
 
 def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttributes:
@@ -814,6 +815,7 @@ def _get_module_attributes(module: Module, operator_name: str) -> ModuleAttribut
         module.weight.requires_grad,
         module.in_channels,
         module.out_channels,
+        module.kernel_size,
         module.stride,
         module.groups
     )

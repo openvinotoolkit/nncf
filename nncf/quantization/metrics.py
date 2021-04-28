@@ -257,7 +257,7 @@ class MemoryCostMetric(BaseMetric):
             input_node_keys.append(input_node_key)
             next_nodes = original_graph.get_next_nodes(input_node)
             for next_node in next_nodes:
-                scope = next_node.op_exec_context.scope_in_model
+                scope = next_node.ia_op_exec_context.scope_in_model
                 status, quantizer = self._get_quantizer_for_scope(scope, self._non_weight_quantizers)
                 if status:
                     next_node_key = original_graph.get_node_key_by_id(next_node.node_id)
@@ -269,7 +269,7 @@ class MemoryCostMetric(BaseMetric):
                 continue
 
             shape = original_nx_graph.edges[u, v][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
-            u_node_scope_str = str(original_nx_graph.nodes[u]['op_exec_context'].input_agnostic)
+            u_node_scope_str = str(original_nx_graph.nodes[u][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
             num_bits = self.get_precision_for_activation_tensor(u, v, original_nx_graph)
             original_nx_graph.edges[u, v]['precision'] = num_bits
             memory_consumption_fp_model[u_node_scope_str] = np.prod(shape) * fp_num_bits
@@ -284,7 +284,7 @@ class MemoryCostMetric(BaseMetric):
             self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = 0
 
     def get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
-        scope_u_node = original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
+        scope_u_node = original_nx_graph.nodes[u_node][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
         # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor =\
@@ -298,7 +298,7 @@ class MemoryCostMetric(BaseMetric):
                 precision = 32
             return precision
 
-        u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+        u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
         for aq_id, aq in self._non_weight_quantizers.items():
             if u_node_scope_str in str(aq_id.ia_op_exec_context):
                 precision = aq.num_bits
@@ -376,7 +376,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 node = merged_original_graph.nodes[node_key]
                 if node[self.IS_MERGED_GRAPH_ATTR]:
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
-                    scope_str = str(last_node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                    scope_str = str(last_node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
                     matched = False
                     for aq_id in self._qctrl.non_weight_quantizers:
                         if scope_str in str(aq_id.ia_op_exec_context):
@@ -387,7 +387,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                     else:
                         self._marking_edges(merged_original_graph, node_key, queue, False)
                 else:
-                    scope_str = str(node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic)
+                    scope_str = str(node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
 
                     matched = False
                     for aq_key in self._compressed_model.external_quantizers.keys():
@@ -398,7 +398,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True
-                        node_op_name = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                        node_op_name = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].operator_name
                         for op in DEFAULT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
                             op_names = [op.name]
                             if op.torch_tensor_patch_spec is not None:
@@ -461,8 +461,8 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
         return retval
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
-        import nncf.dynamic_graph.patterns as p
-        from nncf.dynamic_graph.graph_matching import search_all
+        import nncf.graph.patterns as p
+        from nncf.graph.graph_matching import search_all
 
         pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
         # pylint: disable=protected-access

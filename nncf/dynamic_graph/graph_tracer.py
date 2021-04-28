@@ -16,6 +16,8 @@ from copy import deepcopy
 
 import torch
 
+from nncf.dynamic_graph.graph import DynamicGraph
+
 
 class ModelInputInfo:
     FILLER_TYPE_ONES = "ones"
@@ -81,12 +83,12 @@ def create_mock_tensor(input_info: ModelInputInfo, device: str):
     raise RuntimeError
 
 
-class GraphBuilder:
+class GraphTracer:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
-    def build_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
-                    as_eval: bool = False) -> 'PTNNCFGraph':
+    def trace_graph(self, model: torch.nn.Module, context_to_use: Optional['TracingContext'] = None,
+                    as_eval: bool = False) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
         from nncf.dynamic_graph.context import TracingContext
@@ -120,8 +122,9 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                             with_output_tracing=False):
 
     def default_dummy_forward_fn(model):
-        from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_inputs_with_objwalk
-        from nncf.dynamic_graph.input_wrapping import wrap_nncf_model_outputs_with_objwalk
+        from nncf.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
+        from nncf.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+        from nncf.dynamic_graph.io_handling import replicate_same_tensors
 
         device = next(model.parameters()).device
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
@@ -140,9 +143,11 @@ def create_dummy_forward_fn(input_infos: List[ModelInputInfo], with_input_tracin
                 args, kwargs = wrap_nncf_model_inputs_with_objwalk(args, kwargs)
             else:
                 args, kwargs = wrap_inputs_fn(args, kwargs)
+        retval = model(*args, **kwargs)
         if with_output_tracing:
+            retval = replicate_same_tensors(retval)
             if wrap_outputs_fn is not None:
-                return wrap_outputs_fn(model(*args, **kwargs))
-            return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
-        return model(*args, **kwargs)
+                return wrap_outputs_fn(retval)
+            return wrap_nncf_model_outputs_with_objwalk(retval)
+        return retval
     return default_dummy_forward_fn
