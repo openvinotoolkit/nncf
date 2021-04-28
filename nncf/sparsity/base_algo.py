@@ -60,7 +60,8 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
                 continue
 
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
-            operation = self.create_weight_sparsifying_operation(module)
+            compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
+            operation = self.create_weight_sparsifying_operation(module, compression_lr_multiplier)
             hook = operation.to(device)
             insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                                                        module_scope=module_scope),
@@ -70,7 +71,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         return insertion_commands
 
-    def create_weight_sparsifying_operation(self, target_module):
+    def create_weight_sparsifying_operation(self, target_module, compression_lr_multiplier):
         raise NotImplementedError
 
 

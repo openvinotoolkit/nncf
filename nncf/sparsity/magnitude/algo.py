@@ -28,7 +28,7 @@ from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
-    def create_weight_sparsifying_operation(self, module):
+    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
         device = module.weight.device
         return BinaryMask(module.weight.size()).to(device)
 
