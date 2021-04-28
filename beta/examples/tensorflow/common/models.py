@@ -39,7 +39,7 @@ def mobilenet_v2_100_224(input_shape=None,
     return model
 
 
-def MobileNetV3Small(input_shape=None, **_):
+def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type='large', **_):
     if input_shape is None:
         input_shape = (None, None, 3)
 
@@ -59,7 +59,6 @@ def MobileNetV3Small(input_shape=None, **_):
     kernel = 5
     activation = hard_swish
     se_ratio = 0.25
-    last_point_ch = 1024
 
     x = img_input
     x = layers.Rescaling(scale=1. / 127.5, offset=-1.)(x)
@@ -111,12 +110,18 @@ def MobileNetV3Small(input_shape=None, **_):
                           name='Predictions')(x)
 
     # Create model.
-    model = models.Model(img_input, x, name='MobilenetV3small')
+    model = models.Model(img_input, x, name='MobilenetV3{}'.format(model_type))
 
     BASE_WEIGHT_PATH = ('https://storage.googleapis.com/tensorflow/'
                         'keras-applications/mobilenet_v3/')
-    file_name = 'weights_mobilenet_v3_small_224_1.0_float.h5'
-    file_hash = '8768d4c2e7dee89b9d02b2d03d65d862'
+    WEIGHTS_HASHES = {
+        'large': '59e551e166be033d707958cf9e29a6a7',
+        'small': '8768d4c2e7dee89b9d02b2d03d65d862',
+    }
+
+    file_name = 'weights_mobilenet_v3_{}_224_1.0_float.h5'.format(model_type)
+    file_hash = WEIGHTS_HASHES[model_type]
+
     weights_path = data_utils.get_file(
         file_name,
         BASE_WEIGHT_PATH + file_name,
@@ -127,19 +132,46 @@ def MobileNetV3Small(input_shape=None, **_):
     return model
 
 
-def stack_fn(x, kernel, activation, se_ratio):
-    x = _inverted_res_block(x, 1, _depth(16), 3, 2, se_ratio, relu, 0)
-    x = _inverted_res_block(x, 72. / 16, _depth(24), 3, 2, None, relu, 1)
-    x = _inverted_res_block(x, 88. / 24, _depth(24), 3, 1, None, relu, 2)
-    x = _inverted_res_block(x, 4, _depth(40), kernel, 2, se_ratio, activation, 3)
-    x = _inverted_res_block(x, 6, _depth(40), kernel, 1, se_ratio, activation, 4)
-    x = _inverted_res_block(x, 6, _depth(40), kernel, 1, se_ratio, activation, 5)
-    x = _inverted_res_block(x, 3, _depth(48), kernel, 1, se_ratio, activation, 6)
-    x = _inverted_res_block(x, 3, _depth(48), kernel, 1, se_ratio, activation, 7)
-    x = _inverted_res_block(x, 6, _depth(96), kernel, 2, se_ratio, activation, 8)
-    x = _inverted_res_block(x, 6, _depth(96), kernel, 1, se_ratio, activation, 9)
-    x = _inverted_res_block(x, 6, _depth(96), kernel, 1, se_ratio, activation, 10)
-    return x
+def MobileNetV3Small(input_shape=None, **kwargs):
+
+    def stack_fn(x, kernel, activation, se_ratio):
+        x = _inverted_res_block(x, 1, _depth(16), 3, 2, se_ratio, relu, 0)
+        x = _inverted_res_block(x, 72. / 16, _depth(24), 3, 2, None, relu, 1)
+        x = _inverted_res_block(x, 88. / 24, _depth(24), 3, 1, None, relu, 2)
+        x = _inverted_res_block(x, 4, _depth(40), kernel, 2, se_ratio, activation, 3)
+        x = _inverted_res_block(x, 6, _depth(40), kernel, 1, se_ratio, activation, 4)
+        x = _inverted_res_block(x, 6, _depth(40), kernel, 1, se_ratio, activation, 5)
+        x = _inverted_res_block(x, 3, _depth(48), kernel, 1, se_ratio, activation, 6)
+        x = _inverted_res_block(x, 3, _depth(48), kernel, 1, se_ratio, activation, 7)
+        x = _inverted_res_block(x, 6, _depth(96), kernel, 2, se_ratio, activation, 8)
+        x = _inverted_res_block(x, 6, _depth(96), kernel, 1, se_ratio, activation, 9)
+        x = _inverted_res_block(x, 6, _depth(96), kernel, 1, se_ratio, activation, 10)
+        return x
+
+    return MobileNetV3(stack_fn, 1024, input_shape, model_type='small', **kwargs)
+
+
+def MobileNetV3Large(input_shape=None, **kwargs):
+
+    def stack_fn(x, kernel, activation, se_ratio):
+        x = _inverted_res_block(x, 1, _depth(16), 3, 1, None, relu, 0)
+        x = _inverted_res_block(x, 4, _depth(24), 3, 2, None, relu, 1)
+        x = _inverted_res_block(x, 3, _depth(24), 3, 1, None, relu, 2)
+        x = _inverted_res_block(x, 3, _depth(40), kernel, 2, se_ratio, relu, 3)
+        x = _inverted_res_block(x, 3, _depth(40), kernel, 1, se_ratio, relu, 4)
+        x = _inverted_res_block(x, 3, _depth(40), kernel, 1, se_ratio, relu, 5)
+        x = _inverted_res_block(x, 6, _depth(80), 3, 2, None, activation, 6)
+        x = _inverted_res_block(x, 2.5, _depth(80), 3, 1, None, activation, 7)
+        x = _inverted_res_block(x, 2.3, _depth(80), 3, 1, None, activation, 8)
+        x = _inverted_res_block(x, 2.3, _depth(80), 3, 1, None, activation, 9)
+        x = _inverted_res_block(x, 6, _depth(112), 3, 1, se_ratio, activation, 10)
+        x = _inverted_res_block(x, 6, _depth(112), 3, 1, se_ratio, activation, 11)
+        x = _inverted_res_block(x, 6, _depth(160), kernel, 2, se_ratio, activation, 12)
+        x = _inverted_res_block(x, 6, _depth(160), kernel, 1, se_ratio, activation, 13)
+        x = _inverted_res_block(x, 6, _depth(160), kernel, 1, se_ratio, activation, 14)
+        return x
+
+    return MobileNetV3(stack_fn, 1280, input_shape, model_type='large', **kwargs)
 
 
 def relu(x):
