@@ -114,7 +114,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         """
         self.scheduler.load_state(state)
 
-    def get_state(self) -> None:
+    def get_state(self) -> Dict[str, object]:
         """
         Returns the compression controller state.
 

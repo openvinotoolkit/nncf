@@ -25,7 +25,7 @@ DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompositeCompressionAlgorithmController( # pylint: disable=too-many-ancestors
+class TFCompositeCompressionAlgorithmController(
     CompositeCompressionAlgorithmController, TFCompressionAlgorithmController):
     def __init__(self, target_model: ModelType):
         super().__init__(target_model)

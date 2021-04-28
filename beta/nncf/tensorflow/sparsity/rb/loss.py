@@ -12,6 +12,7 @@
 """
 
 from typing import Dict
+
 import tensorflow as tf
 
 from nncf.api.compression import CompressionLoss
@@ -73,7 +74,7 @@ class SparseLoss(CompressionLoss):
 
     def get_state(self) -> Dict[str, object]:
         return {
-            'target': self.target_sparsity_rate,
+            'target':  tf.keras.backend.eval(self.target),
             'disabled': bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
             'p': self.p
         }

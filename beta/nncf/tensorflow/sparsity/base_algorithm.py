@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from abc import abstractmethod
 
 from nncf.common.sparsity.controller import SparsityController
@@ -41,7 +42,7 @@ SPARSITY_TF_OPS = [
 ]
 
 
-class BaseSparsityController(TFCompressionAlgorithmController, SparsityController): # pylint: disable=too-many-ancestors
+class BaseSparsityController(TFCompressionAlgorithmController, SparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable sparsity-specific compression.

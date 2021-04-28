@@ -15,7 +15,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 from typing import Any, List, MutableMapping
 
 import tensorflow as tf
@@ -148,6 +147,7 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
 class CustomModelCheckpoint(tf.keras.callbacks.Callback):
     """Callback which manage to save checkpoint every epoch during the training."""
     def __init__(self, checkpoint_manager):
+        super().__init__()
         self._checkpoint_manager = checkpoint_manager
 
     def on_epoch_end(self, epoch, logs=None):

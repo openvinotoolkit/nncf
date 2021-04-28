@@ -72,7 +72,7 @@ class SSD_VGG(nn.Module):
 
     def load_weights(self, base_file):
         _, ext = os.path.splitext(base_file)
-        if ext == '.pkl' or '.pth':
+        if ext in ['.pkl', '.pth']:
             print('Loading weights into state dict...')
             self.load_state_dict(torch.load(base_file,
                                             map_location=lambda storage, loc: storage))

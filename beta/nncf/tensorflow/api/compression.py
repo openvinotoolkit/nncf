@@ -12,6 +12,7 @@
 """
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar, Dict
+
 import json
 import tensorflow as tf
 
