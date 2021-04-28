@@ -262,7 +262,7 @@ def export(config):
     checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
     if config.ckpt_path is not None:
-        load_checkpoint(checkpoint_manager=checkpoint_manager,
+        load_checkpoint(checkpoint=checkpoint_manager.checkpoint,
                         ckpt_path=config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)

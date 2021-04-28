@@ -41,7 +41,7 @@ SPARSITY_TF_OPS = [
 ]
 
 
-class BaseSparsityController(TFCompressionAlgorithmController, SparsityController):
+class BaseSparsityController(TFCompressionAlgorithmController, SparsityController): # pylint: disable=too-many-ancestors
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable sparsity-specific compression.

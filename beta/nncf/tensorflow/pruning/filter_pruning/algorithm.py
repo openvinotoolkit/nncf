@@ -84,7 +84,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return TFElementwise.get_all_op_aliases()
 
 
-class FilterPruningController(BasePruningAlgoController):
+class FilterPruningController(BasePruningAlgoController): # pylint: disable=too-many-ancestors
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable filter pruning.
