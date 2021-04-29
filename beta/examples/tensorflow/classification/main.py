@@ -118,11 +118,11 @@ def load_checkpoint(checkpoint, ckpt_path):
     return None
 
 
-def resume_from_checkpoint(checkpoint_manager, ckpt_path, steps_per_epoch):
-    if load_checkpoint(checkpoint_manager.checkpoint, ckpt_path) == 0:
+def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
+    if load_checkpoint(checkpoint, ckpt_path) == 0:
         return 0
 
-    initial_step = checkpoint_manager.checkpoint.model.optimizer.iterations.numpy()
+    initial_step = checkpoint.model.optimizer.iterations.numpy()
     initial_epoch = initial_step // steps_per_epoch
 
     logger.info('Resuming from epoch %d', initial_epoch)
@@ -181,11 +181,10 @@ def run(config):
             compress_model.summary()
 
             checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
-            checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
             initial_epoch = 0
             if config.ckpt_path is not None:
-                initial_epoch = resume_from_checkpoint(checkpoint_manager=checkpoint_manager,
+                initial_epoch = resume_from_checkpoint(checkpoint=checkpoint,
                                                        ckpt_path=config.ckpt_path,
                                                        steps_per_epoch=train_steps)
             else:
@@ -193,13 +192,13 @@ def run(config):
                 compression_ctrl.initialize(dataset=train_dataset)
 
     callbacks = get_callbacks(
-        model_checkpoint=True,
         include_tensorboard=True,
         track_lr=True,
         write_model_weights=False,
         initial_step=initial_epoch * train_steps,
         model_dir=config.log_dir,
-        checkpoint_manager=checkpoint_manager)
+        ckpt_dir=config.checkpoint_save_dir,
+        checkpoint=checkpoint)
 
     callbacks.append(get_progress_bar(
         stateful_metrics=['loss'] + [metric.name for metric in metrics]))
@@ -259,10 +258,9 @@ def export(config):
     compress_model.summary()
 
     checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
-    checkpoint_manager = tf.train.CheckpointManager(checkpoint, config.checkpoint_save_dir, max_to_keep=None)
 
     if config.ckpt_path is not None:
-        load_checkpoint(checkpoint=checkpoint_manager.checkpoint,
+        load_checkpoint(checkpoint=checkpoint,
                         ckpt_path=config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)

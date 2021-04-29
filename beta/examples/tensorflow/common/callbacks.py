@@ -20,22 +20,22 @@ from typing import Any, List, MutableMapping
 import tensorflow as tf
 from absl import logging
 
+from beta.nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 
-def get_callbacks(model_checkpoint: bool = True,
-                  include_tensorboard: bool = True,
+
+def get_callbacks(include_tensorboard: bool = True,
                   track_lr: bool = True,
                   write_model_weights: bool = True,
                   initial_step: int = 0,
                   model_dir: str = None,
-                  checkpoint_manager: tf.train.CheckpointManager = None) -> List[tf.keras.callbacks.Callback]:
+                  ckpt_dir: str = None,
+                  checkpoint: tf.train.Checkpoint = None) -> List[tf.keras.callbacks.Callback]:
     """Get all callbacks."""
     model_dir = model_dir or ''
+    ckpt_dir = ckpt_dir or model_dir
     callbacks = []
-    if model_checkpoint:
-        if not checkpoint_manager:
-            raise ValueError('model_checkpoint param is True but '
-                             'checkpoint manager not provided by checkpoint_manager argument')
-        callbacks.append(CustomModelCheckpoint(checkpoint_manager))
+    if checkpoint:
+        callbacks.append(CheckpointManagerCallback(checkpoint, ckpt_dir))
     if include_tensorboard:
         callbacks.append(
             CustomTensorBoard(
@@ -142,13 +142,3 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
             optimizer = optimizer._optimizer  # pylint:disable=protected-access
 
         return optimizer
-
-
-class CustomModelCheckpoint(tf.keras.callbacks.Callback):
-    """Callback which manage to save checkpoint every epoch during the training."""
-    def __init__(self, checkpoint_manager):
-        super().__init__()
-        self._checkpoint_manager = checkpoint_manager
-
-    def on_epoch_end(self, epoch, logs=None):
-        self._checkpoint_manager.save()
