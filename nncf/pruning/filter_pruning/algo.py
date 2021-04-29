@@ -93,6 +93,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._pruning_rate = 0
         self.pruning_init = config.get("pruning_init", 0)
         self.pruning_quota = 0.9
+        self.normalize_weights = True
 
         self.modules_in_channels = {}  # type: Dict[Scope, int]
         self.modules_out_channels = {}  # type: Dict[Scope, int]
@@ -113,6 +114,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._scheduler = scheduler_cls(self, params)
 
         if self.weight_importance == 'legr':
+            self.normalize_weights = False
             # Wrapping model for parallelization
             distributed_wrapping_init_args = config.get_extra_struct(DistributedCallbacksArgs)
             target_model = distributed_wrapping_init_args.wrap_model(target_model)
@@ -190,8 +192,8 @@ class FilterPruningController(BasePruningAlgoController):
 
         # 3. Init pruning quotas
         for cluster in self.pruned_module_groups_info.get_all_clusters():
-            self.pruning_quotas[cluster.id] = floor(self.modules_out_channels[cluster.nodes[0].module_scope] \
-                                              * self.pruning_quota)
+            self.pruning_quotas[cluster.id] = np.floor(self.modules_out_channels[cluster.nodes[0].module_scope]
+                                                       * self.pruning_quota)
 
     def flops_count_init(self) -> None:
         def get_in_out_shapes_hook(in_shapes_dict_to_save: dict, out_shapes_dict_to_save: dict):
@@ -514,9 +516,9 @@ class FilterPruningController(BasePruningAlgoController):
             cumulative_filters_importance = torch.zeros(filters_num[0]).to(device)
             # Calculate cumulative importance for all filters in this group
             for minfo in cluster.nodes:
-                # TODO: check why here normalization is needed (in LEGR case normalization shouldn't be done)
-                # normalized_weight = self.weights_normalizer(minfo.module.weight)
                 weight = minfo.module.weight
+                if self.normalize_weights:
+                    weight = self.weights_normalizer(weight)
                 filters_importance = self.filter_importance(weight,
                                                             minfo.module.target_weight_dim_for_compression)
                 scaled_importance = self.ranking_coeffs[minfo.module_scope][0] * filters_importance + \

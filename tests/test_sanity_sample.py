@@ -463,11 +463,11 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
             mocker.patch("examples.classification.staged_quantization_worker.validate")
             import examples.classification.staged_quantization_worker as staged_worker
             mocked_printing = mocker.patch('examples.classification.staged_quantization_worker.print_statistics')
-            staged_worker.validate.return_value = (0, 0)
+            staged_worker.validate.return_value = (0, 0, 0)
         else:
             mocker.patch("examples.classification.main.train_epoch")
             mocker.patch("examples.classification.main.validate")
-            sample.validate.return_value = (0, 0)
+            sample.validate.return_value = (0, 0, 0)
     elif config["sample_type"] == "semantic_segmentation":
         import examples.semantic_segmentation.main as sample
         mocked_printing = mocker.patch('examples.semantic_segmentation.main.print_statistics')

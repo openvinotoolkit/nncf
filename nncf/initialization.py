@@ -225,9 +225,11 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                train_loader: torch.utils.data.DataLoader = None,
                                criterion: _Loss = None,
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
-                               train_steps_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module, torch.optim.Optimizer,
-                                                         'CompressionAlgorithmController', Optional[int]], type(None)] = None,
-                               validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
+                               train_steps_fn: Callable[[torch.utils.data.DataLoader, torch.nn.Module,
+                                                         torch.optim.Optimizer, 'CompressionAlgorithmController',
+                                                         Optional[int]], type(None)] = None,
+                               validate_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader],
+                                                     Tuple[float, float, float]] = None,
                                val_loader: torch.utils.data.DataLoader = None,
                                device: str = None,
                                distributed_callbacks: Tuple[Callable, Callable] = None,
@@ -262,7 +264,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
         if not val_loader:
             val_loader = init_loader
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=val_loader,
-                                                                   eval_fn=validate_fn,
+                                                                   eval_fn=lambda *x: validate_fn(*x)[1],
                                                                    nncf_config=nncf_config)])
 
     if distributed_callbacks is None:

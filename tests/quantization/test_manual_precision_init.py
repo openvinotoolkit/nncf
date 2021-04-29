@@ -203,7 +203,7 @@ def test_can_resume_with_manual_init(mocker):
     apply_init = mocker.spy(ManualPrecisionInitializer, 'apply_init')
     all_mocks = [get_stats, parse_range_init, run_bn_adapt, apply_init]
 
-    config = register_default_init_args(config, train_loader=create_mock_dataloader(config))
+    config = register_default_init_args(config, init_loader=create_mock_dataloader(config))
 
     model, _ = create_compressed_model_and_algo_for_test(AddTwoConv(), config)
 

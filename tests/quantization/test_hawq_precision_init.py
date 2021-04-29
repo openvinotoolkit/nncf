@@ -569,7 +569,7 @@ def precision_init_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     model.eval()
     criterion = torch.nn.MSELoss().cuda(config.gpu)
     config = register_default_init_args(config, data_loader, criterion=criterion,
-                                        validate_fn=lambda *x: 0, val_loader=data_loader)
+                                        validate_fn=lambda *x: (0, 0, 0), val_loader=data_loader)
     quant_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     quant_model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, quant_model)
