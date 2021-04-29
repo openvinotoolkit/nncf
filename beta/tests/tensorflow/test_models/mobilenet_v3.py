@@ -12,7 +12,11 @@
 """
 
 from beta.examples.tensorflow.common.models import MobileNetV3Small as mobilenet_v3_small
+from beta.examples.tensorflow.common.models import MobileNetV3Large as mobilenet_v3_large
 
 
 def MobileNetV3Small(input_shape=None):
     return mobilenet_v3_small(input_shape)
+
+def MobileNetV3Large(input_shape=None):
+    return mobilenet_v3_large(input_shape)
