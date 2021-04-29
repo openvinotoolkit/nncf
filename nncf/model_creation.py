@@ -147,6 +147,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     if is_dist_avail_and_initialized():
         try:
             barrier()
+        # Exception can be raised during running barrier
+        # if the backend not in the supported list https://pytorch.org/docs/stable/distributed.html
         except RuntimeError as err:
             logger.warning(err)
             logger.warning(
