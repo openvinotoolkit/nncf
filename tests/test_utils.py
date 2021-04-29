@@ -2,13 +2,12 @@ import pytest
 from torch import nn
 
 from nncf.utils import training_mode_switcher
+from nncf.initialization import DataLoaderBNAdaptationRunner
 
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, MockModel
 from tests.quantization.test_saturation_issue_export import DepthWiseConvTestModel, EightConvTestModel
 # pylint:disable=unused-import
 from tests.modules.test_rnn import _seed
-
-from nncf.initialization import DataLoaderBNAdaptationRunner
 
 
 def save_model_training_state(module, model_state):
@@ -42,6 +41,7 @@ def test_training_mode_switcher(_seed, model):
     save_model_training_state(model, saved_model_state)
 
     with training_mode_switcher(model, True):
+        # pylint: disable=unnecessary-pass
         pass
 
     compare_saved_model_state_and_current_model_state(model, saved_model_state)
@@ -49,7 +49,7 @@ def test_training_mode_switcher(_seed, model):
 
 @pytest.mark.parametrize('model', [BasicConvTestModel(), TwoConvTestModel(), MockModel(),
                                    DepthWiseConvTestModel(), EightConvTestModel()])
-def test_bn_training_state_switcher(model):
+def test_bn_training_state_switcher(_seed, model):
     runner = DataLoaderBNAdaptationRunner(model, 'cuda', 0)
     saved_model_state = {}
 
@@ -67,6 +67,7 @@ def test_bn_training_state_switcher(model):
 
     save_model_training_state(model, saved_model_state)
 
+    # pylint: disable=protected-access
     with runner._bn_training_state_switcher():
         check_were_only_bn_training_state_changed(model, saved_model_state)
 
