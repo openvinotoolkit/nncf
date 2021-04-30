@@ -12,7 +12,7 @@
 """
 from nncf.utils import manual_seed
 
-from nncf.pruning.filter_pruning.global_ranking.RL_evolution import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
+from nncf.pruning.filter_pruning.global_ranking.evolutionary_optimization import EvolutionOptimizer, LeGREvolutionEnv, LeGRPruner
 from nncf.common.utils.logger import logger as nncf_logger
 import time
 

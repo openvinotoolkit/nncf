@@ -51,7 +51,7 @@ from nncf.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS
 from nncf.pruning.filter_pruning.functions import calculate_binary_mask
 from nncf.pruning.filter_pruning.functions import tensor_l2_normalizer
-from nncf.pruning.filter_pruning.global_ranking.LeGR import LeGR
+from nncf.pruning.filter_pruning.global_ranking.legr import LeGR
 from nncf.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.structures import LeGRInitArgs, DistributedCallbacksArgs
