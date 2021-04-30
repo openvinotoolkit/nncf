@@ -27,6 +27,7 @@ from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward
 from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.layer_utils import _NNCFModuleMixin
+from nncf.layer_utils import CompressionParameter
 from contextlib import contextmanager
 
 
@@ -393,13 +394,13 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def save_module_training_state(module: torch.nn.Module, saved_state: Dict[torch.nn.Module, bool]) -> None:
+def save_module_training_state(module: Module, saved_state: Dict[Module, bool]) -> None:
     for ch in module.children():
         saved_state[ch] = ch.training
         save_module_training_state(ch, saved_state)
 
 
-def load_module_training_state(module: torch.nn.Module, state: Dict[torch.nn.Module, bool], strict=False) -> None:
+def load_module_training_state(module: Module, state: Dict[Module, bool], strict=False) -> None:
     for ch in module.children():
         try:
             ch.train(state[ch])
@@ -413,7 +414,7 @@ def load_module_training_state(module: torch.nn.Module, state: Dict[torch.nn.Mod
 
 
 @contextmanager
-def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
+def training_mode_switcher(model: Module, is_training: bool = True):
     saved_state = {}
     save_module_training_state(model, saved_state)
     model.train(is_training)
@@ -421,6 +422,13 @@ def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
         yield
     finally:
         load_module_training_state(model, saved_state)
+
+
+def set_compression_parameters_requires_grad_true(module: Module):
+    for param in module.parameters():
+        if isinstance(param, CompressionParameter):
+            if torch.is_floating_point(param):
+                param.requires_grad_(True)
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):

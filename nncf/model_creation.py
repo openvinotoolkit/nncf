@@ -26,6 +26,7 @@ from nncf.graph.graph_builder import GraphBuilder
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import is_main_process
 from nncf.utils import is_dist_avail_and_initialized
+from nncf.utils import set_compression_parameters_requires_grad_true
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 
 from nncf.common.utils.logger import logger
@@ -142,6 +143,9 @@ def create_compressed_model(model: Module, config: NNCFConfig,
 
             graph = compressed_graph_builder.build_graph(compressed_model, compressed_model.get_tracing_context())
             graph.visualize_graph(osp.join(config.get("log_dir", "."), "compressed_graph.dot"))
+
+    # To be sure that all NNCF parameters are in trainable state
+    set_compression_parameters_requires_grad_true(compressed_model)
 
     # Synchronize all processes if run in distributed mode
     if is_dist_avail_and_initialized():
