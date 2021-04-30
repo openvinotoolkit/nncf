@@ -372,11 +372,10 @@ def load_module_training_state(module: torch.nn.Module, state: Dict[torch.nn.Mod
         try:
             ch.train(state[ch])
         except KeyError as err:
-            # if the modules name changed during forward as LSTM block in our examples
+            # if the modules name changed during forward  (e.g. LSTM block in our examples)
             if strict:
                 nncf_logger.error(err)
                 return
-            pass
         finally:
             load_module_training_state(ch, state)
 
