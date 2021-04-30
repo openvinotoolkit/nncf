@@ -99,20 +99,20 @@ def get_dataset_builders(config, num_devices, one_hot=True):
 def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled.')
     if tf.io.gfile.isdir(ckpt_path):
-        patch_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info('Latest checkpoint: {}'.format(patch_to_checkpoint))
+        path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
+        logger.info('Latest checkpoint: {}'.format(path_to_checkpoint))
     else:
-        patch_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + '.index') else None
-        logger.info('Provided checkpoint: {}'.format(patch_to_checkpoint))
+        path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + '.index') else None
+        logger.info('Provided checkpoint: {}'.format(path_to_checkpoint))
 
-    if not patch_to_checkpoint:
+    if not path_to_checkpoint:
         logger.info('No checkpoint detected.')
         return 0
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'
-                .format(patch_to_checkpoint))
+                .format(path_to_checkpoint))
 
-    status = checkpoint.restore(patch_to_checkpoint)
+    status = checkpoint.restore(path_to_checkpoint)
     status.expect_partial()
     logger.info('Completed loading from checkpoint.')
     return None

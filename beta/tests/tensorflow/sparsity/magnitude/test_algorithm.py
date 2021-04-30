@@ -70,7 +70,7 @@ def test_compression_controller_state():
     assert compression_ctrl.get_state()['scheduler_state'] == {'current_step': 100, 'current_epoch': 5}
 
     # Test load state
-    new_state = {'scheduler_state': {'current_step': 500, 'current_epoch': 10}, 'loss_state': None}
+    new_state = {'scheduler_state': {'current_step': 500, 'current_epoch': 10}, 'loss_state': {}}
     compression_ctrl.load_state(new_state)
     assert compression_ctrl.scheduler.current_step == 500
     assert compression_ctrl.scheduler.current_epoch == 10

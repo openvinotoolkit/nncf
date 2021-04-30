@@ -123,7 +123,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_type = params.get('schedule', 'polynomial')
 
         if scheduler_type == 'adaptive':
-            raise TypeError('Magnitude sparsity algorithm do not support adaptive scheduler')
+            raise ValueError('Magnitude sparsity algorithm do not support adaptive scheduler')
 
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)

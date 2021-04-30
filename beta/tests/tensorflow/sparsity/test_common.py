@@ -49,7 +49,7 @@ def test_can_not_create_rb_algo__with_adaptive_scheduler():
 def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'magnitude_sparsity', 'params': {'schedule': 'adaptive'}}
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 

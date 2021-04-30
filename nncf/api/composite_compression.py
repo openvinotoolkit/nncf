@@ -249,7 +249,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         """
         composite_state = []
         for child_ctrl in self.child_ctrls:
-            composite_state .append(child_ctrl.get_state())
+            composite_state.append(child_ctrl.get_state())
         return composite_state
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:

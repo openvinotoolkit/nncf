@@ -76,7 +76,7 @@ class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.tr
         """
         Callback to serialize the object by tf.train.experimental.PythonState.
 
-        :return: State of the compression scheduler.
+        :return: State of the compression controller.
         """
         string_value = json.dumps(self.get_state())
         return string_value

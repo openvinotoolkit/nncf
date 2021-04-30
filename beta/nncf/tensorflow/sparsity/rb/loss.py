@@ -74,7 +74,7 @@ class SparseLoss(CompressionLoss):
 
     def get_state(self) -> Dict[str, object]:
         return {
-            'target':  float(tf.keras.backend.eval(self.target)),
+            'target': float(tf.keras.backend.eval(self.target)),
             'disabled': bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
             'p': self.p
         }

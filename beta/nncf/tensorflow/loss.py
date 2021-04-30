@@ -30,4 +30,4 @@ class TFZeroCompressionLoss(CompressionLoss):
         pass
 
     def get_state(self) -> Dict[str, object]:
-        pass
+        return {}

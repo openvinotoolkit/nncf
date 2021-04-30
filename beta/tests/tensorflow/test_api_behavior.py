@@ -16,6 +16,6 @@ from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 
 def test_tf_zero_loss_state():
     loss = TFZeroCompressionLoss()
-    assert loss.get_state() is None
-    loss.load_state(None)
-    assert loss.get_state() is None
+    assert loss.get_state() == {}
+    loss.load_state({})
+    assert loss.get_state() == {}
