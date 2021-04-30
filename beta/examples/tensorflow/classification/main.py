@@ -20,7 +20,6 @@ import tensorflow_addons as tfa
 
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.classification.datasets.builder import DatasetBuilder
@@ -221,7 +220,7 @@ def run(config):
             **validation_kwargs)
 
     logger.info('evaluation...')
-    print_statistics(compression_ctrl.statistics())
+    logger.info(compression_ctrl.statistics().as_str())
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,

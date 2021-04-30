@@ -238,32 +238,6 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         mask = self._get_mask(minfo)
         return mask.shape
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        table = Texttable()
-        header = ["Name", "Weight's Shape", "Mask Shape", "Mask zero %", "PR", "Filter PR"]
-        data = [header]
-
-        for minfo in self.pruned_module_groups_info.get_all_nodes():
-            drow = {h: 0 for h in header}
-            drow["Name"] = str(minfo.module_scope)
-            drow["Weight's Shape"] = list(minfo.module.weight.size())
-
-            drow["Mask Shape"] = list(self.mask_shape(minfo))
-
-            drow["Mask zero %"] = self.pruning_rate_for_mask(minfo) * 100
-
-            drow["PR"] = self.pruning_rate_for_weight(minfo)
-
-            drow["Filter PR"] = self.pruning_rate_for_filters(minfo)
-
-            row = [drow[h] for h in header]
-            data.append(row)
-        table.add_rows(data)
-
-        stats["pruning_statistic_by_module"] = table
-        return stats
-
     def get_stats_for_pruned_modules(self):
         """
         Return dict with information about pruned modules. Keys in dict is module names, values is dicts with next keys:

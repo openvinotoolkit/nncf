@@ -14,14 +14,14 @@
 from collections import namedtuple
 from typing import List
 
-from texttable import Texttable
-
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
+from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -142,31 +142,26 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
         return 1 - nonzero / max(count, 1)
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        table = Texttable()
-        header = ["Name", "Weight's Shape", "SR", "% weights"]
-        data = [header]
-
+    def statistics(self, quickly_collected_only: bool = False) -> SparsifiedModelStatistics:
+        sparsified_layers_summary = []
         sparsified_weights_count = self.sparsified_weights_count
 
         for minfo in self.sparsified_module_info:
-            drow = {h: 0 for h in header}
-            drow["Name"] = minfo.module_name
-            drow["Weight's Shape"] = list(minfo.module.weight.size())
             mask = minfo.operand.apply_binary_mask(minfo.module.weight)
             nonzero = mask.nonzero().size(0)
-            drow["SR"] = 1.0 - nonzero / max(mask.view(-1).size(0), 1)
-            drow["% weights"] = (mask.view(-1).size(0) / sparsified_weights_count) * 100
-            row = [drow[h] for h in header]
-            data.append(row)
-        table.add_rows(data)
+            sparsity_level = 1.0 - nonzero / max(mask.view(-1).size(0), 1)
+            weight_percentage = (mask.view(-1).size(0) / sparsified_weights_count) * 100
+            weight_shape = list(minfo.module.weight.size())
 
-        stats["sparsity_statistic_by_module"] = table
-        stats["sparsity_rate_for_sparsified_modules"] = self.sparsity_rate_for_sparsified_modules()
-        stats["sparsity_rate_for_model"] = self.sparsity_rate_for_model
+            sparsified_layers_summary.append(
+                SparsifiedLayerSummary(minfo.module_name, weight_shape, sparsity_level, weight_percentage)
+            )
 
-        return stats
+        model_statistics = SparsifiedModelStatistics(self.sparsity_rate_for_model,
+                                                     self.sparsity_rate_for_sparsified_modules(),
+                                                     sparsified_layers_summary)
+
+        return model_statistics
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED

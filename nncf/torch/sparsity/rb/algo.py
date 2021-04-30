@@ -23,6 +23,7 @@ from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityA
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.statistics import RBSparsityStatistics
 from nncf.torch.utils import get_world_size
 
 
@@ -123,8 +124,14 @@ class RBSparsityController(BaseSparsityAlgoController):
         return ncor_values / nvalues
 
     def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        stats['target_sparsity_rate'] = self.loss.target_sparsity_rate
+        model_statistics = super().statistics(quickly_collected_only)
+
+        target_level = self.loss.target_sparsity_rate
+        # TODO(andrey-churkin): Check that `mean_sparse_prob` is calculated correctly
+        mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
+
+        masks_consistency = 1.0
         if self._distributed and self._check_sparsity_masks:
-            stats['masks_consistents'] = self._check_distributed_masks()
-        return stats
+            masks_consistency = self._check_distributed_masks()
+
+        return RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)

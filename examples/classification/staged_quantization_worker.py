@@ -30,7 +30,7 @@ from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
+    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from nncf.torch.binarization.algo import BinarizationController
 from nncf.api.compression import CompressionStage
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
@@ -202,7 +202,7 @@ def staged_quantization_main_worker(current_gpu, config):
         cudnn.benchmark = True
 
     if is_main_process():
-        print_statistics(compression_ctrl.statistics())
+        logger.info(compression_ctrl.statistics().as_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -249,7 +249,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
         # portion of enabled quantizers)
         if is_main_process():
-            print_statistics(stats)
+            logger.info(stats.as_str())
 
         optimizer_scheduler.epoch_step()
 
@@ -363,7 +363,7 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
+            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).as_dict().items():
                 if isinstance(stat_value, (int, float)):
                     config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 

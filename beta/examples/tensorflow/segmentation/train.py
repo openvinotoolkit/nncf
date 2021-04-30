@@ -19,7 +19,6 @@ import tensorflow as tf
 import numpy as np
 
 from beta.nncf import create_compressed_model
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.logger import logger
@@ -196,9 +195,9 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
                 timer.tic()
 
         statistics = compression_ctrl.statistics()
-        print_statistics(statistics)
+        logger.info(statistics.as_str())
         statistics = {'compression/statistics/' + key: value
-                      for key, value in statistics.items()
+                      for key, value in statistics.as_dict().items()
                       if isinstance(value, (int, float))}
         compression_summary_writer(metrics=statistics,
                                    step=optimizer.iterations.numpy())
@@ -266,7 +265,7 @@ def run_train(config):
           epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, config.print_freq)
 
     logger.info('Compression statistics')
-    print_statistics(compression_ctrl.statistics())
+    logger.info(compression_ctrl.statistics().as_str())
 
 
 def main(argv):

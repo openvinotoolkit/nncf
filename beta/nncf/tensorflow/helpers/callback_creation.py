@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -32,7 +32,7 @@ def create_compression_callbacks(compression_ctrl, log_tensorboard=True, log_tex
                 else:
                     statistics_callback_cls = PruningStatisticsCallback
 
-                callbacks += [statistics_callback_cls(ctrl.raw_statistics,
+                callbacks += [statistics_callback_cls(ctrl.statistics,
                                                       log_tensorboard=log_tensorboard,
                                                       log_text=log_text,
                                                       log_dir=log_dir)]

@@ -11,7 +11,6 @@
  limitations under the License.
 """
 
-from texttable import Texttable
 from typing import List
 
 import tensorflow as tf
@@ -22,37 +21,6 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFRemovalCommand
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-
-
-def convert_raw_to_printable(raw_statistics, prefix, header):
-    statistics = {}
-    statistics.update(raw_statistics)
-
-    table = Texttable()
-    data = [header]
-
-    statistic_by_layer = prefix + '_statistic_by_layer'
-    for info in raw_statistics[statistic_by_layer]:
-        row = [info[h] for h in header]
-        data.append(row)
-    table.add_rows(data)
-    statistics[statistic_by_layer] = table
-    return statistics
-
-
-def prepare_for_tensorboard(raw_sparsity_statistics, prefix, rate_abbreviation):
-    statistics = {}
-    statistic_by_layer = prefix + '_statistic_by_layer'
-    base_prefix = '2.compression/statistics/'
-    detailed_prefix = '3.compression_details/statistics/'
-    for key, value in raw_sparsity_statistics.items():
-        if key == statistic_by_layer:
-            for v in value:
-                statistics[detailed_prefix + v['Name'] + '/' + prefix] = v[rate_abbreviation]
-        else:
-            statistics[base_prefix + key] = value
-
-    return statistics
 
 
 def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:

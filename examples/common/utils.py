@@ -31,7 +31,6 @@ from examples.common.distributed import configure_distributed
 from examples.common.execution import ExecutionMode, get_device
 from examples.common.sample_config import SampleConfig
 from torch.utils.tensorboard import SummaryWriter
-from texttable import Texttable
 import mlflow
 import torch
 
@@ -240,15 +239,6 @@ def is_staged_quantization(config):
     if algo_type == "quantization" and compression_config.get("params", {}):
         return True
     return False
-
-
-def print_statistics(stats, logger=default_logger):
-    for key, val in stats.items():
-        if isinstance(val, Texttable):
-            logger.info("{}:".format(key))
-            logger.info(val.draw())
-        else:
-            logger.info("{}: {}".format(key, val))
 
 
 def is_pretrained_model_requested(config: SampleConfig) -> bool:

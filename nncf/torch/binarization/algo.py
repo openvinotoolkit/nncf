@@ -31,6 +31,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.common.compression import StubStatistics
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCFConv2d
@@ -139,6 +140,9 @@ class BinarizationController(QuantizationControllerBase):
 
     def compression_stage(self) -> CompressionStage:
         return self.scheduler.compression_stage()
+
+    def statistics(self, quickly_collected_only: bool = False) -> StubStatistics:
+        return StubStatistics()
 
     def _compute_and_display_flops_binarization_rate(self):
         net = self._model

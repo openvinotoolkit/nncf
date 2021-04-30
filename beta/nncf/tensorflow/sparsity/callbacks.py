@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,11 +11,12 @@
  limitations under the License.
 """
 
+from typing import Union
+
 import tensorflow as tf
 
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics, RBSparsityStatistics
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
 
 
 class UpdateMask(tf.keras.callbacks.Callback):
@@ -32,15 +33,21 @@ class UpdateMask(tf.keras.callbacks.Callback):
 
 class SparsityStatisticsCallback(StatisticsCallback):
     """
-    Callback for logging sparsity compression statistics to tensorboard and stdout
+    Callback for logging sparsity compression statistics to tensorboard and stdout.
     """
 
-    def _prepare_for_tensorboard(self, raw_statistics: dict):
-        prefix = 'sparsity'
-        rate_abbreviation = 'SR'
-        return prepare_for_tensorboard(raw_statistics, prefix, rate_abbreviation)
+    def _prepare_for_tensorboard(self, statistics: Union[MagnitudeSparsityStatistics, RBSparsityStatistics]):
+        base_prefix = '2.compression/statistics'
+        detailed_prefix = '3.compression_details/statistics'
 
-    def _convert_raw_to_printable(self, raw_statistics: dict):
-        prefix = 'sparsity'
-        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        return convert_raw_to_printable(raw_statistics, prefix, header)
+        ms = statistics.model_statistics  # type: SparsifiedModelStatistics
+        tensorboard_statistics = {
+            f'{base_prefix}/sparsity_level': ms.sparsity_level,
+            f'{base_prefix}/sparsity_level_for_layers': ms.sparsity_level_for_layers,
+        }
+
+        for ls in ms.sparsified_layers_summary:
+            layer_name, sparsity_level = ls.name, ls.sparsity_level
+            tensorboard_statistics[f'{detailed_prefix}/{layer_name}/sparsity_level'] = sparsity_level
+
+        return tensorboard_statistics

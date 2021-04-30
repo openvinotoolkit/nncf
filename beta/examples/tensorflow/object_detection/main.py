@@ -19,7 +19,6 @@ import tensorflow as tf
 import numpy as np
 
 from beta.nncf import create_compressed_model
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
@@ -210,9 +209,9 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
         logger.info('Validation metric = {}'.format(test_metric_result))
 
         statistics = compression_ctrl.statistics()
-        print_statistics(statistics)
+        logger.info(statistics.as_str())
         statistics = {'compression/statistics/' + key: value
-                      for key, value in statistics.items()
+                      for key, value in statistics.as_dict().items()
                       if isinstance(value, (int, float))}
         compression_summary_writer(metrics=statistics,
                                    step=optimizer.iterations.numpy())
@@ -310,7 +309,7 @@ def run(config):
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq)
 
-    print_statistics(compression_ctrl.statistics())
+    logger.info(compression_ctrl.statistics().as_str())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 

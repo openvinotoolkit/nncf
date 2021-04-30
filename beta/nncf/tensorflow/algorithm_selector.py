@@ -16,6 +16,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.logger import logger
 from nncf.common.utils.registry import Registry
+from nncf.common.compression import StubStatistics
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
@@ -45,6 +46,9 @@ class NoCompressionAlgorithmController(TFCompressionAlgorithmController):
     @property
     def scheduler(self) -> StubCompressionScheduler:
         return self._scheduler
+
+    def statistics(self, quickly_collected_only: bool = False) -> StubStatistics:
+        return StubStatistics()
 
 
 def get_compression_algorithm_builder(config):

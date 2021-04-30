@@ -288,7 +288,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 policy_loss = agent.get_policy_loss()
                 delta = agent.get_delta()
 
-                bit_stats_tt = env.qctrl.statistics()['Bitwidth distribution:']
+                bit_stats_tt = env.qctrl.statistics().bitwidth_distribution_statistics.as_str()
                 bit_stats_tt.set_max_width(100)
                 bit_stats_df = pd.read_csv(
                     StringIO(re.sub(

@@ -413,15 +413,9 @@ index 0000000..d6b3887
 +        self.compression_ctrl.scheduler.epoch_step()
 +
 +    def before_run(self, runner):
-+        runner.logger.info(get_printable_stats(self.compression_ctrl.statistics()))
++        runner.logger.info(self.compression_ctrl.statistics().as_str())
 +
 +
-+def get_printable_stats(stats):
-+    for key, val in stats.items():
-+        if isinstance(val, Texttable):
-+            return '{}\n{}'.format(key, val.draw())
-+        else:
-+            return '{}: {}'.format(key, val)
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py
 new file mode 100644
 index 0000000..c903a55

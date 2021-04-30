@@ -16,7 +16,6 @@ import sys
 import tensorflow as tf
 
 from beta.nncf import create_compressed_model
-from beta.nncf.helpers.utils import print_statistics
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
@@ -199,8 +198,7 @@ def run_evaluation(config, eval_timeout=None):
         if config.ckpt_path:
             load_checkpoint(checkpoint, config.ckpt_path)
 
-        statistics = compression_ctrl.statistics()
-        print_statistics(statistics)
+        logger.info(compression_ctrl.statistics().as_str())
         metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
         eval_metric.reset_states()
         logger.info('Test metric = {}'.format(metric_result))

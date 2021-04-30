@@ -16,6 +16,10 @@ from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
+from nncf.common.sparsity.statistics import LayerThreshold
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -183,8 +187,7 @@ class MagnitudeSparsityController(BaseSparsityController):
                             [-1]))
         return all_weights
 
-    def raw_statistics(self):
-        raw_sparsity_statistics = {}
+    def statistics(self, quickly_collected_only: bool = False) -> MagnitudeSparsityStatistics:
         sparsity_levels = []
         mask_names = []
         weights_shapes = []
@@ -214,24 +217,23 @@ class MagnitudeSparsityController(BaseSparsityController):
         model_weights_number = count_params(self._model.weights) - total_weights_number - total_bkup_weights_number
         sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
 
-        raw_sparsity_statistics.update({
-            'sparsity_rate_for_sparsified_modules': sparsity_rate_for_sparsified_modules,
-            'sparsity_rate_for_model': sparsity_rate_for_model,
-            'sparsity_threshold': self._threshold
-        })
-
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
         weights_percentages = [weights_number / total_weights_number * 100
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
-        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
-                'Name': mask_name,
-                'Weight\'s Shape': weights_shape,
-                'SR': sparsity_level,
-                '% weights': weights_percentage
-            })
 
-        return raw_sparsity_statistics
+        sparsified_layers_summary = []
+        threshold_statistics = []
+        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
+            sparsified_layers_summary.append(
+                SparsifiedLayerSummary(mask_name, weights_shape, sparsity_level, weights_percentage)
+            )
+
+            threshold_statistics.append(LayerThreshold(mask_name, self._threshold))
+
+        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
+                                                     sparsity_rate_for_sparsified_modules,
+                                                     sparsified_layers_summary)
+
+        return MagnitudeSparsityStatistics(model_statistics, threshold_statistics)

@@ -33,7 +33,7 @@ from examples.common.execution import prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionStage
 from nncf.torch.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
-from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
+from examples.common.utils import get_name, make_additional_checkpoints, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
     log_common_mlflow_params, SafeMLFLow, configure_device
 from examples.common.utils import write_metrics
@@ -190,7 +190,7 @@ def main_worker(current_gpu, config):
         return
 
     if is_main_process():
-        print_statistics(compression_ctrl.statistics())
+        logger.info(compression_ctrl.statistics().as_str())
 
     if config.mode.lower() == 'test':
         with torch.no_grad():
@@ -331,7 +331,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
             if is_main_process():
-                print_statistics(compression_ctrl.statistics())
+                logger.info(compression_ctrl.statistics().as_str())
 
         if (iteration + 1) % epoch_size == 0:
             compression_stage = compression_ctrl.compression_stage()

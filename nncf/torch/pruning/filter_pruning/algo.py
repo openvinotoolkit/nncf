@@ -52,6 +52,9 @@ from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.torch.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.torch.pruning.utils import init_output_masks_in_graph
 from nncf.torch.utils import get_filters_num
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
+from nncf.common.pruning.statistics import FilterPruningStatistics
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -120,12 +123,22 @@ class FilterPruningController(BasePruningAlgoController):
     def _get_mask(minfo: PrunedModuleInfo):
         return minfo.operand.binary_filter_pruning_mask
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        stats['pruning_rate'] = self._pruning_rate
-        stats['FLOPS pruning level'] = 1 - self.current_flops / self.full_flops
-        stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"
-        return stats
+    def statistics(self, quickly_collected_only: bool = False) -> FilterPruningStatistics:
+        pruned_layers_summary = []
+        for minfo in self.pruned_module_groups_info.get_all_nodes():
+            pruned_layers_summary.append(
+                PrunedLayerSummary(
+                    str(minfo.module_scope),
+                    list(minfo.module.weight.size()),
+                    list(self.mask_shape(minfo)),
+                    self.pruning_rate_for_weight(minfo),
+                    self.pruning_rate_for_mask(minfo),
+                    self.pruning_rate_for_filters(minfo)
+                )
+            )
+
+        model_statistics = PrunedModelStatistics(self._pruning_rate, pruned_layers_summary)
+        return FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)
 
     @property
     def pruning_rate(self) -> float:

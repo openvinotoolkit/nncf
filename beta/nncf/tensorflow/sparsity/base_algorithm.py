@@ -16,7 +16,6 @@ from abc import abstractmethod
 from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 
 SPARSITY_LAYERS = {
     'Conv1D': {'weight_attr_name': 'kernel'},
@@ -56,14 +55,3 @@ class BaseSparsityController(TFCompressionAlgorithmController, SparsityControlle
 
     def strip_model(self, model):
         return strip_model_from_masks(model, self._op_names)
-
-    def statistics(self, quickly_collected_only: bool = False):
-        stats = super().statistics(quickly_collected_only)
-        raw_sparsity_statistics = self.raw_statistics()
-        header = ['Name', 'Weight\'s Shape', 'SR', '% weights']
-        stats.update(convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header))
-        return stats
-
-    @abstractmethod
-    def raw_statistics(self):
-        pass

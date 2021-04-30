@@ -260,7 +260,7 @@ index 2bd4e90f..2b1a60e8 100644
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
++                        for key, value in compression_stats.as_dict().items():
 +                            if isinstance(value, (int, float)):
 +                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
 +                                                     global_step)
@@ -606,7 +606,7 @@ index c1db6fa3..ca44bd1c 100644
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
++                        for key, value in compression_stats.as_dict().items():
 +                            if isinstance(value, (int, float)):
 +                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
 +                                                     global_step)
@@ -1302,7 +1302,7 @@ index 067f793d..f9ccb762 100644
 +                        if self.compression_ctrl is not None:
 +                            logs["compression_loss"] = self.compression_ctrl.loss()
 +                            compression_stats = self.compression_ctrl.statistics()
-+                            for key, value in compression_stats.items():
++                            for key, value in compression_stats.as_dict().items():
 +                                if isinstance(value, (int, float)):
 +                                    logs["compression/statistics/{0}".format(key)] = value
 +

@@ -36,7 +36,6 @@ from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
 from nncf.common.graph import NNCFNode
@@ -47,6 +46,8 @@ from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.statistics import PrunedLayerSummary
+from nncf.common.pruning.statistics import PrunedModelStatistics
 
 
 class PrunedLayerInfo:
@@ -274,14 +275,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def statistics(self, quickly_collected_only=False) -> Dict[str, object]:
-        raw_pruning_statistics = self.raw_statistics()
-        prefix = 'pruning'
-        header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
-        return convert_raw_to_printable(raw_pruning_statistics, prefix, header)
-
-    def raw_statistics(self) -> Dict[str, object]:
-        raw_pruning_statistics = {}
+    def statistics(self, quickly_collected_only: bool = False) -> PrunedModelStatistics:
         pruning_rates = []
         mask_names = []
         weights_shapes = []
@@ -305,23 +299,18 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
                         pruned_filters_number = filters_number - tf.reduce_sum(filter_mask)
                         pruning_rates.append(pruned_filters_number / filters_number)
 
-        raw_pruning_statistics.update({
-            'pruning_rate': self.pruning_rate
-        })
-
         pruning_rates = tf.keras.backend.batch_get_value(pruning_rates)
-
         mask_pruning = list(zip(mask_names, weights_shapes, mask_shapes, pruning_rates))
-        raw_pruning_statistics['pruning_statistic_by_layer'] = []
-        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
-            raw_pruning_statistics['pruning_statistic_by_layer'].append({
-                'Name': mask_name,
-                'Weight\'s Shape': weights_shape,
-                'Mask Shape': mask_shape,
-                'PR': pruning_rate
-            })
 
-        return raw_pruning_statistics
+        pruned_layers_summary = []
+        for mask_name, weights_shape, mask_shape, pruning_rate in mask_pruning:
+            # TODO(andrey-churkin): Should be calculated
+            weight_pruning_level = -1
+            mask_pruning_level = -1
+            pruned_layers_summary.append(PrunedLayerSummary(mask_name, weights_shape, mask_shape,
+                                                            weight_pruning_level, mask_pruning_level, pruning_rate))
+
+        return PrunedModelStatistics(self.pruning_rate, pruned_layers_summary)
 
     def strip_model(self, model: tf.keras.Model) -> tf.keras.Model:
         return strip_model_from_masks(model, self._op_names)

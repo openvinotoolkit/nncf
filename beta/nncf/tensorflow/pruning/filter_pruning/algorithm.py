@@ -55,6 +55,7 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.pruning.statistics import FilterPruningStatistics
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -131,12 +132,9 @@ class FilterPruningController(BasePruningAlgoController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        stats['pruning_rate'] = self.pruning_rate
-        stats['FLOPS pruning level'] = 1 - self.current_flops / self.full_flops
-        stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"
-        return stats
+    def statistics(self, quickly_collected_only: bool = False) -> FilterPruningStatistics:
+        model_statistics = super().statistics(quickly_collected_only)
+        return FilterPruningStatistics(model_statistics, self.full_flops, self.current_flops)
 
     def freeze(self):
         self.frozen = True

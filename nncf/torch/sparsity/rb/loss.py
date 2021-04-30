@@ -15,7 +15,6 @@ import torch
 
 from nncf.torch.compression_method_api import PTCompressionLoss
 
-
 # Actually in responsible to lean density to target value
 class SparseLoss(PTCompressionLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
@@ -65,11 +64,9 @@ class SparseLoss(PTCompressionLoss):
             raise IndexError("Target is not within range(0,1)")
         return rate
 
-    def statistics(self, quickly_collected_only=False):
-        return {'mean_sparse_prob': 1 - self.mean_sparse_prob}
-
     def set_target_sparsity_loss(self, sparsity_level):
         self.target = 1 - sparsity_level
+
 
 class SparseLossForPerLayerSparsity(SparseLoss):
     def __init__(self, sparse_layers=None, target=1.0, p=0.05):
