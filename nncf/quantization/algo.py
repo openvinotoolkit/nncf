@@ -606,7 +606,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
-        if self.should_init:
+        if is_main_process() and self.should_init:
             stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
                                                                              single_config_quantizer_setup,
                                                                              self._range_init_params)
