@@ -53,6 +53,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
     )
+    parser.addoption(
+        "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -83,3 +86,8 @@ def ov_data_dir(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
+
+
+@pytest.fixture(scope="module")
+def weekly_tests(request):
+    return request.config.getoption("--run-weekly-tests")
