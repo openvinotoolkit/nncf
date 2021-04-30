@@ -12,6 +12,8 @@
 """
 from collections import OrderedDict
 from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
+from typing import Tuple
+from typing import Type
 
 import numpy as np
 import random
@@ -20,6 +22,7 @@ import torch
 from torch import distributed as dist, nn
 from torch.nn import Module
 
+from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
 from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.graph.graph_builder import GraphBuilder
@@ -311,14 +314,40 @@ def maybe_get_iterator(obj):
     return it
 
 
+def to_tuple(lst: List,
+             named_tuple_class: Type = None,
+             named_tuple_fields: List[str] = None) -> Tuple:
+    # Able to produce namedtuples if a corresponding parameter is given
+    if named_tuple_fields is None:
+        return tuple(lst)
+    return named_tuple_class(*lst)
+
+
+def is_tuple(obj) -> bool:
+    return isinstance(obj, tuple)
+
+
+def is_named_tuple(obj) -> bool:
+    return is_tuple(obj) and (obj.__class__ != tuple)
+
+
 def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, memo=None):
     """Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application."""
+    #pylint:disable=too-many-nested-blocks
+    #pylint:disable=too-many-branches
     if memo is None:
         memo = set()
 
-    is_tuple = isinstance(obj, tuple)
-    if is_tuple:
+    named_tuple_class = None
+    named_tuple_fields = None
+    if is_named_tuple(obj):
+        named_tuple_class = obj.__class__
+        #pylint:disable=protected-access
+        named_tuple_fields = obj._fields
+
+    was_tuple = is_tuple(obj)
+    if was_tuple:
         obj = list(obj)
 
     iterator = maybe_get_iterator(obj)
@@ -327,30 +356,34 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         if id(obj) not in memo:
             memo.add(id(obj))
             indices_to_apply_fn_to = set()
-            indices_vs_tuples_to_assign = {}  # type: Dict[Any, list]
+            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
             for idx, value in iterator(obj):
                 next_level_it = maybe_get_iterator(value)
                 if next_level_it is None:
                     if unary_predicate(value):
                         indices_to_apply_fn_to.add(idx)
                 else:
-                    if isinstance(value, tuple):
+                    if is_tuple(value):
                         processed_tuple = objwalk(value, unary_predicate, apply_fn, memo)
-                        indices_vs_tuples_to_assign[idx] = processed_tuple
+                        if is_named_tuple(value):
+                            indices_vs_named_tuple_data[idx] = processed_tuple, value.__class__, value._fields
+                        else:
+                            indices_vs_named_tuple_data[idx] = processed_tuple, None, None
                     else:
                         objwalk(value, unary_predicate, apply_fn)
             for idx in indices_to_apply_fn_to:
                 obj[idx] = apply_fn(obj[idx])
-            for idx, tpl in indices_vs_tuples_to_assign.items():
-                obj[idx] = tuple(tpl)
+            for idx, tpl_data in indices_vs_named_tuple_data.items():
+                tpl, n_tpl_class, n_tpl_fields = tpl_data
+                obj[idx] = to_tuple(tpl, n_tpl_class, n_tpl_fields)
 
             memo.remove(id(obj))
     else:
         if unary_predicate(obj):
             return apply_fn(obj)
 
-    if is_tuple:
-        return tuple(obj)
+    if was_tuple:
+        return to_tuple(obj, named_tuple_class, named_tuple_fields)
 
     return obj
 
@@ -360,14 +393,34 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
+def save_module_training_state(module: torch.nn.Module, saved_state: Dict[torch.nn.Module, bool]) -> None:
+    for ch in module.children():
+        saved_state[ch] = ch.training
+        save_module_training_state(ch, saved_state)
+
+
+def load_module_training_state(module: torch.nn.Module, state: Dict[torch.nn.Module, bool], strict=False) -> None:
+    for ch in module.children():
+        try:
+            ch.train(state[ch])
+        except KeyError as err:
+            # if the modules name changed during forward  (e.g. LSTM block in our examples)
+            if strict:
+                nncf_logger.error(err)
+                return
+        finally:
+            load_module_training_state(ch, state)
+
+
 @contextmanager
 def training_mode_switcher(model: torch.nn.Module, is_training: bool = True):
-    is_original_mode_training = model.training
+    saved_state = {}
+    save_module_training_state(model, saved_state)
     model.train(is_training)
     try:
         yield
     finally:
-        model.train(is_original_mode_training)
+        load_module_training_state(model, saved_state)
 
 
 def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):

@@ -27,6 +27,7 @@ from beta.tests.tensorflow.test_models.retinanet import RetinaNet
 from beta.tests.tensorflow.test_models.sequential_model import SequentialModel
 from beta.tests.tensorflow.test_models.sequential_model import SequentialModelNoInput
 from beta.tests.tensorflow.test_models.mobilenet_v3 import MobileNetV3Small
+from beta.tests.tensorflow.test_models.mobilenet_v3 import MobileNetV3Large
 from beta.tests.tensorflow.test_models.shared_layers_model import SharedLayersModel
 from beta.tests.tensorflow.test_models.maskrcnn import MaskRCNN
 from beta.tests.tensorflow.test_models.yolo_v4 import YOLOv4

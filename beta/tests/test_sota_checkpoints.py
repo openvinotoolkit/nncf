@@ -202,7 +202,7 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def write_error_in_csv(error_message, filename, model_name):
-        error_message = 'Error ' + error_message[:80]
+        error_message = 'Error ' + error_message[:80].replace("\n", '')
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = ['model', 'launcher', 'device', 'dataset', 'tags', 'metric_name', 'metric_type',
                           'metric_value']

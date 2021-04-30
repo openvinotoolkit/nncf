@@ -37,6 +37,7 @@ from nncf.api.compression import CompressionLevel
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
 from nncf.hw_config import HWConfigType
+from pytest_dependency import depends
 from tests.conftest import EXAMPLES_DIR
 from tests.conftest import PROJECT_ROOT
 from tests.conftest import TEST_ROOT
@@ -149,13 +150,14 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["mock_32x32", "mock_32x32", "mock_32x32", "mock_32x32"],
+    "classification": ["mock_32x32", "mock_299x299", "mock_32x32", "mock_32x32"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
 
 CONFIGS = {
     "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
+                       TEST_ROOT.joinpath("data", "configs", "inception_v3_mock_dataset.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_pruning_magnitude.json")],
@@ -165,7 +167,7 @@ CONFIGS = {
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256, 256, 128],
+    "classification": [256, 32, 256, 256, 128],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }
@@ -201,9 +203,11 @@ def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
         algo_dict['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
                                                                   'num_bn_forget_samples': 5}})
 
+def _get_test_case_id(p) -> str:
+    return "-".join([p[0], p[1].name, p[2], str(p[3])])
 
 @pytest.fixture(params=CONFIG_PARAMS,
-                ids=["-".join([p[0], p[1].name, p[2], str(p[3])]) for p in CONFIG_PARAMS])
+                ids=[_get_test_case_id(p) for p in CONFIG_PARAMS])
 def config(request, dataset_dir):
     sample_type, config_path, dataset_name, batch_size = request.param
     dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
@@ -232,6 +236,7 @@ def config(request, dataset_dir):
         "model_name": jconfig["model"],
         "dataset_path": dataset_path,
         "batch_size": batch_size,
+        "test_case_id": _get_test_case_id(request.param)
     }
 
 
@@ -266,10 +271,9 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
     runner.run()
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(name="train_distributed")),
-        pytest.param(False, marks=pytest.mark.dependency(name="train_dataparallel"))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     checkpoint_save_dir = os.path.join(case_common_dirs["checkpoint_save_dir"],
@@ -291,20 +295,34 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--cpu-only"] = True
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
+    elif config['nncf_config']["model"] == "inception_v3":
+        pytest.skip("InceptionV3 may not be trained in DataParallel "
+                    "because it outputs namedtuple, which DP seems to be unable "
+                    "to support even still.")
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
+def depends_on_pretrained_train(request, test_case_id: str, current_multiprocessing_distributed: bool):
+    full_test_case_id = test_case_id + ('-distributed' if current_multiprocessing_distributed else '-dataparallel')
+    primary_test_case_name = f'test_pretrained_model_train[{full_test_case_id}]'
+    depends(request, [primary_test_case_name])
+
+
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = os.path.join(case_common_dirs["checkpoint_save_dir"],
                              "distributed" if multiprocessing_distributed else "data_parallel",
@@ -335,12 +353,12 @@ def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, ch
                         get_name(config_factory.config) + "_last.pth")
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     checkpoint_save_dir = os.path.join(str(tmp_path), "models")
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
@@ -369,15 +387,19 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_export_with_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_export_with_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
                                              case_common_dirs["checkpoint_save_dir"])
