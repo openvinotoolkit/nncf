@@ -62,8 +62,8 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'resnet50_int8.json': {
-                            'expected_accuracy': 68.86,
-                            'weights': 'resnet50_68.86.sd',
+                            'expected_accuracy': 67.93,
+                            'weights': 'resnet50_cifar100_67.93.pth',
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'mobilenet_v2_magnitude_sparsity_int8.json': {
