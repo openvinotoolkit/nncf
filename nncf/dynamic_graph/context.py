@@ -475,11 +475,11 @@ class TracingContext:
         tl.operator_counters = {}
         tl.node_call_tracker = {}
 
-    def register_node_call(self, node_key: str):
-        if node_key in self._thread_local.node_call_tracker:
-            self._thread_local.node_call_tracker[node_key] += 1
+    def register_node_call(self, node: NNCFNode):
+        if node.node_id in self._thread_local.node_call_tracker:
+            self._thread_local.node_call_tracker[node.node_id] += 1
         else:
-            self._thread_local.node_call_tracker[node_key] = 1
+            self._thread_local.node_call_tracker[node.node_id] = 1
 
     def reset_node_call_counters(self):
         for k, _ in self._thread_local.node_call_tracker.items():

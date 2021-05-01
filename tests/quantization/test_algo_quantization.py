@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import logging
+from contextlib import contextmanager
 from copy import deepcopy
 from typing import List
 from typing import Tuple
@@ -504,6 +506,7 @@ def test_quantize_outputs():
         quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
         assert isinstance(quantizer, SymmetricQuantizer)
 
+
 def test_quantize_outputs_with_scope_overrides():
     config = get_quantization_config_without_range_init()
     config["input_info"] = [
@@ -526,3 +529,20 @@ def test_quantize_outputs_with_scope_overrides():
     for q in output_quantizers:
         assert q.num_bits == 4
         assert isinstance(q, AsymmetricQuantizer)
+
+
+@contextmanager
+def nncf_debug():
+    from nncf import set_log_level
+    set_log_level(logging.DEBUG)
+    yield
+    set_log_level(logging.INFO)
+
+
+def test_debug_mode():
+    config = get_quantization_config_without_range_init()
+    model = BasicConvTestModel()
+    with nncf_debug():
+        model, _ = create_compressed_model_and_algo_for_test(model, config)
+        model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
+                                  device=next(model.parameters()).device))
