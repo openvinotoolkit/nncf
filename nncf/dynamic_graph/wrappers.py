@@ -79,7 +79,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
 
             if is_debug():
-                ctx.register_node_call(ctx.graph.get_node_key_by_id(node.node_id))
+                ctx.register_node_call(node)
 
             args = tuple(processed_input.op_args)
             kwargs = processed_input.op_kwargs

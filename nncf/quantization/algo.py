@@ -1367,6 +1367,9 @@ class QuantizationDebugInterface(DebugInterface):
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")
+        if self.scale_dump_dir.exists():
+            shutil.rmtree(str(self.scale_dump_dir))
+        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self.prop_graph_dump_dir = self.dump_dir / Path("quant_prop")
         if self.prop_graph_dump_dir.exists():
             shutil.rmtree(str(self.prop_graph_dump_dir))
@@ -1385,9 +1388,6 @@ class QuantizationDebugInterface(DebugInterface):
             nncf_module_quantizations_id_list)
         self.call_trackers[self.ACTIVATION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
             activation_quantizer_id_list)
-        if self.scale_dump_dir.exists():
-            shutil.rmtree(str(self.scale_dump_dir))
-        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self._strict_forward = True
 
     def pre_forward_actions(self, module: 'NNCFNetwork'):
@@ -1430,7 +1430,7 @@ class QuantizationDebugInterface(DebugInterface):
         quantizer_normalized_name = re.sub(r'[^\w\-_\. ]', '_', quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
-            with safe_open(self.scale_dump_dir / fname, "ba") as file:
+            with safe_open(self.scale_dump_dir / fname, "ab") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):

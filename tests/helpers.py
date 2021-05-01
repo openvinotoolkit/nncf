@@ -75,6 +75,7 @@ def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, b
 
 
 class BasicConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
         super().__init__()
         self.in_channels = in_channels
