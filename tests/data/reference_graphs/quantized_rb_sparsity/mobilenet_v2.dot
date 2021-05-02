@@ -370,12 +370,13 @@ strict digraph  {
 "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize" [id=368, scope="MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer", type=symmetric_quantize];
 "369 MobileNetV2/adaptive_avg_pool2d" [id=369, scope=MobileNetV2, type=adaptive_avg_pool2d];
 "370 MobileNetV2/SymmetricQuantizer/symmetric_quantize" [id=370, scope="MobileNetV2/SymmetricQuantizer", type=symmetric_quantize];
-"371 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=371, scope="MobileNetV2/Sequential[classifier]/Dropout[0]", type=dropout];
-"372 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=372, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
-"373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=373, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
-"374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=374, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=375, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
-"376 /nncf_model_output" [id=376, scope="", type=nncf_model_output];
+"371 MobileNetV2/reshape" [id=371, scope=MobileNetV2, type=reshape];
+"372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=372, scope="MobileNetV2/Sequential[classifier]/Dropout[0]", type=dropout];
+"373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=373, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
+"374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=374, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
+"375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=375, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"376 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=376, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
+"377 /nncf_model_output" [id=377, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
 "2 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -756,10 +757,11 @@ strict digraph  {
 "367 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh" -> "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize";
 "368 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize" -> "369 MobileNetV2/adaptive_avg_pool2d";
 "369 MobileNetV2/adaptive_avg_pool2d" -> "370 MobileNetV2/SymmetricQuantizer/symmetric_quantize";
-"370 MobileNetV2/SymmetricQuantizer/symmetric_quantize" -> "371 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
-"371 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
-"372 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
-"373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
-"375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "376 /nncf_model_output";
+"370 MobileNetV2/SymmetricQuantizer/symmetric_quantize" -> "371 MobileNetV2/reshape";
+"371 MobileNetV2/reshape" -> "372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
+"372 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "376 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"373 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
+"374 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
+"375 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "376 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"376 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "377 /nncf_model_output";
 }

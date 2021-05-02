@@ -516,9 +516,10 @@ strict digraph  {
 "514 PNASNet/Sequential[layer5]/CellB[5]/AsymmetricQuantizer/asymmetric_quantize" [id=514, scope="PNASNet/Sequential[layer5]/CellB[5]/AsymmetricQuantizer", type=asymmetric_quantize];
 "515 PNASNet/avg_pool2d" [id=515, scope=PNASNet, type=avg_pool2d];
 "516 PNASNet/AsymmetricQuantizer/asymmetric_quantize" [id=516, scope="PNASNet/AsymmetricQuantizer", type=asymmetric_quantize];
-"517 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=517, scope="PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
-"518 PNASNet/NNCFLinear[linear]/linear" [id=518, scope="PNASNet/NNCFLinear[linear]", type=linear];
-"519 /nncf_model_output" [id=519, scope="", type=nncf_model_output];
+"517 PNASNet/view" [id=517, scope=PNASNet, type=view];
+"518 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" [id=518, scope="PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]", type=asymmetric_quantize];
+"519 PNASNet/NNCFLinear[linear]/linear" [id=519, scope="PNASNet/NNCFLinear[linear]", type=linear];
+"520 /nncf_model_output" [id=520, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
 "2 PNASNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 PNASNet/NNCFConv2d[conv1]/conv2d";
@@ -1095,7 +1096,8 @@ strict digraph  {
 "513 PNASNet/Sequential[layer5]/CellB[5]/RELU" -> "514 PNASNet/Sequential[layer5]/CellB[5]/AsymmetricQuantizer/asymmetric_quantize";
 "514 PNASNet/Sequential[layer5]/CellB[5]/AsymmetricQuantizer/asymmetric_quantize" -> "515 PNASNet/avg_pool2d";
 "515 PNASNet/avg_pool2d" -> "516 PNASNet/AsymmetricQuantizer/asymmetric_quantize";
-"516 PNASNet/AsymmetricQuantizer/asymmetric_quantize" -> "518 PNASNet/NNCFLinear[linear]/linear";
-"517 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "518 PNASNet/NNCFLinear[linear]/linear";
-"518 PNASNet/NNCFLinear[linear]/linear" -> "519 /nncf_model_output";
+"516 PNASNet/AsymmetricQuantizer/asymmetric_quantize" -> "517 PNASNet/view";
+"517 PNASNet/view" -> "519 PNASNet/NNCFLinear[linear]/linear";
+"518 PNASNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "519 PNASNet/NNCFLinear[linear]/linear";
+"519 PNASNet/NNCFLinear[linear]/linear" -> "520 /nncf_model_output";
 }

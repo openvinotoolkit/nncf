@@ -1,10 +1,10 @@
 strict digraph  {
-"0 /A" [associated_ip_node_keys="{'POST HOOK 0 /A'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="0 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc9453e490>()"];
-"1 /conv2d" [associated_ip_node_keys="{'POST HOOK 1 /conv2d', 'PRE HOOK 0 1 /conv2d'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="1 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc9453a950>(C0_I0_S1x1x1x1;)"];
-"2 /batch_norm" [associated_ip_node_keys="{'PRE HOOK 0 2 /batch_norm', 'POST HOOK 2 /batch_norm'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="2 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc9453ad10>(C1_I0_S1x1x1x1;)"];
-"3 /RELU" [associated_ip_node_keys="{'POST HOOK 3 /RELU', 'PRE HOOK 0 3 /RELU'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="3 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc94532110>(C2_I0_S1x1x1x1;)"];
-"4 /C" [associated_ip_node_keys="{'PRE HOOK 0 4 /C', 'POST HOOK 4 /C', 'PRE HOOK 1 4 /C'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="4 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc945324d0>(C1_I1_S1x1x1x1;C3_I0_S1x1x1x1;)"];
-"5 /B" [associated_ip_node_keys="{'PRE HOOK 0 5 /B', 'POST HOOK 5 /B'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="5 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc94532910>(C4_I0_S1x1x1x1;)"];
+"0 /A" [associated_ip_node_keys="{'POST HOOK 0 /A'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="0 /A_0"];
+"1 /conv2d" [associated_ip_node_keys="{'POST HOOK 1 /conv2d', 'PRE HOOK 0 1 /conv2d'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="1 /conv2d_0"];
+"2 /batch_norm" [associated_ip_node_keys="{'PRE HOOK 0 2 /batch_norm', 'POST HOOK 2 /batch_norm'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="2 /batch_norm_0"];
+"3 /RELU" [associated_ip_node_keys="{'POST HOOK 3 /RELU', 'PRE HOOK 0 3 /RELU'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="3 /RELU_0"];
+"4 /C" [associated_ip_node_keys="{'POST HOOK 4 /C', 'PRE HOOK 1 4 /C', 'PRE HOOK 0 4 /C'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="4 /C_0"];
+"5 /B" [associated_ip_node_keys="{'POST HOOK 5 /B', 'PRE HOOK 0 5 /B'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="5 /B_0"];
 "POST HOOK 0 /A" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /A_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "PRE HOOK 0 1 /conv2d" [insertion_point_data="TargetType.OPERATOR_PRE_HOOK 0 /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK 1 /conv2d" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];

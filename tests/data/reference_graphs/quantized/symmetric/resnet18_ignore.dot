@@ -105,9 +105,10 @@ strict digraph  {
 "103 ResNet/Sequential[layer4]/BasicBlock[1]/SymmetricQuantizer/symmetric_quantize" [id=103, scope="ResNet/Sequential[layer4]/BasicBlock[1]/SymmetricQuantizer", type=symmetric_quantize];
 "104 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" [id=104, scope="ResNet/AdaptiveAvgPool2d[avgpool]", type=adaptive_avg_pool2d];
 "105 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" [id=105, scope="ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer", type=symmetric_quantize];
-"106 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=106, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"107 ResNet/NNCFLinear[linear]/linear" [id=107, scope="ResNet/NNCFLinear[linear]", type=linear];
-"108 /nncf_model_output" [id=108, scope="", type=nncf_model_output];
+"106 ResNet/flatten" [id=106, scope=ResNet, type=flatten];
+"107 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=107, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"108 ResNet/NNCFLinear[linear]/linear" [id=108, scope="ResNet/NNCFLinear[linear]", type=linear];
+"109 /nncf_model_output" [id=109, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNet/NNCFConv2d[conv1]/conv2d";
@@ -221,7 +222,8 @@ strict digraph  {
 "102 ResNet/Sequential[layer4]/BasicBlock[1]/RELU" -> "103 ResNet/Sequential[layer4]/BasicBlock[1]/SymmetricQuantizer/symmetric_quantize";
 "103 ResNet/Sequential[layer4]/BasicBlock[1]/SymmetricQuantizer/symmetric_quantize" -> "104 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d";
 "104 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "105 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize";
-"105 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "107 ResNet/NNCFLinear[linear]/linear";
-"106 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "107 ResNet/NNCFLinear[linear]/linear";
-"107 ResNet/NNCFLinear[linear]/linear" -> "108 /nncf_model_output";
+"105 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "106 ResNet/flatten";
+"106 ResNet/flatten" -> "108 ResNet/NNCFLinear[linear]/linear";
+"107 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "108 ResNet/NNCFLinear[linear]/linear";
+"108 ResNet/NNCFLinear[linear]/linear" -> "109 /nncf_model_output";
 }

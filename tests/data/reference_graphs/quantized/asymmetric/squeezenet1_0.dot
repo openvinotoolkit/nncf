@@ -118,7 +118,8 @@ strict digraph  {
 "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" [id=116, scope="SqueezeNet/Sequential[classifier]/ReLU[2]", type=RELU];
 "117 SqueezeNet/Sequential[classifier]/ReLU[2]/AsymmetricQuantizer/asymmetric_quantize" [id=117, scope="SqueezeNet/Sequential[classifier]/ReLU[2]/AsymmetricQuantizer", type=asymmetric_quantize];
 "118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" [id=118, scope="SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]", type=adaptive_avg_pool2d];
-"119 /nncf_model_output" [id=119, scope="", type=nncf_model_output];
+"119 SqueezeNet/view" [id=119, scope=SqueezeNet, type=view];
+"120 /nncf_model_output" [id=120, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 AsymmetricQuantizer/asymmetric_quantize";
 "1 AsymmetricQuantizer/asymmetric_quantize" -> "3 SqueezeNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 SqueezeNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/AsymmetricQuantizer[op]/asymmetric_quantize" -> "3 SqueezeNet/Sequential[features]/NNCFConv2d[0]/conv2d";
@@ -245,5 +246,6 @@ strict digraph  {
 "115 SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/conv2d" -> "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU";
 "116 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" -> "117 SqueezeNet/Sequential[classifier]/ReLU[2]/AsymmetricQuantizer/asymmetric_quantize";
 "117 SqueezeNet/Sequential[classifier]/ReLU[2]/AsymmetricQuantizer/asymmetric_quantize" -> "118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d";
-"118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" -> "119 /nncf_model_output";
+"118 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" -> "119 SqueezeNet/view";
+"119 SqueezeNet/view" -> "120 /nncf_model_output";
 }

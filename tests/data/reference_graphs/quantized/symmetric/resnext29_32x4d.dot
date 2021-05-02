@@ -173,9 +173,10 @@ strict digraph  {
 "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize" [id=171, scope="ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer", type=symmetric_quantize];
 "172 ResNeXt/avg_pool2d" [id=172, scope=ResNeXt, type=avg_pool2d];
 "173 ResNeXt/SymmetricQuantizer/symmetric_quantize" [id=173, scope="ResNeXt/SymmetricQuantizer", type=symmetric_quantize];
-"174 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=174, scope="ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"175 ResNeXt/NNCFLinear[linear]/linear" [id=175, scope="ResNeXt/NNCFLinear[linear]", type=linear];
-"176 /nncf_model_output" [id=176, scope="", type=nncf_model_output];
+"174 ResNeXt/view" [id=174, scope=ResNeXt, type=view];
+"175 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=175, scope="ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"176 ResNeXt/NNCFLinear[linear]/linear" [id=176, scope="ResNeXt/NNCFLinear[linear]", type=linear];
+"177 /nncf_model_output" [id=177, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
 "2 ResNeXt/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 ResNeXt/NNCFConv2d[conv1]/conv2d";
@@ -358,7 +359,8 @@ strict digraph  {
 "170 ResNeXt/Sequential[layer3]/Block[2]/RELU" -> "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize";
 "171 ResNeXt/Sequential[layer3]/Block[2]/SymmetricQuantizer/symmetric_quantize" -> "172 ResNeXt/avg_pool2d";
 "172 ResNeXt/avg_pool2d" -> "173 ResNeXt/SymmetricQuantizer/symmetric_quantize";
-"173 ResNeXt/SymmetricQuantizer/symmetric_quantize" -> "175 ResNeXt/NNCFLinear[linear]/linear";
-"174 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "175 ResNeXt/NNCFLinear[linear]/linear";
-"175 ResNeXt/NNCFLinear[linear]/linear" -> "176 /nncf_model_output";
+"173 ResNeXt/SymmetricQuantizer/symmetric_quantize" -> "174 ResNeXt/view";
+"174 ResNeXt/view" -> "176 ResNeXt/NNCFLinear[linear]/linear";
+"175 ResNeXt/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "176 ResNeXt/NNCFLinear[linear]/linear";
+"176 ResNeXt/NNCFLinear[linear]/linear" -> "177 /nncf_model_output";
 }

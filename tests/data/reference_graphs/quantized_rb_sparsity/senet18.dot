@@ -286,11 +286,12 @@ strict digraph  {
 "284 SENet/Sequential[layer4]/PreActBlock[1]/SymmetricQuantizer/symmetric_quantize" [id=284, scope="SENet/Sequential[layer4]/PreActBlock[1]/SymmetricQuantizer", type=symmetric_quantize];
 "285 SENet/avg_pool2d" [id=285, scope=SENet, type=avg_pool2d];
 "286 SENet/SymmetricQuantizer/symmetric_quantize" [id=286, scope="SENet/SymmetricQuantizer", type=symmetric_quantize];
-"287 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=287, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
-"288 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=288, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
-"289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=289, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"290 SENet/NNCFLinear[linear]/linear" [id=290, scope="SENet/NNCFLinear[linear]", type=linear];
-"291 /nncf_model_output" [id=291, scope="", type=nncf_model_output];
+"287 SENet/view" [id=287, scope=SENet, type=view];
+"288 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=288, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
+"289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=289, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
+"290 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=290, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"291 SENet/NNCFLinear[linear]/linear" [id=291, scope="SENet/NNCFLinear[linear]", type=linear];
+"292 /nncf_model_output" [id=292, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 SENet/NNCFConv2d[conv1]/conv2d";
 "2 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -593,9 +594,10 @@ strict digraph  {
 "283 SENet/Sequential[layer4]/PreActBlock[1]/__iadd__" -> "284 SENet/Sequential[layer4]/PreActBlock[1]/SymmetricQuantizer/symmetric_quantize";
 "284 SENet/Sequential[layer4]/PreActBlock[1]/SymmetricQuantizer/symmetric_quantize" -> "285 SENet/avg_pool2d";
 "285 SENet/avg_pool2d" -> "286 SENet/SymmetricQuantizer/symmetric_quantize";
-"286 SENet/SymmetricQuantizer/symmetric_quantize" -> "290 SENet/NNCFLinear[linear]/linear";
-"287 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "288 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
-"288 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "290 SENet/NNCFLinear[linear]/linear";
-"290 SENet/NNCFLinear[linear]/linear" -> "291 /nncf_model_output";
+"286 SENet/SymmetricQuantizer/symmetric_quantize" -> "287 SENet/view";
+"287 SENet/view" -> "291 SENet/NNCFLinear[linear]/linear";
+"288 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
+"289 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "290 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
+"290 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "291 SENet/NNCFLinear[linear]/linear";
+"291 SENet/NNCFLinear[linear]/linear" -> "292 /nncf_model_output";
 }
