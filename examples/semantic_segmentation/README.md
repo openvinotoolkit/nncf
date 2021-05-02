@@ -57,13 +57,13 @@ To export a model to OpenVINO IR and run it using Intel Deep Learning Deployment
 
 |Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch checkpoint|
 | :---: | :---: | :---: | :---: | :---: | :---: |
-|UNet|None|CamVid|71.95|[unet_camvid.json](configs/unet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_camvid.pth)|
-|UNet|INT8|CamVid|71.8|[unet_camvid_int8.json](configs/unet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_camvid_int8.pth)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|72.03|[unet_camvid_magnitude_sparsity_int8.json](configs/unet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_camvid_magnitude_sparsity_int8.pth)|
-|ICNet|None|CamVid|67.89|[icnet_camvid.json](configs/icnet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/icnet_camvid.pth)|
-|ICNet|INT8|CamVid|67.86|[icnet_camvid_int8.json](configs/icnet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/icnet_camvid_int8.pth)|
-|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.18|[icnet_camvid_magnitude_sparsity_int8.json](configs/icnet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/icnet_camvid_magnitude_sparsity_int8.pth)|
-|UNet|None|Mapillary|56.23|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_mapillary.pth)|
-|UNet|INT8|Mapillary|55.87|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_mapillary_int8.pth)|
-|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_mapillary_magnitude_sparsity_int8.pth)|
-|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/v1.7.0/unet_mapillary_pruning_geometric_median.pth)|
+|UNet|None|CamVid|71.95|[unet_camvid.json](configs/unet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_camvid.pth)|
+|UNet|INT8|CamVid|71.8|[unet_camvid_int8.json](configs/unet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_camvid_int8.pth)|
+|UNet|INT8 + Sparsity 60% (Magnitude)|CamVid|72.03|[unet_camvid_magnitude_sparsity_int8.json](configs/unet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_camvid_magnitude_sparsity_int8.pth)|
+|ICNet|None|CamVid|67.89|[icnet_camvid.json](configs/icnet_camvid.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/icnet_camvid.pth)|
+|ICNet|INT8|CamVid|67.86|[icnet_camvid_int8.json](configs/icnet_camvid_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/icnet_camvid_int8.pth)|
+|ICNet|INT8 + Sparsity 60% (Magnitude)|CamVid|67.18|[icnet_camvid_magnitude_sparsity_int8.json](configs/icnet_camvid_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/icnet_camvid_magnitude_sparsity_int8.pth)|
+|UNet|None|Mapillary|56.23|[unet_mapillary.json](configs/unet_mapillary.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary.pth)|
+|UNet|INT8|Mapillary|55.87|[unet_mapillary_int8.json](configs/unet_mapillary_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_int8.pth)|
+|UNet|INT8 + Sparsity 60% (Magnitude)|Mapillary|55.65|[unet_mapillary_magnitude_sparsity_int8.json](configs/unet_mapillary_magnitude_sparsity_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_magnitude_sparsity_int8.pth)|
+|UNet|Filter pruning, 25%, geometric median criterion|Mapillary|55.62|[unet_mapillary_pruning_geometric_median.json](configs/unet_mapillary_pruning_geometric_median.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/unet_mapillary_pruning_geometric_median.pth)|
