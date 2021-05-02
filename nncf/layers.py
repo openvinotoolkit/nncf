@@ -22,6 +22,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 
+from nncf.dynamic_graph.context import forward_nncf_trace
 from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.common.utils.registry import Registry
 from nncf.layer_utils import _NNCFModuleMixin
@@ -422,7 +423,9 @@ class Recurrent(nn.Module):
         output = []
         steps = range(input_.size(0) - 1, -1, -1) if self.reverse else range(input_.size(0))
         for i in steps:
-            hidden = self.cell(input_[i], hidden)
+            with forward_nncf_trace():
+                hidden_input = input_[i]
+            hidden = self.cell(hidden_input, hidden)
             output.append(hidden[0] if isinstance(hidden, tuple) else hidden)
 
         if self.reverse:
@@ -455,14 +458,25 @@ class VariableRecurrent(nn.Module):
         flat_hidden = not isinstance(hidden, tuple)
         if flat_hidden:
             hidden = (hidden,)
-        for batch_size in batch_sizes:
+        with forward_nncf_trace():
+            #pylint:disable=unnecessary-comprehension
+            batch_size_elements = [b for b in batch_sizes]
+        for batch_size in batch_size_elements:
             step_input = input_[input_offset:input_offset + batch_size]
             input_offset += batch_size
 
-            dec = last_batch_size - batch_size
-            if dec > 0:
-                hiddens.append(tuple(h[-dec:] for h in hidden))
-                hidden = tuple(h[:-dec] for h in hidden)
+            bs_decrease = last_batch_size - batch_size
+            if bs_decrease > 0:
+                hidden_len = len(hidden)
+                hidden_offset_elts = []
+                hidden_offset_elts_reversed = []
+                for i in range(hidden_len):
+                    with forward_nncf_trace():
+                        hidden_offset_elts.append(hidden[i][-bs_decrease:])
+                        hidden_offset_elts_reversed.append(hidden[i][:-bs_decrease])
+
+                hiddens.append(tuple(hidden_offset_elts))
+                hidden = tuple(hidden_offset_elts_reversed)
             last_batch_size = batch_size
 
             if flat_hidden:

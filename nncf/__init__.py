@@ -55,6 +55,8 @@ if __nncf_backend__ == 'Torch':
     from .dynamic_graph.patch_pytorch import register_operator
     from .dynamic_graph.io_handling import nncf_model_input
     from .dynamic_graph.io_handling import nncf_model_output
+    from .dynamic_graph.context import no_nncf_trace
+    from .dynamic_graph.context import forward_nncf_trace
 
     # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
     # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",

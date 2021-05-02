@@ -47,49 +47,52 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
 
         ctx.in_operator = True
 
-        if operator_info.custom_trace_fn is not None:
-            try:
+        try:
+            if operator_info.custom_trace_fn is not None:
                 result = operator_info.custom_trace_fn(operator, *args, **kwargs)
-            except:
-                # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
-                # but instead throws an exception. This try...except block handles such a situation.
-                # Otherwise the context is stuck in the "in_operator == True" state.
-                ctx.in_operator = False
-                raise
-        else:
-            op_name = operator_info.name
-            ia_op_exec_context = ctx.get_caller_context(op_name)
+            elif ctx.is_forwarding:
+                from nncf.dynamic_graph.patch_pytorch import ForwardTraceOnly
+                result = ForwardTraceOnly()(operator, *args, **kwargs)
+            else:
+                op_name = operator_info.name
+                ia_op_exec_context = ctx.get_caller_context(op_name)
 
-            module_attrs = None
-            # Collect module attributes, if required
-            if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-                curr_module = ctx.get_current_module()
-                if curr_module is None:
-                    raise RuntimeError("Operation {} requires module attributes, "
-                                       "but it was executed outside any module".format(op_name))
-                module_attrs = _get_module_attributes(curr_module, op_name)
+                module_attrs = None
+                # Collect module attributes, if required
+                if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
+                    curr_module = ctx.get_current_module()
+                    if curr_module is None:
+                        raise RuntimeError("Operation {} requires module attributes, "
+                                           "but it was executed outside any module".format(op_name))
+                    module_attrs = _get_module_attributes(curr_module, op_name)
 
-            ctx.register_operator_call(ia_op_exec_context.operator_name, ia_op_exec_context.scope_in_model)
-            op_input = OperatorInput(list(args), kwargs)
-            processed_input = ctx.execute_pre_hooks(ia_op_exec_context, op_input)
+                ctx.register_operator_call(ia_op_exec_context.operator_name, ia_op_exec_context.scope_in_model)
+                op_input = OperatorInput(list(args), kwargs)
+                processed_input = ctx.execute_pre_hooks(ia_op_exec_context, op_input)
 
-            tensor_metas = make_tensor_metas(processed_input)
-            node = ctx.find_operator_node(tensor_metas, ia_op_exec_context)
+                tensor_metas = make_tensor_metas(processed_input)
+                node = ctx.find_operator_node(tensor_metas, ia_op_exec_context)
 
-            args = tuple(processed_input.op_args)
-            kwargs = processed_input.op_kwargs
-            result = operator(*args, **kwargs)
+                args = tuple(processed_input.op_args)
+                kwargs = processed_input.op_kwargs
+                result = operator(*args, **kwargs)
 
-            if isinstance(result, type(NotImplemented)):
-                nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
-            elif node is None:
-                node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
+                if isinstance(result, type(NotImplemented)):
+                    nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
+                elif node is None:
+                    node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
 
-            if node is not None:
-                if is_debug():
-                    ctx.register_node_call(node)
-                result = trace_tensors(result, node)
-            result = ctx.execute_post_hooks(ia_op_exec_context, result)
+                if node is not None:
+                    if is_debug():
+                        ctx.register_node_call(node)
+                    result = trace_tensors(result, node)
+                result = ctx.execute_post_hooks(ia_op_exec_context, result)
+        except:
+            # Looks like the __repr__ call made during IDE debug to display tensor contents does not exit properly,
+            # but instead throws an exception. This try...except block handles such a situation.
+            # Otherwise the context is stuck in the "in_operator == True" state.
+            ctx.in_operator = False
+            raise
 
         ctx.in_operator = False
         return result

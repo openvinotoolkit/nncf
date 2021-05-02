@@ -453,7 +453,6 @@ class TestNumberOfNodes:
         for counter in inter_layer_reset_point_post_aq_counters.values():
             assert counter.count == 1
 
-
     def test_number_of_calling_fq_for_gnmt(self):
         if torch.cuda.is_available():
             torch.cuda.set_device(0)
@@ -528,8 +527,8 @@ class TestNumberOfNodes:
             quantizer.register_forward_pre_hook(partial(hook, counter=counter))
         dummy_forward_fn(model)
 
-        assert model.get_graph().get_nodes_count() == 315 # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 143
+        assert model.get_graph().get_nodes_count() == 382 # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 152
 
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
@@ -538,8 +537,8 @@ class TestNumberOfNodes:
                 assert counter.count == 1, name
         new_seq_len = int(sequence_size / 2)
         dummy_forward_fn(model, new_seq_len)
-        assert model.get_graph().get_nodes_count() == 315  # NB: may always fail in debug due to superfluous 'cat' nodes
-        assert len(counters) == 143
+        assert model.get_graph().get_nodes_count() == 382  # NB: may always fail in debug due to superfluous 'cat' nodes
+        assert len(counters) == 152
         for name, counter in counters.items():
             if 'cell' in name or "LSTMCellForwardNNCF" in name:
                 assert counter.count == sequence_size + new_seq_len, name
