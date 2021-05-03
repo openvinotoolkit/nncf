@@ -148,13 +148,23 @@ class BaseQuantizer(nn.Module):
         if not self.is_enabled_quantization():
             return x
         self.set_level_ranges()
-        if is_tracing_state():
+        is_exporting = is_tracing_state()
+        if is_exporting:
             with no_nncf_trace():
-                return self.run_export_quantization(x)
+                x = self.run_export_quantization(x)
 
-        return self.quantize(x)
+            # The underlying operator (registered via register_operator) must be executed,
+            # otherwise the dynamic graph won't be traced as it was during regular inference.
+            # While this does not impact the regular, non-RNN models, for which the graph
+            # building and pre-/post-hook calling is only determined by input-agnostic,
+            # graph-structure independent trace info (e.g. current op scope and call count),
+            # this is important for LSTMs etc. where determining the "first nodes in iteration
+            # scopes" depends on whether the input tensors to an operation were traced or not.
+            return self.quantize(x, execute_traced_op_as_identity=True)
 
-    def quantize(self, x):
+        return self.quantize(x, execute_traced_op_as_identity=False)
+
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
         raise NotImplementedError
 
     def reset_call_counter(self):
@@ -405,8 +415,9 @@ class SymmetricQuantizer(BaseQuantizer):
     def signed(self, signed: bool):
         self.signed_tensor.fill_(signed)
 
-    def quantize(self, x):
-        return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps)
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps,
+                                  skip=execute_traced_op_as_identity)
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
@@ -547,9 +558,9 @@ class AsymmetricQuantizer(BaseQuantizer):
     def calculate_level_ranges(num_bits):
         return calculate_asymmetric_level_ranges(num_bits)
 
-    def quantize(self, x):
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
         return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,
-                                   self.eps)
+                                   self.eps, skip=execute_traced_op_as_identity)
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),

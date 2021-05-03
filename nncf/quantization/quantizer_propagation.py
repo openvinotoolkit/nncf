@@ -321,10 +321,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self.add_node(barrier_node_key, **qpg_node_barrier)
 
         edge_attr = {QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR: []}
-        next_node_key = list(self.succ[node_key].keys())[0]  # POST HOOK v
-        self.add_edge(node_key, barrier_node_key, **edge_attr)
-        self.add_edge(barrier_node_key, next_node_key, **edge_attr)
-        self.remove_edge(node_key, next_node_key)
+        next_node_keys = list(self.succ[node_key].keys())
+        for next_node_key in next_node_keys:
+            self.add_edge(node_key, barrier_node_key, **edge_attr)
+            self.add_edge(barrier_node_key, next_node_key, **edge_attr)
+            self.remove_edge(node_key, next_node_key)
 
     @staticmethod
     def ipg_node_type_to_qpsg_node_type(ipg_node_type: InsertionPointGraphNodeType) \

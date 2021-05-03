@@ -217,7 +217,7 @@ def test_export_lstm_cell(tmp_path):
     for node in model.graph.node:
         if node.op_type == 'FakeQuantize':
             onnx_num += 1
-    assert onnx_num == 14
+    assert onnx_num == 17
 
 
 @pytest.mark.parametrize('sizes',
