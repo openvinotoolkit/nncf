@@ -513,7 +513,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 unified_scale_gids_to_merge.add(gid)
 
         if unified_scale_gids_to_merge:
-            for merge_pq in merge_pqs:
             merge_gid = self._unified_scale_group_manager.register_group(set(merge_pqs))
             for gid_to_merge in unified_scale_gids_to_merge:
                 self._unified_scale_group_manager.merge_groups(merge_gid, gid_to_merge)
