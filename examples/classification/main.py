@@ -392,6 +392,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
     model.train()
 
     end = time.time()
+    start_time = time.time()
     for i, (input_, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
@@ -407,6 +408,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
 
         # compute compression loss
         compression_loss = compression_ctrl.loss(output, input_)
+
         loss = criterion_loss + compression_loss
 
         if isinstance(output, InceptionOutputs):
@@ -430,6 +432,8 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         end = time.time()
 
         if i % config.print_freq == 0:
+            print(f'Time per {config.print_freq} iterations: {time.time() - start_time}')
+            start_time = time.time()
             logger.info(
                 '{rank}: '
                 'Epoch: [{0}][{1}/{2}] '
