@@ -21,7 +21,7 @@ from examples.common.example_logger import logger
 import examples.common.restricted_pickle_module as restricted_pickle_module
 from nncf import load_state
 from nncf.utils import safe_thread_call
-from tests.test_models.mobilenet_v2_32x32 import MobileNetV2For32x32
+from examples.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 
 
 def load_model(model, pretrained=True, num_classes=1000, model_params=None,
