@@ -344,6 +344,7 @@ strict digraph  {
 "342 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=342, scope="GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "343 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=343, scope="GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "344 GoogLeNet/NNCFLinear[linear]/linear" [id=344, scope="GoogLeNet/NNCFLinear[linear]", type=linear];
+"345 /nncf_model_output" [id=345, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
 "1 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 GoogLeNet/Sequential[pre_layers]/NNCFConv2d[0]/conv2d";
@@ -715,4 +716,5 @@ strict digraph  {
 "341 GoogLeNet/AvgPool2d[avgpool]/avg_pool2d" -> "344 GoogLeNet/NNCFLinear[linear]/linear";
 "342 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "343 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "343 GoogLeNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "344 GoogLeNet/NNCFLinear[linear]/linear";
+"344 GoogLeNet/NNCFLinear[linear]/linear" -> "345 /nncf_model_output";
 }

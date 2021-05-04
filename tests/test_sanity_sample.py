@@ -31,7 +31,7 @@ import torch
 from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name, is_staged_quantization
-from nncf.compression_method_api import CompressionLevel
+from nncf.api.compression import CompressionLevel
 from nncf.config import NNCFConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from tests.conftest import EXAMPLES_DIR, PROJECT_ROOT, TEST_ROOT
@@ -634,9 +634,14 @@ class HAWQDescriptor(TestCaseDescriptor):
 class AutoQDescriptor(TestCaseDescriptor):
     subset_ratio_: float = 1.0
     BITS = [2, 4, 8]
+    debug_dump: bool = False
 
     def subset_ratio(self, subset_ratio_: float):
         self.subset_ratio_ = subset_ratio_
+        return self
+
+    def dump_debug(self, debug_dump: bool):
+        self.debug_dump = debug_dump
         return self
 
     def get_precision_section(self) -> Dict:
@@ -644,11 +649,13 @@ class AutoQDescriptor(TestCaseDescriptor):
                 "bits": AutoQDescriptor.BITS,
                 "iter_number": 2,
                 "compression_ratio": 0.15,
-                "eval_subset_ratio": self.subset_ratio_}
+                "eval_subset_ratio": self.subset_ratio_,
+                "dump_init_precision_data": self.debug_dump}
 
     def __str__(self):
         sr = f'_sr{self.subset_ratio_}' if self.subset_ratio_ else ''
-        return super().__str__() + '_autoq' + sr
+        dd = '_dump_debug' if self.debug_dump else ''
+        return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
         from nncf.quantization.algo import QuantizationBuilder
@@ -701,11 +708,11 @@ TEST_CASE_DESCRIPTORS = [
     inception_v3_desc(AutoQDescriptor()).batch(2),
     inception_v3_desc(AutoQDescriptor()).staged(),
     resnet18_desc(AutoQDescriptor()).batch(2),
-    resnet18_desc(AutoQDescriptor()).batch(2).staged(),
+    resnet18_desc(AutoQDescriptor()).batch(2).staged().dump_debug(True),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).batch(2),
     resnet18_desc(AutoQDescriptor()).subset_ratio(0.2).staged(),
-    ssd300_vgg_desc(AutoQDescriptor()),
-    unet_desc(AutoQDescriptor()),
+    ssd300_vgg_desc(AutoQDescriptor()).batch(2).dump_debug(True),
+    unet_desc(AutoQDescriptor()).dump_debug(True),
     icnet_desc(AutoQDescriptor())
 ]
 

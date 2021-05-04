@@ -60,6 +60,8 @@ class MaskRCNNPreprocessor:
         self._max_num_instances = config.maskrcnn_parser.get('max_num_instances', 100)
         self._skip_crowd_during_training = config.maskrcnn_parser.get('skip_crowd_during_training', True)
         self._is_training = is_train
+        self._global_batch_size = config.batch_size
+        self._num_preprocess_workers = config.get('workers', tf.data.experimental.AUTOTUNE)
 
         # Anchor
         self._output_size = config.input_info.sample_size[1:3]
@@ -100,7 +102,7 @@ class MaskRCNNPreprocessor:
             image, labels: if mode == ModeKeys.TRAIN. see _parse_train_data.
             {'images': image, 'labels': labels}: if mode == ModeKeys.PREDICT or ModeKeys.PREDICT_WITH_GT.
         """
-        return self._parse_fn
+        return None, self._pipeline_fn
 
     def _parse_train_data(self, data):
         """Parses data for training.
@@ -297,7 +299,7 @@ class MaskRCNNPreprocessor:
 
         groundtruths['source_id'] = dataloader_utils.process_source_id(groundtruths['source_id'])
         groundtruths = dataloader_utils.pad_groundtruths_to_fixed_size(groundtruths, self._max_num_instances)
-        # Remove the `groundtrtuh` layer key (no longer needed)
+        # Remove the `groundtruth` layer key (no longer needed)
         labels['groundtruths'] = groundtruths
 
         inputs = {
@@ -306,3 +308,13 @@ class MaskRCNNPreprocessor:
         }
 
         return inputs, labels
+
+    def _pipeline_fn(self, dataset, decoder_fn):
+
+        preprocess_input_fn = self._parse_fn
+        preprocess_pipeline = lambda record: preprocess_input_fn(decoder_fn(record))
+
+        dataset = dataset.map(preprocess_pipeline, num_parallel_calls=self._num_preprocess_workers)
+        dataset = dataset.batch(self._global_batch_size, drop_remainder=True)
+
+        return dataset

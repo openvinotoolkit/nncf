@@ -495,6 +495,7 @@ class PTNNCFGraph(NNCFGraph):
         super().__init__()
         self.match_manager = NodeManager(self._node_id_to_key_dict, self._nx_graph, self._nx_node_to_nncf_node)
         self._input_nncf_nodes = []
+        self._output_nncf_nodes = []
 
     def __eq__(self, other: 'PTNNCFGraph'):
         nm = iso.categorical_node_match([PTNNCFGraph.ID_NODE_ATTR,
@@ -519,13 +520,19 @@ class PTNNCFGraph(NNCFGraph):
         node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs,
                                            module_attrs)
 
-        from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
+        from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:  # TODO: refactorable model input node name
             self._input_nncf_nodes.append(node)
+
+        if node.op_exec_context.operator_name == MODEL_OUTPUT_OP_NAME:
+            self._output_nncf_nodes.append(node)
         return node
 
     def get_input_nodes(self) -> List[PTNNCFNode]:
         return self._input_nncf_nodes
+
+    def get_output_nodes(self) -> List[PTNNCFNode]:
+        return self._output_nncf_nodes
 
     def get_nncf_node_by_id(self, node_id: int) -> PTNNCFNode:
         nx_node = self.get_nx_node_by_key(self.get_node_key_by_id(node_id))

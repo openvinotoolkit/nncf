@@ -10,13 +10,24 @@
             "resnet50_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/resnet50_imagenet_int8.json",
                 "reference": "resnet50_imagenet",
-                "target": 75.97,
+                "target": 76.4,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int8.pth",
                 "model_description": "ResNet-50",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.5
+            },
+            "resnet50_imagenet_int8_per_tensor": {
+                "config": "examples/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json",
+                "reference": "resnet50_imagenet",
+                "target": 76.4,
+                "metric_type": "Acc@1",
+                "resume": "resnet50_imagenet_int8_per_tensor.pth",
+                "model_description": "ResNet-50",
+                "compression_description": "INT8",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.5
             },
             "resnet50_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_manual.json",
@@ -34,13 +45,13 @@
             "resnet50_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",
                 "reference": "resnet50_imagenet",
-                "target": 75.21,
+                "target": 75.51,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_rb_sparsity_int8.pth",
                 "model_description": "ResNet-50",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.15
             },
             "resnet50_imagenet_rb_sparsity50_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json",
@@ -71,41 +82,52 @@
             "inception_v3_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/inception_v3_imagenet_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 76.97,
+                "target": 78.19,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_int8.pth",
                 "model_description": "Inception V3",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 1.0
             },
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 76.95,
+                "target": 77.58,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_rb_sparsity_int8.pth",
                 "model_description": "Inception V3",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.4
             },
             "mobilenet_v2_imagenet": {
                 "config": "examples/classification/configs/quantization/mobilenet_v2_imagenet.json",
-                "target": 71.75,
+                "target": 71.91,
                 "metric_type": "Acc@1",
                 "model_description": "MobileNet V2"
             },
             "mobilenet_v2_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/mobilenet_v2_imagenet_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 71.32,
+                "target": 71.47,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.15
+            },
+            "mobilenet_v2_imagenet_int8_per_tensor": {
+                "config": "examples/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
+                "reference": "mobilenet_v2_imagenet",
+                "target": 71.23,
+                "metric_type": "Acc@1",
+                "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
+                "model_description": "MobileNet V2",
+                "compression_description": "INT8",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.15
             },
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_manual.json",
@@ -121,13 +143,13 @@
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target": 70.94,
+                "target": 71.21,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_rb_sparsity_int8.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8 + Sparsity 52% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.15
             },
             "squeezenet1_1_imagenet": {
                 "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet.json",
@@ -138,13 +160,24 @@
             "squeezenet1_1_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.04,
+                "target": 58.24,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8.pth",
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.15
+            },
+            "squeezenet1_1_imagenet_int8_per_tensor": {
+                "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
+                "reference": "squeezenet1_1_imagenet",
+                "target": 58.15,
+                "metric_type": "Acc@1",
+                "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",
+                "model_description": "SqueezeNet V1.1",
+                "compression_description": "INT8",
+                "diff_fp32_min": -1,
+                "diff_fp32_max": 0.15
             },
             "squeezenet1_1_imagenet_int4_int8": {
                 "config": "examples/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_manual.json",
@@ -240,7 +273,7 @@
         "VOCdevkit": {
             "ssd300_mobilenet_voc": {
                 "config": "examples/object_detection/configs/ssd300_mobilenet_voc.json",
-                "target": 86.02,
+                "target": 62.23,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc.pth",
                 "batch": 120,
@@ -249,7 +282,7 @@
             "ssd300_mobilenet_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json",
                 "reference": "ssd300_mobilenet_voc",
-                "target": 85.82,
+                "target": 62.23,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_mobilenet_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-MobileNet",
@@ -259,7 +292,7 @@
             },
             "ssd300_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc.json",
-                "target": 96.53,
+                "target": 78.28,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc.pth",
                 "batch": 120,
@@ -268,7 +301,7 @@
             "ssd300_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_int8.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 96.5,
+                "target": 78.08,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_int8.pth",
                 "model_description": "SSD300-VGG-BN",
@@ -279,7 +312,7 @@
             "ssd300_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 95.4,
+                "target": 77.62,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_magnitude_sparsity_int8.pth",
                 "model_description": "SSD300-VGG-BN",
@@ -290,7 +323,7 @@
             "ssd300_vgg_voc_pruning_geometric_median": {
                 "config": "examples/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json",
                 "reference": "ssd300_vgg_voc",
-                "target": 91.98,
+                "target": 77.72,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_pruning_geometric_median.pth",
                 "batch": 32,
@@ -301,7 +334,7 @@
             },
             "ssd512_vgg_voc": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc.json",
-                "target": 97.59,
+                "target": 80.26,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc.pth",
                 "batch": 32,
@@ -310,7 +343,7 @@
             "ssd512_vgg_voc_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 97.37,
+                "target": 80.11,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
                 "batch": 32,
@@ -322,7 +355,7 @@
             "ssd512_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json",
                 "reference": "ssd512_vgg_voc",
-                "target": 96.66,
+                "target": 79.74,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_magnitude_sparsity_int8.pth",
                 "batch": 32,
@@ -347,7 +380,7 @@
             "unet_camvid_int8": {
                 "config": "examples/semantic_segmentation/configs/unet_camvid_int8.json",
                 "reference": "unet_camvid",
-                "target": 71.66,
+                "target": 71.96,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid_int8.pth",
                 "model_description": "UNet",

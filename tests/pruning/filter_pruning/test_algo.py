@@ -331,7 +331,7 @@ def test_calculation_of_flops(all_weights, pruning_flops_target, ref_flops):
     assert pruning_algo._calculate_flops_pruned_model_by_masks() == ref_flops
 
 
-def test_clasters_for_multiple_forward():
+def test_clusters_for_multiple_forward():
     config = get_basic_pruning_config(input_sample_size=[1, 2, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     config['compression']['params']['all_weights'] = False

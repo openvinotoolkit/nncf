@@ -110,6 +110,9 @@ strict digraph  {
 "108 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" [id=108, scope="NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint", type=cat];
 "109 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=109, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
 "110 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=110, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
+"111 /nncf_model_output" [id=111, scope="", type=nncf_model_output];
+"112 /nncf_model_output" [id=112, scope="", type=nncf_model_output];
+"113 /nncf_model_output" [id=113, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
 "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
@@ -240,4 +243,7 @@ strict digraph  {
 "106 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[3]/LSTMCellForwardNNCF[cell]/__mul__" -> "107 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[3]/cat";
 "106 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[3]/LSTMCellForwardNNCF[cell]/__mul__" -> "109 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "107 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[3]/cat" -> "108 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat";
+"108 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" -> "113 /nncf_model_output";
+"109 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "111 /nncf_model_output";
+"110 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "112 /nncf_model_output";
 }

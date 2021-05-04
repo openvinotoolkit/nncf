@@ -24,9 +24,8 @@ from typing import Set
 from typing import Tuple
 
 import networkx as nx
-
-from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.logger import logger as nncf_logger
@@ -37,9 +36,10 @@ from nncf.dynamic_graph.graph_builder import ModelInputInfo
 # pylint: disable=unused-wildcard-import
 from nncf.dynamic_graph.operator_metatypes import *
 from nncf.dynamic_graph.operator_metatypes import OPERATOR_METATYPES
-from nncf.hw_config import HWConfig
-from nncf.nncf_network import InsertionPointGraph
 from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.hw_config import HWConfig
+from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
+from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
 from nncf.quantization.layers import QuantizerConfig
@@ -50,13 +50,19 @@ from nncf.quantization.quantizer_setup import QuantizationPointId
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.utils import in_scope_list
 
-
 class QuantizationTrait(Enum):
     """General, hardware-agnostic specifications for the relation of operators to quantization.
     Hardware-specific quantization configuration is handled elsewhere."""
     NON_QUANTIZABLE = -1
     QUANTIZATION_AGNOSTIC = 0
     INPUTS_QUANTIZABLE = 1
+
+    # For embeddings, the inputs are integer and are used to index into the weight of the layer,
+    # therefore if the weight is already quantized there may be no need to quantize the outgoing tensor.
+    # TODO: unify scales for such operations if they become linked through a downstream op (such as
+    # two embeddings added to each other)
+    OUTPUT_QUANTIZATION_AS_WEIGHTS = 2
+
     # A concat node should ultimately either have all of its inputs quantized with the same configuration
     # or none at all. This cannot be determined ahead of time, hence the special trait.
     CONCAT = 100
@@ -93,12 +99,14 @@ DEFAULT_QUANT_TRAIT_TO_OP_DICT = {
         AvgPool3dMetatype
     ],
     QuantizationTrait.NON_QUANTIZABLE: [
-        EmbeddingMetatype,
-        EmbeddingBagMetatype,
         SoftmaxMetatype
     ],
     QuantizationTrait.CONCAT: [
         CatMetatype
+    ],
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [
+        EmbeddingMetatype,
+        EmbeddingBagMetatype
     ]
 }  # type: Dict[QuantizationTrait, List[OperatorMetatype]]
 
@@ -257,6 +265,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
 
         self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
         self._input_node_keys_vs_contexts = {}  # type: Dict[str, InputAgnosticOperationExecutionContext]
+        self._pqs_after_weight_dependent_output_quantized_nodes = {}  # type: Dict[PropagatingQuantizer, str]
 
         iteration_scope_node_keys = []
         for node_key, node in ip_graph.nodes.items():
@@ -341,6 +350,27 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     matches.append(node_key)
         assert len(matches) == 1
         return matches[0]
+
+    def mark_act_quantizer_as_dependent_on_weights(self, pq: PropagatingQuantizer, operator_node_key: str):
+        """Marks a given propagating quantizer corresponding to input activation quantization
+        of some downstream op as depenedent on weights of an operation that gives its weights directly
+        as outputs (such as Embedding). The quantizer marked in this manner will be later considered
+        for removal if the weights of the weight-as-outputs operation are quantized in a compatible
+        way (i.e. with the same quantizer configuration) as is required by the propagating activation
+        quantizer.
+        :param: pq - the propagating quantizer corresponding to input quantization of some op
+        :param: operator_node_key - a key of the node in QuantizerPropagationStateGraph that corresponds to
+        a weights-as-outputs node."""
+        op_node = self.nodes[operator_node_key]
+        assert op_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR] is \
+               QuantizerPropagationStateGraphNodeType.OPERATOR
+        assert op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] is \
+               QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+        if pq in self._pqs_after_weight_dependent_output_quantized_nodes and \
+                self._pqs_after_weight_dependent_output_quantized_nodes[pq] != operator_node_key:
+            raise RuntimeError("Propagating quantizer {} is already marked as depending on node {} weight "
+                               "quantization!".format(pq.id, operator_node_key))
+        self._pqs_after_weight_dependent_output_quantized_nodes[pq] = operator_node_key
 
     # pylint:disable=too-many-branches
     def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: List[Tuple[str, str]]):
@@ -462,6 +492,22 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             merge_pq.quantized_input_sink_operator_nodes.update(pq.quantized_input_sink_operator_nodes)
 
         return merge_pq
+
+    def get_predecessor_weight_as_outputs_node_keys(self, curr_node_key: str) -> List[str]:
+        """For a given node key in this graph, returns node keys of all direct predecessors
+        of this node that correspond to weights-as-outputs operations (such as Embedding)
+        :param: curr_node_key - a node key in this QuantizerPropagationStateGraph
+        :return: A list of weights-as-outputs predecessor node keys for `curr_node_key`"""
+        pred_keys = list(self.predecessors(curr_node_key))
+        matches = []
+        for pred_key in pred_keys:
+            pred_node = self.nodes[pred_key]
+            pred_node_type = pred_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
+            if pred_node_type is QuantizerPropagationStateGraphNodeType.OPERATOR:
+                pred_node_trait = pred_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                if pred_node_trait is QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS:
+                    matches.append(pred_key)
+        return matches
 
     def backtrack_propagation_until_accepting_location(self, prop_quantizer: PropagatingQuantizer) -> \
             Optional[PropagatingQuantizer]:
@@ -786,8 +832,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     quant_node_label = quant_node_key + '\n' + "T: {}\n".format(sub_label)
                     quant_node_label += 'Q-input sink ops: {}'.format(
                         "\n".join(prop_quantizer.quantized_input_sink_operator_nodes))
+                    pq_color = "blue" if prop_quantizer not in self._pqs_after_weight_dependent_output_quantized_nodes \
+                        else "yellow"
                     out_graph.add_node(quant_node_key,
-                                       color="blue", label=quant_node_label)
+                                       color=pq_color, label=quant_node_label)
                     out_graph.add_edge(quant_node_key, node_key,
                                        style="dashed")
                     if prop_quantizer.unified_scale:
@@ -1060,7 +1108,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         same_op_groups = self._get_all_quantizers_grouped_by_affecting_op_set()
         setup = MultiConfigQuantizerSetup()
 
-        qm_scope_vs_same_op_group_idx_in_list = {}  # type: Dict[Scope, int]
+        pqid_vs_qpid = {}  # type: Dict[int, QuantizationPointId]
+        qm_scope_vs_same_op_gid = {}  # type: Dict[Scope, int]
         for group in same_op_groups:
             grouped_ids = set()
             for pq in group.affecting_prop_quants:
@@ -1078,11 +1127,12 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 quant_point = MultiConfigQuantizationPoint(self.get_insertion_point_for_propagating_quantizer(pq),
                                                            pq.potential_quant_configs,
                                                            scopes_of_directly_quantized_operators)
-                setup.quantization_points[pq.id] = quant_point
-                grouped_ids.add(pq.id)
+                qp_id = pq.id
+                pqid_vs_qpid[pq.id] = qp_id
+                setup.quantization_points[qp_id] = quant_point
+                grouped_ids.add(qp_id)
 
-            setup.shared_input_operation_set_groups.append(grouped_ids)
-            group_idx_in_list = len(setup.shared_input_operation_set_groups) - 1
+            gid = setup.register_shared_inputs_group(list(grouped_ids))
             for module_scope in quantizable_module_scope_vs_qconfigs.keys():
                 # Hacky, but this is all we can do since the graph we are dealing with has merged nodes,
                 # and the only information about which nodes were there before the merge is in the node key,
@@ -1090,19 +1140,21 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 # TODO: preserve pre-merge node keys information explicitly
                 for affected_node_key in group.affected_op_node_keys:
                     if str(module_scope) in affected_node_key:
-                        qm_scope_vs_same_op_group_idx_in_list[module_scope] = group_idx_in_list
+                        qm_scope_vs_same_op_gid[module_scope] = gid
 
         if setup.quantization_points.keys():
             max_aq_id = max(setup.quantization_points.keys()) + 1
         else:
             max_aq_id = 0
+
         next_wq_id = max_aq_id + 1
+        wao_op_node_key_vs_wq_id = {}  # type: Dict[str, QuantizationPointId]
         for module_scope, qconfig_list in quantizable_module_scope_vs_qconfigs.items():
             insertion_point = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                             module_scope=module_scope)
             quant_point = MultiConfigQuantizationPoint(insertion_point, qconfig_list, [module_scope])
             setup.quantization_points[next_wq_id] = quant_point
-            if module_scope not in qm_scope_vs_same_op_group_idx_in_list:
+            if module_scope not in qm_scope_vs_same_op_gid:
                 # Happens for LSTM cells. The "hidden" Linear layer, as represented in NNCFGraph, has no
                 # input edges, since its input is not a regular network input, but a recurrent input
                 # from the previous execution step. TODO: extend recurrent operations handling so that NNCF graph
@@ -1110,15 +1162,105 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 nncf_logger.warning("Could not find an associated input activation quantizer for a module with "
                                     "quantizable weights: {}\n".format(module_scope))
             else:
-                associated_same_op_group_list_idx = qm_scope_vs_same_op_group_idx_in_list[module_scope]
-                setup.shared_input_operation_set_groups[associated_same_op_group_list_idx].add(next_wq_id)
+                associated_same_op_gid = qm_scope_vs_same_op_gid[module_scope]
+                setup.shared_input_operation_set_groups[associated_same_op_gid].add(next_wq_id)
+
+            for wao_op_node_key in self._pqs_after_weight_dependent_output_quantized_nodes.values():
+                # TODO: refactor
+                if str(module_scope) in wao_op_node_key:
+                    wao_op_node_key_vs_wq_id[wao_op_node_key] = next_wq_id
             next_wq_id += 1
 
         pq_sets_grouped_by_unified_scale = list(
             self._unified_scale_group_manager.get_group_vs_prop_quants_dict().values())
         for pq_set in pq_sets_grouped_by_unified_scale:
-            setup.unified_scale_groups.append({pq.id for pq in pq_set})
+            setup.register_unified_scale_group([pqid_vs_qpid[pq.id] for pq in pq_set])
 
+        setup = self._handle_output_quantizers_for_weights_as_outputs_ops(setup, pqid_vs_qpid,
+                                                                          wao_op_node_key_vs_wq_id)
+
+        return setup
+
+    def _handle_output_quantizers_for_weights_as_outputs_ops(self, setup: MultiConfigQuantizerSetup,
+                                                             pqid_vs_qpid: Dict[int, QuantizationPointId],
+                                                             wao_op_node_key_vs_wq_id: Dict[str, QuantizationPointId]) \
+            -> MultiConfigQuantizerSetup:
+        """In case there are propagating quantizers dependent on the weights-as-outputs weighted operations
+        (as marked by mark_act_quantizer_as_dependent_on_weights) in the current state of the quantizer setup,
+        and if the quantizer configurations between the dependent activation quantizer and the weight output
+        quantizer have at least one compatible configuration (checked across all AQ's in the unified
+        scale group of the dependent AQ), then the activation quantizer will be removed and the weight quantizer's
+        config options will be limited to the common configurations between the dependent quantizer and the
+        original weight quantizer configuration space. In case the dependent quantizer to be removed
+        belonged to a unified scale group, the weight quantizer will be put into the same group instead.
+        If the configurations were incompatible, will not remove the corresponding activation quantizer and
+        requantization will occur.
+        :param: setup - a MultiConfigQuantizerSetup corresponding to the quantizer setup state with potentially
+        dependent activation quantizers on the weights-as-outputs ops
+        :param: pqid_vs_qpid - a mapping from propagating quantizer IDs to the corresponding activation quantization
+        point IDs in `setup`
+        :param: wao_op_node_key_vs_wq_id - a mapping from weights-as-outputs operator node keys in the
+        QuantizerPropagationStageGraph to the corresponding weight quantization points in `setup`
+        :return: A MultiConfigQuantizerSetup with weights-as-outputs-dependent quantizers removed where possible
+        and shared inputs/unified scales group adjusted to reflect the change."""
+
+        # For the weights-are-outputs quantized operations, need to find out the dependent activation quantizers in
+        # the multiconfig setup and see if it is possible to avoid requantization by selecting a common configuration
+        # subset. If yes and the activation quantizer becomes unnecessary, need to unify the scales of the weight
+        # quantizer if the removed activation quantizer also had unified scales. If requantization is unavoidable,
+        # leave quantizers as-is (do not unify weight quantizer scales).
+        for pq, wao_op_node_key in self._pqs_after_weight_dependent_output_quantized_nodes.items():
+            wao_qp_id = wao_op_node_key_vs_wq_id[wao_op_node_key]
+            curr_intersection_of_qconfigs = setup.quantization_points[wao_qp_id].possible_qconfigs
+            qp_id_for_current_pq = pqid_vs_qpid[pq.id]
+
+            # Irrespective of whether the dependent input actiation quantizer gets merged into
+            # the weight quantizer, need to register the weight quantizer into the same shared input
+            # group as the dependent input activation quantizer.
+            shared_input_gid = setup.get_shared_inputs_group_id(qp_id_for_current_pq)
+            if shared_input_gid is not None:
+                setup.register_existing_qp_id_in_shared_input_group(wao_qp_id, shared_input_gid)
+
+            unified_scale_gid = setup.get_unified_scale_group_id(qp_id_for_current_pq)
+            if unified_scale_gid is not None:
+                all_qp_ids_in_unified_scale_group = deepcopy(setup.unified_scale_groups[unified_scale_gid])
+            else:
+                all_qp_ids_in_unified_scale_group = {qp_id_for_current_pq}
+            for act_qp_id in all_qp_ids_in_unified_scale_group:
+                curr_act_qconfigs = setup.quantization_points[act_qp_id].possible_qconfigs
+                curr_intersection_of_qconfigs = [qconf for qconf in curr_intersection_of_qconfigs
+                                                 if qconf in curr_act_qconfigs]
+
+            # Do further filtering for per-tensor quantizations only.
+            # TODO: relax the requirement to allow the scale shape of the weight-as-output quantizer
+            # matching the scale shape of the output quantizer (which may, in theory, end up being per-channel
+            curr_intersection_of_qconfigs = list(filter(lambda x: not x.per_channel,
+                                                        curr_intersection_of_qconfigs))
+
+            if not curr_intersection_of_qconfigs:
+                # Requantization is unavoidable
+                nncf_logger.warning("Attempted to use weight quantizer of {} to quantize input of {}, "
+                                    "but no compatible configs were found.".format(wao_op_node_key,
+                                                                                   pq.affected_operator_nodes))
+                continue
+
+            setup.quantization_points[wao_qp_id].possible_qconfigs = curr_intersection_of_qconfigs
+            for act_qp_id in all_qp_ids_in_unified_scale_group:
+                setup.quantization_points[act_qp_id].possible_qconfigs = curr_intersection_of_qconfigs
+
+            if unified_scale_gid is not None:
+                setup.register_existing_qp_id_in_unified_scale_group(wao_qp_id, unified_scale_gid)
+                unified_scale_qp_printable_str = ", ".join([str(setup.quantization_points[qp_id]) for qp_id in
+                                                            all_qp_ids_in_unified_scale_group])
+                nncf_logger.info("Unifying weight quantizer ranges of {} with {}".format(
+                    wao_op_node_key, unified_scale_qp_printable_str))
+
+            # The activation quantizer is now unnecessary since we could find a matching weight quantization
+            # for the op. Should discard it, but first transfer the knowledge on the operators it quantizes downstream
+            # to the weights-as-outputs quantization point.
+            dir_quant_ops = setup.quantization_points[qp_id_for_current_pq].scopes_of_directly_quantized_operators
+            setup.quantization_points[wao_qp_id].scopes_of_directly_quantized_operators.extend(deepcopy(dir_quant_ops))
+            setup.discard(qp_id_for_current_pq, keep_shared_input_qps=True)
         return setup
 
     def run_consistency_check(self) -> bool:
@@ -1302,7 +1444,8 @@ class QuantizerPropagationSolver:
                  scope_overrides: Dict = None,
                  global_constraints: Dict[QuantizerGroup, QuantizationConstraints] = None,
                  additional_unified_scale_op_scopes: List[List[str]] = None,
-                 run_consistency_checks: bool = False):
+                 run_consistency_checks: bool = False,
+                 quantize_outputs: bool = False):
         self.default_global_qconfig_list = default_qconfig_list
         self._hw_config = hw_config  # type: HWConfig
         self._debug_interface = debug_interface
@@ -1311,6 +1454,7 @@ class QuantizerPropagationSolver:
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
         self._input_infos = input_infos
+        self._quantize_outputs = quantize_outputs
         self._quantizable_modules = quantizable_modules  # type: List['QuantizableModule']
         if scope_overrides is None:
             self._scope_overrides = {}
@@ -1526,6 +1670,14 @@ class QuantizerPropagationSolver:
 
         paths = quant_prop_graph.get_paths_to_immediately_dominating_insertion_points(curr_node_key)
         if not paths:
+            # May have ended up right below an embedding node without inputs. The path to the dominating IP will
+            # not be generated (because a no-input node cannot be assigned pre-hooks), so need to directly check
+            # the predecessors.
+            wao_pred_node_keys = quant_prop_graph.get_predecessor_weight_as_outputs_node_keys(curr_node_key)
+            if wao_pred_node_keys:
+                assert len(wao_pred_node_keys) == 1
+                quant_prop_graph.mark_act_quantizer_as_dependent_on_weights(curr_prop_quantizer, wao_pred_node_keys[0])
+
             prop_quantizer = quant_prop_graph.backtrack_propagation_until_accepting_location(curr_prop_quantizer)
             if prop_quantizer is not None:
                 self._finished_propagating_quantizers.append(prop_quantizer)
@@ -1581,6 +1733,7 @@ class QuantizerPropagationSolver:
             self._active_propagating_quantizers_queue.appendleft(prop_quantizer)
         return quant_prop_graph
 
+
     def get_allowed_quantizer_configs_for_operator(self, quant_det_id: OperatorMetatype) -> List[QuantizerConfig]:
         return self._operator_allowed_qconfigs_map[quant_det_id]
 
@@ -1604,6 +1757,7 @@ class QuantizerPropagationSolver:
                     node[QuantizerPropagationStateGraph.ALLOWED_INPUT_QUANTIZATION_TYPES_NODE_ATTR] = \
                         self.get_allowed_quantizer_configs_for_operator(quant_det_id)
         return quant_prop_graph
+
 
     def get_operator_quantization_traits_map(self) -> Dict[OperatorMetatype, QuantizationTrait]:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
@@ -1818,15 +1972,18 @@ class QuantizerPropagationSolver:
         if not preds:
             return  # TODO: remove this once module insertion points are included in the IP graph
 
+        if not self._quantize_outputs and MODEL_OUTPUT_OP_NAME in operator_node_key:
+            return
         # No need to place quantizers for FP32-forced ops, naturally
         if node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR] in \
                 [QuantizationTrait.NON_QUANTIZABLE,
                  QuantizationTrait.QUANTIZATION_AGNOSTIC,
-                 QuantizationTrait.CONCAT]:
+                 QuantizationTrait.CONCAT] and MODEL_OUTPUT_OP_NAME not in operator_node_key:
             return
-
         quant_det_id = node[QuantizerPropagationStateGraph.OPERATOR_METATYPE_NODE_ATTR]
         qconf_list = self.get_allowed_quantizer_configs_for_operator(quant_det_id)
+        if MODEL_OUTPUT_OP_NAME in operator_node_key:
+            qconf_list = self.default_global_qconfig_list
         assert qconf_list is not None
 
         ia_op_exec_context = node[QuantizerPropagationStateGraph.OPERATOR_IA_OP_EXEC_CONTEXT_NODE_ATTR]
@@ -1981,6 +2138,9 @@ class QuantizerPropagationSolver:
             from_node_type = from_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if from_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 trait = from_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
+                if trait is QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS:
+                    quant_prop_graph.mark_act_quantizer_as_dependent_on_weights(prop_quantizer, from_node_key)
+                    return TransitionStatus.SHOULD_NOT_TRANSITION
                 if trait in [QuantizationTrait.NON_QUANTIZABLE,
                              QuantizationTrait.INPUTS_QUANTIZABLE]:
                     return TransitionStatus.SHOULD_NOT_TRANSITION

@@ -95,7 +95,8 @@ def test_quantization_configs__with_defaults():
                                        num_bits=8,
                                        signedness_to_force=None,
                                        per_channel=False,
-                                       narrow_range=True)
+                                       narrow_range=True,
+                                       half_range=False)
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
 
@@ -103,7 +104,8 @@ def test_quantization_configs__with_defaults():
                                            num_bits=8,
                                            signedness_to_force=None,
                                            per_channel=False,
-                                           narrow_range=False)
+                                           narrow_range=False,
+                                           half_range=False)
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
 
@@ -133,7 +135,8 @@ def test_quantization_configs__custom():
                                        num_bits=4,
                                        signedness_to_force=None,
                                        per_channel=True,
-                                       narrow_range=True)
+                                       narrow_range=True,
+                                       half_range=False)
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
 
@@ -141,7 +144,8 @@ def test_quantization_configs__custom():
                                            num_bits=4,
                                            signedness_to_force=True,
                                            per_channel=False,
-                                           narrow_range=False)
+                                           narrow_range=False,
+                                           half_range=False)
     for wq in activation_quantizers:
         compare_qspecs(ref_activation_qspec, wq)
 
@@ -559,7 +563,7 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     layer_desk = LAYERS_MAP[layer_name](input_type, data_type)
     layer_name = \
         LAYERS_WITH_WEIGHTS[layer_desk.layer_name][WEIGHT_ATTR_NAME]
-    q = Quantizer()
+    q = Quantizer(name='quantizer')
     q.setup_input_transformation(layer_desk.shape, layer_desk.input_type,
                                  layer_name, layer_desk.layer)
     # pylint: disable=protected-access

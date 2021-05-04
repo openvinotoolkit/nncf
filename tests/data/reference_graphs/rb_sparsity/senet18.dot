@@ -186,6 +186,7 @@ strict digraph  {
 "184 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=184, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
 "185 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=185, scope="SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
 "186 SENet/NNCFLinear[linear]/linear" [id=186, scope="SENet/NNCFLinear[linear]", type=linear];
+"187 /nncf_model_output" [id=187, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 SENet/NNCFConv2d[conv1]/conv2d";
 "1 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 SENet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 SENet/NNCFConv2d[conv1]/conv2d";
@@ -388,4 +389,5 @@ strict digraph  {
 "183 SENet/avg_pool2d" -> "186 SENet/NNCFLinear[linear]/linear";
 "184 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "185 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "185 SENet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "186 SENet/NNCFLinear[linear]/linear";
+"186 SENet/NNCFLinear[linear]/linear" -> "187 /nncf_model_output";
 }

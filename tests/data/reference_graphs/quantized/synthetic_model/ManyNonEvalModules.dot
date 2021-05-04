@@ -10,9 +10,12 @@ strict digraph  {
 "8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" [id=8, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout", type=dropout];
 "9 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [id=9, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", type=symmetric_quantize];
 "10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear" [id=10, scope="ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]", type=linear];
-"11 ManyNonEvalModules/AuxBranch[aux_branch]/linear" [id=11, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=linear];
-"12 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" [id=12, scope="ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]", type=linear];
-"13 ManyNonEvalModules/AuxBranch[aux_branch]/RELU" [id=13, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=RELU];
+"11 /nncf_model_output" [id=11, scope="", type=nncf_model_output];
+"12 /nncf_model_output" [id=12, scope="", type=nncf_model_output];
+"13 ManyNonEvalModules/AuxBranch[aux_branch]/linear" [id=13, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=linear];
+"14 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" [id=14, scope="ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]", type=linear];
+"15 ManyNonEvalModules/AuxBranch[aux_branch]/RELU" [id=15, scope="ManyNonEvalModules/AuxBranch[aux_branch]", type=RELU];
+"16 /nncf_model_output" [id=16, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "2 ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d";
 "2 ManyNonEvalModules/AvgPool2d[avg_pool]/avg_pool2d" -> "3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize";
@@ -21,9 +24,12 @@ strict digraph  {
 "5 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFUserCustomWeightModule[custom]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "6 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFUserCustomWeightModule[custom]/linear";
 "6 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFUserCustomWeightModule[custom]/linear" -> "7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFUserCustomWeightModule[custom]/SymmetricQuantizer/symmetric_quantize";
 "7 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFUserCustomWeightModule[custom]/SymmetricQuantizer/symmetric_quantize" -> "8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout";
-"3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize" -> "11 ManyNonEvalModules/AuxBranch[aux_branch]/linear";
+"3 ManyNonEvalModules/AvgPool2d[avg_pool]/SymmetricQuantizer/symmetric_quantize" -> "13 ManyNonEvalModules/AuxBranch[aux_branch]/linear";
 "8 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/Dropout/dropout" -> "10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear";
 "9 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear";
-"11 ManyNonEvalModules/AuxBranch[aux_branch]/linear" -> "12 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear";
-"12 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" -> "13 ManyNonEvalModules/AuxBranch[aux_branch]/RELU";
+"10 ManyNonEvalModules/ModuleWithMixedModules[mixed_modules]/NNCFLinear[called_linear]/linear" -> "11 /nncf_model_output";
+"11 /nncf_model_output" -> "12 /nncf_model_output";
+"13 ManyNonEvalModules/AuxBranch[aux_branch]/linear" -> "14 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear";
+"14 ManyNonEvalModules/AuxBranch[aux_branch]/Linear[linear]/linear" -> "15 ManyNonEvalModules/AuxBranch[aux_branch]/RELU";
+"15 ManyNonEvalModules/AuxBranch[aux_branch]/RELU" -> "16 /nncf_model_output";
 }

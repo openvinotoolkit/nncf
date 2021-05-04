@@ -1,11 +1,15 @@
-import pytest
-from pytest import approx
 from collections import namedtuple
 
-from nncf.quantization.metrics import NetworkQuantizationShareMetric as NQSM,\
-    MemoryCostMetric, ShareEdgesQuantizedDataPath
-from nncf import create_compressed_model, NNCFConfig
+import pytest
+from pytest import approx
+
+from nncf import NNCFConfig
+from nncf import create_compressed_model
+from nncf.quantization.metrics import MemoryCostMetric
+from nncf.quantization.metrics import NetworkQuantizationShareMetric as NQSM
+from nncf.quantization.metrics import ShareEdgesQuantizedDataPath
 from tests import test_models
+
 
 def get_basic_quantization_config():
     config = NNCFConfig()
@@ -183,8 +187,9 @@ def test_share_edges_quantized_data_path(share_edges_quantized_data_path_test_st
     config = get_basic_quantization_config()
     config['compression']["ignored_scopes"] = share_edges_quantized_data_path_test_struct.ignored_scopes
     config['input_info']['sample_size'] = [2, 3, 299, 299]
-    _, compressed_model = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True), config)
-    qmetric = ShareEdgesQuantizedDataPath(compressed_model)
+    qctrl, compressed_model = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True),
+                                                      config)
+    qmetric = ShareEdgesQuantizedDataPath(compressed_model, qctrl)
     qmetric.collect()
     # pylint: disable=protected-access
     qmetric_stat = qmetric._get_copy_statistics()

@@ -20,6 +20,9 @@ strict digraph  {
 "18 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" [id=18, scope="NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint", type=cat];
 "19 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=19, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
 "20 NNCF_RNN/StackedRNN[rnn_impl]/cat" [id=20, scope="NNCF_RNN/StackedRNN[rnn_impl]", type=cat];
+"21 /nncf_model_output" [id=21, scope="", type=nncf_model_output];
+"22 /nncf_model_output" [id=22, scope="", type=nncf_model_output];
+"23 /nncf_model_output" [id=23, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
 "1 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
 "2 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "3 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[input_linear]/linear";
@@ -43,4 +46,7 @@ strict digraph  {
 "16 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "17 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat";
 "16 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul__" -> "19 NNCF_RNN/StackedRNN[rnn_impl]/cat";
 "17 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat" -> "18 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat";
+"18 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat" -> "23 /nncf_model_output";
+"19 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "21 /nncf_model_output";
+"20 NNCF_RNN/StackedRNN[rnn_impl]/cat" -> "22 /nncf_model_output";
 }
