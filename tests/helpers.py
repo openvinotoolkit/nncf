@@ -30,13 +30,15 @@ from onnx import numpy_helper
 from torch import nn
 from torch.nn import functional as F
 from torch.nn import Module
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 
-import nncf
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.initialization import register_default_init_args
 from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
@@ -85,6 +87,8 @@ def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, b
 
 
 class BasicConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
         super().__init__()
         self.in_channels = in_channels
@@ -274,9 +278,8 @@ def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
     return compressed_model, composite_builder
 
 
-def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig,
-                                        train_loader: torch.utils.data.DataLoader) -> nn.Module:
-    config = nncf.register_default_init_args(deepcopy(config), train_loader, nn.MSELoss)
+def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig, train_loader: DataLoader) -> nn.Module:
+    config = register_default_init_args(deepcopy(config), train_loader, nn.MSELoss)
     model, _compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return model
 
@@ -314,22 +317,22 @@ def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model:
     return original_modules, nncf_modules
 
 
-class BaseDatasetMock(torch.utils.data.Dataset, ABC):
-    def __init__(self, input_size, num_samples=10):
-        super(torch.utils.data.Dataset, self).__init__()
+class BaseDatasetMock(Dataset, ABC):
+    def __init__(self, input_size: Tuple, num_samples: int = 10):
+        super().__init__()
         self._input_size = input_size
         self._len = num_samples
 
     @abstractmethod
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         pass
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
 
 class OnesDatasetMock(BaseDatasetMock):
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         return torch.ones(self._input_size), torch.ones(1)
 
 
@@ -338,21 +341,21 @@ class RandomDatasetMock(BaseDatasetMock):
         return torch.rand(self._input_size), torch.zeros(1)
 
 
-def create_any_mock_dataloader(dataset_cls, config, num_samples=1):
+def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_samples: int = 1) -> DataLoader:
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(dataset_cls(input_sample_size[1:], num_samples),
-                                              batch_size=1,
-                                              num_workers=0,  # Workaround
-                                              shuffle=False, drop_last=True)
+    data_loader = DataLoader(dataset_cls(input_sample_size[1:], num_samples),
+                             batch_size=1,
+                             num_workers=0,  # Workaround
+                             shuffle=False, drop_last=True)
     return data_loader
 
 
-def create_mock_dataloader(config, num_samples=1):
+def create_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
     return create_any_mock_dataloader(OnesDatasetMock, config, num_samples)
 
 
-def create_random_mock_dataloader(config, num_samples=1):
+def create_random_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
     return create_any_mock_dataloader(RandomDatasetMock, config, num_samples)
 
 
