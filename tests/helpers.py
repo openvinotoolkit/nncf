@@ -10,16 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from abc import ABC, abstractmethod
 from typing import Dict
 from typing import Callable
 from typing import Any
 from typing import Union
+from typing import Iterable
 from typing import List
 from typing import Tuple
+from typing import TypeVar
 
 import onnx
 import numpy as np
 import torch
+import pytest
 
 from copy import deepcopy
 from onnx import numpy_helper
@@ -27,6 +31,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn import Module
 
+import nncf
 from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
@@ -36,6 +41,9 @@ from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import get_all_modules_by_type
+
+TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
+
 
 def fill_conv_weight(conv, value):
     conv.weight.data.fill_(value)
@@ -61,11 +69,13 @@ def create_conv(in_channels, out_channels, kernel_size, weight_init=1, bias_init
     fill_bias(conv, bias_init)
     return conv
 
+
 def create_depthwise_conv(channels, kernel_size, weight_init, bias_init, padding=0, stride=1):
     conv = nn.Conv2d(channels, channels, kernel_size, padding=padding, stride=stride, groups=channels)
     fill_conv_weight(conv, weight_init)
     fill_bias(conv, bias_init)
     return conv
+
 
 def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, bias_init, stride):
     conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride=stride)
@@ -75,7 +85,6 @@ def create_transpose_conv(in_channels, out_channels, kernel_size, weight_init, b
 
 
 class BasicConvTestModel(nn.Module):
-    INPUT_SIZE = [1, 1, 4, 4]
     def __init__(self, in_channels=1, out_channels=2, kernel_size=2, weight_init=-1, bias_init=-2):
         super().__init__()
         self.in_channels = in_channels
@@ -146,11 +155,11 @@ class TwoConvTestModel(nn.Module):
 
 
 class LeNet(nn.Module):
-    INPUT_SIZE = 28
+    INPUT_SIZE = 1, 32, 32
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 6, (5, 5), padding=2)
+        self.conv1 = nn.Conv2d(1, 6, (5, 5))
         self.conv2 = nn.Conv2d(6, 16, (5, 5))
 
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
@@ -197,17 +206,36 @@ def get_grads(variables):
     return [var.grad.clone() for var in variables]
 
 
-def to_numpy(tensor: Union[torch.Tensor, np.ndarray]) -> np.ndarray:
+def to_numpy(tensor: TensorType) -> np.ndarray:
     if isinstance(tensor, torch.Tensor):
         return tensor.cpu().detach().numpy()
     return tensor
 
 
-def check_equal(test, reference, rtol=1e-4):
+def compare_tensor_lists(test: Iterable[TensorType], reference: Iterable[TensorType],
+                         compare_fn: Callable[[np.ndarray, np.ndarray], bool]):
     for i, (x, y) in enumerate(zip(test, reference)):
         x = to_numpy(x)
         y = to_numpy(y)
-        np.testing.assert_allclose(x, y, rtol=rtol, err_msg="Index: {}".format(i))
+        assert compare_fn(x, y), f'i={i}'
+
+
+def check_equal(test: Iterable[TensorType], reference: Iterable[TensorType], rtol: float = 1e-4):
+    compare_tensor_lists(test, reference, lambda x, y: x == pytest.approx(y, rel=rtol))
+
+
+def check_not_equal(test: Iterable[TensorType], reference: Iterable[TensorType], rtol: float = 1e-4):
+    compare_tensor_lists(test, reference, lambda x, y: x != pytest.approx(y, rel=rtol))
+
+
+def check_less(test: Iterable[TensorType], reference: Iterable[TensorType], rtol=1e-4):
+    check_not_equal(test, reference, rtol=rtol)
+    compare_tensor_lists(test, reference, lambda x, y: (x < y).all())
+
+
+def check_greater(test: Iterable[TensorType], reference: Iterable[TensorType], rtol=1e-4):
+    check_not_equal(test, reference, rtol=rtol)
+    compare_tensor_lists(test, reference, lambda x, y: (x > y).all())
 
 
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
@@ -246,6 +274,13 @@ def create_nncf_model_and_algo_builder(model: Module, config: NNCFConfig,
     return compressed_model, composite_builder
 
 
+def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig,
+                                        train_loader: torch.utils.data.DataLoader) -> nn.Module:
+    config = nncf.register_default_init_args(deepcopy(config), train_loader, nn.MSELoss)
+    model, _compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    return model
+
+
 class MockModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -279,27 +314,46 @@ def check_correct_nncf_modules_replacement(model: NNCFNetwork, compressed_model:
     return original_modules, nncf_modules
 
 
-class OnesDatasetMock:
-    def __init__(self, input_size, num_samples=1):
-        self.input_size = input_size
-        super().__init__()
+class BaseDatasetMock(torch.utils.data.Dataset, ABC):
+    def __init__(self, input_size, num_samples=10):
+        super(torch.utils.data.Dataset, self).__init__()
+        self._input_size = input_size
         self._len = num_samples
 
+    @abstractmethod
     def __getitem__(self, index):
-        return torch.ones(self.input_size), torch.ones(1)
+        pass
 
     def __len__(self):
         return self._len
 
 
-def create_mock_dataloader(config, num_samples=1):
+class OnesDatasetMock(BaseDatasetMock):
+    def __getitem__(self, index):
+        return torch.ones(self._input_size), torch.ones(1)
+
+
+class RandomDatasetMock(BaseDatasetMock):
+    def __getitem__(self, index):
+        return torch.rand(self._input_size), torch.zeros(1)
+
+
+def create_any_mock_dataloader(dataset_cls, config, num_samples=1):
     input_infos_list = create_input_infos(config)
     input_sample_size = input_infos_list[0].shape
-    data_loader = torch.utils.data.DataLoader(OnesDatasetMock(input_sample_size[1:], num_samples),
+    data_loader = torch.utils.data.DataLoader(dataset_cls(input_sample_size[1:], num_samples),
                                               batch_size=1,
                                               num_workers=0,  # Workaround
                                               shuffle=False, drop_last=True)
     return data_loader
+
+
+def create_mock_dataloader(config, num_samples=1):
+    return create_any_mock_dataloader(OnesDatasetMock, config, num_samples)
+
+
+def create_random_mock_dataloader(config, num_samples=1):
+    return create_any_mock_dataloader(RandomDatasetMock, config, num_samples)
 
 
 # ONNX graph helpers
