@@ -292,8 +292,8 @@ def random_mosaic_augment(image_data, boxes_data, prob=.1):
 
             #crop_x = np.random.randint(int(width*min_offset), int(width*(1 - min_offset)))
             #crop_y = np.random.randint(int(height*min_offset), int(height*(1 - min_offset)))
-            crop_x = int(random.uniform(int(width*min_offset), int(width*(1-min_offset))))
-            crop_y = int(random.uniform(int(height*min_offset), int(height*(1 - min_offset))))
+            crop_x = int(random.uniform(int(width*min_offset), int(width*(1-min_offset))))  # nosec
+            crop_y = int(random.uniform(int(height*min_offset), int(height*(1 - min_offset))))  # nosec
 
             merged_boxes = merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size=(height, width))
             #no valid bboxes, drop this loop

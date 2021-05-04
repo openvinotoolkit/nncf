@@ -48,7 +48,7 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.api.compression import CompressionLevel
-from nncf.dynamic_graph.graph_builder import create_input_infos
+from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.initialization import register_default_init_args, default_criterion_fn
 from nncf.utils import safe_thread_call, is_main_process
 from examples.classification.common import set_seed, load_resuming_checkpoint
@@ -199,6 +199,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.mode.lower() == 'train':
         train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
+    config.mlflow.end_run()
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
@@ -270,9 +271,11 @@ def get_dataset(dataset_config, config, transform, is_train):
     if dataset_config == 'imagenet':
         prefix = 'train' if is_train else 'val'
         return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
+    # For testing purposes
     if dataset_config == 'mock_32x32':
-        # For testing purposes
         return MockDataset(img_size=(32, 32), transform=transform)
+    if dataset_config == 'mock_299x299':
+        return MockDataset(img_size=(299, 299), transform=transform)
     return create_cifar(config, dataset_config, is_train, transform)
 
 
@@ -290,7 +293,8 @@ def create_cifar(config, dataset_config, is_train, transform):
 def create_datasets(config):
     dataset_config = config.dataset if config.dataset is not None else 'imagenet'
     dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32'], "Unknown dataset option"
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32', 'mock_299x299'], \
+        "Unknown dataset option"
 
     if dataset_config == 'imagenet':
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
@@ -298,7 +302,7 @@ def create_datasets(config):
     elif dataset_config == 'cifar100':
         normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
                                          std=(0.2673, 0.2564, 0.2761))
-    elif dataset_config in ['cifar10', 'mock_32x32']:
+    elif dataset_config in ['cifar10', 'mock_32x32', 'mock_299x299']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 

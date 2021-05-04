@@ -17,9 +17,17 @@ from typing import Tuple
 from typing import Any
 from typing import KeysView
 from typing import ValuesView
+from typing import Dict
+
+from collections import OrderedDict
 
 import networkx as nx
+
 from nncf.common.graph.module_attributes import BaseModuleAttributes
+
+
+MODEL_INPUT_OP_NAME = "nncf_model_input"
+MODEL_OUTPUT_OP_NAME = "nncf_model_output"
 
 
 class NNCFNode:
@@ -69,6 +77,8 @@ class NNCFGraph:
     KEY_NODE_ATTR = 'key'
     NODE_TYPE_ATTR = 'type'
     MODULE_ATTRIBUTES = 'module_attributes'
+    ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
+    IN_PORT_NAME_EDGE_ATTR = 'in_port'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -79,7 +89,14 @@ class NNCFGraph:
         :param node_id: Id of the node.
         :return: Node in a graph with such id.
         """
-        return self._nx_node_to_nncf_node(self._nx_graph.nodes[self.get_node_key_by_id(node_id)])
+        return self.get_node_by_key(self.get_node_key_by_id(node_id))
+
+    def get_node_by_key(self, key: str):
+        """
+        :param key: key (node_name) of the node.
+        :return: NNCFNode in a graph with such key.
+        """
+        return self._nx_node_to_nncf_node(self._nx_graph.nodes[key])
 
     def get_input_nodes(self) -> List[NNCFNode]:
         """
@@ -170,6 +187,19 @@ class NNCFGraph:
 
         nx_node_keys = self._nx_graph.pred[self._node_id_to_key_dict[node.node_id]]
         return [self._nx_node_to_nncf_node(self._nx_graph.nodes[key]) for key in nx_node_keys]
+
+    def get_input_edges(self, node: NNCFNode) -> Dict[Tuple[str, str], dict]:
+        """
+        Returns edges of input tensors with description sorted by 'in_port'.
+
+        :param node: Consumer node.
+        :return: Dictionary of input edges for node sorted by in_port.
+        """
+        nx_node_key = self._node_id_to_key_dict[node.node_id]
+        input_edges = sorted(list(self._nx_graph.in_edges(nx_node_key)),
+                             key=lambda edge: self._nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR])
+
+        return OrderedDict((edge, self._nx_graph.edges[edge]) for edge in input_edges)
 
     def traverse_graph(self,
                        curr_node: NNCFNode,

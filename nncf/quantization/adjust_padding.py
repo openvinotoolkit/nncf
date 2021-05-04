@@ -18,7 +18,7 @@ import torch
 from torch import nn
 
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import NNCFGraph
+from nncf.graph.graph import NNCFGraph
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdatePaddingValue
 from nncf.nncf_network import NNCFNetwork

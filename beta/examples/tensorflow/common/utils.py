@@ -24,14 +24,14 @@ from pathlib import Path
 import tensorflow as tf
 
 from nncf.common.utils.logger import logger as nncf_logger
-from beta.nncf.tensorflow.utils.save import FROZEN_GRAPH_FORMAT
-from beta.nncf.tensorflow.utils.save import KERAS_H5_FORMAT
-from beta.nncf.tensorflow.utils.save import SAVEDMODEL_FORMAT
-
 from beta.examples.tensorflow.common.logger import logger as default_logger
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
+
+SAVED_MODEL_FORMAT = 'tf'
+KERAS_H5_FORMAT = 'h5'
+FROZEN_GRAPH_FORMAT = 'frozen_graph'
 
 
 def get_name(config):
@@ -66,14 +66,8 @@ def get_name(config):
 def write_metrics(acc, filename):
     avg = round(acc * 100, 2)
     metrics = {"Accuracy": avg}
-    if os.path.isfile(filename):
-        path = Path(filename)
-        metric_data = json.loads(path.read_text(encoding='utf-8'))
-        metric_data.update(metrics)
-        path.write_text(json.dumps(metric_data, indent=2), encoding='utf-8')
-    else:
-        with open(filename, 'w') as outfile:
-            json.dump(metrics, outfile)
+    with open(filename, 'w') as outfile:
+        json.dump(metrics, outfile)
 
 
 def configure_paths(config):
@@ -130,7 +124,7 @@ def get_saving_parameters(config):
     if config.to_frozen_graph is not None:
         return config.to_frozen_graph, FROZEN_GRAPH_FORMAT
     if config.to_saved_model is not None:
-        return config.to_saved_model, SAVEDMODEL_FORMAT
+        return config.to_saved_model, SAVED_MODEL_FORMAT
     if config.to_h5 is not None:
         return config.to_h5, KERAS_H5_FORMAT
     save_path = os.path.join(config.log_dir, 'frozen_model.pb')

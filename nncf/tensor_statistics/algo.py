@@ -13,15 +13,17 @@
 from typing import Dict
 from typing import Set
 
+from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import NNCFNetwork
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import TransformationPriority
 from nncf.tensor_statistics.collectors import ReductionShape
 from nncf.tensor_statistics.collectors import TensorStatisticCollectorBase
 
@@ -72,6 +74,16 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
                  ip_vs_collector_dict: Dict[PTTargetPoint, TensorStatisticCollectorBase]):
         super().__init__(target_model)
         self.ip_vs_collector_dict = ip_vs_collector_dict
+        self._scheduler = StubCompressionScheduler()
+        self._loss = ZeroCompressionLoss('cpu')
+
+    @property
+    def loss(self) -> ZeroCompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> StubCompressionScheduler:
+        return self._scheduler
 
     def start_collection(self):
         for collector in self.ip_vs_collector_dict.values():

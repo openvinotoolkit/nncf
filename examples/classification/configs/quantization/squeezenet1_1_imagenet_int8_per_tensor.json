@@ -22,6 +22,5 @@
         "weights": {
             "per_channel": false
         }
-    },
-    "target_device": "TRIAL"
+    }
 }

@@ -6,7 +6,7 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import get_current_context, OperatorInput
-from nncf.dynamic_graph.graph import ModuleAttributes
+from nncf.graph.graph import ModuleAttributes
 from nncf.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.dynamic_graph.trace_tensor import trace_tensors
 from nncf.layers import ITERATION_MODULES
@@ -79,7 +79,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                 node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
 
             if is_debug():
-                ctx.register_node_call(ctx.graph.get_node_key_by_id(node.node_id))
+                ctx.register_node_call(node)
 
             args = tuple(processed_input.op_args)
             kwargs = processed_input.op_kwargs
@@ -125,6 +125,7 @@ def _get_module_attributes(module: TorchModule, operator_name: str) -> ModuleAtt
         module.weight.requires_grad,
         module.in_channels,
         module.out_channels,
+        module.kernel_size,
         module.stride,
         module.groups
     )

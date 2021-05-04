@@ -1,5 +1,5 @@
 {
-    "model": "mobilenet_v2",
+    "model": "mobilenet_v2_32x32",
     "input_info": {
       "sample_size":  [2, 3, 32, 32]
     },

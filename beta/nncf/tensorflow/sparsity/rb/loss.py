@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from typing import Dict
+
 import tensorflow as tf
 
 from nncf.api.compression import CompressionLoss
@@ -64,3 +66,6 @@ class SparseLoss(CompressionLoss):
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target.assign(1 - sparsity_level)
+
+    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+        return {}

@@ -18,16 +18,19 @@ from texttable import Texttable
 
 from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.sparsity.controller import SparsityController
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.layer_utils import COMPRESSION_MODULES
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
@@ -57,7 +60,8 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
                 continue
 
             nncf_logger.info("Adding Weight Sparsifier in scope: {}".format(scope_str))
-            operation = self.create_weight_sparsifying_operation(module)
+            compression_lr_multiplier = self.config.get("compression_lr_multiplier", None)
+            operation = self.create_weight_sparsifying_operation(module, compression_lr_multiplier)
             hook = operation.to(device)
             insertion_commands.append(PTInsertionCommand(PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS,
                                                                        module_scope=module_scope),
@@ -67,7 +71,7 @@ class BaseSparsityAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         return insertion_commands
 
-    def create_weight_sparsifying_operation(self, target_module):
+    def create_weight_sparsifying_operation(self, target_module, compression_lr_multiplier):
         raise NotImplementedError
 
 
@@ -76,7 +80,16 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
                  sparsified_module_info: List[SparseModuleInfo]):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.sparsified_module_info = sparsified_module_info
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     @property
     def sparsified_weights_count(self):

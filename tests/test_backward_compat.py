@@ -21,8 +21,8 @@ from examples.common.execution import ExecutionMode, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.sample_config import SampleConfig
 from nncf.checkpoint_loading import load_state
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME
 from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from tests.conftest import TEST_ROOT

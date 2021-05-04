@@ -20,33 +20,32 @@ from typing import Tuple
 import networkx as nx
 import pytest
 import torch
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.graph.graph import InputAgnosticOperationExecutionContext
 
-from nncf.dynamic_graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
-from nncf.dynamic_graph.trace_tensor import TensorMeta
+from nncf.graph.graph import PTNNCFGraph
+from nncf.graph.graph_builder import GraphBuilder
+from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
 from torch import nn
 
 from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.dynamic_graph.context import PreHookId
 from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import PTNNCFNode
-from nncf.dynamic_graph.graph import NNCFGraph
-from nncf.dynamic_graph.graph import NNCFNode
-from nncf.dynamic_graph.graph import OperationExecutionContext
-from nncf.dynamic_graph.graph_builder import GraphBuilder
-from nncf.dynamic_graph.graph_builder import ModelInputInfo
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
-from nncf.dynamic_graph.input_wrapping import MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME
-from nncf.dynamic_graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.graph.graph import PTNNCFNode
+from nncf.graph.graph import NNCFGraph
+from nncf.graph.graph import NNCFNode
+from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.graph.transformations.layout import PTTransformationLayout
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import BaseOp
 from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
-from nncf.dynamic_graph.transformations.commands import TransformationPriority
-from nncf.dynamic_graph.transformations.commands import PTTargetPoint
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
+from nncf.graph.transformations.commands import TransformationPriority
+from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.nncf_network import PTInsertionPoint
 from nncf.nncf_network import PTInsertionType
 from nncf.nncf_network import PTModelTransformer
@@ -78,15 +77,15 @@ def test_disable_shape_matching():
     qnet_no_shape = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo(input_shape_1), ],
                                 scopes_without_shape_matching=['MatMulModel'])  # type: NNCFNetwork
     _ = qnet_no_shape(torch.zeros(*input_shape_1))
-    graph_1 = deepcopy(qnet_no_shape.get_graph())
+    graph_1 = deepcopy(qnet_no_shape.get_dynamic_graph())
 
     _ = qnet_no_shape(torch.zeros(*input_shape_2))
-    graph_2 = deepcopy(qnet_no_shape.get_graph())
+    graph_2 = deepcopy(qnet_no_shape.get_dynamic_graph())
 
-    keys_1 = list(graph_1.get_all_node_keys())
-    keys_2 = list(graph_2.get_all_node_keys())
-    assert len(keys_1) == 3  # 1 input node + 1 operation node + 1 output node
-    assert keys_1 == keys_2
+    assert graph_1 == graph_2
+
+    nodes_1 = list(graph_1.get_all_nodes())
+    assert len(nodes_1) == 3  # 1 input node + 1 operation node + 1 output node
 
     qnet = NNCFNetwork(model, input_infos=[ModelInputInfo(input_shape_1), ])  # type: NNCFNetwork
     _ = qnet(torch.zeros(*input_shape_1))
@@ -94,7 +93,7 @@ def test_disable_shape_matching():
     # The second forward run should have led to an increase in registered node counts
     # since disable_shape_matching was False and the network was run with a different
     # shape of input tensor
-    assert qnet.get_graph().get_nodes_count() > graph_1.get_nodes_count()
+    assert qnet.get_dynamic_graph().get_nodes_count() > graph_1.get_nodes_count()
 
 
 def test_check_correct_modules_replacement():
@@ -355,24 +354,29 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
     from networkx.algorithms.dag import lexicographical_topological_sort
-    for curr_node_key in lexicographical_topological_sort(nx_graph):
+    for idx, curr_node_key in enumerate(lexicographical_topological_sort(nx_graph)):
         node = nx_graph.nodes[curr_node_key]
-        if PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR in node:
-            ia_op_exec_context = node[PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR].input_agnostic
+        if PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR in node:
+            ia_op_exec_context = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]
         else:
             ia_op_exec_context = InputAgnosticOperationExecutionContext(curr_node_key, Scope(), 0)
         module_attributes = node.get(PTNNCFGraph.MODULE_ATTRIBUTES)
-        tensor_metas = []
+        node_id = idx
+        node = PTNNCFNode(node_id, ia_op_exec_context, {
+            PTNNCFGraph.MODULE_ATTRIBUTES: module_attributes
+        })
+        mock_graph.add_nncf_node(node)
+        key_vs_id[curr_node_key] = node_id
+
         preds = list(nx_graph.predecessors(curr_node_key))
-        for idx, pred in enumerate(preds):
+        for pred_idx, pred in enumerate(preds):
             in_edge = (pred, curr_node_key)
-            output_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
-            tensor_metas.append(TensorMeta(creator_id, output_idx,
-                                           [1, 1, 1, 1]))
-        node = mock_graph.add_node(ia_op_exec_context, tensor_metas, [], None, module_attrs=module_attributes)
-        key_vs_id[curr_node_key] = node.node_id
-        for idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
-            edge_vs_output_idx_and_creator_id[out_edge] = (idx, node.node_id)
+            _, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
+            mock_graph.add_edge_between_nncf_nodes(creator_id, node_id,
+                                                   [1, 1, 1, 1], pred_idx)
+
+        for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
+            edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)
     return mock_graph
 
 
@@ -412,10 +416,9 @@ def get_mock_nncf_node_attrs(op_name=None, scope_str=None):
     op_name_to_set = op_name if op_name is not None else MOCK_OPERATOR_NAME
     scope_to_set = Scope() if scope_str is None else Scope.from_str(scope_str)
     return {
-        PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR: OperationExecutionContext(op_name_to_set,
-                                                                         scope_to_set,
-                                                                         0,
-                                                                       [None]),
+        PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: InputAgnosticOperationExecutionContext(op_name_to_set,
+                                                                                         scope_to_set,
+                                                                                         0)
     }
 
 
@@ -584,16 +587,16 @@ class TestInsertionPointGraph:
             post_hook_ip_node = ip_graph.nodes[succs[0]]
             post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
             assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
-            assert post_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
+            assert post_hook_ip.ia_op_exec_context == nncf_node.ia_op_exec_context
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]
                 pre_hook_ip = pre_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
                 assert pre_hook_ip.target_type == TargetType.OPERATOR_PRE_HOOK
-                assert pre_hook_ip.ia_op_exec_context == nncf_node.op_exec_context.input_agnostic
+                assert pre_hook_ip.ia_op_exec_context == nncf_node.ia_op_exec_context
 
     def test_operator_metatype_marking(self):
-        from nncf.dynamic_graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
+        from nncf.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {
@@ -644,7 +647,7 @@ class TestInsertionPointGraph:
         nncf_graph = nncf_network.get_original_graph()
 
         for nncf_node in nncf_graph.get_all_nodes():  # type: PTNNCFNode
-            scope_str = str(nncf_node.op_exec_context.input_agnostic)
+            scope_str = str(nncf_node.ia_op_exec_context)
             assert scope_str in ref_scope_vs_metatype_dict
             ref_metatype = ref_scope_vs_metatype_dict[scope_str]
             assert PTOperatorMetatypeNodeMatcher.match(nncf_node) == ref_metatype
@@ -752,7 +755,7 @@ class TestModelMultipleForward(nn.Module):
 
 
 def test_multiple_forward():
-    # Check that all convolution nodes in model have op_exec_context and module_attributes
+    # Check that all convolution nodes in model have ia_op_exec_context and module_attributes
     # for case with multiple forward of one module
     model = TestModelMultipleForward()
     config = get_basic_sparsity_plus_quantization_config()
@@ -760,5 +763,5 @@ def test_multiple_forward():
     graph = sparse_quantized_model.get_original_graph()
     for node_key in list(graph.get_all_node_keys())[1:-2]:
         node = graph.get_nx_node_by_key(node_key)
-        assert node.get(PTNNCFGraph.OP_EXEC_CONTEXT_NODE_ATTR)
+        assert node.get(PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR)
         assert node.get(PTNNCFGraph.MODULE_ATTRIBUTES)

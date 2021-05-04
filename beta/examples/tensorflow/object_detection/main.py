@@ -257,6 +257,8 @@ def evaluate(test_step, metric, test_dist_dataset, num_batches, print_freq):
 
 def run(config):
     strategy = get_distribution_strategy(config)
+    if config.metrics_dump is not None:
+        write_metrics(0, config.metrics_dump)
 
     # Create dataset
     builders = get_dataset_builders(config, strategy.num_replicas_in_sync)

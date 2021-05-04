@@ -10,18 +10,17 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-from typing import Any, Dict, Optional, TypeVar
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional, TypeVar, List, Tuple
 
 from nncf import NNCFConfig
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 
 ModelType = TypeVar('ModelType')
 
 
-class CompressionLoss:
+class CompressionLoss(ABC):
     """
     Used to calculate the additional loss to be added to the base loss during the
     training process. It uses the model graph to measure variables and activations
@@ -30,14 +29,15 @@ class CompressionLoss:
     and fully-connected layers to construct the loss function.
     """
 
+    @abstractmethod
     def calculate(self, *args, **kwargs) -> Any:
         """
         Calculates the compression loss value.
 
         :return: The compression loss value.
         """
-        return 0
 
+    @abstractmethod
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Returns a dictionary of printable statistics.
@@ -47,7 +47,6 @@ class CompressionLoss:
             need to keep track of statistics on each training batch/step/iteration.
         :return: A dictionary of printable statistics.
         """
-        return {}
 
     def __call__(self, *args, **kwargs) -> Any:
         """
@@ -58,7 +57,7 @@ class CompressionLoss:
         return self.calculate(*args, **kwargs)
 
 
-class CompressionScheduler:
+class CompressionScheduler(ABC):
     """
     Implements the logic of compression method control during the training process.
     May change the method hyperparameters in regards to the current training step
@@ -77,27 +76,7 @@ class CompressionScheduler:
     ```
     """
 
-    def __init__(self):
-        """
-        Initializes the internal state of the compression scheduler specified by:
-            - `current_step` is the index of the global training step, counted
-            from 0 to the end of training. The initial value is -1
-            - `current_epoch` is the training epoch index (numbering from zero).
-            The initial value is -1.
-
-        The `current_step` and `current_epoch` specify the training step and epoch,
-        respectively, for which the compression scheduler has updated the state of
-        the compression method, in particular its hyperparameters. It means that
-        the compression method is configured and ready to continue training at
-        `current_step` and `current_epoch`.
-
-        When `current_step` is -1, it means that the compression scheduler did not
-        update the compression method state taking into account the training step,
-        there is the same for current_epoch is -1.
-        """
-        self.current_step = -1
-        self.current_epoch = -1
-
+    @abstractmethod
     def step(self, next_step: Optional[int] = None) -> None:
         """
         Should be called at the beginning of each training step to prepare
@@ -106,10 +85,8 @@ class CompressionScheduler:
         :param next_step: The global step index for which the compression scheduler
             will update the state of the compression method.
         """
-        if next_step is None:
-            next_step = self.current_step + 1
-        self.current_step = next_step
 
+    @abstractmethod
     def epoch_step(self, next_epoch: Optional[int] = None) -> None:
         """
         Should be called at the beginning of each training epoch to prepare
@@ -118,10 +95,8 @@ class CompressionScheduler:
         :param next_epoch: The epoch index for which the compression scheduler
             will update the state of the compression method.
         """
-        if next_epoch is None:
-            next_epoch = self.current_epoch + 1
-        self.current_epoch = next_epoch
 
+    @abstractmethod
     def load_state(self, state: Dict[str, object]) -> None:
         """
         Loads the compression scheduler state, but does not update the state of the
@@ -129,19 +104,14 @@ class CompressionScheduler:
 
         :param state: Output of `get_state()` method.
         """
-        self.current_step = state['current_step']
-        self.current_epoch = state['current_epoch']
 
+    @abstractmethod
     def get_state(self) -> Dict[str, object]:
         """
         Returns the compression scheduler state.
 
         :return: The compression scheduler state.
         """
-        return {
-            'current_step': self.current_step,
-            'current_epoch': self.current_epoch
-        }
 
 
 class CompressionLevel(OrderedEnum):
@@ -173,7 +143,7 @@ class CompressionLevel(OrderedEnum):
         return CompressionLevel.PARTIAL
 
 
-class CompressionAlgorithmController:
+class CompressionAlgorithmController(ABC):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable algorithm-specific compression.
@@ -190,20 +160,27 @@ class CompressionAlgorithmController:
             by the `CompressionAlgorithmBuilder`.
         """
         self._model = target_model
-        self._loss = CompressionLoss()
-        self._scheduler = CompressionScheduler()
 
     @property
     def model(self) -> ModelType:
+        """
+        :return: The target model.
+        """
         return self._model
 
     @property
+    @abstractmethod
     def loss(self) -> CompressionLoss:
-        return self._loss
+        """
+        :return: The instance of the `CompressionLoss`.
+        """
 
     @property
+    @abstractmethod
     def scheduler(self) -> CompressionScheduler:
-        return self._scheduler
+        """
+        :return: The instance of the `CompressionScheduler`.
+        """
 
     def compression_level(self) -> CompressionLevel:
         """
@@ -213,7 +190,6 @@ class CompressionAlgorithmController:
 
         :return: The compression level of the target model.
         """
-        return CompressionLevel.NONE
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
@@ -224,7 +200,7 @@ class CompressionAlgorithmController:
             need to keep track of statistics on each training batch/step/iteration.
         :return: A dictionary of printable statistics.
         """
-        return self._loss.statistics(quickly_collected_only)
+        return self.loss.statistics(quickly_collected_only)
 
     def prepare_for_export(self) -> None:
         """
@@ -232,15 +208,31 @@ class CompressionAlgorithmController:
         """
         self._model = self.strip_model(self._model)
 
-    def export_model(self, save_path: str, *args, **kwargs) -> None:
+    @abstractmethod
+    def export_model(self,
+                     save_path: str,
+                     save_format: Optional[str] = None,
+                     input_names: Optional[List[str]] = None,
+                     output_names: Optional[List[str]] = None,
+                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
         """
-        Used to export the compressed model for deployment. Makes method-specific
-        preparations of the model, (e.g. removing auxiliary layers that were used
-        for the model compression), then exports the model in the specified path.
+        Exports the compressed model to the specified format for deployment.
 
-        :param save_path: The path to export model.
-        :param args: Advanced export options.
-        :param kwargs: Advanced export options
+        Makes method-specific preparations of the model, (e.g. removing auxiliary
+        layers that were used for the model compression), then exports the model to
+        the specified path.
+
+        :param save_path: The path where the model will be saved.
+        :param save_format: Saving format. The default format will
+            be used if `save_format` is not specified.
+        :param input_names: Names to be assigned to the input tensors of the model.
+        :param output_names: Names to be assigned to the output tensors of the model.
+        :param model_args: Tuple of additional positional and keyword arguments
+            which are required for the model's forward during export. Should be
+            specified in the following format:
+                - (a, b, {'x': None, 'y': y}) for positional and keyword arguments.
+                - (a, b, {}) for positional arguments only.
+                - ({'x': None, 'y': y},) for keyword arguments only.
         """
 
     def strip_model(self, model: ModelType) -> ModelType:
@@ -255,7 +247,7 @@ class CompressionAlgorithmController:
         return model
 
 
-class CompressionAlgorithmBuilder:
+class CompressionAlgorithmBuilder(ABC):
     """
     Determines which modifications should be made to the original model in
     order to enable algorithm-specific compression during fine-tuning.
@@ -273,6 +265,7 @@ class CompressionAlgorithmBuilder:
         self.config = config
         self.should_init = should_init
 
+    @abstractmethod
     def apply_to(self, model: ModelType) -> ModelType:
         """
         Applies algorithm-specific modifications to the model.
@@ -281,11 +274,8 @@ class CompressionAlgorithmBuilder:
         :return: The model with additional modifications necessary to enable
             algorithm-specific compression during fine-tuning.
         """
-        transformation_layout = self.get_transformation_layout(model)
-        transformer = ModelTransformer(model, transformation_layout)
-        transformed_model = transformer.transform()
-        return transformed_model
 
+    @abstractmethod
     def build_controller(self, model: ModelType) -> CompressionAlgorithmController:
         """
         Builds `CompressionAlgorithmController` to handle the additional modules,
@@ -296,8 +286,8 @@ class CompressionAlgorithmBuilder:
             algorithm-specific compression during fine-tuning.
         :return: The instance of the `CompressionAlgorithmController`.
         """
-        return CompressionAlgorithmController(model)
 
+    @abstractmethod
     def get_transformation_layout(self, model: ModelType) -> TransformationLayout:
         """
         Computes necessary model transformations to enable algorithm-specific
@@ -307,4 +297,3 @@ class CompressionAlgorithmBuilder:
         :return: The instance of the `TransformationLayout` class containing
             a list of algorithm-specific modifications.
         """
-        return TransformationLayout()

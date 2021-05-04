@@ -10,32 +10,33 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
+from abc import ABC, abstractmethod
 from typing import Optional, TypeVar
 
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionScheduler
+from nncf.common.compression import BaseCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from beta.nncf.tensorflow.utils.save import save_model
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
 LossType = TypeVar('LossType')
 
 
-class TFCompressionAlgorithmInitializer:
+class TFCompressionAlgorithmInitializer(ABC):
+    @abstractmethod
     def call(self,
              model: ModelType,
              dataset: Optional[DatasetType] = None,
              loss: Optional[LossType] = None) -> None:
-        pass
+        """
+        Initializes minimum and maximum quantization ranges.
+        """
 
     def __call__(self, *args, **kwargs) -> None:
         self.call(*args, **kwargs)
 
 
-class TFCompressionAlgorithmController(CompressionAlgorithmController):
+class TFCompressionAlgorithmController(BaseCompressionAlgorithmController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable algorithm-specific compression.
@@ -43,36 +44,10 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
     compression scheduler and compression loss.
     """
 
-    def __init__(self, target_model: ModelType):
-        """
-        Initializes the internal state of the compression algorithm controller.
-
-        :param target_model: The model with additional modifications necessary
-            to enable algorithm-specific compression during fine-tuning built
-            by the `CompressionAlgorithmBuilder`.
-        """
-        super().__init__(target_model)
-        self._initializer = TFCompressionAlgorithmInitializer()
-        self._scheduler = CompressionScheduler()
-
     def initialize(self,
                    dataset: Optional[DatasetType] = None,
                    loss: Optional[LossType] = None) -> None:
-        self._initializer(self._model, dataset, loss)
-
-    def export_model(self, save_path: str, save_format: str = 'frozen_graph') -> None:
-        """
-        Used to export the compressed model to the Frozen Graph, TensorFlow SavedModel,
-        or Keras H5 formats. Makes method-specific preparations of the model, (e.g.
-        removing auxiliary layers that were used for the model compression), then
-        exports the model in the specified path.
-
-        :param save_path: The path to export model.
-        :param save_format: Saving format (`frozen_graph` for Frozen Graph,
-            `tf` for Tensorflow SavedModel, `h5` for Keras H5 format).
-        """
-        self.prepare_for_export()
-        save_model(self.model, save_path, save_format)
+        pass
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
@@ -93,15 +68,3 @@ class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):
         transformer = TFModelTransformer(model, transformation_layout)
         transformed_model = transformer.transform()
         return transformed_model
-
-    def build_controller(self, model: ModelType) -> TFCompressionAlgorithmController:
-        """
-        Builds `CompressionAlgorithmController` to handle the additional modules,
-        parameters, and hooks inserted into the model to enable algorithm-specific
-        compression.
-
-        :param model: The model with additional modifications necessary to enable
-            algorithm-specific compression during fine-tuning.
-        :return: The instance of the `CompressionAlgorithmController`.
-        """
-        return TFCompressionAlgorithmController(model)

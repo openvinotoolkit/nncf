@@ -15,6 +15,7 @@ from beta.nncf.tensorflow.layers.operation import InputType
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
 from beta.nncf.tensorflow.layers.common import CHANNEL_AXES
+from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
 from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 
 
@@ -39,7 +40,14 @@ def get_data_format(layer):
 
 
 def get_input_channel_axis(layer):
+    original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
     data_format = get_data_format(layer)
+    class_name = original_layer.__class__.__name__
+    if class_name in GENERAL_CONV_LAYERS:
+        return -1 if data_format == 'channels_last' else -1 - original_layer.rank
+    if class_name in ['BatchNormalization', 'LayerNormalization']:
+        return original_layer.axis
+
     return -1 if data_format == 'channels_last' else 1
 
 

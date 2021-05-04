@@ -89,10 +89,6 @@ class BaseDatasetBuilder(ABC):
         if builder is None:
             raise ValueError('Unknown dataset type {}'.format(self._dataset_type))
 
-        # TODO(Evgeny Tsykunov): add TFRecords support for YOLOv4
-        if self._config.model == 'YOLOv4' and self._dataset_type == 'tfrecords':
-            raise ValueError('YOLOv4 does not support TFRecords, use TFDS dataset type')
-
         dataset = builder()
         dataset = self._pipeline(dataset)
 
