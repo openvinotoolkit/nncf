@@ -202,7 +202,7 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def write_error_in_csv(error_message, filename, model_name):
-        error_message = 'Error ' + error_message[:80]
+        error_message = 'Error ' + error_message[:80].replace("\n", '')
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = ['model', 'launcher', 'device', 'dataset', 'tags', 'metric_name', 'metric_type',
                           'metric_value']
@@ -371,10 +371,6 @@ class TestSotaCheckpoints:
                                                          diff_target_min_=diff_target_min,
                                                          diff_target_max_=diff_target_max))
                 for dataset_type in datasets[dataset_name].get('dataset_types'):
-                    # TODO(Evgeny Tsykunov): add TFRecords support for YOLOv4
-                    if 'yolo_v4' in model_name and dataset_type == 'tfrecords':
-                        continue
-
                     # Change model name to keep dataset version
                     model_name_with_datatype = model_name + '_' + dataset_type
                     param_list.append(EvalRunParamsStruct(config_name_=config_name,
@@ -524,7 +520,7 @@ class TestSotaCheckpoints:
         if eval_test_struct.model_name_.startswith('mask_'):
             self.write_error_in_csv('AC does not support mask models yet', csv_result, eval_test_struct.model_name_)
             pytest.fail('AC does not support mask models yet')
-        if eval_test_struct.reference_ and eval_test_struct.model_name_ != 'retinanet_int8_w_sym_t_a_sym_t':
+        if eval_test_struct.reference_ and not config.is_file():
             self.make_config(config, eval_test_struct.reference_)
         save_cmd = f'{sys.executable} examples/tensorflow/{eval_test_struct.sample_type_}/{file}' \
                    f' --mode export --config {eval_test_struct.config_name_}' \

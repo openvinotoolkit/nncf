@@ -10,9 +10,15 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-import math
+
 from functools import partial
-from typing import List, Tuple, Optional
+import math
+import numpy as np
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+from typing import Union
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -185,6 +191,140 @@ def get_previous_conv(graph: NNCFGraph, nncf_node: NNCFNode,
     if len(sources) == 1 and sources[0].node_type in pruning_types:
         return sources[0]
     return None
+
+
+def get_original_node_name(node_name: str):
+    return node_name.split('^')[0]
+
+
+def get_conv_in_out_channels(graph: NNCFGraph):
+    """
+    Collects the number of input and output channels for each convolution in the graph.
+
+    :param graph: NNCFGraph
+    :return Dictionary with the number of input channels to convolution layers:
+            {node_name: input_channels_num}
+            Dictionary with the number of output channels from convolution layers:
+            {node_name: output_channels_num}
+    """
+    in_channels, out_channels = {}, {}
+    for node in graph.get_all_nodes():
+        if isinstance(node.module_attributes, ConvolutionModuleAttributes):
+            name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+                else get_original_node_name(node.node_name)
+            if name in in_channels and name in out_channels:
+                continue
+            in_channels[name] = node.module_attributes.in_channels
+            out_channels[name] = node.module_attributes.out_channels
+    return in_channels, out_channels
+
+
+def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
+                           prunable_types: List[str]) -> Dict[int, List[str]]:
+    """
+    Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input.
+
+    :param graph: NNCFGraph.
+    :param pruned_groups_info: `Clusterization` of pruning groups.
+    :param prunable_types: Types of nodes that will be returned.
+    :return Dictionary of next node names by cluster {cluster_id: [node_name]}.
+    """
+    next_nodes = {}
+    for cluster in pruned_groups_info.get_all_clusters():
+        next_nodes_cluster = set()
+        cluster_nodes = set()
+        for cluster_node in cluster.nodes:
+            nncf_cluster_node = graph.get_node_by_id(cluster_node.nncf_node_id)
+            nncf_cluster_node_scope = nncf_cluster_node.ia_op_exec_context.scope_in_model \
+                if hasattr(nncf_cluster_node, 'ia_op_exec_context') \
+                else get_original_node_name(nncf_cluster_node.node_name)
+            cluster_nodes.add(nncf_cluster_node_scope)
+            curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
+
+            next_nodes_idxs = [n.ia_op_exec_context.scope_in_model if hasattr(n, 'ia_op_exec_context')
+                               else get_original_node_name(n.node_name) for n in curr_next_nodes]
+            next_nodes_cluster = next_nodes_cluster.union(next_nodes_idxs)
+        next_nodes[cluster.id] = list(next_nodes_cluster - cluster_nodes)
+    return next_nodes
+
+
+def count_flops_for_nodes(graph: NNCFGraph,
+                          input_shapes: Dict[str, tuple], output_shapes: Dict[str, tuple],
+                          conv_op_types: List[str], linear_op_types: List[str],
+                          input_channels: Dict[str, int] = None, output_channels: Dict[str, int] = None):
+    """
+    Counts the number FLOPs in the model for convolution and fully connected layers.
+
+    :param graph: NNCFGraph.
+    :param input_shapes: Dictionary of input dimension shapes for convolutions and
+                         fully connected layers. E.g {node_name: (height, width)}
+    :param output_shapes: Dictionary of output dimension shapes for convolutions and
+                          fully connected layers. E.g {node_name: (height, width)}
+    :param conv_op_types: List of framework specific types of convolutions
+    :param linear_op_types: List of framework specific types of linear/fully connected layers
+    :param input_channels: Dictionary of input channels number in convolutions.
+                           If not specified, taken from the graph. {node_name: channels_num}
+    :param output_channels: Dictionary of output channels number in convolutions.
+                            If not specified, taken from the graph. {node_name: channels_num}
+    :return Dictionary of FLOPs number {node_name: flops_num}
+    """
+    flops = {}
+    input_channels = input_channels or {}
+    output_channels = output_channels or {}
+    for node in graph.get_nodes_by_types(conv_op_types):
+        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+            else get_original_node_name(node.node_name)
+        if name in flops:
+            continue
+        num_in_channels = input_channels.get(name, node.module_attributes.in_channels)
+        num_out_channels = output_channels.get(name, node.module_attributes.out_channels)
+        flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
+                      num_in_channels * num_out_channels * np.prod(output_shapes[name])
+
+    for node in graph.get_nodes_by_types(linear_op_types):
+        name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
+            else get_original_node_name(node.node_name)
+        flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])
+
+    return flops
+
+
+def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_rate: float,
+                                                        full_input_channels: Dict[Union[str, 'Scope'], int],
+                                                        full_output_channels: Dict[Union[str, 'Scope'], int],
+                                                        pruning_groups_next_nodes: Dict[int, List[str]]):
+    """
+    Imitates filters pruning by removing `pruning_rate` percent of output filters in each pruning group
+    and updating corresponding input channels number in `pruning_groups_next_nodes` nodes.
+
+    :param pruning_groups: `Clusterization` of pruning groups.
+    :param pruning_rate: Target pruning rate.
+    :param full_input_channels:  A dictionary of input channels number in original model.
+    :param full_output_channels: A dictionary of output channels number in original model.
+    :param pruning_groups_next_nodes: A dictionary of next nodes of each pruning group.
+    :return Dictionary of new input channels number {node_name: channels_num}
+    :return Dictionary of new output channels number {node_name: channels_num}
+    """
+    tmp_in_channels = full_input_channels.copy()
+    tmp_out_channels = full_output_channels.copy()
+
+    for group in pruning_groups:
+        layer_name = group.nodes[0].key
+        assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.key] for node in
+                   group.nodes)
+        # Prune all nodes in cluster (by output channels)
+        old_out_channels = full_output_channels[layer_name]
+        num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
+        new_out_channels_num = old_out_channels - num_of_sparse_elems
+
+        for node in group.nodes:
+            tmp_out_channels[node.key] = new_out_channels_num
+
+        # Prune in_channels in all next nodes of cluster
+        for node_name in pruning_groups_next_nodes[group.id]:
+            tmp_in_channels[node_name] -= num_of_sparse_elems
+
+    return tmp_in_channels, tmp_out_channels
 
 
 class PruningOperationsMetatypeRegistry(Registry):

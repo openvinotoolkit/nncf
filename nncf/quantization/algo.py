@@ -33,10 +33,13 @@ from nncf.algo_selector import ZeroCompressionLoss
 from nncf.api.compression import CompressionLevel
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
 from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -478,8 +481,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._range_init_params = None
         self._precision_init_type = None
         self._precision_init_params = None
-        if should_init:
+        if self.should_init:
             self._parse_init_params()
+        else:
+            # TODO: remove it! It workarounds checkpoint loading for mixed precision model by forcing manual init
+            self._force_manual_precision_init()
 
         self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
 
@@ -489,6 +495,18 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self._use_logarithm_scale_per_group[quantizer_group] = params_dict.get('logarithm_scale', False)
 
         self._disable_saturation_fix = self.config.get('disable_saturation_fix', False)
+
+    def _force_manual_precision_init(self):
+        init_config = self.config.get('initializer', {})
+        init_precision_config = init_config.get('precision', None)
+        if init_precision_config is not None:
+            precision_init_type = init_precision_config.get('type', 'manual')
+            if precision_init_type == 'manual':
+                # range init is needed for correct setting of Adjust Padding ops as it considers sign of FQ
+                self._range_init_params = self._parse_range_init_params(init_config)
+                self.should_init = True
+                self._precision_init_type = precision_init_type
+                self._precision_init_params = ManualPrecisionInitParams.from_config(init_precision_config)
 
     def _parse_init_params(self):
         init_config = self.config.get('initializer', {})
@@ -588,7 +606,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
-        if self.should_init:
+        if is_main_process() and self.should_init:
             stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
                                                                              single_config_quantizer_setup,
                                                                              self._range_init_params)
@@ -1099,6 +1117,7 @@ class QuantizationController(QuantizationControllerBase):
                  build_time_range_init_params: RangeInitParams = None):
         super().__init__(target_model)
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
+        self._scheduler = BaseCompressionScheduler()
         self.debug_interface = debug_interface
         self.quantization_config = quantization_config
         self._collect_compression_metrics = collect_compression_metrics
@@ -1144,6 +1163,14 @@ class QuantizationController(QuantizationControllerBase):
         if self.is_staged_scheduler:
             scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
             self._scheduler = scheduler_cls(self, params)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     @property
     def groups_of_adjacent_quantizers(self) -> GroupsOfAdjacentQuantizers:
@@ -1340,6 +1367,9 @@ class QuantizationDebugInterface(DebugInterface):
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")
+        if self.scale_dump_dir.exists():
+            shutil.rmtree(str(self.scale_dump_dir))
+        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self.prop_graph_dump_dir = self.dump_dir / Path("quant_prop")
         if self.prop_graph_dump_dir.exists():
             shutil.rmtree(str(self.prop_graph_dump_dir))
@@ -1358,9 +1388,6 @@ class QuantizationDebugInterface(DebugInterface):
             nncf_module_quantizations_id_list)
         self.call_trackers[self.ACTIVATION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
             activation_quantizer_id_list)
-        if self.scale_dump_dir.exists():
-            shutil.rmtree(str(self.scale_dump_dir))
-        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self._strict_forward = True
 
     def pre_forward_actions(self, module: 'NNCFNetwork'):
@@ -1403,7 +1430,7 @@ class QuantizationDebugInterface(DebugInterface):
         quantizer_normalized_name = re.sub(r'[^\w\-_\. ]', '_', quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
-            with safe_open(self.scale_dump_dir / fname, "ba") as file:
+            with safe_open(self.scale_dump_dir / fname, "ab") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):
@@ -1557,6 +1584,14 @@ class ExperimentalQuantizationController(QuantizationController):
             else:
                 self.module_id_to_qp_id_translation_dict[qid] = {qp_id}
         self.hw_config = hw_config
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
         retval = SingleConfigQuantizerSetup()

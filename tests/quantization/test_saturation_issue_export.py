@@ -101,13 +101,29 @@ class EightConvTestModel(nn.Module):
         super().__init__()
         self.features = []
         self.features.append(create_conv(*in_out_ch[0], 2, -1, -2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][1]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*in_out_ch[1], 5, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][1]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*in_out_ch[2], 1, 2, 2))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][1]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*in_out_ch[3], 9, -1, 0))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][1]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*reversed(in_out_ch[3]), 3, 0, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[3][0]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*reversed(in_out_ch[2]), 1, -1, 9))
+        self.features.append(nn.BatchNorm2d(in_out_ch[2][0]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*reversed(in_out_ch[1]), 2, 10, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[1][0]))
+        self.features.append(nn.ReLU())
         self.features.append(create_conv(*reversed(in_out_ch[0]), 1, 1, 1))
+        self.features.append(nn.BatchNorm2d(in_out_ch[0][0]))
+        self.features.append(nn.ReLU())
         self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
@@ -376,4 +392,4 @@ def test_is_pytorch_output_the_same_as_onnx_qdq_saturation_fix_applied(tmp_path,
         input_name = sess.get_inputs()[0].name
         onnx_out = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
 
-        assert np.allclose(torch_out.numpy(), onnx_out, rtol=0, atol=1e-4)
+        assert np.allclose(torch_out.numpy(), onnx_out, rtol=1e-5, atol=1e-3)

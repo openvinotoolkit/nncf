@@ -10,6 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Optional
 
 from nncf.api.compression import CompressionScheduler
 from nncf.api.composite_compression import CompositeCompressionScheduler
@@ -21,13 +22,19 @@ class DummyScheduler(CompressionScheduler):
         self.delta = delta
 
     def get_state(self):
-        state = super().get_state()
-        state['delta'] = self.delta
+        state = {
+            'delta': self.delta
+        }
         return state
 
     def load_state(self, state):
-        super().load_state(state)
         self.delta = state['delta']
+
+    def step(self, next_step: Optional[int] = None) -> None:
+        pass
+
+    def epoch_step(self, next_epoch: Optional[int] = None) -> None:
+        pass
 
 
 def test_can_restore_from_state():

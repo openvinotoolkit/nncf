@@ -99,7 +99,7 @@ class PruningNodeSelector:
             5. Checks for groups (all nodes in group can prune or all group can't be pruned)
         Return groups of modules that should be pruned together.
 
-        :param graph: Fraph to work with and their initialization parameters as values.
+        :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations)  # NNCFNodes here

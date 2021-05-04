@@ -425,10 +425,10 @@ HAWQTestParams = namedtuple('HAWQTestParams',
                             ('iter_number', 'batch_size', 'num_data_points', 'cuda_ref_trace', 'cpu_ref_trace'))
 
 @pytest.mark.parametrize("params",
-                         (HAWQTestParams(200, 13, 100, 1.2741253927579268, 1.2741257554269734),
-                          HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.264643123532975),
-                          HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305272578443488),
-                          HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305272578443488)),
+                         (HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.274125503581261),
+                          HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.2646428162034615),
+                          HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305243724338203),
+                          HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305243724338203)),
                          ids=('until_threshold', 'until_num_iter', 'batch_eq_num_data', 'batch_larger_num_data'))
 def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, params: HAWQTestParams, mocker):
     config = get_squeezenet_quantization_config(batch_size=params.batch_size)
@@ -440,10 +440,12 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     load_state(model, model_zoo.load_url(model_urls['squeezenet1_1']))
     criterion = nn.CrossEntropyLoss()
     ref_trace = params.cpu_ref_trace
+    rtol = 1e-7
     if torch.cuda.is_available():
         model = model.cuda()
         criterion = criterion.cuda()
         ref_trace = params.cuda_ref_trace
+        rtol = 1e-9
 
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -468,7 +470,7 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     trace_estimator = HessianTraceEstimator(model, default_criterion_fn, criterion, device, data_loader,
                                             params.num_data_points)
     actual_state = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
-    assert math.isclose(actual_state.item(), ref_trace, rel_tol=1e-09)
+    assert math.isclose(actual_state.item(), ref_trace, rel_tol=rtol)
 
 
 def get_size_of_search_space(m, L):
@@ -513,7 +515,7 @@ def get_requires_grad_per_param(model):
 
 
 def get_scopes_of_skipped_weight_quantizers():
-    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNReLU[18]/NNCFConv2d[0]',
+    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]',
                    'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]',
                    'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]']
     return [Scope.from_str(s) for s in scopes_list]
@@ -521,7 +523,7 @@ def get_scopes_of_skipped_weight_quantizers():
 
 def test_disable_quantizer_gradients():
     _, parameters_to_restore, model, *_ = disable_quantizer_gradients()
-    assert len(parameters_to_restore.originally_disabled_gradients) == 406
+    assert len(parameters_to_restore.originally_disabled_gradients) == 354
     assert len(parameters_to_restore.skipped_gradients_to_enable) == 3
     actual_requires_grad_per_param = get_requires_grad_per_param(model)
     path_to_ref = str(TEST_ROOT / 'data/hawq_reference/mobilenet_v2_requires_grad_per_param.json')
