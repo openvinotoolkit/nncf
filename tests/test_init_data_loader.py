@@ -13,7 +13,7 @@
 
 import pytest
 from math import ceil
-from tests.helpers import get_empty_config, create_mock_dataloader
+from tests.helpers import get_empty_config, create_ones_mock_dataloader
 
 from nncf.initialization import PartialDataLoader
 
@@ -23,7 +23,7 @@ INVALID_RATIO = ['string', '0.5', -17, -0.01, 1.01, 5, 100]
 
 
 def create_regular_dataloader():
-    return create_mock_dataloader(config=get_empty_config(), num_samples=N_SAMPLE)
+    return create_ones_mock_dataloader(config=get_empty_config(), num_samples=N_SAMPLE)
 
 
 def test_can_create_partial_dataloader__with_defaults():

@@ -13,7 +13,7 @@
 
 import contextlib
 import copy
-from typing import Iterable
+from typing import Callable
 from typing import Tuple
 from typing import List
 from typing import Dict
@@ -104,7 +104,8 @@ def get_config_algorithms(config: NNCFConfig) -> List[Dict]:
     return algorithms
 
 
-def add_multiplier_to_config(config: NNCFConfig, local_multiplier: float = None, global_multiplier: float = None):
+def add_multiplier_to_config(config: NNCFConfig,
+                             local_multiplier: float = None, global_multiplier: float = None) -> NNCFConfig:
     config = copy.deepcopy(config)
 
     if local_multiplier is not None:
@@ -217,7 +218,7 @@ def create_initialized_lenet_model_and_dataloader(config: NNCFConfig) -> Tuple[n
 
 @pytest.fixture(name='configs_building_params',
                 params=get_configs_building_params())
-def configs_building_params_(request):
+def configs_building_params_(request) -> Dict:
     return request.param
 
 
@@ -243,14 +244,18 @@ def target_config_(target_configs: List[NNCFConfig], configs_building_params: Di
     return add_multiplier_to_config(target_config, global_multiplier=configs_building_params['global_multiplier'])
 
 
-@pytest.fixture(name='ref_lenet_model_and_dataloader')
-def ref_lenet_model_and_dataloader_(ref_config: NNCFConfig) -> Tuple[nn.Module, DataLoader]:
-    return create_initialized_lenet_model_and_dataloader(ref_config)
+@pytest.fixture(name='get_ref_lenet_model_and_dataloader')
+def get_ref_lenet_model_and_dataloader_(ref_config: NNCFConfig) -> Callable[[], Tuple[nn.Module, DataLoader]]:
+    def f():
+        return create_initialized_lenet_model_and_dataloader(ref_config)
+    return f
 
 
-@pytest.fixture(name='target_lenet_model_and_dataloader')
-def target_lenet_model_and_dataloader_(target_config: NNCFConfig) -> Tuple[nn.Module, DataLoader]:
-    return create_initialized_lenet_model_and_dataloader(target_config)
+@pytest.fixture(name='get_target_lenet_model_and_dataloader')
+def get_target_lenet_model_and_dataloader_(target_config: NNCFConfig) -> Callable[[], Tuple[nn.Module, DataLoader]]:
+    def f():
+        return create_initialized_lenet_model_and_dataloader(target_config)
+    return f
 
 
 class OneParameterModel(nn.Module):
@@ -315,20 +320,25 @@ def create_initialized_one_parameter_model_and_dataloader(parameter_cls: type, i
     return model, train_loader
 
 
-@pytest.fixture(name='ref_one_parameter_model_and_dataloader')
-def ref_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) -> Tuple[nn.Module, DataLoader]:
-    return create_initialized_one_parameter_model_and_dataloader(nn.Parameter,
-                                                                 **one_parameter_model_creation_params)
+@pytest.fixture(name='get_ref_one_parameter_model_and_dataloader')
+def get_ref_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) -> \
+        Callable[[], Tuple[nn.Module, DataLoader]]:
+    def f():
+        return create_initialized_one_parameter_model_and_dataloader(nn.Parameter,
+                                                                     **one_parameter_model_creation_params)
+    return f
 
 
-@pytest.fixture(name='target_one_parameter_model_and_dataloader')
-def target_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) ->\
-        Tuple[nn.Module, DataLoader]:
-    return create_initialized_one_parameter_model_and_dataloader(CompressionParameter,
-                                                                 **one_parameter_model_creation_params)
+@pytest.fixture(name='get_target_one_parameter_model_and_dataloader')
+def get_target_one_parameter_model_and_dataloader_(one_parameter_model_creation_params: Dict) -> \
+        Callable[[], Tuple[nn.Module, DataLoader]]:
+    def f():
+        return create_initialized_one_parameter_model_and_dataloader(CompressionParameter,
+                                                                     **one_parameter_model_creation_params)
+    return f
 
 
-def perform_model_training_steps(model: nn.Module, train_loader, num_steps: int = 1) -> nn.Module:
+def perform_model_training_steps(model: nn.Module, train_loader: DataLoader, num_steps: int = 1) -> nn.Module:
     with set_torch_seed():
         train_loader = iter(train_loader)
         optimizer = SGD(model.parameters(), lr=0.1)
@@ -351,10 +361,10 @@ def perform_model_training_steps(model: nn.Module, train_loader, num_steps: int 
     return model
 
 
-def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.Parameter]]:
+def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, List[nn.Parameter]]:
     cls_name_to_params = {}
     for module in model.modules():
-        params = module.parameters(recurse=False)
+        params = list(module.parameters(recurse=False))
         full_cls_name = '.'.join([module.__class__.__module__, module.__class__.__name__])
         if full_cls_name not in cls_name_to_params:
             cls_name_to_params[full_cls_name] = []
@@ -379,22 +389,24 @@ def get_params_grouped_by_algorithms(model: nn.Module) -> Dict[str, Iterable[nn.
 
 
 def get_lenet_params_after_training_steps(model: nn.Module, train_loader: DataLoader,
-                                          num_steps: int = 1) -> Dict[str, Iterable[nn.Parameter]]:
+                                          num_steps: int = 1) -> Dict[str, List[nn.Parameter]]:
     with set_torch_seed():
         model = perform_model_training_steps(model, train_loader, num_steps)
     return get_params_grouped_by_algorithms(model)
 
 
 def get_one_parameter_model_params_after_training_steps(model: nn.Module, train_loader: DataLoader,
-                                                        num_steps: int = 1) -> Iterable[nn.Parameter]:
+                                                        num_steps: int = 1) -> List[nn.Parameter]:
     with set_torch_seed():
         model = perform_model_training_steps(model, train_loader, num_steps)
-    return model.parameters()
+    return list(model.parameters())
 
 
-def test_if_algorithms_add_params(target_lenet_model_and_dataloader: Tuple[nn.Module, DataLoader],
-                                  ref_config: NNCFConfig):
-    algo_to_params = get_lenet_params_after_training_steps(*target_lenet_model_and_dataloader, num_steps=0)
+def test_if_algorithms_add_params(
+        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        ref_config: NNCFConfig
+):
+    algo_to_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader(), num_steps=0)
     algo_names = get_multipliers_from_config(ref_config).keys()
 
     assert sorted(algo_to_params.keys()) == sorted(list(algo_names) + ['regular'])
@@ -402,10 +414,12 @@ def test_if_algorithms_add_params(target_lenet_model_and_dataloader: Tuple[nn.Mo
 
 @pytest.mark.parametrize('one_parameter_model_creation_params',
                          get_one_parameter_model_creation_params())
-def test_if_parameter_is_initialized_correctly(ref_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader],
-                                               target_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader]):
-    ref_model, _ref_loader = ref_one_parameter_model_and_dataloader
-    target_model, target_loader = target_one_parameter_model_and_dataloader
+def test_if_parameter_is_initialized_correctly(
+        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]]
+):
+    ref_model, _ref_loader = get_ref_one_parameter_model_and_dataloader()
+    target_model, target_loader = get_target_one_parameter_model_and_dataloader()
 
     assert pytest.approx(ref_model.param.data) == target_model.param.data
     assert ref_model.param.requires_grad == target_model.param.requires_grad
@@ -417,7 +431,7 @@ def test_if_parameter_is_initialized_correctly(ref_one_parameter_model_and_datal
             get_one_parameter_model_params_after_training_steps(target_model, target_loader)
 
 
-def check_if_grads_are_multiplied(ref_params: Iterable[nn.Parameter], target_params: Iterable[nn.Parameter],
+def check_if_grads_are_multiplied(ref_params: List[nn.Parameter], target_params: List[nn.Parameter],
                                   multiplier: float):
     ref_grads = get_grads(ref_params)
     ref_grads = [multiplier * grad for grad in ref_grads]
@@ -427,12 +441,12 @@ def check_if_grads_are_multiplied(ref_params: Iterable[nn.Parameter], target_par
 
 
 def test_if_setting_multipliers_in_config_multiplies_grads_values(
-        ref_lenet_model_and_dataloader: Tuple[nn.Module, DataLoader],
-        target_lenet_model_and_dataloader: Tuple[nn.Module, DataLoader],
+        get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
         target_config: NNCFConfig
 ):
-    ref_params = get_lenet_params_after_training_steps(*ref_lenet_model_and_dataloader)
-    target_params = get_lenet_params_after_training_steps(*target_lenet_model_and_dataloader)
+    ref_params = get_lenet_params_after_training_steps(*get_ref_lenet_model_and_dataloader())
+    target_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader())
     multipliers = get_multipliers_from_config(target_config)
     multipliers['regular'] = 1
 
@@ -441,22 +455,21 @@ def test_if_setting_multipliers_in_config_multiplies_grads_values(
 
 
 @pytest.mark.parametrize('one_parameter_model_creation_params',
-                         get_one_parameter_model_creation_params(True))
+                         get_one_parameter_model_creation_params(for_training=True))
 def test_if_setting_multiplier_in_parameter_multiplies_grads_values(
-        ref_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader],
-        target_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader],
+        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
         one_parameter_model_creation_params: Dict
 ):
-    ref_model_params = get_one_parameter_model_params_after_training_steps(*ref_one_parameter_model_and_dataloader)
-    target_model_params = \
-        get_one_parameter_model_params_after_training_steps(*target_one_parameter_model_and_dataloader)
+    ref_params = get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader())
+    target_params = \
+        get_one_parameter_model_params_after_training_steps(*get_target_one_parameter_model_and_dataloader())
 
-    assert list(target_model_params)[0].requires_grad
-    check_if_grads_are_multiplied(ref_model_params, target_model_params,
-                                  one_parameter_model_creation_params['multiplier'])
+    assert target_params[0].requires_grad
+    check_if_grads_are_multiplied(ref_params, target_params, one_parameter_model_creation_params['multiplier'])
 
 
-def check_if_zero_multiplier_freezes_training(params: Iterable[nn.Parameter], orig_params: Iterable[nn.Parameter],
+def check_if_zero_multiplier_freezes_training(orig_params: List[nn.Parameter], params: List[nn.Parameter],
                                               multiplier: float):
     if multiplier == 0:
         check_equal(orig_params, params)
@@ -464,57 +477,61 @@ def check_if_zero_multiplier_freezes_training(params: Iterable[nn.Parameter], or
         check_not_equal(orig_params, params)
 
 
-def get_params_diff(params: Iterable[nn.Parameter], orig_params: Iterable[nn.Parameter]) -> List[torch.Tensor]:
+def get_params_diff(orig_params: List[nn.Parameter], params: List[nn.Parameter]) -> List[torch.Tensor]:
     param_diffs = []
     for param, orig_param in zip(params, orig_params):
         param_diffs.append((param - orig_param).abs())
     return param_diffs
 
 
-def check_params_affect_training_speed(orig_params: Iterable[nn.Parameter],
-                                       params: Iterable[nn.Parameter], ref_params: Iterable[nn.Parameter],
+def check_params_affect_training_speed(orig_params: List[nn.Parameter],
+                                       ref_params: List[nn.Parameter], target_params: List[nn.Parameter],
                                        compression_lr_multiplier: float):
+    assert len(ref_params) == len(orig_params)
+    assert len(target_params) == len(orig_params)
+
     ref_diff = get_params_diff(ref_params, orig_params)
-    target_diff = get_params_diff(params, orig_params)
+    target_diff = get_params_diff(target_params, orig_params)
 
     if pytest.approx(compression_lr_multiplier) == 1:
         check_equal(target_diff, ref_diff)
-    elif compression_lr_multiplier > 1:
+    elif compression_lr_multiplier < 1:
         check_less(target_diff, ref_diff)
     else:
         check_greater(target_diff, ref_diff)
 
 
 def test_if_setting_multipliers_in_config_affect_training_speed(
-        ref_lenet_model_and_dataloader: Tuple[nn.Module, DataLoader],
-        target_lenet_model_and_dataloader: Tuple[nn.Module, DataLoader],
+        get_ref_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        get_target_lenet_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
         target_config: NNCFConfig
 ):
-    orig_params = get_lenet_params_after_training_steps(*ref_lenet_model_and_dataloader, num_steps=0)
-    params = get_lenet_params_after_training_steps(*target_lenet_model_and_dataloader, num_steps=1)
+    orig_params = get_lenet_params_after_training_steps(*get_ref_lenet_model_and_dataloader(), num_steps=0)
+    target_params = get_lenet_params_after_training_steps(*get_target_lenet_model_and_dataloader(), num_steps=1)
     multipliers = get_multipliers_from_config(target_config)
     multipliers['regular'] = 1
 
     for algo in orig_params:
-        check_if_zero_multiplier_freezes_training(params[algo], orig_params[algo], multipliers[algo])
+        check_if_zero_multiplier_freezes_training(orig_params[algo], target_params[algo], multipliers[algo])
 
 
 @pytest.mark.parametrize('one_parameter_model_creation_params',
-                         get_one_parameter_model_creation_params(True))
+                         get_one_parameter_model_creation_params(for_training=True))
 def test_if_setting_multiplier_in_parameter_affect_training_speed(
-        ref_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader],
-        target_one_parameter_model_and_dataloader: Tuple[nn.Module, DataLoader],
+        get_ref_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
+        get_target_one_parameter_model_and_dataloader: Callable[[], Tuple[nn.Module, DataLoader]],
         one_parameter_model_creation_params: Dict
 ):
-    orig_model_params = get_one_parameter_model_params_after_training_steps(*ref_one_parameter_model_and_dataloader,
-                                                                            num_steps=0)
-    ref_model_params = get_one_parameter_model_params_after_training_steps(*ref_one_parameter_model_and_dataloader,
-                                                                           num_steps=1)
-    target_model_params = \
-        get_one_parameter_model_params_after_training_steps(*target_one_parameter_model_and_dataloader, num_steps=1)
+    orig_params = \
+        get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader(), num_steps=0)
+    ref_params = \
+        get_one_parameter_model_params_after_training_steps(*get_ref_one_parameter_model_and_dataloader(), num_steps=1)
+    target_params = \
+        get_one_parameter_model_params_after_training_steps(*get_target_one_parameter_model_and_dataloader(),
+                                                            num_steps=1)
 
-    assert list(target_model_params)[0].requires_grad
-    check_if_zero_multiplier_freezes_training(orig_model_params, target_model_params,
+    assert target_params[0].requires_grad
+    check_if_zero_multiplier_freezes_training(orig_params, target_params,
                                               one_parameter_model_creation_params['multiplier'])
-    check_params_affect_training_speed(orig_model_params, ref_model_params, target_model_params,
+    check_params_affect_training_speed(orig_params, ref_params, target_params,
                                        one_parameter_model_creation_params['multiplier'])

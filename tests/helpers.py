@@ -15,7 +15,6 @@ from typing import Dict
 from typing import Callable
 from typing import Any
 from typing import Union
-from typing import Iterable
 from typing import List
 from typing import Tuple
 from typing import TypeVar
@@ -206,7 +205,7 @@ def get_empty_config(model_size=4, input_sample_sizes: Union[Tuple[List[int]], L
     return config
 
 
-def get_grads(variables):
+def get_grads(variables: List[nn.Parameter]) -> List[torch.Tensor]:
     return [var.grad.clone() for var in variables]
 
 
@@ -216,28 +215,30 @@ def to_numpy(tensor: TensorType) -> np.ndarray:
     return tensor
 
 
-def compare_tensor_lists(test: Iterable[TensorType], reference: Iterable[TensorType],
+def compare_tensor_lists(test: List[TensorType], reference: List[TensorType],
                          compare_fn: Callable[[np.ndarray, np.ndarray], bool]):
+    assert len(test) == len(reference)
+
     for i, (x, y) in enumerate(zip(test, reference)):
         x = to_numpy(x)
         y = to_numpy(y)
         assert compare_fn(x, y), f'i={i}'
 
 
-def check_equal(test: Iterable[TensorType], reference: Iterable[TensorType], rtol: float = 1e-4):
+def check_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-1):
     compare_tensor_lists(test, reference, lambda x, y: x == pytest.approx(y, rel=rtol))
 
 
-def check_not_equal(test: Iterable[TensorType], reference: Iterable[TensorType], rtol: float = 1e-4):
+def check_not_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-4):
     compare_tensor_lists(test, reference, lambda x, y: x != pytest.approx(y, rel=rtol))
 
 
-def check_less(test: Iterable[TensorType], reference: Iterable[TensorType], rtol=1e-4):
+def check_less(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
     check_not_equal(test, reference, rtol=rtol)
     compare_tensor_lists(test, reference, lambda x, y: (x < y).all())
 
 
-def check_greater(test: Iterable[TensorType], reference: Iterable[TensorType], rtol=1e-4):
+def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
     check_not_equal(test, reference, rtol=rtol)
     compare_tensor_lists(test, reference, lambda x, y: (x > y).all())
 
@@ -351,7 +352,7 @@ def create_any_mock_dataloader(dataset_cls: type, config: NNCFConfig, num_sample
     return data_loader
 
 
-def create_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
+def create_ones_mock_dataloader(config: NNCFConfig, num_samples: int = 1) -> DataLoader:
     return create_any_mock_dataloader(OnesDatasetMock, config, num_samples)
 
 
