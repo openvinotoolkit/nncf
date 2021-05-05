@@ -545,9 +545,9 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         qp_ids_in_trace_order = self._get_weight_qp_ids_in_trace_order(traces_order)
         ctrl = self._algo
         observers_for_all_qconfig_sequences = []  # type: List[List[PerturbationObserver]]
-        for qconfig in qconfig_sequences_to_run:
+        for qconfig_sequence in qconfig_sequences_to_run:
             quantizer_setup_to_run = self._apply_qconfig_sequence_to_quantizer_setup(
-                qconfig,
+                qconfig_sequence,
                 qp_ids_in_trace_order,
                 ctrl.get_quantizer_setup_for_current_state())
             ctrl, model = ctrl.apply_new_quantizer_setup(
@@ -567,7 +567,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
             for i, observer in enumerate(observers):
                 perturbations.add(layer_id=traces_order.get_execution_index_by_traces_index(i),
-                                  qconfig=qconfig[i],
+                                  qconfig=qconfig_sequence[i],
                                   perturbation=observer.get_observation().to(self._init_device))
 
             for handle in hook_handles:

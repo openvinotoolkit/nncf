@@ -228,7 +228,12 @@
             }
         },
         {"type": "Reshape"},
-        {"type": "Concat"},
+        {
+            "type": "Concat",
+            "attributes": {
+                "scales": "unified"
+            }
+        },
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},

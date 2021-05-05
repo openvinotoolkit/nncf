@@ -201,6 +201,7 @@ class BaseQuantizer(nn.Module):
 
     @property
     def scale_shape(self) -> Tuple[int, ...]:
+        # Per-tensor scale shapes are (1,)
         return self._scale_shape
 
     def broadcast_initialized_params(self, src: int = 0):
@@ -240,7 +241,7 @@ class BaseQuantizer(nn.Module):
                                                       input_high)
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
             x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
-            if self.per_channel:
+            if self.per_channel and y_zero_point.numel() > 1:
                 if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
                         torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                     y_scale, y_zero_point = y_scale[0], y_zero_point[0]
@@ -262,7 +263,8 @@ class BaseQuantizer(nn.Module):
         numel = 1
         for el in self.scale_shape:
             numel *= el
-        return numel > 1
+        is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
+        return not is_per_tensor
 
 
 class QuantizersSwitcher:

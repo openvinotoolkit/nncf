@@ -381,16 +381,24 @@ def test_quantize_inputs():
         '/nncf_model_input_3|OUTPUT',
         '/nncf_model_input_4|OUTPUT'
     ]
-    actual_input_quantizer_str_scopes = \
-        [str(aq_id) for aq_id in qctrl.non_weight_quantizers if 'nncf_model_input' in str(aq_id)]
+
+    actual_input_quantizer_str_scopes = []
+    for aq_id, aq_info in qctrl.non_weight_quantizers.items():
+        for target_point in aq_info.affected_insertions:
+            quantizer_location_str = str(target_point.ia_op_exec_context)
+            if 'nncf_model_input' in quantizer_location_str:
+                actual_input_quantizer_str_scopes.append(quantizer_location_str)
+
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
-    for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
-        matches = []
-        for aq_id in qctrl.non_weight_quantizers:
-            if str(aq_id) == ref_qinput_scope_str:
-                matches.append(aq_id)
+    for qinput_scope_str in actual_input_quantizer_str_scopes:
+        matches = set()
+        for aq_id, aq_info in qctrl.non_weight_quantizers.items():
+            for target_point in aq_info.affected_insertions:
+                if qinput_scope_str in str(target_point):
+                    matches.add(aq_id)
         assert len(matches) == 1
-        quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
+        input_aq_id = next(iter(matches))
+        quantizer = qctrl.non_weight_quantizers[input_aq_id].quantizer_module_ref
         assert isinstance(quantizer, SymmetricQuantizer)
 
 
