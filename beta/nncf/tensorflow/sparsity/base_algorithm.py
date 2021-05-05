@@ -11,6 +11,8 @@
  limitations under the License.
 """
 
+from abc import abstractmethod
+
 from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
@@ -62,5 +64,6 @@ class BaseSparsityController(TFCompressionAlgorithmController, SparsityControlle
         stats.update(convert_raw_to_printable(raw_sparsity_statistics, 'sparsity', header))
         return stats
 
+    @abstractmethod
     def raw_statistics(self):
-        raise NotImplementedError
+        pass

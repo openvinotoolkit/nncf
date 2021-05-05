@@ -187,7 +187,9 @@ def run_evaluation(config, eval_timeout=None):
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, config.nncf_config)
             variables = get_variables(compress_model)
-            checkpoint = tf.train.Checkpoint(variables=variables, step=tf.Variable(0))
+            checkpoint = tf.train.Checkpoint(variables=variables,
+                                             compression_ctrl=compression_ctrl,
+                                             step=tf.Variable(0))
             eval_metric = model_builder.eval_metrics()
             predict_post_process_fn = model_builder.post_processing
 

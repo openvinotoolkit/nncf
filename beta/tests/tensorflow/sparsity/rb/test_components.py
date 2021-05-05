@@ -161,8 +161,11 @@ class TestSparseModules:
 
             grads = tape.gradient(loss, model.trainable_weights)
             grads_weights_paris = list(zip(grads, model.trainable_weights))
-            assert all([g is not None for g, w in grads_weights_paris if 'mask' not in w.name])
-            assert all([g is None if frozen else g is not None for g, w in grads_weights_paris if 'mask' in w.name])
+            for grad, weight in grads_weights_paris:
+                if 'mask' not in weight.name:
+                    assert grad is not None
+                else:
+                    assert grad is None if frozen else grad is not None
 
         def test_masks_gradients(self, model_name, local_mode, frozen):
             model, algo, _ = get_basic_rb_sparse_model(model_name, local_mode, freeze=frozen)
@@ -205,3 +208,31 @@ class TestSparseModules:
                 pytest.fail("Exception is not expected")
         if expected_rate is not None:
             assert actual_rate == expected_rate
+
+
+def test_loss_state():
+    loss = SparseLoss([])
+
+    # Test default state
+    assert loss.get_state() == {'target': 1.0, 'disabled': False, 'p': 0.05}
+
+    # Test get state
+    loss.disable()
+    loss.p = 0.5
+    loss.set_target_sparsity_loss(0.1)
+    state = loss.get_state()
+    assert state['target'] == pytest.approx(0.9)
+    assert state['disabled']
+    assert state['p'] == 0.5
+
+    # Test load state
+    new_state = {'target': 1.0, 'disabled': False, 'p': 0.05}
+    loss.load_state(new_state)
+    assert tf.equal(loss.target, tf.constant(new_state['target']))
+    assert loss.disabled == new_state['disabled']
+    assert loss.p == pytest.approx(new_state['p'])
+
+    new_real_state = loss.get_state()
+    assert new_real_state['target'] == pytest.approx(new_state['target'])
+    assert new_real_state['disabled'] == new_state['disabled']
+    assert new_real_state['p'] == pytest.approx(new_state['p'])

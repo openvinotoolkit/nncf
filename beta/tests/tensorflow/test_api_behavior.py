@@ -11,23 +11,11 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
-
-import tensorflow as tf
-
-from nncf.api.compression import CompressionLoss
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 
 
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
-
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        return {}
-
-    def load_state(self, state: Dict[str, object]) -> None:
-        pass
-
-    def get_state(self) -> Dict[str, object]:
-        return {}
+def test_tf_zero_loss_state():
+    loss = TFZeroCompressionLoss()
+    assert loss.get_state() == {}
+    loss.load_state({})
+    assert loss.get_state() == {}

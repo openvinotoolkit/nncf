@@ -120,7 +120,12 @@ class MagnitudeSparsityController(BaseSparsityController):
 
         sparsity_init = config.get('sparsity_init', 0)
         params['sparsity_init'] = sparsity_init
-        scheduler_cls = SPARSITY_SCHEDULERS.get(params.get('schedule', 'polynomial'))
+        scheduler_type = params.get('schedule', 'polynomial')
+
+        if scheduler_type == 'adaptive':
+            raise ValueError('Magnitude sparsity algorithm do not support adaptive scheduler')
+
+        scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)
         self._loss = TFZeroCompressionLoss()
         self.set_sparsity_level(sparsity_init)

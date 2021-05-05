@@ -73,7 +73,7 @@ class SSD_VGG(nn.Module):
 
     def load_weights(self, base_file):
         _, ext = os.path.splitext(base_file)
-        if ext == '.pkl' or '.pth':
+        if ext in ['.pkl', '.pth']:
             logger.debug('Loading weights into state dict...')
             #
             # ** WARNING: torch.load functionality uses Python's pickling facilities that
