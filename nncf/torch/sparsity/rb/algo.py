@@ -17,6 +17,7 @@ import torch.distributed as dist
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
+from nncf.common.graph.graph import NNCFNode
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
@@ -35,8 +36,8 @@ class RBSparsityBuilder(BaseSparsityAlgoBuilder):
         target_model = super().apply_to(target_model)
         return target_model
 
-    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
-        return RBSparsifyingWeight(module.weight.size(), frozen=False,
+    def create_weight_sparsifying_operation(self, target_module_node: NNCFNode, compression_lr_multiplier: float):
+        return RBSparsifyingWeight(target_module_node.module_attributes.get_weight_shape(), frozen=False,
                                    compression_lr_multiplier=compression_lr_multiplier)
 
     def build_controller(self, target_model: NNCFNetwork) -> PTCompressionAlgorithmController:

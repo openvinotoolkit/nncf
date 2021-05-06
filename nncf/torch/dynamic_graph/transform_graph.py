@@ -17,8 +17,9 @@ from typing import List
 
 from nncf.torch.layers import NNCF_MODULES_DICT, NNCF_MODULES, \
     add_nncf_functionality_to_user_module, NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.torch.utils import in_scope_list
-from nncf.torch.dynamic_graph.context import Scope, ScopeElement
+from nncf.common.utils.helpers import in_scope_list
+from nncf.torch.dynamic_graph.scope import ScopeElement
+from nncf.torch.dynamic_graph.scope import Scope
 
 from nncf.common.utils.logger import logger as nncf_logger
 

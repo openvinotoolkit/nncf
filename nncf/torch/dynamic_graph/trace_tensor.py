@@ -87,7 +87,7 @@ def flatten_args(args, kwargs):
     return list(flatten(args)) + list(flatten(kwargs))
 
 
-def trace_tensors(operator_output, node: 'PTNNCFNode'):
+def trace_tensors(operator_output, node: 'DynamicGraphNode'):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):

@@ -28,7 +28,7 @@ def test_ignored_scopes():
         '{re}.*conv2.*'
     ]
     config['compression'][WEIGHTS]['ignored_scopes'] = ['{re}.*conv3/c[23]']
-    config['compression'][ACTIVATIONS]['ignored_scopes'] = ['{re}.*c3']
+    config['compression'][ACTIVATIONS]['ignored_scopes'] = ['{re}.*c3$']
 
     model = tf.keras.Sequential([
         layers.Conv2D(3, 3, name='conv1', input_shape=config['input_info']['sample_size'][1:]),

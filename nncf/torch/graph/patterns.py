@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.torch.graph.graph import NNCFNodeExpression as N
+from nncf.common.graph.graph import NNCFNodeExpression as N
 from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
 
 LINEAR_OPS = N('linear') | N('conv2d') | N('conv_transpose2d') | N('conv3d') | \

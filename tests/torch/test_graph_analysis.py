@@ -12,10 +12,11 @@
 """
 from collections import Counter
 
+from nncf.common.graph.graph import NNCFGraphEdge
+from nncf.common.graph.graph import NNCFGraphPatternIO
+from nncf.common.graph.module_attributes import Dtype
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.graph import NNCFGraphPatternIO
-from nncf.torch.graph.graph import NNCFGraphEdge
-from nncf.torch.graph.graph import PTNNCFNode
+from nncf.torch.graph.operator_metatypes import NoopMetatype
 
 
 def test_graph_pattern_io_building():
@@ -32,37 +33,29 @@ def test_graph_pattern_io_building():
     # |
     # 8
 
-    #pylint:disable=protected-access
     node_keys = ['1', '2', '3', '4', '5', '6', '7', '8']
     for idx, node_key in enumerate(node_keys):
-        attrs = {
-            PTNNCFGraph.ID_NODE_ATTR: idx + 1,
-            PTNNCFGraph.KEY_NODE_ATTR: node_key,
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
-        }
-        graph._nx_graph.add_node(node_key, **attrs)
+        graph.add_nncf_node(node_name=node_key,
+                            node_type=node_key,
+                            node_metatype=NoopMetatype,
+                            node_id_override=idx + 1)
 
-    edge_attr = {PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: None}
-    graph._nx_graph.add_edges_from([('1', '2'), ('1', '4'), ('2', '3'), ('3', '4'), ('4', '5'),
-                                    ('4', '6'), ('4', '7'), ('5', '8')], **edge_attr)
-    graph._node_id_to_key_dict.update({k + 1: v for k, v in enumerate(node_keys)})
+    id_defined_edges = [(1, 2), (1, 4), (2, 3), (3, 4), (4, 5),
+                        (4, 6), (4, 7), (5, 8)]
+    for edge in id_defined_edges:
+        graph.add_edge_between_nncf_nodes(edge[0], edge[1], [1,], None, dtype=Dtype.FLOAT)
 
     def make_mock_edge(from_id: int, to_id: int):
 
-        return NNCFGraphEdge(make_mock_node(from_id),
-                             make_mock_node(to_id), None)
+        return NNCFGraphEdge(get_node(from_id),
+                             get_node(to_id), [1,])
 
-    def make_mock_node(id_: int):
-        data_ = {
-            PTNNCFGraph.ID_NODE_ATTR: id_,
-            PTNNCFGraph.KEY_NODE_ATTR: str(id_),
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: None
-        }
-        return PTNNCFNode(id_, None, data_)
+    def get_node(id_: int):
+        return graph.get_node_by_id(id_)
 
     ref_patterns_and_ios = [
         (['1', '2'], NNCFGraphPatternIO(input_edges=[],
-                                        input_nodes=[make_mock_node(1)],
+                                        input_nodes=[get_node(1)],
                                         output_edges=[make_mock_edge(2, 3),
                                                       make_mock_edge(1, 4)],
                                         output_nodes=[])),
@@ -71,7 +64,7 @@ def test_graph_pattern_io_building():
                                    output_edges=[make_mock_edge(3, 4)],
                                    output_nodes=[])),
         (['1', '2', '3'], NNCFGraphPatternIO(input_edges=[],
-                                             input_nodes=[make_mock_node(1)],
+                                             input_nodes=[get_node(1)],
                                              output_edges=[make_mock_edge(3, 4),
                                                            make_mock_edge(1, 4)],
                                              output_nodes=[])),
@@ -86,16 +79,17 @@ def test_graph_pattern_io_building():
                                                           make_mock_edge(4, 6)],
                                              input_nodes=[],
                                              output_edges=[],
-                                             output_nodes=[make_mock_node(6),
-                                                           make_mock_node(8)])),
+                                             output_nodes=[get_node(6),
+                                                           get_node(8)])),
         (['7'], NNCFGraphPatternIO(input_edges=[make_mock_edge(4, 7)],
                                    input_nodes=[],
                                    output_edges=[],
-                                   output_nodes=[make_mock_node(7)]))
+                                   output_nodes=[get_node(7)]))
     ]
 
-    for pattern, ref_pattern_io in ref_patterns_and_ios:
-        test_pattern_io = graph._get_nncf_graph_pattern_io_list(pattern)
+    for node_key_list, ref_pattern_io in ref_patterns_and_ios:
+        pattern = [graph.get_node_key_by_id(graph.get_node_by_name(name).node_id) for name in node_key_list]
+        test_pattern_io = graph.get_nncf_graph_pattern_io_list(pattern)
         assert Counter(test_pattern_io.input_edges) == Counter(ref_pattern_io.input_edges)
         assert Counter(test_pattern_io.output_edges) == Counter(ref_pattern_io.output_edges)
         assert Counter(test_pattern_io.input_nodes) == Counter(ref_pattern_io.input_nodes)

@@ -10,8 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.common.graph.graph import NNCFNodeName
 
 
 class QuantizerId:
@@ -22,9 +21,6 @@ class QuantizerId:
         raise NotImplementedError
 
     def get_suffix(self) -> str:
-        raise NotImplementedError
-
-    def get_scope(self) -> Scope:
         raise NotImplementedError
 
     def __str__(self):
@@ -40,54 +36,27 @@ class QuantizerId:
 class WeightQuantizerId(QuantizerId):
     """ Unique identifier of a quantizer for weights."""
 
-    def __init__(self, scope: 'Scope'):
-        self.scope = scope
+    def __init__(self, target_node_name: NNCFNodeName):
+        self.target_node_name = target_node_name
 
-    def get_base(self) -> 'Scope':
-        return self.scope
+    def get_base(self) -> str:
+        return self.target_node_name
 
     def get_suffix(self) -> str:
-        return 'module_weight'
-
-    def get_scope(self) -> Scope:
-        return self.get_base()
+        return '|WEIGHT'
 
 
 class NonWeightQuantizerId(QuantizerId):
     """ Unique identifier of a quantizer, which corresponds to non-weight operations, such as
     ordinary activation, function and input"""
 
-    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def __init__(self, target_node_name: NNCFNodeName,
                  input_port_id=None):
-        self.ia_op_exec_context = ia_op_exec_context
+        self.target_node_name = target_node_name
         self.input_port_id = input_port_id
 
-    def get_base(self) -> 'InputAgnosticOperationExecutionContext':
-        return self.ia_op_exec_context
+    def get_base(self) -> str:
+        return self.target_node_name
 
     def get_suffix(self) -> str:
         return '|OUTPUT' if self.input_port_id is None else '|INPUT{}'.format(self.input_port_id)
-
-    def get_scope(self) -> Scope:
-        return self.ia_op_exec_context.scope_in_model
-
-
-class InputQuantizerId(NonWeightQuantizerId):
-    """ Unique identifier of a quantizer for model's input"""
-
-    def get_base(self) -> 'Scope':
-        return self.ia_op_exec_context.scope_in_model
-
-    def get_suffix(self) -> str:
-        return 'module_input'
-
-
-class FunctionQuantizerId(NonWeightQuantizerId):
-    """ Unique identifier of a quantizer for a function call"""
-
-    def __init__(self, ia_op_exec_context: InputAgnosticOperationExecutionContext, input_arg_idx: int):
-        super().__init__(ia_op_exec_context)
-        self.input_arg_idx = input_arg_idx
-
-    def get_suffix(self) -> str:
-        return "_input" + str(self.input_arg_idx)

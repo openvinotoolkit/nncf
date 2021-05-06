@@ -35,7 +35,7 @@ from nncf.config.structure import BNAdaptationInitArgs
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP

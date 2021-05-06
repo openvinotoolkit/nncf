@@ -10,14 +10,3 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
-import re
-
-from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
-
-
-def is_ignored(node_name, ignored_scopes):
-    original_name, _ = get_original_name_and_instance_index(node_name)
-    return any(re.fullmatch(ignored.replace('{re}', ''), original_name) if ignored.startswith('{re}')
-               else ignored == original_name
-               for ignored in ignored_scopes)

@@ -24,6 +24,7 @@ from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf import register_default_init_args
+from nncf.common.quantization.structs import QuantizerGroup
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.utils import get_all_modules_by_type
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -123,7 +124,8 @@ AUTOQ_TEST_PARAMS = (
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).with_ratio(RATIO)),
     AutoQTestStruct(model_creator=inception_v3,
                     config_builder=AutoQConfigBuilder().with_sample_size([2, 3, 299, 299]).
-                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).eval_subset_ratio(RATIO)),
+                    with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]'],
+                                       target_group=QuantizerGroup.WEIGHTS).eval_subset_ratio(RATIO)),
     AutoQTestStruct(model_creator=ssd_vgg_512_test,
                     config_builder=AutoQConfigBuilder().with_sample_size([1, 3, 512, 512]).eval_subset_ratio(RATIO)),
     AutoQTestStruct(model_creator=ssd_vgg_512_test,

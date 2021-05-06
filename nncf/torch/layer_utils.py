@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from nncf.common.graph.module_attributes import BaseLayerAttributes
+from nncf.common.graph.module_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry('compression modules')
@@ -80,6 +82,12 @@ class _NNCFModuleMixin:
             if op_results is not None:
                 results = op_results
         return results
+
+    def collect_module_attributes(self) -> BaseLayerAttributes:
+        if hasattr(self, 'weight'):
+            return GenericWeightedLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                                  weight_shape=self.weight.shape)
+        return None
 
 
 class CompressionParameter(nn.Parameter):

@@ -26,11 +26,11 @@ from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss
 
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
 from nncf.torch.debug import is_debug
-from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
 from nncf.torch.quantization.layers import QuantizersSwitcher
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
@@ -383,15 +383,14 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             quantizers_switcher: QuantizersSwitcher,
             weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
             model: nn.Module,
-            scopes_of_skipped_weight_quantizers: List[
-                Scope] = None) -> ParamsToRestore:  # pylint: disable=undefined-variable
+            skipped_quantized_weight_node_names: List[NNCFNodeName] = None) -> ParamsToRestore:
         """
         Disables gradients of all parameters, except for layers that have quantizers for weights, which wasn't skipped
         because of single precision constraints.
         :param quantizers_switcher: object that is responsible for enabling and disabling quantizers
         :param weight_quantizers: modules with quantized weights per scope
         :param model: model to access all parameters
-        :param scopes_of_skipped_weight_quantizers: list of string scopes of layers that have a single precision
+        :param skipped_quantized_weight_node_names: list of weighted nodes that have a single precision
         constraint and which weights should be skipped from bitwidth initialization
         :return: list of names of the parameters that were originally disabled
         """
@@ -406,10 +405,10 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         gradients_to_enable = []
         for wq_id, wq_info in weight_quantizers.items():
             quantized_module = wq_info.quantized_module
-            scope = wq_id.get_scope()
+            target_node_name = wq_id.target_node_name
             is_skipped = False
-            for skipped_weight_quantizer_scope in scopes_of_skipped_weight_quantizers:
-                if skipped_weight_quantizer_scope in scope:
+            for skipped_wt_node_name in skipped_quantized_weight_node_names:
+                if skipped_wt_node_name == target_node_name:
                     is_skipped = True
                     break
             for param_name, param in quantized_module.named_parameters():
@@ -446,7 +445,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             quantizers_switcher,
             self._algo.weight_quantizers,
             self._model,
-            self._quantizers_handler.get_scope_of_skipped_weight_quantizers())
+            self._quantizers_handler.get_skipped_quantized_weight_node_names())
 
         trace_estimator = HessianTraceEstimator(self._model, criterion_fn, criterion, self._init_device,
                                                 self._data_loader, self._num_data_points)

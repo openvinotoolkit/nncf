@@ -24,6 +24,9 @@ from torch.nn.utils.rnn import PackedSequence
 
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
+from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.module_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.module_attributes import LinearLayerAttributes
 from nncf.common.utils.registry import Registry
 from nncf.torch.layer_utils import _NNCFModuleMixin
 
@@ -48,6 +51,15 @@ class NNCFConv1d(_NNCFModuleMixin, nn.Conv1d):
         )
         dict_update(nncf_conv.__dict__, module.__dict__)
         return nncf_conv
+
+    def collect_module_attributes(self) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                          in_channels=self.in_channels,
+                                          out_channels=self.out_channels,
+                                          kernel_size=self.kernel_size,
+                                          stride=self.stride,
+                                          groups=self.groups,
+                                          transpose=False)
 
 
 NNCF_PADDING_VALUE_ATTR_NAME = 'nncf_padding_value'
@@ -89,6 +101,15 @@ class NNCFConv2d(_NNCFModuleMixin, nn.Conv2d):
         dict_update(nncf_conv.__dict__, module.__dict__)
         return nncf_conv
 
+    def collect_module_attributes(self) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                          in_channels=self.in_channels,
+                                          out_channels=self.out_channels,
+                                          kernel_size=self.kernel_size,
+                                          stride=self.stride,
+                                          groups=self.groups,
+                                          transpose=False)
+
     # override class attribute of _NNCFModuleMixin
     def _custom_forward_fn(self, input_):
         proxy_padding_value = getattr(self, NNCF_PADDING_VALUE_ATTR_NAME)  # hack to get value from ProxyModule
@@ -120,6 +141,11 @@ class NNCFLinear(_NNCFModuleMixin, nn.Linear):
         dict_update(nncf_linear.__dict__, module.__dict__)
         return nncf_linear
 
+    def collect_module_attributes(self) -> LinearLayerAttributes:
+        return LinearLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                     in_features=self.in_features,
+                                     out_features=self.out_features)
+
 
 class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
     op_func_name = "conv_transpose2d"
@@ -137,6 +163,15 @@ class NNCFConvTranspose2d(_NNCFModuleMixin, nn.ConvTranspose2d):
         dict_update(nncf_conv_transpose2d.__dict__, module.__dict__)
         return nncf_conv_transpose2d
 
+    def collect_module_attributes(self) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                          in_channels=self.in_channels,
+                                          out_channels=self.out_channels,
+                                          kernel_size=self.kernel_size,
+                                          stride=self.stride,
+                                          groups=self.groups,
+                                          transpose=True)
+
 
 class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
     op_func_name = "conv3d"
@@ -152,6 +187,14 @@ class NNCFConv3d(_NNCFModuleMixin, nn.Conv3d):
         dict_update(nncf_conv3d.__dict__, module.__dict__)
         return nncf_conv3d
 
+    def collect_module_attributes(self) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                          in_channels=self.in_channels,
+                                          out_channels=self.out_channels,
+                                          kernel_size=self.kernel_size,
+                                          stride=self.stride,
+                                          groups=self.groups,
+                                          transpose=False)
 
 class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
     op_func_name = "conv_transpose3d"
@@ -169,6 +212,15 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
         dict_update(nncf_conv_transpose3d.__dict__, module.__dict__)
         return nncf_conv_transpose3d
 
+    def collect_module_attributes(self) -> ConvolutionLayerAttributes:
+        return ConvolutionLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                          in_channels=self.in_channels,
+                                          out_channels=self.out_channels,
+                                          kernel_size=self.kernel_size,
+                                          stride=self.stride,
+                                          groups=self.groups,
+                                          transpose=True)
+
 
 class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
     op_func_name = "embedding"
@@ -184,6 +236,10 @@ class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
         nncf_embedding = NNCFEmbedding(*args)
         dict_update(nncf_embedding.__dict__, module.__dict__)
         return nncf_embedding
+
+    def collect_module_attributes(self) -> GenericWeightedLayerAttributes:
+        return GenericWeightedLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                              weight_shape=list(self.weight.shape))
 
 
 class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
@@ -201,6 +257,9 @@ class NNCFEmbeddingBag(_NNCFModuleMixin, nn.EmbeddingBag):
         dict_update(nncf_embedding_bag.__dict__, module.__dict__)
         return nncf_embedding_bag
 
+    def collect_module_attributes(self) -> GenericWeightedLayerAttributes:
+        return GenericWeightedLayerAttributes(weight_requires_grad=self.weight.requires_grad,
+                                              weight_shape=list(self.weight.shape))
 
 NNCF_MODULES_DICT = {
     NNCFConv1d: nn.Conv1d,
@@ -253,6 +312,9 @@ def register_module(*quantizable_field_names: str, ignored_algorithms: list = No
         UNWRAPPED_USER_MODULES.registry_dict[cls.__name__] = cls
         nncf_wrapped_module_class_name = 'NNCFUser{}'.format(cls.__name__)
         NNCF_WRAPPED_USER_MODULES_DICT[cls] = type(nncf_wrapped_module_class_name, (_NNCFModuleMixin, cls), {})
+        get_base_attributes_fn = lambda self : GenericWeightedLayerAttributes(self.weight.requires_grad,
+                                                                              self.weight.shape)
+        setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "get_weight_shape", get_base_attributes_fn)
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
         return cls

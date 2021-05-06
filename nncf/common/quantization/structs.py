@@ -11,10 +11,11 @@
  limitations under the License.
 """
 
-from collections import namedtuple
 from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional
+
+from nncf.common.graph.graph import NNCFNode
 
 
 class QuantizationMode:
@@ -216,4 +217,7 @@ class QuantizerGroup(Enum):
         raise RuntimeError("Unknown quantizer group string")
 
 
-QuantizableModule = namedtuple('QuantizableModule', 'module module_scope qconfig_list')
+class QuantizableWeightedLayerNode:
+    def __init__(self, node: NNCFNode, qconfig_list: List[QuantizerConfig]):
+        self.node = node
+        self.qconfig_list = qconfig_list

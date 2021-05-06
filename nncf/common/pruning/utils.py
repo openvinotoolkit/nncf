@@ -18,16 +18,19 @@ from typing import Dict, List, Optional, Tuple, Type
 
 import numpy as np
 
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNodeName
+from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.utils.registry import Registry
+from nncf.torch.pruning.structs import PrunedModuleInfo
 
 
 def is_grouped_conv(node: NNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
            and node.module_attributes.groups != 1
 
 
@@ -106,14 +109,14 @@ def get_next_nodes_of_types(graph: NNCFGraph, nncf_node: NNCFNode, types: List[s
 
 def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple_of: int = 8) -> int:
     """
-    Calculates number of sparsified elements (approximately sparsity rate) from total such as
+    Calculates number of sparsified nodes (approximately sparsity rate) from total such as
     number of remaining items will be multiple of some value.
-    Always rounds number of remaining elements up.
+    Always rounds number of remaining nodes up.
 
-    :param total: Total elements number.
-    :param sparsity_rate: Prorortion of zero elements in total.
-    :param multiple_of: Number of remaining elements must be a multiple of `multiple_of`.
-    :return: Number of elements to be zeroed.
+    :param total: Total nodes number.
+    :param sparsity_rate: Prorortion of zero nodes in total.
+    :param multiple_of: Number of remaining nodes must be a multiple of `multiple_of`.
+    :return: Number of nodes to be zeroed.
     """
     remaining_elems = math.ceil((total - total * sparsity_rate) / multiple_of) * multiple_of
     return max(total - remaining_elems, 0)
@@ -205,7 +208,7 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     """
     in_channels, out_channels = {}, {}
     for node in graph.get_all_nodes():
-        if isinstance(node.module_attributes, ConvolutionModuleAttributes):
+        if isinstance(node.module_attributes, ConvolutionLayerAttributes):
             name = node.node_name
             if name in in_channels and name in out_channels:
                 continue
@@ -214,8 +217,8 @@ def get_conv_in_out_channels(graph: NNCFGraph):
     return in_channels, out_channels
 
 
-def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
-                           prunable_types: List[str]) -> Dict[int, List[str]]:
+def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info: Clusterization[PrunedModuleInfo],
+                           prunable_types: List[str]) -> Dict[int, List[NNCFNodeName]]:
     """
     Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input.
 
@@ -228,8 +231,8 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
     for cluster in pruned_groups_info.get_all_clusters():
         next_nodes_cluster = set()
         cluster_nodes = set()
-        for cluster_node in cluster.nodes:
-            nncf_cluster_node = graph.get_node_by_id(cluster_node.nncf_node_id)
+        for pruned_module_info in cluster.elements:
+            nncf_node = graph.get_node_by_id(pruned_module_info.nncf_node_id)
             cluster_nodes.add(nncf_cluster_node.node_name)
             curr_next_nodes = get_next_nodes_of_types(graph, nncf_cluster_node, prunable_types)
 
@@ -240,11 +243,11 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
 
 
 def count_flops_for_nodes(graph: NNCFGraph,
-                          input_shapes: Dict[str, tuple], output_shapes: Dict[str, tuple],
+                          input_shapes: Dict[NNCFNodeName, List[int]],
+                          output_shapes:  Dict[NNCFNodeName, List[int]],
                           conv_op_metatypes: List[Type[OperatorMetatype]],
                           linear_op_metatypes: List[Type[OperatorMetatype]],
-                          input_channels: Dict[str, int] = None,
-                          output_channels: Dict[str, int] = None) -> Dict[str, float]:
+                          input_channels: Dict[str, int] = None, output_channels: Dict[str, int] = None) -> Dict[str, int]:
     """
     Counts the number FLOPs in the model for convolution and fully connected layers.
 
@@ -298,15 +301,15 @@ def calculate_in_out_channels_in_uniformly_pruned_model(pruning_groups, pruning_
     tmp_out_channels = full_output_channels.copy()
 
     for group in pruning_groups:
-        layer_name = group.nodes[0].node_name
+        layer_name = group.elements[0].node_name
         assert all(tmp_out_channels[layer_name] == tmp_out_channels[node.node_name] for node in
-                   group.nodes)
+                   group.elements)
         # Prune all nodes in cluster (by output channels)
         old_out_channels = full_output_channels[layer_name]
         num_of_sparse_elems = get_rounded_pruned_element_number(old_out_channels, pruning_rate)
         new_out_channels_num = old_out_channels - num_of_sparse_elems
 
-        for node in group.nodes:
+        for node in group.elements:
             tmp_out_channels[node.node_name] = new_out_channels_num
 
         # Prune in_channels in all next nodes of cluster

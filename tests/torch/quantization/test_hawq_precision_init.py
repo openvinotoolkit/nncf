@@ -12,21 +12,21 @@
 """
 import itertools
 import json
-import math
+import os
 from collections import OrderedDict
 from collections import namedtuple
+from functools import partial
 from pathlib import Path
 from typing import Callable
 from typing import Dict
 from typing import List
 from typing import NamedTuple
 
-import os
+import math
 import pytest
 import torch
 import torch.nn as nn
 import torch.utils.data
-from functools import partial
 from numpy.random import random_sample
 from torch.utils import model_zoo
 from torchvision.models import MobileNetV2
@@ -40,16 +40,18 @@ from examples.torch.common.sample_config import SampleConfig
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.debug import set_debug_log_dir
-from nncf.torch.dynamic_graph.context import Scope
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
+from nncf.common.quantization.structs import QuantizerGroup
+from nncf.torch.debug import set_debug_log_dir
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import QuantizerConfig
 from nncf.torch.quantization.layers import QuantizersSwitcher
+from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
 from nncf.torch.quantization.precision_init.hawq_debug import HAWQDebugger
 from nncf.torch.quantization.precision_init.hawq_init import BitwidthAssignmentMode
@@ -161,8 +163,13 @@ class BaseConfigBuilder:
     def build(self):
         return self._config
 
-    def with_ignored_scope(self, ignored_scopes=List[str]):
-        self._config['ignored_scopes'] = ignored_scopes
+    def with_ignored_scope(self, ignored_scopes=List[str], target_group: QuantizerGroup = None):
+        if target_group is None:
+            self._config["compression"]['ignored_scopes'] = ignored_scopes
+        else:
+            if target_group.value not in self._config["compression"]:
+                self._config["compression"][target_group.value] = {}
+            self._config["compression"][target_group.value]['ignored_scopes'] = ignored_scopes
         self._options['with'] = 'ignored_scopes'
         return self
 
@@ -274,8 +281,7 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=Fal
     quantizer_switcher.enable_quantizers()
     model.rebuild_graph()
     groups_of_adjacent_quantizers = algo_ctrl.groups_of_adjacent_quantizers
-    graph = HAWQDebugger.get_bitwidth_graph(algo_ctrl, model,
-                                            groups_of_adjacent_quantizers, add_flops)
+    graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers, add_flops).get()
     nx_graph = add_adjust_padding_nodes(graph, model)
     check_nx_graph(nx_graph, path_to_dot, graph_dir, sort_dot_graph=False)
 
@@ -317,7 +323,8 @@ HAWQ_TEST_PARAMS = (
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:94],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
-                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]']).with_ratio(1.5)),
+                   with_ignored_scope(['Inception3/BasicConv2d[Conv2d_2a_3x3]/NNCFConv2d[conv]/conv2d_0'],
+                                      target_group=QuantizerGroup.WEIGHTS).with_ratio(1.5)),
     HAWQTestStruct(model_creator=inception_v3,
                    avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:9],
                    config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().
@@ -515,11 +522,11 @@ def get_requires_grad_per_param(model):
     return OrderedDict(sorted(not_sorted.items()))
 
 
-def get_scopes_of_skipped_weight_quantizers():
-    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]',
-                   'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]',
-                   'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]']
-    return [Scope.from_str(s) for s in scopes_list]
+def get_skipped_quantized_weight_node_names() -> List[NNCFNodeName]:
+    scopes_list = ['MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0',
+                   'MobileNetV2/Sequential[features]/InvertedResidual[17]/Sequential[conv]/NNCFConv2d[2]/conv2d_0',
+                   'MobileNetV2/Sequential[features]/InvertedResidual[16]/Sequential[conv]/NNCFConv2d[2]/conv2d_0']
+    return scopes_list
 
 
 def test_disable_quantizer_gradients():
@@ -555,7 +562,7 @@ def disable_quantizer_gradients():
         quantizers_switcher,
         compression_ctrl.weight_quantizers,
         model,
-        get_scopes_of_skipped_weight_quantizers())
+        get_skipped_quantized_weight_node_names())
     return quantizers_switcher, params_to_restore, model, compression_ctrl, original_requires_grad_per_param
 
 
@@ -682,9 +689,9 @@ def get_quantization_config_with_ignored_scope():
 class RatioCalculatorTestDesc:
     NAMES_OF_INSERTION_POINTS = [
         'TargetType.OPERATOR_POST_HOOK /nncf_model_input_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFConv2d[conv1]',
+        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFConv2d[conv1]/conv2d_0',
         'TargetType.OPERATOR_POST_HOOK ConvLinear/NNCFConv2d[conv1]/conv2d_0',
-        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFLinear[fc]'
+        'TargetType.OPERATION_WITH_WEIGHTS ConvLinear/NNCFLinear[fc]/linear_0'
     ]
 
     def __init__(self, ref_ratio: float = 1):

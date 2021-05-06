@@ -10,56 +10,54 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from typing import Tuple
 from typing import Optional
 from typing import List
 
 import torch
 import numpy as np
 
-from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.torch.layers import NNCF_DECONV_MODULES_DICT
-from nncf.torch.graph.graph import PTNNCFNode
-from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.graph.graph import NNCFNode
+from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
 
 def get_bn_node_for_conv(graph: NNCFGraph, conv_node: NNCFNode) -> Optional[NNCFNode]:
-    successors = graph.get_successor_nncf_nodes(conv_node.node_id)
+    successors = graph.get_next_nodes(conv_node)
     for succ in successors:
-        if succ.ia_op_exec_context.operator_name == 'batch_norm':
+        if succ.node_type == 'batch_norm':
             return succ
     return None
 
 
-def get_bn_for_module_scope(target_model: NNCFNetwork, module_scope: Scope) -> Tuple[torch.nn.Module, Scope]:
+def get_bn_for_conv_node_by_name(target_model: NNCFNetwork, conv_node_name: NNCFNodeName) -> Optional[torch.nn.Module]:
     """
-    Returns batch norm module that corresponds to module_scope convolution.
+    Returns a batch norm module in target_model that corresponds immediately following a given
+    convolution node in the model's NNCFGraph representation.
     :param target_model: NNCFNetwork to work with
     :param module_scope:
     :return: batch norm module
     """
     graph = target_model.get_original_graph()
-    module_graph_node = graph.find_node_in_nx_graph_by_scope(module_scope)
-    bn_graph_node = get_bn_node_for_conv(graph, module_graph_node)
-    if bn_graph_node:
-        bn_scope = bn_graph_node.ia_op_exec_context.scope_in_model
-        bn_module = target_model.get_module_by_scope(bn_scope)
-        return bn_module, bn_scope
-    return None, None
+    conv_node = graph.get_node_by_name(conv_node_name)
+    bn_node = get_bn_node_for_conv(graph, conv_node)
+    if bn_node is None:
+        return None
+    bn_module = target_model.get_containing_module(bn_node.node_name)
+    return bn_module
 
 
-def is_depthwise_conv(node: PTNNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+def is_depthwise_conv(node: NNCFNode) -> bool:
+    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
            and node.module_attributes.groups == node.module_attributes.in_channels \
            and (node.module_attributes.out_channels % node.module_attributes.in_channels == 0) \
            and node.module_attributes.in_channels > 1
 
 
-def is_conv_with_downsampling(node: PTNNCFNode) -> bool:
-    return isinstance(node.module_attributes, ConvolutionModuleAttributes) \
+def is_conv_with_downsampling(node: NNCFNode) -> bool:
+    return isinstance(node.module_attributes, ConvolutionLayerAttributes) \
            and not np.all(np.array(node.module_attributes.stride) == 1) \
            and node.node_type not in [deconv.op_func_name for deconv in NNCF_DECONV_MODULES_DICT]
 
@@ -77,5 +75,5 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
 
     for minfo in nodes:
         mask = minfo.operand.binary_filter_pruning_mask
-        nncf_node = graph.get_nncf_node_by_id(minfo.nncf_node_id)
+        nncf_node = graph.get_node_by_id(minfo.nncf_node_id)
         nncf_node.data['output_mask'] = mask

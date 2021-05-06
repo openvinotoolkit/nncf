@@ -30,16 +30,15 @@ from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
-from beta.nncf.tensorflow.pruning.utils import is_shared
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 from beta.nncf.tensorflow.pruning.export_helpers import TF_PRUNING_OPERATOR_METATYPES
-from nncf.common.graph import NNCFNode
-from nncf.common.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
-from nncf.common.pruning.model_analysis import NodesCluster
-from nncf.common.pruning.model_analysis import Clusterization
+from nncf.common.pruning.clusterization import Cluster
+from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.pruning.statistics import PrunedLayerSummary
@@ -94,8 +93,9 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         :param model: The original uncompressed model.
         :return: The model with pruning masks.
         """
+        transformer = TFModelTransformer(model)
         transformation_layout = self.get_transformation_layout(model)
-        return TFModelTransformer(model, transformation_layout).transform()
+        return transformer.transform(transformation_layout)
 
     def get_transformation_layout(self, model: tf.keras.Model) -> TFTransformationLayout:
         """
@@ -111,22 +111,22 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         transformations = TFTransformationLayout()
         shared_layers = set()
 
-        self._pruned_layer_groups_info = Clusterization('node_name')
+        self._pruned_layer_groups_info = Clusterization[PrunedLayerInfo](lambda x: x.layer_name)
 
         for i, group in enumerate(groups_of_nodes_to_prune.get_all_clusters()):
             group_minfos = []
-            for node in group.nodes:
+            for node in group.elements:
                 layer_name = get_layer_identifier(node)
                 layer = model.get_layer(layer_name)
                 group_minfos.append(PrunedLayerInfo(node.node_name, layer_name, node.node_id))
 
-                # Add output_mask to nodes to run mask_propagation
+                # Add output_mask to elements to run mask_propagation
                 # and detect spec_nodes that will be pruned.
-                # It should be done for all nodes of shared layer.
+                # It should be done for all elements of shared layer.
                 node.data['output_mask'] = tf.ones(node.module_attributes.out_channels)
                 if layer_name in shared_layers:
                     continue
-                if is_shared(node):
+                if self._graph.is_shared_node(node):
                     shared_layers.add(layer_name)
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
@@ -143,7 +143,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                             layer_name, node.metatype.bias_attr_name)
                     )
 
-            cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
+            cluster = Cluster[PrunedLayerInfo](i, group_minfos, [n.node_id for n in group.elements])
             self._pruned_layer_groups_info.add_cluster(cluster)
 
         # Propagating masks across the graph to detect spec_nodes that will be pruned
@@ -159,11 +159,11 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
             if spec_node.data['output_mask'] is None:
-                # Skip nodes that will not be pruned
+                # Skip elements that will not be pruned
                 continue
             if layer_name in shared_layers:
                 continue
-            if is_shared(spec_node):
+            if self._graph.is_shared_node(spec_node):
                 shared_layers.add(layer_name)
             nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
             for weight_def in spec_node.metatype.weight_definitions:
@@ -177,7 +177,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             )
         return transformations
 
-    def _get_insertion_command_binary_mask(self, layer_name, attr_name):
+    def _get_insertion_command_binary_mask(self, layer_name: str, attr_name: str) -> TFInsertionCommand:
         op_name = self._get_pruning_operation_name(layer_name, attr_name)
         self._op_names.append(op_name)
 
@@ -199,12 +199,12 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             is_finished = True
         return is_finished, bn_nodes
 
-    def _get_related_batchnorms(self, layer_name: str, group: NodesCluster, graph: NNCFGraph) -> List[NNCFNode]:
+    def _get_related_batchnorms(self, layer_name: str, group: Cluster, graph: NNCFGraph) -> List[NNCFNode]:
         """
-        Returns List of batchnorm nodes related to the layer.
+        Returns List of batchnorm elements related to the layer.
         Note: Single node per layer for shared bactchnorm layers
         """
-        layer_nodes = [node_ for node_ in group.nodes
+        layer_nodes = [node_ for node_ in group.elements
                        if get_layer_identifier(node_) == layer_name]
         bn_nodes = []
         bn_layer_names = []
@@ -232,7 +232,7 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
     def _get_types_of_grouping_ops(self) -> List[str]:
         raise NotImplementedError
 
-    def _get_pruning_operation_name(self, layer_name, weight_attr_name):
+    def _get_pruning_operation_name(self, layer_name: str, weight_attr_name: str):
         return f'{layer_name}_{weight_attr_name}_pruning_binary_mask'
 
 
@@ -246,7 +246,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
                  target_model: tf.keras.Model,
                  op_names: List[str],
                  prunable_types: List[str],
-                 pruned_layer_groups_info: Clusterization,
+                 pruned_layer_groups_info: Clusterization[PrunedLayerInfo],
                  config):
         super().__init__(target_model)
         self._op_names = op_names

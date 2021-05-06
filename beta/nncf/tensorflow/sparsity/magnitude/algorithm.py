@@ -10,9 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Set
 
 import tensorflow as tf
 
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import LayerThreshold
@@ -30,19 +33,18 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
-from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
-from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
-from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OPS
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OP_METATYPES
 from beta.nncf.tensorflow.sparsity.magnitude.functions import calc_magnitude_binary_mask
 from beta.nncf.tensorflow.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
-from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.common.utils.helpers import should_consider_scope
 
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -53,19 +55,24 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model):
-        graph = convert_keras_model_to_nncf_graph(model)
+        nncf_graph = convert_keras_model_to_nncf_graph(model)
         transformations = TFTransformationLayout()
-        shared_nodes = set()
 
-        for node in graph.get_all_nodes():
-            original_node_name, _ = get_original_name_and_instance_index(node.node_name)
-            if (node.metatype not in SPARSITY_LAYERS or
-                is_ignored(node.node_name, self.ignored_scopes) or
-                original_node_name in shared_nodes):
+        processed_shared_layer_names = set()  # type: Set[str]
+
+        for node in nncf_graph.get_all_nodes():
+            if nncf_graph.is_shared_node(node):
+                target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
+                if target_layer_name in processed_shared_layer_names:
+                    continue
+                processed_shared_layer_names.add(target_layer_name)
+            else:
+                target_layer_name = node.node_name
+
+            if not (node.metatype in SPARSITY_LAYER_METATYPES and
+                    should_consider_scope(node.node_name, target_scopes=None,
+                                          ignored_scopes=self.ignored_scopes)):
                 continue
-
-            if node.data['is_shared']:
-                shared_nodes.add(original_node_name)
 
             for weight_def in node.metatype.weight_definitions:
                 op_name = self._get_sparsity_operation_name(node.node_name,
@@ -74,28 +81,10 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
                 transformations.register(
                     TFInsertionCommand(
-                        target_point=TFLayerWeight(original_node_name, weight_def.weight_attr_name),
+                        target_point=TFLayerWeight(target_layer_name, weight_def.weight_attr_name),
                         callable_object=BinaryMask(op_name),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))
-
-        for layer in get_custom_layers(model):
-            layer_graph = convert_layer_graph_to_nncf_graph(layer)
-            for node in layer_graph.get_all_nodes():
-                if (node.metatype in SPARSITY_TF_OPS and
-                    not is_ignored(node.node_name, self.ignored_scopes)):
-
-                    weight_attr_name = get_weight_node_name(layer_graph, node.node_name)
-                    op_name = self._get_sparsity_operation_name(node.node_name, weight_attr_name)
-                    self._op_names.append(op_name)
-
-                    transformations.register(
-                        TFInsertionCommand(
-                            target_point=TFLayerWeight(layer.name, weight_attr_name),
-                            callable_object=BinaryMaskWithWeightsBackup(op_name, weight_attr_name),
-                            priority=TransformationPriority.SPARSIFICATION_PRIORITY
-                        ))
-
         return transformations
 
     def _get_sparsity_operation_name(self, layer_name, weight_attr_name):
@@ -133,7 +122,7 @@ class MagnitudeSparsityController(BaseSparsityController):
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
         self._scheduler = scheduler_cls(self, params)
         self._loss = TFZeroCompressionLoss()
-        self._bn_adaptation = None
+        self._bn_adaptation = none
         self._config = config
         self.set_sparsity_level(sparsity_init)
 

@@ -19,6 +19,8 @@ from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from examples.torch.common.model_loader import load_model
 from nncf import NNCFConfig
 from nncf import register_default_init_args
+from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.torch.quantization.quantizer_id import WeightQuantizerId
 from tests.common.helpers import EXAMPLES_DIR
 from tests.common.helpers import TEST_ROOT
 from tests.torch.helpers import BasicConvTestModel
@@ -177,23 +179,23 @@ def test_quantization_configs__with_precisions_list():
     config['compression']['initializer'].update({
         "precision": {
             "bitwidth_per_scope":
-                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]'],
-                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]']]
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]/conv2d_0'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]/conv2d_0']]
         }})
     config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
     register_bn_adaptation_init_args(config)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    ref_bits = [('AddTwoConv/NNCFConv2d[conv1]module_weight', 2),
-                ('AddTwoConv/NNCFConv2d[conv2]module_weight', 4),
-                ('AddTwoConv/NNCFConv2d[conv2]/conv2d_0|OUTPUT', 6),
-                ('AddTwoConv/NNCFConv2d[conv1]/conv2d_0|OUTPUT', 6),
-                ('/nncf_model_input_0|OUTPUT', 6)]
+    ref_bits = [(WeightQuantizerId(target_node_name='AddTwoConv/NNCFConv2d[conv1]/conv2d_0'), 2),
+                (WeightQuantizerId(target_node_name='AddTwoConv/NNCFConv2d[conv2]/conv2d_0'), 4),
+                (NonWeightQuantizerId(target_node_name='AddTwoConv/NNCFConv2d[conv2]/conv2d_0'), 6),
+                (NonWeightQuantizerId(target_node_name='AddTwoConv/NNCFConv2d[conv1]/conv2d_0'), 6),
+                (NonWeightQuantizerId('/nncf_model_input_0'), 6)]
 
-    for key, quantizer in compression_ctrl.all_quantizations.items():
-        expected_bit = [ref_bit for (name, ref_bit) in ref_bits if name == str(key)][0]
-        assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(key)
+    for qid, quantizer in compression_ctrl.all_quantizations.items():
+        expected_bit = [ref_bit for (ref_qid, ref_bit) in ref_bits if ref_qid == qid][0]
+        assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(str(qid))
 
     nncf_stats = compression_ctrl.statistics()
     actual = nncf_stats.quantization.bitwidth_distribution_statistics
@@ -212,8 +214,8 @@ def test_can_resume_with_manual_init(mocker):
     config['compression']['initializer'].update({
         'precision': {
             'bitwidth_per_scope':
-                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]'],
-                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]']]
+                [[2, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv1]/conv2d_0'],
+                 [4, 'TargetType.OPERATION_WITH_WEIGHTS AddTwoConv/NNCFConv2d[conv2]/conv2d_0']]
         },
         'range': {
             'num_init_samples': 1

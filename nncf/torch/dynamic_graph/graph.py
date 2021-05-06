@@ -15,17 +15,19 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 from torch import Tensor
 
+from nncf.common.graph.module_attributes import BaseLayerAttributes
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.torch.graph.graph import ModuleAttributes
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
 
+ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
 class TensorMetaComparator:
     def __call__(self, lhs: TensorMeta, rhs: TensorMeta) -> bool:
@@ -99,16 +101,16 @@ class OperationExecutionContext:
                  tensor_metas: List[TensorMeta],
                  tm_comparators: List[TensorMetaComparator] = None,
                  input_matcher: InputsMatcher = None):
-        self.input_agnostic = InputAgnosticOperationExecutionContext(operator_name, scope_in_model, call_order)
+        self.op_address = OperationAddress(operator_name, scope_in_model, call_order)
         # This should be a list with a length equal to the number of inputs.
-        # "None" values in this list correspond to non-tensor input elements.
+        # "None" values in this list correspond to non-tensor input nodes.
         self.tensor_metas = tensor_metas
         self.tm_comparators = tm_comparators if tm_comparators else [
             DefaultTensorMetaComparator()]
         self.input_matcher = input_matcher if input_matcher else DefaultInputsMatcher()
 
     def __eq__(self, other: 'OperationExecutionContext'):
-        return (self.input_agnostic == other.input_agnostic) and \
+        return (self.op_address == other.op_address) and \
                self.input_matcher(self.tensor_metas, other.tensor_metas, self.tm_comparators)
 
     def __hash__(self):
@@ -127,24 +129,27 @@ class OperationExecutionContext:
 
     @property
     def operator_name(self):
-        return self.input_agnostic.operator_name
+        return self.op_address.operator_name
 
     @property
     def scope_in_model(self) -> 'Scope':
-        return self.input_agnostic.scope_in_model
+        return self.op_address.scope_in_model
 
     @property
     def call_order(self):
-        return self.input_agnostic.call_order
+        return self.op_address.call_order
 
 
 class DynamicGraphNode:
     def __init__(self, node_id: int, node_key: str, module_attributes: ModuleAttributes,
-                 op_exec_context: OperationExecutionContext):
+                 op_exec_context: OperationExecutionContext, ignored_algorithms: List[str],
+                 is_in_iteration_scope: bool):
         self.node_id = node_id
         self.node_key = node_key
         self.module_attributes = module_attributes
         self.op_exec_context = op_exec_context
+        self.ignored_algorithms = ignored_algorithms
+        self.is_in_iteration_scope = is_in_iteration_scope
 
     def __eq__(self, other: 'DynamicGraphNode') -> bool:
         return self.__dict__ == other.__dict__
@@ -197,12 +202,16 @@ class DefaultScopeNodeMatcher:
                 node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
                 node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
                 module_attributes=nx_node.get(DynamicGraph.MODULE_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
+                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
         return node_candidates
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 module_attrs: ModuleAttributes = None) -> DynamicGraphNode:
+                 module_attrs: ModuleAttributes = None,
+                 ignored_algorithms: List[str] = None,
+                 is_in_iteration_scope: bool = False) -> DynamicGraphNode:
         node_id = len(self._node_id_to_key_dict)
 
         name_parts = (str(op_exec_context.scope_in_model), op_exec_context.operator_name)
@@ -214,10 +223,17 @@ class DefaultScopeNodeMatcher:
         attrs = {
             DynamicGraph.ID_NODE_ATTR: node_id,
             DynamicGraph.KEY_NODE_ATTR: node_key,
-            DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context
+            DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR: op_exec_context,
+            DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR: is_in_iteration_scope
         }
         if module_attrs is not None:
             attrs[DynamicGraph.MODULE_ATTRIBUTES] = module_attrs
+
+        if ignored_algorithms is not None:
+            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = ignored_algorithms
+        else:
+            attrs[DynamicGraph.IGNORED_ALGOS_NODE_ATTR] = []
+
         self._nx_graph.add_node(node_key, **attrs)
 
         has_traced_inputs = False
@@ -230,24 +246,25 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
             self._nx_graph.edges[parent, node_key][DynamicGraph.IN_PORT_NAME_EDGE_ATTR] = i
 
-
         nx_node_dict = self._nx_graph.nodes[node_key]
         node = DynamicGraphNode(node_id=nx_node_dict[DynamicGraph.ID_NODE_ATTR],
                                 node_key=nx_node_dict[DynamicGraph.KEY_NODE_ATTR],
                                 module_attributes=nx_node_dict.get(DynamicGraph.MODULE_ATTRIBUTES),
-                                op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR])
+                                op_exec_context=nx_node_dict[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                                ignored_algorithms=nx_node_dict[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
+                                is_in_iteration_scope=nx_node_dict[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
         if not has_traced_inputs:
             self._inputless_nodes[node_key] = node
 
         return node
 
-    def find_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def find_node(self, op_address: OperationAddress,
                   tensor_metas: List[TensorMeta],
                   tm_comparators: List[TensorMetaComparator]) -> DynamicGraphNode:
-        op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                    ia_op_exec_context.scope_in_model,
-                                                    ia_op_exec_context.call_order,
+        op_exec_context = OperationExecutionContext(op_address.operator_name,
+                                                    op_address.scope_in_model,
+                                                    op_address.call_order,
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
         node_candidates = self._find_nodes_with_matching_context_and_inputs(op_exec_context)
@@ -310,44 +327,47 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 if len(untraced_tensor_inputs) == (len(inputs) - len(non_tensor_inputs)):
                     has_input_outside_iteration = True
                 if has_input_outside_iteration:
-                    node_name = str(op_exec_context.input_agnostic)
+                    node_name = str(op_exec_context.op_address)
                     first_nodes[node_name] = node
                     nncf_logger.debug('Found first iteration node: {} in scope: {}'.format(name, iter_scope))
 
     def add_node(self, op_exec_context: OperationExecutionContext, inputs,
-                 module_attrs: ModuleAttributes = None) -> DynamicGraphNode:
-        node = super().add_node(op_exec_context, inputs, module_attrs)
+                 module_attrs: ModuleAttributes = None,
+                 ignored_algorithms: List[str] = None,
+                 is_in_iteration_scope: bool = True) -> DynamicGraphNode:
+        node = super().add_node(op_exec_context, inputs, module_attrs, ignored_algorithms,
+                                is_in_iteration_scope=True)
         self.save_first_iteration_node(inputs, node)
         return node
 
     def find_node(self,
-                  ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                  op_address: OperationAddress,
                   tensor_metas: List[TensorMeta],
                   tm_comparators: List[TensorMetaComparator]) -> Optional[DynamicGraphNode]:
-        iter_scopes = ia_op_exec_context.scope_in_model.get_iteration_scopes()
+        iter_scopes = op_address.scope_in_model.get_iteration_scopes()
         # compare meta information about first input nodes during the matching. During the iteration some nodes may
         # change number of inputs, e.g. on concat of hidden outputs
         input_matcher = FirstInputsMatcher()
-        op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                    ia_op_exec_context.scope_in_model,
-                                                    ia_op_exec_context.call_order,
+        op_exec_context = OperationExecutionContext(op_address.operator_name,
+                                                    op_address.scope_in_model,
+                                                    op_address.call_order,
                                                     tensor_metas,
                                                     input_matcher=input_matcher,
                                                     tm_comparators=tm_comparators)
         node_candidates = self._find_nodes_with_matching_context_and_inputs(op_exec_context)
         if not node_candidates:
-            op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                        ia_op_exec_context.scope_in_model,
-                                                        ia_op_exec_context.call_order,
+            op_exec_context = OperationExecutionContext(op_address.operator_name,
+                                                        op_address.scope_in_model,
+                                                        op_address.call_order,
                                                         tensor_metas,
                                                         tm_comparators=tm_comparators)
             node_candidates = self._find_nodes_with_matching_context_among_inputless(op_exec_context)
             if not node_candidates and iter_scopes:
                 # ignore information about node creator and index of input
                 comparators = tm_comparators + [ShapeOnlyTensorMetaComparator()]
-                op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                            ia_op_exec_context.scope_in_model,
-                                                            ia_op_exec_context.call_order,
+                op_exec_context = OperationExecutionContext(op_address.operator_name,
+                                                            op_address.scope_in_model,
+                                                            op_address.call_order,
                                                             tensor_metas,
                                                             tm_comparators=comparators)
                 # match with starting points of iteration
@@ -393,44 +413,45 @@ class NodeManager:
                 return True
         return False
 
-    def choose_matcher(self, ia_op_exec_context: InputAgnosticOperationExecutionContext) -> DefaultScopeNodeMatcher:
-        if self._within_iteration(ia_op_exec_context.scope_in_model):
+    def choose_matcher(self, op_address: OperationAddress) -> DefaultScopeNodeMatcher:
+        if self._within_iteration(op_address.scope_in_model):
             return self.iteration_matcher
         return self.base_matcher
 
     @staticmethod
-    def choose_tm_comparators(ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def choose_tm_comparators(op_address: OperationAddress,
                               input_comparators_per_scope:
                               List[Tuple[TensorMetaComparator, List[str]]]) -> List[TensorMetaComparator]:
         result = []
         for pairs in input_comparators_per_scope:
             comparator, scopes = pairs
             for scope in scopes:
-                if scope in str(ia_op_exec_context):
+                if scope in str(op_address):
                     result.append(comparator)
         return result
 
-    def find_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def find_node(self, op_address: OperationAddress,
                   tensor_metas: List[TensorMeta],
                   input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]]) -> DynamicGraphNode:
-        matcher = self.choose_matcher(ia_op_exec_context)
-        comparators = self.choose_tm_comparators(ia_op_exec_context, input_comparators_per_scope)
-        return matcher.find_node(ia_op_exec_context, tensor_metas, comparators)
+        matcher = self.choose_matcher(op_address)
+        comparators = self.choose_tm_comparators(op_address, input_comparators_per_scope)
+        return matcher.find_node(op_address, tensor_metas, comparators)
 
-    def add_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def add_node(self, op_address: OperationAddress,
                  tensor_metas: List[TensorMeta],
                  tm_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 module_attrs: ModuleAttributes = None) -> DynamicGraphNode:
-        matcher = self.choose_matcher(ia_op_exec_context)
-        tm_comparators = self.choose_tm_comparators(ia_op_exec_context, tm_comparators_per_scope)
-        op_exec_context = OperationExecutionContext(ia_op_exec_context.operator_name,
-                                                    ia_op_exec_context.scope_in_model,
-                                                    ia_op_exec_context.call_order,
+                 module_attrs: ModuleAttributes = None,
+                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
+        matcher = self.choose_matcher(op_address)
+        tm_comparators = self.choose_tm_comparators(op_address, tm_comparators_per_scope)
+        op_exec_context = OperationExecutionContext(op_address.operator_name,
+                                                    op_address.scope_in_model,
+                                                    op_address.call_order,
                                                     tensor_metas,
                                                     tm_comparators=tm_comparators)
 
-        return matcher.add_node(op_exec_context, inputs, module_attrs)
+        return matcher.add_node(op_exec_context, inputs, module_attrs, ignored_algorithms)
 
 
 class DynamicGraph:
@@ -440,6 +461,8 @@ class DynamicGraph:
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
+    IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
+    IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
 
     def __init__(self):
         self._nx_graph = nx.DiGraph()
@@ -458,18 +481,19 @@ class DynamicGraph:
         return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
 
     def find_node(self,
-                  ia_op_exec_context: InputAgnosticOperationExecutionContext,
+                  op_address: OperationAddress,
                   tensor_metas: List[TensorMeta],
                   input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]]) -> DynamicGraphNode:
-        return self.match_manager.find_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope)
+        return self.match_manager.find_node(op_address, tensor_metas, input_comparators_per_scope)
 
-    def add_node(self, ia_op_exec_context: InputAgnosticOperationExecutionContext,
+    def add_node(self, op_address: OperationAddress,
                  tensor_metas: List[TensorMeta],
                  input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
                  inputs,
-                 module_attrs: ModuleAttributes = None) -> DynamicGraphNode:
-        node = self.match_manager.add_node(ia_op_exec_context, tensor_metas, input_comparators_per_scope, inputs,
-                                           module_attrs)
+                 module_attrs: ModuleAttributes = None,
+                 ignored_algorithms: List[str] = None) -> DynamicGraphNode:
+        node = self.match_manager.add_node(op_address, tensor_metas, input_comparators_per_scope, inputs,
+                                           module_attrs, ignored_algorithms)
 
         from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
         from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
@@ -497,7 +521,9 @@ class DynamicGraph:
                 node_id=nx_node[DynamicGraph.ID_NODE_ATTR],
                 node_key=nx_node[DynamicGraph.KEY_NODE_ATTR],
                 module_attributes=nx_node.get(DynamicGraph.MODULE_ATTRIBUTES),
-                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]
+                op_exec_context=nx_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR],
+                ignored_algorithms=nx_node[DynamicGraph.IGNORED_ALGOS_NODE_ATTR],
+                is_in_iteration_scope=nx_node[DynamicGraph.IS_IN_ITERATION_SCOPE_NODE_ATTR]
             )
             all_nodes.append(dynamic_graph_node)
         return all_nodes

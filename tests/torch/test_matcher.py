@@ -14,7 +14,7 @@
 import pytest
 import networkx as nx
 
-from nncf.torch.graph.graph_matching import NodeExpression as N, find_subgraphs_match_expression
+from nncf.common.graph.graph_matching import NodeExpression as N, find_subgraphs_match_expression
 
 
 def add_nodes(graph, types, nodes=None):

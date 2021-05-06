@@ -16,7 +16,7 @@ from nncf.torch.tensor_statistics.collectors import TensorStatisticCollectorBase
     ReductionShape, MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
     MeanPercentileStatisticCollector
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.torch.utils import should_consider_scope
+from nncf.common.utils.helpers import should_consider_scope
 
 
 class RangeInitConfig:
@@ -119,10 +119,10 @@ class RangeInitParams:
 
     def get_init_config_for_quantization_point(self, qp: QuantizationPointBase) -> RangeInitConfig:
         if qp.is_weight_quantization_point():
-            scope_str = str(WeightQuantizerId(qp.insertion_point.module_scope))
+            scope_str = str(WeightQuantizerId(qp.insertion_point.target_node_name))
             group = QuantizerGroup.WEIGHTS
         else:
-            scope_str = str(NonWeightQuantizerId(qp.insertion_point.ia_op_exec_context,
+            scope_str = str(NonWeightQuantizerId(qp.insertion_point.target_node_name,
                                                  qp.insertion_point.input_port_id))
             group = QuantizerGroup.ACTIVATIONS
         return self.get_init_config_for_scope_and_group(scope_str, group)
@@ -159,12 +159,12 @@ class StatCollectorGenerator:
             num_batches = int(np.ceil(
                 init_config.num_init_samples / range_init_params.init_range_data_loader.batch_size))
             if is_weights:
-                module = target_model.get_module_by_scope(qp.insertion_point.module_scope)
+                module = target_model.get_containing_module(qp.insertion_point.target_node_name)
                 input_shape = module.weight.shape
                 # No need to store extra statistics in memory since weights won't change during range init
                 num_batches = 1
             else:
-                input_shape = target_model.get_input_shape_for_insertion_point(qp.insertion_point)
+                input_shape = target_model.get_original_graph().get_input_shape_for_insertion_point(qp.insertion_point)
 
             obs_p = TensorStatisticObservationPoint(
                 qp.insertion_point,

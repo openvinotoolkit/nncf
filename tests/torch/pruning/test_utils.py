@@ -12,12 +12,11 @@
 """
 import pytest
 
-from nncf.torch.dynamic_graph.context import Scope
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
-from nncf.torch.pruning.utils import get_bn_for_module_scope
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type
+from nncf.torch.pruning.utils import get_bn_for_conv_node_by_name
 from tests.torch.pruning.helpers import get_basic_pruning_config, BigPruningTestModel, \
     TestModelBranching
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -42,25 +41,25 @@ def test_get_rounded_pruned_element_number(total, sparsity_rate, multiple_of, re
         assert (total - result) % multiple_of == 0
 
 
-def test_get_bn_for_module_scope():
+def test_get_bn_for_conv_node():
     config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
     config['compression']['algorithm'] = 'filter_pruning'
     pruned_model, _ = create_compressed_model_and_algo_for_test(BigPruningTestModel(), config)
 
-    conv1_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv1]')
-    bn, _ = get_bn_for_module_scope(pruned_model, conv1_scope)
+    conv1_name = 'BigPruningTestModel/NNCFConv2d[conv1]/conv2d_0'
+    bn = get_bn_for_conv_node_by_name(pruned_model, conv1_name)
     assert bn is None
 
-    conv2_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv2]')
-    bn, _ = get_bn_for_module_scope(pruned_model, conv2_scope)
+    conv2_name = 'BigPruningTestModel/NNCFConv2d[conv2]/conv2d_0'
+    bn = get_bn_for_conv_node_by_name(pruned_model, conv2_name)
     assert bn == pruned_model.bn
 
-    up_scope = Scope.from_str('BigPruningTestModel/NNCFConvTranspose2d[up]')
-    bn, _ = get_bn_for_module_scope(pruned_model, up_scope)
+    up_name = 'BigPruningTestModel/NNCFConvTranspose2d[up]/conv_transpose2d_0'
+    bn = get_bn_for_conv_node_by_name(pruned_model, up_name)
     assert bn is None
 
-    conv3_scope = Scope.from_str('BigPruningTestModel/NNCFConv2d[conv3]')
-    bn, _ = get_bn_for_module_scope(pruned_model, conv3_scope)
+    conv3_name = 'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0'
+    bn = get_bn_for_conv_node_by_name(pruned_model, conv3_name)
     assert bn is None
 
 
@@ -76,7 +75,7 @@ def test_get_first_pruned_layers(model, ref_first_module_names):
 
     first_pruned_nodes = get_first_nodes_of_type(pruned_model.get_original_graph(),
                                                  FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    first_pruned_modules = [pruned_model.get_module_by_scope(n.ia_op_exec_context.scope_in_model)
+    first_pruned_modules = [pruned_model.get_containing_module(n.node_name)
                             for n in first_pruned_nodes]
     ref_first_modules = [getattr(pruned_model, module_name) for module_name in ref_first_module_names]
     assert set(first_pruned_modules) == set(ref_first_modules)
@@ -95,7 +94,7 @@ def test_get_last_pruned_layers(model, ref_last_module_names):
 
     last_pruned_nodes = get_last_nodes_of_type(pruned_model.get_original_graph(),
                                                FilterPruningBuilder(config).get_op_types_of_pruned_modules())
-    last_pruned_modules = [pruned_model.get_module_by_scope(n.ia_op_exec_context.scope_in_model)
+    last_pruned_modules = [pruned_model.get_containing_module(n.node_name)
                            for n in last_pruned_nodes]
     ref_last_modules = [getattr(pruned_model, module_name) for module_name in ref_last_module_names]
     assert set(last_pruned_modules) == set(ref_last_modules)

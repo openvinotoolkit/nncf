@@ -10,14 +10,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from typing import Dict
+from typing import Optional
+
+import networkx as nx
+import torch
+import numpy as np
 from collections import Counter
 from collections import deque
 from copy import deepcopy
 
-import numpy as np
-import networkx as nx
+from nncf.common.graph.graph import NNCFGraph
+from nncf.torch.quantization.layers import BaseQuantizer
+from nncf.torch.quantization.quantizer_id import QuantizerId
+
 
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
@@ -153,20 +159,19 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         Initializes collector of the memory consumption statistics.
         """
         self._compressed_model = compressed_model
-        self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
-        self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
+        self._weight_quantizers = weight_quantizers
+        self._non_weight_quantizers = non_weight_quantizers
 
     def collect(self) -> MemoryConsumptionStatistics:
         stats = MemoryConsumptionStatistics()
 
         fp_num_bits = 32
         nncf_modules = self._compressed_model.get_nncf_modules()
-
-        for scope_module, nncf_module in nncf_modules.items():
+        for nncf_module in nncf_modules.values():
             count_el = np.prod(nncf_module.weight.shape)
             stats.fp32_weight_size += count_el * fp_num_bits
-            status, quantizer = self._get_quantizer_for_scope(scope_module, self._weight_quantizers)
-            if status:
+            quantizer = self._get_weight_quantizer_for_module(nncf_module)
+            if quantizer is not None:
                 num_bits = quantizer.num_bits
                 stats.quantized_weight_size += count_el * num_bits
             else:
@@ -187,31 +192,14 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         # pylint: disable=protected-access
         original_nx_graph = original_graph._nx_graph
         nx.set_edge_attributes(original_nx_graph, 32, "precision")
-        input_nodes = original_graph.get_input_nodes()
-        input_node_keys = []
-        for input_node in input_nodes:
-            input_node_key = original_graph.get_node_key_by_id(input_node.node_id)
-            input_node_keys.append(input_node_key)
-            next_nodes = original_graph.get_next_nodes(input_node)
-            for next_node in next_nodes:
-                scope = next_node.ia_op_exec_context.scope_in_model
-                status, quantizer = self._get_quantizer_for_scope(scope, self._non_weight_quantizers)
-                if status:
-                    next_node_key = original_graph.get_node_key_by_id(next_node.node_id)
-                    num_bits = quantizer.num_bits
-                    original_nx_graph.edges[input_node_key, next_node_key]['precision'] = num_bits
 
         for u, v in original_nx_graph.edges:
-            if u in input_node_keys:
-                continue
-
-            shape = original_nx_graph.edges[u, v][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
-            u_node_scope_str = str(original_nx_graph.nodes[u][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
+            shape = original_nx_graph.edges[u, v][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             num_bits = self._get_precision_for_activation_tensor(u, v, original_nx_graph)
             original_nx_graph.edges[u, v]['precision'] = num_bits
-            memory_consumption_fp_model[u_node_scope_str] = np.prod(shape) * fp_num_bits
-            memory_consumption_compressed_model[u_node_scope_str] = np.prod(shape) * num_bits
-
+            u_node_name = original_nx_graph.nodes[u][NNCFGraph.NODE_NAME_ATTR]
+            memory_consumption_fp_model[u_node_name] = np.prod(shape) * fp_num_bits
+            memory_consumption_compressed_model[u_node_name] = np.prod(shape) * num_bits
         try:
             stats.max_fp32_activation_size = max(memory_consumption_fp_model.values()) / 2**23
             stats.max_compressed_activation_size = max(memory_consumption_compressed_model.values()) / 2**23
@@ -220,35 +208,34 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
             stats.max_compressed_activation_size = 0
         return stats
 
-    def _get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
-        scope_u_node = original_nx_graph.nodes[u_node][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
+    def _get_precision_for_activation_tensor(self, u_node: str, v_node: str, original_nx_graph: nx.DiGraph) -> int:
         # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor =\
              max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
-        module = self._compressed_model.get_module_by_scope(scope_u_node)
+        u_node_name = original_nx_graph.nodes[u_node][NNCFGraph.NODE_NAME_ATTR]
+        module = self._compressed_model.get_containing_module(u_node_name)
         if is_nncf_module(module):
-            status, quantizer = self._get_quantizer_for_scope(scope_u_node, self._weight_quantizers)
-            if status:
+            quantizer = self._get_weight_quantizer_for_module(module)
+            if quantizer is not None:
                 precision = max(quantizer.num_bits, precision_enter_activation_tensor)
             else:
                 precision = 32
             return precision
 
-        u_node_scope_str = str(original_nx_graph.nodes[u_node][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
         for aq_id, aq in self._non_weight_quantizers.items():
-            if u_node_scope_str in str(aq_id.ia_op_exec_context):
-                precision = aq.num_bits
+            if u_node_name == aq_id.target_node_name:
+                precision = aq.quantizer_module_ref.num_bits
                 break
         else:
             precision = precision_enter_activation_tensor
         return precision
 
-    def _get_quantizer_for_scope(self, scope, quatizers):
-        for quantizer_id, quantizer in quatizers.items():
-            if quantizer_id.get_scope() == scope:
-                return True, quantizer
-        return False, None
+    def _get_weight_quantizer_for_module(self, module: torch.nn.Module) -> Optional[BaseQuantizer]:
+        for wq_info in self._weight_quantizers.values():
+            if wq_info.quantized_module is module:
+                return wq_info.quantizer_module_ref
+        return None
 
 
 class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
@@ -265,7 +252,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
     def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController'):
         self._compressed_model = compressed_model
-        self._qctrl = qctrl
+        self._qctrl = qctrl  # type: QuantizationController
         self.stats = QuantizationConfigurationStatistics(0, 0)
 
     def collect(self) -> QuantizationConfigurationStatistics:
@@ -298,11 +285,11 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 node = merged_original_graph.nodes[node_key]
                 if node[self.IS_MERGED_GRAPH_ATTR]:
                     last_node = node[self.NODES_GRAPH_ATTR][-1]
-                    scope_str = str(last_node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
+                    node_name = str(last_node[NNCFGraph.NODE_NAME_ATTR])
                     matched = False
                     for aq_info in self._qctrl.non_weight_quantizers.values():
                         for target_point in aq_info.affected_insertions:
-                            if scope_str in str(target_point.ia_op_exec_context):
+                            if node_name == target_point.target_node_name:
                                 matched = True
                                 break
                     if matched:
@@ -310,18 +297,18 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     else:
                         self._marking_edges(merged_original_graph, node_key, queue, False)
                 else:
-                    scope_str = str(node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
+                    node_name = str(node[NNCFGraph.NODE_NAME_ATTR])
 
                     matched = False
                     for aq_key in self._compressed_model.external_quantizers.keys():
-                        if scope_str in aq_key:
+                        if node_name in aq_key:
                             matched = True
                             break
                     if matched:
                         self._marking_edges(merged_original_graph, node_key, queue)
                     else:
                         is_op_non_change_precision_activation_tensor = True
-                        node_op_name = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].operator_name
+                        node_op_name = node[NNCFGraph.NODE_TYPE_ATTR]
                         for op in DEFAULT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.INPUTS_QUANTIZABLE]:
                             op_names = [op.name]
                             if op.torch_tensor_patch_spec is not None:
@@ -330,8 +317,8 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                                 is_op_non_change_precision_activation_tensor = False
                                 break
                         status = is_op_non_change_precision_activation_tensor and\
-                            self._all_enter_edges_in_node_of_type(merged_original_graph,\
-                                node_key, self.QUANTIZED_EDGES_ATTR)
+                            self._all_enter_edges_in_node_of_type(merged_original_graph,
+                                                                  node_key, self.QUANTIZED_EDGES_ATTR)
                         self._marking_edges(merged_original_graph, node_key, queue, status)
             else:
                 queue.appendleft(node_key)
@@ -363,7 +350,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         import nncf.torch.graph.patterns as p
-        from nncf.torch.graph.graph_matching import find_subgraphs_match_expression
+        from nncf.common.graph.graph_matching import find_subgraphs_match_expression
 
         pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
         # pylint: disable=protected-access

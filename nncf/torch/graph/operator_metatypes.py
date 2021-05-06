@@ -13,15 +13,19 @@
 
 from copy import copy
 from typing import List, Optional, Type
+from typing import TypeVar
 
 from nncf.common.graph.graph import NNCFGraphNodeType
-from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.module_attributes import BaseLayerAttributes
+from nncf.common.graph.module_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
 from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
-from nncf.torch.graph.graph import ModuleAttributes
+
+
+ModuleAttributes = TypeVar('ModuleAttributes', bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
@@ -29,7 +33,7 @@ PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 class PTOperatorMetatype(OperatorMetatype):
     """Base class for grouping PyTorch operators based on their semantic meaning.
     Each derived class represents a single semantic group - for example, AddMetatype would
-    group together '__iadd__', '__add__' and '__radd__' operations which all define elementwise
+    group together '__iadd__', '__add__' and '__radd__' operations which all define nodewise
     tensor addition.
     Derived classes also specify which PyTorch functions in which modules should be patched
     and in what manner, so that the entire group of operations is visible in the internal graph
@@ -144,7 +148,7 @@ class DepthwiseConv1dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
         if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
@@ -165,7 +169,7 @@ class DepthwiseConv2dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
         if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:
@@ -186,7 +190,7 @@ class DepthwiseConv3dSubtype(PTOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
     @classmethod
-    def matches(cls, module_attributes: Optional[ConvolutionModuleAttributes] = None,
+    def matches(cls, module_attributes: Optional[ConvolutionLayerAttributes] = None,
                 function_args=None,
                 functions_kwargs=None) -> bool:
         if module_attributes.groups == module_attributes.in_channels and module_attributes.in_channels > 1:

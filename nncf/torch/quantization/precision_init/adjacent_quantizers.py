@@ -15,6 +15,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Tuple
 
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.quantizer_id import QuantizerId
@@ -69,8 +70,8 @@ class GroupsOfAdjacentQuantizers:
             act_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
             wt_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
 
-            module_scope_per_activation_qp_id = {}  # type: Dict['Scope', QuantizationPointId]
-            module_scope_per_weight_qp_id = {}  # type: Dict['Scope', QuantizationPointId]
+            quantized_node_per_activation_qp_id = {}  # type: Dict[NNCFNodeName, QuantizationPointId]
+            module_scope_per_weight_qp_id = {}  # type: Dict[NNCFNodeName, QuantizationPointId]
 
             for qp_id in group:
                 qp = quantizer_setup.quantization_points[qp_id]
@@ -79,21 +80,23 @@ class GroupsOfAdjacentQuantizers:
                 resulting_tuple = (quant_id, quantizer_module)
                 if qp.is_weight_quantization_point():
                     wt_quant_tuples.append(resulting_tuple)
-                    module_scope = qp.insertion_point.module_scope
-                    module_scope_per_weight_qp_id[module_scope] = qp_id
+                    weight_quantized_module_node_name = qp.insertion_point.target_node_name
+                    module_scope_per_weight_qp_id[weight_quantized_module_node_name] = qp_id
                 elif qp.is_activation_quantization_point():
                     act_quant_tuples.append(resulting_tuple)
-                    scopes_of_modules = qp.scopes_of_directly_quantized_operators
-                    module_scope_per_activation_qp_id.update({scope: qp_id for scope in scopes_of_modules})
+                    quantized_node_names = qp.directly_quantized_operator_node_names
+                    quantized_node_per_activation_qp_id.update({node_name: qp_id for node_name in quantized_node_names})
                 self._quantizer_per_group_id[quant_id] = group_idx
 
-            for module_scope, w_qp_id in module_scope_per_weight_qp_id.items():
-                if module_scope not in module_scope_per_activation_qp_id:
-                    nncf_logger.warning('Module `%s` has quantized weights and no quantized inputs!', module_scope)
+            for weight_quantized_module_node_name, w_qp_id in module_scope_per_weight_qp_id.items():
+                if weight_quantized_module_node_name not in quantized_node_per_activation_qp_id:
+                    nncf_logger.warning('Module `%s` has quantized weights and no quantized inputs!',
+                                        weight_quantized_module_node_name)
                     continue
-                a_qp_id = module_scope_per_activation_qp_id[module_scope]
+                a_qp_id = quantized_node_per_activation_qp_id[weight_quantized_module_node_name]
                 if w_qp_id in self.weight_qp_id_per_activation_qp_id:
-                    nncf_logger.warning('Multiple weight quantizers per activation quantizer for `%s`', module_scope)
+                    nncf_logger.warning('Multiple weight quantizers per activation quantizer for `%s`',
+                                        weight_quantized_module_node_name)
                     continue
                 self.weight_qp_id_per_activation_qp_id[w_qp_id] = a_qp_id
 

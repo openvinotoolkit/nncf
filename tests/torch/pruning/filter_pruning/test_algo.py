@@ -356,6 +356,6 @@ def test_clusters_for_multiple_forward():
     clusters = pruning_algo.pruned_module_groups_info.clusters
     assert len(clusters) == 2
     # Convolutions before one node that forwards several times should be in one cluster
-    assert sorted([n.nncf_node_id for n in clusters[0].nodes]) == [1, 2, 3]
+    assert sorted([n.nncf_node_id for n in clusters[0].elements]) == [1, 2, 3]
     # Nodes that associate with one module should be in one cluster
-    assert sorted([n.nncf_node_id for n in clusters[1].nodes]) == [4, 5, 6]
+    assert sorted([n.nncf_node_id for n in clusters[1].elements]) == [4, 5, 6]

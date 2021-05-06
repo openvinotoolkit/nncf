@@ -10,12 +10,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import Set
 
 from typing import List
 
 import numpy as np
 import tensorflow as tf
 
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
@@ -30,12 +32,12 @@ from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_inde
 from beta.nncf.tensorflow.graph.utils import get_nncf_operations
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
-from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
+from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYER_METATYPES
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
 from beta.nncf.tensorflow.sparsity.utils import apply_fn_to_op_weights
 from beta.nncf.tensorflow.sparsity.collector import TFSparseModelStatisticsCollector
-from beta.nncf.tensorflow.utils.node import is_ignored
+from nncf.common.utils.helpers import should_consider_scope
 
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
@@ -46,19 +48,24 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model):
-        graph = convert_keras_model_to_nncf_graph(model)
+        nncf_graph = convert_keras_model_to_nncf_graph(model)
         transformations = TransformationLayout()
-        shared_nodes = set()
 
-        for node in graph.get_all_nodes():
-            original_node_name, _ = get_original_name_and_instance_index(node.node_name)
-            if (node.metatype not in SPARSITY_LAYERS or
-                is_ignored(node.node_name, self.ignored_scopes) or
-                original_node_name in shared_nodes):
+        processed_shared_layer_names = set()  # type: Set[str]
+
+        for node in nncf_graph.get_all_nodes():
+            if nncf_graph.is_shared_node(node):
+                target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
+                if target_layer_name in processed_shared_layer_names:
+                    continue
+                processed_shared_layer_names.add(target_layer_name)
+            else:
+                target_layer_name = node.node_name
+
+            if not (node.metatype in SPARSITY_LAYER_METATYPES and
+                    should_consider_scope(node.node_name, target_scopes=None,
+                                          ignored_scopes=self.ignored_scopes)):
                 continue
-
-            if node.data['is_shared']:
-                shared_nodes.add(original_node_name)
 
             for weight_def in node.metatype.weight_definitions:
                 op_name = self._get_rb_sparsity_operation_name(node.node_name,
@@ -67,7 +74,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
 
                 transformations.register(
                     TFInsertionCommand(
-                        target_point=TFLayerWeight(original_node_name, weight_def.weight_attr_name),
+                        target_point=TFLayerWeight(target_layer_name, weight_def.weight_attr_name),
                         callable_object=RBSparsifyingWeight(op_name),
                         priority=TransformationPriority.SPARSIFICATION_PRIORITY
                     ))

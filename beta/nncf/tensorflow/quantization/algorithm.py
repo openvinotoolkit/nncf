@@ -10,42 +10,49 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+from typing import List
+from typing import Set
 
 import networkx as nx
 
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.utils.logger import logger
-from nncf.common.schedulers import BaseCompressionScheduler
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
-from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.graph import patterns as p
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.metatypes.common import ELEMENTWISE_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION
 from beta.nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFLambdaLayerMetatype
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.pattern_matching import search_all
-from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFAfterLayer
+from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATONS
+from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
 from beta.nncf.tensorflow.quantization.initializers.minmax import MinMaxInitializer
 from beta.nncf.tensorflow.quantization.layers import FakeQuantize
 from beta.nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
-from beta.nncf.tensorflow.utils.node import is_ignored
-from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.api.compression import CompressionLoss
+from nncf.api.compression import CompressionScheduler
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.module_attributes import Dtype
+from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import QuantizationConstraints
+from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.utils import extract_bn_adaptation_init_params
+from nncf.common.utils.helpers import should_consider_scope
+from nncf.common.utils.logger import logger
 
 ACTIVATIONS = "activations"
 WEIGHTS = "weights"
@@ -106,8 +113,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return quantizer_cls(name, qconfig)
 
     def get_transformation_layout(self, model):
-        graph = convert_keras_model_to_nncf_graph(model)
-        nodes = graph.get_all_nodes()
+        nncf_graph = convert_keras_model_to_nncf_graph(model)
+        nodes = nncf_graph.get_all_nodes()
         for node in nodes:
             if node.metatype in NOT_SUPPORT_LAYER_METATYPES:
                 logger.warning('The layer {} is not supported by the quantization algorithm'
@@ -115,16 +122,21 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[WEIGHTS])
-        shared_nodes = set()
+        processed_shared_layer_names = set()  # type: Set[str]
         for node in nodes:
-            original_node_name, _ = get_original_name_and_instance_index(node.node_name)
-            if node.metatype not in QUANTIZATION_LAYER_METATYPES \
-                    or is_ignored(node.node_name, self.ignored_scopes_per_group[WEIGHTS]) \
-                    or original_node_name in shared_nodes:
-                continue
 
-            if node.data['is_shared']:
-                shared_nodes.add(original_node_name)
+            if nncf_graph.is_shared_node(node):
+                target_layer_name, _ = get_original_name_and_instance_index(node.node_name)
+                if target_layer_name in processed_shared_layer_names:
+                    continue
+                processed_shared_layer_names.add(target_layer_name)
+            else:
+                target_layer_name = node.node_name
+
+            if not (node.metatype in QUANTIZATION_LAYER_METATYPES \
+                    and should_consider_scope(node.node_name, target_scopes=None,
+                                              ignored_scopes=self.ignored_scopes_per_group[WEIGHTS])):
+                continue
 
             for weight_def in node.metatype.weight_definitions:
                 op_name = self._get_quantizer_operation_name(
@@ -137,11 +149,11 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
                 transformations.register(
                     TFInsertionCommand(
-                        target_point=TFLayerWeight(original_node_name, weight_def.weight_attr_name),
+                        target_point=TFLayerWeight(target_layer_name, weight_def.weight_attr_name),
                         callable_object=operation,
                         priority=TransformationPriority.QUANTIZATION_PRIORITY))
 
-        insertion_points = self._find_insertion_points(graph)
+        insertion_points = self._find_insertion_points(nncf_graph)
         qconfig = self._get_default_qconfig(self.global_quantizer_constraints[ACTIVATIONS])
         for original_node_name, instance_index in insertion_points:
             fake_quantize_name = self._get_fake_quantize_name(original_node_name, instance_index)
@@ -157,69 +169,90 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
         return transformations
 
-    def _find_insertion_points(self, graph):
-        def _filter_fn(node):
-            return not is_ignored(node.node_name, self.ignored_scopes_per_group[ACTIVATIONS]) \
-                   and 'float' in node.data['dtype'].lower()
+    def _find_insertion_points(self, nncf_graph: NNCFGraph) -> List[str]:
+        def _filter_fn(node: NNCFNode):
+            ignored = not should_consider_scope(node.node_name,
+                                                target_scopes=None,
+                                                ignored_scopes=self.ignored_scopes_per_group[ACTIVATIONS])
+            # Works if the insertion is done as an operation after the corresponding node.
+            out_nodes = nncf_graph.get_next_nodes(node)
+            is_float_dtype = True
+            for out_node in out_nodes:
+                out_edge = nncf_graph.get_nx_edge(node, out_node)
+                if out_edge[NNCFGraph.DTYPE_EDGE_ATTR] != Dtype.FLOAT:
+                    is_float_dtype = False
+            return (not ignored) and is_float_dtype
 
         pattern = p.CONV_LINEAR_OPS | p.ELEMENTWISE | p.ANY_BN_ACT_COMBO | \
                   p.CONV_LINEAR_OPS + p.ANY_AG_BN_ACT_COMBO | p.ELEMENTWISE + p.ANY_AG_BN_ACT_COMBO | p.SINGLE_OPS
 
-        matches = search_all(graph.nx_graph, pattern)
+        nx_graph = nncf_graph.get_nx_graph_copy()
+        matches = search_all(nncf_graph.get_nx_graph_copy(), pattern)
 
-        topological_order = {node: k for k, node in enumerate(nx.topological_sort(graph.nx_graph))}
-        insertion_points = [max(match, key=topological_order.__getitem__) for match in matches]
+        topological_order = {node: k for k, node in enumerate(nx.topological_sort(nx_graph))}
+        insertion_point_node_keys = [max(match, key=topological_order.__getitem__) for match in matches]
 
         if self.quantize_inputs:
-            for node in graph.get_input_nodes():
-                preprocessing_nodes = self._get_input_preprocessing_nodes(graph, node)
+            for nncf_node in nncf_graph.get_input_nodes():
+                node_key = nncf_graph.get_node_key_by_id(nncf_node.node_id)
+                preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, node_key)
                 if preprocessing_nodes:
                     for n in preprocessing_nodes[:-1]:
-                        if n in insertion_points:
-                            insertion_points.remove(node.node_name)
-                elif _filter_fn(node):
-                    insertion_points = [node.node_name] + insertion_points
+                        preprocessing_node_key = nncf_graph.get_node_key_by_id(n.node_id)
+                        if preprocessing_node_key in insertion_point_node_keys:
+                            insertion_point_node_keys.remove(node_key)
+                elif _filter_fn(nncf_node):
+                    insertion_point_node_keys = [node_key] + insertion_point_node_keys
 
         if not self.quantize_outputs:
-            for node in graph.get_output_nodes():
-                for quantized_node in self._get_quantized_nodes_for_output(
-                        graph, insertion_points, node):
-                    insertion_points.remove(quantized_node.node_name)
+            for nncf_node in nncf_graph.get_output_nodes():
+                node_key = nncf_graph.get_node_key_by_id(nncf_node.node_id)
+                for quantized_node in self._get_quantized_nodes_for_output(nncf_graph,
+                                                                           insertion_point_node_keys, node_key):
+                    quantized_node_key = nncf_graph.get_node_key_by_id(quantized_node.node_id)
+                    insertion_point_node_keys.remove(quantized_node_key)
 
-        insertion_points = [point for point in insertion_points
-                            if _filter_fn(graph.get_node_by_key(point))]
+        insertion_point_node_keys = [point for point in insertion_point_node_keys
+                                     if _filter_fn(nncf_graph.get_node_by_key(point))]
+        insertion_point_layer_names = [nncf_graph.get_node_by_key(ip).node_name for ip in insertion_point_node_keys]
 
-        return [get_original_name_and_instance_index(point) for point in insertion_points]
+        return [get_original_name_and_instance_index(ip) for ip in insertion_point_layer_names]
 
-    def _get_input_preprocessing_nodes(self, graph, node, preprocessing_nodes=None):
+    def _get_input_preprocessing_nodes(self, nncf_graph: NNCFGraph, node_key: str,
+                                       preprocessing_nodes: List[NNCFNode] = None) -> List[NNCFNode]:
         if preprocessing_nodes is None:
             preprocessing_nodes = []
 
-        succ_nodes = graph.get_next_nodes(node)
-        if len(succ_nodes) == 1:
-            pred_nodes = graph.get_previous_nodes(succ_nodes[0])
-            if succ_nodes[0].metatype in ELEMENTWISE_LAYER_METATYPES and len(pred_nodes) == 1:
-                preprocessing_nodes.append(succ_nodes[0])
-                return self._get_input_preprocessing_nodes(graph, succ_nodes[0], preprocessing_nodes)
+        node = nncf_graph.get_node_by_key(node_key)
+        successors = nncf_graph.get_next_nodes(node)
+        if len(successors) == 1:
+            successor = next(iter(successors))
+            successor_key = nncf_graph.get_node_key_by_id(successor.node_id)
+            if successor.metatype in ELEMENTWISE_LAYER_METATYPES and len(nncf_graph.get_previous_nodes(successor)) == 1:
+                preprocessing_nodes.append(successor)
+                return self._get_input_preprocessing_nodes(nncf_graph, successor_key, preprocessing_nodes)
         return preprocessing_nodes
 
-    def _get_quantized_nodes_for_output(self, graph, insetrion_points, node, quantized_nodes_for_output=None):
+    def _get_quantized_nodes_for_output(self, nncf_graph: NNCFGraph,
+                                        insertion_points: List[str],
+                                        node_key: str,
+                                        quantized_nodes_for_output: List[NNCFNode] = None) -> List[NNCFNode]:
+        nncf_node = nncf_graph.get_node_by_key(node_key)
         if quantized_nodes_for_output is None:
-            if node.node_name in insetrion_points:
-                return [node]
+            if node_key in insertion_points:
+                return [nncf_node]
             quantized_nodes_for_output = []
 
-        for pred_node in graph.get_previous_nodes(node):
-            if len(graph.get_next_nodes(pred_node)) > 1:
+        for predecessor in nncf_graph.get_previous_nodes(nncf_node):
+            pred_node_key = nncf_graph.get_node_key_by_id(predecessor.node_id)
+            if len(nncf_graph.get_next_nodes(predecessor)) > 1:
                 logger.warning('Removing of FakeQuantize after layer {} '
-                               'with multiple outputs is not fully supported'.format(pred_node.node_name))
-                continue
-
-            if pred_node.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION:
-                self._get_quantized_nodes_for_output(graph, insetrion_points,
-                                                     pred_node, quantized_nodes_for_output)
-            elif pred_node.node_name in insetrion_points:
-                quantized_nodes_for_output.append(pred_node)
+                               'with multiple outputs is not fully supported'.format(predecessor.node_name))
+            if predecessor.metatype in LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION:
+                self._get_quantized_nodes_for_output(nncf_graph, insertion_points,
+                                                     pred_node_key, quantized_nodes_for_output)
+            elif nncf_graph.get_node_key_by_id(predecessor.node_id) in insertion_points:
+                quantized_nodes_for_output.append(predecessor)
         return quantized_nodes_for_output
 
     def _get_fake_quantize_name(self, node_name, instance_index):

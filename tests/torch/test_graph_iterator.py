@@ -10,17 +10,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-
 from collections import OrderedDict
-import pytest
 
+import pytest
 import torch.nn.functional as F
-from torch.nn import Module, Conv2d, BatchNorm2d, ReLU, MaxPool2d, Sequential, AvgPool2d, init
+from torch.nn import AvgPool2d
+from torch.nn import BatchNorm2d
+from torch.nn import Conv2d
+from torch.nn import MaxPool2d
+from torch.nn import Module
+from torch.nn import ReLU
+from torch.nn import Sequential
 
 from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
-from nncf.torch.utils import get_all_modules_by_type, get_module_by_node_name, get_all_node_names, \
-    apply_by_node_name, set_module_by_node_name, parse_node_name
-
+from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import get_all_node_names
+from nncf.torch.utils import get_module_by_node_name
+from nncf.torch.utils import set_module_by_node_name
 
 
 class ModelForTest(Module):
@@ -171,25 +177,3 @@ def test_get_all_nodes():
 
     act_list = get_all_node_names(model, (1, 1, 4, 4))
     assert ref_list == act_list
-
-
-def test_apply_by_node_name():
-    model = ModelForTest()
-    node_name = 'ModelForTest/BatchNorm2d[bn1]'
-    bn1 = get_module_by_node_name(model, node_name)
-    bn1.weight.data.fill_(1)
-    assert bn1.weight == 1
-    apply_by_node_name(model, [node_name], command=lambda m: init.zeros_(m.weight))
-    assert bn1.weight == 0
-
-
-def test_parse_node_name():
-    node_names = ["conv2d", "Conv2d[conv1]", "Conv2d[conv1]/RELU[relu]"]
-    ref_class_name = ["conv2d", "Conv2d", "RELU"]
-    ref_var_name = [None, "conv1", "relu"]
-    ref_prefix = [None, None, "Conv2d[conv1]"]
-    for i, node_name in enumerate(node_names):
-        prefix, class_name, var_name = parse_node_name(node_name)
-        assert class_name == ref_class_name[i]
-        assert var_name == ref_var_name[i]
-        assert prefix == ref_prefix[i]

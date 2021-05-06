@@ -10,8 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import re
 
 from typing import List, Any
+from typing import Optional
+from typing import Union
 
 from texttable import Texttable
 
@@ -25,3 +28,24 @@ def create_table(header: List[str], rows: List[List[Any]]) -> str:
     :return: A string which represents a table with a header and rows.
     """
     return Texttable().header(header).add_rows(rows, header=False).draw()
+
+
+def should_consider_scope(scope_str: str, target_scopes: Optional[List[str]],
+                          ignored_scopes: List[str]):
+    return (target_scopes is None or in_scope_list(scope_str, target_scopes)) \
+               and not in_scope_list(scope_str, ignored_scopes)
+
+
+def in_scope_list(scope: str, scope_list: Union[List[str], str]) -> bool:
+    if scope_list is None:
+        return False
+
+    for item in [scope_list] if isinstance(scope_list, str) else scope_list:
+        if "{re}" in item:
+            regex = item.replace("{re}", "")
+            if re.search(regex, scope):
+                return True
+        else:
+            if scope == item:
+                return True
+    return False

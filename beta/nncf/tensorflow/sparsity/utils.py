@@ -45,7 +45,7 @@ def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.ker
                                     operation_name=op_name)
                             ))
 
-    return TFModelTransformer(model, transformations).transform()
+    return TFModelTransformer(model).transform(transformations)
 
 
 def apply_fn_to_op_weights(model: tf.keras.Model, op_names: List[str], fn = lambda x: x):

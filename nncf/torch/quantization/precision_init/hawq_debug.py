@@ -10,19 +10,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict
 from typing import List
 
 import networkx as nx
-import os
 import torch
 from torch import Tensor
 
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
@@ -31,7 +28,6 @@ from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfA
 from nncf.torch.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
 from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
-from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.torch.utils import get_all_modules_by_type
 
 
@@ -82,138 +78,6 @@ class HAWQDebugger:
             all_quantizations.update(get_all_modules_by_type(model.get_nncf_wrapped_model(), quantization_type))
         all_quantizations = OrderedDict(sorted(all_quantizations.items(), key=lambda x: str(x[0])))
         return all_quantizations
-
-    @staticmethod
-    def _paint_activation_quantizer_node(nncf_graph: PTNNCFGraph,
-                                         quantizer_id: NonWeightQuantizerId,
-                                         quantizer_info: 'NonWeightQuantizerInfo',
-                                         bitwidth_color_map: Dict[int, str],
-                                         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        # pylint:disable=too-many-branches
-        affected_insertion_points_list = quantizer_info.affected_insertions  # type: List[PTInsertionPoint]
-
-        for insertion_point in affected_insertion_points_list:
-            input_agnostic_op_exec_context = insertion_point.ia_op_exec_context
-            affected_nncf_node_key = nncf_graph.get_node_key_by_iap_context(input_agnostic_op_exec_context)
-            affected_nx_node = nncf_graph.get_nx_node_by_key(affected_nncf_node_key)
-            node_id = affected_nx_node[PTNNCFGraph.ID_NODE_ATTR]
-
-            affected_nncf_node = nncf_graph.get_node_by_id(node_id)
-
-            in_port_id = insertion_point.input_port_id
-
-            if in_port_id is None:
-                # Post-hooking used for activation quantization
-                # Currently only a single post-hook can immediately follow an operation
-                succs = list(nncf_graph.get_successors(affected_nncf_node_key))
-                assert len(succs) == 1
-                target_nncf_node_key = succs[0]
-            else:
-                # Pre-hooking used for activation quantization
-                previous_nodes = nncf_graph.get_previous_nodes(affected_nncf_node)
-                target_node = None
-                for prev_node in previous_nodes:
-                    prev_edge = nncf_graph.get_nx_edge(prev_node, affected_nncf_node)
-                    if prev_edge[PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR] == in_port_id:
-                        target_node = prev_node
-                        break
-
-                assert target_node is not None, "Could not find a pre-hook quantizer node for a specific " \
-                                                "input port!"
-                target_nncf_node_id = target_node.node_id
-                target_nncf_node_key = nncf_graph.get_node_key_by_id(target_nncf_node_id)
-
-            activation_fq_node = nncf_graph.get_nx_node_by_key(target_nncf_node_key)
-            bitwidth = quantizer_info.quantizer_module_ref.num_bits
-            activation_fq_node['color'] = bitwidth_color_map[bitwidth]
-            activation_fq_node['style'] = 'filled'
-            node_id = activation_fq_node[PTNNCFGraph.ID_NODE_ATTR]
-
-            activation_fq_node['label'] = 'AFQ_[{}]_#{}'.format(
-                quantizer_info.quantizer_module_ref.get_quantizer_config(),
-                str(node_id))
-            grouped_mode = bool(groups_of_adjacent_quantizers)
-            if grouped_mode:
-                group_id_str = 'UNDEFINED'
-                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(quantizer_id)
-                if node_id is None:
-                    nncf_logger.error('No group for activation quantizer: {}'.format(target_nncf_node_key))
-                else:
-                    group_id_str = str(group_id)
-                activation_fq_node['label'] += "_G" + group_id_str
-
-    @staticmethod
-    def get_bitwidth_graph(algo_ctrl, model,
-                           groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
-                           add_flops=False) -> PTNNCFGraph:
-        # Overwrites nodes that were obtained during graph tracing and correspond to quantizer
-        # nodes with the nodes whose 'label' attribute is set to a more display-friendly representation
-        # of the quantizer's bitwidth.
-        # pylint:disable=too-many-branches
-        if add_flops:
-            flops_per_module = model.get_flops_per_module()
-        grouped_mode = bool(groups_of_adjacent_quantizers)
-        nncf_graph = model.get_graph()
-        for node_key in nncf_graph.get_all_node_keys():
-            node = nncf_graph.get_nx_node_by_key(node_key)
-            color = ''
-            if node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]:
-                operator_name = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].operator_name
-                quantized_module_scope = node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
-                module = model.get_module_by_scope(quantized_module_scope)
-                if isinstance(module, NNCFConv2d):
-                    color = 'lightblue'
-                    if module.groups == module.in_channels and module.in_channels > 1:
-                        operator_name = 'DW_Conv2d'
-                        color = 'purple'
-                    kernel_size = 'x'.join(map(str, module.kernel_size))
-                    operator_name += f'_k{kernel_size}'
-                    padding_values = set(module.padding)
-                    padding_enabled = len(padding_values) >= 1 and padding_values.pop()
-                    if padding_enabled:
-                        operator_name += '_PAD'
-                    if add_flops:
-                        operator_name += f'_FLOPS:{str(flops_per_module[quantized_module_scope])}'
-                operator_name += '_#{}'.format(str(node[PTNNCFGraph.ID_NODE_ATTR]))
-                node['label'] = operator_name
-                node['style'] = 'filled'
-                if color:
-                    node['color'] = color
-
-        non_weight_quantizers = algo_ctrl.non_weight_quantizers
-        bitwidth_color_map = {2: 'purple', 4: 'red', 8: 'green', 6: 'orange'}
-        for quantizer_id, quantizer_info in non_weight_quantizers.items():
-            HAWQDebugger._paint_activation_quantizer_node(nncf_graph, quantizer_id,
-                                                          quantizer_info, bitwidth_color_map,
-                                                          groups_of_adjacent_quantizers)
-        for wq_id, wq_info in algo_ctrl.weight_quantizers.items():
-            quantized_module_scope = wq_id.get_scope()
-            quantizer = wq_info.quantizer_module_ref
-
-            nodes = nncf_graph.get_op_nodes_in_scope(quantized_module_scope)
-            if not nodes:
-                raise AttributeError('Failed to get any nodes by scope={}'.format(str(quantized_module_scope)))
-            wq_nodes = []
-            for pot_wq_node in nodes:
-                if 'UpdateWeight' in str(pot_wq_node[PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR]):
-                    wq_nodes.append(pot_wq_node)
-            assert len(wq_nodes) == 1
-
-            node = wq_nodes[0]
-            bitwidths = quantizer.num_bits
-            node_id = node[PTNNCFGraph.ID_NODE_ATTR]
-            node['label'] = 'WFQ_[{}]_#{}'.format(quantizer.get_quantizer_config(), str(node_id))
-            if grouped_mode:
-                group_id_str = 'UNDEFINED'
-                group_id = groups_of_adjacent_quantizers.get_group_id_for_quantizer(wq_id)
-                if group_id is None:
-                    nncf_logger.error('No group for weight quantizer: {}'.format(quantized_module_scope))
-                else:
-                    group_id_str = str(group_id)
-                node['label'] += '_G' + group_id_str
-            node['color'] = bitwidth_color_map[bitwidths]
-            node['style'] = 'filled'
-        return nncf_graph
 
     def dump_avg_traces(self):
         import matplotlib.pyplot as plt
@@ -322,6 +186,7 @@ class HAWQDebugger:
 
     def dump_bitwidth_graph(self, algo_ctrl: 'QuantizationController', model: NNCFNetwork,
                             groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers):
-        nncf_graph = self.get_bitwidth_graph(algo_ctrl, model, groups_of_adjacent_quantizers)
-        nx_graph = add_adjust_padding_nodes(nncf_graph, model)
+        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph
+        bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
+        nx_graph = add_adjust_padding_nodes(bw_graph, model)
         nx.drawing.nx_pydot.write_dot(nx_graph, self._dump_dir / Path('bitwidth_graph.dot'))

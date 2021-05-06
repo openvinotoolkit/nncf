@@ -23,7 +23,7 @@ class ModelTransformer:
     Applies transformations to the model.
     """
 
-    def __init__(self, model: ModelType, transformation_layout: TransformationLayout):
+    def __init__(self, model: ModelType):
         """
         Initializes Model Transformer.
 
@@ -32,9 +32,8 @@ class ModelTransformer:
             includes a list of transformations to be applied to the model.
         """
         self._model = model
-        self._transformations = transformation_layout.transformations
 
-    def transform(self) -> ModelType:
+    def transform(self, transformation_layout: TransformationLayout) -> ModelType:
         """
         Applies transformations to the model.
 
