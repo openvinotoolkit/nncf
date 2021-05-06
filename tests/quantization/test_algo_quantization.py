@@ -10,6 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import logging
+from contextlib import contextmanager
 from copy import deepcopy
 from typing import List
 from typing import Tuple
@@ -379,16 +381,24 @@ def test_quantize_inputs():
         '/nncf_model_input_3|OUTPUT',
         '/nncf_model_input_4|OUTPUT'
     ]
-    actual_input_quantizer_str_scopes = \
-        [str(aq_id) for aq_id in qctrl.non_weight_quantizers if 'nncf_model_input' in str(aq_id)]
+
+    actual_input_quantizer_str_scopes = []
+    for aq_id, aq_info in qctrl.non_weight_quantizers.items():
+        for target_point in aq_info.affected_insertions:
+            quantizer_location_str = str(target_point.ia_op_exec_context)
+            if 'nncf_model_input' in quantizer_location_str:
+                actual_input_quantizer_str_scopes.append(quantizer_location_str)
+
     assert len(REF_QUANTIZED_INPUT_MODULE_SCOPES) == len(actual_input_quantizer_str_scopes)
-    for ref_qinput_scope_str in REF_QUANTIZED_INPUT_MODULE_SCOPES:
-        matches = []
-        for aq_id in qctrl.non_weight_quantizers:
-            if str(aq_id) == ref_qinput_scope_str:
-                matches.append(aq_id)
+    for qinput_scope_str in actual_input_quantizer_str_scopes:
+        matches = set()
+        for aq_id, aq_info in qctrl.non_weight_quantizers.items():
+            for target_point in aq_info.affected_insertions:
+                if qinput_scope_str in str(target_point):
+                    matches.add(aq_id)
         assert len(matches) == 1
-        quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
+        input_aq_id = next(iter(matches))
+        quantizer = qctrl.non_weight_quantizers[input_aq_id].quantizer_module_ref
         assert isinstance(quantizer, SymmetricQuantizer)
 
 
@@ -504,6 +514,7 @@ def test_quantize_outputs():
         quantizer = qctrl.non_weight_quantizers[matches[0]].quantizer_module_ref
         assert isinstance(quantizer, SymmetricQuantizer)
 
+
 def test_quantize_outputs_with_scope_overrides():
     config = get_quantization_config_without_range_init()
     config["input_info"] = [
@@ -526,3 +537,20 @@ def test_quantize_outputs_with_scope_overrides():
     for q in output_quantizers:
         assert q.num_bits == 4
         assert isinstance(q, AsymmetricQuantizer)
+
+
+@contextmanager
+def nncf_debug():
+    from nncf import set_log_level
+    set_log_level(logging.DEBUG)
+    yield
+    set_log_level(logging.INFO)
+
+
+def test_debug_mode():
+    config = get_quantization_config_without_range_init()
+    model = BasicConvTestModel()
+    with nncf_debug():
+        model, _ = create_compressed_model_and_algo_for_test(model, config)
+        model.forward(torch.zeros(BasicConvTestModel.INPUT_SIZE,
+                                  device=next(model.parameters()).device))

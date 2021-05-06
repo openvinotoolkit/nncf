@@ -48,6 +48,22 @@ class CompressionLoss(ABC):
         :return: A dictionary of printable statistics.
         """
 
+    @abstractmethod
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression loss state.
+
+        :param state: Output of `get_state()` method.
+        """
+
+    @abstractmethod
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+
     def __call__(self, *args, **kwargs) -> Any:
         """
         Invokes the `CompressionLoss` instance.
@@ -180,6 +196,22 @@ class CompressionAlgorithmController(ABC):
     def scheduler(self) -> CompressionScheduler:
         """
         :return: The instance of the `CompressionScheduler`.
+        """
+
+    @abstractmethod
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression controller state.
+
+        :param state: Output of `get_state()` method.
+        """
+
+    @abstractmethod
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
         """
 
     def compression_level(self) -> CompressionLevel:

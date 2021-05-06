@@ -32,8 +32,6 @@ from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_empty_c
                              ('exponential', ExponentialSparsityScheduler),
                              ('multistep', MultiStepSparsityScheduler)
                          ))
-
-
 def test_can_choose_scheduler(algo, schedule_type, scheduler_class):
     config = get_empty_config()
     config['compression'] = Dict({'algorithm': algo, 'params': {'schedule': schedule_type}})
@@ -41,18 +39,17 @@ def test_can_choose_scheduler(algo, schedule_type, scheduler_class):
     assert isinstance(compression_ctrl.scheduler, scheduler_class)
 
 
-def test_can_create_rb_algo__with_adaptive_scheduler():
+def test_can_not_create_rb_algo__with_adaptive_scheduler():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', 'params': {'schedule': 'adaptive'}}
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(get_mock_model(), config)
-    assert isinstance(compression_ctrl.scheduler, AdaptiveSparsityScheduler)
+    with pytest.raises(NotImplementedError):
+        _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 
-@pytest.mark.skip()
 def test_can_not_create_magnitude_algo__with_adaptive_scheduler():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'magnitude_sparsity', 'params': {'schedule': 'adaptive'}}
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         _, _ = create_compressed_model_and_algo_for_test(get_mock_model(), config)
 
 

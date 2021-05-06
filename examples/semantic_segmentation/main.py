@@ -312,7 +312,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
         best_miou = resuming_checkpoint['miou']
 
         if "scheduler" in resuming_checkpoint and compression_ctrl.scheduler is not None:
-            compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
+            compression_ctrl.load_state(resuming_checkpoint['scheduler'])
         logger.info("Resuming from model: Start epoch = {0} "
                     "| Best mean IoU = {1:.4f}".format(start_epoch, best_miou))
         config.start_epoch = start_epoch

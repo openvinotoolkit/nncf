@@ -55,7 +55,7 @@ from nncf.utils import get_all_modules_by_type
 from nncf.utils import safe_thread_call
 from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.helpers import create_mock_dataloader
+from tests.helpers import create_ones_mock_dataloader
 from tests.helpers import get_empty_config
 from tests.quantization.test_quantization_helpers import compare_multi_gpu_dump
 from tests.quantization.test_quantization_helpers import create_rank_dataloader
@@ -88,7 +88,7 @@ def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     act_sum = 0
     for layer in get_all_modules_by_type(quant_model, "SymmetricQuantizer").values():
         act_sum += layer.scale.sum()
-    ref_sum = 4447.291
+    ref_sum = 3720.864
     assert act_sum.item() == approx(ref_sum, 0.01), \
         'sum of scales is not expected {} vs {} rank {}'.format(act_sum.item(), ref_sum, config.rank)
 
@@ -189,7 +189,7 @@ class TestRangeInit:
 
     @staticmethod
     def create_dataloader(wrap_dataloader, config, num_samples=1) -> DataLoader:
-        data_loader = create_mock_dataloader(config, num_samples)
+        data_loader = create_ones_mock_dataloader(config, num_samples)
         if wrap_dataloader:
             data_loader = DefaultInitializingDataLoader(data_loader)
         return data_loader

@@ -263,3 +263,64 @@ class TestAdaptiveSparsityScheduler:
             self.run_epoch(steps_per_epoch, scheduler, mock)
             expected_level = ref_sparsity_levels[epoch_idx]
             mock.assert_called_once_with(pytest.approx(expected_level))
+
+
+REF_DEFAULT_STATE = {
+    PolynomialSparsityScheduler: {'current_step': -1, 'current_epoch': -1, '_steps_per_epoch': None},
+    ExponentialSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
+    MultiStepSparsityScheduler: {'current_step': -1, 'current_epoch': -1},
+    AdaptiveSparsityScheduler: {'current_step': -1, 'current_epoch': -1,
+                                'num_bad_epochs': 0, 'current_sparsity_level': 0.3}
+
+}
+
+
+class TestLoss:
+    def __init__(self):
+        self.current_sparsity = 0.5
+
+
+class TestCompressionController:
+    def __init__(self):
+        self.loss = TestLoss()
+
+    def set_sparsity_level(self, level):
+        pass
+
+
+@pytest.mark.parametrize('scheduler_cls', [PolynomialSparsityScheduler, ExponentialSparsityScheduler,
+                         MultiStepSparsityScheduler, AdaptiveSparsityScheduler],
+                         ids=['Polynomial', 'Exponential', 'Multistep', 'Adaptive'])
+def test_scheduler_get_state(scheduler_cls):
+    args = (TestCompressionController(), {'sparsity_init': 0.3, 'update_per_optimizer_step': True, 'patience': 2})
+    scheduler = scheduler_cls(*args)
+
+    # Test init state
+    assert scheduler.get_state() == REF_DEFAULT_STATE[scheduler_cls]
+
+    for _ in range(5):
+        scheduler.step()
+    scheduler.epoch_step()
+
+    # Test get state
+    state = scheduler.get_state()
+    assert state['current_step'] == 4
+    assert state['current_epoch'] == 0
+    if scheduler_cls == PolynomialSparsityScheduler:
+        assert state['_steps_per_epoch'] == 5
+    if scheduler_cls == AdaptiveSparsityScheduler:
+        assert state['num_bad_epochs'] == 1
+        assert state['current_sparsity_level'] == pytest.approx(0.3)
+
+    # Test load state
+    new_scheduler = scheduler_cls(*args)
+    new_scheduler.load_state(state)
+    assert new_scheduler.get_state() == scheduler.get_state()
+    assert new_scheduler.current_step == 4
+    assert new_scheduler.current_epoch == 0
+    if scheduler_cls == PolynomialSparsityScheduler:
+        # pylint: disable=protected-access
+        assert new_scheduler._steps_per_epoch == 5
+    if scheduler_cls == AdaptiveSparsityScheduler:
+        assert new_scheduler.num_bad_epochs == 1
+        assert new_scheduler.current_sparsity_level == pytest.approx(0.3)

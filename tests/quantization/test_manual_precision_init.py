@@ -22,7 +22,7 @@ from tests.conftest import EXAMPLES_DIR
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.helpers import create_mock_dataloader
+from tests.helpers import create_ones_mock_dataloader
 from tests.quantization.test_hawq_precision_init import check_bitwidth_graph
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.test_models.synthetic import AddTwoConv
@@ -87,7 +87,7 @@ def test_hawq_manual_configs(manual_config_params):
     if manual_config_params.name != 'resnet18_cifar10_mixed_int_manual.json':
         pytest.skip("Propagation-based manual config TBA")
     config = manual_config_params.create_nncf_config()
-    config = register_default_init_args(config, init_loader=create_mock_dataloader(config), criterion=None)
+    config = register_default_init_args(config, init_loader=create_ones_mock_dataloader(config), criterion=None)
     model = manual_config_params.create_model(config['model'])
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
@@ -203,7 +203,7 @@ def test_can_resume_with_manual_init(mocker):
     apply_init = mocker.spy(ManualPrecisionInitializer, 'apply_init')
     all_mocks = [get_stats, parse_range_init, run_bn_adapt, apply_init]
 
-    config = register_default_init_args(config, init_loader=create_mock_dataloader(config))
+    config = register_default_init_args(config, init_loader=create_ones_mock_dataloader(config))
 
     model, _ = create_compressed_model_and_algo_for_test(AddTwoConv(), config)
 

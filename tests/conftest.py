@@ -21,6 +21,8 @@ TEST_ROOT = Path(__file__).parent.absolute()
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / 'examples'
 
+pytest.register_assert_rewrite('tests.helpers')
+
 
 def pytest_addoption(parser):
     parser.addoption(

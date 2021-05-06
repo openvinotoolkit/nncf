@@ -46,6 +46,26 @@ class CompositeCompressionLoss(CompressionLoss):
         """
         self._child_losses.append(child_loss)
 
+    def load_state(self, states: List[Dict[str, object]]) -> None:
+        """
+        Loads the composite compression loss state.
+
+        :param states: Output of `get_state()` method.
+        """
+        for child_loss, child_state in zip(self._child_losses, states):
+            child_loss.load_state(child_state)
+
+    def get_state(self) -> List[Dict[str, object]]:
+        """
+        Returns the composite compression loss state.
+
+        :return: The composite compression loss state.
+        """
+        composite_state = []
+        for child_loss in self.child_losses:
+            composite_state.append(child_loss.get_state())
+        return composite_state
+
     def calculate(self, *args, **kwargs) -> Any:
         """
         Traverses through all children and calculates the total compression
@@ -123,7 +143,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for scheduler in self._child_schedulers:
             scheduler.epoch_step(next_epoch)
 
-    def load_state(self, state: List[dict]) -> None:
+    def load_state(self, state: List[Dict[str, object]]) -> None:
         """
         Calls `load_state()` method for all children.
 
@@ -132,7 +152,7 @@ class CompositeCompressionScheduler(CompressionScheduler):
         for child_scheduler, child_state in zip(self._child_schedulers, state):
             child_scheduler.load_state(child_state)
 
-    def get_state(self) -> List[dict]:
+    def get_state(self) -> List[Dict[str, object]]:
         """
         Returns the composite compression scheduler state. This state contains
         the state of all children.
@@ -210,6 +230,27 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             else:
                 result += current_level
         return result
+
+    def load_state(self, states: List[Dict[str, object]]) -> None:
+        """
+        Calls `load_state()` method for all children.
+
+        :param states: Output of `get_state()` method.
+        """
+        for child_ctrl, child_state in zip(self.child_ctrls, states):
+            child_ctrl.load_state(child_state)
+
+    def get_state(self) -> List[Dict[str, object]]:
+        """
+        Returns the composite compression controller state. This state contains
+        the state of all children.
+
+        :return: The composite compression controller state.
+        """
+        composite_state = []
+        for child_ctrl in self.child_ctrls:
+            composite_state.append(child_ctrl.get_state())
+        return composite_state
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """

@@ -6,7 +6,7 @@ from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import get_all_modules_by_type
 from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.helpers import create_mock_dataloader
+from tests.helpers import create_ones_mock_dataloader
 from tests.helpers import get_empty_config
 
 FIRST_NNCF_CONV_SCOPE = 'TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]'
@@ -90,7 +90,7 @@ class FrozenLayersTestStruct:
                     if 'initializer' not in compression:
                         compression['initializer'] = {}
                     compression['initializer'].update({'range': {'num_init_samples': 1}})
-                    data_loader = create_mock_dataloader(config)
+                    data_loader = create_ones_mock_dataloader(config)
                     config = NNCFConfig.from_dict(config)
                     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
             return config

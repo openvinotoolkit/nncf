@@ -9,6 +9,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import itertools
 from collections import Counter
 from functools import partial
 from typing import Dict
@@ -18,16 +19,19 @@ import onnx
 import pytest
 import torch
 import torch.nn
+from onnx import numpy_helper
+
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.transformations.commands import PTTargetPoint
+from nncf.hw_config import HWConfigType
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
-from onnx import numpy_helper
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
 from tests.helpers import get_nodes_by_type
+from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init
+
 
 def make_ia_op_exec_context_for_coalescing_test(scope_str: str) -> InputAgnosticOperationExecutionContext:
     ia_op_exec_context = InputAgnosticOperationExecutionContext.from_str(scope_str)
@@ -401,7 +405,7 @@ def test_insertion_point_coalescing(input_insertion_points: List[PTTargetPoint],
             assert Counter(test_list) == Counter(ref_coalesced_ip_lists[idx])
 
 
-class QuantizerLinkingTestModel(torch.nn.Module):
+class EltwiseQuantizerLinkingTestModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self._dummy_trainable_param = torch.nn.Parameter(torch.ones([1]))
@@ -437,19 +441,19 @@ def test_quantizer_scale_linking(mocker):
         "unified_scale_ops": [
             [
                 # Note: Assuming that quantizers are attached as a post-op to the specified operation
-                "QuantizerLinkingTestModel/Path[path2]/__mul___0",
-                "QuantizerLinkingTestModel/Path[path2]/__add___0",
+                "EltwiseQuantizerLinkingTestModel/Path[path2]/__mul___0",
+                "EltwiseQuantizerLinkingTestModel/Path[path2]/__add___0",
             ]
         ],
         "ignored_scopes": [
             # Ignore path output averaging operations
-            "QuantizerLinkingTestModel/__add___0",
-            "QuantizerLinkingTestModel/__add___1",
-            "QuantizerLinkingTestModel/__add___2",
+            "EltwiseQuantizerLinkingTestModel/__add___0",
+            "EltwiseQuantizerLinkingTestModel/__add___1",
+            "EltwiseQuantizerLinkingTestModel/__add___2",
         ]
     }
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(QuantizerLinkingTestModel(),
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(),
                                                                                    nncf_config)
 
     # 18 inputs to quantize (14 regular + 4 linked),
@@ -477,7 +481,7 @@ def test_quantizer_scale_linking(mocker):
         assert non_shared_spy.call_count == 1
 
 
-def test_unified_scales_for_vpu():
+def test_eltwise_unified_scales_for_vpu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["input_info"] = [
         {
@@ -489,7 +493,7 @@ def test_unified_scales_for_vpu():
     ]
     nncf_config["target_device"] = "VPU"
 
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(QuantizerLinkingTestModel(),
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(),
                                                                     nncf_config)
 
     assert len(compression_ctrl.non_weight_quantizers) == 2
@@ -499,6 +503,87 @@ def test_unified_scales_for_vpu():
     assert total_quantizations == 8
 
 
+class SingleCatModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(4, 1, 1)
+
+    def forward(self, x, y):
+        x = x * x
+        y = y * y
+        z = torch.cat([x, y])
+        v = self.conv(z)
+        return v
+
+
+class DoubleCatModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(4, 1, 1)
+
+    def forward(self, x, y):
+        x = x * x
+        y = y * y
+        z = torch.cat([x, y])
+        v = torch.cat([x, z])
+        w = self.conv(v)
+        return w
+
+
+class UNetLikeModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_1 = torch.nn.Conv2d(4, 8, 1)
+        self.conv_2 = torch.nn.Conv2d(8, 16, 1)
+        self.conv_3 = torch.nn.Conv2d(16, 32, 1)
+        self.conv_t_3 = torch.nn.ConvTranspose2d(32, 16, 1)
+        self.conv_t_2 = torch.nn.ConvTranspose2d(16, 8, 1)
+        self.conv_t_1 = torch.nn.ConvTranspose2d(8, 4, 1)
+
+    def forward(self, x, y):
+        y1 = self.conv_1(x)
+        y2 = self.conv_2(y1)
+        y3 = self.conv_3(y2)
+        z3 = self.conv_t_3(y3)
+        z3 = torch.cat([z3, y2])
+        z2 = self.conv_t_2(z3)
+        z2 = torch.cat([z2, y1])
+        z1 = self.conv_t_1(z2)
+        return z1
+
+
+CAT_UNIFIED_SCALE_TEST_STRUCTS = [(SingleCatModel, 3, 4),
+                                  (DoubleCatModel, 3, 4),
+                                  (UNetLikeModel, 4, 6)]
+
+
+@pytest.mark.parametrize("target_device, model_creator, ref_aq_module_count, ref_quantizations",
+                         [(t_dev, ) + rest for t_dev, rest in
+                             itertools.product([x.value for x in HWConfigType],
+                                               CAT_UNIFIED_SCALE_TEST_STRUCTS)])
+def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
+    nncf_config = get_quantization_config_without_range_init(model_size=1)
+    nncf_config["input_info"] = [
+        {
+            "sample_size": [1, 4, 1, 1],
+        },
+        {
+            "sample_size": [1, 4, 1, 1],
+        }
+    ]
+
+    nncf_config["target_device"] = target_device
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model_creator(),
+                                                                                   nncf_config)
+
+    assert len(compression_ctrl.non_weight_quantizers) == ref_aq_module_count
+
+    total_quantizations = sum(
+        [len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values()])
+    assert total_quantizations == ref_quantizations
+
+
 class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -506,16 +591,23 @@ class SimplerModelForUnifiedScalesTesting(torch.nn.Module):
         self.conv2d_2 = torch.nn.Conv2d(1, 1, 1)
         self.conv2d_3 = torch.nn.Conv2d(1, 1, 1)
         self.conv2d_4 = torch.nn.Conv2d(1, 1, 1)
+        self.conv2d_5 = torch.nn.Conv2d(1, 1, 1)
+        self.conv2d_6 = torch.nn.Conv2d(1, 1, 1)
 
     def forward(self, x):
         in_1, in_2 = x.chunk(dim=-1, chunks=2)
         in_1 = self.conv2d_1(in_1)
         in_2 = self.conv2d_2(in_2)
         x = in_1 + in_2
-        x = torch.cat([x, x], dim=-1)
+        x = torch.stack([x, x], dim=-1)
+        x = x.squeeze(dim=0)
+        in1, in2 = x.chunk(dim=-1, chunks=2)
+        in1 = self.conv2d_3(in1)
+        in2 = self.conv2d_3(in2)
+        x = torch.cat([in1, in2], dim=-1)
         in_1, in_2 = x.chunk(dim=-1, chunks=2)
-        in_1 = self.conv2d_3(in_1)
-        in_2 = self.conv2d_4(in_2)
+        in_1 = self.conv2d_5(in_1)
+        in_2 = self.conv2d_6(in_2)
         x = in_1 * in_2
         return x
 
@@ -545,6 +637,17 @@ class TestsWithONNXInspection:
         matches = [x for x in graph.node if output_tensor_id in x.input]
         for match in matches:
             if match.op_type in ["Add", "Mul"]:
+                return True
+        return False
+
+    @staticmethod
+    def immediately_dominates_cat(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
+        if len(node.output) != 1:
+            return False
+        output_tensor_id = node.output[0]
+        matches = [x for x in graph.node if output_tensor_id in x.input]
+        for match in matches:
+            if match.op_type in ["Concat"]:
                 return True
         return False
 
@@ -624,10 +727,16 @@ class TestsWithONNXInspection:
 
         fq_nodes = TestsWithONNXInspection.get_fq_nodes(onnx_model)
         eltwise_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_add_or_mul,
-                                    graph=onnx_model.graph)
+                                              graph=onnx_model.graph)
         eltwise_fq_nodes = list(filter(eltwise_dominator_predicate, fq_nodes))
-        fq_nodes_grouped_by_output = TestsWithONNXInspection.group_nodes_by_output_target(eltwise_fq_nodes,
-                                                                                          onnx_model.graph)
+
+        cat_dominator_predicate = partial(TestsWithONNXInspection.immediately_dominates_cat,
+                                          graph=onnx_model.graph)
+        cat_fq_nodes = list(filter(cat_dominator_predicate, fq_nodes))
+
+        fq_nodes_grouped_by_output = TestsWithONNXInspection.group_nodes_by_output_target(
+            eltwise_fq_nodes + cat_fq_nodes,
+            onnx_model.graph)
 
         for unified_scale_group in fq_nodes_grouped_by_output:
             inputs = [TestsWithONNXInspection.resolve_constant_node_inputs_to_values(fq_node,

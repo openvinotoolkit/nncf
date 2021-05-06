@@ -57,6 +57,26 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
         assert isinstance(op, BinaryMask)
 
 
+def test_compression_controller_state():
+    model = get_magnitude_test_model()
+    config = get_basic_magnitude_sparsity_config()
+    config['compression']['params'] = \
+        {'schedule': 'multistep'}
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    # Test get state
+    compression_ctrl.scheduler.current_step = 100
+    compression_ctrl.scheduler.current_epoch = 5
+    assert compression_ctrl.get_state()['scheduler_state'] == {'current_step': 100, 'current_epoch': 5}
+
+    # Test load state
+    new_state = {'scheduler_state': {'current_step': 500, 'current_epoch': 10}, 'loss_state': {}}
+    compression_ctrl.load_state(new_state)
+    assert compression_ctrl.scheduler.current_step == 500
+    assert compression_ctrl.scheduler.current_epoch == 10
+    assert compression_ctrl.get_state() == new_state
+
+
 @pytest.mark.parametrize(
     ('weight_importance', 'sparsity_level', 'threshold'),
     (
