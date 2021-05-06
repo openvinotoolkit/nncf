@@ -22,7 +22,7 @@ from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
-from tests.helpers import create_mock_dataloader, create_conv, BasicConvTestModel
+from tests.helpers import create_ones_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch
 import torch.nn as nn
@@ -57,7 +57,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
     experimental_builder.apply_to(nncf_network)
     # pylint:disable=line-too-long
     experimental_ctrl = experimental_builder.build_controller(nncf_network)
-    data_loader = create_mock_dataloader(input_info_cfg)
+    data_loader = create_ones_mock_dataloader(input_info_cfg)
     constraints = HardwareQuantizationConstraints()
     for qid, qp_id_set in experimental_ctrl.module_id_to_qp_id_translation_dict.items():
         first_qp_id_for_this_quantizer_module = next(iter(qp_id_set))
