@@ -13,7 +13,6 @@
 
 import torch
 import torch.multiprocessing as mp
-
 from examples.common.sample_config import SampleConfig
 
 

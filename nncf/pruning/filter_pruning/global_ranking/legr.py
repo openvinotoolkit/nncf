@@ -20,11 +20,11 @@ import time
 class LeGR:
     def __init__(self, pruning_ctrl, target_model, legr_init_args, train_steps=200, generations=400, max_pruning=0.5,
                  random_seed=42):
-        self.GENERATIONS = generations
+        self.num_generations = generations
         self.pruner = LeGRPruner(pruning_ctrl, target_model)
         initial_filter_ranks = self.pruner.init_filter_ranks
         agent_hparams = {
-            'generations': self.GENERATIONS
+            'num_generations': self.num_generations
         }
         self.agent = EvolutionOptimizer(initial_filter_ranks, agent_hparams, random_seed)
         self.env = LeGREvolutionEnv(self.pruner, target_model, legr_init_args.train_loader,
@@ -39,7 +39,7 @@ class LeGR:
 
         generation_time = 0
         end = time.time()
-        for episode in range(self.GENERATIONS):
+        for episode in range(self.num_generations):
             state, info = self.env.reset()
 
             # Beginning of the episode

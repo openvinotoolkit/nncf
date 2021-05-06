@@ -22,89 +22,92 @@ from nncf.utils import get_filters_num
 
 
 class EvolutionOptimizer:
-    def __init__(self, initial_filter_ranks, hparams, random_seed):
+    def __init__(self, initial_filter_norms, hparams, random_seed):
         np.random.seed(random_seed)
-
         # Optimizer hyper-params
-        self.POPULATIONS = hparams.get('POPULATIONS', 64)
-        self.GENERATIONS = hparams.get('GENERATIONS', 400)
-        self.SAMPLES = hparams.get('SAMPLES', 16)
+        self.population_size = hparams.get('population_size', 64)
+        self.num_generations = hparams.get('num_generations', 400)
+        self.num_samples = hparams.get('num_samples', 16)
         self.mutate_percent = hparams.get('mutate_percent', 0.1)
-        self.SCALE_SIGMA = hparams.get('scale_sigma', 1)
+        self.scale_sigma = hparams.get('sigma_scale', 1)
         self.max_reward = hparams.get('max_reward', -np.inf)
+        self.mean_rewards = []
 
-        self.index_queue = queue.Queue(self.POPULATIONS)
+        self.indexes_queue = queue.Queue(self.population_size)
         self.oldest_index = None
-        self.population_reward = np.zeros(0)
-        self.population_data = []
-        self.mean_reward = []
+        self.population_rewards = np.zeros(self.population_size)
+        self.population = [None for i in range(self.population_size)]
 
         self.best_action = None
-        self.num_layers = len(initial_filter_ranks)
-        self.all_action_keys = np.array(list(initial_filter_ranks.keys()))
-        self.original_dist_stat = {}
-        for k in self.all_action_keys:
-            a = initial_filter_ranks[k].cpu().detach().numpy()
-            self.original_dist_stat[k] = {'mean': np.mean(a), 'std': np.std(a)}
-
-        self.state = None
-        self.reward = None
-        self.episode = None
-        self.info = None
         self.last_action = None
+        self.num_layers = len(initial_filter_norms)
+        self.layer_keys = np.array(list(initial_filter_norms.keys()))
+        self.initial_norms_stats = {}
+        for key in self.layer_keys:
+            layer_norms = initial_filter_norms[key].cpu().detach().numpy()
+            self.initial_norms_stats[key] = {'mean': np.mean(layer_norms), 'std': np.std(layer_norms)}
+
+        self.cur_state = None
+        self.cur_reward = None
+        self.cur_episode = None
+        self.cur_info = None
 
     def _save_episode_info(self, reward):
+        """
+        Savin episode information
+        :param reward:
+        :return:
+        """
+        # Update best action and reward if needed
         if reward > self.max_reward:
-            self.max_reward = reward
             self.best_action = self.last_action
+            self.max_reward = reward
 
-        if self.episode < self.POPULATIONS:
-            self.index_queue.put(self.episode)
-            self.population_data.append(self.last_action)
-            self.population_reward = np.append(self.population_reward, [reward])
+        if self.cur_episode < self.population_size:
+            self.indexes_queue.put(self.cur_episode)
+            self.population[self.cur_episode] = self.last_action
+            self.population_rewards[self.cur_episode] = reward
         else:
-            self.index_queue.put(self.oldest_index)
-            self.population_data[self.oldest_index] = self.last_action
-            self.population_reward[self.oldest_index] = reward
+            self.indexes_queue.put(self.oldest_index)
+            self.population[self.oldest_index] = self.last_action
+            self.population_rewards[self.oldest_index] = reward
 
     def _predict_action(self):
         """
         Predict action for the last state.
-        :return: action (pertrubation)
+        :return: action
         """
-        episode_num = self.episode
-        step_size = 1 - (float(episode_num) / (self.GENERATIONS * 1.25))
+        episode_num = self.cur_episode
         action = {}
 
-        if episode_num == self.POPULATIONS - 1:
-            for k in self.all_action_keys:
-                action[k] = (1, 0)
-        elif episode_num < self.POPULATIONS - 1:
-            for k in self.all_action_keys:
-                scale = np.exp(float(np.random.normal(0, self.SCALE_SIGMA)))
-                shift = float(np.random.normal(0, self.original_dist_stat[k]['std']))
-                action[k] = (scale, shift)
+        if episode_num < self.population_size - 1:
+            for key in self.layer_keys:
+                scale = np.exp(np.random.normal(0, self.scale_sigma))
+                shift = np.random.normal(0, self.initial_norms_stats[key]['std'])
+                action[key] = (scale, shift)
+        elif episode_num == self.population_size - 1:
+            # Adding identity transformation to population
+            for key in self.layer_keys:
+                action[key] = (1, 0)
         else:
-            self.mean_reward.append(np.mean(self.population_reward))
-            sampled_idxs = np.random.choice(self.POPULATIONS, self.SAMPLES)
-            sampled_rewards = self.population_reward[sampled_idxs]
-            winner_idx_ = np.argmax(sampled_rewards)
-            winner_idx = sampled_idxs[winner_idx_]
+            step_size = 1 - (float(episode_num) / (self.num_generations * 1.25))  # Rename this
+            self.mean_rewards.append(np.mean(self.population_rewards))
 
-            # Mutate winner
-            winner = self.population_data[winner_idx]
-            # Perturbate winner
+            # 1. Sampling  num_samples actions from population and choosing the best one
+            sampled_idxs = np.random.choice(self.population_rewards, self.num_samples)
+            sampled_rewards = self.population_rewards[sampled_idxs]
+            best_action = self.population[sampled_idxs[np.argmax(sampled_rewards)]]
+
+            # 2. Mutate best action
             mutate_num = int(self.mutate_percent * self.num_layers)
-            mutate_candidate_idxs = np.random.choice(self.num_layers, mutate_num)
-            mutate_candidates = self.all_action_keys[mutate_candidate_idxs]
-            for k in self.all_action_keys:
-                scale = 1
-                shift = 0
-                if k in mutate_candidates:
-                    scale = np.exp(float(np.random.normal(0, self.SCALE_SIGMA * step_size)))
-                    shift = float(np.random.normal(0, self.original_dist_stat[k]['std']))
-                action[k] = (scale * winner[k][0], shift + winner[k][1])
-            self.oldest_index = self.index_queue.get()
+            mutate_idxs = np.random.choice(self.layer_keys, mutate_num)
+            for key in self.layer_keys:
+                scale, shift = 1, 0
+                if key in mutate_idxs:
+                    scale = np.exp(np.random.normal(0, self.scale_sigma * step_size))
+                    shift = np.random.normal(0, self.initial_norms_stats[key]['std'])
+                action[key] = (scale * best_action[key][0], shift + best_action[key][1])
+            self.oldest_index = self.indexes_queue.get()
         return action
 
     def ask(self, episode_num):
@@ -112,7 +115,7 @@ class EvolutionOptimizer:
         Predict and returns action for the last told episode information: state, reward, episode_num and info
         :return:
         """
-        self.episode = episode_num
+        self.cur_episode = episode_num
         action = self._predict_action()
         self.last_action = action
         return action
@@ -122,10 +125,10 @@ class EvolutionOptimizer:
         Getting info about episode step and save it every end of episode
         """
         # save state, reward and info from the current step
-        self.state = state
-        self.reward = reward
-        self.episode = episode_num
-        self.info = info
+        self.cur_state = state
+        self.cur_reward = reward
+        self.cur_episode = episode_num
+        self.cur_info = info
 
         if end_of_episode:
             self._save_episode_info(reward)
@@ -156,7 +159,7 @@ class LeGREvolutionEnv:
         self.filter_pruner.reset()
         self.model.eval()
 
-        self.full_flops = self.filter_pruner.get_flops_number_in_model()
+        self.full_flops = self.filter_pruner.get_full_flops_number_in_model()
         self.rest = self.full_flops
         self.last_act = (1, 0)
         return torch.zeros(1), [self.full_flops, self.rest]
@@ -205,7 +208,7 @@ class LeGRPruner:
     def _restore_model_weights(self):
         self.model.load_state_dict(self.model_params_copy)
 
-    def reset_masks(self):
+    def _reset_masks(self):
         for minfo in self.filter_pruner.pruned_module_groups_info.get_all_nodes():
             new_mask = torch.ones(get_filters_num(minfo.module)).to(
                     minfo.module.weight.device)
@@ -213,10 +216,10 @@ class LeGRPruner:
 
     def reset(self):
         self._restore_model_weights()
-        self.reset_masks()
+        self._reset_masks()
         self.scheduler = copy(self.filter_pruner.scheduler)
 
-    def get_flops_number_in_model(self):
+    def get_full_flops_number_in_model(self):
         return self.filter_pruner.full_flops
 
     def prune(self, flops_pruning_target, ranking_coeffs):

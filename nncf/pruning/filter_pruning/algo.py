@@ -130,8 +130,8 @@ class FilterPruningController(BasePruningAlgoController):
                 loaded_coeffs = json.load(open(coeffs_path, 'r'))
                 self.ranking_coeffs = {Scope.from_str(key): loaded_coeffs[key] for key in loaded_coeffs}
             else:
-                legr = LeGR(self, target_model, legr_init_args, **legr_params)
-                self.ranking_coeffs = legr.train_global_ranking()
+                self.legr = LeGR(self, target_model, legr_init_args, **legr_params)
+                self.ranking_coeffs = self.legr.train_global_ranking()
                 nncf_logger.info('Trained ranking coefficients = {}'.format({str(scope): self.ranking_coeffs[scope]
                                                                          for scope in self.ranking_coeffs}))
             # Unwrapping model

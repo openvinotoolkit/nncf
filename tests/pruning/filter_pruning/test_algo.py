@@ -65,10 +65,12 @@ def test_check_default_algo_params():
     assert compression_ctrl.prune_last is False
     assert compression_ctrl.prune_batch_norms is True
     assert compression_ctrl.filter_importance is l2_filter_norm
+    assert compression_ctrl.weight_importance == 'uniform'
 
     assert compression_ctrl.all_weights is False
     assert compression_ctrl.zero_grad is True
 
+    assert compression_ctrl.pruning_quota == 0.9
     # Check default scheduler params
     assert isinstance(scheduler, BaselinePruningScheduler)
 
