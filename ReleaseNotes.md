@@ -7,6 +7,11 @@ samples distributed with the code.  The samples demonstrate the usage of compres
 public models and datasets for three different use cases: Image Classification, Object Detection,
 and Semantic Segmentation.
 
+## New in Release 1.7.1:
+Bugfixes:
+- Fixed a bug with where compressed models that were supposed to return named tuples actually returned regular tuples
+- Fixed an issue with batch norm adaptation-enabled compression runs hanging in the DDP scenario
+
 ## New in Release 1.7:
 - Adjust Padding feature to support accurate execution of U4 on VPU - when setting "target_device" to "VPU", the training-time padding values for quantized convolutions will be adjusted to better reflect VPU inference process.
 - Weighted layers that are "frozen" (i.e. have requires_grad set to False at compressed model creation time) are no longer considered for compression, to better handle transfer learning cases.
