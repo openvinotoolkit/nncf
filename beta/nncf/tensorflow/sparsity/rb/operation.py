@@ -12,6 +12,7 @@
 """
 
 import tensorflow as tf
+import numpy as np
 
 from tensorflow.python.keras.utils.control_flow_util import smart_cond
 
@@ -60,9 +61,18 @@ class RBSparsifyingWeight(NNCFOperation):
             trainable=False,
             dtype=tf.bool)
 
+        seed = layer.add_weight(
+            name + '_seed',
+            shape=(2,),
+            initializer=tf.keras.initializers.Constant(
+                            np.random.randint(size=(2,), low=-2**31, high=2**31-1)),
+            trainable=False,
+            dtype=tf.int32)
+
         return {
             'mask': mask,
             'trainable': trainable,
+            'seed': seed,
         }
 
     def call(self, layer_weights, op_weights, training: tf.constant):
@@ -75,12 +85,19 @@ class RBSparsifyingWeight(NNCFOperation):
         :param training: True if operation called in training mode
             else False
         """
-        true_fn = lambda: apply_mask(layer_weights, calc_rb_binary_mask(op_weights['mask'], self.eps))
+        true_fn = lambda: apply_mask(layer_weights, self._calc_rb_binary_mask(op_weights))
         false_fn = lambda: apply_mask(layer_weights, binary_mask(op_weights['mask']))
         return smart_cond(training,
                           true_fn=lambda: smart_cond(op_weights['trainable'],
                                                      true_fn=true_fn, false_fn=false_fn),
                           false_fn=false_fn)
+
+    def _calc_rb_binary_mask(self, op_weights):
+        new_seed = tf.random.stateless_uniform(
+                       (2,), seed=op_weights['seed'], minval=-2**31, maxval=2**31-1)
+        new_seed = tf.cast(new_seed, tf.int32)
+        op_weights['seed'].assign(new_seed)
+        return calc_rb_binary_mask(op_weights['mask'], op_weights['seed'], self.eps)
 
     def freeze(self, op_weights):
         """

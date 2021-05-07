@@ -12,17 +12,29 @@
 """
 
 import pytest
+import os
 from pathlib import Path
 import tensorflow as tf
 from addict import Dict
+from collections import defaultdict
+from itertools import combinations
+from unittest.mock import patch
 
 from beta.nncf import NNCFConfig
+from beta.nncf import create_compressed_model
+from beta.nncf.helpers.callback_creation import create_compression_callbacks
 from beta.nncf.tensorflow.sparsity.rb.loss import SparseLoss
 from beta.nncf.tensorflow.sparsity.rb.operation import RBSparsifyingWeight
-from beta.tests.tensorflow.helpers import get_basic_conv_test_model, get_basic_fc_test_model, \
-    create_compressed_model_and_algo_for_test, get_empty_config, get_weight_by_name, get_op_by_cls
+from beta.nncf.tensorflow.sparsity.rb.functions import calc_rb_binary_mask
+from beta.tests.tensorflow.helpers import get_basic_conv_test_model
+from beta.tests.tensorflow.helpers import get_op_by_cls
+from beta.tests.tensorflow.helpers import get_weight_by_name
+from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
+from beta.tests.tensorflow.helpers import get_basic_fc_test_model
+from beta.tests.tensorflow.helpers import get_empty_config
 
 CONF = Path(__file__).parent.parent.parent / 'data' / 'configs' / 'sequential_model_cifar10_rb_sparsity.json'
+MASKS_SEEDS_PATH = Path(__file__).parent / 'output_seeds.txt'
 
 TEST_MODELS = {
 
@@ -56,6 +68,74 @@ def get_basic_rb_sparse_model(model_name, local=False, config=CONF, freeze=False
     if freeze:
         algo.freeze()
     return compress_model, algo, config
+
+
+def calc_rb_mask_decorator(fn):
+    def wrapper(*args, **kwargs):
+        if tf.distribute.get_replica_context():
+            thread_id = tf.distribute.get_replica_context().replica_id_in_sync_group
+        else:
+            thread_id = 'dummy'
+
+        # pylint: disable=redundant-keyword-arg
+        tf.print(thread_id, args[1], output_stream=f'file://{MASKS_SEEDS_PATH}')
+        mask = fn(*args, **kwargs)
+        return mask
+    return wrapper
+
+
+@pytest.mark.parametrize('quantization', [False, True],
+                         ids=['without_quantization', 'with_quantization'])
+@patch('beta.nncf.tensorflow.sparsity.rb.operation.calc_rb_binary_mask',
+       new=calc_rb_mask_decorator(calc_rb_binary_mask))
+def test_distributed_masks_are_equal(quantization):
+    # Clean output file
+    try:
+        os.remove(MASKS_SEEDS_PATH)
+    except OSError:
+        pass
+    # Fill file with seeds
+    num_of_replicas = 3
+    strategy = tf.distribute.MirroredStrategy([f'GPU:{i}' for i in range(num_of_replicas)])
+    with strategy.scope():
+        config = NNCFConfig.from_json(CONF)
+        if quantization:
+            config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
+        model = TEST_MODELS['Conv2D']()
+        algo, model = create_compressed_model(model, config)
+        model.add_loss(algo.loss)
+        compression_callbacks = create_compression_callbacks(algo, log_tensorboard=False)
+
+        model.compile(
+            loss=tf.keras.losses.CategoricalCrossentropy(),
+            optimizer=tf.keras.optimizers.Adam(5e-4),
+            metrics=["accuracy"])
+
+        dataset_len_per_replica = 10
+        dataset_len = dataset_len_per_replica * num_of_replicas
+
+        dummy_x = tf.random.normal((dataset_len,) + model.input_shape[1:])
+        dummy_y = tf.random.normal((dataset_len,) + model.output_shape[1:])
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+        dataset = tf.data.Dataset.from_tensor_slices((dummy_x, dummy_y)).batch(num_of_replicas).with_options(options)
+
+        model.fit(dataset, epochs=1, validation_split=0,
+                  callbacks=[compression_callbacks])
+    # Check seeds in file
+    seeds = open(MASKS_SEEDS_PATH, 'r').readlines()
+    seeds_per_replica = defaultdict(list)
+    for row in seeds:
+        replica_id, *seed = row.split()
+        seeds_per_replica[replica_id].append((int(seed[0][1:]), int(seed[1][:-1])))
+
+    # Check seeds are equal for all replicas
+    for key, other_key in combinations(seeds_per_replica, 2):
+        assert seeds_per_replica[key] == seeds_per_replica[other_key]
+    # Check seeds differs during training
+    assert len(set(seeds_per_replica['0'])) > 1
+    # Remove temporary file
+    os.remove(MASKS_SEEDS_PATH)
 
 
 @pytest.mark.parametrize('local_mode', [False], ids=['global_loss'])

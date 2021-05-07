@@ -14,11 +14,14 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 from pathlib import Path
+import pytest
 import os
 
 from beta.nncf import NNCFConfig
+from beta.nncf import create_compressed_model
+from nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.nncf.helpers.callback_creation import create_compression_callbacks
-from beta.tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 
 
 MODEL_PATH = Path(__file__).parent.parent.parent / 'data' / 'mock_models' / 'LeNet.h5'
@@ -26,7 +29,7 @@ MODEL_PATH = Path(__file__).parent.parent.parent / 'data' / 'mock_models' / 'LeN
 
 def get_basic_sparsity_config(model_size=4, input_sample_size=None,
                               sparsity_init=0.02, sparsity_target=0.5, sparsity_target_epoch=2,
-                              sparsity_freeze_epoch=3):
+                              sparsity_freeze_epoch=3, scheduler='polinomial'):
     if input_sample_size is None:
         input_sample_size = [1, 1, 4, 4]
 
@@ -44,7 +47,7 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
                 "sparsity_init": sparsity_init,
                 "params":
                     {
-                        "schedule": "polynomial",
+                        "schedule": scheduler,
                         "sparsity_target": sparsity_target,
                         "sparsity_target_epoch": sparsity_target_epoch,
                         "sparsity_freeze_epoch": sparsity_freeze_epoch
@@ -52,6 +55,20 @@ def get_basic_sparsity_config(model_size=4, input_sample_size=None,
             }
     })
     return config
+
+
+def get_lenet_model():
+    inp = tf.keras.Input((28, 28, 1))
+    x = tf.keras.layers.Conv2D(32, 5)(inp)
+    x = tf.keras.layers.MaxPool2D()(x)
+    x = tf.keras.layers.Conv2D(48, 5)(x)
+    x = tf.keras.layers.MaxPool2D()(x)
+    x = tf.keras.layers.Flatten()(x)
+    x = tf.keras.layers.Dense(256)(x)
+    x = tf.keras.layers.Dense(84)(x)
+    y = tf.keras.layers.Dense(10, activation='softmax')(x)
+
+    return tf.keras.Model(inputs=inp, outputs=y)
 
 
 def train_lenet():
@@ -63,17 +80,7 @@ def train_lenet():
     x_train = x_train / 255
     x_test = x_test / 255
 
-    inp = tf.keras.Input((28, 28, 1))
-    x = tf.keras.layers.Conv2D(32, 5)(inp)
-    x = tf.keras.layers.MaxPool2D()(x)
-    x = tf.keras.layers.Conv2D(48, 5)(x)
-    x = tf.keras.layers.MaxPool2D()(x)
-    x = tf.keras.layers.Flatten()(x)
-    x = tf.keras.layers.Dense(256)(x)
-    x = tf.keras.layers.Dense(84)(x)
-    y = tf.keras.layers.Dense(10, activation='softmax')(x)
-
-    model = tf.keras.Model(inputs=inp, outputs=y)
+    model = get_lenet_model()
 
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(),
@@ -91,47 +98,91 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-def test_rb_sparse_target_lenet():
+@pytest.mark.parametrize('distributed', [False, True], ids=['not_distributed', 'distributed'])
+@pytest.mark.parametrize('quantized', [False, True], ids=['without_quantization', 'with_quantization'])
+def test_rb_sparse_target_lenet(distributed, quantized):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
-    (x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
+
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+    x_test, y_test = x_test[:2], y_test[:2]
 
     x_train = tf.transpose(tf.reshape(x_train, (-1, 1, 28, 28)), (0, 2, 3, 1))
+    x_test = tf.transpose(tf.reshape(x_test, (-1, 1, 28, 28)), (0, 2, 3, 1))
+
     x_train = x_train / 255
+    x_test = x_test / 255
 
-    model = tf.keras.models.load_model(MODEL_PATH)
+    batch_size = 128
+    if distributed:
+        num_of_replicas = 3
+        strategy = tf.distribute.MirroredStrategy([f'GPU:{i}' for i in range(num_of_replicas)])
+    else:
+        strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
 
-    freeze_epoch=4
-    config = get_basic_sparsity_config(sparsity_init=0.05, sparsity_target=0.3,
-                                       sparsity_target_epoch=3, sparsity_freeze_epoch=freeze_epoch)
-    compress_model, compress_algo = create_compressed_model_and_algo_for_test(model, config)
-    compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
+    tf.keras.backend.clear_session()
+    with strategy.scope():
+        dataset_train = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+        dataset_test = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(batch_size)
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+        dataset_train = dataset_train.with_options(options)
+        dataset_test = dataset_test.with_options(options)
 
-    class SparsityRateTestCallback(tf.keras.callbacks.Callback):
-        def on_epoch_end(self, epoch, logs=None):
-            target = compress_algo.loss.target_sparsity_rate
-            actual = compress_algo.raw_statistics()['sparsity_rate_for_sparsified_modules']
-            print(f'target {target}, actual {actual}')
-            if epoch <= freeze_epoch:
-                assert abs(actual - target) < 0.05
-            else:
-                assert target == 0.
+        model = get_lenet_model()
+        model.load_weights(MODEL_PATH)
 
-    loss_obj = tf.keras.losses.SparseCategoricalCrossentropy()
+        freeze_epoch = 4
+        config = get_basic_sparsity_config(sparsity_init=0.04, sparsity_target=0.3,
+                                           sparsity_target_epoch=3, sparsity_freeze_epoch=freeze_epoch,
+                                           scheduler='exponential')
+        if quantized:
+            config.update({'compression': [config['compression'], {'algorithm': 'quantization'}]})
 
-    metrics = [loss_obj,
-               tfa.metrics.MeanMetricWrapper(compress_algo.loss,
-                                             name='rb_loss')]
+        compress_algo, compress_model = create_compressed_model(model, config)
+        compression_callbacks = create_compression_callbacks(compress_algo, log_tensorboard=True, log_dir='logdir/')
 
-    compress_model.add_loss(compress_algo.loss)
+        sparse_algo = compress_algo.child_ctrls[0] \
+            if isinstance(compress_algo, CompositeCompressionAlgorithmController) else compress_algo
 
-    compress_model.compile(
-        loss=loss_obj,
-        optimizer=tf.keras.optimizers.Adam(5e-3),
-        metrics=metrics,
-    )
+        class SparsityRateTestCallback(tf.keras.callbacks.Callback):
+            def on_epoch_end(self, epoch, logs=None):
+                target = sparse_algo.loss.target_sparsity_rate
+                actual = compress_algo.statistics()['sparsity_rate_for_sparsified_modules']
+                print(f'target {target}, actual {actual}')
+                if epoch + 1 <= freeze_epoch:
+                    assert abs(actual - target) < 0.05
+                else:
+                    assert tf.cast(sparse_algo.loss.disabled, tf.bool)
+                    assert tf.equal(sparse_algo.loss.calculate(), tf.constant(0.))
 
-    compress_model.fit(x_train, y_train, batch_size=64, epochs=5, validation_split=0.2,
+        loss_obj = tf.keras.losses.SparseCategoricalCrossentropy()
+
+        metrics = [
+            tf.keras.metrics.CategoricalAccuracy(name='acc@1'),
+            tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='acc@5'),
+            tfa.metrics.MeanMetricWrapper(loss_obj, name='ce_loss'),
+            tfa.metrics.MeanMetricWrapper(compress_algo.loss, name='cr_loss')
+        ]
+
+        compress_model.add_loss(compress_algo.loss)
+
+        compress_model.compile(
+            loss=loss_obj,
+            optimizer=tf.keras.optimizers.Adam(5e-3),
+            metrics=metrics,
+        )
+
+    compress_model.fit(dataset_train, validation_data=dataset_test, epochs=5,
                        callbacks=[tf.keras.callbacks.ReduceLROnPlateau(),
+                                  get_progress_bar(
+                                      stateful_metrics=['loss'] + [metric.name for metric in metrics]),
+                                  *get_callbacks(
+                                      include_tensorboard=True,
+                                      track_lr=False,
+                                      write_model_weights=False,
+                                      initial_step=0,
+                                      model_dir='logdir/',
+                                      ckpt_dir='logdir/cpt/'),
                                   compression_callbacks,
                                   SparsityRateTestCallback()])

@@ -8,7 +8,7 @@
     "batch_size": 256,
     "epochs": 40,
 
-     "optimizer": {
+    "optimizer": {
         "type": "Adam",
         "schedule_type": "piecewise_constant",
         "schedule_params": {
@@ -21,24 +21,12 @@
     "dataset_type": "tfds",
 
     "compression": {
-        "algorithm": "magnitude_sparsity",
+        "algorithm": "rb_sparsity",
+        "sparsity_init": 0.01,
         "params": {
-            "schedule": "multistep",
-            "multistep_steps": [
-                5,
-                10,
-                15,
-                20,
-                25
-            ],
-            "multistep_sparsity_levels": [
-                0.1,
-                0.15,
-                0.20,
-                0.25,
-                0.30,
-                0.35
-            ]
+            "sparsity_target": 0.5,
+            "sparsity_target_epoch": 5,
+            "sparsity_freeze_epoch": 10
         }
     }
 }
