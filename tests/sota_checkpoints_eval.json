@@ -82,7 +82,7 @@
             "inception_v3_imagenet_int8": {
                 "config": "examples/classification/configs/quantization/inception_v3_imagenet_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 78.25,
+                "target": 77.52,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_int8.pth",
                 "model_description": "Inception V3",
@@ -93,7 +93,7 @@
             "inception_v3_imagenet_rb_sparsity_int8": {
                 "config": "examples/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json",
                 "reference": "inception_v3_imagenet",
-                "target": 77.58,
+                "target": 76.39,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_rb_sparsity_int8.pth",
                 "model_description": "Inception V3",
@@ -171,7 +171,7 @@
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
-                "target": 58.26,
+                "target": 58.15,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",
                 "model_description": "SqueezeNet V1.1",
@@ -378,7 +378,7 @@
             "unet_camvid_int8": {
                 "config": "examples/semantic_segmentation/configs/unet_camvid_int8.json",
                 "reference": "unet_camvid",
-                "target": 71.8,
+                "target": 72.0,
                 "metric_type": "Mean IoU",
                 "resume": "unet_camvid_int8.pth",
                 "model_description": "UNet",
@@ -448,7 +448,7 @@
             "unet_mapillary_int8": {
                 "config": "examples/semantic_segmentation/configs/unet_mapillary_int8.json",
                 "reference": "unet_mapillary",
-                "target": 55.87,
+                "target": 56.02,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary_int8.pth",
                 "model_description": "UNet",
@@ -459,7 +459,7 @@
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
                 "reference": "unet_mapillary",
-                "target": 55.65,
+                "target": 55.51,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary_magnitude_sparsity_int8.pth",
                 "model_description": "UNet",
