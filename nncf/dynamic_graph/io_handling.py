@@ -9,7 +9,7 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.dynamic_graph.patch_pytorch import register_operator
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_mock_tensor
-from nncf.utils import is_tensor, objwalk, is_traced_tensor
+from nncf.utils import is_tensor, objwalk, is_traced_tensor, maybe_get_iterator
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -21,10 +21,12 @@ def nncf_model_input(tensor: 'torch.Tensor'):
 def nncf_model_output(tensor: 'torch.Tensor'):
     return tensor
 
+
 def wrap_nncf_model_inputs_with_objwalk(model_args, model_kwargs):
     model_args = objwalk(model_args, is_tensor, nncf_model_input)
     model_kwargs = objwalk(model_kwargs, is_tensor, nncf_model_input)
     return model_args, model_kwargs
+
 
 def wrap_nncf_model_outputs_with_objwalk(model_outputs):
     model_outputs = objwalk(model_outputs, is_traced_tensor, nncf_model_output)

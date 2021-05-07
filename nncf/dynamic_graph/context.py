@@ -33,37 +33,17 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import PTNNCFNode
 from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.trace_tensor import TensorMeta
+from nncf.dynamic_graph.utils import InputIndexEntry
+from nncf.dynamic_graph.utils import nested_object_paths_generator
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.layers import ITERATION_MODULES
 from nncf.graph.graph import ModuleAttributes
-from nncf.utils import maybe_get_iterator
 
 _CURRENT_CONTEXT = None
 
 
 def nth(iterable, n, default=None):
     return next(islice(iterable, n, None), default)
-
-
-class InputIndexEntry:
-    def __init__(self, path: Tuple[Union[int, str], ...], getter: Callable, setter: Callable):
-        self.path = path
-        self.getter = getter
-        self.setter = setter
-
-
-class TupleRebuildingSetter:
-    def __init__(self, idx_to_set, current_tuple, previous_level_setter_for_current_tuple):
-        self._previous_level_setter = previous_level_setter_for_current_tuple
-        self._current_tuple = current_tuple
-        self._idx_to_set = idx_to_set
-
-    def __call__(self, value):
-        tmp_list = list(self._current_tuple)
-        tmp_list[self._idx_to_set] = value
-        new_tuple = tuple(tmp_list)
-        self._current_tuple = new_tuple
-        self._previous_level_setter(new_tuple)
 
 
 class OperatorInput:
@@ -73,55 +53,14 @@ class OperatorInput:
         self._index = OrderedDict()  # type: Dict[int, InputIndexEntry]
 
         op_args_index_entries = []
-        self.nested_object_paths_generator(self.op_args, op_args_index_entries,
+        nested_object_paths_generator(self.op_args, op_args_index_entries,
                                            previous_level_setter=partial(setattr, self, "op_args"))
         op_kwargs_index_entries = []
-        self.nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
+        nested_object_paths_generator(self.op_kwargs, op_kwargs_index_entries)
 
         # pylint:disable=unnecessary-comprehension
         self._index = {idx: entry for idx, entry in
                        enumerate(op_args_index_entries + op_kwargs_index_entries)}
-
-    @staticmethod
-    def nested_object_paths_generator(obj, out_entries_list, path=(), memo=None, previous_level_setter=None):
-        if memo is None:
-            memo = set()
-        iterator = maybe_get_iterator(obj)
-        if iterator is not None:
-            if id(obj) not in memo:
-                memo.add(id(obj))
-                current_level_getters = []
-                current_level_setters = []
-                for idx, iterval in enumerate(iterator(obj)):
-                    path_component, value = iterval
-                    current_level_getters.append(partial(obj.__getitem__, path_component))
-                    if not isinstance(obj, tuple):
-                        current_level_setters.append(partial(obj.__setitem__, path_component))
-                    else:
-                        current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
-
-                for idx, iterval in enumerate(iterator(obj)):
-                    path_component, value = iterval
-                    retval = OperatorInput.nested_object_paths_generator(value, out_entries_list,
-                                                                         path + (path_component,), memo,
-                                                                         current_level_setters[idx])
-                    was_leaf = retval[1]
-                    if was_leaf:
-                        leaf_entry_path = retval
-                        # getter = partial(obj.__getitem__, path_component)
-                        getter = current_level_getters[idx]
-                        setter = current_level_setters[idx]
-
-                        out_entries_list.append(InputIndexEntry(leaf_entry_path,
-                                                                getter,
-                                                                setter))
-
-                memo.remove(id(obj))
-            is_leaf = False
-            return path, is_leaf
-
-        is_leaf = True
-        return path, is_leaf
 
     def __iter__(self):
         return iter(self._index.values())

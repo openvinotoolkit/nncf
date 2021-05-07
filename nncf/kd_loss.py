@@ -1,26 +1,27 @@
-from typing import List
-
 from copy import deepcopy
-from nncf.dynamic_graph.transformations.layout import PTTransformationLayout
+
+from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.graph.transformations.layout import PTTransformationLayout
 from torch import nn
 import torch
 from functools import reduce, partial
 from nncf import NNCFConfig
 
-from nncf.nncf_network import NNCFNetwork, PTModelTransformer
-from nncf.dynamic_graph.transformations.commands import PTInsertionCommand
-from nncf.dynamic_graph.context import OperatorInput
+from nncf.nncf_network import NNCFNetwork
+from nncf.dynamic_graph.utils import nested_object_paths_generator
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionLevel, CompressionLoss, CompressionScheduler
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.compression_method_api import PTCompressionLoss
 
 KD_MODULE_NAME = 'KD_FP32_MODULE'
 
+
 class KDLossCalculator(PTCompressionLoss):
-    def __init__(self, original_model, scale, is_softmax):
+    def __init__(self, target_model, original_model, scale, is_softmax):
         super().__init__()
+        self._target_model = target_model
         self.original_model = original_model
         self.original_model.train()
         self.scale = scale
@@ -55,20 +56,20 @@ class KDLossCalculator(PTCompressionLoss):
                     return True
             return False
 
-        with torch.no_grad():
-            ref_outputs = self.original_model(target)
-
         # get outputs from nncf_model
         # nncf_model.get_register_modules_outputs()
+        #with torch.no_grad():
+        #    ref_outputs_0 = self.original_model(target)
+
+        ref_outputs = self._target_model.get_registered_modules_for_parallel_exec_outputs(KD_MODULE_NAME)
 
         compressed_model_outputs = []
         orig_model_outputs = []
-        OperatorInput.nested_object_paths_generator([input_], compressed_model_outputs)
-        OperatorInput.nested_object_paths_generator([ref_outputs], orig_model_outputs)
-        compressed_model_loss_outputs = filter(lambda x: is_loss(x.getter()), compressed_model_outputs)
-        orig_model_loss_outputs = filter(partial(match_func, to_match_with=compressed_model_loss_outputs), orig_model_outputs)
-        compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_outputs))
-        orig_model_loss_outputs = list(map(lambda x: x.getter(), orig_model_loss_outputs))
+        nested_object_paths_generator([input_], compressed_model_outputs)
+        nested_object_paths_generator([ref_outputs], orig_model_outputs)
+        compressed_model_loss_nested_obj_paths = list(filter(lambda x: is_loss(x.getter()), compressed_model_outputs))
+        compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))
+        orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(partial(match_func, to_match_with=compressed_model_loss_nested_obj_paths), orig_model_outputs)))
         # check for shapes. zip is not reliable
         return self.scale * reduce(
             lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
@@ -101,7 +102,18 @@ class KnowledgeDistillationController(PTCompressionAlgorithmController):
 
     def __init__(self, target_model, original_model, scale, is_softmax):
         super().__init__(target_model)
-        self._loss = KDLossCalculator(original_model, scale, is_softmax)
+        original_model.train()
+        target_model.register_module_for_parallel_exec(original_model, KD_MODULE_NAME, is_traced=False, no_grad=True)
+        self._scheduler = BaseCompressionScheduler()
+        self._loss = KDLossCalculator(target_model=target_model, original_model=original_model, scale=scale, is_softmax=is_softmax)
+
+    @property
+    def scheduler(self) -> CompressionScheduler:
+        return self._scheduler
+
+    @property
+    def loss(self) -> CompressionLoss:
+        return self._loss
 
     def distributed(self):
         pass
