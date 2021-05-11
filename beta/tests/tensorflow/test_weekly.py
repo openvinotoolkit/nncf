@@ -15,16 +15,16 @@ import json
 import os
 import sys
 import tempfile
-
-import time # for Command
-import signal # for Command
-import subprocess # for Command
 import threading
 
 import pytest
 from pytest import approx
 
 from beta.tests.conftest import PROJECT_ROOT
+from tests.helpers import Command
+from tests.helpers import get_cli_dict_args
+
+EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 
 # sample
 # ├── dataset
@@ -168,93 +168,6 @@ GLOBAL_CONFIG = {
     }
 }
 
-EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
-
-
-def get_cli_dict_args(args): # move to nncf/tests/test_helpers.py
-    cli_args = dict()
-    for key, val in args.items():
-        cli_key = '--{}'.format(str(key))
-        cli_args[cli_key] = None
-        if val is not None:
-            cli_args[cli_key] = str(val)
-    return cli_args
-
-# move to nncf/tests/test_helpers.py
-class Command:
-    def __init__(self, cmd, path=None):
-        self.cmd = cmd
-        self.process = None
-        self.exec_time = -1
-        self.output = []  # store output here
-        self.kwargs = {}
-        self.timeout = False
-        self.path = path
-
-        # set system/version dependent "start_new_session" analogs
-        if sys.platform == "win32":
-            self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        elif sys.version_info < (3, 2):  # assume posix
-            self.kwargs.update(preexec_fn=os.setsid)
-        else:  # Python 3.2+ and Unix
-            self.kwargs.update(start_new_session=True)
-
-    def kill_process_tree(self, pid):
-        try:
-            if sys.platform != "win32":
-                os.killpg(pid, signal.SIGKILL)
-            else:
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pid)])
-        except OSError as err:
-            print(err)
-
-    def run(self, timeout=3600, assert_returncode_zero=True):
-        # if torch.cuda.is_available():
-        #     torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
-
-        def target():
-            start_time = time.time()
-            self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, cwd=self.path, **self.kwargs)
-            self.timeout = False
-
-            self.output = []
-            for line in self.process.stdout:
-                line = line.decode('utf-8')
-                self.output.append(line)
-                sys.stdout.write(line)
-
-            sys.stdout.flush()
-            self.process.stdout.close()
-
-            self.process.wait()
-            self.exec_time = time.time() - start_time
-
-        thread = threading.Thread(target=target)
-        thread.start()
-
-        thread.join(timeout)
-        if thread.is_alive():
-            try:
-                print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
-                self.kill_process_tree(self.process.pid)
-                self.exec_time = timeout
-                self.timeout = True
-                thread.join()
-            except OSError as e:
-                print(self.process.pid, "Exception when try to kill task by PID, " + e.strerror)
-                raise
-        returncode = self.process.wait()
-        print("Process returncode = " + str(returncode))
-        if assert_returncode_zero:
-            assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
-                returncode,
-                "".join(self.output))
-        return returncode
-
-    def get_execution_time(self):
-        return self.exec_time
-
 
 def create_command_line(args, sample_type):
     env = os.environ.copy()
@@ -279,7 +192,6 @@ for sample_type_ in GLOBAL_CONFIG:
     datasets = GLOBAL_CONFIG[sample_type_]
     for dataset_name_ in datasets:
         dataset_path = datasets[dataset_name_].get('path', os.path.join(tempfile.gettempdir(), dataset_name_))
-        batch_size = datasets[dataset_name_].get('batch', None)
         configs = datasets[dataset_name_].get('configs', {})
         for config_name in configs:
             config_params = configs[config_name]
@@ -288,12 +200,10 @@ for sample_type_ in GLOBAL_CONFIG:
             absolute_tolerance_train_ = config_params.get('absolute_tolerance_train', 1)
             absolute_tolerance_eval_ = config_params.get('absolute_tolerance_eval', 0.5)
             weights_path_ = config_params.get('weights', None)
-            epochs = config_params.get('epochs', None)
             if weights_path_:
                 weights_path_ = os.path.join(sample_type_, dataset_name_, weights_path_)
             for execution_arg_ in execution_args:
                 config_path_ = EXAMPLES_DIR.joinpath(sample_type_, 'configs', config_name)
-                jconfig = json.load(config_path_.open())
                 args_ = {
                     'data': dataset_path,
                     'weights': weights_path_,
@@ -305,7 +215,6 @@ for sample_type_ in GLOBAL_CONFIG:
                     'expected_accuracy': expected_accuracy_,
                     'absolute_tolerance_train': absolute_tolerance_train_,
                     'absolute_tolerance_eval': absolute_tolerance_eval_,
-                    'checkpoint_name': config_name.split('/')[-1]
                 }
                 CONFIG_PARAMS.append(tuple([test_config_, args_, execution_arg_, dataset_name_]))
 
@@ -331,6 +240,9 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
     checkpoint_save_dir = str(tmp_path_factory.mktemp('models'))
     checkpoint_save_dir = os.path.join(checkpoint_save_dir, execution_arg.replace('-', '_'))
     args['checkpoint-save-dir'] = checkpoint_save_dir
+    metric_save_dir = str(tmp_path_factory.mktemp('metrics'))
+    metric_save_dir = os.path.join(metric_save_dir, execution_arg.replace('-', '_'))
+    args['metrics-dump-path'] = metric_save_dir
     if dataset_dir:
         args['data'] = dataset_dir
     return {
@@ -340,20 +252,22 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
 
 
 @pytest.mark.dependency(name="train")
-def test_compression_train(_params, tmp_path):
+def test_weekly_train(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
 
     args['mode'] = 'train'
-    args['log-dir'] = tmp_path
-    args['metrics-dump'] = os.path.join(args['checkpoint-save-dir'], 'metrics.json')
+    model_name = get_config_name(args['config'])
+    args['log-dir'] = os.path.join(args['checkpoint-save-dir'], model_name)
+    args['metrics-dump'] = os.path.join(args['metrics-dump-path'], f'{model_name}_train_metrics.json')
 
+    del args['metrics-dump-path']
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
     runner.run(timeout=threading.TIMEOUT_MAX)
 
     assert os.path.exists(args['metrics-dump'])
-    with open(args['metrics-dump']) as metric_file: # test_sota_checkpoint.TestSotaCheckpoints.read_metric
+    with open(args['metrics-dump']) as metric_file:
         metrics = json.load(metric_file)
         actual_acc = metrics['Accuracy']
 
@@ -363,25 +277,27 @@ def test_compression_train(_params, tmp_path):
     assert actual_acc == approx(ref_acc, abs=tolerance)
 
 
-# Not sure that we need this test
 @pytest.mark.dependency(depends=["train"])
-def test_compression_eval_trained(_params, tmp_path):
+def test_weekly_eval_trained(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
 
     args['mode'] = 'test'
-    args['log-dir'] = tmp_path
-    args['resume'] = args['checkpoint-save-dir']
-    args['metrics-dump'] = os.path.join(args['checkpoint-save-dir'], 'metrics.json')
+    model_name = get_config_name(args['config'])
+    args['log-dir'] =  os.path.join(args['checkpoint-save-dir'], model_name)
+    args['resume'] = os.path.join(args['checkpoint-save-dir'], model_name)
+
+    args['metrics-dump'] = os.path.join(args['metrics-dump-path'], f'{model_name}_eval_metrics.json')
     if 'weights' in args:
         del args['weights']
 
+    del args['metrics-dump-path']
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
     runner.run(timeout=threading.TIMEOUT_MAX)
 
     assert os.path.exists(args['metrics-dump'])
-    with open(args['metrics-dump']) as metric_file: # test_sota_checkpoint.TestSotaCheckpoints.read_metric
+    with open(args['metrics-dump']) as metric_file:
         metrics = json.load(metric_file)
         actual_acc = metrics['Accuracy']
 

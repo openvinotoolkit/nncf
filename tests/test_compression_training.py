@@ -22,7 +22,9 @@ from pytest import approx
 
 from examples.common.utils import get_name
 from tests.conftest import TEST_ROOT
-from tests.test_sanity_sample import Command, create_command_line
+from tests.helpers import Command
+from tests.helpers import get_cli_dict_args
+from tests.test_sanity_sample import create_command_line
 
 # sample
 # ├── dataset
@@ -106,25 +108,6 @@ GLOBAL_CONFIG = {
                 }
         }
 }
-
-
-def get_cli_args(args):
-    cli_args = []
-    for key, val in args.items():
-        cli_args.append('--{}'.format(str(key)))
-        if val:
-            cli_args.append(str(val))
-    return cli_args
-
-
-def get_cli_dict_args(args):
-    cli_args = dict()
-    for key, val in args.items():
-        cli_key = '--{}'.format(str(key))
-        cli_args[cli_key] = None
-        if val is not None:
-            cli_args[cli_key] = str(val)
-    return cli_args
 
 
 def parse_best_acc1(tmp_path):
