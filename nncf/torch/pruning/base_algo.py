@@ -13,9 +13,9 @@
 
 from functools import partial
 from functools import update_wrapper
-from texttable import Texttable
-from torch import nn
 from typing import List
+
+from torch import nn
 
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.common.graph.transformations.commands import TargetType
