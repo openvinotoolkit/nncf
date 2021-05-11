@@ -24,10 +24,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
 
 import nncf.accuracy_aware_training.restricted_pickle_module as restricted_pickle_module
-from nncf.initialization import TrainEpochArgs
 from nncf.api.compression import CompressionLevel
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.accuracy_aware_training.algo import TrainingRunner
+from nncf.common.accuracy_aware_training.runner import TrainingRunner
 from nncf.accuracy_aware_training.utils import is_main_process, print_statistics, configure_paths
 from nncf.checkpoint_loading import load_state
 
@@ -35,7 +34,8 @@ from nncf.checkpoint_loading import load_state
 # pylint: disable=E1101
 class PTAccuracyAwareTrainingRunner(TrainingRunner):
 
-    def __init__(self, nncf_config, lr_updates_needed=True, verbose=True,
+    def __init__(self, accuracy_aware_config, train_epoch_args,
+                 lr_updates_needed=True, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95):
 
         self.accuracy_bugdet = None
@@ -44,6 +44,7 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
         self.best_compression_level = CompressionLevel.NONE
         self.was_compression_increased_on_prev_step = None
         self._compressed_training_history = []
+        self.train_epoch_args = train_epoch_args
 
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0
@@ -54,8 +55,6 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
 
         self.lr_updates_needed = lr_updates_needed
         self.verbose = verbose
-
-        accuracy_aware_config = nncf_config.get('accuracy_aware_training_config', None)
 
         default_parameter_values = {
             'is_higher_metric_better': True,
@@ -75,7 +74,6 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
         self.compression_rate_step = self.initial_compression_rate_step
         self.step_reduction_factor = self.compression_rate_step_reduction_factor
 
-        self.train_epoch_args = nncf_config.get_extra_struct(TrainEpochArgs)
         self.log_dir = self.train_epoch_args.log_dir if self.train_epoch_args.log_dir is not None \
             else 'runs'
         self.log_dir = configure_paths(self.log_dir)
@@ -90,7 +88,7 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
             self.uncompressed_model_accuracy = model.module.original_model_accuracy
         else:
             self.uncompressed_model_accuracy = model.original_model_accuracy
-        self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy - self.maximal_accuracy_drop
+        self.minimal_tolerable_accuracy = self.uncompressed_model_accuracy * (1 - 0.01 * self.maximal_accuracy_drop)
 
     def train_epoch(self, model, compression_controller):
         compression_controller.scheduler.epoch_step()
@@ -129,14 +127,18 @@ class PTAccuracyAwareTrainingRunner(TrainingRunner):
 
     def validate(self, model, compression_controller):
         val_metric_value = self.train_epoch_args.eval_fn(model, epoch=self.cumulative_epoch_count)
-
         compression_level = compression_controller.compression_level()
         is_better_by_accuracy = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
-        is_best_by_accuracy = is_better_by_accuracy and compression_level == self.best_compression_level
-        is_best = is_best_by_accuracy or compression_level > self.best_compression_level
+        is_best = is_better_by_accuracy
+
+        # is_best_by_accuracy = is_better_by_accuracy and compression_level == self.best_compression_level
+        # is_best = is_best_by_accuracy or compression_level > self.best_compression_level
+
         if is_best:
             self.best_val_metric_value = val_metric_value
         self.best_compression_level = max(compression_level, self.best_compression_level)
+
+        nncf_logger.info('eval current {}, best {}'.format(val_metric_value, self.best_val_metric_value))
 
         if is_main_process():
             self.tensorboard_writer.add_scalar('val/accuracy_aware/metric_value',

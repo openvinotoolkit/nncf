@@ -45,12 +45,16 @@ from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
     print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
+from examples.common.utils import is_accuracy_aware_training
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
 from nncf.api.compression import CompressionLevel
 from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.initialization import register_default_init_args, default_criterion_fn
+from nncf.initialization import register_default_init_args
+from nncf.initialization import default_criterion_fn
+from nncf.initialization import register_training_loop_args
 from nncf.utils import safe_thread_call, is_main_process
+from nncf import run_accuracy_aware_compressed_training
 from examples.classification.common import set_seed, load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
@@ -120,6 +124,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
     set_seed(config)
 
+    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
+
     # define loss function (criterion)
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(config.device)
@@ -157,7 +163,9 @@ def main_worker(current_gpu, config: SampleConfig):
     model.to(config.device)
 
     resuming_model_sd, resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
+    compression_ctrl, model = create_compressed_model(model, nncf_config,
+                                                      resuming_state_dict=resuming_model_sd,
+                                                      should_eval_original_model=is_accuracy_aware_training_mode)
 
     if config.to_onnx:
         compression_ctrl.export_model(config.to_onnx)
@@ -192,6 +200,34 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         print_statistics(compression_ctrl.statistics())
+
+    if config.mode.lower() == 'train' and is_accuracy_aware_training_mode:
+        # validation function that returns the target metric value
+        # pylint: disable=E1123
+        def validate_fn(model, epoch):
+            top1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+            return top1
+
+        # training function that trains the model for one epoch (full training dataset pass)
+        def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+            return train_epoch(train_loader, model, criterion, train_criterion_fn,
+                               optimizer, compression_ctrl, epoch, config)
+
+        # function that initializes optimizers & lr schedulers to start training
+        def configure_optimizers_fn():
+            params_to_optimize = get_parameter_groups(model, config)
+            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+            return optimizer, lr_scheduler
+
+        # register all these training-loop related funcs in nncf config
+        nncf_config = register_training_loop_args(nncf_config, train_epoch_fn, validate_fn,
+                                                  configure_optimizers_fn,
+                                                  tensorboard_writer=config.tb,
+                                                  log_dir=config.log_dir)
+
+        # run accuracy-aware training loop
+        model = run_accuracy_aware_compressed_training(model, compression_ctrl, nncf_config)
+        return
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)

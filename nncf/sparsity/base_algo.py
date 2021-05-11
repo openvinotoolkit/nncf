@@ -31,6 +31,7 @@ from nncf.graph.transformations.commands import TransformationPriority
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.common.schedulers import BaseCompressionScheduler
+from nncf.common.schedulers import StubCompressionScheduler
 from nncf.nncf_network import NNCFNetwork
 
 SparseModuleInfo = namedtuple('SparseModuleInfo', ['module_name', 'module', 'operand'])
@@ -177,3 +178,8 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
     @compression_rate.setter
     def compression_rate(self, sparsity_level: float):
         self.set_sparsity_level(sparsity_level)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
+        self._scheduler.target_level = 0.0
+        self._scheduler.current_sparsity_level = 0.0

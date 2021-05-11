@@ -239,6 +239,18 @@ def is_staged_quantization(config):
     return False
 
 
+def is_accuracy_aware_training(config):
+    compression_config = config.get('compression', {})
+    if isinstance(compression_config, list):
+        for algo_config in compression_config:
+            if algo_config.get("accuracy_aware_training") is not None:
+                return True
+        return False
+    if compression_config.get("accuracy_aware_training") is not None:
+        return True
+    return False
+
+
 def print_statistics(stats, logger=default_logger):
     for key, val in stats.items():
         if isinstance(val, Texttable):

@@ -11,8 +11,7 @@
  limitations under the License.
 """
 
-from typing import TypeVar
-from abc import ABC, abstractmethod
+from nncf.config.config import NNCFConfig
 from copy import copy
 from functools import partial
 
@@ -21,57 +20,32 @@ from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from nncf.api.compression import CompressionScheduler
-from nncf.api.compression import CompressionLevel
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.registry import Registry
+from nncf.structures import TrainEpochArgs
+
+from nncf.common.utils.backend import __nncf_backend__
+if __nncf_backend__ == 'Torch':
+    from nncf.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner as \
+        AccuracyAwareTrainingRunner
 
 
-ModelType = TypeVar('ModelType')
 ACCURACY_AWARE_CONTROLLERS = Registry('accuracy_aware_controllers')
-
-
-class TrainingRunner(ABC):
-
-    @abstractmethod
-    def train_epoch(self, model: ModelType, compression_controller: CompressionAlgorithmController):
-        pass
-
-    @abstractmethod
-    def validate(self, model: ModelType, compression_controller: CompressionAlgorithmController):
-        pass
-
-    @abstractmethod
-    def dump_checkpoint(self, model: ModelType, compression_controller: CompressionAlgorithmController):
-        pass
-
-    @abstractmethod
-    def configure_optimizers(self):
-        pass
-
-    @abstractmethod
-    def reset_training(self):
-        pass
-
-    @abstractmethod
-    def retrieve_original_accuracy(self, model):
-        pass
-
-
-class StubCompressionScheduler(CompressionScheduler):
-
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
 
 
 # pylint: disable=E1101
 def run_accuracy_aware_compressed_training(model,
                                            compression_controller: CompressionAlgorithmController,
-                                           runner: TrainingRunner):
+                                           nncf_config: NNCFConfig):
 
+
+    accuracy_aware_controller, accuracy_aware_config = get_controller_for_acc_aware(compression_controller,
+                                                                                    nncf_config)
+    train_epoch_args = nncf_config.get_extra_struct(TrainEpochArgs)
+
+    runner = AccuracyAwareTrainingRunner(accuracy_aware_config, train_epoch_args)
     runner.retrieve_original_accuracy(model)
 
-    accuracy_aware_controller = determine_compression_variable_controller(compression_controller)
     if accuracy_aware_controller is None:
         raise RuntimeError('No compression algorithm supported by the accuracy-aware training '
                            'runner was specified in the config')
@@ -137,18 +111,23 @@ def run_initial_training_phase(model, accuracy_aware_controller, runner):
     nncf_logger.info('Accuracy budget value after training is {}'.format(runner.accuracy_bugdet))
 
 
-def determine_compression_variable_controller(compression_controller):
-    accuracy_aware_controllers = ACCURACY_AWARE_CONTROLLERS.registry_dict.values()
+def get_controller_for_acc_aware(compression_controller, nncf_config):
+    accuracy_aware_controllers = ACCURACY_AWARE_CONTROLLERS.registry_dict
+    compression_configs = nncf_config.get('compression', {})
+    comp_algorithm_params_dict = {compression_config['algorithm']: compression_config
+                                  for compression_config in compression_configs}
     if not isinstance(compression_controller, CompositeCompressionAlgorithmController):
-        for ctrl_type in accuracy_aware_controllers:
+        for algo_name, ctrl_type in accuracy_aware_controllers.items():
             if isinstance(compression_controller, ctrl_type):
-                return compression_controller
-        return None
+                acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
+                return compression_controller, acc_aware_config
     for controller in compression_controller.child_ctrls:
-        for ctrl_type in accuracy_aware_controllers:
+        for algo_name, ctrl_type in accuracy_aware_controllers.items():
             if isinstance(controller, ctrl_type):
-                return controller
+                acc_aware_config = comp_algorithm_params_dict[algo_name].get('accuracy_aware_training', None)
+                return controller, acc_aware_config
     return None
+
 
 
 def update_target_compression_rate(accuracy_aware_controller, runner):
@@ -179,7 +158,8 @@ def determine_compression_rate_step_value(runner, current_compression_rate,
 
 def uniform_decrease_compression_step_update(runner):
     best_accuracy_budget_sign = np.sign(runner.best_val_metric_value - runner.minimal_tolerable_accuracy)
-    if runner.was_compression_increased_on_prev_step != best_accuracy_budget_sign:
+    if runner.was_compression_increased_on_prev_step is not None and \
+        runner.was_compression_increased_on_prev_step != best_accuracy_budget_sign:
         runner.compression_rate_step *= runner.step_reduction_factor
     return best_accuracy_budget_sign * runner.compression_rate_step
 
