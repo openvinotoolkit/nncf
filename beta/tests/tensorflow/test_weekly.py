@@ -21,8 +21,8 @@ import pytest
 from pytest import approx
 
 from beta.tests.conftest import PROJECT_ROOT
-from tests.helpers import Command
-from tests.helpers import get_cli_dict_args
+from tests.common.command import Command
+from tests.common.helpers import get_cli_dict_args
 
 EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 

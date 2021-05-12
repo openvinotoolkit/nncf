@@ -23,7 +23,7 @@ from pytest import approx
 from examples.common.utils import get_name
 from tests.conftest import TEST_ROOT
 from tests.helpers import Command
-from tests.helpers import get_cli_dict_args
+from tests.common.helpers import get_cli_dict_args
 from tests.test_sanity_sample import create_command_line
 
 # sample
