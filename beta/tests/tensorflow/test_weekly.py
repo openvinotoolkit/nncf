@@ -224,6 +224,14 @@ def get_config_name(config_path):
     return os.path.splitext(base)[0]
 
 
+def get_actual_acc(metrics_path):
+    assert os.path.exists(metrics_path)
+    with open(metrics_path) as metrics_file:
+        metrics = json.load(metrics_file)
+        actual_acc = metrics['Accuracy']
+    return actual_acc
+
+
 @pytest.fixture(scope='module', params=CONFIG_PARAMS,
                 ids=['-'.join([p[0]['sample_type'], get_config_name(p[1]['config'])]) for p in CONFIG_PARAMS])
 def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
@@ -239,10 +247,11 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
         args[execution_arg] = None
     checkpoint_save_dir = str(tmp_path_factory.mktemp('models'))
     checkpoint_save_dir = os.path.join(checkpoint_save_dir, execution_arg.replace('-', '_'))
-    args['checkpoint-save-dir'] = checkpoint_save_dir
     metric_save_dir = str(tmp_path_factory.mktemp('metrics'))
     metric_save_dir = os.path.join(metric_save_dir, execution_arg.replace('-', '_'))
-    args['metrics-dump-path'] = metric_save_dir
+    model_name = get_config_name(args['config'])
+    args['metrics-dump'] = os.path.join(metric_save_dir, f'{model_name}_metrics.json')
+    args['checkpoint-save-dir'] = os.path.join(checkpoint_save_dir, model_name)
     if dataset_dir:
         args['data'] = dataset_dir
     return {
@@ -256,21 +265,12 @@ def test_weekly_train(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
-
     args['mode'] = 'train'
-    model_name = get_config_name(args['config'])
-    args['log-dir'] = os.path.join(args['checkpoint-save-dir'], model_name)
-    args['metrics-dump'] = os.path.join(args['metrics-dump-path'], f'{model_name}_train_metrics.json')
 
-    del args['metrics-dump-path']
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
     runner.run(timeout=threading.TIMEOUT_MAX)
 
-    assert os.path.exists(args['metrics-dump'])
-    with open(args['metrics-dump']) as metric_file:
-        metrics = json.load(metric_file)
-        actual_acc = metrics['Accuracy']
-
+    actual_acc = get_actual_acc(args['metrics-dump'])
     ref_acc = tc['expected_accuracy']
     better_accuracy_tolerance = 3
     tolerance = tc['absolute_tolerance_train'] if actual_acc < ref_acc else better_accuracy_tolerance
@@ -282,24 +282,16 @@ def test_weekly_eval_trained(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
-
     args['mode'] = 'test'
-    model_name = get_config_name(args['config'])
-    args['log-dir'] =  os.path.join(args['checkpoint-save-dir'], model_name)
-    args['resume'] = os.path.join(args['checkpoint-save-dir'], model_name)
 
-    args['metrics-dump'] = os.path.join(args['metrics-dump-path'], f'{model_name}_eval_metrics.json')
+    assert os.path.exists(args['checkpoint-save-dir'])
+    args['resume'] = args['checkpoint-save-dir']
     if 'weights' in args:
         del args['weights']
 
-    del args['metrics-dump-path']
     runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
     runner.run(timeout=threading.TIMEOUT_MAX)
 
-    assert os.path.exists(args['metrics-dump'])
-    with open(args['metrics-dump']) as metric_file:
-        metrics = json.load(metric_file)
-        actual_acc = metrics['Accuracy']
-
+    actual_acc = get_actual_acc(args['metrics-dump'])
     ref_acc = tc['expected_accuracy']
     assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_eval'])

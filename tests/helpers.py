@@ -291,7 +291,8 @@ if __nncf_backend__ == 'Torch':
         return compressed_model, composite_builder
 
 
-    def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig, train_loader: DataLoader) -> nn.Module:
+    def create_initialized_compressed_model(model: nn.Module, config: NNCFConfig,
+                                            train_loader: DataLoader) -> nn.Module:
         config = register_default_init_args(deepcopy(config), train_loader, nn.MSELoss)
         model, _compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
         return model
