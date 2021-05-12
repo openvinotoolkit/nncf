@@ -20,9 +20,10 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.utils.registry import Registry
 
 
@@ -344,7 +345,7 @@ class PruningOperationsMetatypeRegistry(Registry):
             super_register(obj, cls_name)
             op_names = obj.get_all_op_aliases()
             for name in op_names:
-                name = self.get_version_agnostic_name(name)
+                name = get_version_agnostic_name(name)
                 if name not in self._op_name_to_op_class:
                     self._op_name_to_op_class[name] = obj
                 else:
@@ -358,7 +359,3 @@ class PruningOperationsMetatypeRegistry(Registry):
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
-
-    @staticmethod
-    def get_version_agnostic_name(name):
-        raise NotImplementedError

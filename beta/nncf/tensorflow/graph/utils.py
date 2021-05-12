@@ -17,7 +17,7 @@ import inspect
 import tensorflow as tf
 
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFNode
 
 SHARED_OPERATION_MARK = '^'
 

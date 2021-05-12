@@ -19,7 +19,7 @@ from torch import Tensor
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
-from nncf.common.os import safe_open
+from nncf.common.utils.os import safe_open
 from nncf.dynamic_graph.trace_tensor import TracedTensor, flatten_args
 from nncf.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
 
@@ -171,8 +171,8 @@ def patch_torch_operators():
     # patch operators
     import torch.nn.functional as F
     import torch
-    from nncf.graph.operator_metatypes import OPERATOR_METATYPES
-    for op_meta_class in OPERATOR_METATYPES.registry_dict.values():  # type: OperatorMetatype
+    from nncf.graph.operator_metatypes import PT_OPERATOR_METATYPES
+    for op_meta_class in PT_OPERATOR_METATYPES.registry_dict.values():  # type: OperatorMetatype
         if op_meta_class.torch_nn_functional_patch_spec is not None:
             ps = op_meta_class.torch_nn_functional_patch_spec
             patch_namespace_by_patchspec(F, ps)

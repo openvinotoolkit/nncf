@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from typing import Union
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
 from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
@@ -26,8 +26,9 @@ from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
-TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
+TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
 def _get_types(expression):

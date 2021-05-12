@@ -15,13 +15,7 @@ import json
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import NamedTuple
-from typing import Set
-from typing import Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Set, Tuple
 
 import torch
 import warnings
@@ -32,9 +26,9 @@ from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss
 
-from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import Scope
 from nncf.quantization.hessian_trace import HessianTraceEstimator

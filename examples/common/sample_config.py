@@ -18,7 +18,7 @@ import argparse
 import os
 
 from nncf import NNCFConfig
-from nncf.common.os import safe_open
+from nncf.common.utils.os import safe_open
 
 try:
     import jstyleson as json
