@@ -29,10 +29,30 @@
     "compression": [
         {
             "algorithm": "knowledge_distillation",
-            "type": "mse"
+            "is_softmax": true
         },
         {
-            "...": "..."
+            "algorithm": "magnitude_sparsity",
+            "sparsity_init": 0.2,
+            "params": {
+                "schedule": "multistep",
+                "multistep_steps": [
+                    2,
+                    4,
+                    8,
+                    15
+                ],
+                "multistep_sparsity_levels": [
+                    0.2,
+                    0.3,
+                    0.4,
+                    0.5,
+                    0.6
+                ]
+            }
+        },
+        {
+            "algorithm": "quantization"
         }
     ]
 }

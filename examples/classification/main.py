@@ -411,7 +411,7 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
         criterion_loss = criterion_fn(output, target, criterion)
 
         # compute compression loss
-        compression_loss = compression_ctrl.loss(output, input_)
+        compression_loss = compression_ctrl.loss(output)
 
         loss = criterion_loss + compression_loss
 

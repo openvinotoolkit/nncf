@@ -40,7 +40,7 @@ class KDLossCalculator(PTCompressionLoss):
     def forward(self, input_=None, target=None):
         # input_ is compressed model output
         # target is input
-        if input_ is None or target is None:
+        if input_ is None:
             raise ValueError('KDLoss entries cannot be None. Check compression loss arguments.')
 
         def is_loss(obj):
@@ -56,11 +56,7 @@ class KDLossCalculator(PTCompressionLoss):
                     return True
             return False
 
-        # get outputs from nncf_model
-        # nncf_model.get_register_modules_outputs()
-        #with torch.no_grad():
-        #    ref_outputs_0 = self.original_model(target)
-
+        # with DP outputs / gpu count need to concat outputs
         ref_outputs = self._target_model.get_registered_modules_for_parallel_exec_outputs(KD_MODULE_NAME)
 
         compressed_model_outputs = []
@@ -88,8 +84,6 @@ class KnowledgeDistillationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         self.original_model = deepcopy(target_model.nncf_module)
-        #target_model.register_module_for_parallel_execution(self.original_model, KD_MODULE_NAME, is_traced=False)
-        #self.original_model = torch.nn.DataParallel(self.original_model)
         return PTTransformationLayout()
 
     def build_controller(self, target_model):

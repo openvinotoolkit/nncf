@@ -400,7 +400,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
-        self._registered_modules_for_parallel_exec = {}
+        self._registered_modules_for_parallel_exec = nn.ModuleDict()
+        self._modules_for_parallel_exec = {}
+
 
         try:
             device = next(module.parameters()).device
@@ -476,9 +478,10 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = self.get_nncf_wrapped_model()(*args, **kwargs)
             retval = replicate_same_tensors(retval)
             retval = self._wrap_outputs_fn(retval)
-        for module in self._registered_modules_for_parallel_exec.values():
+
+        for key, module in self._registered_modules_for_parallel_exec.items():
             with torch.no_grad():
-                module['outputs'] = module['module'](*args, **kwargs)
+                self._modules_for_parallel_exec[key]['outputs'] = module(*args, **kwargs)
             #with ExitStack() as stack:
             #    if module['is_traced']:
             #        stack.enter_context(self._compressed_context)
@@ -488,11 +491,12 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         return retval
 
     def register_module_for_parallel_exec(self, module, MODULE_NAME, is_traced=False, no_grad=True):
-        self._registered_modules_for_parallel_exec[MODULE_NAME] = {'module': module, 'outputs': None,
+        self._registered_modules_for_parallel_exec.update({MODULE_NAME: module})
+        self._modules_for_parallel_exec[MODULE_NAME] = {'module': module, 'outputs': None,
                                                                        'is_traced': is_traced, 'no_grad': no_grad}
 
     def get_registered_modules_for_parallel_exec_outputs(self, MODULE_NAME):
-        return self._registered_modules_for_parallel_exec[MODULE_NAME]['outputs']
+        return self._modules_for_parallel_exec[MODULE_NAME]['outputs']
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
         """
