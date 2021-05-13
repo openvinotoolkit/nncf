@@ -8,7 +8,7 @@ from nncf import create_compressed_model
 from nncf import register_default_init_args
 from nncf import NNCFConfig
 
-from tests.helpers import create_mock_dataloader
+from tests.helpers import create_random_mock_dataloader
 
 
 class TestModelWithChangedTrain(nn.Module):
@@ -62,17 +62,17 @@ def worker(rank: int, world_size: int) -> None:
             }
         }
     })
-    dataloader = create_mock_dataloader(nncf_config, 10)
+    dataloader = create_random_mock_dataloader(nncf_config, num_samples=10)
     register_default_init_args(nncf_config, dataloader)
 
     _, compressed_model = create_compressed_model(model, nncf_config)
 
     # At this part the additional processes may be freezing
 
-    compressed_model = torch.nn.parallel.DistributedDataParallel(compressed_model, device_ids=[rank])
+    _ = torch.nn.parallel.DistributedDataParallel(compressed_model, device_ids=[rank])
 
 
-@pytest.mark.parametrize('waiting_time', [30.0])
+@pytest.mark.parametrize('waiting_time', [20.0])
 def test_is_ddp_frezing(waiting_time: float) -> None:
     # Number of processes the same as GPU count
     n_procs = torch.cuda.device_count()
