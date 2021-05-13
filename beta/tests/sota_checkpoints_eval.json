@@ -311,7 +311,8 @@
                     "compression_description":"INT8",
                     "batch_per_gpu": 15,
                     "reverse_input_channels": true,
-                    "scale_value": "Placeholder[255]"
+                    "scale_value": "Placeholder[255]",
+                    "diff_target_max": 0.15
                 },
                 "yolo_v4_sparsity_50": {
                     "config":"examples/tensorflow/object_detection/configs/sparsity/yolo_v4_coco_magnitude_sparsity.json",
