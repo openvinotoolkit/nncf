@@ -252,11 +252,11 @@ def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
     compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
     stats = compression_ctrl.statistics()
 
-    expected = [(module_name_conv1, 0.334), (module_name_conv2, 0.219)]
+    expected = [(module_name_conv1, 0.3344823), (module_name_conv2, 0.2191864)]
     for idx, layer_info in enumerate(stats.thresholds):
         expected_name, expected_threshold = expected[idx]
         assert layer_info.name == expected_name
-        assert layer_info.threshold == expected_threshold
+        assert pytest.approx(layer_info.threshold) == expected_threshold
 
 
 def test_magnitude_algo_can_calculate_sparsity_rate_for_one_sparsified_module():
