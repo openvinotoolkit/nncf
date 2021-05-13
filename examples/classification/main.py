@@ -35,6 +35,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_execution_mode, \
@@ -457,9 +458,9 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).as_dict().items():
-                if isinstance(stat_value, (int, float)):
-                    config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
+            statistics = compression_ctrl.statistics(quickly_collected_only=True)
+            for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
 def validate(val_loader, model, criterion, config):

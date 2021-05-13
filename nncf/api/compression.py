@@ -34,14 +34,6 @@ class Statistics(ABC):
         :return: A representation of the statistics as a human-readable string.
         """
 
-    @abstractmethod
-    def as_dict(self) -> Dict[str, Any]:
-        """
-        Returns a representation of the statistics as built-in data types.
-
-        :return: A representation of the statistics as built-in data types.
-        """
-
 
 class CompressionLoss(ABC):
     """

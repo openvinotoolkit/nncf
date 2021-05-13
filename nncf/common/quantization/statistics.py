@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 
 from nncf.api.compression import Statistics
 from nncf.common.utils.helpers import create_table
@@ -71,16 +71,6 @@ class MemoryConsumptionStatistics(Statistics):
         pretty_string = f'Statistics of the memory consumption:\n{memory_consumption_string}'
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'fp32_weight_size': self.fp32_weight_size,
-            'quantized_weight_size': self.quantized_weight_size,
-            'max_fp32_activation_size': self.max_fp32_activation_size,
-            'max_compressed_activation_size': self.max_compressed_activation_size,
-            'weight_memory_consumption_decrease': self.weight_memory_consumption_decrease,
-        }
-        return stats
-
 
 class QuantizersCounter:
     def __init__(self,
@@ -106,16 +96,6 @@ class QuantizersCounter:
         self.num_unsigned = num_unsigned
         self.num_per_tensor = num_per_tensor
         self.num_per_channel = num_per_channel
-
-    def as_dict(self) -> Dict[str, Any]:
-        return {
-            'num_symmetric': self.num_symmetric,
-            'num_asymmetric': self.num_asymmetric,
-            'num_signed': self.num_signed,
-            'num_unsigned': self.num_unsigned,
-            'num_per_tensor': self.num_per_tensor,
-            'num_per_channel': self.num_per_channel,
-        }
 
 
 class QuantizationShareStatistics(Statistics):
@@ -177,17 +157,6 @@ class QuantizationShareStatistics(Statistics):
         pretty_string = f'Statistics of the quantization share:\n{qshare_string}'
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'wq_total_num': self.wq_total_num,
-            'aq_total_num': self.aq_total_num,
-            'wq_potential_num': self.wq_potential_num,
-            'aq_potential_num': self.aq_potential_num,
-            'wq_counter': self.wq_counter.as_dict(),
-            'aq_counter': self.aq_counter.as_dict(),
-        }
-        return stats
-
 
 class BitwidthDistributionStatistics(Statistics):
     """
@@ -233,13 +202,6 @@ class BitwidthDistributionStatistics(Statistics):
         pretty_string = f'Statistics of the bitwidth distribution:\n{distribution_string}'
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'num_wq_per_bitwidth': self.num_wq_per_bitwidth,
-            'num_aq_per_bitwidth': self.num_aq_per_bitwidth,
-        }
-        return stats
-
 
 class QuantizationConfigurationStatistics(Statistics):
     """
@@ -267,13 +229,6 @@ class QuantizationConfigurationStatistics(Statistics):
         qc_string = create_table(header, rows)
         pretty_string = f'Statistics of the quantization configuration:\n{qc_string}'
         return pretty_string
-
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'quantized_edges_in_cfg': self.quantized_edges_in_cfg,
-            'total_edges_in_cfg': self.total_edges_in_cfg,
-        }
-        return stats
 
 
 class QuantizationStatistics(Statistics):
@@ -325,14 +280,3 @@ class QuantizationStatistics(Statistics):
             '\n\n'.join(pretty_strings)
         )
         return pretty_string
-
-    def as_dict(self) -> Dict[str, Any]:
-        algorithm = 'quantization'
-        stats = {
-            f'{algorithm}/ratio_of_enabled_quantizations': self.ratio_of_enabled_quantizations,
-            f'{algorithm}/quantization_share_statistics': self.quantization_share_statistics.as_dict(),
-            f'{algorithm}/bitwidth_distribution_statistics': self.bitwidth_distribution_statistics.as_dict(),
-            f'{algorithm}/memory_consumption_statistics': self.memory_consumption_statistics.as_dict(),
-            f'{algorithm}/quantization_configuration_statistics': self.quantization_configuration_statistics.as_dict(),
-        }
-        return stats

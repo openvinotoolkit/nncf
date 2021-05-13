@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Any
+from typing import List
 
 from nncf.api.compression import Statistics
 from nncf.common.utils.helpers import create_table
@@ -45,22 +45,6 @@ class PrunedLayerSummary:
         self.weight_pruning_level = weight_pruning_level
         self.mask_pruning_level = mask_pruning_level
         self.filter_pruning_level = filter_pruning_level
-
-    def as_dict(self) -> Dict[str, Any]:
-        """
-        Returns a representation of the pruned layer's summary as built-in data types.
-
-        :return: A representation of the sparsified layer's summary as built-in data types.
-        """
-        summary = {
-            'name': self.name,
-            'weight_shape': self.weight_shape,
-            'mask_shape': self.mask_shape,
-            'weight_pruning_level': self.weight_pruning_level,
-            'mask_pruning_level': self.mask_pruning_level,
-            'filter_pruning_level': self.filter_pruning_level,
-        }
-        return summary
 
 
 class PrunedModelStatistics(Statistics):
@@ -107,13 +91,6 @@ class PrunedModelStatistics(Statistics):
 
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'pruning_level': self.pruning_level,
-            'pruned_layers_summary': [s.as_dict() for s in self.pruned_layers_summary],
-        }
-        return stats
-
 
 class FilterPruningStatistics(Statistics):
     """
@@ -150,15 +127,3 @@ class FilterPruningStatistics(Statistics):
             f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
         )
         return pretty_string
-
-    def as_dict(self) -> Dict[str, Any]:
-        algorithm = 'filter_pruning'
-        model_statistics = self.model_statistics.as_dict()
-        stats = {
-            f'{algorithm}/pruning_level_for_model': model_statistics['pruning_level'],
-            f'{algorithm}/pruning_statistic_by_layer': model_statistics['pruned_layers_summary'],
-            f'{algorithm}/flops_pruning_level': self.flops_pruning_level,
-            f'{algorithm}/full_flops': self.full_flops,
-            f'{algorithm}/current_flops': self.current_flops,
-        }
-        return stats

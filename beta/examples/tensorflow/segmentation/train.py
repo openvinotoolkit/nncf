@@ -18,6 +18,7 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from beta.nncf import create_compressed_model
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
 
@@ -196,9 +197,9 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
 
         statistics = compression_ctrl.statistics()
         logger.info(statistics.as_str())
-        statistics = {'compression/statistics/' + key: value
-                      for key, value in statistics.as_dict().items()
-                      if isinstance(value, (int, float))}
+        statistics = {
+            f'compression/statistics/{name}': value for name, value in prepare_for_tensorboard(statistics).items()
+        }
         compression_summary_writer(metrics=statistics,
                                    step=optimizer.iterations.numpy())
 

@@ -55,15 +55,6 @@ class CompositeStatistics(Statistics):
         pretty_string = '\n\n'.join([stats.as_str() for stats in self.child_statistics])
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        """
-        Calls as_dict() method for all children and returns a sum-up dictionary.
-        """
-        stats = {}
-        for statistics in self.child_statistics:
-            stats.update(statistics.as_dict())
-        return stats
-
 
 class CompositeCompressionLoss(CompressionLoss):
     """

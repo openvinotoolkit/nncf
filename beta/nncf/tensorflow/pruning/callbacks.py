@@ -26,7 +26,7 @@ class PruningStatisticsCallback(StatisticsCallback):
 
         ms = statistics.model_statistics  # type: SparsifiedModelStatistics
         tensorboard_statistics = {
-            f'{base_prefix}/pruning_level': ms.pruning_level,
+            f'{base_prefix}/pruning_level_for_model': ms.pruning_level,
         }
 
         for ls in ms.pruned_layers_summary:

@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import List, Dict, Any
+from typing import List
 
 from nncf.api.compression import Statistics
 from nncf.common.utils.helpers import create_table
@@ -39,20 +39,6 @@ class SparsifiedLayerSummary:
         self.weight_shape = weight_shape
         self.sparsity_level = sparsity_level
         self.weight_percentage = weight_percentage
-
-    def as_dict(self) -> Dict[str, Any]:
-        """
-        Returns a representation of the sparsified layer's summary as built-in data types.
-
-        :return: A representation of the sparsified layer's summary as built-in data types.
-        """
-        summary = {
-            'name': self.name,
-            'weight_shape': self.weight_shape,
-            'sparsity_level': self.sparsity_level,
-            'weight_percentage': self.weight_percentage,
-        }
-        return summary
 
 
 class SparsifiedModelStatistics(Statistics):
@@ -99,25 +85,11 @@ class SparsifiedModelStatistics(Statistics):
         )
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        stats = {
-            'sparsity_level': self.sparsity_level,
-            'sparsity_level_for_layers': self.sparsity_level_for_layers,
-            'sparsified_layers_summary': [s.as_dict() for s in self.sparsified_layers_summary],
-        }
-        return stats
-
 
 class LayerThreshold:
     def __init__(self, name: str, threshold: float):
         self.name = name
         self.threshold = threshold
-
-    def as_dict(self) -> Dict[str, Any]:
-        return {
-            'name': self.name,
-            'threshold': self.threshold,
-        }
 
 
 class MagnitudeSparsityStatistics(Statistics):
@@ -149,17 +121,6 @@ class MagnitudeSparsityStatistics(Statistics):
         )
         return pretty_string
 
-    def as_dict(self) -> Dict[str, Any]:
-        algorithm = 'magnitude_sparsity'
-        model_statistics = self.model_statistics.as_dict()
-        stats = {
-            f'{algorithm}/sparsity_level_for_model': model_statistics['sparsity_level'],
-            f'{algorithm}/sparsity_level_for_sparsified_layers': model_statistics['sparsity_level_for_layers'],
-            f'{algorithm}/sparsity_statistic_by_layer': model_statistics['sparsified_layers_summary'],
-            f'{algorithm}/thresholds': [s.as_dict() for s in self.thresholds],
-        }
-        return stats
-
 
 class ConstSparsityStatistics(Statistics):
     """
@@ -177,16 +138,6 @@ class ConstSparsityStatistics(Statistics):
     def as_str(self) -> str:
         pretty_string = self.model_statistics.as_str()
         return pretty_string
-
-    def as_dict(self) -> Dict[str, Any]:
-        algorithm = 'const_sparsity'
-        model_statistics = self.model_statistics.as_dict()
-        stats = {
-            f'{algorithm}/sparsity_level_for_model': model_statistics['sparsity_level'],
-            f'{algorithm}/sparsity_level_for_sparsified_layers': model_statistics['sparsity_level_for_layers'],
-            f'{algorithm}/sparsity_statistic_by_layer': model_statistics['sparsified_layers_summary'],
-        }
-        return stats
 
 
 class RBSparsityStatistics(Statistics):
@@ -228,16 +179,3 @@ class RBSparsityStatistics(Statistics):
             f'Statistics the RB-sparsity algorithm:\n{algorithm_string}'
         )
         return pretty_string
-
-    def as_dict(self) -> Dict[str, Any]:
-        algorithm = 'rb_sparsity'
-        model_statistics = self.model_statistics.as_dict()
-        stats = {
-            f'{algorithm}/sparsity_level_for_model': model_statistics['sparsity_level'],
-            f'{algorithm}/sparsity_level_for_sparsified_layers': model_statistics['sparsity_level_for_layers'],
-            f'{algorithm}/sparsity_statistic_by_layer': model_statistics['sparsified_layers_summary'],
-            f'{algorithm}/masks_consistency': self.masks_consistency,
-            f'{algorithm}/target_level': self.target_level,
-            f'{algorithm}/mean_sparse_prob': self.mean_sparse_prob,
-        }
-        return stats

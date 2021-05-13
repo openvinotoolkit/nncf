@@ -61,6 +61,3 @@ class StubStatistics(Statistics):
 
     def as_str(self) -> str:
         return ''
-
-    def as_dict(self) -> Dict[str, Any]:
-        return {}

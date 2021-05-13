@@ -41,6 +41,16 @@ def get_basic_quantization_config():
     return config
 
 
+def as_dict(obj):
+    if isinstance(obj, list):
+        return [as_dict(value) for value in obj]
+    if isinstance(obj, dict):
+        return {key: as_dict(value) for key, value in obj.items()}
+    if hasattr(obj, '__dict__'):
+        return {key: as_dict(value) for key, value in obj.__dict__.items() if not key.startswith('_')}
+    return obj
+
+
 TestStruct = namedtuple(
     'TestStruct', ('initializers', 'activations', 'weights', 'ignored_scopes', 'target_device', 'expected'))
 
@@ -140,7 +150,7 @@ def test_quantization_share_and_bitwidth_distribution_stats(data):
     statistics = ctrl.statistics()
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = getattr(statistics, attr_name).as_dict()
+        actual_value = as_dict(getattr(statistics, attr_name))
         assert expected_value == actual_value
 
 
@@ -219,7 +229,7 @@ def test_memory_consumption_stats(data):
     statistics = ctrl.statistics()
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = getattr(statistics, attr_name).as_dict()
+        actual_value = as_dict(getattr(statistics, attr_name))
         assert expected_value == pytest.approx(actual_value, rel=1e-2)
 
 
@@ -270,5 +280,5 @@ def test_quantization_configuration_stats(data):
     statistics = ctrl.statistics()
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = getattr(statistics, attr_name).as_dict()
+        actual_value = as_dict(getattr(statistics, attr_name))
         assert expected_value == actual_value

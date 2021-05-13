@@ -42,8 +42,8 @@ class SparsityStatisticsCallback(StatisticsCallback):
 
         ms = statistics.model_statistics  # type: SparsifiedModelStatistics
         tensorboard_statistics = {
-            f'{base_prefix}/sparsity_level': ms.sparsity_level,
-            f'{base_prefix}/sparsity_level_for_layers': ms.sparsity_level_for_layers,
+            f'{base_prefix}/sparsity_level_for_model': ms.sparsity_level,
+            f'{base_prefix}/sparsity_level_for_sparsified_layers': ms.sparsity_level_for_layers,
         }
 
         for ls in ms.sparsified_layers_summary:
