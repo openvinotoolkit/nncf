@@ -289,10 +289,9 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 delta = agent.get_delta()
 
                 bit_stats_tt = env.qctrl.statistics().bitwidth_distribution_statistics.as_str()
-                bit_stats_tt.set_max_width(100)
                 bit_stats_df = pd.read_csv(
                     StringIO(re.sub(
-                        r'[-+|=]', '', bit_stats_tt.draw())), sep=r'\s{2,}', engine='python').reset_index(drop=True)
+                        r'[-+|=]', '', bit_stats_tt)), sep=r'\s{2,}', engine='python').reset_index(drop=True)
 
                 if final_reward > best_reward:
                     best_reward = final_reward

@@ -11,8 +11,6 @@
  limitations under the License.
 """
 
-from abc import abstractmethod
-
 from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks

@@ -271,10 +271,9 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-            for key, value in stats.items():
-                if isinstance(value, (int, float)):
-                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
-                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+            for key, value in prepare_for_tensorboard(stats).items():
+                config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
 def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criterion_fn, optimizer,
