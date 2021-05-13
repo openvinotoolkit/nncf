@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.multiprocessing as mp
 import time
+from typing import Tuple
 from nncf import create_compressed_model
 from nncf import register_default_init_args
 from nncf import NNCFConfig
@@ -11,7 +12,8 @@ from tests.helpers import create_mock_dataloader
 
 
 class TestModelWithChangedTrain(nn.Module):
-    def __init__(self, in_out_channels=((1, 3), (3, 5), (5, 7), (7, 10)), freezing_stages=-1):
+    def __init__(self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)),
+                 freezing_stages: int = -1):
         super(TestModelWithChangedTrain, self).__init__()
         self.freezing_stages = freezing_stages
         self.features = nn.ModuleList()
@@ -22,7 +24,7 @@ class TestModelWithChangedTrain(nn.Module):
             block.append(nn.ReLU())
             self.features.append(block)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         for blocks in self.features:
             for module in blocks:
                 x = module(x)
@@ -36,7 +38,7 @@ class TestModelWithChangedTrain(nn.Module):
                     p.requires_grad = False
 
 
-def worker(rank, world_size):
+def worker(rank: int, world_size: int) -> None:
     torch.distributed.init_process_group(backend="nccl", init_method='tcp://127.0.0.1:8999',
                                          world_size=world_size, rank=rank)
     model = TestModelWithChangedTrain(freezing_stages=1)
@@ -71,7 +73,7 @@ def worker(rank, world_size):
 
 
 @pytest.mark.parametrize('waiting_time', [30.0])
-def test_is_ddp_frezing(waiting_time):
+def test_is_ddp_frezing(waiting_time: float) -> None:
     # Number of processes the same as GPU count
     n_procs = torch.cuda.device_count()
     ctx = mp.spawn(fn=worker, args=(n_procs,), nprocs=n_procs, join=False)
