@@ -408,9 +408,12 @@ def load_module_state(module: Module, state: NamedTuple, strict=False) -> None:
         try:
             ch.train(state.training_state[ch])
         except KeyError as err:
-            # if the modules name changed during forward  (e.g. LSTM block in our examples)
+            # KeyError could happen if the modules name were changed during forward
+            # (e.g. LSTM block in NNCF examples)
+            nncf_logger.warning(err)
             if strict:
                 nncf_logger.error(err)
+                return
 
     for p in module.parameters():
         p.requires_grad = state.requires_grad_state[p]
