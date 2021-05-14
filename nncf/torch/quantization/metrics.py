@@ -63,12 +63,6 @@ class QuantizationShareStatisticsCollector(StatisticsCollector):
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  build_time_info: QuantizationShareBuildTimeInfo):
-        """
-        Initializes collector of the quantization share statistics.
-
-        :param weight_quantizers: TODO
-        :param non_weight_quantizers: TODO
-        """
         self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
         self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
         self._info = build_time_info

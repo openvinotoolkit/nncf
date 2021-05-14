@@ -176,6 +176,6 @@ class RBSparsityStatistics(Statistics):
 
         pretty_string = (
             f'{self.model_statistics.as_str()}\n\n'
-            f'Statistics the RB-sparsity algorithm:\n{algorithm_string}'
+            f'Statistics of the RB-sparsity algorithm:\n{algorithm_string}'
         )
         return pretty_string

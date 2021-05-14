@@ -35,9 +35,9 @@ class PrunedLayerSummary:
         :param name: Layer's name.
         :param weight_shape: Weight's shape.
         :param mask_shape: Mask's shape.
-        :param weight_pruning_level: TODO
-        :param mask_pruning_level: TODO
-        :param filter_pruning_level: TODO
+        :param weight_pruning_level: Weight's pruning level.
+        :param mask_pruning_level: Mask's pruning level.
+        :param filter_pruning_level: Filter's pruning level.
         """
         self.name = name
         self.weight_shape = weight_shape
@@ -105,8 +105,8 @@ class FilterPruningStatistics(Statistics):
         Initializes statistics of the filter pruning algorithm.
 
         :param model_statistics: Statistics of the pruned model.
-        :param full_flops: TODO
-        :param current_flops: TODO
+        :param full_flops: Full FLOPS.
+        :param current_flops: Current FLOPS.
         """
         self.model_statistics = model_statistics
         self.full_flops = full_flops

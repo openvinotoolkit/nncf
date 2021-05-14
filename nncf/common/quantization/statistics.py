@@ -83,12 +83,12 @@ class QuantizersCounter:
         """
         Initializes quantizers counter.
 
-        :param num_symmetric: TODO
-        :param num_asymmetric: TODO
-        :param num_signed: TODO
-        :param num_unsigned: TODO
-        :param num_per_tensor: TODO
-        :param num_per_channel: TODO
+        :param num_symmetric: Number of symmetric quantizers.
+        :param num_asymmetric: Number of asymmetric quantizers.
+        :param num_signed: Number of signed quantizers.
+        :param num_unsigned: Number of unsigned quantizers.
+        :param num_per_tensor: Number of per-tensor quantizers.
+        :param num_per_channel: Number of per-channel quantizers.
         """
         self.num_symmetric = num_symmetric
         self.num_asymmetric = num_asymmetric
@@ -113,12 +113,12 @@ class QuantizationShareStatistics(Statistics):
         """
         Initializes statistics of the quantization share.
 
-        :param wq_total_num: TODO
-        :param aq_total_num: TODO
-        :param wq_potential_num: TODO
-        :param aq_potential_num: TODO
-        :param wq_counter: TODO
-        :param aq_counter: TODO
+        :param wq_total_num: Total number of weight quantizers.
+        :param aq_total_num: Total number of activation quantizers.
+        :param wq_potential_num: Potential number of weight quantizers.
+        :param aq_potential_num: Potential number of activation quantizers.
+        :param wq_counter: Weight quantizers counter.
+        :param aq_counter: Activation quantizers counter.
         """
         self.wq_total_num = wq_total_num
         self.aq_total_num = aq_total_num
@@ -169,8 +169,8 @@ class BitwidthDistributionStatistics(Statistics):
         """
         Initializes bitwidth distribution statistics.
 
-        :param num_wq_per_bitwidth: TODO
-        :param num_aq_per_bitwidth: TODO
+        :param num_wq_per_bitwidth: Number of weight quantizers per bit width.
+        :param num_aq_per_bitwidth: Number of activation quantizers per bit width.
         """
         self.num_wq_per_bitwidth = num_wq_per_bitwidth
         self.num_aq_per_bitwidth = num_aq_per_bitwidth
@@ -181,7 +181,7 @@ class BitwidthDistributionStatistics(Statistics):
         q_total_num = wq_total_num + aq_total_num
 
         bitwidths = self.num_wq_per_bitwidth.keys() | self.num_aq_per_bitwidth.keys()  # union of all bitwidths
-        bitwidths = sorted(bitwidths)
+        bitwidths = sorted(bitwidths, reverse=True)
 
         # Table creation
         header = ['Num bits (N)', 'N-bits WQs / Placed WQs', 'N-bits AQs / Placed AQs', 'N-bits Qs / Placed Qs']
@@ -212,8 +212,8 @@ class QuantizationConfigurationStatistics(Statistics):
         """
         Initializes statistics of the quantization configuration.
 
-        :param quantized_edges_in_cfg: TODO
-        :param total_edges_in_cfg: TODO
+        :param quantized_edges_in_cfg: Number of quantized edges in quantization configuration.
+        :param total_edges_in_cfg: Total number of edges in quantization configuration.
         """
         self.quantized_edges_in_cfg = quantized_edges_in_cfg
         self.total_edges_in_cfg = total_edges_in_cfg
@@ -245,11 +245,11 @@ class QuantizationStatistics(Statistics):
         """
         Initializes statistics of the quantization algorithm.
 
-        :param ratio_of_enabled_quantizations: TODO
-        :param quantization_share_statistics: TODO
-        :param bitwidth_distribution_statistics: TODO
-        :param memory_consumption_statistics: TODO
-        :param quantization_configuration_statistics: TODO
+        :param ratio_of_enabled_quantizations: Ratio of enabled quantizations.
+        :param quantization_share_statistics: Statistics of the quantization share.
+        :param bitwidth_distribution_statistics: Statistics of the bitwidth distribution.
+        :param memory_consumption_statistics: Statistics of the memory consumption.
+        :param quantization_configuration_statistics: Statistics of the quantization configuration.
         """
         self.ratio_of_enabled_quantizations = ratio_of_enabled_quantizations
         self.quantization_share_statistics = quantization_share_statistics
@@ -258,6 +258,14 @@ class QuantizationStatistics(Statistics):
         self.quantization_configuration_statistics = quantization_configuration_statistics
 
     def as_str(self) -> str:
+        pretty_strings = []
+
+        table_string = create_table(
+            header=['Statistic\'s name', 'Value'],
+            rows=[['Ratio of enabled quantizations', self.ratio_of_enabled_quantizations]]
+        )
+        pretty_strings.append(f'Statistics of the quantization algorithm:\n{table_string}')
+
         statistics = [
             self.quantization_share_statistics,
             self.bitwidth_distribution_statistics,
@@ -265,18 +273,9 @@ class QuantizationStatistics(Statistics):
             self.quantization_configuration_statistics
         ]
 
-        pretty_strings = []
         for stats in statistics:
             if stats:
                 pretty_strings.append(stats.as_str())
 
-        pretty_string = create_table(
-            header=['Statistic\'s name', 'Value'],
-            rows=[['Ratio of enabled quantizations', self.ratio_of_enabled_quantizations]]
-        )
-
-        pretty_string = (
-            f'Statistics of the quantization algorithm:\n{pretty_string}\n\n'
-            '\n\n'.join(pretty_strings)
-        )
+        pretty_string = '\n\n'.join(pretty_strings)
         return pretty_string
