@@ -10,8 +10,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
+from typing import NamedTuple
 from typing import Tuple
 from typing import Type
 
@@ -394,34 +395,38 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def save_module_training_state(module: Module, saved_state: Dict[Module, bool]) -> None:
-    for ch in module.children():
-        saved_state[ch] = ch.training
-        save_module_training_state(ch, saved_state)
+def save_module_state(module: Module, saved_state: NamedTuple) -> None:
+    for ch in module.modules():
+        saved_state.training_state[ch] = ch.training
+
+    for p in module.parameters():
+        saved_state.requires_grad_state[p] = p.requires_grad
 
 
-def load_module_training_state(module: Module, state: Dict[Module, bool], strict=False) -> None:
-    for ch in module.children():
+def load_module_state(module: Module, state: NamedTuple, strict=False) -> None:
+    for ch in module.modules():
         try:
-            ch.train(state[ch])
+            ch.train(state.training_state[ch])
         except KeyError as err:
             # if the modules name changed during forward  (e.g. LSTM block in our examples)
             if strict:
                 nncf_logger.error(err)
-                return
-        finally:
-            load_module_training_state(ch, state)
+
+    for p in module.parameters():
+        p.requires_grad = state.requires_grad_state[p]
 
 
 @contextmanager
 def training_mode_switcher(model: Module, is_training: bool = True):
-    saved_state = {}
-    save_module_training_state(model, saved_state)
+    State = namedtuple('State', ['training_state', 'requires_grad_state'])
+    training_state, requires_grad_state = {}, {}
+    saved_state = State(training_state, requires_grad_state)
+    save_module_state(model, saved_state)
     model.train(is_training)
     try:
         yield
     finally:
-        load_module_training_state(model, saved_state)
+        load_module_state(model, saved_state)
 
 
 def set_compression_parameters_requires_grad_true(module: Module):
