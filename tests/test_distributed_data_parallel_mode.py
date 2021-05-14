@@ -14,13 +14,13 @@ from tests.helpers import create_random_mock_dataloader
 class TestModelWithChangedTrain(nn.Module):
     def __init__(self, in_out_channels: Tuple[Tuple[int, int]] = ((1, 3), (3, 5), (5, 7), (7, 10)),
                  freezing_stages: int = -1):
-        super(TestModelWithChangedTrain, self).__init__()
+        super().__init__()
         self.freezing_stages = freezing_stages
         self.features = nn.ModuleList()
-        for i in range(len(in_out_channels)):
+        for i, in_out_ch in enumerate(in_out_channels):
             block = nn.ModuleList()
-            block.append(nn.Conv2d(*in_out_channels[i], 3))
-            block.append(nn.BatchNorm2d(in_out_channels[i][1]))
+            block.append(nn.Conv2d(*in_out_ch, 3))
+            block.append(nn.BatchNorm2d(in_out_ch[1]))
             block.append(nn.ReLU())
             self.features.append(block)
 
@@ -73,7 +73,7 @@ def worker(rank: int, world_size: int) -> None:
 
 
 @pytest.mark.parametrize('waiting_time', [20.0])
-def test_is_ddp_frezing(waiting_time: float) -> None:
+def test_is_ddp_freezing(waiting_time: float) -> None:
     # Number of processes the same as GPU count
     n_procs = torch.cuda.device_count()
     ctx = mp.spawn(fn=worker, args=(n_procs,), nprocs=n_procs, join=False)
