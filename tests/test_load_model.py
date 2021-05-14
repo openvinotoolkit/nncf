@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import os
 from typing import Dict
 from typing import List
 from typing import Set
 
-import os
 import pytest
 import torch
 
@@ -26,6 +26,8 @@ from nncf.checkpoint_loading import ProcessedKeys
 from nncf.checkpoint_loading import load_state
 from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
 from nncf.layers import NNCF_PADDING_VALUE_ATTR_NAME
+from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
 from tests.helpers import BasicConvTestModel
 from tests.quantization.test_functions import check_equal
 
@@ -110,6 +112,7 @@ class MatchKeyDesc:
         self.processed_keys = ProcessedKeys()
         self.is_resume = is_resume
         self.expects_error = expects_error
+        self.has_deprecation_warning = False
 
     def __str__(self):
         result = '-'.join(self.state_dict_to_load.keys()) + '__TO__' + '-'.join(self.model_state_dict.keys())
@@ -157,6 +160,10 @@ class MatchKeyDesc:
 
     def all_matched(self):
         self.matched(list(self.model_state_dict))
+        return self
+
+    def with_deprecation_warning(self):
+        self.has_deprecation_warning = True
         return self
 
 
@@ -215,12 +222,74 @@ MATCH_KEY_DESC_LIST = [
     MatchKeyDesc(num_loaded=0, expects_error=True)
         .keys_to_load(['module.nncf_module.1.1', 'module.2']).model_keys(['1', '2.2'])
         .all_not_matched(),
-    MatchKeyDesc(num_loaded=0, expects_error=True)
-        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2']).model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
-        .all_not_matched(),
-    MatchKeyDesc(num_loaded=2, is_resume=False)
+    MatchKeyDesc(num_loaded=2)
         .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2']).model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
         .all_matched(),
+
+    # can match legacy activation quantizer storage name
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
+                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP2])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    # can match new format of activation quantizer with |INPUT and |OUTPUT
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['RELU_0.' + OP1, 'RELU_0.' + OP2]).model_keys(['RELU_0|OUTPUT.' + OP1, 'RELU_0|INPUT.' + OP2])
+        .all_matched(),
+
+    # can match legacy activation quantizer + new format with |INPUT and |OUTPUT
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load([LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
+                       LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP2])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT.' + OP1,
+                     EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|INPUT.' + OP2])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    # can match unified FQ
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + LEGACY_ACT_STORAGE_NAME + '.RELU_1.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    MatchKeyDesc(num_loaded=1)
+        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .all_matched()
+        .with_deprecation_warning(),
+
+    # not matched common operation
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_1.' + OP2,
+                     'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1_NOT_PARAM]),
+
+    # not all unified scopes are matched: RELU_3 vs RELU_1
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1,
+                       'module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_2.' + OP1])
+        .model_keys([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .matched([EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
+        .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_NAME + '.RELU_3.' + OP1]),
 
     OptionalMatchKeyDesc(num_loaded=1)
         .keys_to_load([OP1_PREFIX])
@@ -255,7 +324,11 @@ def test_match_key(desc: MatchKeyDesc, mocker):
     desc.setup_test(mocker)
 
     key_matcher = KeyMatcher(desc.is_resume, desc.state_dict_to_load, desc.model_state_dict)
-    new_dict = key_matcher.run()
+    if desc.has_deprecation_warning:
+        with pytest.deprecated_call():
+            new_dict = key_matcher.run()
+    else:
+        new_dict = key_matcher.run()
     num_loaded_layers = len(new_dict)
 
     assert num_loaded_layers == desc.num_loaded

@@ -10,13 +10,12 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+import re
 import warnings
 from enum import Enum
 from typing import Dict
 from typing import List
 from typing import Set
-
-import re
 from typing import Tuple
 
 import torch
@@ -89,16 +88,17 @@ class ProcessedKeyStatus(Enum):
 
 class ProcessedKeys:
     """ Contains checkpoint keys with their status of matching with model keys """
+
     def __init__(self):
-        self._keys = {}  # type: Dict[ProcessedKeyStatus, List[str]]
+        self._keys = {}  # type: Dict[ProcessedKeyStatus, Set[str]]
         for key_status in ProcessedKeyStatus:
-            self._keys[key_status] = []
+            self._keys[key_status] = set()
 
     def add_key(self, key: str, status: ProcessedKeyStatus):
-        self._keys[status].append(key)
+        self._keys[status].add(key)
 
     def extend_keys(self, keys: List[str], status: ProcessedKeyStatus):
-        self._keys[status].extend(keys)
+        self._keys[status].update(keys)
 
     def add_skipped_and_missing_keys(self, model_state_dict: Dict[str, torch.Tensor]):
         all_processed_keys = []
@@ -143,11 +143,71 @@ class ProcessedKeys:
             nncf_logger.warning(error_msg)
 
 
+class NormalizedKeys:
+    """
+        Contains normalized form of parameters. It helps to discard irrelevant prefixes added during wrapping in
+        NNCFNetwork or DataParallel/DistributedDataParallel objects, to ignore the order of pre/post operations, to
+        handle legacy parameters' names and to match unified compression parameters from the separate ones.
+    """
+
+    def __init__(self, keys: List[str]):
+        self._collisions = []
+        self._norm_key_vs_orig_key_map = {}
+        self.is_unified_group_detected = False
+
+        for orig_key in keys:
+            normalized_keys = self._key_normalizer(orig_key)
+            if len(normalized_keys) > 1:
+                self.is_unified_group_detected = True
+            for normalized_key in normalized_keys:
+                if normalized_key in self._norm_key_vs_orig_key_map:
+                    self._collisions.append(orig_key)
+                self._norm_key_vs_orig_key_map[normalized_key] = orig_key
+
+    def __contains__(self, key: str):
+        return (key in self._norm_key_vs_orig_key_map) and (key not in self._collisions)
+
+    def __iter__(self):
+        return iter(self._norm_key_vs_orig_key_map)
+
+    def get_orig_key(self, normalized_key: str):
+        return self._norm_key_vs_orig_key_map[normalized_key]
+
+    @staticmethod
+    def _key_normalizer(key: str) -> List[str]:
+        new_key = key
+
+        match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
+        new_key = new_key if not match else new_key.replace(match.group(), 'operation')
+
+        from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
+        clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT']
+        for pattern in clip_patterns:
+            new_key = new_key.replace(pattern, '')
+        result = [new_key]
+
+        # cover unified FQ - external_quantizers.RELU_0;RELU_1;RELU_2.op
+        from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+        from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
+        if ';' in new_key and new_key.startswith((EXTERNAL_QUANTIZERS_STORAGE_NAME, LEGACY_ACT_STORAGE_NAME)):
+            group_of_keys = new_key.split(';')
+            last_key = group_of_keys[-1]
+            common_op = last_key.split('.')[-1]
+            result = [
+                group_of_keys[0] + '.' + common_op,
+                EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + last_key
+            ]
+            for middle_key in group_of_keys[1:-1]:
+                result.append(EXTERNAL_QUANTIZERS_STORAGE_NAME + '.' + middle_key + '.' + common_op)
+        return result
+
+
 class KeyMatcher:
     """
     Matches state_dict_to_load parameters to the model's state_dict parameters while discarding irrelevant prefixes
     added during wrapping in NNCFNetwork or DataParallel/DistributedDataParallel objects, skipping registered optional
-    parameters, and forms the model state dict with matched parameters.
+    parameters, handling legacy parameters' names, ignoring the order of pre/post operations, matching unified
+    compression parameters from the separate ones and forms the model state dict with matched parameters.
     """
 
     def __init__(self, is_resume: bool,
@@ -164,50 +224,33 @@ class KeyMatcher:
         """
         :return: the model state dict with matched parameters
         """
-        from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
-        clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.']
-
-        clipped_keys = list(self.model_state_dict.keys())
-        for pattern in clip_patterns:
-            for i, _ in enumerate(clipped_keys):
-                clipped_keys[i] = clipped_keys[i].replace(pattern, '')
-
-        clipped_key_to_model_key_dict = dict(zip(clipped_keys, self.model_state_dict.keys()))
-
-
-        norm_clipped_keys = {}
-        collisions = []
-        for clipped_key, orig_key in clipped_key_to_model_key_dict.items():
-            normalized_key = self._key_normalizer(clipped_key)
-            if normalized_key in norm_clipped_keys:
-                collisions.append(clipped_key)
-            norm_clipped_keys[normalized_key] = orig_key
+        normalized_model_keys = NormalizedKeys(list(self.model_state_dict.keys()))
+        normalized_keys_to_load = NormalizedKeys(list(self.state_dict_to_load.keys()))
 
         has_legacy_storage_keys = False
-        for (saved_key, saved_value) in self.state_dict_to_load.items():
-            clipped_saved_key = saved_key
-            for pattern in clip_patterns:
-                clipped_saved_key = clipped_saved_key.replace(pattern, '')
-
-            clipped_saved_key, did_replace = self._replace_legacy_act_quantizer_storage_name(
-                clipped_saved_key
+        for normalized_key_to_load in normalized_keys_to_load:
+            key_to_load = normalized_keys_to_load.get_orig_key(normalized_key_to_load)
+            processed_key_to_load, did_replace = self._replace_legacy_act_quantizer_storage_name(
+                normalized_key_to_load
             )
 
             if did_replace:
                 has_legacy_storage_keys = True
 
-            if clipped_saved_key in clipped_key_to_model_key_dict:
-                key = clipped_key_to_model_key_dict[clipped_saved_key]
-                self._check_parameter_size(key, saved_value)
-            else:
-                norm_clipped_saved_key = self._key_normalizer(clipped_saved_key)
-                in_norm_clipped = norm_clipped_saved_key in norm_clipped_keys
-                not_in_collisions = clipped_saved_key not in collisions
-                if in_norm_clipped and not_in_collisions and not self._is_resume:
-                    key = norm_clipped_keys[norm_clipped_saved_key]
-                    self._check_parameter_size(key, saved_value)
+            if processed_key_to_load in normalized_model_keys:
+                model_key = normalized_model_keys.get_orig_key(processed_key_to_load)
+                value_to_load = self.state_dict_to_load[key_to_load]
+                size_of_value_to_load = value_to_load.size()
+                size_of_model_value = self.model_state_dict[model_key].size()
+                if size_of_value_to_load == size_of_model_value:
+                    self._new_dict[model_key] = value_to_load
+                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.MATCHED)
                 else:
-                    self._processed_keys.add_key(saved_key, ProcessedKeyStatus.UNEXPECTED)
+                    nncf_logger.warning("Different size of value of '{}' in resuming dictionary ({}) and in model ({})"
+                                        .format(model_key, size_of_value_to_load, size_of_model_value, ))
+                    self._processed_keys.add_key(model_key, ProcessedKeyStatus.SIZE_MISMATCHED)
+            else:
+                self._processed_keys.add_key(key_to_load, ProcessedKeyStatus.UNEXPECTED)
 
         if has_legacy_storage_keys:
             warnings.warn('Legacy NNCF-enabled .pth checkpoint has been loaded! '
@@ -217,11 +260,18 @@ class KeyMatcher:
                           'This checkpoint will be loaded; update your checkpoint file by saving this model\'s'
                           'checkpoint file again.', category=DeprecationWarning)
 
+        if normalized_model_keys.is_unified_group_detected and not normalized_keys_to_load.is_unified_group_detected:
+            warnings.warn('Unified parameters are detected in the compressed model, but all parameters are independent '
+                          'and separate in the loading checkpoint. The unified parameters will be initialized by one of'
+                          'the corresponding separate parameter in the checkpoint. That may slightly degrade the '
+                          'accuracy, but should allow to not start training compression from scratch with unified '
+                          'params.', category=DeprecationWarning)
+
         self._processed_keys.add_skipped_and_missing_keys(self.model_state_dict)
         return self._new_dict
 
     @staticmethod
-    def _replace_legacy_act_quantizer_storage_name(checkpoint_key : str) -> Tuple[str, bool]:
+    def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
 
         from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
         from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
@@ -239,20 +289,3 @@ class KeyMatcher:
         """
         num_matched_params = len(self._new_dict)
         self._processed_keys.handle_problematic(self._is_resume, num_matched_params == self._num_params_to_load)
-
-    @staticmethod
-    def _key_normalizer(key: str) -> str:
-        new_key = key
-        match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
-        return new_key if not match else new_key.replace(match.group(), 'operation')
-
-    def _check_parameter_size(self, key: str, value_to_load: torch.Tensor):
-        size_of_value_to_load = value_to_load.size()
-        size = self.model_state_dict[key].size()
-        if size_of_value_to_load == size:
-            self._new_dict[key] = value_to_load
-            self._processed_keys.add_key(key, ProcessedKeyStatus.MATCHED)
-        else:
-            nncf_logger.warning("Different size of value of '{}' in resuming dictionary ({}) and in model ({})"
-                                .format(key, size_of_value_to_load, size, ))
-            self._processed_keys.add_key(key, ProcessedKeyStatus.SIZE_MISMATCHED)
