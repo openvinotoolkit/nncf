@@ -429,13 +429,6 @@ def training_mode_switcher(model: Module, is_training: bool = True):
         load_module_state(model, saved_state)
 
 
-def set_compression_parameters_requires_grad_true(module: Module):
-    for param in module.parameters():
-        if isinstance(param, CompressionParameter):
-            if torch.is_floating_point(param):
-                param.requires_grad_(True)
-
-
 def compute_FLOPs_hook(module, input_, output, dict_to_save, ctx: 'TracingContext'):
     if isinstance(module, (nn.Conv1d, nn.ConvTranspose1d, nn.Conv2d, nn.ConvTranspose2d, nn.Conv3d,
                            nn.ConvTranspose3d)):
