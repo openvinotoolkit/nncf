@@ -192,7 +192,8 @@ def main_worker(current_gpu, config: SampleConfig):
         cudnn.benchmark = True
 
     if is_main_process():
-        logger.info(compression_ctrl.statistics().as_str())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.as_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -221,7 +222,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
 
         # compute compression algo statistics
-        stats = compression_ctrl.statistics()
+        statistics = compression_ctrl.statistics()
 
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
@@ -242,7 +243,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
         if is_main_process():
-            logger.info(stats.as_str())
+            logger.info(statistics.as_str())
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
             checkpoint = {
@@ -259,7 +260,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-            for key, value in prepare_for_tensorboard(stats).items():
+            for key, value in prepare_for_tensorboard(statistics).items():
                 config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
                 config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 

@@ -190,7 +190,8 @@ def main_worker(current_gpu, config):
         return
 
     if is_main_process():
-        logger.info(compression_ctrl.statistics().as_str())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.as_str())
 
     if config.mode.lower() == 'test':
         with torch.no_grad():
@@ -331,7 +332,8 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
         if iteration % epoch_size == 0:
             compression_ctrl.scheduler.epoch_step(epoch)
             if is_main_process():
-                logger.info(compression_ctrl.statistics().as_str())
+                statistics = compression_ctrl.statistics()
+                logger.info(statistics.as_str())
 
         if (iteration + 1) % epoch_size == 0:
             compression_stage = compression_ctrl.compression_stage()

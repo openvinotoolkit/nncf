@@ -266,7 +266,8 @@ def run_train(config):
           epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, config.print_freq)
 
     logger.info('Compression statistics')
-    logger.info(compression_ctrl.statistics().as_str())
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.as_str())
 
 
 def main(argv):

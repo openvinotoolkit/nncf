@@ -310,7 +310,8 @@ def run(config):
             epochs, steps_per_epoch, checkpoint_manager, compression_ctrl, config.log_dir, optimizer, num_test_batches,
             config.print_freq)
 
-    logger.info(compression_ctrl.statistics().as_str())
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.as_str())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 

@@ -157,7 +157,6 @@ class RBSparsityController(BaseSparsityController):
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
 
-        # TODO(andrey-churkin): Why we use `mask_name` instead of `layer_name`?
         sparsified_layers_summary = []
         for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
             sparsified_layers_summary.append(

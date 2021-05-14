@@ -198,7 +198,8 @@ def run_evaluation(config, eval_timeout=None):
         if config.ckpt_path:
             load_checkpoint(checkpoint, config.ckpt_path)
 
-        logger.info(compression_ctrl.statistics().as_str())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.as_str())
         metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_batches, config.print_freq)
         eval_metric.reset_states()
         logger.info('Test metric = {}'.format(metric_result))

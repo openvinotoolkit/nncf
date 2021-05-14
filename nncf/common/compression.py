@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Optional, List, Tuple, Any, Dict
+from typing import Optional, List, Tuple, Any
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import Statistics

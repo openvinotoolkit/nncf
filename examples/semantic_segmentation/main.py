@@ -390,7 +390,8 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                                                   compression_ctrl.scheduler, config)
 
                 make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
-                logger.info(compression_ctrl.statistics().as_str())
+                statistics = compression_ctrl.statistics()
+                logger.info(statistics.as_str())
 
     return model
 
@@ -524,7 +525,8 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
     if is_main_process():
-        logger.info(compression_ctrl.statistics().as_str())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.as_str())
 
     if config.mode.lower() == 'test':
         logger.info(model)

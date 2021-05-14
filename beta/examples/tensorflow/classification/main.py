@@ -220,7 +220,8 @@ def run(config):
             **validation_kwargs)
 
     logger.info('evaluation...')
-    logger.info(compression_ctrl.statistics().as_str())
+    statistics = compression_ctrl.statistics()
+    logger.info(statistics.as_str())
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,

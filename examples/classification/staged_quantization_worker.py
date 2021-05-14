@@ -203,7 +203,8 @@ def staged_quantization_main_worker(current_gpu, config):
         cudnn.benchmark = True
 
     if is_main_process():
-        logger.info(compression_ctrl.statistics().as_str())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.as_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -230,7 +231,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                            optimizer_scheduler, kd_loss_calculator, compression_ctrl, epoch, config)
 
         # compute compression algo statistics
-        stats = compression_ctrl.statistics()
+        statistics = compression_ctrl.statistics()
 
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
@@ -250,7 +251,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
         # portion of enabled quantizers)
         if is_main_process():
-            logger.info(stats.as_str())
+            logger.info(statistics.as_str())
 
         optimizer_scheduler.epoch_step()
 
@@ -271,7 +272,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-            for key, value in prepare_for_tensorboard(stats).items():
+            for key, value in prepare_for_tensorboard(statistics).items():
                 config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
                 config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
