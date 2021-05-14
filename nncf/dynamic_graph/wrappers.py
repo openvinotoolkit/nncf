@@ -85,10 +85,9 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             elif node is None:
                 node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
 
-            if is_debug():
-                ctx.register_node_call(node)
-
             if node is not None:
+                if is_debug():
+                    ctx.register_node_call(node)
                 result = trace_tensors(result, node)
             result = ctx.execute_post_hooks(ia_op_exec_context, result)
 
