@@ -395,12 +395,16 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def save_module_state(module: Module, saved_state: NamedTuple) -> None:
+def save_module_state(module: Module) -> NamedTuple:
+    State = namedtuple('State', ['training_state', 'requires_grad_state'])
+    saved_state = State({}, {})
     for ch in module.modules():
         saved_state.training_state[ch] = ch.training
 
     for p in module.parameters():
         saved_state.requires_grad_state[p] = p.requires_grad
+
+    return saved_state
 
 
 def load_module_state(module: Module, state: NamedTuple, strict=False) -> None:
@@ -421,10 +425,7 @@ def load_module_state(module: Module, state: NamedTuple, strict=False) -> None:
 
 @contextmanager
 def training_mode_switcher(model: Module, is_training: bool = True):
-    State = namedtuple('State', ['training_state', 'requires_grad_state'])
-    training_state, requires_grad_state = {}, {}
-    saved_state = State(training_state, requires_grad_state)
-    save_module_state(model, saved_state)
+    saved_state = save_module_state(model)
     model.train(is_training)
     try:
         yield
