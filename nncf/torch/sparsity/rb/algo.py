@@ -127,7 +127,6 @@ class RBSparsityController(BaseSparsityAlgoController):
         model_statistics = super().statistics(quickly_collected_only)
 
         target_level = self.loss.target_sparsity_rate
-        # TODO(andrey-churkin): Check that `mean_sparse_prob` is calculated correctly
         mean_sparse_prob = 1.0 - self.loss.mean_sparse_prob
 
         masks_consistency = 1.0

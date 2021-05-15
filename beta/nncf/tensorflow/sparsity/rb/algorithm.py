@@ -149,7 +149,7 @@ class RBSparsityController(BaseSparsityController):
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number
         sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
-        mean_sparse_prob = (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
+        mean_sparse_prob = 1.0 - (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
 
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
         weights_percentages = [weights_number / total_weights_number * 100
@@ -171,5 +171,4 @@ class RBSparsityController(BaseSparsityController):
         # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported
         masks_consistency = 1.0
 
-        # TODO(andrey-churkin): Check that `mean_sparse_prob` is calculated correctly
         return RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
