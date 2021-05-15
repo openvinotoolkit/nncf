@@ -17,7 +17,7 @@ class TestModelWithChangedTrain(nn.Module):
         super().__init__()
         self.freezing_stages = freezing_stages
         self.features = nn.ModuleList()
-        for i, in_out_ch in enumerate(in_out_channels):
+        for in_out_ch in in_out_channels:
             block = nn.ModuleList()
             block.append(nn.Conv2d(*in_out_ch, 3))
             block.append(nn.BatchNorm2d(in_out_ch[1]))
