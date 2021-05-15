@@ -28,7 +28,6 @@ from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward
 from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.layer_utils import _NNCFModuleMixin
-from nncf.layer_utils import CompressionParameter
 from contextlib import contextmanager
 
 
