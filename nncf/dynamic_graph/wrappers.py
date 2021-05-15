@@ -4,6 +4,7 @@ from torch.nn import DataParallel, Module as TorchModule
 
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
+from nncf.utils import nncf_logger
 from nncf.debug import is_debug
 from nncf.dynamic_graph.context import get_current_context, OperatorInput
 from nncf.graph.graph import ModuleAttributes
@@ -75,17 +76,18 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             tensor_metas = make_tensor_metas(processed_input)
             node = ctx.find_operator_node(tensor_metas, ia_op_exec_context)
 
-            if node is None:
-                node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
-
-            if is_debug():
-                ctx.register_node_call(node)
-
             args = tuple(processed_input.op_args)
             kwargs = processed_input.op_kwargs
             result = operator(*args, **kwargs)
 
+            if isinstance(result, type(NotImplemented)):
+                nncf_logger.debug("Operation {} returned NotImplemented".format(op_name))
+            elif node is None:
+                node = ctx.maybe_add_node(processed_input, tensor_metas, ia_op_exec_context, module_attrs)
+
             if node is not None:
+                if is_debug():
+                    ctx.register_node_call(node)
                 result = trace_tensors(result, node)
             result = ctx.execute_post_hooks(ia_op_exec_context, result)
 
