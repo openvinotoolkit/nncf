@@ -125,8 +125,7 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
 
         :return: The compression controller state.
         """
-        return {'scheduler': self.scheduler.get_state(),
-                'compression_stage': self.compression_stage()}
+        return self.scheduler.get_state()
 
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

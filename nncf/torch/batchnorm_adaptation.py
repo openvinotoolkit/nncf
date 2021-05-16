@@ -26,5 +26,3 @@ class PTBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
 
         :param model: A model for which the algorithm will be applied.
         """
-        bn_adaptation_runner = DataLoaderBNAdaptationRunner(model, self._device, self._num_bn_forget_steps)
-        bn_adaptation_runner.run(self._data_loader, self._num_bn_adaptation_steps)
