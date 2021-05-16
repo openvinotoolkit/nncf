@@ -13,16 +13,14 @@
 
 import json
 import os
-import sys
 import tempfile
-import threading
 
 import pytest
 from pytest import approx
 
 from beta.tests.conftest import PROJECT_ROOT
-from tests.common.command import Command
-from tests.common.helpers import get_cli_dict_args
+from beta.tests.tensorflow.test_sanity_sample import get_sample_fn
+
 
 EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 
@@ -169,22 +167,8 @@ GLOBAL_CONFIG = {
 }
 
 
-def create_command_line(args, sample_type):
-    env = os.environ.copy()
-    if 'PYTHONPATH' in env:
-        env['PYTHONPATH'] += ':' + str(PROJECT_ROOT)
-    else:
-        env['PYTHONPATH'] = str(PROJECT_ROOT)
-    if sample_type == 'segmentation':
-        main_py = 'train.py' if args['--mode'] == 'train' else 'evaluation.py'
-    else:
-        main_py = 'main.py'
-    executable = EXAMPLES_DIR.joinpath(sample_type, main_py).as_posix()
-
-    cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
-    return "{python_exe} {main_py} {args}".format(
-         main_py=executable, args=cli_args, python_exe=sys.executable
-    )
+def convert_to_argv(args):
+    return ' '.join('--{}'.format(key) if val is None else '--{} {}'.format(key, val) for key, val in args.items()).split()
 
 
 CONFIG_PARAMS = []
@@ -238,6 +222,13 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
     if not weekly_tests:
         pytest.skip('For weekly testing use --run-weekly-tests option.')
     test_config, args, execution_arg, _ = request.param
+    if dataset_dir:
+        args['data'] =  os.path.join(dataset_dir, os.path.split(args['data'])[-1])
+    with open(args['config']) as config_file:
+        config = json.load(config_file)
+        if config.get('dataset_type') == 'tfds':
+            args['data'] += '_tfds'
+
     if args['weights']:
         if not os.path.exists(args['weights']):
             raise FileExistsError('Weights file does not exist: {}'.format(args['weights']))
@@ -252,23 +243,20 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
     model_name = get_config_name(args['config'])
     args['metrics-dump'] = os.path.join(metric_save_dir, f'{model_name}_metrics.json')
     args['checkpoint-save-dir'] = os.path.join(checkpoint_save_dir, model_name)
-    if dataset_dir:
-        args['data'] = dataset_dir
     return {
         'test_config': test_config,
         'args': args,
     }
 
 
-@pytest.mark.dependency(name="train")
-def test_weekly_train(_params, tmp_path):
+def test_weekly_train_eval(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
     args['mode'] = 'train'
 
-    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
-    runner.run(timeout=threading.TIMEOUT_MAX)
+    main = get_sample_fn(tc['sample_type'], modes=['train'])
+    main(convert_to_argv(args))
 
     actual_acc = get_actual_acc(args['metrics-dump'])
     ref_acc = tc['expected_accuracy']
@@ -276,21 +264,14 @@ def test_weekly_train(_params, tmp_path):
     tolerance = tc['absolute_tolerance_train'] if actual_acc < ref_acc else better_accuracy_tolerance
     assert actual_acc == approx(ref_acc, abs=tolerance)
 
-
-@pytest.mark.dependency(depends=["train"])
-def test_weekly_eval_trained(_params, tmp_path):
-    p = _params
-    args = p['args']
-    tc = p['test_config']
     args['mode'] = 'test'
-
     assert os.path.exists(args['checkpoint-save-dir'])
     args['resume'] = args['checkpoint-save-dir']
     if 'weights' in args:
         del args['weights']
 
-    runner = Command(create_command_line(get_cli_dict_args(args), tc['sample_type']))
-    runner.run(timeout=threading.TIMEOUT_MAX)
+    main = get_sample_fn(tc['sample_type'], modes=['test'])
+    main(convert_to_argv(args))
 
     actual_acc = get_actual_acc(args['metrics-dump'])
     ref_acc = tc['expected_accuracy']
