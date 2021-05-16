@@ -43,6 +43,7 @@ from nncf.torch.quantization.precision_constraints import HardwareQuantizationCo
 from nncf.torch.quantization.quantizer_id import QuantizerId, WeightQuantizerId, \
     NonWeightQuantizerId, InputQuantizerId, FunctionQuantizerId
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 
 from sklearn.preprocessing import MinMaxScaler
 
@@ -136,6 +137,7 @@ class QuantizationEnv:
         self.eval_loader = eval_loader
         self.eval_fn = eval_fn
         self._hw_precision_constraints = hw_precision_constraints
+        self._bn_adaptation = BatchnormAdaptationAlgorithm()
 
         self.model_name = self.qmodel.nncf_module.__class__.__name__
 
@@ -463,7 +465,7 @@ class QuantizationEnv:
 
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
-        self.qctrl.run_batchnorm_adaptation(self.qctrl.quantization_config)
+        self._bn_adaptation.run(self.qctrl.model, self.qctrl.quantization_config)
 
         if finetune:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")

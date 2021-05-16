@@ -18,8 +18,10 @@ from nncf.common.exporter import Exporter
 from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
     from nncf.torch.exporter import PTExporter
+    from nncf.torch.batchnorm_adaptation import PTBatchnormAdaptationAlgorithmImpl
 elif __nncf_backend__ == 'TensorFlow':
     from beta.nncf.tensorflow.exporter import TFExporter
+    from beta.nncf.tensorflow.batchnorm_adaptation import TFBatchnormAdaptationAlgorithmImpl
 
 
 def create_exporter(model: ModelType,
@@ -27,7 +29,7 @@ def create_exporter(model: ModelType,
                     output_names: Optional[List[str]] = None,
                     model_args: Optional[Tuple[Any, ...]] = None) -> Exporter:
     """
-    Factory to build an exporter.
+    Factory for building an exporter.
     """
     if __nncf_backend__ == 'Torch':
         exporter = PTExporter(model, input_names, output_names, model_args)
@@ -35,3 +37,15 @@ def create_exporter(model: ModelType,
         exporter = TFExporter(model, input_names, output_names, model_args)
 
     return exporter
+
+
+def create_bn_adaptation_algorithm_impl():
+    """
+    Factory for building a batchnorm adaptation algorithm implementation.
+    """
+    if __nncf_backend__ == 'Torch':
+        bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl()
+    elif __nncf_backend__ == 'Tensorflow':
+        bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl()
+
+    return bn_adaptation_algorithm_impl

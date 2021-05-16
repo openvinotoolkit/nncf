@@ -611,7 +611,7 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
                                                                  criterion=mocker.stub(),
                                                                  data_loader=mock_train_loader,
                                                                  device=device)])
-    mocker.patch('nncf.torch.quantization.algo.QuantizationController.run_batchnorm_adaptation')
+    mocker.patch('nncf.common.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run')
     mocked_calc_traces = mocker.patch(
         'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
     stub = mocker.stub()
