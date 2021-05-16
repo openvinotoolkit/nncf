@@ -44,8 +44,8 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
-                        'sparsity_quantization/inception_v3_imagenet_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 77.52,
+                        'sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json': {
+                            'expected_accuracy': 77.55,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
@@ -59,13 +59,13 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
-                        'sparsity_quantization/mobilenet_v2_imagenet_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 72.17,
+                        'sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json': {
+                            'expected_accuracy': 71.05,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
-                        'sparsity/mobilenet_v2_imagenet_magnitude_sparsity.json': {
-                            'expected_accuracy': 72.36,
+                        'sparsity/mobilenet_v2_imagenet_rb_sparsity.json': {
+                            'expected_accuracy': 71.34,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
@@ -99,13 +99,13 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
-                        'sparsity_quantization/resnet50_imagenet_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 74.46,
+                        'sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json': {
+                            'expected_accuracy': 74.38,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
-                        'sparsity/resnet50_imagenet_magnitude_sparsity.json': {
-                            'expected_accuracy': 75.00,
+                        'sparsity/resnet50_imagenet_rb_sparsity.json': {
+                            'expected_accuracy': 74.36,
                             'absolute_tolerance_train': 0.5,
                             'absolute_tolerance_eval': 0.5
                         },
