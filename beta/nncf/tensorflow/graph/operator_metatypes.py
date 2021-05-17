@@ -70,8 +70,8 @@ class TFLayerMetatype(OperatorMetatype):
 
 
 class TFLayerWithWeightsMetatype(TFLayerMetatype):
-    weights_definition = [] # type: List[WeightDef]
-    bias_attr_name = None # type: Optional[str]
+    weights_definition = []  # type: List[WeightDef]
+    bias_attr_name = None  # type: Optional[str]
 
 
 class TFDepthwiseConv1DSubLayerMetatype(TFLayerWithWeightsMetatype):
