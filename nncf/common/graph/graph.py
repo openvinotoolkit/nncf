@@ -12,6 +12,7 @@
 """
 
 import networkx as nx
+from enum import Enum
 
 from collections import OrderedDict
 from typing import Any, Callable, Dict, KeysView, List, Tuple, ValuesView
@@ -39,6 +40,11 @@ class NNCFNode:
 
     @property
     def node_type(self) -> str:
+        node_type = self.data.get(NNCFGraph.NODE_TYPE_ATTR)
+        if node_type == 'InputLayer':
+                return NNCFGraphNodeType.INPUT_NODE
+        if node_type == 'OutputLayer':
+            return NNCFGraphNodeType.OUTPUT_NODE
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property
@@ -59,6 +65,11 @@ class NNCFNode:
                and self.module_attributes == other.module_attributes
 
 
+class NNCFGraphNodeType(Enum):
+    INPUT_NODE = 0
+    OUTPUT_NODE = 1
+
+
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -75,6 +86,8 @@ class NNCFGraph:
     def __init__(self):
         self._nx_graph = nx.DiGraph()
         self._node_id_to_key_dict = dict()
+        self._input_nncf_nodes = {}  # type: Dict[int, NNCFNode]
+        self._output_nncf_nodes = {}  # type: Dict[int, NNCFNode]
 
     def get_node_by_id(self, node_id: int) -> NNCFNode:
         """
@@ -91,24 +104,10 @@ class NNCFGraph:
         return self._nx_node_to_nncf_node(self._nx_graph.nodes[key])
 
     def get_input_nodes(self) -> List[NNCFNode]:
-        """
-        Returns list of input nodes of the graph.
-        """
-        inputs = []
-        for nx_node_key, deg in self._nx_graph.in_degree():
-            if deg == 0:
-                inputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
-        return inputs
+        return list(self._input_nncf_nodes.values())
 
     def get_output_nodes(self) -> List[NNCFNode]:
-        """
-        Returns list of output nodes of the graph.
-        """
-        outputs = []
-        for nx_node_key, deg in self._nx_graph.out_degree():
-            if deg == 0:
-                outputs.append(self._nx_node_to_nncf_node(self._nx_graph.nodes[nx_node_key]))
-        return outputs
+        return list(self._output_nncf_nodes.values())
 
     def get_nodes_by_types(self, type_list: List[str]) -> List[NNCFNode]:
         """
@@ -226,10 +225,17 @@ class NNCFGraph:
         :param attrs: Attributes of the node.
         """
         node_id = len(self._node_id_to_key_dict)
+        attrs[NNCFGraph.ID_NODE_ATTR] = node_id
         self._node_id_to_key_dict[node_id] = label
         attrs[NNCFGraph.KEY_NODE_ATTR] = label
-        attrs[NNCFGraph.ID_NODE_ATTR] = node_id
         self._nx_graph.add_node(label, **attrs)
+
+        nncf_node = self.get_node_by_id(node_id)
+        if nncf_node.node_type == NNCFGraphNodeType.INPUT_NODE:
+            self._input_nncf_nodes[node_id] = nncf_node
+
+        if nncf_node.node_type == NNCFGraphNodeType.OUTPUT_NODE:
+            self._output_nncf_nodes[node_id] = nncf_node
 
     def add_edge(self, u_of_edge: str, v_of_edge: str, **attrs):
         """

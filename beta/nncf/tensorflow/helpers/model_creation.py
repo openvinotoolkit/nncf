@@ -31,6 +31,7 @@ def create_compression_algorithm_builder(config):
 
 def create_compressed_model(model, config):
     model = get_built_model(model, config)
+
     builder = create_compression_algorithm_builder(config)
     if builder is None:
         return None, model

@@ -19,7 +19,7 @@ from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
 from beta.nncf.tensorflow.layers.common import ELEMENTWISE_LAYERS
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraphNodeType, NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.export_helpers import DefaultMetaOp
 from nncf.common.pruning.mask_propagation import identity_mask_propagation
@@ -43,7 +43,7 @@ def _get_types(expression):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('model_input')
 class TFInput(DefaultMetaOp):
-    additional_types = ['InputLayer']
+    additional_types = ['InputLayer', NNCFGraphNodeType.INPUT_NODE]
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -53,6 +53,17 @@ class TFInput(DefaultMetaOp):
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
         node.data['output_mask'] = None
 
+@TF_PRUNING_OPERATOR_METATYPES.register('model_output')
+class TFOutput(DefaultMetaOp):
+    additional_types = [NNCFGraphNodeType.OUTPUT_NODE]
+
+    @classmethod
+    def accept_pruned_input(cls, node: NNCFNode):
+        return True
+
+    @classmethod
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph):
+        node.data['output_mask'] = None
 
 @TF_PRUNING_OPERATOR_METATYPES.register('identity_mask_propagation')
 class TFIdentityMaskForwardOps(DefaultMetaOp):

@@ -24,6 +24,7 @@ import networkx.algorithms.isomorphism as iso
 from networkx.drawing.nx_agraph import to_agraph
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.module_attributes import BaseModuleAttributes
 from nncf.common.utils.logger import logger as nncf_logger
@@ -80,6 +81,10 @@ class PTNNCFNode(NNCFNode):
     @property
     def node_type(self):
         if self.ia_op_exec_context:
+            if self.ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
+                return NNCFGraphNodeType.INPUT_NODE
+            if self.ia_op_exec_context.operator_name == MODEL_OUTPUT_OP_NAME:
+                return NNCFGraphNodeType.OUTPUT_NODE
             return self.ia_op_exec_context.operator_name
         return None
 
@@ -131,8 +136,6 @@ class PTNNCFGraph(NNCFGraph):
 
     def __init__(self):
         super().__init__()
-        self._input_nncf_nodes = {}  # type: Dict[int, PTNNCFNode]
-        self._output_nncf_nodes = {}  # type: Dict[int, PTNNCFNode]
 
     def __eq__(self, other: 'PTNNCFGraph'):
         nm = iso.categorical_node_match([PTNNCFGraph.ID_NODE_ATTR,
@@ -152,20 +155,23 @@ class PTNNCFGraph(NNCFGraph):
         node_key = '{idx} {uri}'.format(uri=name, idx=node_id)
 
         self._node_id_to_key_dict[node_id] = node_key
+
         attrs = {
+            PTNNCFGraph.NODE_TYPE_ATTR: nncf_node.node_type,
             PTNNCFGraph.ID_NODE_ATTR: node_id,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
             PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: nncf_node.ia_op_exec_context
         }
+
         if nncf_node.module_attributes is not None:
             attrs[NNCFGraph.MODULE_ATTRIBUTES] = nncf_node.module_attributes
         self._nx_graph.add_node(node_key, **attrs)
 
-        if nncf_node.node_type == MODEL_INPUT_OP_NAME:
-            self._input_nncf_nodes[node_id] = deepcopy(nncf_node)
+        if attrs[NNCFGraph.NODE_TYPE_ATTR] == NNCFGraphNodeType.INPUT_NODE:
+            self._input_nncf_nodes[node_id] = nncf_node
 
-        if nncf_node.node_type == MODEL_OUTPUT_OP_NAME:
-            self._output_nncf_nodes[node_id] = deepcopy(nncf_node)
+        if attrs[NNCFGraph.NODE_TYPE_ATTR] == NNCFGraphNodeType.OUTPUT_NODE:
+            self._output_nncf_nodes[node_id] = nncf_node
 
     def add_edge_between_nncf_nodes(self, from_node_id: int, to_node_id: int,
                                     tensor_shape: List[int],
@@ -192,12 +198,6 @@ class PTNNCFGraph(NNCFGraph):
             PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR: input_port_id
         }
         self._nx_graph.add_edge(from_node_key, to_node_key, **attrs)
-
-    def get_input_nodes(self) -> List[PTNNCFNode]:
-        return list(self._input_nncf_nodes.values())
-
-    def get_output_nodes(self) -> List[PTNNCFNode]:
-        return list(self._output_nncf_nodes.values())
 
     def get_nncf_node_by_id(self, node_id: int) -> PTNNCFNode:
         nx_node = self.get_nx_node_by_key(self.get_node_key_by_id(node_id))

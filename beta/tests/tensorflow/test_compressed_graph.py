@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 import os
 import pytest
 from addict import Dict
