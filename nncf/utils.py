@@ -10,9 +10,8 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from typing import Dict, Callable, Any, Mapping, Sequence, Set, List, Union
-from typing import NamedTuple
 from typing import Tuple
 from typing import Type
 
@@ -21,7 +20,7 @@ import random
 import re
 import torch
 from torch import distributed as dist, nn
-from torch.nn import Module
+from torch.nn import Module, Parameter
 
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.dynamic_graph.graph_tracer import ModelInputInfo, create_dummy_forward_fn
@@ -394,19 +393,31 @@ def should_consider_scope(scope_str: str, target_scopes: List[str], ignored_scop
                and not in_scope_list(scope_str, ignored_scopes)
 
 
-def save_module_state(module: Module) -> NamedTuple:
-    State = namedtuple('State', ['training_state', 'requires_grad_state'])
-    saved_state = State({}, {})
-    for ch in module.modules():
-        saved_state.training_state[ch] = ch.training
+class _ModuleState:
+    def __init__(self, module: Module = None):
+        self._training_state = {}
+        self._requires_grad_state = {}
+        if module is not None:
+            for ch in module.modules():
+                self.training_state[ch] = ch.training
 
-    for p in module.parameters():
-        saved_state.requires_grad_state[p] = p.requires_grad
+            for p in module.parameters():
+                self.requires_grad_state[p] = p.requires_grad
 
-    return saved_state
+    @property
+    def training_state(self) -> Dict[Module, bool]:
+        return self._training_state
+
+    @property
+    def requires_grad_state(self) -> Dict[Parameter, bool]:
+        return self._requires_grad_state
 
 
-def load_module_state(module: Module, state: NamedTuple, strict=False) -> None:
+def save_module_state(module: Module) -> _ModuleState:
+    return _ModuleState(module)
+
+
+def load_module_state(module: Module, state: _ModuleState, strict=False) -> None:
     for ch in module.modules():
         try:
             ch.train(state.training_state[ch])

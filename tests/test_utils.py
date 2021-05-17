@@ -1,10 +1,10 @@
 import pytest
-from typing import NamedTuple
 import torch
 from torch import nn
 
 from nncf.utils import training_mode_switcher
 from nncf.utils import save_module_state
+from nncf.utils import _ModuleState
 from nncf.layer_utils import CompressionParameter
 from nncf.initialization import DataLoaderBNAdaptationRunner
 
@@ -14,7 +14,7 @@ from tests.quantization.test_saturation_issue_export import DepthWiseConvTestMod
 from tests.modules.test_rnn import _seed
 
 
-def compare_saved_model_state_and_current_model_state(module: nn.Module, model_state: NamedTuple):
+def compare_saved_model_state_and_current_model_state(module: nn.Module, model_state: _ModuleState):
     for ch in module.modules():
         assert model_state.training_state[ch] == ch.training
 
@@ -55,7 +55,7 @@ def test_training_mode_switcher(_seed, model: nn.Module):
                                    DepthWiseConvTestModel(), EightConvTestModel()])
 def test_bn_training_state_switcher(_seed, model: nn.Module):
 
-    def check_were_only_bn_training_state_changed(module: nn.Module, saved_state: NamedTuple):
+    def check_were_only_bn_training_state_changed(module: nn.Module, saved_state: _ModuleState):
         for ch in module.modules():
             if isinstance(ch, (nn.BatchNorm1d,
                                nn.BatchNorm2d,
