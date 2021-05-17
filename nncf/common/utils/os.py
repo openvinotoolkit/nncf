@@ -23,8 +23,8 @@ def safe_open(file: Path, *args, **kwargs):
     For security reasons, should not follow symlinks. Use .resolve() on any Path
     objects before passing them here.
 
-    :param file: The path to the file
-    :return: A file object
+    :param file: The path to the file.
+    :return: A file object.
     """
     if file.is_symlink():
         raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))

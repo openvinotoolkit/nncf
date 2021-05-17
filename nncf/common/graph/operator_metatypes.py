@@ -23,7 +23,7 @@ class OperatorMetatype:
     Base class for grouping framework operators based on their semantic meaning.
     """
 
-    name = '' # type: str
+    name = ''  # type: str
     hw_config_names = []  # type: List[str]
 
     @classmethod
@@ -40,41 +40,41 @@ class OperatorMetatype:
         """
         Returns a list of 'OperatorMetatype' that are subtypes.
 
-        :return: A subtype list
+        :return: A subtype list.
         """
         return []
 
 
 class OperatorMetatypeRegistry(Registry):
     """
-    Operator Metatypes Registry
+    Operator Metatypes Registry.
     """
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         """
-        Initialize registry state
+        Initialize registry state.
 
-        :param name: The registry name
+        :param name: The registry name.
         """
         super().__init__(name)
         self._op_name_to_op_meta_dict = {}
 
-    def register(self, name=None):
+    def register(self, name: Optional[str] = None):
         """
-        Decorator for registering operator metatypes
+        Decorator for registering operator metatypes.
 
-        :param name: The registration name
-        :return: The inner function for registering operator metatypes
+        :param name: The registration name.
+        :return: The inner function for registering operator metatypes.
         """
         name_ = name
         super_register = super()._register
 
         def wrap(obj: Type[OperatorMetatype]):
             """
-            Inner function for registering operator metatypes
+            Inner function for registering operator metatypes.
 
-            :param obj: The operator metatype
-            :return: The input operator metatype
+            :param obj: The operator metatype.
+            :return: The input operator metatype.
             """
             cls_name = name_
             if cls_name is None:
@@ -96,10 +96,10 @@ class OperatorMetatypeRegistry(Registry):
 
     def get_operator_metatype_by_op_name(self, op_name: str) -> Type[OperatorMetatype]:
         """
-        Returns the operator metatype by operator name
+        Returns the operator metatype by operator name.
 
-        :param op_name: The operator name
-        :return: The operator metatype
+        :param op_name: The operator name.
+        :return: The operator metatype.
         """
         if op_name not in self._op_name_to_op_meta_dict:
             return self._op_name_to_op_meta_dict['noop']
@@ -108,9 +108,9 @@ class OperatorMetatypeRegistry(Registry):
 
 def get_operator_metatypes() -> Optional[OperatorMetatypeRegistry]:
     """
-    Returns operator metatype registry
+    Returns operator metatype registry.
 
-    :return: The operator metatype registry
+    :return: The operator metatype registry.
     """
     if __nncf_backend__ == 'Torch':
         from nncf.graph.operator_metatypes \

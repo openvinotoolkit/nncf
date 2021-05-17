@@ -20,24 +20,24 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
 
-WeightDef = namedtuple('WeightDef', 'weight_attr_name channel_axes')
+WeightDef = namedtuple('WeightDef', ['weight_attr_name', 'channel_axes'])
 
-TF_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
+TF_OPERATOR_METATYPES = OperatorMetatypeRegistry('operator_metatypes')
 
 
 #
 # NNCF Operator Metatypes Section
 #
 class NoopMetatype(OperatorMetatype):
-    name = "noop"
+    name = 'noop'
 
 
 #
 # TensorFlow Keras Layer Metatypes Section
 #
 class TFLayerMetatype(OperatorMetatype):
-    keras_layer_names = [] # type: List[str]
-    subtypes = [] #type: List[Type['OperatorMetatype']]
+    keras_layer_names = []  # type: List[str]
+    subtypes = []  #type: List[Type['OperatorMetatype']]
 
     @classmethod
     def get_subtypes(cls) -> List[Type['OperatorMetatype']]:
@@ -155,7 +155,7 @@ class TFDepthwiseConv2DLayerMetatype(TFLayerWithWeightsMetatype):
     keras_layer_names = ['DepthwiseConv2D']
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
 
-    weights_def = [WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(2,3))]
+    weights_def = [WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(2, 3))]
     bias_attr_name = 'bias'
 
 
@@ -214,8 +214,8 @@ class TFSeparableConv1DLayerMetatype(TFLayerWithWeightsMetatype):
     keras_layer_names = ['SeparableConv1D', 'SeparableConvolution1D']
 
     weights_def = [
-        WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(1,2)),
-        WeightDef(weight_attr_name='pointwise_kernel', channel_axes=(-1)),
+        WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(1, 2)),
+        WeightDef(weight_attr_name='pointwise_kernel', channel_axes=-1),
     ]
     bias_attr_name = 'bias'
 
@@ -226,8 +226,8 @@ class TFSeparableConv2DLayerMetatype(TFLayerWithWeightsMetatype):
     keras_layer_names = ['SeparableConv2D', 'SeparableConvolution2D']
 
     weights_def = [
-        WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(2,3)),
-        WeightDef(weight_attr_name='pointwise_kernel', channel_axes=(-1)),
+        WeightDef(weight_attr_name='depthwise_kernel', channel_axes=(2, 3)),
+        WeightDef(weight_attr_name='pointwise_kernel', channel_axes=-1),
     ]
     bias_attr_name = 'bias'
 
@@ -527,10 +527,10 @@ class TFLambdaLayerMetatype(TFLayerMetatype):
 #
 # TensorFlow  Raw Operations Section
 #
-TF_RAW_OPERATOR_METATYPES = OperatorMetatypeRegistry("raw_operator_metatypes")
+TF_RAW_OPERATOR_METATYPES = OperatorMetatypeRegistry('raw_operator_metatypes')
 
 class TFOpMetatype(OperatorMetatype):
-    op_names = [] # type: List[str]
+    op_names = []  # type: List[str]
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
