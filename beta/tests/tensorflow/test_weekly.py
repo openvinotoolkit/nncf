@@ -32,7 +32,7 @@ EXAMPLES_DIR = PROJECT_ROOT.joinpath('examples', 'tensorflow')
 # │   │     ├─── config_filename
 # │   │     │       ├── expected_accuracy
 # │   │     │       ├── absolute_tolerance_train
-# │   │     │       ├── absolute_tolerance_eval
+# │   │     │       ├── absolute_tolerance_test
 # │   │     │       ├── execution_arg
 # │   │     │       ├── weights
 GLOBAL_CONFIG = {
@@ -42,77 +42,77 @@ GLOBAL_CONFIG = {
                         'quantization/inception_v3_imagenet_int8.json': {
                             'expected_accuracy': 78.41,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json': {
                             'expected_accuracy': 77.55,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity/inception_v3_imagenet_magnitude_sparsity.json': {
                             'expected_accuracy': 77.87,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v2_imagenet_int8.json': {
                             'expected_accuracy': 71.96,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json': {
                             'expected_accuracy': 71.05,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity/mobilenet_v2_imagenet_rb_sparsity.json': {
                             'expected_accuracy': 71.34,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json': {
                             'expected_accuracy': 71.83,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v3_small_imagenet_int8.json': {
                             'expected_accuracy': 67.51,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/mobilenet_v3_small_imagenet_magnitude_sparsity_int8.json': {
                             'expected_accuracy': 67.81,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'quantization/mobilenet_v3_large_imagenet_int8.json': {
                             'expected_accuracy': 75.13,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/mobilenet_v3_large_imagenet_magnitude_sparsity_int8.json': {
                             'expected_accuracy': 74.94,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'quantization/resnet50_imagenet_int8.json': {
                             'expected_accuracy': 75.04,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json': {
                             'expected_accuracy': 74.38,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'sparsity/resnet50_imagenet_rb_sparsity.json': {
                             'expected_accuracy': 74.36,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                         'pruning/resnet50_imagenet_pruning_geometric_median.json': {
                             'expected_accuracy': 74.98,
                             'absolute_tolerance_train': 0.5,
-                            'absolute_tolerance_eval': 0.5
+                            'absolute_tolerance_test': 0.5
                         },
                     }
                 }
@@ -123,27 +123,32 @@ GLOBAL_CONFIG = {
                     'quantization/retinanet_coco_int8.json': {
                         'expected_accuracy': 33.3,
                         'absolute_tolerance_train': 0.5,
-                        'absolute_tolerance_eval': 0.5
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'retinanet/retinanet.h5',
                     },
                     'sparsity/retinanet_coco_magnitude_sparsity.json': {
                         'expected_accuracy': 33.13,
                         'absolute_tolerance_train': 0.5,
-                        'absolute_tolerance_eval': 0.5
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'retinanet/retinanet.h5',
                     },
                     'pruning/retinanet_coco_pruning.json': {
                         'expected_accuracy': 32.70,
                         'absolute_tolerance_train': 0.5,
-                        'absolute_tolerance_eval': 0.5
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'retinanet/retinanet.h5',
                     },
                     'quantization/yolo_v4_coco_int8.json': {
                         'expected_accuracy': 46.20,
                         'absolute_tolerance_train': 0.5,
-                        'absolute_tolerance_eval': 0.5
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'yolo_v4/yolo_v4.h5',
                     },
                     'sparsity/yolo_v4_coco_magnitude_sparsity.json': {
                         'expected_accuracy': 46.54,
                         'absolute_tolerance_train': 0.5,
-                        'absolute_tolerance_eval': 0.5
+                        'absolute_tolerance_test': 0.5,
+                        'weights': 'yolo_v4/yolo_v4.h5',
                     },
                 }
             }
@@ -154,12 +159,14 @@ GLOBAL_CONFIG = {
                 'quantization/mask_rcnn_coco_int8.json': {
                     'expected_accuracy': 37.25,
                     'absolute_tolerance_train': 0.5,
-                    'absolute_tolerance_eval': 0.5
+                    'absolute_tolerance_test': 0.5,
+                    'weights': 'mask_rcnn_baseline',
                 },
                 'sparsity/mask_rcnn_coco_magnitude_sparsity.json': {
                     'expected_accuracy': 36.93,
                     'absolute_tolerance_train': 0.5,
-                    'absolute_tolerance_eval': 0.5
+                    'absolute_tolerance_test': 0.5,
+                    'weights': 'mask_rcnn_baseline',
                 },
             }
         }
@@ -168,7 +175,7 @@ GLOBAL_CONFIG = {
 
 
 def convert_to_argv(args):
-    return ' '.join('--{}'.format(key) if val is None else '--{} {}'.format(key, val) for key, val in args.items()).split()
+    return ' '.join(f'--{key}' if val is None else f'--{key} {val}' for key, val in args.items()).split()
 
 
 CONFIG_PARAMS = []
@@ -182,10 +189,8 @@ for sample_type_ in GLOBAL_CONFIG:
             execution_args = config_params.get('execution_arg', [''])
             expected_accuracy_ = config_params.get('expected_accuracy', 100)
             absolute_tolerance_train_ = config_params.get('absolute_tolerance_train', 1)
-            absolute_tolerance_eval_ = config_params.get('absolute_tolerance_eval', 0.5)
+            absolute_tolerance_test_ = config_params.get('absolute_tolerance_test', 0.5)
             weights_path_ = config_params.get('weights', None)
-            if weights_path_:
-                weights_path_ = os.path.join(sample_type_, dataset_name_, weights_path_)
             for execution_arg_ in execution_args:
                 config_path_ = EXAMPLES_DIR.joinpath(sample_type_, 'configs', config_name)
                 args_ = {
@@ -198,7 +203,7 @@ for sample_type_ in GLOBAL_CONFIG:
                     'sample_type': sample_type_,
                     'expected_accuracy': expected_accuracy_,
                     'absolute_tolerance_train': absolute_tolerance_train_,
-                    'absolute_tolerance_eval': absolute_tolerance_eval_,
+                    'absolute_tolerance_test': absolute_tolerance_test_,
                 }
                 CONFIG_PARAMS.append(tuple([test_config_, args_, execution_arg_, dataset_name_]))
 
@@ -218,7 +223,7 @@ def get_actual_acc(metrics_path):
 
 @pytest.fixture(scope='module', params=CONFIG_PARAMS,
                 ids=['-'.join([p[0]['sample_type'], get_config_name(p[1]['config'])]) for p in CONFIG_PARAMS])
-def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
+def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
     if not weekly_tests:
         pytest.skip('For weekly testing use --run-weekly-tests option.')
     test_config, args, execution_arg, _ = request.param
@@ -226,10 +231,12 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
         args['data'] =  os.path.join(dataset_dir, os.path.split(args['data'])[-1])
     with open(args['config']) as config_file:
         config = json.load(config_file)
-        if config.get('dataset_type') == 'tfds':
-            args['data'] += '_tfds'
+        if config.get('dataset') != 'imagenet2012' or config.get('dataset_type') != 'tfrecords':
+             args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))
 
     if args['weights']:
+        if models_dir:
+            args['weights'] = os.path.join(models_dir, args['weights'])
         if not os.path.exists(args['weights']):
             raise FileExistsError('Weights file does not exist: {}'.format(args['weights']))
     else:
@@ -249,20 +256,29 @@ def _params(request, tmp_path_factory, dataset_dir, weekly_tests):
     }
 
 
+def run_sample(tc, args):
+    mode = args['mode']
+    main = get_sample_fn(tc['sample_type'], modes=[mode])
+
+    if tc['sample_type'] == 'segmentation' and args['mode'] == 'train':
+        del args['metrics-dump']
+        del args['mode']
+
+    main(convert_to_argv(args))
+
+    if 'metrics-dump' in args:
+        actual_acc = get_actual_acc(args['metrics-dump'])
+        ref_acc = tc['expected_accuracy']
+        assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_{}'.format(mode)])
+
+
 def test_weekly_train_eval(_params, tmp_path):
     p = _params
     args = p['args']
     tc = p['test_config']
+
     args['mode'] = 'train'
-
-    main = get_sample_fn(tc['sample_type'], modes=['train'])
-    main(convert_to_argv(args))
-
-    actual_acc = get_actual_acc(args['metrics-dump'])
-    ref_acc = tc['expected_accuracy']
-    better_accuracy_tolerance = 3
-    tolerance = tc['absolute_tolerance_train'] if actual_acc < ref_acc else better_accuracy_tolerance
-    assert actual_acc == approx(ref_acc, abs=tolerance)
+    run_sample(tc, args.copy())
 
     args['mode'] = 'test'
     assert os.path.exists(args['checkpoint-save-dir'])
@@ -270,9 +286,4 @@ def test_weekly_train_eval(_params, tmp_path):
     if 'weights' in args:
         del args['weights']
 
-    main = get_sample_fn(tc['sample_type'], modes=['test'])
-    main(convert_to_argv(args))
-
-    actual_acc = get_actual_acc(args['metrics-dump'])
-    ref_acc = tc['expected_accuracy']
-    assert actual_acc == approx(ref_acc, abs=tc['absolute_tolerance_eval'])
+    run_sample(tc, args.copy())
