@@ -148,9 +148,8 @@ class PTNNCFGraph(NNCFGraph):
         if node_id in self._node_id_to_key_dict:
             raise ValueError(f"NNCF node with id {node_id} is already in the NNCFGraph")
 
-        name_parts = (str(nncf_node.ia_op_exec_context.scope_in_model),
-                      nncf_node.ia_op_exec_context.operator_name)
-        node_key = '{idx} {uri}'.format(uri='/'.join(name_parts), idx=node_id)
+        name = str(nncf_node.ia_op_exec_context)
+        node_key = '{idx} {uri}'.format(uri=name, idx=node_id)
 
         self._node_id_to_key_dict[node_id] = node_key
         attrs = {

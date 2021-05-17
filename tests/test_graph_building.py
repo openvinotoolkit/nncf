@@ -166,14 +166,14 @@ def test_activation_shape_tracing(input_shape: Tuple):
     shape1 = (input_shape[0], ModelForTest.CONV1_OUT_CHANNELS, input_shape[2], input_shape[3])
     ref_node_ids_and_output_shapes = [
         # TODO: extend with checking input tensor size once proper input node marking is implemented
-        ("0 ModelForTest/Conv2d[conv1]/conv2d", [shape1]),
-        ("1 ModelForTest/BatchNorm2d[bn1]/batch_norm", [shape1]),
-        ("2 ModelForTest/ReLU[relu1]/RELU", [shape1, shape1]),
-        ("3 ModelForTest/max_pool2d", [(shape1[0], shape1[1],
+        ("0 ModelForTest/Conv2d[conv1]/conv2d_0", [shape1]),
+        ("1 ModelForTest/BatchNorm2d[bn1]/batch_norm_0", [shape1]),
+        ("2 ModelForTest/ReLU[relu1]/RELU_0", [shape1, shape1]),
+        ("3 ModelForTest/max_pool2d_0", [(shape1[0], shape1[1],
                                         shape1[2] // ModelForTest.MAXPOOL_SIZE,
                                         shape1[3] // ModelForTest.MAXPOOL_SIZE)]),
-        ("4 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d", [input_shape]),
-        ("5 ModelForTest/cat", [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS,
+        ("4 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d_0", [input_shape]),
+        ("5 ModelForTest/cat_0", [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS,
                                  input_shape[2], input_shape[3])])
 
         # TODO: extend with checking output tensor size once proper output node marking is implemented

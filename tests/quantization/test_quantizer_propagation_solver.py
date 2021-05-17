@@ -832,11 +832,11 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
@@ -844,100 +844,100 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7)]),
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6)]),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]),
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)]),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4), QuantizerConfig(num_bits=6)]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4), QuantizerConfig(num_bits=6)]),
 
-                '3 /C': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '3 /C_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]),
 
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC)]),
 
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)]),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)]),
-                '8 /H': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '8 /H_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)]),
 
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=5)]),
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6)]),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4), QuantizerConfig(num_bits=6)]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]),
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)]),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4), QuantizerConfig(num_bits=6)]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
@@ -945,30 +945,30 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '4 /D': (QuantizationTrait.NON_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '4 /D': (QuantizationTrait.NON_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
-                '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -976,30 +976,30 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '4 /D': (QuantizationTrait.NON_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '4 /D': (QuantizationTrait.NON_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
                       []),
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /E_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1007,15 +1007,15 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '8 /H': (QuantizationTrait.QUANTIZATION_AGNOSTIC,
+                '8 /H_0': (QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
-                '9 /I': (QuantizationTrait.CONCAT,
+                '9 /I_0': (QuantizationTrait.CONCAT,
                       []),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('7 /G'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('7 /G_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1023,15 +1023,15 @@ class TestQuantizerPropagationSolver:
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
-                '8 /H': (QuantizationTrait.QUANTIZATION_AGNOSTIC,
+                '8 /H_0': (QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
-                '9 /I': (QuantizationTrait.CONCAT,
+                '9 /I_0': (QuantizationTrait.CONCAT,
                       [QuantizerConfig(num_bits=6)]),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('7 /G'),
-            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('7 /G_0'),
+            target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
     ]
@@ -1130,9 +1130,9 @@ class TestQuantizerPropagationSolver:
             init_node_to_trait_configs_and_target_node_dict=
             {
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('10 /J'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('10 /J_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('5 /E_0'),
             expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
@@ -1140,13 +1140,13 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '4 /D': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_post_hook_node_key('1 /A')),
+                      InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('3 /C'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('3 /C_0'),
             expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
 
@@ -1154,16 +1154,16 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6)],
-                      InsertionPointGraph.get_pre_hook_node_key('3 /C')),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E'))
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
@@ -1171,17 +1171,17 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
-                      InsertionPointGraph.get_pre_hook_node_key('3 /C')),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=5,
                                                                     mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E'))
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             primary_quantizer_qconfigs=[QuantizerConfig(num_bits=6)],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
@@ -1189,29 +1189,29 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('1 /A'))
+                      InsertionPointGraph.get_pre_hook_node_key('1 /A_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('3 /C'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('3 /C_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_MERGE
         ),
 
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('1 /A')),
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=2)],
-                      InsertionPointGraph.get_pre_hook_node_key('3 /C'))
+                      InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('8 /H'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('8 /H_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_MERGE
         ),
 
@@ -1221,16 +1221,16 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '3 /C': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '3 /C_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('2 /B')),
-                '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('2 /B_0')),
+                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)],
-                      InsertionPointGraph.get_pre_hook_node_key('9 /I')),
+                      InsertionPointGraph.get_pre_hook_node_key('9 /I_0')),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('3 /C'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('3 /C_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1238,16 +1238,16 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('8 /H')),
-                '3 /C': (QuantizationTrait.NON_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('8 /H_0')),
+                '3 /C_0': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('6 /F_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /A'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /A_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1256,16 +1256,16 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E')),
-                '4 /D': (QuantizationTrait.NON_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
+                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('3 /C'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('3 /C_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1273,26 +1273,26 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
-                      InsertionPointGraph.get_post_hook_node_key('1 /A')),
+                      InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
-                      InsertionPointGraph.get_post_hook_node_key('1 /A'))
+                      InsertionPointGraph.get_post_hook_node_key('1 /A_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /B_0'),
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
 
@@ -1300,17 +1300,17 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
-                      InsertionPointGraph.get_pre_hook_node_key('3 /C')),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=5,
                                                                     mode=QuantizationMode.ASYMMETRIC)],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E'))
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
             },
-            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D'),
+            starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             primary_quantizer_qconfigs=[QuantizerConfig(num_bits=4)],
-            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A'),
+            target_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /A_0'),
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
 
@@ -1357,39 +1357,39 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_post_hook_node_key('0 /O'))
+                      InsertionPointGraph.get_post_hook_node_key('0 /O_0'))
             },
             expected_finished_status=True,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('0 /O'),
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('0 /O_0'),
             added_quantizer_location_node_keys=[]
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('3 /C'))
+                      InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))
             },
             expected_finished_status=False,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('3 /C'),
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('3 /C_0'),
             added_quantizer_location_node_keys=[]
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('1 /A')),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E')),
-                '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
+                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('9 /I'))
+                      InsertionPointGraph.get_pre_hook_node_key('9 /I_0'))
             },
             expected_finished_status=False,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('1 /A'),
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_pre_hook_node_key('1 /A_0'),
             added_quantizer_location_node_keys=[]
         ),
 
@@ -1397,19 +1397,19 @@ class TestQuantizerPropagationSolver:
         # (i.e. when passing through an upward branching node)
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_post_hook_node_key('9 /I')),
-                '6 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_post_hook_node_key('9 /I_0')),
+                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('1 /A')),
-                '7 /G': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                      InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
+                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
-                      InsertionPointGraph.get_pre_hook_node_key('5 /E')),
+                      InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
             },
             expected_finished_status=False,
-            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('9 /I'),
-            added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('9 /I', in_port_id=1)]
+            current_location_node_key_for_propagated_quant=InsertionPointGraph.get_post_hook_node_key('9 /I_0'),
+            added_quantizer_location_node_keys=[InsertionPointGraph.get_pre_hook_node_key('9 /I_0', in_port_id=1)]
         )
     ]
 
@@ -1467,12 +1467,12 @@ class TestQuantizerPropagationSolver:
         quant_prop_solver = QuantizerPropagationSolver()
         prep_data_dict = {
 
-            '9 /I': (QuantizationTrait.NON_QUANTIZABLE,
+            '9 /I_0': (QuantizationTrait.NON_QUANTIZABLE,
                   [],
                   None),
-            '10 /J': (QuantizationTrait.INPUTS_QUANTIZABLE,
+            '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                   [QuantizerConfig()],
-                  InsertionPointGraph.get_post_hook_node_key('9 /I'))
+                  InsertionPointGraph.get_post_hook_node_key('9 /I_0'))
         }
 
         prop_quantizers, quant_prop_graph = self.prepare_propagation_graph_state(ip_graph,
