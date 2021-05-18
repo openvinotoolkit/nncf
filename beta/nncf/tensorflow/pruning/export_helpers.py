@@ -122,7 +122,7 @@ class TFTransposeConvolution(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class TFBatchNorm(DefaultMetaOp):
-    additional_types = ['BatchNormalization']
+    additional_types = ['BatchNormalization', 'SyncBatchNormalization']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):

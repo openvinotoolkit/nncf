@@ -28,7 +28,8 @@ class YOLOv4Model(base_model.Model):
         super().__init__(params)
 
         self._params = params
-        self._input_layer = tf.keras.layers.Input(shape=(None, None, 3), name='image_input')
+        self._input_layer = tf.keras.layers.Input(shape=params.input_info.sample_size[1:],
+                                                  name='image_input')
         self._loss_fn = losses.YOLOv4Loss()
 
         # Architecture generators.

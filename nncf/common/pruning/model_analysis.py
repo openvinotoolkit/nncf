@@ -188,7 +188,8 @@ def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clu
     for node in nodes_to_merge:
         if node.node_id != max_importance_node_id:
             current_node_cluster_id = clusterization.get_cluster_by_node_id(node.node_id).id
-            clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
+            if current_node_cluster_id != max_importance_cluster_id:
+                clusterization.merge_clusters(max_importance_cluster_id, current_node_cluster_id)
 
 
 def cluster_special_ops(graph: NNCFGraph, special_types: List[str], identity_types: List[str]) -> Clusterization:
