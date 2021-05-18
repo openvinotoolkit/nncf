@@ -35,6 +35,7 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
@@ -58,7 +59,6 @@ from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.graph_matching import NodeExpression
 from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.module_operations import UpdateWeight

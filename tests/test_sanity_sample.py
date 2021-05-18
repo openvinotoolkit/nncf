@@ -34,9 +34,9 @@ from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name
 from examples.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionLevel
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
-from nncf.hw_config import HWConfigType
 from pytest_dependency import depends
 from tests.conftest import EXAMPLES_DIR
 from tests.conftest import PROJECT_ROOT

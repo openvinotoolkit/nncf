@@ -11,20 +11,12 @@
  limitations under the License.
 """
 
-from typing import List
-from typing import Callable
-from typing import Tuple
-from typing import Any
-from typing import KeysView
-from typing import ValuesView
-from typing import Dict
-
-from collections import OrderedDict
-
 import networkx as nx
 
-from nncf.common.graph.module_attributes import BaseModuleAttributes
+from collections import OrderedDict
+from typing import Any, Callable, Dict, KeysView, List, Tuple, ValuesView
 
+from nncf.common.graph.module_attributes import BaseModuleAttributes
 
 MODEL_INPUT_OP_NAME = "nncf_model_input"
 MODEL_OUTPUT_OP_NAME = "nncf_model_output"

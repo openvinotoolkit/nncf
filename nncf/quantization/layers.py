@@ -26,6 +26,8 @@ from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
+from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
     ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
 from nncf.layer_utils import COMPRESSION_MODULES, CompressionParameter
@@ -393,14 +395,7 @@ class SymmetricQuantizer(BaseQuantizer):
 
     @staticmethod
     def calculate_level_ranges(num_bits, signed):
-        levels = 2 ** num_bits
-        if signed:
-            level_high = (levels // 2) - 1
-            level_low = -(levels // 2)
-        else:
-            level_high = levels - 1
-            level_low = 0
-        return level_low, level_high, levels
+        return calculate_symmetric_level_ranges(num_bits, signed)
 
     @property
     def signed(self):
@@ -550,10 +545,7 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     @staticmethod
     def calculate_level_ranges(num_bits):
-        level_high = 2 ** num_bits - 1
-        level_low = 0
-        levels = 2 ** num_bits
-        return level_low, level_high, levels
+        return calculate_asymmetric_level_ranges(num_bits)
 
     def quantize(self, x):
         return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,

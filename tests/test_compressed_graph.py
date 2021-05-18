@@ -40,7 +40,7 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import PTNNCFGraph
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 from nncf.layers import LSTMCellNNCF
 from nncf.layers import NNCF_RNN
 from nncf.nncf_network import NNCFNetwork

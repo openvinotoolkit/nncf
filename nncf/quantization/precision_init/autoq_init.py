@@ -17,8 +17,9 @@ from typing import Dict, Tuple, List, Optional
 import os
 
 from nncf.debug import is_debug
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.utils.logger import logger
+from nncf.common.utils.os import safe_open
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.quantization.precision_init.base_init import BasePrecisionInitializer, BasePrecisionInitParams
 from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -35,8 +36,6 @@ import pandas as pd
 import re
 from io import StringIO
 from copy import deepcopy
-
-from nncf.common.os import safe_open
 
 
 class AutoQPrecisionInitParams(BasePrecisionInitParams):

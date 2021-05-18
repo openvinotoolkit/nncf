@@ -22,9 +22,9 @@ import torch.nn
 from onnx import numpy_helper
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.hardware.config import HWConfigType
 from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.hw_config import HWConfigType
 from nncf.quantization.layers import AsymmetricQuantizer
 from nncf.quantization.quantizer_id import NonWeightQuantizerId
 from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver

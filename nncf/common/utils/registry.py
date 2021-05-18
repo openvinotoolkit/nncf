@@ -18,6 +18,10 @@ class Registry:
         self._registry_dict = dict()
         self._add_name_as_attr = add_name_as_attr
 
+    @property
+    def registry_dict(self):
+        return self._registry_dict
+
     def _register(self, obj, name):
         if name in self._registry_dict:
             raise KeyError('{} is already registered in {}'.format(name, self._name))
@@ -42,7 +46,3 @@ class Registry:
 
     def _key_not_found(self, name):
         raise KeyError("{} is unknown type of {} ".format(name, self._name))
-
-    @property
-    def registry_dict(self):
-        return self._registry_dict

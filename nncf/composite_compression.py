@@ -23,7 +23,8 @@ from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.compression_method_api import PTCompressionLoss
 from nncf.graph.transformations.layout import PTTransformationLayout
-from nncf.hw_config import HWConfigType, HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
+from nncf.common.hardware.config import HWConfigType
 from nncf.nncf_network import NNCFNetwork
 from nncf.nncf_network import PTModelTransformer
 from nncf.pruning.base_algo import BasePruningAlgoController

@@ -11,5 +11,22 @@
  limitations under the License.
 """
 
-from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.graph import NNCFGraph
+from contextlib import contextmanager
+from pathlib import Path
+
+
+@contextmanager
+def safe_open(file: Path, *args, **kwargs):
+    """
+    Safe function to open file and return a stream.
+
+    For security reasons, should not follow symlinks. Use .resolve() on any Path
+    objects before passing them here.
+
+    :param file: The path to the file.
+    :return: A file object.
+    """
+    if file.is_symlink():
+        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+    with open(str(file), *args, **kwargs) as f:
+        yield f

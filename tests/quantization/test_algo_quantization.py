@@ -32,7 +32,7 @@ from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionLoss
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.context import ScopeElement
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 from nncf.layers import NNCFConv2d
 from nncf.module_operations import UpdateInputs
 from nncf.module_operations import UpdateWeight

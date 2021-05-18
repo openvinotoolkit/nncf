@@ -17,12 +17,7 @@ from collections import OrderedDict
 from collections import deque
 from copy import deepcopy
 from enum import Enum
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Set
-from typing import Tuple
-from typing import Type
+from typing import Any, Callable, Dict, Set, Tuple, Type
 
 import networkx as nx
 
@@ -37,8 +32,8 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 # pylint: disable=wildcard-import
 # pylint: disable=unused-wildcard-import
 from nncf.graph.operator_metatypes import *
+from nncf.common.hardware.config import HWConfig
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.hw_config import HWConfig
 from nncf.nncf_network import InsertionPointGraph
 from nncf.nncf_network import InsertionPointGraphNodeType
 from nncf.quantization.layers import QuantizationMode
@@ -1848,7 +1843,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
                 retval[op_meta] = QuantizationTrait.QUANTIZATION_AGNOSTIC  # Default value
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 for op_meta in meta_list:  # type: OperatorMetatype
@@ -1896,7 +1891,7 @@ class QuantizerPropagationSolver:
         # TODO: ensure that there are no name collisions between ops in different torch subpackages with the same name
         retval = {}
         if self._hw_config is None:
-            for op_meta in OPERATOR_METATYPES.registry_dict.values():
+            for op_meta in PT_OPERATOR_METATYPES.registry_dict.values():
                 retval[op_meta] = []  # Default value, corresponds to wildcard quantization
             for trait, meta_list in DEFAULT_QUANT_TRAIT_TO_OP_DICT.items():
                 if trait == QuantizationTrait.INPUTS_QUANTIZABLE:

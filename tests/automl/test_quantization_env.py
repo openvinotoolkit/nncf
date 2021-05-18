@@ -17,7 +17,7 @@ import pytest
 from nncf import NNCFConfig
 from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
 from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.hw_config import HWConfigType, HWConfig
+from nncf.common.hardware.config import HWConfigType, HWConfig
 from nncf.nncf_network import NNCFNetwork
 from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
 from nncf.quantization.precision_constraints import HardwareQuantizationConstraints

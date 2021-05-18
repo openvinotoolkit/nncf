@@ -35,12 +35,14 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.hardware.config import HWConfig
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
@@ -54,8 +56,6 @@ from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.graph.transformations.commands import TransformationPriority
 from nncf.graph.transformations.layout import PTTransformationLayout
-from nncf.hw_config import HWConfig
-from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
