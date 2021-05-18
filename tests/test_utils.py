@@ -1,7 +1,11 @@
 import pytest
+import torch
 from torch import nn
 
 from nncf.utils import training_mode_switcher
+from nncf.utils import save_module_state
+from nncf.utils import _ModuleState
+from nncf.layer_utils import CompressionParameter
 from nncf.initialization import DataLoaderBNAdaptationRunner
 
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, MockModel
@@ -10,65 +14,63 @@ from tests.quantization.test_saturation_issue_export import DepthWiseConvTestMod
 from tests.modules.test_rnn import _seed
 
 
-def save_model_training_state(module, model_state):
-    for ch in module.children():
-        model_state[ch] = ch.training
-        save_model_training_state(ch, model_state)
+def compare_saved_model_state_and_current_model_state(module: nn.Module, model_state: _ModuleState):
+    for ch in module.modules():
+        assert model_state.training_state[ch] == ch.training
+
+    for p in module.parameters():
+        assert p.requires_grad == model_state.requires_grad_state[p]
 
 
-def compare_saved_model_state_and_current_model_state(module, model_state):
-    for ch in module.children():
-        assert model_state[ch] == ch.training
-        compare_saved_model_state_and_current_model_state(ch, model_state)
-
-
-def randomly_change_model_training_state(module):
+def randomly_change_model_state(module: nn.Module, compression_params_only: bool = False):
     import random
-    for ch in module.children():
+    for ch in module.modules():
         if random.uniform(0, 1) > 0.5:
             ch.training = False
         else:
             ch.training = True
-        randomly_change_model_training_state(ch)
+
+    for p in module.parameters():
+        if compression_params_only and not (isinstance(p, CompressionParameter) and torch.is_floating_point(p)):
+            break
+        if random.uniform(0, 1) > 0.5:
+            p.requires_grad = False
+        else:
+            p.requires_grad = True
 
 
 @pytest.mark.parametrize('model', [BasicConvTestModel(), TwoConvTestModel(), MockModel(),
                                    DepthWiseConvTestModel(), EightConvTestModel()])
-def test_training_mode_switcher(_seed, model):
-    randomly_change_model_training_state(model)
-
-    saved_model_state = {}
-    save_model_training_state(model, saved_model_state)
-
+def test_training_mode_switcher(_seed, model: nn.Module):
+    randomly_change_model_state(model)
+    saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
         # pylint: disable=unnecessary-pass
         pass
 
-    compare_saved_model_state_and_current_model_state(model, saved_model_state)
+    compare_saved_model_state_and_current_model_state(model, saved_state)
 
 
 @pytest.mark.parametrize('model', [BasicConvTestModel(), TwoConvTestModel(), MockModel(),
                                    DepthWiseConvTestModel(), EightConvTestModel()])
-def test_bn_training_state_switcher(_seed, model):
-    runner = DataLoaderBNAdaptationRunner(model, 'cuda', 0)
-    saved_model_state = {}
+def test_bn_training_state_switcher(_seed, model: nn.Module):
 
-    def check_were_only_bn_training_state_changed(module, saved_state):
-        for ch in module.children():
+    def check_were_only_bn_training_state_changed(module: nn.Module, saved_state: _ModuleState):
+        for ch in module.modules():
             if isinstance(ch, (nn.BatchNorm1d,
                                nn.BatchNorm2d,
                                nn.BatchNorm3d)):
                 assert ch.training
             else:
-                assert ch.training == saved_state[ch]
-            check_were_only_bn_training_state_changed(ch, saved_state)
+                assert ch.training == saved_state.training_state[ch]
 
-    randomly_change_model_training_state(model)
+    runner = DataLoaderBNAdaptationRunner(model, 'cuda', 0)
 
-    save_model_training_state(model, saved_model_state)
+    randomly_change_model_state(model)
+    saved_state = save_module_state(model)
 
     # pylint: disable=protected-access
     with runner._bn_training_state_switcher():
-        check_were_only_bn_training_state_changed(model, saved_model_state)
+        check_were_only_bn_training_state_changed(model, saved_state)
 
-    compare_saved_model_state_and_current_model_state(model, saved_model_state)
+    compare_saved_model_state_and_current_model_state(model, saved_state)
