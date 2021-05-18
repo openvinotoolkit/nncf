@@ -72,6 +72,7 @@ from nncf.utils import objwalk
 MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
+KD_LOSS_STORAGE_NAME = 'kd_loss'
 
 Module = TypeVar('Module', bound=nn.Module)
 
@@ -402,7 +403,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self._user_dummy_forward_fn = dummy_forward_fn
         self._registered_modules_for_parallel_exec = nn.ModuleDict()
         self._modules_for_parallel_exec = {}
-
+        self._kd_original_model = None
 
         try:
             device = next(module.parameters()).device
@@ -479,24 +480,37 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = replicate_same_tensors(retval)
             retval = self._wrap_outputs_fn(retval)
 
-        for key, module in self._registered_modules_for_parallel_exec.items():
+        if self._kd_original_model is not None:
             with torch.no_grad():
-                self._modules_for_parallel_exec[key]['outputs'] = module(*args, **kwargs)
-            #with ExitStack() as stack:
-            #    if module['is_traced']:
-            #        stack.enter_context(self._compressed_context)
-            #    if module['no_grad']:
-            #        stack.enter_context(torch.no_grad())
-            #    module['outputs'] = module['module'](*args, **kwargs)
+                kd_outputs = self._kd_original_model(*args, **kwargs)
+            kd_loss = self._calculate_kdloss_fn(retval, kd_outputs)
+            # Global buffer inner content: 1.8429677486419678
+            # Global buffer inner content: 1.8429677486419678
+            # Global buffer inner content: 2.7948174476623535
+            # Data race?
+            if not isinstance(kd_loss, torch.Tensor):
+                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss)
+            else:
+                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(torch.device('cpu')))
+            print(f'Global buffer inner content: {self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME]}')
+
         return retval
 
-    def register_module_for_parallel_exec(self, module, MODULE_NAME, is_traced=False, no_grad=True):
-        self._registered_modules_for_parallel_exec.update({MODULE_NAME: module})
-        self._modules_for_parallel_exec[MODULE_NAME] = {'module': module, 'outputs': None,
-                                                                       'is_traced': is_traced, 'no_grad': no_grad}
+    def enable_knowledge_distillation(self, kd_original_model, calculate_kdloss_fn):
+        #self._kd_loss_calculator = kd_loss_calculator
+        self._kd_original_model = kd_original_model
+        self._calculate_kdloss_fn  = calculate_kdloss_fn
+        self._compressed_context.register_global_buffer(KD_LOSS_STORAGE_NAME, [])
 
-    def get_registered_modules_for_parallel_exec_outputs(self, MODULE_NAME):
-        return self._modules_for_parallel_exec[MODULE_NAME]['outputs']
+    def zero_kdloss(self):
+        if self._kd_original_model is not None:
+            self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME] = []
+
+    def get_kdloss(self):
+        if self._kd_original_model is not None:
+            return self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME]
+        else:
+            return 0
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
         """

@@ -196,6 +196,7 @@ class TracingContext:
         self.is_tracing = True
         self._may_add_nodes = True
         self._input_comparators_per_scope = []
+        self.global_buffer_store = {}
 
     def __enter__(self):
         global _CURRENT_CONTEXT
@@ -210,6 +211,12 @@ class TracingContext:
     def __exit__(self, *args):
         self.reset_scope_operator_call_counters()
         self.leave()
+
+    def register_global_buffer(self, name: str, buffer):
+        self.global_buffer_store[name] = buffer
+
+    def get_from_global_buffer(self, name: str):
+        return self.global_buffer_store[name]
 
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
                            ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:

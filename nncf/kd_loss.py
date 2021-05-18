@@ -19,13 +19,14 @@ KD_MODULE_NAME = 'KD_FP32_MODULE'
 
 
 class KDLossCalculator(PTCompressionLoss):
-    def __init__(self, target_model, original_model, scale, is_softmax):
+    def __init__(self, target_model: NNCFNetwork, original_model, scale, is_softmax):
         super().__init__()
         self._target_model = target_model
         self.original_model = original_model
         self.original_model.train()
         self.scale = scale
         self.is_softmax = is_softmax
+        self.loss_value = torch.zeros([1], device=torch.device('cpu'))
         # ToDo: Make user to choose type of loss explicitely
         if is_softmax:
             def kdloss_fn(ref_outputs, compressed_model_outputs):
@@ -37,39 +38,39 @@ class KDLossCalculator(PTCompressionLoss):
                 return mse(ref_outputs, compressed_model_outputs)
         self.kdloss_fn = kdloss_fn
 
-    def forward(self, input_=None, target=None):
-        # input_ is compressed model output
-        # target is input
-        if input_ is None:
-            raise ValueError('KDLoss entries cannot be None. Check compression loss arguments.')
-
-        def is_loss(obj):
-            if not isinstance(obj, torch.Tensor):
-                return False
-            if obj.requires_grad:
-                return True
-            return False
-
-        def match_func(obj, to_match_with):
-            for x in to_match_with:
-                if x.path == obj.path:
-                    return True
-            return False
-
-        # with DP outputs / gpu count need to concat outputs
-        ref_outputs = self._target_model.get_registered_modules_for_parallel_exec_outputs(KD_MODULE_NAME)
-
-        compressed_model_outputs = []
-        orig_model_outputs = []
-        nested_object_paths_generator([input_], compressed_model_outputs)
-        nested_object_paths_generator([ref_outputs], orig_model_outputs)
-        compressed_model_loss_nested_obj_paths = list(filter(lambda x: is_loss(x.getter()), compressed_model_outputs))
+    def calculate_kd_loss(self, compressed_model_outputs, orig_model_outputs):
+        compressed_model_outputs_struct = []
+        orig_model_outputs_struct = []
+        nested_object_paths_generator([compressed_model_outputs], compressed_model_outputs_struct)
+        nested_object_paths_generator([orig_model_outputs], orig_model_outputs_struct)
+        compressed_model_loss_nested_obj_paths = list(filter(lambda x: self._is_loss(x.getter()), compressed_model_outputs_struct))
         compressed_model_loss_outputs = list(map(lambda x: x.getter(), compressed_model_loss_nested_obj_paths))
-        orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(partial(match_func, to_match_with=compressed_model_loss_nested_obj_paths), orig_model_outputs)))
+        orig_model_loss_outputs = list(map(lambda x: x.getter(), filter(
+            partial(self.match_func, to_match_with=compressed_model_loss_nested_obj_paths), orig_model_outputs_struct)))
         # check for shapes. zip is not reliable
         return self.scale * reduce(
             lambda kd_loss, loss_tensors: kd_loss + self.kdloss_fn(loss_tensors[0], loss_tensors[1]),
             zip(orig_model_loss_outputs, compressed_model_loss_outputs), 0)
+
+    @staticmethod
+    def _is_loss(obj):
+        if not isinstance(obj, torch.Tensor):
+            return False
+        if obj.requires_grad:
+            return True
+        return False
+
+    @staticmethod
+    def match_func(obj, to_match_with):
+        for x in to_match_with:
+            if x.path == obj.path:
+                return True
+        return False
+
+    def forward(self, input_=None, target=None):
+        output = torch.mean(torch.tensor(self._target_model.get_kdloss()))
+        self._target_model.zero_kdloss()
+        return output
 
     def statistics(self, quickly_collected_only=False):
         return {}
@@ -97,9 +98,9 @@ class KnowledgeDistillationController(PTCompressionAlgorithmController):
     def __init__(self, target_model, original_model, scale, is_softmax):
         super().__init__(target_model)
         original_model.train()
-        target_model.register_module_for_parallel_exec(original_model, KD_MODULE_NAME, is_traced=False, no_grad=True)
         self._scheduler = BaseCompressionScheduler()
         self._loss = KDLossCalculator(target_model=target_model, original_model=original_model, scale=scale, is_softmax=is_softmax)
+        target_model.enable_knowledge_distillation(original_model, self._loss.calculate_kd_loss)
 
     @property
     def scheduler(self) -> CompressionScheduler:
