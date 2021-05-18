@@ -146,44 +146,84 @@ class ProcessedKeys:
 class NormalizedKeys:
     """
         Contains normalized form of parameters. It helps to discard irrelevant prefixes added during wrapping in
-        NNCFNetwork or DataParallel/DistributedDataParallel objects, to ignore the order of pre/post operations, to
-        handle legacy parameters' names and to match unified compression parameters from the separate ones.
+        NNCFNetwork or DataParallel/DistributedDataParallel objects, to handle legacy parameters' names and to match
+        unified compression parameters from the separate ones.
     """
 
     def __init__(self, keys: List[str]):
-        self._collisions = []
-        self._norm_key_vs_orig_key_map = {}
+        self._unique_normalized_key_vs_orig_key_map = {}
         self.is_unified_group_detected = False
-
-        for orig_key in keys:
-            normalized_keys = self._key_normalizer(orig_key)
-            if len(normalized_keys) > 1:
-                self.is_unified_group_detected = True
-            for normalized_key in normalized_keys:
-                if normalized_key in self._norm_key_vs_orig_key_map:
-                    self._collisions.append(orig_key)
-                self._norm_key_vs_orig_key_map[normalized_key] = orig_key
+        unique_clipped_key_vs_orig_key_list_map = self._clip_keys_without_collisions(keys)
+        self._normalize_keys_without_collisions(unique_clipped_key_vs_orig_key_list_map)
 
     def __contains__(self, key: str):
-        return (key in self._norm_key_vs_orig_key_map) and (key not in self._collisions)
+        return key in self._unique_normalized_key_vs_orig_key_map
 
     def __iter__(self):
-        return iter(self._norm_key_vs_orig_key_map)
+        return iter(self._unique_normalized_key_vs_orig_key_map)
 
     def get_orig_key(self, normalized_key: str):
-        return self._norm_key_vs_orig_key_map[normalized_key]
+        return self._unique_normalized_key_vs_orig_key_map[normalized_key]
+
+    def _normalize_keys_without_collisions(self, unique_clipped_key_vs_orig_key_map: Dict[str, str]):
+        normalized_key_vs_clipped_key_list_map = {}
+        for clipped_key in unique_clipped_key_vs_orig_key_map:
+            replaced_keys = self._key_replacer(clipped_key)
+            if len(replaced_keys) > 1:
+                self.is_unified_group_detected = True
+
+            for replaced_key in replaced_keys:
+                if replaced_key in normalized_key_vs_clipped_key_list_map:
+                    normalized_key_vs_clipped_key_list_map[replaced_key].append(clipped_key)
+                else:
+                    normalized_key_vs_clipped_key_list_map[replaced_key] = [clipped_key]
+        # keep clipped keys if their normalization led to a collisions
+        for normalized_key in normalized_key_vs_clipped_key_list_map:
+            list_clipped_keys = normalized_key_vs_clipped_key_list_map[normalized_key]
+            if len(list_clipped_keys) == 1:
+                clipped_key = list_clipped_keys[0]
+                orig_key = unique_clipped_key_vs_orig_key_map[clipped_key]
+                self._unique_normalized_key_vs_orig_key_map[normalized_key] = orig_key
+            else:
+                for clipped_key in list_clipped_keys:
+                    orig_key = unique_clipped_key_vs_orig_key_map[clipped_key]
+                    self._unique_normalized_key_vs_orig_key_map[clipped_key] = orig_key
 
     @staticmethod
-    def _key_normalizer(key: str) -> List[str]:
+    def _clip_keys_without_collisions(keys: List[str]) -> Dict[str, str]:
+        clipped_key_vs_orig_key_list_map = {}
+        for orig_key in keys:
+            clipped_key = NormalizedKeys._key_clipper(orig_key)
+            if clipped_key in clipped_key_vs_orig_key_list_map:
+                clipped_key_vs_orig_key_list_map[clipped_key].append(orig_key)
+            else:
+                clipped_key_vs_orig_key_list_map[clipped_key] = [orig_key]
+        # keep original keys if their clipping led to a collisions
+        unique_clipped_key_vs_orig_key_map = {}
+        for clipped_key in clipped_key_vs_orig_key_list_map:
+            list_orig_keys = clipped_key_vs_orig_key_list_map[clipped_key]
+            if len(list_orig_keys) == 1:
+                unique_clipped_key_vs_orig_key_map[clipped_key] = list_orig_keys[0]
+            else:
+                for orig_key in list_orig_keys:
+                    unique_clipped_key_vs_orig_key_map[orig_key] = orig_key
+        return unique_clipped_key_vs_orig_key_map
+
+    @staticmethod
+    def _key_clipper(key: str) -> str:
         new_key = key
-
-        match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
-        new_key = new_key if not match else new_key.replace(match.group(), 'operation')
-
         from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
         clip_patterns = [MODEL_WRAPPED_BY_NNCF_ATTR_NAME + '.', 'module.', '|OUTPUT', '|INPUT']
         for pattern in clip_patterns:
             new_key = new_key.replace(pattern, '')
+        return new_key
+
+    @staticmethod
+    def _key_replacer(key: str) -> List[str]:
+        new_key = key
+
+        match = re.search('(pre_ops|post_ops)\\.(\\d+?)\\.op', key)
+        new_key = new_key if not match else new_key.replace(match.group(), 'operation')
         result = [new_key]
 
         # cover unified FQ - external_quantizers.RELU_0;RELU_1;RELU_2.op

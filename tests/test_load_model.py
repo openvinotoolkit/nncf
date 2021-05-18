@@ -222,9 +222,47 @@ MATCH_KEY_DESC_LIST = [
     MatchKeyDesc(num_loaded=0, expects_error=True)
         .keys_to_load(['module.nncf_module.1.1', 'module.2']).model_keys(['1', '2.2'])
         .all_not_matched(),
+
+    # collisions after normalization of keys
+
+    # different order of pre_ops
     MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2']).model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
+        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2'])
+        .model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
         .all_matched(),
+    # binarization of activation and weight may have the identical parameter (e.g. enabled)
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
+        .model_keys(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
+        .all_matched(),
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['nncf_module.pre_ops.1.op.1', 'nncf_module.pre_ops.0.op.1'])
+        .model_keys(['module.nncf_module.pre_ops.1.op.1', 'module.nncf_module.pre_ops.0.op.1'])
+        .all_matched(),
+    # quantization -> quantization + sparsity: op.1 was first, than
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2'])
+        .model_keys(['pre_ops.1.op.1', 'pre_ops.1.op.2'])
+        .all_matched(),
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['module.1', '1']).model_keys(['module.1', '1'])
+        .all_matched(),
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['module.1', '1']).model_keys(['module.1'])
+        .matched(['module.1']).unexpected(['module.1']),
+    MatchKeyDesc(num_loaded=2)
+        .keys_to_load(['pre_ops.0.op.1', 'module.pre_ops.1.op.2'])
+        .model_keys(['module.pre_ops.0.op.1|OUTPUT', 'pre_ops.6.op.2'])
+        .all_matched(),
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['module.1']).model_keys(['module.1', '1'])
+        .matched(['1']).missing(['module.1']),
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['1']).model_keys(['module.1', '1'])
+        .matched(['1']).missing(['module.1']),
+    MatchKeyDesc(num_loaded=1, expects_error=True)
+        .keys_to_load(['1', 'module.1']).model_keys(['1'])
+        .matched(['1']).unexpected(['module.1']),
 
     # can match legacy activation quantizer storage name
     MatchKeyDesc(num_loaded=2)
