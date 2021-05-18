@@ -139,7 +139,7 @@ GLOBAL_CONFIG = {
                         'weights': 'retinanet/retinanet.h5',
                     },
                     'quantization/yolo_v4_coco_int8.json': {
-                        'expected_accuracy': 46.20,
+                        'expected_accuracy': 46.30,
                         'absolute_tolerance_train': 0.5,
                         'absolute_tolerance_test': 0.5,
                         'weights': 'yolo_v4/yolo_v4.h5',
@@ -232,7 +232,7 @@ def _params(request, tmp_path_factory, dataset_dir, models_dir, weekly_tests):
     with open(args['config']) as config_file:
         config = json.load(config_file)
         if config.get('dataset') != 'imagenet2012' or config.get('dataset_type') != 'tfrecords':
-             args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))
+            args['data'] += '_{}'.format(config.get('dataset_type', 'tfrecords'))
 
     if args['weights']:
         if models_dir:

@@ -60,6 +60,7 @@ def pytest_addoption(parser):
         "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
     )
 
+
 @pytest.fixture(scope="module")
 def sota_checkpoints_dir(request):
     return request.config.getoption("--sota-checkpoints-dir")
