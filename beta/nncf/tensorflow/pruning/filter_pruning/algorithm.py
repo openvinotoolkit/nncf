@@ -131,8 +131,8 @@ class FilterPruningController(BasePruningAlgoController):
     def loss(self) -> CompressionLoss:
         return self._loss
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
+    def raw_statistics(self) -> Dict[str, object]:
+        stats = super().raw_statistics()
         stats['pruning_rate'] = self.pruning_rate
         stats['FLOPS pruning level'] = 1 - self.current_flops / self.full_flops
         stats['FLOPS current / full'] = f"{self.current_flops} / {self.full_flops}"

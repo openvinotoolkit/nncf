@@ -49,10 +49,18 @@ def prepare_for_tensorboard(raw_sparsity_statistics, prefix, rate_abbreviation):
         if key == statistic_by_layer:
             for v in value:
                 statistics[detailed_prefix + v['Name'] + '/' + prefix] = v[rate_abbreviation]
-        else:
+        elif is_convertible_to_scalar(value):
             statistics[base_prefix + key] = value
 
     return statistics
+
+
+def is_convertible_to_scalar(value):
+    try:
+        tf.convert_to_tensor(value, dtype=tf.float32)
+        return True
+    except:
+        return False
 
 
 def strip_model_from_masks(model: tf.keras.Model, op_names: List[str]) -> tf.keras.Model:
