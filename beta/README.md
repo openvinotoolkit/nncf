@@ -65,8 +65,8 @@ To run the samples please refer to the corresponding tutorials:
 ## System requirements
 - Ubuntu\* 16.04 or later (64-bit)
 - Python\* 3.6 or later
-- NVidia CUDA\* Toolkit 10.1
-- TensorFlow\* 2.3.1
+- NVidia CUDA\* Toolkit 11.0
+- TensorFlow\* 2.4.0
 
 ## NNCF TF compression results
 
