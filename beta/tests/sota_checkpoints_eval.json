@@ -304,7 +304,7 @@
                 "yolo_v4_int8_w_sym_ch_a_asym_t": {
                     "config":"examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json",
                     "reference":"yolo_v4",
-                    "target":46.20,
+                    "target":46.30,
                     "resume":"yolo_v4_int8_w_sym_ch_a_asym_t",
                     "metric_type":"mAP",
                     "model_description":"yolo_v4_int8_w_sym_ch_a_asym_t",
