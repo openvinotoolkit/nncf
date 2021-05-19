@@ -42,6 +42,7 @@ from nncf.layers import NNCF_MODULES_MAP
 from nncf.model_creation import create_compressed_model
 from nncf.nncf_network import NNCFNetwork
 from nncf.utils import get_all_modules_by_type
+from tests.common.command import Command as BaseCommand
 
 TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])
 
@@ -387,3 +388,10 @@ def get_all_inputs_for_graph_node(node: onnx.NodeProto, graph: onnx.GraphProto) 
             retval[input_] = numpy_helper.to_array(val.t)
 
     return retval
+
+
+class Command(BaseCommand):
+    def run(self, timeout=3600, assert_returncode_zero=True):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
+        return super().run(timeout, assert_returncode_zero)

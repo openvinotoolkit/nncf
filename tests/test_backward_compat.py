@@ -28,9 +28,10 @@ from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from tests.conftest import TEST_ROOT
 from tests.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.test_compressed_graph import get_basic_quantization_config
-from tests.test_compression_training import get_cli_dict_args
 from tests.helpers import create_compressed_model_and_algo_for_test
-from tests.test_sanity_sample import Command, create_command_line
+from tests.helpers import Command
+from tests.common.helpers import get_cli_dict_args
+from tests.test_sanity_sample import create_command_line
 
 GLOBAL_CONFIG = {
     TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"): [
