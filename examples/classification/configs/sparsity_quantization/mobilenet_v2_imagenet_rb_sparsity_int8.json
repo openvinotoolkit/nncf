@@ -16,15 +16,6 @@
     },
     "compression": [
         {
-            "algorithm": "quantization",
-            "initializer": {
-                "range": {
-                    "num_init_samples": 256,
-                    "type": "min_max"
-                }
-            }
-        },
-        {
             "algorithm": "rb_sparsity",
             "sparsity_init": 0.01,
             "params": {
@@ -32,7 +23,16 @@
                 "sparsity_target_epoch": 5,
                 "sparsity_freeze_epoch": 10
             },
-            "ignored_scopes": ["MobileNetV2/Sequential[features]/ConvBNReLU[0]/NNCFConv2d[0]"]
+            "ignored_scopes": ["MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]"]
+        },
+        {
+            "algorithm": "quantization",
+            "initializer": {
+                "range": {
+                    "num_init_samples": 256,
+                    "type": "min_max"
+                }
+            }
         }
     ]
 }
