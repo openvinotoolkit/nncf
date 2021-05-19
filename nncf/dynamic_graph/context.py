@@ -215,9 +215,6 @@ class TracingContext:
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
 
-    def get_from_global_buffer(self, name: str):
-        return self.global_buffer_store[name]
-
     def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
                            ia_op_exec_context: InputAgnosticOperationExecutionContext) -> Optional[PTNNCFNode]:
         with self._cond:
