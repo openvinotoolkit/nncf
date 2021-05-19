@@ -17,7 +17,6 @@ import networkx as nx
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
-
 from beta.nncf.tensorflow.graph.utils import get_expanded_node_name
 from beta.nncf.tensorflow.graph.utils import is_functional_model
 from beta.nncf.tensorflow.graph.utils import is_sequential_model
@@ -28,6 +27,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFGraphNodeType
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 
+PREFIX_AUXILIARY_OUTPUT_NODE = 'output'
 
 def convert_keras_model_to_nxmodel(model):
     """
@@ -170,25 +170,26 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
         nncf_graph = _get_nncf_graph_from_functional(model)
     else:
         nncf_graph = _get_nncf_graph_from_sequential(model)
-    _add_aux_output_nodes_to_nncf_graph(nncf_graph)
+
+    # pylint: disable=protected-access
+    _add_aux_output_nodes_to_nncf_graph(nncf_graph, model._output_layers)
     return nncf_graph
 
-def _add_aux_output_nodes_to_nncf_graph(nncf_graph: NNCFGraph):
-    outputs = []
-    for nx_node_key, deg in nncf_graph._nx_graph.out_degree():
-        if deg == 0:
-            outputs.append(nncf_graph._nx_node_to_nncf_node(nncf_graph._nx_graph.nodes[nx_node_key]))
+def _add_aux_output_nodes_to_nncf_graph(nncf_graph: NNCFGraph, output_layers):
 
-    for num, output_node in enumerate(outputs):
-        output_aux_node_name = 'output_{}'.format(num)
-        attrs = {
+    for i, output_layer in enumerate(output_layers):
+        output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
+        node_attrs = {
             NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
             'original_name': output_aux_node_name
         }
-        nncf_graph.add_node(output_aux_node_name, **attrs)
-        nncf_graph.add_edge(output_node.node_name, output_aux_node_name)
+        edge_attrs = {
+            NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: output_layer.output_shape,
+            NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0
+        }
+        nncf_graph.add_node(output_aux_node_name, **node_attrs)
+        nncf_graph.add_edge(output_layer.name, output_aux_node_name, **edge_attrs)
 
-    return outputs
 
 def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
     model_config = model.get_config()

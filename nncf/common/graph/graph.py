@@ -12,7 +12,6 @@
 """
 
 import networkx as nx
-from enum import Enum
 
 from collections import OrderedDict
 from typing import Any, Callable, Dict, KeysView, List, Tuple, ValuesView
@@ -42,7 +41,7 @@ class NNCFNode:
     def node_type(self) -> str:
         node_type = self.data.get(NNCFGraph.NODE_TYPE_ATTR)
         if node_type == 'InputLayer':
-                return NNCFGraphNodeType.INPUT_NODE
+            return NNCFGraphNodeType.INPUT_NODE
         if node_type == 'OutputLayer':
             return NNCFGraphNodeType.OUTPUT_NODE
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
@@ -65,9 +64,9 @@ class NNCFNode:
                and self.module_attributes == other.module_attributes
 
 
-class NNCFGraphNodeType(Enum):
-    INPUT_NODE = 0
-    OUTPUT_NODE = 1
+class NNCFGraphNodeType:
+    INPUT_NODE = 'input_node'
+    OUTPUT_NODE = 'output_node'
 
 
 class NNCFGraph:

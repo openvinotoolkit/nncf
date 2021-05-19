@@ -134,8 +134,6 @@ class PTNNCFGraph(NNCFGraph):
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
 
-    def __init__(self):
-        super().__init__()
 
     def __eq__(self, other: 'PTNNCFGraph'):
         nm = iso.categorical_node_match([PTNNCFGraph.ID_NODE_ATTR,
@@ -155,14 +153,12 @@ class PTNNCFGraph(NNCFGraph):
         node_key = '{idx} {uri}'.format(uri=name, idx=node_id)
 
         self._node_id_to_key_dict[node_id] = node_key
-
         attrs = {
             PTNNCFGraph.NODE_TYPE_ATTR: nncf_node.node_type,
             PTNNCFGraph.ID_NODE_ATTR: node_id,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
             PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: nncf_node.ia_op_exec_context
         }
-
         if nncf_node.module_attributes is not None:
             attrs[NNCFGraph.MODULE_ATTRIBUTES] = nncf_node.module_attributes
         self._nx_graph.add_node(node_key, **attrs)
