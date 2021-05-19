@@ -112,6 +112,7 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,
                                    wrap_inputs_fn=wrap_inputs_fn,
+                                   wrap_outputs_fn=wrap_outputs_fn,
                                    ignored_scopes=ignored_scopes,
                                    target_scopes=target_scopes,
                                    scopes_without_shape_matching=scopes_without_shape_matching)

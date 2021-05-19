@@ -37,17 +37,12 @@
     "top_k": 200,
     "loss_inference": false
   },
-  "compression": [
-    {
+  "compression": {
       "algorithm": "quantization",
         "initializer": {
             "range": {
                 "num_init_samples": 1280
             }
         }
-    },
-    {
-      "algorithm": "knowledge_distillation"
-    }
-    ]
+  }
 }

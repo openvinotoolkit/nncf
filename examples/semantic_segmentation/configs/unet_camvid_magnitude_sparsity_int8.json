@@ -63,9 +63,6 @@
         },
         {
             "algorithm": "quantization"
-        },
-        {
-            "algorithm": "knowledge_distillation"
-        }
+    }
     ]
 }

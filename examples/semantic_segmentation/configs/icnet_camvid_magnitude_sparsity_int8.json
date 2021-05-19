@@ -31,8 +31,10 @@
             "lr": 5.0e-5,
             "weight_decay": 2.0e-4
         },
-        "schedule_type": "step",
-        "step": 100
+        "schedule_type": "poly",
+        "schedule_params": {
+            "power": 0.9
+        }
     },
 
     "model_params": {
@@ -49,13 +51,9 @@
                 "multistep_steps": [
                     5,
                     10,
-                    15,
-                    25,
-                    35,
-                    45,
-                    55,
-                    65,
-                    80
+                    20,
+                    30,
+                    40
                 ],
                 "multistep_sparsity_levels": [
                     0.1,
@@ -63,19 +61,13 @@
                     0.3,
                     0.4,
                     0.5,
-                    0.6,
-                    0.7,
-                    0.8,
-                    0.9,
-                    0.95
+                    0.6
                 ]
             }
         },
         {
             "algorithm": "quantization",
             "ignored_scopes": ["ICNet/interpolate_0"]
-        }
-    ],
-    "epochs": 120,
-    "batch_size": 9
+    }
+    ]
 }

@@ -60,8 +60,6 @@
         },
         {
             "algorithm": "quantization"
-        }
-    ],
-    "epochs": 15,
-    "batch_size": 10
+    }
+    ]
 }

@@ -22,7 +22,6 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
-from contextlib import ExitStack
 
 import networkx as nx
 import torch
@@ -387,6 +386,8 @@ class PTInsertionPoint:
 
 
 # pylint: disable=too-many-public-methods
+
+
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
@@ -523,6 +524,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
 
+
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
     def get_nncf_wrapped_model(self):
@@ -614,6 +616,7 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             return retval
 
         return wrapped_user_dummy_forward_fn
+
 
     def _replace_modules_by_nncf_modules(self, device, eval_only_ops_exec_ctx: List[str] = None,
                                          reset: bool = False):
