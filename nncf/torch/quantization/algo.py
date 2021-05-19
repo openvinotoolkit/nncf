@@ -49,6 +49,7 @@ from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
+from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.debug import is_debug
@@ -1136,7 +1137,8 @@ class QuantizationController(QuantizationControllerBase):
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
         self._distributed = False
         self._groups_of_adjacent_quantizers = groups_of_adjacent_quantizers
-        self._bn_adaptation = BatchnormAdaptationAlgorithm()
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(
+            **extract_bn_adaptation_init_params(self.quantization_config))
 
         should_export_to_onnx_qdq = quantization_config.get("export_to_onnx_standard_ops",
                                                             False)
@@ -1170,7 +1172,7 @@ class QuantizationController(QuantizationControllerBase):
         self.is_staged_scheduler = bool(params)
 
         if is_main_process() and should_init:
-            self._bn_adaptation.run(self.model, self.quantization_config)
+            self._bn_adaptation.run(self.model)
 
         # Staged scheduler must be created after initialized to prevent extra logic with disabled quantizations
         if self.is_staged_scheduler:

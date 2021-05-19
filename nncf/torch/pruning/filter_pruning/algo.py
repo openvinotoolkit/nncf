@@ -22,6 +22,7 @@ from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
+from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.model_analysis import Clusterization
@@ -127,7 +128,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         self.set_pruning_rate(self.pruning_init)
         self._scheduler = scheduler_cls(self, params)
-        self._bn_adaptation = BatchnormAdaptationAlgorithm()
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(**extract_bn_adaptation_init_params(self.config))
 
     @property
     def loss(self) -> CompressionLoss:
@@ -335,7 +336,7 @@ class FilterPruningController(BasePruningAlgoController):
             self._pruning_rate = self._calculate_global_weight_pruning_rate()
 
         if run_batchnorm_adaptation:
-            self._bn_adaptation.run(self.model, self.config)
+            self._bn_adaptation.run(self.model)
 
     def _calculate_global_weight_pruning_rate(self) -> float:
         full_param_count = 0

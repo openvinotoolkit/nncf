@@ -11,8 +11,8 @@
  limitations under the License.
 """
 
-from nncf.config import NNCFConfig
 from nncf.common.batchnorm_adaptation import BatchnormAdaptationAlgorithmImpl
+from nncf.common.utils.logger import logger
 
 
 class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
@@ -20,11 +20,13 @@ class TFBatchnormAdaptationAlgorithmImpl(BatchnormAdaptationAlgorithmImpl):
     Implementation of the batch-norm adaptation algorithm for the TensorFlow.
     """
 
-    def run(self, model, config: NNCFConfig):
+    def run(self, model):
         """
         Runs the batch-norm adaptation algorithm.
 
         :param model: A model for which the algorithm will be applied.
-        :param config: NNCF config.
         """
         # TODO(andrey-churkin): Should be implemented.
+
+        logger.warning('There is no possibility to start batchnorm adaptation algorithm for '
+                       'the TensorFlow backend because it is not implemented.')

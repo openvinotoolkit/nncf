@@ -17,6 +17,7 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.config.structure import NNCFExtraConfigStruct
+from nncf.config.structure import BNAdaptationInitArgs
 
 
 class QuantizationPrecisionInitArgs(NNCFExtraConfigStruct):
@@ -75,7 +76,7 @@ class QuantizationRangeInitArgs(NNCFExtraConfigStruct):
         return "quantization_range_init_args"
 
 
-class BNAdaptationInitArgs(NNCFExtraConfigStruct):
+class PTBNAdaptationInitArgs(BNAdaptationInitArgs):
     """
     Stores arguments for BatchNorm statistics adaptation procedure.
     Adaptation is done by inferring a number of data batches on a compressed model
@@ -91,9 +92,6 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         self.data_loader = data_loader
         self.device = device
 
-    @classmethod
-    def get_id(cls) -> str:
-        return "bn_adaptation_init_args"
 
 class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
     """

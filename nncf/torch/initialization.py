@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 from nncf.common.utils.progress_bar import ProgressBar
 from nncf.torch.structures import AutoQPrecisionInitArgs
-from nncf.torch.structures import BNAdaptationInitArgs
+from nncf.torch.structures import PTBNAdaptationInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.structures import QuantizationRangeInitArgs
 from nncf.torch.utils import is_tensor
@@ -255,8 +255,8 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                device: str = None) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                   device=device),
-                                        BNAdaptationInitArgs(data_loader=train_loader,
-                                                             device=device)])
+                                        PTBNAdaptationInitArgs(data_loader=train_loader,
+                                                               device=device)])
 
     if criterion:
         if not criterion_fn:

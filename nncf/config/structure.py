@@ -15,3 +15,9 @@ class NNCFExtraConfigStruct:
     @classmethod
     def get_id(cls) -> str:
         raise NotImplementedError
+
+
+class BNAdaptationInitArgs(NNCFExtraConfigStruct):
+    @classmethod
+    def get_id(cls) -> str:
+        return 'bn_adaptation_init_args'

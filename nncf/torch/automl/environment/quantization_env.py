@@ -33,6 +33,7 @@ from copy import deepcopy
 from collections import OrderedDict
 from natsort import natsorted
 
+from nncf.config.utils import extract_bn_adaptation_init_params
 from nncf.common.utils.logger import logger
 from nncf.common.hardware.config import HWConfigType
 from nncf.torch.debug import is_debug, DEBUG_LOG_DIR
@@ -137,7 +138,8 @@ class QuantizationEnv:
         self.eval_loader = eval_loader
         self.eval_fn = eval_fn
         self._hw_precision_constraints = hw_precision_constraints
-        self._bn_adaptation = BatchnormAdaptationAlgorithm()
+        self._bn_adaptation = BatchnormAdaptationAlgorithm(
+            **extract_bn_adaptation_init_params(self.qctrl.quantization_config))
 
         self.model_name = self.qmodel.nncf_module.__class__.__name__
 
@@ -465,7 +467,7 @@ class QuantizationEnv:
 
 
     def _run_quantization_pipeline(self, finetune=False) -> float:
-        self._bn_adaptation.run(self.qctrl.model, self.qctrl.quantization_config)
+        self._bn_adaptation.run(self.qctrl.model)
 
         if finetune:
             raise NotImplementedError("Post-Quantization fine tuning is not implemented.")
