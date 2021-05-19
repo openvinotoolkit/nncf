@@ -55,6 +55,8 @@ from nncf.common.pruning.utils import get_cluster_next_nodes
 from nncf.common.pruning.utils import get_conv_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.schedulers import StubCompressionScheduler
 
 
 @TF_COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -84,6 +86,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return TFElementwise.get_all_op_aliases()
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -130,6 +133,22 @@ class FilterPruningController(BasePruningAlgoController):
     @property
     def loss(self) -> CompressionLoss:
         return self._loss
+
+    @property
+    def compression_rate(self) -> float:
+        if self.prune_flops:
+            return 1 - self.current_flops / self.full_flops
+        return self.pruning_rate
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        is_pruning_controller_frozen = self.frozen
+        self.frozen = False
+        self.set_pruning_rate(compression_rate)
+        self.frozen = is_pruning_controller_frozen
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
 
     def statistics(self, quickly_collected_only=False):
         stats = super().statistics(quickly_collected_only)

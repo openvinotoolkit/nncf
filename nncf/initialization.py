@@ -11,7 +11,6 @@ from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
 from nncf.progress_bar import ProgressBar
-from nncf.structures import TrainEpochArgs
 from nncf.structures import AutoQPrecisionInitArgs
 from nncf.structures import ModelEvaluationArgs
 from nncf.structures import BNAdaptationInitArgs
@@ -227,6 +226,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
                                autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                autoq_eval_loader: torch.utils.data.DataLoader = None,
+                               model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
                                device: str = None,
                                ) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
@@ -234,7 +234,7 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                         BNAdaptationInitArgs(data_loader=train_loader,
                                                              device=device)])
 
-    if criterion:
+    if criterion is not None:
         if not criterion_fn:
             criterion_fn = default_criterion_fn
         nncf_config.register_extra_structs([QuantizationPrecisionInitArgs(criterion_fn=criterion_fn,
@@ -242,30 +242,14 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                                                           data_loader=train_loader,
                                                                           device=device)])
 
-    if autoq_eval_fn:
+    if autoq_eval_fn is not None:
         if not autoq_eval_loader:
             autoq_eval_loader = train_loader
         nncf_config.register_extra_structs([AutoQPrecisionInitArgs(data_loader=autoq_eval_loader,
                                                                    eval_fn=autoq_eval_fn,
                                                                    nncf_config=nncf_config)])
 
-    if autoq_eval_fn:
-        nncf_config.register_extra_structs([ModelEvaluationArgs(data_loader=autoq_eval_loader,
-                                                                eval_fn=autoq_eval_fn)])
+    if model_eval_fn is not None:
+        nncf_config.register_extra_structs([ModelEvaluationArgs(eval_fn=model_eval_fn)])
 
-    return nncf_config
-
-
-def register_training_loop_args(nncf_config: 'NNCFConfig',
-                                train_epoch_fn=None,
-                                eval_fn=None,
-                                configure_optimizers_fn=None,
-                                tensorboard_writer=None,
-                                log_dir=None):
-
-    nncf_config.register_extra_structs([TrainEpochArgs(train_epoch_fn=train_epoch_fn,
-                                                       eval_fn=eval_fn,
-                                                       configure_optimizers_fn=configure_optimizers_fn,
-                                                       tensorboard_writer=tensorboard_writer,
-                                                       log_dir=log_dir)])
     return nncf_config

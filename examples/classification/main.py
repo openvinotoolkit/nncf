@@ -52,14 +52,15 @@ from nncf.api.compression import CompressionLevel
 from nncf.dynamic_graph.graph_tracer import create_input_infos
 from nncf.initialization import register_default_init_args
 from nncf.initialization import default_criterion_fn
-from nncf.initialization import register_training_loop_args
 from nncf.utils import safe_thread_call, is_main_process
-from nncf import run_accuracy_aware_compressed_training
+from nncf import AdaptiveCompressionTrainingLoop
+
 from examples.classification.common import set_seed, load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
+
 
 def get_argument_parser():
     parser = get_common_argument_parser()
@@ -149,9 +150,13 @@ def main_worker(current_gpu, config: SampleConfig):
             _, top5 = validate(eval_loader, model, criterion, config)
             return top5
 
+        def model_eval_fn(model):
+            top1, _ = validate(val_loader, model, criterion, config)
+            return top1
+
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, train_criterion_fn,
-            autoq_eval_fn, val_loader, config.device)
+            autoq_eval_fn, val_loader, model_eval_fn, config.device)
 
     # create model
     model = load_model(model_name,
@@ -219,14 +224,14 @@ def main_worker(current_gpu, config: SampleConfig):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        # register all these training-loop related funcs in nncf config
-        nncf_config = register_training_loop_args(nncf_config, train_epoch_fn, validate_fn,
-                                                  configure_optimizers_fn,
-                                                  tensorboard_writer=config.tb,
-                                                  log_dir=config.log_dir)
-
-        # run accuracy-aware training loop
-        model = run_accuracy_aware_compressed_training(model, compression_ctrl, nncf_config)
+        # instantiate and run accuracy-aware training loop
+        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        model = acc_aware_training_loop.run(model,
+                                            train_epoch_fn=train_epoch_fn,
+                                            validate_fn=validate_fn,
+                                            configure_optimizers_fn=configure_optimizers_fn,
+                                            tensorboard_writer=config.tb,
+                                            log_dir=config.log_dir)
         return
 
     if config.mode.lower() == 'test':

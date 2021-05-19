@@ -13,6 +13,7 @@
 from os import path as osp
 from typing import Callable, Any, Tuple, Dict
 
+import torch
 from torch.nn import Module
 
 from nncf.checkpoint_loading import load_state
@@ -112,7 +113,8 @@ def create_compressed_model(model: Module, config: NNCFConfig,
     original_model_accuracy = None
     if should_eval_original_model:
         evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
-        original_model_accuracy = evaluation_args.eval_fn(model, evaluation_args.data_loader)
+        with torch.no_grad():
+            original_model_accuracy = evaluation_args.eval_fn(model)
 
     compressed_model = NNCFNetwork(model, input_infos=input_info_list,
                                    dummy_forward_fn=dummy_forward_fn,

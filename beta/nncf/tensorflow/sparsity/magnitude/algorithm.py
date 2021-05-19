@@ -40,6 +40,9 @@ from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMask
 from beta.nncf.tensorflow.sparsity.magnitude.operation import BinaryMaskWithWeightsBackup
 from beta.nncf.tensorflow.utils.node import is_ignored
 
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.schedulers import StubCompressionScheduler
+
 
 @TF_COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
@@ -103,6 +106,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         return MagnitudeSparsityController(model, self.config, self._op_names)
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
@@ -177,6 +181,17 @@ class MagnitudeSparsityController(BaseSparsityController):
                             self._weight_importance_fn(wrapped_layer.layer_weights[weight_attr]),
                             [-1]))
         return all_weights
+
+    @property
+    def compression_rate(self) -> float:
+        return self.raw_statistics()['sparsity_rate_for_model']
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        self.set_sparsity_level(compression_rate)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}

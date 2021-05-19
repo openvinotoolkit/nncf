@@ -14,6 +14,7 @@
 from beta.nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from beta.nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.helpers.utils import get_built_model
+from nncf.structures import ModelEvaluationArgs
 
 
 def create_compression_algorithm_builder(config):
@@ -29,11 +30,16 @@ def create_compression_algorithm_builder(config):
     return None
 
 
-def create_compressed_model(model, config):
+def create_compressed_model(model, config, should_eval_original_model):
     model = get_built_model(model, config)
+    original_model_accuracy = None
+    if should_eval_original_model:
+        evaluation_args = config.get_extra_struct(ModelEvaluationArgs)
+        original_model_accuracy = evaluation_args.eval_fn(model)
     builder = create_compression_algorithm_builder(config)
     if builder is None:
         return None, model
     compressed_model = builder.apply_to(model)
     compression_ctrl = builder.build_controller(compressed_model)
+    compressed_model.original_model_accuracy = original_model_accuracy
     return compression_ctrl, compressed_model

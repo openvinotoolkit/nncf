@@ -52,7 +52,7 @@ from nncf.pruning.filter_pruning.layers import FilterPruningBlock
 from nncf.pruning.filter_pruning.layers import inplace_apply_filter_binary_mask
 from nncf.pruning.utils import init_output_masks_in_graph
 from nncf.utils import get_filters_num
-from nncf.common.accuracy_aware_training.algo import ACCURACY_AWARE_CONTROLLERS
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 
 
 @COMPRESSION_ALGORITHMS.register('filter_pruning')
@@ -78,7 +78,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return PTElementwise.get_all_op_aliases()
 
 
-@ACCURACY_AWARE_CONTROLLERS.register('filter_pruning')
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     def __init__(self, target_model: NNCFNetwork,
                  prunable_types: List[str],

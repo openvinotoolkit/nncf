@@ -32,6 +32,7 @@ import examples.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.semantic_segmentation.utils.transforms as JT
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
+from examples.common.utils import is_accuracy_aware_training
 from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionLevel
@@ -47,6 +48,7 @@ from examples.semantic_segmentation.train import Train
 from examples.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf import create_compressed_model
 from nncf.utils import is_main_process
+from nncf import AdaptiveCompressionTrainingLoop
 
 
 def get_arguments_parser():
@@ -463,6 +465,7 @@ def main_worker(current_gpu, config):
         print_args(config)
 
     logger.info(config)
+    is_accuracy_aware_training_mode = is_accuracy_aware_training(config)
 
     dataset = get_dataset(config.dataset)
     color_encoding = dataset.color_encoding
@@ -493,9 +496,11 @@ def main_worker(current_gpu, config):
         def autoq_test_fn(model, eval_loader):
             return test(model, eval_loader, criterion, color_encoding, config)
 
+        model_eval_fn = functools.partial(autoq_test_fn, eval_loader=val_loader)
+
         nncf_config = register_default_init_args(
             nncf_config, init_loader, criterion, criterion_fn,
-            autoq_test_fn, val_loader, config.device)
+            autoq_test_fn, val_loader, model_eval_fn, config.device)
 
     model = load_model(config.model,
                        pretrained=pretrained,
@@ -510,7 +515,9 @@ def main_worker(current_gpu, config):
     if resuming_checkpoint_path is not None:
         resuming_model_sd, resuming_checkpoint = load_resuming_model_state_dict_and_checkpoint_from_path(
             resuming_checkpoint_path)
-    compression_ctrl, model = create_compressed_model(model, nncf_config, resuming_state_dict=resuming_model_sd)
+    compression_ctrl, model = create_compressed_model(model, nncf_config,
+                                                      resuming_state_dict=resuming_model_sd,
+                                                      should_eval_original_model=is_accuracy_aware_training_mode)
     model, model_without_dp = prepare_model_for_execution(model, config)
 
     if config.distributed:
@@ -532,6 +539,38 @@ def main_worker(current_gpu, config):
         logger.info("Trainable argument count:{params}".format(params=params))
         model = model.to(config.device)
         test(model, val_loader, criterion, color_encoding, config)
+    elif is_accuracy_aware_training_mode and config.mode.lower() == 'train':
+        def validate_fn(model, epoch):
+            return test(model, val_loader, criterion, color_encoding, config)
+
+        # training function that trains the model for one epoch (full training dataset pass)
+        def train_epoch_fn(compression_ctrl, model, epoch, optimizer, lr_scheduler):
+            ignore_index = None
+            ignore_unlabeled = config.get("ignore_unlabeled", True)
+            if ignore_unlabeled and ('unlabeled' in color_encoding):
+                ignore_index = list(color_encoding).index('unlabeled')
+            metric = IoU(len(color_encoding), ignore_index=ignore_index)
+            train_obj = Train(model, train_loader, optimizer, criterion,
+                              compression_ctrl, metric, config.device, config.model)
+            train_obj.run_epoch(config.print_step)
+
+        # function that initializes optimizers & lr schedulers to start training
+        def configure_optimizers_fn():
+            optim_config = config.get('optimizer', {})
+            optim_params = optim_config.get('optimizer_params', {})
+            lr = optim_params.get("lr", 1e-4)
+            params_to_optimize = get_params_to_optimize(model_without_dp, lr * 10, config)
+            optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+            return optimizer, lr_scheduler
+
+        acc_aware_training_loop = AdaptiveCompressionTrainingLoop(nncf_config, compression_ctrl)
+        model = acc_aware_training_loop.run(model,
+                                            train_epoch_fn=train_epoch_fn,
+                                            validate_fn=validate_fn,
+                                            configure_optimizers_fn=configure_optimizers_fn,
+                                            tensorboard_writer=config.tb,
+                                            log_dir=config.log_dir)
+
     elif config.mode.lower() == 'train':
         train(model, model_without_dp, compression_ctrl, train_loader, val_loader, criterion, color_encoding, config,
               resuming_checkpoint)

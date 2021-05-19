@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,9 +11,14 @@
  limitations under the License.
 """
 
-from beta.nncf.tensorflow.helpers.model_creation import create_compressed_model as create_compressed_model_tf
+import os
+import os.path as osp
+import datetime
 
 
-def create_compressed_model(model, config, should_eval_original_model=False):
-    return create_compressed_model_tf(model, config,
-                                      should_eval_original_model=should_eval_original_model)
+def configure_paths(log_dir):
+    d = datetime.datetime.now()
+    run_id = '{:%Y-%m-%d__%H-%M-%S}'.format(d)
+    log_dir = osp.join(log_dir, "accuracy_aware_training/{run_id}".format(run_id=run_id))
+    os.makedirs(log_dir)
+    return log_dir

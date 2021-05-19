@@ -120,29 +120,10 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
 
 
 class ModelEvaluationArgs(NNCFExtraConfigStruct):
-    def __init__(self, data_loader: DataLoader,
+    def __init__(self,
                  eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float]):
-        self.data_loader = data_loader
         self.eval_fn = eval_fn
 
     @classmethod
     def get_id(cls) -> str:
         return "model_evaluation_args"
-
-
-class TrainEpochArgs(NNCFExtraConfigStruct):
-    def __init__(self,
-                 train_epoch_fn,
-                 eval_fn,
-                 configure_optimizers_fn,
-                 tensorboard_writer,
-                 log_dir):
-        self.train_epoch_fn = train_epoch_fn
-        self.eval_fn = eval_fn
-        self.configure_optimizers_fn = configure_optimizers_fn
-        self.tensorboard_writer = tensorboard_writer
-        self.log_dir = log_dir
-
-    @classmethod
-    def get_id(cls) -> str:
-        return "train_epoch_args"

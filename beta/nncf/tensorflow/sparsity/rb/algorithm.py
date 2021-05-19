@@ -35,6 +35,9 @@ from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 
+from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
+from nncf.common.schedulers import StubCompressionScheduler
+
 
 @TF_COMPRESSION_ALGORITHMS.register('rb_sparsity')
 class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
@@ -85,6 +88,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         return RBSparsityController(model, self.config, self._op_names)
 
 
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('rb_sparsity')
 class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model, op_names)
@@ -116,6 +120,17 @@ class RBSparsityController(BaseSparsityController):
 
     def freeze(self):
         self._loss.disable()
+
+    @property
+    def compression_rate(self) -> float:
+        return self.raw_statistics()['sparsity_rate_for_model']
+
+    @compression_rate.setter
+    def compression_rate(self, compression_rate: float) -> None:
+        self.set_sparsity_level(compression_rate)
+
+    def disable_scheduler(self):
+        self._scheduler = StubCompressionScheduler()
 
     def raw_statistics(self):
         raw_sparsity_statistics = {}
