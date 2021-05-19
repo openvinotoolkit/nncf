@@ -57,9 +57,9 @@ def prepare_for_tensorboard(raw_sparsity_statistics, prefix, rate_abbreviation):
 
 def is_convertible_to_scalar(value):
     try:
-        tf.convert_to_tensor(value, dtype=tf.float32)
+        tf.cast(value, dtype=tf.float32)
         return True
-    except:
+    except:  # pylint: disable=bare-except
         return False
 
 
