@@ -73,6 +73,7 @@ MODEL_WRAPPED_BY_NNCF_ATTR_NAME = 'nncf_module'
 LEGACY_ACT_STORAGE_NAME = "activation_quantizers"
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
 KD_LOSS_STORAGE_NAME = 'kd_loss'
+STORAGE_DEVICE = 'storage_device'
 
 Module = TypeVar('Module', bound=nn.Module)
 
@@ -386,8 +387,6 @@ class PTInsertionPoint:
 
 
 # pylint: disable=too-many-public-methods
-
-
 @ignore_scope
 class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def __init__(self, module, input_infos: List[ModelInputInfo],
@@ -401,8 +400,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         self.ignored_scopes = ignored_scopes
         self.target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
-        self._registered_modules_for_parallel_exec = nn.ModuleDict()
-        self._modules_for_parallel_exec = {}
         self._kd_original_model = None
 
         try:
@@ -455,6 +452,9 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
 
         self._compressed_context = TracingContext()
 
+        self._compressed_context.register_global_buffer(STORAGE_DEVICE, next(
+            self.get_nncf_wrapped_model().parameters()).device)
+
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(with_input_tracing=False, with_output_tracing=False)
         self._in_user_dummy_forward = False
 
@@ -480,26 +480,21 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
             retval = replicate_same_tensors(retval)
             retval = self._wrap_outputs_fn(retval)
 
-        if self._kd_original_model is not None:
+        if self._kd_original_model is not None and self.get_nncf_wrapped_model().training:
             with torch.no_grad():
                 kd_outputs = self._kd_original_model(*args, **kwargs)
             kd_loss = self._calculate_kdloss_fn(retval, kd_outputs)
-            # Global buffer inner content: 1.8429677486419678
-            # Global buffer inner content: 1.8429677486419678
-            # Global buffer inner content: 2.7948174476623535
-            # Data race?
             if not isinstance(kd_loss, torch.Tensor):
                 self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss)
             else:
-                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(torch.device('cpu')))
-            print(f'Global buffer inner content: {self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME]}')
+                self._compressed_context.global_buffer_store[KD_LOSS_STORAGE_NAME].append(kd_loss.to(
+                    self._compressed_context.global_buffer_store[STORAGE_DEVICE]))
 
         return retval
 
     def enable_knowledge_distillation(self, kd_original_model, calculate_kdloss_fn):
-        #self._kd_loss_calculator = kd_loss_calculator
         self._kd_original_model = kd_original_model
-        self._calculate_kdloss_fn  = calculate_kdloss_fn
+        self._calculate_kdloss_fn = calculate_kdloss_fn
         self._compressed_context.register_global_buffer(KD_LOSS_STORAGE_NAME, [])
 
     def zero_kdloss(self):
@@ -527,7 +522,6 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
         args = objwalk(args, is_traced_tensor_predicate, strip_fn)
         kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
         return args, kwargs
-
 
     # Cannnot use property syntax here, otherwise the wrapped module will end up
     # being twice in the same checkpoint with different prefixes
