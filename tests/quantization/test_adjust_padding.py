@@ -17,13 +17,13 @@ import pytest
 import torch
 
 from nncf.common.hardware.config import HWConfig
-from nncf.layers import NNCFConv2d
-from nncf.module_operations import UpdatePaddingValue
-from nncf.module_operations import UpdateWeight
-from nncf.quantization.adjust_padding import CalculatePaddingAdjustment
-from nncf.quantization.layers import SymmetricQuantizer
-from nncf.quantization.quantizer_propagation import PropagationStrategy
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from nncf.torch.layers import NNCFConv2d
+from nncf.torch.module_operations import UpdatePaddingValue
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.quantization.quantizer_propagation import PropagationStrategy
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_conv
 from tests.helpers import get_empty_config

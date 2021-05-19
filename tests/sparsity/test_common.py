@@ -229,7 +229,7 @@ def rb_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
-            from nncf.sparsity.rb.loss import SparseLoss
+            from nncf.torch.sparsity.rb.loss import SparseLoss
             self.loss = SparseLoss()
             self.loss.current_sparsity = 0.3
 

@@ -15,7 +15,7 @@ import os
 import torch
 
 from examples.common import restricted_pickle_module
-from nncf.checkpoint_loading import load_state
+from nncf.torch.checkpoint_loading import load_state
 
 
 def save_checkpoint(model, optimizer, epoch, miou, compression_stage, compression_scheduler, config):

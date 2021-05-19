@@ -3,8 +3,8 @@ import inspect
 import pytest
 import torch
 
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.io_handling import InputInfoWrapManager
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from tests.helpers import MockModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_compressed_graph import get_basic_quantization_config
@@ -129,8 +129,8 @@ def test_input_wrapper_wrap_inputs(mocker, inputs_test_struct: InputWrappingTest
     ref_wrapping_sequence = inputs_test_struct.ref_wrapping_sequence
     stub_cpu_model = MockModel()
 
-    mocker.patch('nncf.dynamic_graph.io_handling.nncf_model_input')
-    from nncf.dynamic_graph.io_handling import nncf_model_input
+    mocker.patch('nncf.torch.dynamic_graph.io_handling.nncf_model_input')
+    from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 
     mgr = InputInfoWrapManager(input_infos, inspect.signature(forward), stub_cpu_model)
     mgr.wrap_inputs(model_args, model_kwargs)

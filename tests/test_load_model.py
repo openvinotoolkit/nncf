@@ -19,15 +19,15 @@ import pytest
 import torch
 
 from examples.common.model_loader import load_model
-from nncf.checkpoint_loading import KeyMatcher
-from nncf.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
-from nncf.checkpoint_loading import ProcessedKeyStatus
-from nncf.checkpoint_loading import ProcessedKeys
-from nncf.checkpoint_loading import load_state
-from nncf.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
-from nncf.layers import NNCF_PADDING_VALUE_ATTR_NAME
-from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
+from nncf.torch.checkpoint_loading import KeyMatcher
+from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
+from nncf.torch.checkpoint_loading import ProcessedKeyStatus
+from nncf.torch.checkpoint_loading import ProcessedKeys
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.dynamic_graph.transform_graph import replace_modules_by_nncf_modules
+from nncf.torch.layers import NNCF_PADDING_VALUE_ATTR_NAME
+from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+from nncf.torch.nncf_network import LEGACY_ACT_STORAGE_NAME
 from tests.helpers import BasicConvTestModel
 from tests.quantization.test_functions import check_equal
 

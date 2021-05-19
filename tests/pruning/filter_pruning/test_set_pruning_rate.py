@@ -14,7 +14,7 @@ import pytest
 
 import numpy as np
 
-from nncf.pruning.filter_pruning.algo import FilterPruningController
+from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import check_correct_nncf_modules_replacement
 from tests.pruning.helpers import get_basic_pruning_config

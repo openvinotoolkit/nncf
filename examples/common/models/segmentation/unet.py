@@ -20,7 +20,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 
-from nncf.utils import is_tracing_state
+from nncf.torch.utils import is_tracing_state
 
 from examples.common.example_logger import logger
 

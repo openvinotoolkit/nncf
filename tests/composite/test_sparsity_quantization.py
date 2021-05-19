@@ -1,10 +1,10 @@
-from nncf.composite_compression import CompositeCompressionAlgorithmController
+from nncf.torch.composite_compression import CompositeCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.module_operations import UpdateWeight
-from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.quantization.layers import SymmetricQuantizer
-from nncf.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.utils import get_all_modules_by_type, get_all_modules
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
+from nncf.torch.utils import get_all_modules_by_type, get_all_modules
 from tests.helpers import BasicConvTestModel, create_compressed_model_and_algo_for_test
 
 

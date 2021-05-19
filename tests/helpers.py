@@ -31,16 +31,16 @@ from torch.nn import Module
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
-from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.initialization import register_default_init_args
-from nncf.layers import NNCF_MODULES_MAP
-from nncf.model_creation import create_compressed_model
-from nncf.nncf_network import NNCFNetwork
-from nncf.utils import get_all_modules_by_type
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.initialization import register_default_init_args
+from nncf.torch.layers import NNCF_MODULES_MAP
+from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.utils import get_all_modules_by_type
 from tests.common.command import Command as BaseCommand
 
 TensorType = TypeVar('TensorType', bound=Union[torch.Tensor, np.ndarray])

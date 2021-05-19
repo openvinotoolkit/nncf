@@ -12,7 +12,7 @@
 """
 
 import torch
-from nncf.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig

@@ -564,9 +564,9 @@ class HAWQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_hawq' + bs
 
     def setup_spy(self, mocker):
-        from nncf.quantization.init_precision import HAWQPrecisionInitializer
+        from nncf.torch.quantization.init_precision import HAWQPrecisionInitializer
         self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
-        from nncf.quantization.hessian_trace import HessianTraceEstimator
+        from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
@@ -608,7 +608,7 @@ class AutoQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
-        from nncf.quantization.algo import QuantizationBuilder
+        from nncf.torch.quantization.algo import QuantizationBuilder
         self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
 
     def validate_spy(self):

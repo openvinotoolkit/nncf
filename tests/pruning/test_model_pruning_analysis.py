@@ -14,14 +14,14 @@ from typing import Callable
 
 import pytest
 
-from nncf.layers import NNCF_PRUNING_MODULES_DICT
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.context import Scope
-from nncf.nncf_network import NNCFNetwork
-from nncf.pruning.export_helpers import PTIdentityMaskForwardOps
-from nncf.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
-from nncf.pruning.export_helpers import PTElementwise
-from nncf.pruning.utils import is_depthwise_conv
+from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.pruning.export_helpers import PTIdentityMaskForwardOps
+from nncf.torch.pruning.export_helpers import PT_PRUNING_OPERATOR_METATYPES
+from nncf.torch.pruning.export_helpers import PTElementwise
+from nncf.torch.pruning.utils import is_depthwise_conv
 from nncf.common.pruning.pruning_node_selector import PruningNodeSelector
 from nncf.common.pruning.model_analysis import NodesCluster
 from nncf.common.pruning.model_analysis import Clusterization

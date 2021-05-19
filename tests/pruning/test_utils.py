@@ -12,9 +12,9 @@
 """
 import pytest
 
-from nncf.dynamic_graph.context import Scope
-from nncf.pruning.filter_pruning.algo import FilterPruningBuilder
-from nncf.pruning.utils import get_bn_for_module_scope
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
+from nncf.torch.pruning.utils import get_bn_for_module_scope
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type

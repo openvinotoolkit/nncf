@@ -113,7 +113,7 @@ def get_operator_metatypes() -> Optional[OperatorMetatypeRegistry]:
     :return: The operator metatype registry.
     """
     if __nncf_backend__ == 'Torch':
-        from nncf.graph.operator_metatypes \
+        from nncf.torch.graph.operator_metatypes \
             import PT_OPERATOR_METATYPES
         return PT_OPERATOR_METATYPES
     if __nncf_backend__ == 'TensorFlow':

@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 from functools import partial
-from nncf.utils import objwalk
+from nncf.torch.utils import objwalk
 
 
 class ObjwalkTestClass:

@@ -14,7 +14,7 @@ import logging
 
 import pytest
 
-from nncf.progress_bar import ProgressBar
+from nncf.common.utils.progress_bar import ProgressBar
 from nncf.common.utils.logger import logger as nncf_logger
 
 TEST_RANGE = range(3)

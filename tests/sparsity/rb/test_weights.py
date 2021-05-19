@@ -14,8 +14,8 @@
 import pytest
 import torch
 
-from nncf.functions import logit
-from nncf.sparsity.rb.layers import RBSparsifyingWeight
+from nncf.torch.functions import logit
+from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 
 default_mask = logit(torch.ones(1) * 0.99)
 

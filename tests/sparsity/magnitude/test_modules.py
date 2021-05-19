@@ -15,10 +15,10 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.layers import NNCFConv2d, NNCFLinear
-from nncf.module_operations import UpdateWeight
-from nncf.sparsity.layers import BinaryMask
-from nncf.sparsity.magnitude.functions import normed_magnitude, abs_magnitude, calc_magnitude_binary_mask
+from nncf.torch.layers import NNCFConv2d, NNCFLinear
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.layers import BinaryMask
+from nncf.torch.sparsity.magnitude.functions import normed_magnitude, abs_magnitude, calc_magnitude_binary_mask
 from tests.helpers import fill_conv_weight, fill_linear_weight, fill_bias
 
 

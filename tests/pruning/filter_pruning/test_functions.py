@@ -13,7 +13,7 @@
 import pytest
 import torch
 
-from nncf.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS, calculate_binary_mask
+from nncf.torch.pruning.filter_pruning.functions import FILTER_IMPORTANCE_FUNCTIONS, calculate_binary_mask
 
 
 @pytest.mark.parametrize(("norm_name", "input_tensor", "reference"),

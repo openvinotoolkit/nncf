@@ -19,7 +19,7 @@ import torch
 from examples.object_detection.datasets.coco import COCODataset
 from examples.object_detection.datasets.voc0712 import VOCDetection, VOCAnnotationTransform
 from examples.object_detection.utils.augmentations import SSDAugmentation
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 
 VOC_MEAN = (0.406, 0.456, 0.485)
 VOC_STD = (0.255, 0.224, 0.229)

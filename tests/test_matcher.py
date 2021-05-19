@@ -13,7 +13,7 @@
 
 import networkx as nx
 
-from nncf.graph.graph_matching import NodeExpression as N, search_all
+from nncf.torch.graph.graph_matching import NodeExpression as N, search_all
 
 
 def add_nodes(graph, types, nodes=None):

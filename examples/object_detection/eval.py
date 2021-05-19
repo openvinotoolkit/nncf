@@ -24,7 +24,7 @@ from torch import distributed as dist
 from torch.nn import functional as F
 
 from examples.common.example_logger import logger
-from nncf.utils import is_main_process, is_dist_avail_and_initialized, get_world_size
+from nncf.torch.utils import is_main_process, is_dist_avail_and_initialized, get_world_size
 
 
 def str2bool(v):

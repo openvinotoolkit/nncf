@@ -27,7 +27,7 @@ import torch
 import torch.nn.functional as F
 
 from examples.common.example_logger import logger
-from nncf.utils import is_tracing_state
+from nncf.torch.utils import is_tracing_state
 
 
 class ConvBN(nn.Module):

@@ -17,7 +17,7 @@
 
 
 import pytest
-from nncf.automl.agent.ddpg.memory import RingBuffer
+from nncf.torch.automl.agent.ddpg.memory import RingBuffer
 
 MAX_LEN = 3
 
