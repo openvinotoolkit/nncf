@@ -20,12 +20,14 @@ from examples.common.distributed import configure_distributed
 from examples.common.execution import ExecutionMode, prepare_model_for_execution, get_device
 from examples.common.model_loader import load_model
 from examples.common.sample_config import SampleConfig
+from nncf import register_default_init_args
 from nncf.checkpoint_loading import load_state
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig
 from nncf.nncf_network import LEGACY_ACT_STORAGE_NAME
 from nncf.nncf_network import MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from tests.conftest import TEST_ROOT
+from tests.helpers import create_ones_mock_dataloader
 from tests.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.test_compressed_graph import get_basic_quantization_config
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -95,6 +97,7 @@ def test_model_can_be_loaded_with_resume(_params):
                        pretrained=False,
                        num_classes=config.get('num_classes', 1000),
                        model_params=config.get('model_params'))
+    nncf_config = register_default_init_args(nncf_config, train_loader=create_ones_mock_dataloader(nncf_config))
 
     model.to(config.device)
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
@@ -137,7 +140,8 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
 
     with open(metrics_path) as metric_file:
         metrics = json.load(metric_file)
-        assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(metrics['Accuracy'])
+        # accuracy is rounded to hundredths
+        assert torch.load(checkpoint_path)['best_acc1'] == pytest.approx(metrics['Accuracy'], abs=1e-2)
 
 
 def test_renamed_activation_quantizer_storage_in_state_dict():
