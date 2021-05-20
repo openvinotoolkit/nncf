@@ -22,7 +22,6 @@ from typing import TypeVar
 import onnx
 import numpy as np
 import torch
-import pytest
 
 from copy import deepcopy
 from onnx import numpy_helper
@@ -217,31 +216,35 @@ def to_numpy(tensor: TensorType) -> np.ndarray:
 
 
 def compare_tensor_lists(test: List[TensorType], reference: List[TensorType],
-                         compare_fn: Callable[[np.ndarray, np.ndarray], bool]):
+                         assert_fn: Callable[[np.ndarray, np.ndarray], bool]):
     assert len(test) == len(reference)
 
-    for i, (x, y) in enumerate(zip(test, reference)):
+    for x, y in zip(test, reference):
         x = to_numpy(x)
         y = to_numpy(y)
-        assert compare_fn(x, y), f'i={i}'
+        assert_fn(x, y)
 
 
 def check_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-1):
-    compare_tensor_lists(test, reference, lambda x, y: x == pytest.approx(y, rel=rtol))
+    compare_tensor_lists(test, reference,
+                         lambda x, y: np.testing.assert_allclose(x, y, rtol=rtol))
 
 
 def check_not_equal(test: List[TensorType], reference: List[TensorType], rtol: float = 1e-4):
-    compare_tensor_lists(test, reference, lambda x, y: x != pytest.approx(y, rel=rtol))
+    compare_tensor_lists(test, reference,
+                         lambda x, y: np.testing.assert_raises(AssertionError,
+                                                               np.testing.assert_allclose, x, y, rtol=rtol))
 
 
 def check_less(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
     check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference, lambda x, y: (x < y).all())
+    compare_tensor_lists(test, reference, np.testing.assert_array_less)
 
 
 def check_greater(test: List[TensorType], reference: List[TensorType], rtol=1e-4):
     check_not_equal(test, reference, rtol=rtol)
-    compare_tensor_lists(test, reference, lambda x, y: (x > y).all())
+    compare_tensor_lists(test, reference,
+                         lambda x, y: np.testing.assert_raises(AssertionError, np.testing.assert_array_less, x, y))
 
 
 def create_compressed_model_and_algo_for_test(model: Module, config: NNCFConfig,
