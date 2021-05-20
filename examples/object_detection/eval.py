@@ -349,13 +349,29 @@ def eval_net_loss(data_loader, device, net, criterion):
 def test_net(net, device, data_loader, distributed=False, loss_inference=False, criterion=None):
     """Test a Fast R-CNN network on an image database."""
 
+    # Put BN layers into evaluation mode
+    bn_modules_training_flags = {}
+
+    def put_bn_modules_in_eval_mode(module):
+        if isinstance(module, torch.nn.BatchNorm2d):
+            bn_modules_training_flags[module] = module.training
+            module.eval()
+
+    def restore_bn_module_mode(module):
+        if isinstance(module, torch.nn.BatchNorm2d):
+            module.training = bn_modules_training_flags[module]
+
+    net.apply(put_bn_modules_in_eval_mode)
+
     if loss_inference is True:
         logger.info("Testing... loss function will be evaluated instead of detection mAP")
         if distributed:
             raise NotImplementedError
         if criterion is None:
             raise ValueError("Missing loss inference function (criterion)")
-        return eval_net_loss(data_loader, device, net, criterion)
+        output = eval_net_loss(data_loader, device, net, criterion)
+        net.apply(restore_bn_module_mode)
+        return output
 
     logger.info("Testing...")
     num_images = len(data_loader.dataset)
@@ -366,4 +382,6 @@ def test_net(net, device, data_loader, distributed=False, loss_inference=False, 
     all_boxes = convert_detections(batch_detections)
 
     logger.info('Evaluating detections')
-    return evaluate_detections(all_boxes, data_loader.dataset)
+    output = evaluate_detections(all_boxes, data_loader.dataset)
+    net.apply(restore_bn_module_mode)
+    return output
