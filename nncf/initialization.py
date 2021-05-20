@@ -18,7 +18,7 @@ from nncf.structures import QuantizationPrecisionInitArgs
 from nncf.structures import QuantizationRangeInitArgs
 from nncf.utils import is_tensor
 from nncf.utils import objwalk
-from nncf.utils import training_mode_switcher
+from contextlib import contextmanager
 
 
 class InitializingDataLoader:
@@ -165,39 +165,66 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
         self.num_bn_forget_steps = num_bn_forget_steps
         self.momentum_bn_forget = 0.9
         self.original_momenta_values = {}
+        self.original_training_state = {}
 
     @staticmethod
     def _apply_to_batchnorms(func):
         def func_apply_to_bns(module):
-            if isinstance(module, torch.nn.modules.batchnorm.BatchNorm2d):
+            if isinstance(module, (torch.nn.modules.batchnorm.BatchNorm1d,
+                                   torch.nn.modules.batchnorm.BatchNorm2d,
+                                   torch.nn.modules.batchnorm.BatchNorm3d)):
                 func(module)
 
         return func_apply_to_bns
 
-    def _run_model_inference(self, data_loader, num_init_steps, device):
-        num_bn_forget_steps = self.num_bn_forget_steps
+    @contextmanager
+    def _bn_training_state_switcher(self) -> None:
+        def save_original_bn_training_state(module: torch.nn.Module):
+            self.original_training_state[module] = module.training
 
+        def set_bn_training_state(module: torch.nn.Module, state: Dict[str, bool]):
+            module.training = state
+
+        def restore_original_bn_training_state(module: torch.nn.Module):
+            module.training = self.original_training_state[module]
+
+        self.model.apply(self._apply_to_batchnorms(save_original_bn_training_state))
+        self.model.apply(self._apply_to_batchnorms(partial(set_bn_training_state, state=True)))
+        try:
+            yield
+        finally:
+            self.model.apply(self._apply_to_batchnorms(restore_original_bn_training_state))
+
+    @contextmanager
+    def _bn_momentum_switcher(self) -> None:
         def set_bn_momentum(module, momentum_value):
             module.momentum = momentum_value
 
-        def save_original_bn_momenta(module):
+        def save_original_bn_momentum(module: torch.nn.Module):
             self.original_momenta_values[module] = module.momentum
 
-        def restore_original_bn_momenta(module):
+        def restore_original_bn_momentum(module: torch.nn.Module):
             module.momentum = self.original_momenta_values[module]
 
-        with training_mode_switcher(self.model, is_training=True):
-            self.model.apply(self._apply_to_batchnorms(save_original_bn_momenta))
-            self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
-                                                               momentum_value=self.momentum_bn_forget)))
+        self.model.apply(self._apply_to_batchnorms(save_original_bn_momentum))
+        self.model.apply(self._apply_to_batchnorms(partial(set_bn_momentum,
+                                                           momentum_value=self.momentum_bn_forget)))
+        try:
+            yield
+        finally:
+            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momentum))
 
-            for i, loaded_item in enumerate(data_loader):
-                if num_bn_forget_steps is not None and i >= num_bn_forget_steps:
-                    break
-                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                self._infer_batch(args_kwargs_tuple, device)
+    def _run_model_inference(self, data_loader, num_init_steps, device):
+        num_bn_forget_steps = self.num_bn_forget_steps
 
-            self.model.apply(self._apply_to_batchnorms(restore_original_bn_momenta))
+        with self._bn_training_state_switcher():
+            if num_bn_forget_steps is not None and num_bn_forget_steps > 0:
+                with self._bn_momentum_switcher():
+                    for i, loaded_item in enumerate(data_loader):
+                        if i >= num_bn_forget_steps:
+                            break
+                        args_kwargs_tuple = data_loader.get_inputs(loaded_item)
+                        self._infer_batch(args_kwargs_tuple, device)
 
             for i, loaded_item in ProgressBar(
                     enumerate(data_loader),

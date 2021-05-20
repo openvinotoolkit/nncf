@@ -23,13 +23,14 @@ from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.schedulers import BaselinePruningScheduler
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import check_correct_nncf_modules_replacement
-from tests.helpers import create_mock_dataloader
+from tests.helpers import create_ones_mock_dataloader
 from tests.pruning.helpers import gen_ref_masks
 from tests.pruning.helpers import get_basic_pruning_config
 from tests.pruning.helpers import PruningTestModel
 from tests.pruning.helpers import BigPruningTestModel
 from tests.pruning.helpers import TestModelMultipleForward
 from tests.pruning.helpers import PruningTestModelConcatBN
+
 
 def create_pruning_algo_with_config(config):
     """
@@ -229,6 +230,7 @@ def test_applying_masks(prune_bn):
         assert sum(bn_module.weight) == len(bn_module.weight)
         # Can not check bias because bias initialized with zeros
 
+
 @pytest.mark.parametrize('prune_bn',
                          (False,
                           True)
@@ -260,7 +262,7 @@ def test_applying_masks_for_bn_after_concat(prune_bn):
         [1] * 8 + [0] * 16 + [1] * 8 + [0] * 8 + [1] * 8
     ]
     graph = pruned_model.get_original_graph()
-    for i, node in enumerate(graph.get_nodes_by_types(['concat'])):
+    for i, node in enumerate(graph.get_nodes_by_types(['cat'])):
         assert np.allclose(node.data['output_mask'].numpy(), ref_concat_masks[i])
 
 
@@ -283,7 +285,7 @@ def test_zeroing_gradients(zero_grad):
     pruned_modules = [minfo.module for minfo in pruned_module_info]
 
     device = next(pruned_model.parameters()).device
-    data_loader = create_mock_dataloader(config)
+    data_loader = create_ones_mock_dataloader(config)
 
     params_to_optimize = get_parameter_groups(pruned_model, config)
     optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)

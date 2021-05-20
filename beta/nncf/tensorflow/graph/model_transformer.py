@@ -57,10 +57,7 @@ class TFModelTransformer(ModelTransformer):
 
         :return: The transformed Keras model
         """
-        layer_weights_map = {}
-        for layer in self._model.layers:
-            original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
-            layer_weights_map[original_layer.name] = self._get_layer_weights(layer)
+        layer_weights_map = {layer.name: self._get_layer_weights(layer) for layer in self._model.layers}
 
         for transform in self._transformations:
             self._apply_transformation(transform)
@@ -71,8 +68,7 @@ class TFModelTransformer(ModelTransformer):
             transformed_model = tf.keras.Sequential.from_config(self._model_config, self._custom_objects)
 
         for layer in transformed_model.layers:
-            original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
-            weights = layer_weights_map.get(original_layer.name)
+            weights = layer_weights_map.get(layer.name)
             if weights:
                 self._set_layer_weights(layer, weights)
 

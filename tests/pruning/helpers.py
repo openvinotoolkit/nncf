@@ -234,7 +234,7 @@ class BigPruningTestModel(nn.Module):
         x = self.up(x)
         x = self.relu(x)
         x = self.conv3(x)
-        x = x.view(1, -1)
+        # x = x.view(1, -1)
         return x
 
 

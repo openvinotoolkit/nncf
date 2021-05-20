@@ -18,7 +18,7 @@ import sys
 import subprocess
 
 from nncf import BKC_TORCH_VERSION
-from tests.test_sanity_sample import Command
+from tests.helpers import Command
 from tests.conftest import PROJECT_ROOT
 
 TRANSFORMERS_COMMIT = "b0892fa0e8df02d683e05e625b3903209bff362d"

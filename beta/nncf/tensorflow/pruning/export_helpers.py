@@ -10,11 +10,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
+
 from typing import Union
 
 import tensorflow as tf
 
-from beta.nncf.tensorflow.pruning.utils import TFPruningOperationsMetatypeRegistry
 from beta.nncf.tensorflow.pruning.utils import is_depthwise_conv
 from beta.nncf.tensorflow.graph.patterns import KERAS_ACTIVATIONS
 from beta.nncf.tensorflow.graph.patterns import TF_ACTIVATIONS
@@ -26,8 +26,9 @@ from nncf.common.pruning.mask_propagation import identity_mask_propagation
 from nncf.common.pruning.mask_propagation import get_input_masks
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import is_grouped_conv
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 
-TF_PRUNING_OPERATOR_METATYPES = TFPruningOperationsMetatypeRegistry("operator_metatypes")
+TF_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
 def _get_types(expression):
@@ -122,7 +123,7 @@ class TFTransposeConvolution(DefaultMetaOp):
 
 @TF_PRUNING_OPERATOR_METATYPES.register('batch_norm')
 class TFBatchNorm(DefaultMetaOp):
-    additional_types = ['BatchNormalization']
+    additional_types = ['BatchNormalization', 'SyncBatchNormalization']
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
@@ -174,9 +175,10 @@ class TFConcat(DefaultMetaOp):
         :param graph: NNCF graph to work with
         :return: Output mask
         """
-        previous_nodes = graph.get_previous_nodes_sorted_by_in_port(node)
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
         input_edges = graph.get_input_edges(node)
+        input_edges_desc = list(input_edges.values())
+        previous_nodes = [graph.get_node_by_key(edge[0]) for edge in input_edges]
+        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
 
         if all(mask is None for mask in input_masks):
             return None
@@ -187,7 +189,7 @@ class TFConcat(DefaultMetaOp):
         for i, mask in enumerate(input_masks):
             if mask is None:
                 with tf.device(device):
-                    mask = tf.ones(input_edges[i][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][-1])
+                    mask = tf.ones(input_edges_desc[i][NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][-1])
             filled_input_masks.append(mask)
         result_mask = tf.concat(filled_input_masks, 0)
         return result_mask

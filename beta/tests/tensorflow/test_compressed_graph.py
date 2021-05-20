@@ -180,6 +180,7 @@ SKIP_MAP = {
         'xception': pytest.mark.skip(reason='gitlab issue #28'),
         'mask_rcnn': pytest.mark.skip(reason='ticket #50605'),
         'mobilenet_v3_small': pytest.mark.skip(reason='ticket #50607'),
+        'mobilenet_v3_large': pytest.mark.skip(reason='ticket #50607'),
         'yolo_v4': pytest.mark.skip(reason='ticket #50608'),
         'resnet50_v2': pytest.mark.skip(resason='Several masks on one weight'),
         'mobilenet_v2_slim': pytest.mark.skip(reason='ticket #46349')
@@ -234,6 +235,10 @@ def get_test_models_desc(algorithm):
         pytest.param(
             ModelDesc(ref_name('mobilenet_v3_small.pb'), test_models.MobileNetV3Small, [1, 32, 32, 3]),
             marks=SKIP_MAP[algorithm].get('mobilenet_v3_small', ())
+        ),
+        pytest.param(
+            ModelDesc(ref_name('mobilenet_v3_large.pb'), test_models.MobileNetV3Large, [1, 32, 32, 3]),
+            marks=SKIP_MAP[algorithm].get('mobilenet_v3_large', ())
         ),
         pytest.param(
             ModelDesc(ref_name('shared_layers_model.pb'), test_models.SharedLayersModel, [1, 30, 30, 3]),

@@ -66,7 +66,7 @@ def test_can_load_sparse_algo__with_defaults():
 
     conv_names = [layer.name for layer in model.layers if isinstance(layer, tf.keras.layers.Conv2D)]
     wrappers = [layer for layer in sparse_model.layers if isinstance(layer, NNCFWrapper)]
-    correct_wrappers = [wrapper for wrapper in wrappers if wrapper.layer.name in conv_names]
+    correct_wrappers = [wrapper for wrapper in wrappers if wrapper.name in conv_names]
 
     assert len(conv_names) == len(wrappers)
     assert len(conv_names) == len(correct_wrappers)
@@ -77,6 +77,36 @@ def test_can_load_sparse_algo__with_defaults():
         ref_mask = tf.fill(mask.shape, logit(0.99))
 
         tf.assert_equal(mask, ref_mask)
+
+
+def test_compression_controller_state():
+    model = get_basic_two_conv_test_model()
+    config = get_basic_sparsity_config()
+
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+
+    # Test get state
+    compression_ctrl.scheduler.current_step = 100
+    compression_ctrl.scheduler.current_epoch = 5
+    compression_ctrl.set_sparsity_level(0.5)
+    compression_ctrl.freeze()
+    assert compression_ctrl.get_state() == {'scheduler_state': {'current_step': 100, 'current_epoch': 5},
+                                            'loss_state': {'target': 0.5, 'disabled': True, 'p': 0.05}}
+
+
+    # Test load state
+    new_state = {'scheduler_state': {'current_step': 5000, 'current_epoch': 10},
+                 'loss_state': {'target': 0.9, 'disabled': False, 'p': 0.5}}
+    compression_ctrl.load_state(new_state)
+    assert tf.equal(compression_ctrl.loss.target, tf.constant(new_state['loss_state']['target']))
+    assert compression_ctrl.loss.disabled == new_state['loss_state']['disabled']
+    assert compression_ctrl.loss.p == pytest.approx(new_state['loss_state']['p'])
+
+    new_real_state = compression_ctrl.get_state()
+    assert new_real_state['scheduler_state'] == new_state['scheduler_state']
+    assert new_real_state['loss_state']['target'] == pytest.approx(new_state['loss_state']['target'])
+    assert new_real_state['loss_state']['disabled'] == new_state['loss_state']['disabled']
+    assert new_real_state['loss_state']['p'] == pytest.approx(new_state['loss_state']['p'])
 
 
 def test_can_set_sparse_layers_to_loss():

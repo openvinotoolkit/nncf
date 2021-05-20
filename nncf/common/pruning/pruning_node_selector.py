@@ -11,14 +11,11 @@
  limitations under the License.
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 from collections import defaultdict
+from typing import Dict, List, Optional, Tuple
 
-from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.pruning.utils import get_sources_of_node
 from nncf.common.pruning.utils import get_first_nodes_of_type
 from nncf.common.pruning.utils import get_last_nodes_of_type

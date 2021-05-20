@@ -13,4 +13,4 @@
 
 import os
 NNCF_PACKAGE_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-HW_CONFIG_RELATIVE_DIR = "hw_configs"
+HW_CONFIG_RELATIVE_DIR = "common/hardware/configs"

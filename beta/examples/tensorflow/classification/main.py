@@ -104,34 +104,34 @@ def get_dataset_builders(config, num_devices, one_hot=True):
     return [train_builder, val_builder]
 
 
-def load_checkpoint(model, ckpt_path):
+def load_checkpoint(checkpoint, ckpt_path):
     logger.info('Load from checkpoint is enabled.')
     if tf.io.gfile.isdir(ckpt_path):
-        checkpoint = tf.train.latest_checkpoint(ckpt_path)
-        logger.info('Latest checkpoint: {}'.format(checkpoint))
+        path_to_checkpoint = tf.train.latest_checkpoint(ckpt_path)
+        logger.info('Latest checkpoint: {}'.format(path_to_checkpoint))
     else:
-        checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + '.index') else None
-        logger.info('Provided checkpoint: {}'.format(checkpoint))
+        path_to_checkpoint = ckpt_path if tf.io.gfile.exists(ckpt_path + '.index') else None
+        logger.info('Provided checkpoint: {}'.format(path_to_checkpoint))
 
-    if not checkpoint:
+    if not path_to_checkpoint:
         logger.info('No checkpoint detected.')
         return 0
 
     logger.info('Checkpoint file {} found and restoring from checkpoint'
-                .format(checkpoint))
-    model.load_weights(checkpoint).expect_partial()
+                .format(path_to_checkpoint))
+
+    status = checkpoint.restore(path_to_checkpoint)
+    status.expect_partial()
     logger.info('Completed loading from checkpoint.')
     return None
 
 
-def resume_from_checkpoint(model, compression_ctrl, ckpt_path, steps_per_epoch, config):
-    if load_checkpoint(model, ckpt_path) == 0:
+def resume_from_checkpoint(checkpoint, ckpt_path, steps_per_epoch):
+    if load_checkpoint(checkpoint, ckpt_path) == 0:
         return 0
-    initial_step = model.optimizer.iterations.numpy()
-    initial_epoch = initial_step // steps_per_epoch
 
-    scheduler_state = get_scheduler_state(initial_step, steps_per_epoch, config)
-    compression_ctrl.scheduler.load_state(scheduler_state)
+    initial_step = checkpoint.model.optimizer.iterations.numpy()
+    initial_epoch = initial_step // steps_per_epoch
 
     logger.info('Resuming from epoch %d', initial_epoch)
     return initial_epoch
@@ -211,25 +211,25 @@ def run(config):
 
             compress_model.summary()
 
+            checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+
             initial_epoch = 0
             if config.ckpt_path is not None:
-                initial_epoch = resume_from_checkpoint(model=compress_model,
-                                                       compression_ctrl=compression_ctrl,
+                initial_epoch = resume_from_checkpoint(checkpoint=checkpoint,
                                                        ckpt_path=config.ckpt_path,
-                                                       steps_per_epoch=train_steps,
-                                                       config=config)
+                                                       steps_per_epoch=train_steps)
             else:
                 logger.info('initialization...')
                 compression_ctrl.initialize(dataset=train_dataset)
 
     callbacks = get_callbacks(
-        model_checkpoint=True,
         include_tensorboard=True,
         track_lr=True,
         write_model_weights=False,
         initial_step=initial_epoch * train_steps,
         model_dir=config.log_dir,
-        ckpt_dir=config.checkpoint_save_dir)
+        ckpt_dir=config.checkpoint_save_dir,
+        checkpoint=checkpoint)
 
     callbacks.append(get_progress_bar(
         stateful_metrics=['loss'] + [metric.name for metric in metrics]))
@@ -303,8 +303,10 @@ def export(config):
                            metrics=metrics)
     compress_model.summary()
 
+    checkpoint = tf.train.Checkpoint(model=compress_model, compression_ctrl=compression_ctrl)
+
     if config.ckpt_path is not None:
-        load_checkpoint(model=compress_model,
+        load_checkpoint(checkpoint=checkpoint,
                         ckpt_path=config.ckpt_path)
 
     save_path, save_format = get_saving_parameters(config)

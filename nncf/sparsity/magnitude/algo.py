@@ -29,7 +29,7 @@ from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSI
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
 class MagnitudeSparsityBuilder(BaseSparsityAlgoBuilder):
-    def create_weight_sparsifying_operation(self, module):
+    def create_weight_sparsifying_operation(self, module, compression_lr_multiplier):
         device = module.weight.device
         return BinaryMask(module.weight.size()).to(device)
 

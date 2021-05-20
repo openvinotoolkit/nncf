@@ -11,12 +11,14 @@
  limitations under the License.
 """
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Dict
 
-from nncf.api.compression import CompressionAlgorithmController
+import json
+import tensorflow as tf
+
 from nncf.api.compression import CompressionAlgorithmBuilder
+from nncf.common.compression import BaseCompressionAlgorithmController
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
-from beta.nncf.tensorflow.utils.save import save_model
 
 ModelType = TypeVar('ModelType')
 DatasetType = TypeVar('DatasetType')
@@ -37,7 +39,7 @@ class TFCompressionAlgorithmInitializer(ABC):
         self.call(*args, **kwargs)
 
 
-class TFCompressionAlgorithmController(CompressionAlgorithmController):
+class TFCompressionAlgorithmController(BaseCompressionAlgorithmController, tf.train.experimental.PythonState):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model to enable algorithm-specific compression.
@@ -50,19 +52,43 @@ class TFCompressionAlgorithmController(CompressionAlgorithmController):
                    loss: Optional[LossType] = None) -> None:
         pass
 
-    def export_model(self, save_path: str, save_format: str = 'frozen_graph') -> None:
+    def load_state(self, state: Dict[str, object]) -> None:
         """
-        Used to export the compressed model to the Frozen Graph, TensorFlow SavedModel,
-        or Keras H5 formats. Makes method-specific preparations of the model, (e.g.
-        removing auxiliary layers that were used for the model compression), then
-        exports the model in the specified path.
+        Loads the compression controller state.
 
-        :param save_path: The path to export model.
-        :param save_format: Saving format (`frozen_graph` for Frozen Graph,
-            `tf` for Tensorflow SavedModel, `h5` for Keras H5 format).
+        :param state: Output of `get_state()` method.
         """
-        self.prepare_for_export()
-        save_model(self.model, save_path, save_format)
+        self.scheduler.load_state(state['scheduler_state'])
+        self.loss.load_state(state['loss_state'])
+
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
+        """
+        return {
+            'scheduler_state': self.scheduler.get_state(),
+            'loss_state': self.loss.get_state()
+        }
+
+    def serialize(self) -> str:
+        """
+        Callback to serialize the object by tf.train.experimental.PythonState.
+
+        :return: State of the compression controller.
+        """
+        string_value = json.dumps(self.get_state())
+        return string_value
+
+    def deserialize(self, state: str) -> None:
+        """
+        Callback to deserialize the object by tf.train.experimental.PythonState.
+
+        :param state: State of the compression controller.
+        """
+        state = json.loads(state)
+        self.load_state(state)
 
 
 class TFCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

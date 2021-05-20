@@ -12,7 +12,7 @@
 """
 
 from examples.common.sample_config import CustomArgumentParser
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 
 
 def get_common_argument_parser():

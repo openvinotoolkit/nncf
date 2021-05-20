@@ -7,7 +7,7 @@ import shutil
 import torch
 
 from tests.conftest import TEST_ROOT
-from tests.test_sanity_sample import Command
+from tests.helpers import Command
 
 EXTENSIONS_BUILD_FILENAME = 'extensions_build_checks.py'
 

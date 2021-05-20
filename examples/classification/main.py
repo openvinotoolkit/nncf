@@ -191,7 +191,7 @@ def main_worker(current_gpu, config: SampleConfig):
         if config.mode.lower() == 'train' and config.to_onnx is None:
             config.start_epoch = resuming_checkpoint['epoch']
             best_acc1 = resuming_checkpoint['best_acc1']
-            compression_ctrl.scheduler.load_state(resuming_checkpoint['scheduler'])
+            compression_ctrl.load_state(resuming_checkpoint['scheduler'])
             optimizer.load_state_dict(resuming_checkpoint['optimizer'])
             logger.info("=> loaded checkpoint '{}' (epoch: {}, best_acc1: {:.3f})"
                         .format(resuming_checkpoint_path, resuming_checkpoint['epoch'], best_acc1))
@@ -240,6 +240,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.mode.lower() == 'train':
         train(config, compression_ctrl, model, criterion, train_criterion_fn, lr_scheduler, model_name, optimizer,
               train_loader, train_sampler, val_loader, best_acc1)
+    config.mlflow.end_run()
 
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
@@ -307,9 +308,11 @@ def get_dataset(dataset_config, config, transform, is_train):
     if dataset_config == 'imagenet':
         prefix = 'train' if is_train else 'val'
         return datasets.ImageFolder(osp.join(config.dataset_dir, prefix), transform)
+    # For testing purposes
     if dataset_config == 'mock_32x32':
-        # For testing purposes
         return MockDataset(img_size=(32, 32), transform=transform)
+    if dataset_config == 'mock_299x299':
+        return MockDataset(img_size=(299, 299), transform=transform)
     return create_cifar(config, dataset_config, is_train, transform)
 
 
@@ -327,7 +330,8 @@ def create_cifar(config, dataset_config, is_train, transform):
 def create_datasets(config):
     dataset_config = config.dataset if config.dataset is not None else 'imagenet'
     dataset_config = dataset_config.lower()
-    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32'], "Unknown dataset option"
+    assert dataset_config in ['imagenet', 'cifar100', 'cifar10', 'mock_32x32', 'mock_299x299'], \
+        "Unknown dataset option"
 
     if dataset_config == 'imagenet':
         normalize = transforms.Normalize(mean=(0.485, 0.456, 0.406),
@@ -335,7 +339,7 @@ def create_datasets(config):
     elif dataset_config == 'cifar100':
         normalize = transforms.Normalize(mean=(0.5071, 0.4865, 0.4409),
                                          std=(0.2673, 0.2564, 0.2761))
-    elif dataset_config in ['cifar10', 'mock_32x32']:
+    elif dataset_config in ['cifar10', 'mock_32x32', 'mock_299x299']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5),
                                          std=(0.5, 0.5, 0.5))
 

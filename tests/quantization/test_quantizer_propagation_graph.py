@@ -17,19 +17,23 @@ from collections import namedtuple
 from copy import deepcopy
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 
 import networkx as nx
 import pytest
+
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.dynamic_graph.context import Scope
 from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import NNCFGraph
+from nncf.graph.operator_metatypes import CatMetatype
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.nncf_network import InsertionPointGraph
+from nncf.quantization.quantizer_propagation import PropagationPath
 from nncf.quantization.quantizer_propagation import QuantizationTrait
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
 from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
@@ -39,6 +43,7 @@ from tests.test_nncf_network import get_mock_nncf_node_attrs
 from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import get_two_branch_mock_model_graph
 from tests.test_nncf_network import mark_input_ports_lexicographically_based_on_input_node_key
+
 
 #pylint:disable=too-many-lines
 
@@ -63,6 +68,8 @@ class TestQuantizerPropagationStateGraph:
     def mock_qp_graph():
         ip_graph = InsertionPointGraph(get_two_branch_mock_model_graph())
         qpsg = QPSG(ip_graph)
+
+        qpsg.nodes['5 /F'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
@@ -151,7 +158,6 @@ class TestQuantizerPropagationStateGraph:
         (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
          [[(InsertionPointGraph.get_post_hook_node_key("3 /D"),
             InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1))]]),
-
     ]
 
     @staticmethod
@@ -171,6 +177,78 @@ class TestQuantizerPropagationStateGraph:
 
         assert Counter(get_cat_path_list(ref_paths)) == Counter(get_cat_path_list(test_paths))
 
+    class DomIPGroupedByUnifiedScalesTestStruct:
+        def __init__(self, start_ip_node_key: str,
+                     ref_groups_vs_paths: Dict[Optional[int], List[PropagationPath]]):
+            self.start_ip_node_key = start_ip_node_key
+            self.ref_groups_vs_paths = ref_groups_vs_paths
+
+    START_IP_NODES_AND_GROUPED_PATHS_TO_DOM_IP_NODES = [
+        DomIPGroupedByUnifiedScalesTestStruct(
+            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("4 /E"),
+            ref_groups_vs_paths={
+                None: [
+                    [(InsertionPointGraph.get_post_hook_node_key("2 /C"),
+                      InsertionPointGraph.get_pre_hook_node_key("4 /E"))]
+                ]
+            }),
+        DomIPGroupedByUnifiedScalesTestStruct(
+            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("2 /C"),
+            ref_groups_vs_paths={
+                None: [
+                    [("2 /C", InsertionPointGraph.get_post_hook_node_key("2 /C")),
+                     (InsertionPointGraph.get_pre_hook_node_key("2 /C"), "2 /C")]
+                ]
+            }
+        ),
+        DomIPGroupedByUnifiedScalesTestStruct(
+            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
+            ref_groups_vs_paths={
+                None: [
+                    [(InsertionPointGraph.get_post_hook_node_key("3 /D"),
+                      InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1))]
+                ]
+            }
+        ),
+        DomIPGroupedByUnifiedScalesTestStruct(
+            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("5 /F"),
+            ref_groups_vs_paths={
+                0: [
+                    [("5 /F", InsertionPointGraph.get_post_hook_node_key("5 /F")),
+                     (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1), "5 /F")],
+                    [("5 /F", InsertionPointGraph.get_post_hook_node_key("5 /F")),
+                     (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=0), "5 /F")],
+                ]
+            }
+        )
+
+    ]
+
+    @staticmethod
+    @pytest.fixture(params=START_IP_NODES_AND_GROUPED_PATHS_TO_DOM_IP_NODES)
+    def start_ip_node_and_dom_node_grouped_paths(request):
+        return request.param
+
+    def test_get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
+            self,
+            mock_qp_graph,
+            start_ip_node_and_dom_node_grouped_paths: DomIPGroupedByUnifiedScalesTestStruct):
+        start_node_key = start_ip_node_and_dom_node_grouped_paths.start_ip_node_key
+        ref_groups_vs_paths = start_ip_node_and_dom_node_grouped_paths.ref_groups_vs_paths
+        test_groups_vs_paths = \
+            mock_qp_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
+                start_node_key,
+                {CatMetatype})
+
+        def get_cat_path_list(path_list: List[List[Tuple[str, str]]]):
+            str_paths = [[str(edge[0]) + ' -> ' + str(edge[1]) for edge in path] for path in path_list]
+            cat_paths = [';'.join(path) for path in str_paths]
+            return cat_paths
+
+        processed_ref_groups = {k: get_cat_path_list(v) for k, v in ref_groups_vs_paths.items()}
+        processed_test_groups = {k: get_cat_path_list(v) for k, v in test_groups_vs_paths.items()}
+
+        assert processed_ref_groups == processed_test_groups
 
     START_TARGET_NODES = [
         (InsertionPointGraph.get_pre_hook_node_key("7 /H"),
@@ -463,7 +541,7 @@ class TestQuantizerPropagationStateGraph:
         #    /        \
         # (2 /C)     (3 /D)
         #    |         |
-        # (4 /F)     (5 /E)
+        # (5 /F)     (4 /E)
         #
         #
 

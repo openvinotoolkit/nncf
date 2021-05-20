@@ -1,7 +1,11 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 /nncf_model_output" [id=1, scope="", type=nncf_model_output];
-"2 /nncf_model_output" [id=2, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 /nncf_model_output";
-"0 /nncf_model_input" -> "2 /nncf_model_output";
+"1 TransposeModel/transpose" [id=1, scope=TransposeModel, type=transpose];
+"2 TransposeModel/permute" [id=2, scope=TransposeModel, type=permute];
+"3 /nncf_model_output" [id=3, scope="", type=nncf_model_output];
+"4 /nncf_model_output" [id=4, scope="", type=nncf_model_output];
+"0 /nncf_model_input" -> "1 TransposeModel/transpose";
+"0 /nncf_model_input" -> "2 TransposeModel/permute";
+"1 TransposeModel/transpose" -> "3 /nncf_model_output";
+"2 TransposeModel/permute" -> "4 /nncf_model_output";
 }

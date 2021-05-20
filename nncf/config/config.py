@@ -21,7 +21,7 @@ import jsonschema
 from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structure import NNCFExtraConfigStruct
-from nncf.common.os import safe_open
+from nncf.common.utils.os import safe_open
 
 try:
     import jstyleson as json

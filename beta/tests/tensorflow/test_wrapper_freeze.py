@@ -78,8 +78,8 @@ def test_wrapper_weights_freeze():
     model = get_model_for_test()
 
     # Initial state check
-    ref_trainable_weights = ['kernel_mask_trainable:0', 'nncf_wrapper_layer1/kernel:0',
-                             'nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/bias:0']
+    ref_trainable_weights = ['kernel_mask_trainable:0', 'layer1/kernel:0',
+                             'layer1/kernel:0', 'layer1/bias:0']
     ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
@@ -88,9 +88,9 @@ def test_wrapper_weights_freeze():
         if isinstance(layer, NNCFWrapper):
             layer.trainable = False
     ref_trainable_weights = []
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'nncf_wrapper_layer1/kernel:0',
-                                 'nncf_wrapper_layer1/bias:0', 'kernel_mask_trainable:0',
-                                 'nncf_wrapper_layer1/kernel:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'layer1/kernel:0',
+                                 'layer1/bias:0', 'kernel_mask_trainable:0',
+                                 'layer1/kernel:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # Operation weights are enabled for training
@@ -98,16 +98,16 @@ def test_wrapper_weights_freeze():
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(True)
     ref_trainable_weights = ['kernel_mask_trainable:0']
-    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'nncf_wrapper_layer1/kernel:0',
-                                 'nncf_wrapper_layer1/bias:0', 'nncf_wrapper_layer1/kernel:0']
+    ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'layer1/kernel:0',
+                                 'layer1/bias:0', 'layer1/kernel:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
     # All weights are enabled for training
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.trainable = True
-    ref_trainable_weights = ['kernel_mask_trainable:0', 'nncf_wrapper_layer1/kernel:0',
-                             'nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/bias:0']
+    ref_trainable_weights = ['kernel_mask_trainable:0', 'layer1/kernel:0',
+                             'layer1/kernel:0', 'layer1/bias:0']
     ref_non_trainable_weights = ['kernel_mask_non_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)
 
@@ -115,7 +115,7 @@ def test_wrapper_weights_freeze():
     for layer in model.layers:
         if isinstance(layer, NNCFWrapper):
             layer.set_ops_trainable(False)
-    ref_trainable_weights = ['nncf_wrapper_layer1/kernel:0', 'nncf_wrapper_layer1/kernel:0',
-                             'nncf_wrapper_layer1/bias:0']
+    ref_trainable_weights = ['layer1/kernel:0', 'layer1/kernel:0',
+                             'layer1/bias:0']
     ref_non_trainable_weights = ['kernel_mask_non_trainable:0', 'kernel_mask_trainable:0']
     check_train_weights(model, ref_trainable_weights, ref_non_trainable_weights)

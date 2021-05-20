@@ -60,10 +60,9 @@ from nncf.graph.graph import PTNNCFNode
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.nncf_network import NNCFNetwork
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
-from nncf.pruning.export_utils import PTPruningOperationsMetatypeRegistry
 from nncf.pruning.utils import is_depthwise_conv
 
-PT_PRUNING_OPERATOR_METATYPES = PTPruningOperationsMetatypeRegistry("operator_metatypes")
+PT_PRUNING_OPERATOR_METATYPES = PruningOperationsMetatypeRegistry("operator_metatypes")
 
 
 class PTDefaultMetaOp(DefaultMetaOp):
@@ -400,9 +399,10 @@ class PTConcat(PTDefaultMetaOp):
         :param graph: NNCF graph to work with.
         :return: Filled input masks.
         """
-        previous_nodes = graph.get_previous_nodes_sorted_by_in_port(node)
-        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
         input_edges = graph.get_input_edges(node)
+        input_edges_desc = list(input_edges.values())
+        previous_nodes = [graph.get_node_by_key(edge[0]) for edge in input_edges]
+        input_masks = [input_node.data['output_mask'] for input_node in previous_nodes]
 
         if all(mask is None for mask in input_masks):
             return None
@@ -412,7 +412,7 @@ class PTConcat(PTDefaultMetaOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                mask = torch.ones(input_edges[i][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
+                mask = torch.ones(input_edges_desc[i][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR][1], device=device)
             filled_input_masks.append(mask)
         return filled_input_masks
 

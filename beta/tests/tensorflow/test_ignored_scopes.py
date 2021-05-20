@@ -48,8 +48,8 @@ def test_ignored_scopes():
         'c3_1/fake_quantize'
     ]
     ref_nncf_wrapper_names = [
-        'nncf_wrapper_c3_1',
-        'nncf_wrapper_end'
+        'c3_1',
+        'end'
     ]
 
     fake_quantize_names = [layer.name for layer in compressed_model.layers if isinstance(layer, FakeQuantize)]

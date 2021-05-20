@@ -14,12 +14,8 @@
 import json
 import os
 import shlex
-import signal
-import subprocess
 import sys
 import tempfile
-import threading
-import time
 from enum import Enum
 from enum import auto
 from pathlib import Path
@@ -34,88 +30,16 @@ from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name
 from examples.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionLevel
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
-from nncf.hw_config import HWConfigType
+from pytest_dependency import depends
 from tests.conftest import EXAMPLES_DIR
 from tests.conftest import PROJECT_ROOT
 from tests.conftest import TEST_ROOT
+from tests.helpers import Command
 
 NUM_DEVICES = torch.cuda.device_count() if torch.cuda.is_available() else 1
-
-class Command:
-    def __init__(self, cmd, path=None):
-        self.cmd = cmd
-        self.process = None
-        self.exec_time = -1
-        self.output = []  # store output here
-        self.kwargs = {}
-        self.timeout = False
-        self.path = path
-
-        # set system/version dependent "start_new_session" analogs
-        if sys.platform == "win32":
-            self.kwargs.update(creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-        elif sys.version_info < (3, 2):  # assume posix
-            self.kwargs.update(preexec_fn=os.setsid)
-        else:  # Python 3.2+ and Unix
-            self.kwargs.update(start_new_session=True)
-
-    def kill_process_tree(self, pid):
-        try:
-            if sys.platform != "win32":
-                os.killpg(pid, signal.SIGKILL)
-            else:
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pid)])
-        except OSError as err:
-            print(err)
-
-    def run(self, timeout=3600, assert_returncode_zero=True):
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
-
-        def target():
-            start_time = time.time()
-            self.process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True,
-                                            bufsize=1, cwd=self.path, **self.kwargs)
-            self.timeout = False
-
-            self.output = []
-            for line in self.process.stdout:
-                line = line.decode('utf-8')
-                self.output.append(line)
-                sys.stdout.write(line)
-
-            sys.stdout.flush()
-            self.process.stdout.close()
-
-            self.process.wait()
-            self.exec_time = time.time() - start_time
-
-        thread = threading.Thread(target=target)
-        thread.start()
-
-        thread.join(timeout)
-        if thread.is_alive():
-            try:
-                print("Error: process taking too long to complete--terminating" + ", [ " + self.cmd + " ]")
-                self.kill_process_tree(self.process.pid)
-                self.exec_time = timeout
-                self.timeout = True
-                thread.join()
-            except OSError as e:
-                print(self.process.pid, "Exception when try to kill task by PID, " + e.strerror)
-                raise
-        returncode = self.process.wait()
-        print("Process returncode = " + str(returncode))
-        if assert_returncode_zero:
-            assert returncode == 0, "Process exited with a non-zero exit code {}; output:{}".format(
-                returncode,
-                "".join(self.output))
-        return returncode
-
-    def get_execution_time(self):
-        return self.exec_time
 
 
 class ConfigFactory:
@@ -149,13 +73,14 @@ def create_command_line(args, sample_type):
 SAMPLE_TYPES = ["classification", "semantic_segmentation", "object_detection"]
 
 DATASETS = {
-    "classification": ["mock_32x32", "mock_32x32", "mock_32x32", "mock_32x32"],
+    "classification": ["mock_32x32", "mock_299x299", "mock_32x32", "mock_32x32"],
     "semantic_segmentation": ["camvid", "camvid"],
     "object_detection": ["voc"],
 }
 
 CONFIGS = {
     "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
+                       TEST_ROOT.joinpath("data", "configs", "inception_v3_mock_dataset.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json"),
                        TEST_ROOT.joinpath("data", "configs", "resnet18_pruning_magnitude.json")],
@@ -165,7 +90,7 @@ CONFIGS = {
 }
 
 BATCHSIZE_PER_GPU = {
-    "classification": [256, 256, 256, 128],
+    "classification": [256, 32, 256, 256, 128],
     "semantic_segmentation": [2, 2],
     "object_detection": [128],
 }
@@ -201,9 +126,11 @@ def update_compression_algo_dict_with_reduced_bn_adapt_params(algo_dict):
         algo_dict['initializer'].update({'batchnorm_adaptation': {'num_bn_adaptation_samples': 5,
                                                                   'num_bn_forget_samples': 5}})
 
+def _get_test_case_id(p) -> str:
+    return "-".join([p[0], p[1].name, p[2], str(p[3])])
 
 @pytest.fixture(params=CONFIG_PARAMS,
-                ids=["-".join([p[0], p[1].name, p[2], str(p[3])]) for p in CONFIG_PARAMS])
+                ids=[_get_test_case_id(p) for p in CONFIG_PARAMS])
 def config(request, dataset_dir):
     sample_type, config_path, dataset_name, batch_size = request.param
     dataset_path = DATASET_PATHS[sample_type][dataset_name](dataset_dir)
@@ -232,6 +159,7 @@ def config(request, dataset_dir):
         "model_name": jconfig["model"],
         "dataset_path": dataset_path,
         "batch_size": batch_size,
+        "test_case_id": _get_test_case_id(request.param)
     }
 
 
@@ -266,10 +194,9 @@ def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed):
     runner.run()
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(name="train_distributed")),
-        pytest.param(False, marks=pytest.mark.dependency(name="train_dataparallel"))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
 def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, case_common_dirs):
     checkpoint_save_dir = os.path.join(case_common_dirs["checkpoint_save_dir"],
@@ -291,20 +218,34 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
         args["--cpu-only"] = True
     elif multiprocessing_distributed:
         args["--multiprocessing-distributed"] = True
+    elif config['nncf_config']["model"] == "inception_v3":
+        pytest.skip("InceptionV3 may not be trained in DataParallel "
+                    "because it outputs namedtuple, which DP seems to be unable "
+                    "to support even still.")
 
     runner = Command(create_command_line(args, config["sample_type"]))
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
+def depends_on_pretrained_train(request, test_case_id: str, current_multiprocessing_distributed: bool):
+    full_test_case_id = test_case_id + ('-distributed' if current_multiprocessing_distributed else '-dataparallel')
+    primary_test_case_name = f'test_pretrained_model_train[{full_test_case_id}]'
+    depends(request, [primary_test_case_name])
+
+
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_trained_model_eval(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = os.path.join(case_common_dirs["checkpoint_save_dir"],
                              "distributed" if multiprocessing_distributed else "data_parallel",
@@ -335,12 +276,12 @@ def get_resuming_checkpoint_path(config_factory, multiprocessing_distributed, ch
                         get_name(config_factory.config) + "_last.pth")
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     checkpoint_save_dir = os.path.join(str(tmp_path), "models")
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
@@ -369,15 +310,19 @@ def test_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs)
     runner.run()
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
-    assert torch.load(last_checkpoint_path)['compression_level'] in (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    if 'compression' in config['nncf_config']:
+        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+    else:
+        allowed_compression_levels = (CompressionLevel.NONE,)
+    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
 
 
+@pytest.mark.dependency()
 @pytest.mark.parametrize(
-    "multiprocessing_distributed", [
-        pytest.param(True, marks=pytest.mark.dependency(depends=["train_distributed"])),
-        pytest.param(False, marks=pytest.mark.dependency(depends=["train_dataparallel"]))],
+    "multiprocessing_distributed", [True, False],
     ids=['distributed', 'dataparallel'])
-def test_export_with_resume(config, tmp_path, multiprocessing_distributed, case_common_dirs):
+def test_export_with_resume(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
+    depends_on_pretrained_train(request, config["test_case_id"], multiprocessing_distributed)
     config_factory = ConfigFactory(config['nncf_config'], tmp_path / 'config.json')
     ckpt_path = get_resuming_checkpoint_path(config_factory, multiprocessing_distributed,
                                              case_common_dirs["checkpoint_save_dir"])

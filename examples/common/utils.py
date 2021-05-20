@@ -128,6 +128,9 @@ class SafeMLFLow:
         return Maybe.from_value(self._get_mlflow()).bind(
             lambda obj: Maybe.from_value(getattr(obj, func)(*args, **kwargs)))
 
+    def end_run(self):
+        self.safe_call('end_run')
+
     def _is_enabled(self):
         return self.is_suitable_mode and is_main_process()
 

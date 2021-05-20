@@ -24,10 +24,7 @@ def st_binary_mask(mask):
     return st_threshold(tf.math.sigmoid(mask))
 
 
-def calc_rb_binary_mask(mask, eps=0.01):
-    # TODO: check in distributed mode (mirrored strategy)
-    # TODO: remove pylint disable comment
-    # when https://github.com/tensorflow/tensorflow/pull/46046 will be merged into the release
-    uniform = tf.random.uniform(mask.shape, minval=0, maxval=1)  # pylint: disable=E1123,E1120
+def calc_rb_binary_mask(mask, seed, eps=0.01):
+    uniform = tf.random.stateless_uniform(mask.shape, seed=seed, minval=0, maxval=1)
     mask = mask + logit(tf.clip_by_value(uniform, eps, 1 - eps))
     return st_binary_mask(mask)

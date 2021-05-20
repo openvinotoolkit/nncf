@@ -43,7 +43,6 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         super().__init__(accuracy_aware_config, verbose,
                          minimal_compression_rate, maximal_compression_rate)
 
-        self.best_compression_level = CompressionLevel.NONE
         self._base_lr_reduction_factor_during_search = 0.5
         self.lr_updates_needed = lr_updates_needed
 
@@ -106,16 +105,9 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
     def validate(self, model, compression_controller):
         with torch.no_grad():
             val_metric_value = self._validate_fn(model, epoch=self.cumulative_epoch_count)
-        compression_level = compression_controller.compression_level()
         is_better_by_accuracy = (not self.is_higher_metric_better) != (val_metric_value > self.best_val_metric_value)
-        is_best = is_better_by_accuracy
-
-        # is_best_by_accuracy = is_better_by_accuracy and compression_level == self.best_compression_level
-        # is_best = is_best_by_accuracy or compression_level > self.best_compression_level
-
-        if is_best:
+        if is_better_by_accuracy:
             self.best_val_metric_value = val_metric_value
-        self.best_compression_level = max(compression_level, self.best_compression_level)
 
         if is_main_process():
             self.add_tensorboard_scalar('val/accuracy_aware/metric_value',

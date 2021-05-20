@@ -15,29 +15,27 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
 from typing import Any, List, MutableMapping
 
 import tensorflow as tf
 from absl import logging
 
+from beta.nncf.tensorflow.callbacks.checkpoint_callback import CheckpointManagerCallback
 
-def get_callbacks(model_checkpoint: bool = True,
-                  include_tensorboard: bool = True,
+
+def get_callbacks(include_tensorboard: bool = True,
                   track_lr: bool = True,
                   write_model_weights: bool = True,
                   initial_step: int = 0,
                   model_dir: str = None,
-                  ckpt_dir: str = None) -> List[tf.keras.callbacks.Callback]:
+                  ckpt_dir: str = None,
+                  checkpoint: tf.train.Checkpoint = None) -> List[tf.keras.callbacks.Callback]:
     """Get all callbacks."""
     model_dir = model_dir or ''
     ckpt_dir = ckpt_dir or model_dir
     callbacks = []
-    if model_checkpoint:
-        ckpt_full_path = os.path.join(ckpt_dir, 'model.ckpt-{epoch:04d}')
-        callbacks.append(
-            tf.keras.callbacks.ModelCheckpoint(
-                ckpt_full_path, save_weights_only=True, verbose=1))
+    if checkpoint:
+        callbacks.append(CheckpointManagerCallback(checkpoint, ckpt_dir))
     if include_tensorboard:
         callbacks.append(
             CustomTensorBoard(
@@ -65,16 +63,17 @@ def get_scalar_from_tensor(t: tf.Tensor) -> int:
 
 
 class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
-    """A customized TensorBoard callback that tracks additional datapoints.
+    """
+    A customized TensorBoard callback that tracks additional datapoints.
 
     Metrics tracked:
     - Global learning rate
 
     Attributes:
-      log_dir: the path of the directory where to save the log files to be parsed
+      log_dir: The path of the directory where to save the log files to be parsed
         by TensorBoard.
-      track_lr: `bool`, whether or not to track the global learning rate.
-      initial_step: the initial step, used for preemption recovery.
+      track_lr: `bool`, Whether or not to track the global learning rate.
+      initial_step: The initial step, used for preemption recovery.
       **kwargs: Additional arguments for backwards compatibility. Possible key is
         `period`.
     """

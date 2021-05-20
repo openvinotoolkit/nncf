@@ -25,6 +25,7 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import PTNNCFGraph
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
+from nncf.graph.operator_metatypes import ReshapeMetatype
 from torch import nn
 
 from nncf import register_module
@@ -610,6 +611,7 @@ class TestInsertionPointGraph:
             "ModelForMetatypeTesting/__iadd___0": AddMetatype,
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": AvgPool2dMetatype,
             "ModelForMetatypeTesting/NNCFLinear[linear]/linear_0": LinearMetatype,
+            'ModelForMetatypeTesting/flatten_0': ReshapeMetatype,
             "/" + MODEL_OUTPUT_OP_NAME + "_0": OutputNoopMetatype,
         }
 

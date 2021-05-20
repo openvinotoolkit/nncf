@@ -27,7 +27,7 @@ class SparseLoss(CompressionLoss):
         self.disabled = tf.Variable(False, trainable=False)
 
     def disable(self):
-        tf.cond(self.disabled,
+        tf.cond(tf.cast(self.disabled, tf.bool),
                 lambda: None,
                 self._disable)
 
@@ -38,7 +38,7 @@ class SparseLoss(CompressionLoss):
             op.freeze(op_weights)
 
     def calculate(self, *args, **kwargs):
-        return tf.cond(self.disabled,
+        return tf.cond(tf.cast(self.disabled, tf.bool),
                        lambda: tf.constant(0.),
                        self._calculate)
 
@@ -66,6 +66,18 @@ class SparseLoss(CompressionLoss):
 
     def set_target_sparsity_loss(self, sparsity_level):
         self.target.assign(1 - sparsity_level)
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        self.target.assign(state['target'])
+        self.disabled.assign(state['disabled'])
+        self.p = state['p']
+
+    def get_state(self) -> Dict[str, object]:
+        return {
+            'target': float(tf.keras.backend.eval(self.target)),
+            'disabled': bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
+            'p': self.p
+        }
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         return {}

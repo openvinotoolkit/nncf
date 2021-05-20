@@ -21,6 +21,7 @@ from examples.common.example_logger import logger
 import examples.common.restricted_pickle_module as restricted_pickle_module
 from nncf import load_state
 from nncf.utils import safe_thread_call
+from examples.classification.models.mobilenet_v2_32x32 import MobileNetV2For32x32
 
 
 def load_model(model, pretrained=True, num_classes=1000, model_params=None,
@@ -41,6 +42,8 @@ def load_model(model, pretrained=True, num_classes=1000, model_params=None,
     elif model in custom_models.__dict__:
         load_model_fn = partial(custom_models.__dict__[model], num_classes=num_classes, pretrained=pretrained,
                                 **model_params)
+    elif model == "mobilenet_v2_32x32":
+        load_model_fn = partial(MobileNetV2For32x32, num_classes=100)
     else:
         raise Exception("Undefined model name")
     loaded_model = safe_thread_call(load_model_fn)

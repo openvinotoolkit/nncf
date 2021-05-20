@@ -35,7 +35,7 @@ from natsort import natsorted
 
 from nncf.debug import is_debug, DEBUG_LOG_DIR
 from nncf.common.utils.logger import logger
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 from nncf.initialization import PartialDataLoader
 from nncf.quantization.layers import BaseQuantizer
 from nncf.quantization.algo import QuantizationController, NNCFNetwork, ExperimentalQuantizationController
@@ -47,8 +47,9 @@ from nncf.common.quantization.structs import QuantizerConfig
 from sklearn.preprocessing import MinMaxScaler
 
 from nncf.quantization.quantizer_setup import QuantizationPointId
-from nncf.common.os import safe_open
+from nncf.common.utils.os import safe_open
 from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
+
 
 def find_qid_by_str(qctrl: QuantizationController, qid_str: str) -> QuantizerId:
     for _qid, _q in qctrl.all_quantizations.items():

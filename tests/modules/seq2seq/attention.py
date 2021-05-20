@@ -3,6 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from nncf.dynamic_graph.context import no_nncf_trace
 from torch.nn.parameter import Parameter
 
 
@@ -79,7 +80,8 @@ class BahdanauAttention(nn.Module):
 
         indices = torch.arange(0, max_len, dtype=torch.int64,
                                device=context.device)
-        self.mask = indices >= (context_len.unsqueeze(1))
+        with no_nncf_trace():  # TODO: remove once tensor type is stored in NNCF graph and is accessible to quant algo
+            self.mask = indices >= (context_len.unsqueeze(1))
 
     def calc_score(self, att_query, att_keys):
         """

@@ -4,6 +4,9 @@
     "input_info": {
       "sample_size":  [1, 3, 32, 32]
     },
+    "batch_size": 512,
+    "dataset": "CIFAR10",
+    "epochs": 5,
     "num_classes": 10,
     "optimizer": {
         "type": "sgd",

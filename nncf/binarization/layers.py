@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 
 from nncf.dynamic_graph.patch_pytorch import register_operator
-from nncf.layer_utils import COMPRESSION_MODULES
+from nncf.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.common.utils.registry import Registry
 from nncf.utils import get_per_channel_scale_shape
 from nncf.binarization.binarize_functions import XNORBinarizeFn, DOREFABinarizeFn
@@ -91,19 +91,21 @@ def dorefa_binarize_op(x):
 
 # Activation binarization module
 class ActivationBinarizationScaleThreshold(ActivationBinarizer):
-    def __init__(self, input_shape, enabled=False, desc=""):
+    def __init__(self, input_shape, enabled=False, compression_lr_multiplier=None, desc=""):
         super().__init__(enabled)
 
         self.input_shape = input_shape
 
-        self.scale = torch.nn.Parameter(torch.Tensor([0]), requires_grad=enabled)
+        self.scale = CompressionParameter(torch.Tensor([0]), requires_grad=enabled,
+                                          compression_lr_multiplier=compression_lr_multiplier)
         self.scale.data.zero_()
 
         # Need scale_initialized as buffer for it to appear in the model state dict
         self.register_buffer('scale_initialized', torch.IntTensor([0]))
 
         threshold_shape = get_per_channel_scale_shape(self.input_shape, is_weights=False)
-        self.threshold = torch.nn.Parameter(torch.ones(threshold_shape), requires_grad=enabled)
+        self.threshold = CompressionParameter(torch.ones(threshold_shape), requires_grad=enabled,
+                                              compression_lr_multiplier=compression_lr_multiplier)
         self.threshold.data.zero_()
         self.bin = activation_bin_scale_threshold_op
 

@@ -40,7 +40,7 @@ from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import PTNNCFGraph
 from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.hw_config import HWConfigType
+from nncf.common.hardware.config import HWConfigType
 from nncf.layers import LSTMCellNNCF
 from nncf.layers import NNCF_RNN
 from nncf.nncf_network import NNCFNetwork
@@ -363,6 +363,7 @@ class TestModelsGraph:
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
 
 
+@pytest.mark.skip(reason="Sporadic failures")
 def test_gnmt_quantization(_case_config):
     model = GNMT(vocab_size=32)
     model = replace_lstm(model)

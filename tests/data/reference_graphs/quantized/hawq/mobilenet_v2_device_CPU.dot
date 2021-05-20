@@ -266,10 +266,11 @@ strict digraph  {
 "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize" [color=green, id=264, label="AFQ_[B:8 M:S SGN:U PC:N]_#264_G0", scope="MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer", style=filled, type=symmetric_quantize];
 "265 MobileNetV2/adaptive_avg_pool2d" [id=265, label="adaptive_avg_pool2d_#265", scope=MobileNetV2, style=filled, type=adaptive_avg_pool2d];
 "266 MobileNetV2/SymmetricQuantizer/symmetric_quantize" [color=green, id=266, label="AFQ_[B:8 M:S SGN:U PC:N]_#266_G1", scope="MobileNetV2/SymmetricQuantizer", style=filled, type=symmetric_quantize];
-"267 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=267, label="dropout_#267", scope="MobileNetV2/Sequential[classifier]/Dropout[0]", style=filled, type=dropout];
-"268 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=green, id=268, label="WFQ_[B:8 M:S SGN:S PC:Y]_#268_G1", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
-"269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=269, label="linear_#269", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", style=filled, type=linear];
-"270 /nncf_model_output" [id=270, label="nncf_model_output_#270", scope="", style=filled, type=nncf_model_output];
+"267 MobileNetV2/reshape" [id=267, label="reshape_#267", scope=MobileNetV2, style=filled, type=reshape];
+"268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=268, label="dropout_#268", scope="MobileNetV2/Sequential[classifier]/Dropout[0]", style=filled, type=dropout];
+"269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" [color=green, id=269, label="WFQ_[B:8 M:S SGN:S PC:Y]_#269_G1", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]", style=filled, type=symmetric_quantize];
+"270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=270, label="linear_#270", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", style=filled, type=linear];
+"271 /nncf_model_output" [id=271, label="nncf_model_output_#271", scope="", style=filled, type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
 "2 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "3 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
@@ -546,8 +547,9 @@ strict digraph  {
 "263 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh" -> "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize";
 "264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize" -> "265 MobileNetV2/adaptive_avg_pool2d";
 "265 MobileNetV2/adaptive_avg_pool2d" -> "266 MobileNetV2/SymmetricQuantizer/symmetric_quantize";
-"266 MobileNetV2/SymmetricQuantizer/symmetric_quantize" -> "267 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
-"267 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
-"268 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
-"269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "270 /nncf_model_output";
+"266 MobileNetV2/SymmetricQuantizer/symmetric_quantize" -> "267 MobileNetV2/reshape";
+"267 MobileNetV2/reshape" -> "268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
+"268 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"269 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize" -> "270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"270 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "271 /nncf_model_output";
 }

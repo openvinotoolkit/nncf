@@ -35,12 +35,14 @@ from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
-from nncf.common.os import safe_open
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.hardware.config import HWConfig
+from nncf.common.hardware.config import HWConfigType
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.utils.os import safe_open
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.config import NNCFConfig
@@ -54,8 +56,6 @@ from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.graph.transformations.commands import PTTargetPoint
 from nncf.graph.transformations.commands import TransformationPriority
 from nncf.graph.transformations.layout import PTTransformationLayout
-from nncf.hw_config import HWConfig
-from nncf.hw_config import HWConfigType
 from nncf.initialization import SimpleDataLoaderRunner
 from nncf.layer_utils import _NNCFModuleMixin
 from nncf.module_operations import UpdatePaddingValue
@@ -285,7 +285,9 @@ class DefaultQuantizerSetupDisambiguator(IQuantizerSetupDisambiguator):
                     self.select_first_qconfig_with_bitwidth_variants_for_each_point(multi_config_setup)
 
                 init_setup = bitwidth_varying_only_multi_setup.select_first_qconfig_for_each_point()
-                intermediate_builder = ExperimentalQuantizationBuilder(init_setup, stats, hw_config=self.hw_config)
+                intermediate_builder = ExperimentalQuantizationBuilder(bitwidth_varying_only_multi_setup,
+                                                                       init_setup,
+                                                                       stats, hw_config=self.hw_config)
                 intermediate_builder.apply_to(intermediate_model)
                 intermediate_ctrl = intermediate_builder.build_controller(intermediate_model)
 
@@ -606,7 +608,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         target_model.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
         single_config_quantizer_setup = self._get_quantizer_setup(target_model)
         minmax_values_for_range_init = {}
-        if self.should_init:
+        if is_main_process() and self.should_init:
             stats_for_range_init = self._get_statistics_for_final_range_init(target_model,
                                                                              single_config_quantizer_setup,
                                                                              self._range_init_params)
@@ -972,6 +974,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             narrow_range = False
 
         device = next(target_model.parameters()).device
+        compression_lr_multiplier = self.config.get('compression_lr_multiplier', None)
 
         half_range = False
         if self.hw_config and not self._disable_saturation_fix and is_weights(primary_ip):
@@ -986,7 +989,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                                             narrow_range=narrow_range,
                                             scale_shape=tuple(scale_shape),
                                             logarithm_scale=use_logarithm_scale,
-                                            half_range=half_range)
+                                            half_range=half_range,
+                                            compression_lr_multiplier=compression_lr_multiplier)
         quantizer = self.__create_quantize_module(qspec).to(device)
         if range_init_minmax_values is not None:
             quantizer.apply_minmax_init(min_values=range_init_minmax_values[0],
@@ -1365,6 +1369,9 @@ class QuantizationDebugInterface(DebugInterface):
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
         self.scale_dump_dir = self.dump_dir / Path("scale")
+        if self.scale_dump_dir.exists():
+            shutil.rmtree(str(self.scale_dump_dir))
+        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self.prop_graph_dump_dir = self.dump_dir / Path("quant_prop")
         if self.prop_graph_dump_dir.exists():
             shutil.rmtree(str(self.prop_graph_dump_dir))
@@ -1383,9 +1390,6 @@ class QuantizationDebugInterface(DebugInterface):
             nncf_module_quantizations_id_list)
         self.call_trackers[self.ACTIVATION_QUANTIZERS_TRACKER_NAME].init_with_key_list(
             activation_quantizer_id_list)
-        if self.scale_dump_dir.exists():
-            shutil.rmtree(str(self.scale_dump_dir))
-        self.scale_dump_dir.mkdir(parents=True, exist_ok=True)
         self._strict_forward = True
 
     def pre_forward_actions(self, module: 'NNCFNetwork'):
@@ -1428,7 +1432,7 @@ class QuantizationDebugInterface(DebugInterface):
         quantizer_normalized_name = re.sub(r'[^\w\-_\. ]', '_', quantizer_name)
         for scale_param_name, scale_param in quantizer_scale_params.items():
             fname = "{}_{}.txt".format(quantizer_normalized_name, scale_param_name)
-            with safe_open(self.scale_dump_dir / fname, "ba") as file:
+            with safe_open(self.scale_dump_dir / fname, "ab") as file:
                 np.savetxt(file, scale_param.cpu().numpy().flatten())
 
     def reset_counters(self):
@@ -1502,11 +1506,13 @@ class QuantizationDebugInterface(DebugInterface):
 
 
 class ExperimentalQuantizationBuilder(QuantizationBuilder):
-    def __init__(self, quantizer_setup: SingleConfigQuantizerSetup,
+    def __init__(self, quantizer_setup: MultiConfigQuantizerSetup,
+                 initial_quantizer_setup: SingleConfigQuantizerSetup,
                  tensor_stats_for_all_setup_variations: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
                  hw_config: HWConfig = None):
         should_init = bool(tensor_stats_for_all_setup_variations)
         super().__init__(NNCFConfig(), should_init=should_init)
+        self._initial_quantizer_setup = initial_quantizer_setup
         self._quantizer_setup = quantizer_setup
         self._tensor_stats = tensor_stats_for_all_setup_variations
         self._should_setup_adjust_pad_ops = False
@@ -1516,7 +1522,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         pass
 
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> SingleConfigQuantizerSetup:
-        return self._quantizer_setup
+        return self._initial_quantizer_setup
 
     def _get_statistics_for_final_range_init(self,
                                              target_model: NNCFNetwork,
@@ -1543,6 +1549,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
                                                   self._non_weight_quantizers,
                                                   groups_of_adjacent_quantizers,
                                                   self._quantizer_setup,
+                                                  self._initial_quantizer_setup,
                                                   self._setup_to_module_id_translation_dict,
                                                   self._tensor_stats,
                                                   build_time_metric_infos,
@@ -1555,6 +1562,7 @@ class ExperimentalQuantizationController(QuantizationController):
                  weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
                  non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
                  groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
+                 quantizer_setup: MultiConfigQuantizerSetup,
                  initial_quantizer_setup: SingleConfigQuantizerSetup,
                  setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
                  tensor_stats: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
@@ -1572,6 +1580,7 @@ class ExperimentalQuantizationController(QuantizationController):
                          build_time_metric_info=build_time_metric_info)
         self._target_model_ref = target_model
         self._should_setup_adjust_pad_ops = should_setup_adjust_pad_ops
+        self._quantizer_setup = quantizer_setup
         self._initial_quantizer_setup = initial_quantizer_setup
         self._tensor_stats = tensor_stats
         self.setup_to_module_id_translation_dict = setup_to_module_id_translation_dict
@@ -1592,18 +1601,13 @@ class ExperimentalQuantizationController(QuantizationController):
         return self._scheduler
 
     def get_quantizer_setup_for_current_state(self) -> SingleConfigQuantizerSetup:
-        retval = SingleConfigQuantizerSetup()
-        retval.shared_input_operation_set_groups = self._initial_quantizer_setup.shared_input_operation_set_groups
-        retval.unified_scale_groups = self._initial_quantizer_setup.unified_scale_groups
-        for qp_id, qp in self._initial_quantizer_setup.quantization_points.items():
+        qpid_vs_selected_qconfig = {}
+        for qp_id in self._initial_quantizer_setup.quantization_points:
             quant_module_id = self.setup_to_module_id_translation_dict[qp_id]
             quant_module = self.all_quantizations[quant_module_id]
             qconfig = quant_module.get_quantizer_config()
-            new_qp = SingleConfigQuantizationPoint(
-                qp.insertion_point, qconfig,
-                scopes_of_directly_quantized_operators=qp.scopes_of_directly_quantized_operators)
-            retval.quantization_points[qp_id] = new_qp
-        return retval
+            qpid_vs_selected_qconfig[qp_id] = qconfig
+        return self._quantizer_setup.select_qconfigs(qpid_vs_selected_qconfig, strict=False)
 
     def is_new_setup_requires_regeneration(self, quantizer_setup: SingleConfigQuantizerSetup) -> bool:
         current_setup = self.get_quantizer_setup_for_current_state()
@@ -1635,7 +1639,10 @@ class ExperimentalQuantizationController(QuantizationController):
                 quant_module.num_bits = qp.qconfig.num_bits
             return self, self._target_model_ref
         new_model = self._target_model_ref.get_clean_shallow_copy()
-        new_builder = ExperimentalQuantizationBuilder(quantizer_setup, self._tensor_stats, self.hw_config)
+        new_builder = ExperimentalQuantizationBuilder(self._quantizer_setup,
+                                                      initial_quantizer_setup=quantizer_setup,
+                                                      tensor_stats_for_all_setup_variations=self._tensor_stats,
+                                                      hw_config=self.hw_config)
         new_builder.apply_to(new_model)
         new_ctrl = new_builder.build_controller(new_model)
         return new_ctrl, new_model

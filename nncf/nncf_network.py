@@ -35,6 +35,7 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.module_attributes import GroupNormModuleAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.hardware.config import HWConfig
 from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.debug import CombinedDebugInterface
 from nncf.debug import debuggable_forward
@@ -58,7 +59,6 @@ from nncf.graph.graph_builder import GraphBuilder
 from nncf.graph.graph_matching import NodeExpression
 from nncf.graph.transformations.commands import PTInsertionCommand
 from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.hw_config import HWConfig
 from nncf.layers import NNCF_MODULES
 from nncf.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.module_operations import UpdateWeight
@@ -180,6 +180,13 @@ class InsertionPointGraph(nx.DiGraph):
                 self.add_edge(from_node_key, ip_node_key)
                 self.add_edge(ip_node_key, operator_node_key)
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
+
+            if ia_op_exec_context.operator_name == 'chunk':
+                # chunk returns a tuple of tensors, which can only be handled in NNCF
+                # once post-hook ports are enabled. Work around it for now by disallowing post-hook
+                # insertion for chunks
+                # TODO: enable post-hook ports and remove this
+                continue
 
             # Post-hook insertion point nodes
             post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
@@ -507,10 +514,14 @@ class NNCFNetwork(nn.Module, PostGraphBuildActing):
     def get_clean_shallow_copy(self) -> 'NNCFNetwork':
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        return NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
-                           self._user_dummy_forward_fn, self._wrap_inputs_fn,
-                           self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
-                           reset=True)
+        from nncf.utils import save_module_state, load_module_state
+        saved_state = save_module_state(self)
+        model_copy = NNCFNetwork(self.get_nncf_wrapped_model(), self.input_infos,
+                    self._user_dummy_forward_fn, self._wrap_inputs_fn,
+                    self.scopes_without_shape_matching, self.ignored_scopes, self.target_scopes,
+                    reset=True)
+        load_module_state(model_copy, saved_state)
+        return model_copy
 
     def get_modules_in_nncf_modules_by_type(self, types) -> Dict['Scope', nn.Module]:
         nncf_modules = self.get_nncf_modules()

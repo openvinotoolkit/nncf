@@ -22,7 +22,9 @@ from pytest import approx
 
 from examples.common.utils import get_name
 from tests.conftest import TEST_ROOT
-from tests.test_sanity_sample import Command, create_command_line
+from tests.helpers import Command
+from tests.common.helpers import get_cli_dict_args
+from tests.test_sanity_sample import create_command_line
 
 # sample
 # ├── dataset
@@ -44,16 +46,16 @@ GLOBAL_CONFIG = {
                     'configs': {
                         'mobilenet_v2_sym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed'},
-                            'expected_accuracy': 64.53,
-                            'weights': 'mobilenetV2_64.53.sd',
-                            'absolute_tolerance_train': 1.5,
+                            'expected_accuracy': 68.11,
+                            'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
+                            'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_asym_int8.json': {
                             'execution_arg': {'multiprocessing-distributed', 'cpu-only'},
-                            'expected_accuracy': 64.53,
-                            'weights': 'mobilenetV2_64.53.sd',
-                            'absolute_tolerance_train': 1.5,
+                            'expected_accuracy': 68.11,
+                            'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
+                            'absolute_tolerance_train': 1.0,
                             'absolute_tolerance_eval': 2e-2
                         },
                         'inceptionV3_int8.json': {
@@ -62,20 +64,20 @@ GLOBAL_CONFIG = {
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'resnet50_int8.json': {
-                            'expected_accuracy': 68.86,
-                            'weights': 'resnet50_68.86.sd',
+                            'expected_accuracy': 67.93,
+                            'weights': 'resnet50_cifar100_67.93.pth',
                             'absolute_tolerance_eval': 6e-2,
                         },
                         'mobilenet_v2_magnitude_sparsity_int8.json': {
-                            'expected_accuracy': 57.3,
-                            'weights': 'mobilenetV2_64.53.sd',
+                            'expected_accuracy': 68.11,
+                            'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed', ''},
                             'absolute_tolerance_train': 1.5,
                             'absolute_tolerance_eval': 2e-2
                         },
                         'mobilenet_v2_rb_sparsity_int8.json': {
-                            'expected_accuracy': 62.71,
-                            'weights': 'mobilenetV2_64.53.sd',
+                            'expected_accuracy': 68.11,
+                            'weights': 'mobilenet_v2_32x32_cifar100_68.11.pth',
                             'execution_arg': {'multiprocessing-distributed'},
                             'absolute_tolerance_eval': 2e-2
                         }
@@ -106,25 +108,6 @@ GLOBAL_CONFIG = {
                 }
         }
 }
-
-
-def get_cli_args(args):
-    cli_args = []
-    for key, val in args.items():
-        cli_args.append('--{}'.format(str(key)))
-        if val:
-            cli_args.append(str(val))
-    return cli_args
-
-
-def get_cli_dict_args(args):
-    cli_args = dict()
-    for key, val in args.items():
-        cli_key = '--{}'.format(str(key))
-        cli_args[cli_key] = None
-        if val is not None:
-            cli_args[cli_key] = str(val)
-    return cli_args
 
 
 def parse_best_acc1(tmp_path):

@@ -168,13 +168,17 @@ def get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, inp
 
 
 @register_operator()
-def symmetric_quantize(input_, levels, level_low, level_high, scale, eps):
+def symmetric_quantize(input_, levels, level_low, level_high, scale, eps, skip: bool = False):
+    if skip:
+        return input_
     scale_safe = abs(scale) + eps
     return QuantizeSymmetric.apply(input_, scale_safe, level_low, level_high, levels)
 
 
 @register_operator()
-def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_range, eps):
+def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_range, eps, skip: bool = False):
+    if skip:
+        return input_
     input_range_safe = abs(input_range) + eps
     input_low_tuned, input_range_tuned = TuneRange.apply(input_low, input_range_safe, levels)
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)

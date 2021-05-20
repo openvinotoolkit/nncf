@@ -17,25 +17,22 @@ This package defines the API for the NNCF compression methods so that the user c
 extend the existing algorithms.
 """
 import numpy
-from copy import copy
-from functools import partial
-from typing import List, Tuple, Optional, TypeVar, Dict
+from typing import List, Tuple, TypeVar, Dict
 
 import torch
 from torch import nn
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.initialization import DataLoaderBNAdaptationRunner
 from nncf.layers import NNCF_MODULES_DICT, NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.common.utils.logger import logger as nncf_logger
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.nncf_network import NNCFNetwork
 from nncf.nncf_network import PTModelTransformer
 from nncf.structures import BNAdaptationInitArgs
 from nncf.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
-from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLoss
 from nncf.common.schedulers import StubCompressionScheduler
 
@@ -69,6 +66,20 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         """
         return self.calculate()
 
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression loss state.
+
+        :param state: Output of `get_state()` method.
+        """
+
+    def get_state(self) -> None:
+        """
+        Returns the compression loss state.
+
+        :return: The compression loss state.
+        """
+
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
         """
         Returns a dictionary of printable statistics.
@@ -81,7 +92,7 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         return {}
 
 
-class PTCompressionAlgorithmController(CompressionAlgorithmController):
+class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
@@ -95,6 +106,22 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
         Any special preparations for the algorithm to properly support distributed training
         should be made inside this function.
         """
+
+    def load_state(self, state: Dict[str, object]) -> None:
+        """
+        Loads the compression controller state.
+
+        :param state: Output of `get_state()` method.
+        """
+        self.scheduler.load_state(state)
+
+    def get_state(self) -> Dict[str, object]:
+        """
+        Returns the compression controller state.
+
+        :return: The compression controller state.
+        """
+        return self.scheduler.get_state()
 
     def statistics(self, quickly_collected_only=False):
         """
@@ -142,68 +169,6 @@ class PTCompressionAlgorithmController(CompressionAlgorithmController):
             bn_adaptation_runner = DataLoaderBNAdaptationRunner(self._model, bn_adaptation_args.device,
                                                                 num_bn_forget_steps)
             bn_adaptation_runner.run(bn_adaptation_args.data_loader, num_bn_adaptation_steps)
-
-    def export_model(self,
-                     save_path: str,
-                     input_names: Optional[List[str]] = None,
-                     output_names: Optional[List[str]] = None,
-                     model_args = None) -> None:
-        """
-        Used to export the compressed model for inference into the ONNX format.
-        Makes method-specific preparations of the model graph,
-        (e.g. removing auxiliary layers that were used for the model compression),
-        then exports the model and dumps it into the output file.
-        Parameters:
-            `save_path` - a path to the file for the exported model to be saved into.
-            `input_names` - list of input tensors names (optional).
-            `output_names` - list of output tensors names (optional).
-            `model_args` - tuple of additional positional and keyword arguments which are
-                required for the model's `forward` during export. Should be specified in
-                the following format:
-                    - (a, b, {'x': None, 'y': y}) for positional and keyword arguments
-                    - (a, b, {}) for positional arguments only
-                    - ({'x': None, 'y': y},) for keyword arguments only
-        """
-        if model_args is None:
-            model_args = ({},)
-
-        self.prepare_for_export()
-        model = self._model.eval().cpu()
-        input_tensor_list = []
-        for info in self._model.input_infos:
-            single_batch_info = copy(info)
-            input_shape = tuple([1] + list(info.shape)[1:])
-            single_batch_info.shape = input_shape
-            input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
-        original_forward = model.forward
-        args = model_args[:-1]
-        kwargs = model_args[-1]
-        model.forward = partial(model.forward, *args, **kwargs)
-        # pylint:disable=unexpected-keyword-arg
-        with torch.no_grad():
-            # Should call this, otherwise the operations executed during export will end up in graph
-            model.disable_dynamic_graph_building()
-            torch.onnx.export(model, tuple(input_tensor_list),
-                              save_path, input_names=input_names,
-                              output_names=output_names,
-                              enable_onnx_checker=False,
-                              opset_version=10,
-                              training=True)  # Do not fuse Conv+BN in ONNX. May cause dropout nodes to appear in ONNX
-            model.enable_dynamic_graph_building()
-        model.forward = original_forward
-
-    def disable_scheduler(self):
-        self._scheduler = StubCompressionScheduler()
-        self._scheduler.target_level = 0.0
-
-    @property
-    def compression_rate(self) -> float:
-        raise NotImplementedError
-
-    @compression_rate.setter
-    def compression_rate(self, compression_rate: float) -> None:
-        raise NotImplementedError
-
 
 
 class PTCompressionAlgorithmBuilder(CompressionAlgorithmBuilder):

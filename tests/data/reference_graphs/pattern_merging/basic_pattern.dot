@@ -1,12 +1,12 @@
 strict digraph  {
-"0 /A" [associated_ip_node_keys="{'POST HOOK 0 /A'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="0 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc94a45510>()"];
-"4 /B" [associated_ip_node_keys="{'POST HOOK 4 /B', 'PRE HOOK 0 4 /B'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="4 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc94a34a50>(C3_I0_S1x1x1x1;)"];
+"0 /A" [associated_ip_node_keys="{'POST HOOK 0 /A'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="0 /A_0"];
+"4 /B" [associated_ip_node_keys="{'POST HOOK 4 /B', 'PRE HOOK 0 4 /B'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="4 /B_0"];
 "POST HOOK 0 /A" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /A_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "PRE HOOK 0 1 /conv2d" [insertion_point_data="TargetType.OPERATOR_PRE_HOOK 0 /conv2d_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK 3 /RELU" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /RELU_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "PRE HOOK 0 4 /B" [insertion_point_data="TargetType.OPERATOR_PRE_HOOK 0 /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
 "POST HOOK 4 /B" [insertion_point_data="TargetType.OPERATOR_POST_HOOK /B_0", node_type="InsertionPointGraphNodeType.INSERTION_POINT"];
-"1 /conv2d\n2 /batch_norm\n3 /RELU\n" [associated_ip_node_keys="{'POST HOOK 3 /RELU', 'PRE HOOK 0 1 /conv2d'}", node_type="InsertionPointGraphNodeType.OPERATOR", op_meta=None, regular_node_data="1 <nncf.dynamic_graph.graph.OperationExecutionContext object at 0x7fdc94a42150>(C0_I0_S1x1x1x1;)"];
+"1 /conv2d\n2 /batch_norm\n3 /RELU\n" [associated_ip_node_keys="{'POST HOOK 3 /RELU', 'PRE HOOK 0 1 /conv2d'}", node_type="InsertionPointGraphNodeType.OPERATOR", regular_node_data="1 /conv2d_0"];
 "0 /A" -> "POST HOOK 0 /A";
 "4 /B" -> "POST HOOK 4 /B";
 "POST HOOK 0 /A" -> "PRE HOOK 0 1 /conv2d";

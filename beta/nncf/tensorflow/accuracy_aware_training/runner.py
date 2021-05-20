@@ -24,7 +24,9 @@ from beta.nncf.tensorflow.accuracy_aware_training.utils import configure_paths
 
 # pylint: disable=E1101
 class TFAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
-
+    """
+    The Training Runner implementation for TensorFlow training code.
+    """
     def __init__(self, accuracy_aware_config, verbose=True,
                  minimal_compression_rate=0.05, maximal_compression_rate=0.95):
 

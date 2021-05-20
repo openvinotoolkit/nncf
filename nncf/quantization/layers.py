@@ -26,9 +26,11 @@ from nncf.debug import is_debug
 from nncf.functions import clamp
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.quantization.structs import QuantizationMode, QuantizerConfig, QuantizerSpec
+from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
+from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.quantization.quantize_functions import symmetric_quantize, asymmetric_quantize, \
     ExportQuantizeToFakeQuantize, get_scale_zp_from_input_low_input_high, ExportQuantizeToONNXQuantDequant, TuneRange
-from nncf.layer_utils import COMPRESSION_MODULES
+from nncf.layer_utils import COMPRESSION_MODULES, CompressionParameter
 from nncf.common.utils.registry import Registry
 from nncf.utils import get_flat_tensor_contents_string, no_jit_trace, is_tracing_state
 
@@ -56,23 +58,26 @@ class PTQuantizerSpec(QuantizerSpec):
                  narrow_range: bool,
                  half_range: bool,
                  scale_shape: Tuple[int, ...],
-                 logarithm_scale: bool):
+                 logarithm_scale: bool,
+                 compression_lr_multiplier: float = None):
         super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
+        self.compression_lr_multiplier = compression_lr_multiplier
 
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool,
                     half_range: bool, scale_shape: Tuple[int],
-                    logarithm_scale: bool) -> 'PTQuantizerSpec':
+                    logarithm_scale: bool, compression_lr_multiplier: float) -> 'PTQuantizerSpec':
         return cls(qconfig.num_bits,
                    qconfig.mode,
                    qconfig.signedness_to_force,
                    narrow_range,
                    half_range,
                    scale_shape,
-                   logarithm_scale)
+                   logarithm_scale,
+                   compression_lr_multiplier)
 
 
 class BaseQuantizer(nn.Module):
@@ -83,7 +88,8 @@ class BaseQuantizer(nn.Module):
         self._signedness_to_force = qspec.signedness_to_force
         self._is_using_log_scale_storage = qspec.logarithm_scale
         self._half_range = qspec.half_range
-        self._num_bits = nn.Parameter(torch.IntTensor([qspec.num_bits]), requires_grad=False)
+        self._num_bits = CompressionParameter(torch.IntTensor([qspec.num_bits]), requires_grad=False,
+                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
         OPTIONAL_PARAMETERS_REGISTRY.register('_num_bits')
         self.level_high = None
         self.level_low = None
@@ -142,13 +148,23 @@ class BaseQuantizer(nn.Module):
         if not self.is_enabled_quantization():
             return x
         self.set_level_ranges()
-        if is_tracing_state():
+        is_exporting = is_tracing_state()
+        if is_exporting:
             with no_nncf_trace():
-                return self.run_export_quantization(x)
+                x = self.run_export_quantization(x)
 
-        return self.quantize(x)
+            # The underlying operator (registered via register_operator) must be executed,
+            # otherwise the dynamic graph won't be traced as it was during regular inference.
+            # While this does not impact the regular, non-RNN models, for which the graph
+            # building and pre-/post-hook calling is only determined by input-agnostic,
+            # graph-structure independent trace info (e.g. current op scope and call count),
+            # this is important for LSTMs etc. where determining the "first nodes in iteration
+            # scopes" depends on whether the input tensors to an operation were traced or not.
+            return self.quantize(x, execute_traced_op_as_identity=True)
 
-    def quantize(self, x):
+        return self.quantize(x, execute_traced_op_as_identity=False)
+
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
         raise NotImplementedError
 
     def reset_call_counter(self):
@@ -197,6 +213,7 @@ class BaseQuantizer(nn.Module):
 
     @property
     def scale_shape(self) -> Tuple[int, ...]:
+        # Per-tensor scale shapes are (1,)
         return self._scale_shape
 
     def broadcast_initialized_params(self, src: int = 0):
@@ -236,7 +253,7 @@ class BaseQuantizer(nn.Module):
                                                       input_high)
         if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
             x, y_scale, y_zero_point = self._prepare_qdq_export_quantization(x)
-            if self.per_channel:
+            if self.per_channel and y_zero_point.numel() > 1:
                 if torch.allclose(y_scale - y_scale[0], torch.zeros_like(y_scale)) and \
                         torch.allclose(y_zero_point - y_zero_point[0], torch.zeros_like(y_zero_point)):
                     y_scale, y_zero_point = y_scale[0], y_zero_point[0]
@@ -258,7 +275,8 @@ class BaseQuantizer(nn.Module):
         numel = 1
         for el in self.scale_shape:
             numel *= el
-        return numel > 1
+        is_per_tensor = ((numel == 1) and (len(self.scale_shape) == 1))
+        return not is_per_tensor
 
 
 class QuantizersSwitcher:
@@ -327,10 +345,13 @@ class SymmetricQuantizer(BaseQuantizer):
 
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
-        self.signed_tensor = nn.Parameter(torch.IntTensor([0]), requires_grad=False)
+        self.signed_tensor = CompressionParameter(torch.IntTensor([0]), requires_grad=False,
+                                                  compression_lr_multiplier=qspec.compression_lr_multiplier)
         self.collect_scale_statistics = False
 
-        setattr(self, self._SCALE_PARAM_STORAGE_ATTR, nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
+        setattr(self, self._SCALE_PARAM_STORAGE_ATTR,
+                CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
+                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
         if self._is_using_log_scale_storage:
             self._scale_param_storage.data.log_()
             self.eps = 0
@@ -384,14 +405,7 @@ class SymmetricQuantizer(BaseQuantizer):
 
     @staticmethod
     def calculate_level_ranges(num_bits, signed):
-        levels = 2 ** num_bits
-        if signed:
-            level_high = (levels // 2) - 1
-            level_low = -(levels // 2)
-        else:
-            level_high = levels - 1
-            level_low = 0
-        return level_low, level_high, levels
+        return calculate_symmetric_level_ranges(num_bits, signed)
 
     @property
     def signed(self):
@@ -401,8 +415,9 @@ class SymmetricQuantizer(BaseQuantizer):
     def signed(self, signed: bool):
         self.signed_tensor.fill_(signed)
 
-    def quantize(self, x):
-        return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps)
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
+        return symmetric_quantize(x, self.levels, self.level_low, self.level_high, self.scale, self.eps,
+                                  skip=execute_traced_op_as_identity)
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.SCALE_PARAM_NAME: self.scale.detach()}
@@ -477,9 +492,11 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__(qspec)
-        self.input_low = nn.Parameter(torch.zeros(self.scale_shape), requires_grad=True)
+        self.input_low = CompressionParameter(torch.zeros(self.scale_shape), requires_grad=True,
+                                              compression_lr_multiplier=qspec.compression_lr_multiplier)
         setattr(self, self._INPUT_RANGE_PARAM_STORAGE_ATTR,
-                nn.Parameter(torch.ones(self.scale_shape), requires_grad=True))
+                CompressionParameter(torch.ones(self.scale_shape), requires_grad=True,
+                                     compression_lr_multiplier=qspec.compression_lr_multiplier))
 
         if self._is_using_log_scale_storage:
             self._input_range_param_storage.data.log_()
@@ -539,14 +556,11 @@ class AsymmetricQuantizer(BaseQuantizer):
 
     @staticmethod
     def calculate_level_ranges(num_bits):
-        level_high = 2 ** num_bits - 1
-        level_low = 0
-        levels = 2 ** num_bits
-        return level_low, level_high, levels
+        return calculate_asymmetric_level_ranges(num_bits)
 
-    def quantize(self, x):
+    def quantize(self, x, execute_traced_op_as_identity: bool = False):
         return asymmetric_quantize(x, self.levels, self.level_low, self.level_high, self.input_low, self.input_range,
-                                   self.eps)
+                                   self.eps, skip=execute_traced_op_as_identity)
 
     def get_trainable_params(self) -> Dict[str, torch.Tensor]:
         return {self.INPUT_LOW_PARAM_NAME: self.input_low.detach(),

@@ -12,7 +12,6 @@ from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.dynamic_graph.trace_tensor import TracedTensor
 from nncf.graph.graph import InputAgnosticOperationExecutionContext
 from nncf.graph.graph import ModuleAttributes
-from nncf.layers import ITERATION_MODULES
 
 
 class TensorMetaComparator:
@@ -137,6 +136,9 @@ class DynamicGraphNode:
     def __eq__(self, other: 'DynamicGraphNode') -> bool:
         return self.__dict__ == other.__dict__
 
+    def __str__(self):
+        return self.node_key
+
 
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
@@ -255,7 +257,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         super().__init__(node_id_to_key_dict, nx_graph)
         self._first_iteration_nodes = {}  # type: {str: {str: DynamicGraphNode}}
 
-    def save_first_iteration_node(self, inputs, node: DynamicGraphNode):
+    def save_first_iteration_node(self, inputs: 'OperatorInput', node: DynamicGraphNode):
         """
         It finds and saves "starting" points of iteration for further matching with them on next iteration,
         instead of adding new nodes for each iteration. "Starting" points of iteration are nodes
@@ -263,7 +265,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
             * or whose all inputs are not TracedTensor
         """
         op_exec_context = node.op_exec_context
-        name = node
+        name = str(node)
         iter_scopes = op_exec_context.scope_in_model.get_iteration_scopes()
         if iter_scopes:
             for iter_scope in iter_scopes:
@@ -271,21 +273,28 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                     self._first_iteration_nodes[iter_scope] = {}
                 first_nodes = self._first_iteration_nodes[iter_scope]
                 has_input_outside_iteration = False
-                not_traced_count = 0
+                untraced_tensor_inputs = []
+                traced_tensor_inputs = []
+                non_tensor_inputs = []
                 for i in inputs:
-                    if isinstance(i, Tensor):
-                        has_input_outside_iteration = True
-                        break
-                    if not isinstance(i, TracedTensor):
-                        not_traced_count += 1
-                        continue
+                    input_obj = i.getter()
+                    if isinstance(input_obj, Tensor):
+                        if not isinstance(input_obj, TracedTensor):
+                            untraced_tensor_inputs.append(input_obj)
+                        else:
+                            traced_tensor_inputs.append(input_obj)
+                    else:
+                        non_tensor_inputs.append(input_obj)
+
+                for i in traced_tensor_inputs:
                     creator_id = i.tensor_meta.creator_id
                     creator_node = self.get_node_by_id(creator_id)
                     creator_node_op_exec_ctx = creator_node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR]
                     within_scopes = creator_node_op_exec_ctx.scope_in_model.get_iteration_scopes()
                     if iter_scope not in within_scopes:
                         has_input_outside_iteration = True
-                if not_traced_count == len(inputs):
+
+                if len(untraced_tensor_inputs) == (len(inputs) - len(non_tensor_inputs)):
                     has_input_outside_iteration = True
                 if has_input_outside_iteration:
                     node_name = str(op_exec_context.input_agnostic)
@@ -365,6 +374,7 @@ class NodeManager:
     @staticmethod
     def _within_iteration(scope: 'Scope'):
         scope_name = str(scope)
+        from nncf.layers import ITERATION_MODULES
         for iter_scope in ITERATION_MODULES.registry_dict:
             if iter_scope in scope_name:
                 return True
