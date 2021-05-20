@@ -1,5 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 /nncf_model_output" [id=1, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 /nncf_model_output";
+"1 TestModel/pad" [id=1, scope=TestModel, type=pad];
+"2 /nncf_model_output" [id=2, scope="", type=nncf_model_output];
+"0 /nncf_model_input" -> "1 TestModel/pad";
+"1 TestModel/pad" -> "2 /nncf_model_output";
 }

@@ -246,7 +246,7 @@ MODEL_ANALYSER_TEST_CASES = [
     ModelAnalyserTestStruct(
         model=TestModelResidualConnection,
         ref_can_prune={0: True, 1: True, 2: True, 3: True, 4: True, 5: True, 6: True, 7: False, 8: False, 9: False,
-                       10: False, 11: False}
+                       10: False, 11: False, 12: False}
     )
 ]
 

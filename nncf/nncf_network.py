@@ -181,6 +181,13 @@ class InsertionPointGraph(nx.DiGraph):
                 self.add_edge(ip_node_key, operator_node_key)
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
+            if ia_op_exec_context.operator_name == 'chunk':
+                # chunk returns a tuple of tensors, which can only be handled in NNCF
+                # once post-hook ports are enabled. Work around it for now by disallowing post-hook
+                # insertion for chunks
+                # TODO: enable post-hook ports and remove this
+                continue
+
             # Post-hook insertion point nodes
             post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
                                                       ia_op_exec_context=ia_op_exec_context)

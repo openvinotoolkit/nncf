@@ -403,11 +403,12 @@ strict digraph  {
 "401 ResNet/Sequential[layer4]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize" [id=401, scope="ResNet/Sequential[layer4]/Bottleneck[2]/SymmetricQuantizer", type=symmetric_quantize];
 "402 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" [id=402, scope="ResNet/AdaptiveAvgPool2d[avgpool]", type=adaptive_avg_pool2d];
 "403 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" [id=403, scope="ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer", type=symmetric_quantize];
-"404 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=404, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
-"405 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=405, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
-"406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=406, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
-"407 ResNet/NNCFLinear[linear]/linear" [id=407, scope="ResNet/NNCFLinear[linear]", type=linear];
-"408 /nncf_model_output" [id=408, scope="", type=nncf_model_output];
+"404 ResNet/flatten" [id=404, scope=ResNet, type=flatten];
+"405 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" [id=405, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=calc_rb_binary_mask];
+"406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" [id=406, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]", type=apply_binary_mask];
+"407 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" [id=407, scope="ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]", type=symmetric_quantize];
+"408 ResNet/NNCFLinear[linear]/linear" [id=408, scope="ResNet/NNCFLinear[linear]", type=linear];
+"409 /nncf_model_output" [id=409, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 ResNet/NNCFConv2d[conv1]/conv2d";
 "2 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 ResNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -827,9 +828,10 @@ strict digraph  {
 "400 ResNet/Sequential[layer4]/Bottleneck[2]/RELU" -> "401 ResNet/Sequential[layer4]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize";
 "401 ResNet/Sequential[layer4]/Bottleneck[2]/SymmetricQuantizer/symmetric_quantize" -> "402 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d";
 "402 ResNet/AdaptiveAvgPool2d[avgpool]/adaptive_avg_pool2d" -> "403 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize";
-"403 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "407 ResNet/NNCFLinear[linear]/linear";
-"404 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "405 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
-"405 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
-"406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "407 ResNet/NNCFLinear[linear]/linear";
-"407 ResNet/NNCFLinear[linear]/linear" -> "408 /nncf_model_output";
+"403 ResNet/AdaptiveAvgPool2d[avgpool]/SymmetricQuantizer/symmetric_quantize" -> "404 ResNet/flatten";
+"404 ResNet/flatten" -> "408 ResNet/NNCFLinear[linear]/linear";
+"405 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
+"406 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask" -> "407 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize";
+"407 ResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize" -> "408 ResNet/NNCFLinear[linear]/linear";
+"408 ResNet/NNCFLinear[linear]/linear" -> "409 /nncf_model_output";
 }

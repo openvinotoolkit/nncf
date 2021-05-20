@@ -170,7 +170,8 @@ strict digraph  {
 "168 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" [id=168, scope="SqueezeNet/Sequential[classifier]/ReLU[2]", type=RELU];
 "169 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize" [id=169, scope="SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer", type=symmetric_quantize];
 "170 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" [id=170, scope="SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]", type=adaptive_avg_pool2d];
-"171 /nncf_model_output" [id=171, scope="", type=nncf_model_output];
+"171 SqueezeNet/view" [id=171, scope=SqueezeNet, type=view];
+"172 /nncf_model_output" [id=172, scope="", type=nncf_model_output];
 "0 /nncf_model_input" -> "1 SymmetricQuantizer/symmetric_quantize";
 "1 SymmetricQuantizer/symmetric_quantize" -> "5 SqueezeNet/Sequential[features]/NNCFConv2d[0]/conv2d";
 "2 SqueezeNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask" -> "3 SqueezeNet/Sequential[features]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask";
@@ -349,5 +350,6 @@ strict digraph  {
 "167 SqueezeNet/Sequential[classifier]/NNCFConv2d[1]/conv2d" -> "168 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU";
 "168 SqueezeNet/Sequential[classifier]/ReLU[2]/RELU" -> "169 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize";
 "169 SqueezeNet/Sequential[classifier]/ReLU[2]/SymmetricQuantizer/symmetric_quantize" -> "170 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d";
-"170 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" -> "171 /nncf_model_output";
+"170 SqueezeNet/Sequential[classifier]/AdaptiveAvgPool2d[3]/adaptive_avg_pool2d" -> "171 SqueezeNet/view";
+"171 SqueezeNet/view" -> "172 /nncf_model_output";
 }

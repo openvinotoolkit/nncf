@@ -150,9 +150,10 @@ strict digraph  {
 "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm" [id=148, scope="MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]", type=batch_norm];
 "149 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh" [id=149, scope="MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]", type=hardtanh];
 "150 MobileNetV2/adaptive_avg_pool2d" [id=150, scope=MobileNetV2, type=adaptive_avg_pool2d];
-"151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=151, scope="MobileNetV2/Sequential[classifier]/Dropout[0]", type=dropout];
-"152 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=152, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
-"153 /nncf_model_output" [id=153, scope="", type=nncf_model_output];
+"151 MobileNetV2/reshape" [id=151, scope=MobileNetV2, type=reshape];
+"152 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" [id=152, scope="MobileNetV2/Sequential[classifier]/Dropout[0]", type=dropout];
+"153 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" [id=153, scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
+"154 /nncf_model_output" [id=154, scope="", type=nncf_model_output];
 "/nncf_model_input_0" [color=purple, id=0, label="Quantizer: B:8 M:A SGN:ANY PC:N", scope="", type=nncf_model_input];
 "MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0" [color=purple, id=1, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]", type=conv2d];
 "MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/ConvBNActivation[1]/ReLU6[2]/hardtanh_0" [color=purple, id=100, label="Quantizer: B:8 M:A SGN:ANY PC:N", scope="MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/ConvBNActivation[1]/ReLU6[2]", type=hardtanh];
@@ -199,7 +200,7 @@ strict digraph  {
 "MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [color=purple, id=149, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]", type=hardtanh];
 "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0" [color=purple, id=15, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]", type=conv2d];
 "MobileNetV2/adaptive_avg_pool2d_0" [color=purple, id=150, label="Quantizer: B:8 M:A SGN:ANY PC:N", scope=MobileNetV2, type=adaptive_avg_pool2d];
-"MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" [color=purple, id=152, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
+"MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" [color=purple, id=153, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[classifier]/NNCFLinear[1]", type=linear];
 "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/BatchNorm2d[3]/batch_norm_0" [color=purple, id=16, label="Quantizer: B:8 M:A SGN:ANY PC:N", scope="MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/BatchNorm2d[3]", type=batch_norm];
 "MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0" [color=purple, id=17, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]", type=conv2d];
 "MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/ReLU6[2]/hardtanh_0" [color=purple, id=19, label="Quantizer: B:8 M:S SGN:ANY PC:Y", scope="MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/ReLU6[2]", type=hardtanh];
@@ -421,8 +422,9 @@ strict digraph  {
 "148 MobileNetV2/Sequential[features]/ConvBNActivation[18]/BatchNorm2d[1]/batch_norm" -> "149 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh";
 "149 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh" -> "MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0";
 "150 MobileNetV2/adaptive_avg_pool2d" -> "MobileNetV2/adaptive_avg_pool2d_0";
-"151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "152 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
-"152 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "153 /nncf_model_output";
+"151 MobileNetV2/reshape" -> "152 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
+"152 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout" -> "153 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"153 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear" -> "154 /nncf_model_output";
 "/nncf_model_input_0" -> "1 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
 "MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0" -> "1 MobileNetV2/Sequential[features]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
 "MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/ConvBNActivation[1]/ReLU6[2]/hardtanh_0" -> "101 MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/NNCFConv2d[2]/conv2d";
@@ -471,8 +473,8 @@ strict digraph  {
 "MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0" -> "147 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d";
 "MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "150 MobileNetV2/adaptive_avg_pool2d";
 "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d_0" -> "15 MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/NNCFConv2d[2]/conv2d";
-"MobileNetV2/adaptive_avg_pool2d_0" -> "151 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout";
-"MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" -> "152 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
+"MobileNetV2/adaptive_avg_pool2d_0" -> "151 MobileNetV2/reshape";
+"MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" -> "153 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear";
 "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/BatchNorm2d[3]/batch_norm_0" -> "17 MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";
 "MobileNetV2/Sequential[features]/InvertedResidual[2]/Sequential[conv]/BatchNorm2d[3]/batch_norm_0" -> "25 MobileNetV2/Sequential[features]/InvertedResidual[3]/__add__";
 "MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0" -> "17 MobileNetV2/Sequential[features]/InvertedResidual[3]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d";

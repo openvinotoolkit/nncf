@@ -34,7 +34,6 @@ from nncf.graph.graph import PTNNCFNode
 from nncf.graph.graph import NNCFNode
 from nncf.dynamic_graph.trace_tensor import TensorMeta
 from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
-from nncf.layers import ITERATION_MODULES
 from nncf.graph.graph import ModuleAttributes
 from nncf.utils import maybe_get_iterator
 
@@ -218,6 +217,7 @@ class Scope:
     def get_iteration_scopes(self) -> List[str]:
         results = []
         scope_name = str(self)
+        from nncf.layers import ITERATION_MODULES
         for iter_scope in ITERATION_MODULES.registry_dict:
             if iter_scope in scope_name:
                 results.append(iter_scope)
@@ -254,7 +254,8 @@ class TracingContext:
 
         self._n_instances_searching_graph = 0
         self._cond = threading.Condition()
-        self.is_tracing = True
+        self._is_tracing = True
+        self._is_forwarding = False
         self._may_add_nodes = True
         self._input_comparators_per_scope = []
 
@@ -410,11 +411,25 @@ class TracingContext:
         self.in_operator = in_op
         return outputs
 
+    @property
+    def is_tracing(self) -> bool:
+        return self._is_tracing
+
     def disable_tracing(self):
-        self.is_tracing = False
+        self._is_tracing = False
 
     def enable_tracing(self):
-        self.is_tracing = True
+        self._is_tracing = True
+
+    @property
+    def is_forwarding(self) -> bool:
+        return self._is_forwarding
+
+    def disable_forwarding(self):
+        self._is_forwarding = False
+
+    def enable_forwarding(self):
+        self._is_forwarding = True
 
     def enable_node_additions(self):
         self._may_add_nodes = True
@@ -522,6 +537,16 @@ def no_nncf_trace():
         ctx.disable_tracing()
         yield
         ctx.enable_tracing()
+    else:
+        yield
+
+@contextmanager
+def forward_nncf_trace():
+    ctx = get_current_context()
+    if ctx is not None and not ctx.is_forwarding:
+        ctx.enable_forwarding()
+        yield
+        ctx.disable_forwarding()
     else:
         yield
 

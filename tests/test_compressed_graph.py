@@ -363,6 +363,7 @@ class TestModelsGraph:
         check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
 
 
+@pytest.mark.skip(reason="Sporadic failures")
 def test_gnmt_quantization(_case_config):
     model = GNMT(vocab_size=32)
     model = replace_lstm(model)
