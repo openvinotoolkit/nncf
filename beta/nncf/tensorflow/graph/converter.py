@@ -171,24 +171,7 @@ def convert_keras_model_to_nncf_graph(model: tf.keras.Model) -> NNCFGraph:
     else:
         nncf_graph = _get_nncf_graph_from_sequential(model)
 
-    # pylint: disable=protected-access
-    _add_aux_output_nodes_to_nncf_graph(nncf_graph, model._output_layers)
     return nncf_graph
-
-def _add_aux_output_nodes_to_nncf_graph(nncf_graph: NNCFGraph, output_layers):
-
-    for i, output_layer in enumerate(output_layers):
-        output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
-        node_attrs = {
-            NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
-            'original_name': output_aux_node_name
-        }
-        edge_attrs = {
-            NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: output_layer.output_shape,
-            NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0
-        }
-        nncf_graph.add_node(output_aux_node_name, **node_attrs)
-        nncf_graph.add_edge(output_layer.name, output_aux_node_name, **edge_attrs)
 
 
 def _get_nncf_graph_from_functional(model: tf.keras.Model) -> NNCFGraph:
@@ -235,6 +218,10 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                         parent_instance['out_ports'].add(parent_out_ports)
                     else:
                         parent_instance['out_ports'] = {parent_out_ports}
+                # pylint: disable=protected-access
+                if model_layer in model._output_layers:
+                    instance['is_output'] = True
+                    instance['output_shape'] = _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
         else:
             instance = raw_nodes[layer_name][0]
             instance['type'] = layer_type
@@ -246,6 +233,10 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
             if layer_type in GENERAL_CONV_LAYERS:
                 module_attributes = _get_module_attributes(model_layer, instance)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
+            # pylint: disable=protected-access
+            if model_layer in model._output_layers:
+                instance['is_output'] = True
+                instance['output_shape'] = _prepare_shape(model_layer.output_shape)
 
     outputs = model_config['output_layers']
     raw_nodes = _process_outputs(outputs, raw_nodes)
@@ -270,6 +261,19 @@ def _update_graph_with_raw_nodes(graph: Union[nx.DiGraph, NNCFGraph],
         for i, attributes in instances.items():
             node_name = get_expanded_node_name(original_name, i, attributes['is_shared'])
             graph.add_node(node_name, original_name=original_name, **attributes)
+
+            if attributes['is_output']:
+                output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
+                node_attrs = {
+                    NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
+                    'original_name': output_aux_node_name
+                }
+                edge_attrs = {
+                    NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: attributes['output_shape'],
+                    NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0,
+                }
+                graph.add_node(output_aux_node_name, **node_attrs)
+                graph.add_edge(node_name, output_aux_node_name, **edge_attrs)
 
     for layer in model_config['layers']:
         layer_name = layer['name']
@@ -316,6 +320,19 @@ def _get_nncf_graph_from_sequential(model: tf.keras.Model) -> NNCFGraph:
             }
             nncf_graph.add_edge(producer_layer, layer_name, **attr)
         producer_layer = layer_name
+
+    output_model_layer = model.get_layer(producer_layer)
+    output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_0'
+    node_attrs = {
+        NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
+        'original_name': output_aux_node_name
+    }
+    edge_attrs = {
+        NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: _prepare_shape(output_model_layer.output_shape),
+        NNCFGraph.IN_PORT_NAME_EDGE_ATTR: 0,
+    }
+    nncf_graph.add_node(output_aux_node_name, **node_attrs)
+    nncf_graph.add_edge(producer_layer, output_aux_node_name, **edge_attrs)
 
     return nncf_graph
 

@@ -325,15 +325,7 @@ class ModelAnalyzer:
                     self.can_prune[node.node_id] = can_prune
 
     def set_accept_pruned_input_attr(self):
-        input_nodes = self.graph.get_input_nodes()
-        output_nodes = self.graph.get_output_nodes()
         for nncf_node in self.graph.get_all_nodes():
-            if nncf_node in input_nodes:
-                self.accept_pruned_input[nncf_node.node_id] = False
-                continue
-            if nncf_node in output_nodes:
-                self.accept_pruned_input[nncf_node.node_id] = True
-                continue
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
 
