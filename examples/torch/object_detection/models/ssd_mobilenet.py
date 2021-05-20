@@ -13,8 +13,9 @@
 
 import torch
 import torch.nn as nn
-from examples.torch.common.sample_config import SampleConfig
 
+from examples.torch.common import restricted_pickle_module
+from examples.torch.common.example_logger import logger
 from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
 from nncf.torch.checkpoint_loading import load_state
 
@@ -105,8 +106,14 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
     mobilenet_ssd = MobileNetSSD(num_classes, cfg)
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
-        print('Loading base network...')
-        basenet_weights = torch.load(config.basenet)['state_dict']
+        logger.debug('Loading base network...')
+        #
+        # ** WARNING: torch.load functionality uses Python's pickling facilities that
+        # may be used to perform arbitrary code execution during unpickling. Only load the data you
+        # trust.
+        #
+        basenet_weights = torch.load(config.basenet,
+                                     pickle_module=restricted_pickle_module)['state_dict']
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace('model.', '')
@@ -114,18 +121,3 @@ def build_ssd_mobilenet(cfg, size, num_classes, config):
 
         load_state(mobilenet_ssd.basenet, new_weights, is_resume=False)
     return mobilenet_ssd
-
-
-def ssd_mobilenet():
-    ssd_params = SampleConfig({
-        "variance": [0.1, 0.1, 0.2, 0.2],
-        "max_sizes": [60, 111, 162, 213, 264, 315],
-        "min_sizes": [30, 60, 111, 162, 213, 264],
-        "steps": [16, 32, 64, 100, 150, 300],
-        "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-        "clip": False,
-        "flip": True,
-        "top_k": 200
-    })
-
-    return MobileNetSSD(21, ssd_params)

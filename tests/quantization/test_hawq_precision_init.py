@@ -35,9 +35,9 @@ from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
-from examples.classification.main import create_cifar
-from examples.common.sample_config import SampleConfig
-from examples.object_detection.models.ssd_vgg import SSD_VGG
+from examples.torch.classification.main import create_cifar
+from examples.torch.common.sample_config import SampleConfig
+from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.debug import set_debug_log_dir

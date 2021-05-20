@@ -14,8 +14,9 @@
 import os
 import torch
 import torch.nn as nn
-from examples.torch.common.sample_config import SampleConfig
 
+from examples.torch.common import restricted_pickle_module
+from examples.torch.common.example_logger import logger
 from examples.torch.object_detection.layers import L2Norm
 from examples.torch.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
 from nncf.torch.checkpoint_loading import load_state
@@ -73,12 +74,18 @@ class SSD_VGG(nn.Module):
     def load_weights(self, base_file):
         _, ext = os.path.splitext(base_file)
         if ext in ['.pkl', '.pth']:
-            print('Loading weights into state dict...')
+            logger.debug('Loading weights into state dict...')
+            #
+            # ** WARNING: torch.load functionality uses Python's pickling facilities that
+            # may be used to perform arbitrary code execution during unpickling. Only load the data you
+            # trust.
+            #
             self.load_state_dict(torch.load(base_file,
-                                            map_location=lambda storage, loc: storage))
-            print('Finished!')
+                                            map_location=lambda storage, loc: storage,
+                                            pickle_module=restricted_pickle_module))
+            logger.debug('Finished!')
         else:
-            print('Sorry only .pth and .pkl files supported.')
+            logger.error('Sorry only .pth and .pkl files supported.')
 
 
 def make_ssd_vgg_layer(input_features, output_features, kernel=3, padding=1, dilation=1, modifier=None,
@@ -155,13 +162,9 @@ def build_ssd_vgg(cfg, size, num_classes, config):
     ssd_vgg = SSD_VGG(cfg, size, num_classes, batch_norm=config.get('batchnorm', False))
 
     if config.basenet and (config.resuming_checkpoint_path is None) and (config.weights is None):
-        print('Loading base network...')
-        #
-        # ** WARNING: torch.load functionality uses Python's pickling facilities that
-        # may be used to perform arbitrary code execution during unpickling. Only load the data you
-        # trust.
-        #
-        basenet_weights = torch.load(config.basenet)
+        logger.debug('Loading base network...')
+        basenet_weights = torch.load(config.basenet,
+                                     pickle_module=restricted_pickle_module)
         new_weights = {}
         for wn, wv in basenet_weights.items():
             wn = wn.replace('features.', '')
@@ -169,17 +172,3 @@ def build_ssd_vgg(cfg, size, num_classes, config):
 
         load_state(ssd_vgg.basenet, new_weights, is_resume=False)
     return ssd_vgg
-
-
-def ssd_vgg300():
-    ssd_params = SampleConfig({
-        "clip": False,
-        "variance": [0.1, 0.1, 0.2, 0.2],
-        "max_sizes": [60, 111, 162, 213, 264, 315],
-        "min_sizes": [30, 60, 111, 162, 213, 264],
-        "steps": [8, 16, 32, 64, 100, 300],
-        "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
-        "flip": True
-    })
-
-    return SSD_VGG(ssd_params, 300, 21, True)

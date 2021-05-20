@@ -25,10 +25,10 @@ import pytest
 import torch
 
 # pylint: disable=redefined-outer-name
-from examples.common.optimizer import get_default_weight_decay
-from examples.common.sample_config import SampleConfig
-from examples.common.utils import get_name
-from examples.common.utils import is_staged_quantization
+from examples.torch.common.optimizer import get_default_weight_decay
+from examples.torch.common.sample_config import SampleConfig
+from examples.torch.common.utils import get_name
+from examples.torch.common.utils import is_staged_quantization
 from nncf.api.compression import CompressionStage
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
@@ -397,27 +397,38 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
 
     # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
     # mocked train function
-    mocker.patch("examples.common.utils.SafeMLFLow")
+    mocker.patch("examples.torch.common.utils.SafeMLFLow")
     arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
     command_line = " ".join(arg_list)
     if config["sample_type"] == "classification":
-        import examples.classification.main as sample
+        import examples.torch.classification.main as sample
         if is_staged_quantization(config['nncf_config']):
-            mocker.patch("examples.classification.staged_quantization_worker.train_epoch_staged")
-            mocker.patch("examples.classification.staged_quantization_worker.validate")
-            import examples.classification.staged_quantization_worker as staged_worker
+            mocker.patch("examples.torch.classification.staged_quantization_worker.train_epoch_staged")
+            mocker.patch("examples.torch.classification.staged_quantization_worker.validate")
+            import examples.torch.classification.staged_quantization_worker as staged_worker
             staged_worker.validate.return_value = (0, 0)
         else:
-            mocker.patch("examples.classification.main.train_epoch")
-            mocker.patch("examples.classification.main.validate")
+            mocker.patch("examples.torch.classification.main.train_epoch")
+            mocker.patch("examples.torch.classification.main.validate")
             sample.validate.return_value = (0, 0)
     elif config["sample_type"] == "semantic_segmentation":
+<<<<<<< HEAD
         import examples.semantic_segmentation.main as sample
         import examples.semantic_segmentation.train
         mocker.spy(examples.semantic_segmentation.train.Train, "__init__")
+=======
+        import examples.torch.semantic_segmentation.main as sample
+        mocked_printing = mocker.patch('examples.torch.semantic_segmentation.main.print_statistics')
+        import examples.torch.semantic_segmentation.train
+        mocker.spy(examples.torch.semantic_segmentation.train.Train, "__init__")
+>>>>>>> 86361fe... Moved examples to examples/torch dir
     elif config["sample_type"] == "object_detection":
-        import examples.object_detection.main as sample
+        import examples.torch.object_detection.main as sample
         mocker.spy(sample, "train")
+<<<<<<< HEAD
+=======
+        mocked_printing = mocker.patch('examples.torch.object_detection.main.print_statistics')
+>>>>>>> 86361fe... Moved examples to examples/torch dir
 
 
     sample.main(shlex.split(command_line))
@@ -425,12 +436,12 @@ def test_cpu_only_mode_produces_cpu_only_model(config, tmp_path, mocker):
     # pylint: disable=no-member
     if config["sample_type"] == "classification":
         if is_staged_quantization(config['nncf_config']):
-            import examples.classification.staged_quantization_worker as staged_worker
+            import examples.torch.classification.staged_quantization_worker as staged_worker
             model_to_be_trained = staged_worker.train_epoch_staged.call_args[0][2]  # model
         else:
             model_to_be_trained = sample.train_epoch.call_args[0][1]  # model
     elif config["sample_type"] == "semantic_segmentation":
-        model_to_be_trained = examples.semantic_segmentation.train.Train.__init__.call_args[0][1]  # model
+        model_to_be_trained = examples.torch.semantic_segmentation.train.Train.__init__.call_args[0][1]  # model
     elif config["sample_type"] == "object_detection":
         model_to_be_trained = sample.train.call_args[0][0]  # net
 
@@ -689,19 +700,19 @@ def test_precision_init(desc: TestCaseDescriptor, tmp_path, mocker):
     # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
     # SafeMLFLow, which happens with a mocked train function
     if desc.sample_type == SampleType.CLASSIFICATION:
-        import examples.classification.main as sample
-        mocker.patch("examples.classification.staged_quantization_worker.train_staged")
-        mocker.patch("examples.classification.main.train")
-        mocker.patch("examples.classification.main.SafeMLFLow")
-        mocker.patch("examples.classification.staged_quantization_worker.SafeMLFLow")
+        import examples.torch.classification.main as sample
+        mocker.patch("examples.torch.classification.staged_quantization_worker.train_staged")
+        mocker.patch("examples.torch.classification.main.train")
+        mocker.patch("examples.torch.classification.main.SafeMLFLow")
+        mocker.patch("examples.torch.classification.staged_quantization_worker.SafeMLFLow")
     elif desc.sample_type == SampleType.SEMANTIC_SEGMENTATION:
-        import examples.semantic_segmentation.main as sample
-        mocker.patch("examples.semantic_segmentation.main.train")
-        mocker.patch("examples.semantic_segmentation.main.SafeMLFLow")
+        import examples.torch.semantic_segmentation.main as sample
+        mocker.patch("examples.torch.semantic_segmentation.main.train")
+        mocker.patch("examples.torch.semantic_segmentation.main.SafeMLFLow")
     elif desc.sample_type == SampleType.OBJECT_DETECTION:
-        import examples.object_detection.main as sample
-        mocker.patch("examples.object_detection.main.train")
-        mocker.patch("examples.object_detection.main.SafeMLFLow")
+        import examples.torch.object_detection.main as sample
+        mocker.patch("examples.torch.object_detection.main.train")
+        mocker.patch("examples.torch.object_detection.main.SafeMLFLow")
     desc.setup_spy(mocker)
 
     sample.main(shlex.split(command_line))
@@ -733,8 +744,8 @@ def test_sample_propagates_target_device_cl_param_to_nncf_config(mocker, tmp_pat
 
     arg_list = [key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items()]
     command_line = " ".join(arg_list)
-    import examples.classification.main as sample
-    start_worker_mock = mocker.patch("examples.classification.main.start_worker")
+    import examples.torch.classification.main as sample
+    start_worker_mock = mocker.patch("examples.torch.classification.main.start_worker")
     sample.main(shlex.split(command_line))
 
     config = start_worker_mock.call_args[0][1].nncf_config

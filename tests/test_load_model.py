@@ -18,7 +18,7 @@ from typing import Set
 import pytest
 import torch
 
-from examples.common.model_loader import load_model
+from examples.torch.common.model_loader import load_model
 from nncf.torch.checkpoint_loading import KeyMatcher
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.checkpoint_loading import ProcessedKeyStatus

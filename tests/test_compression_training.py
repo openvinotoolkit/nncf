@@ -20,7 +20,7 @@ import pytest
 import torch
 from pytest import approx
 
-from examples.common.utils import get_name
+from examples.torch.common.utils import get_name
 from tests.conftest import TEST_ROOT
 from tests.helpers import Command
 from tests.common.helpers import get_cli_dict_args

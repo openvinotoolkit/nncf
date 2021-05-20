@@ -14,7 +14,7 @@ import pytest
 import torch
 import numpy as np
 
-from examples.common.optimizer import make_optimizer, get_parameter_groups
+from examples.torch.common.optimizer import make_optimizer, get_parameter_groups
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
 from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm

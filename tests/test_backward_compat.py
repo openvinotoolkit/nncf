@@ -16,10 +16,10 @@ import os
 import pytest
 import torch
 
-from examples.common.distributed import configure_distributed
-from examples.common.execution import ExecutionMode, prepare_model_for_execution, get_device
-from examples.common.model_loader import load_model
-from examples.common.sample_config import SampleConfig
+from examples.torch.common.distributed import configure_distributed
+from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution, get_device
+from examples.torch.common.model_loader import load_model
+from examples.torch.common.sample_config import SampleConfig
 from nncf import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
