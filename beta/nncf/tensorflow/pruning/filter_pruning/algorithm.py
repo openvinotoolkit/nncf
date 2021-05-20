@@ -23,7 +23,6 @@ from beta.nncf.tensorflow.graph.metatypes.common import LINEAR_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
 from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.graph.utils import get_layer_by_original_name
 from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.layers.data_layout import get_input_channel_axis
@@ -186,7 +185,7 @@ class FilterPruningController(BasePruningAlgoController):
         """
         for node in self._original_graph.get_nodes_by_metatypes(GENERAL_CONV_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_index(node.node_name)
-            layer = get_layer_by_original_name(self._model, node_name)
+            layer = self._model.get_layer(node_name)
             layer_ = layer.layer if isinstance(layer, NNCFWrapper) else layer
 
             channel_axis = get_input_channel_axis(layer_)
@@ -203,7 +202,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         for node in self._original_graph.get_nodes_by_metatypes(LINEAR_LAYER_METATYPES):
             node_name, node_index = get_original_name_and_instance_index(node.node_name)
-            layer = get_layer_by_original_name(self._model, node_name)
+            layer = self._model.get_layer(node_name)
 
             in_shape = layer.get_input_shape_at(node_index)[1:]
             out_shape = layer.get_output_shape_at(node_index)[1:]
@@ -428,9 +427,7 @@ class FilterPruningController(BasePruningAlgoController):
         :param group: Nodes cluster
         :return a list of filter importance scores
         """
-        group_layers = [get_layer_by_original_name(model=self._model,
-                                                   name=node.layer_name)
-                        for node in group.nodes]
+        group_layers = [self._model.get_layer(node.layer_name) for node in group.nodes]
         group_filters_num = tf.constant([get_filters_num(layer) for layer in group_layers])
         filters_num = group_filters_num[0]
         assert tf.reduce_all(group_filters_num == filters_num)
@@ -445,8 +442,7 @@ class FilterPruningController(BasePruningAlgoController):
             nncf_node = self._original_graph.get_node_by_id(minfo.nncf_node_id)
             if nncf_node.data['is_shared']:
                 shared_nodes.append(layer_name)
-            layer = get_layer_by_original_name(self._model, layer_name)
-            filters_importance = self._layer_filter_importance(layer)
+            filters_importance = self._layer_filter_importance(self._model.get_layer(layer_name))
             cumulative_filters_importance += filters_importance
 
         return cumulative_filters_importance
