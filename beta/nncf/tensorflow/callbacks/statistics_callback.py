@@ -15,7 +15,7 @@ from typing import Callable
 
 import tensorflow as tf
 
-from nncf.api.compression import Statistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.logger import logger as nncf_logger
 
 
@@ -25,14 +25,14 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
     """
 
     def __init__(self,
-                 statistics_fn: Callable[[], Statistics],
+                 statistics_fn: Callable[[], NNCFStatistics],
                  log_tensorboard: bool = True,
                  log_text: bool = True,
                  log_dir: str = None):
         """
         Initializes compression statistics callback.
 
-        :param statistics_fn: A callable object that provides compression statistics.
+        :param statistics_fn: A callable object that provides NNCF statistics.
         :param log_tensorboard: Whether to log statistics to tensorboard or not.
         :param log_text: Whether to log statistics to stdout.
         :param log_dir: The directory for tensorbard logging.
@@ -54,17 +54,17 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
                 tf.summary.scalar(name, value, step=step)
 
     def on_epoch_end(self, epoch: int, logs: dict = None):
-        statistics = self._statistics_fn()
+        nncf_stats = self._statistics_fn()
         if self._log_tensorboard:
-            self._dump_to_tensorboard(self._prepare_for_tensorboard(statistics),
+            self._dump_to_tensorboard(self._prepare_for_tensorboard(nncf_stats),
                                       self.model.optimizer.iterations.numpy())
         if self._log_text:
-            nncf_logger.info(statistics.as_str())
+            nncf_logger.info(nncf_stats.to_str())
 
     def on_train_end(self, logs: dict = None):
         if self._file_writer:
             self._file_writer.close()
 
-    def _prepare_for_tensorboard(self, statistics: Statistics):
+    def _prepare_for_tensorboard(self, stats: NNCFStatistics):
         raise NotImplementedError(
             'StatisticsCallback class implementation must override the _prepare_for_tensorboard method.')

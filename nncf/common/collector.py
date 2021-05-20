@@ -13,7 +13,7 @@
 
 from abc import ABC, abstractmethod
 
-from nncf.api.compression import Statistics
+from nncf.api.statistics import Statistics
 
 
 class StatisticsCollector(ABC):

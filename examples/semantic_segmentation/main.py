@@ -391,7 +391,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
 
                 make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
                 statistics = compression_ctrl.statistics()
-                logger.info(statistics.as_str())
+                logger.info(statistics.to_str())
 
     return model
 
@@ -526,7 +526,7 @@ def main_worker(current_gpu, config):
         return
     if is_main_process():
         statistics = compression_ctrl.statistics()
-        logger.info(statistics.as_str())
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         logger.info(model)

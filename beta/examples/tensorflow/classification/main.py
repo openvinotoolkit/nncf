@@ -221,7 +221,7 @@ def run(config):
 
     logger.info('evaluation...')
     statistics = compression_ctrl.statistics()
-    logger.info(statistics.as_str())
+    logger.info(statistics.to_str())
     results = compress_model.evaluate(
         validation_dataset,
         steps=validation_steps,

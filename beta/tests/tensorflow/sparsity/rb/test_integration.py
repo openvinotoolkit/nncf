@@ -19,7 +19,7 @@ import os
 
 from beta.nncf import NNCFConfig
 from beta.nncf import create_compressed_model
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from beta.examples.tensorflow.common.callbacks import get_callbacks, get_progress_bar
 from beta.nncf.helpers.callback_creation import create_compression_callbacks
 
@@ -148,7 +148,8 @@ def test_rb_sparse_target_lenet(distributed, quantized):
         class SparsityRateTestCallback(tf.keras.callbacks.Callback):
             def on_epoch_end(self, epoch, logs=None):
                 target = sparse_algo.loss.target_sparsity_rate
-                actual = sparse_algo.statistics().model_statistics.sparsity_level_for_layers
+                nncf_stats = sparse_algo.statistics()
+                actual = nncf_stats.rb_sparsity.model_statistics.sparsity_level_for_layers
                 print(f'target {target}, actual {actual}')
                 if epoch + 1 <= freeze_epoch:
                     assert abs(actual - target) < 0.05

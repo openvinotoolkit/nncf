@@ -196,7 +196,7 @@ def train(train_step, train_dist_dataset, initial_epoch, initial_step,
                 timer.tic()
 
         statistics = compression_ctrl.statistics()
-        logger.info(statistics.as_str())
+        logger.info(statistics.to_str())
         statistics = {
             f'compression/statistics/{name}': value for name, value in prepare_for_tensorboard(statistics).items()
         }
@@ -267,7 +267,7 @@ def run_train(config):
 
     logger.info('Compression statistics')
     statistics = compression_ctrl.statistics()
-    logger.info(statistics.as_str())
+    logger.info(statistics.to_str())
 
 
 def main(argv):

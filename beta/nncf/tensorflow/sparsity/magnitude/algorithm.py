@@ -20,6 +20,7 @@ from nncf.common.sparsity.statistics import SparsifiedLayerSummary
 from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
@@ -187,7 +188,7 @@ class MagnitudeSparsityController(BaseSparsityController):
                             [-1]))
         return all_weights
 
-    def statistics(self, quickly_collected_only: bool = False) -> MagnitudeSparsityStatistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         sparsity_levels = []
         mask_names = []
         weights_shapes = []
@@ -236,4 +237,8 @@ class MagnitudeSparsityController(BaseSparsityController):
                                                      sparsity_rate_for_sparsified_modules,
                                                      sparsified_layers_summary)
 
-        return MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('magnitude_sparsity', stats)
+        return nncf_stats

@@ -13,7 +13,7 @@
 
 from typing import List
 
-from nncf.api.compression import Statistics
+from nncf.api.statistics import Statistics
 from nncf.common.utils.helpers import create_table
 
 
@@ -63,7 +63,7 @@ class SparsifiedModelStatistics(Statistics):
         self.sparsity_level_for_layers = sparsity_level_for_layers
         self.sparsified_layers_summary = sparsified_layers_summary
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         model_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -109,14 +109,14 @@ class MagnitudeSparsityStatistics(Statistics):
         self.model_statistics = model_statistics
         self.thresholds = thresholds
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         thresholds_string = create_table(
             ['Layer\'s name', 'Sparsity threshold'],
             [[s.name, s.threshold] for s in self.thresholds]
         )
 
         pretty_string = (
-            f'{self.model_statistics.as_str()}\n\n'
+            f'{self.model_statistics.to_str()}\n\n'
             f'Statistics of the magnitude sparsity algorithm:\n{thresholds_string}'
         )
         return pretty_string
@@ -135,8 +135,8 @@ class ConstSparsityStatistics(Statistics):
         """
         self.model_statistics = model_statistics
 
-    def as_str(self) -> str:
-        pretty_string = self.model_statistics.as_str()
+    def to_str(self) -> str:
+        pretty_string = self.model_statistics.to_str()
         return pretty_string
 
 
@@ -163,7 +163,7 @@ class RBSparsityStatistics(Statistics):
         self.target_level = target_level
         self.mean_sparse_prob = mean_sparse_prob
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         # TODO(andrey-churkin): Add human-readable description.
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
@@ -175,7 +175,7 @@ class RBSparsityStatistics(Statistics):
         )
 
         pretty_string = (
-            f'{self.model_statistics.as_str()}\n\n'
+            f'{self.model_statistics.to_str()}\n\n'
             f'Statistics of the RB-sparsity algorithm:\n{algorithm_string}'
         )
         return pretty_string

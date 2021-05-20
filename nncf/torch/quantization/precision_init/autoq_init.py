@@ -288,7 +288,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
                 policy_loss = agent.get_policy_loss()
                 delta = agent.get_delta()
 
-                bit_stats_tt = env.qctrl.statistics().bitwidth_distribution_statistics.as_str()
+                nncf_stats = env.qctrl.statistics()
+                bit_stats_tt = nncf_stats.quantization.bitwidth_distribution_statistics.to_str()
                 bit_stats_df = pd.read_csv(
                     StringIO(re.sub(
                         r'[-+|=]', '', bit_stats_tt)), sep=r'\s{2,}', engine='python').reset_index(drop=True)

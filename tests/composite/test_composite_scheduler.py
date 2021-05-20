@@ -13,7 +13,7 @@
 from typing import Optional
 
 from nncf.api.compression import CompressionScheduler
-from nncf.api.composite_compression import CompositeCompressionScheduler
+from nncf.common.composite_compression import CompositeCompressionScheduler
 
 
 class DummyScheduler(CompressionScheduler):

@@ -14,7 +14,6 @@
 from typing import Optional, List, Tuple, Any
 
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.api.compression import Statistics
 from nncf.common.factory import create_exporter
 
 
@@ -51,13 +50,3 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         exporter = create_exporter(self.model, input_names, output_names, model_args)
         exporter.export_model(save_path, save_format)
-
-
-class StubStatistics(Statistics):
-    """
-    This is a representation of empty statistics. An instance of the `StubStatistics`
-    class is used when statistics are not calculated.
-    """
-
-    def as_str(self) -> str:
-        return ''

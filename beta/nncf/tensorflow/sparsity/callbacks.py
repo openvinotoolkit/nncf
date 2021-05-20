@@ -11,11 +11,9 @@
  limitations under the License.
 """
 
-from typing import Union
-
 import tensorflow as tf
 
-from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics, RBSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
 
 
@@ -36,18 +34,23 @@ class SparsityStatisticsCallback(StatisticsCallback):
     Callback for logging sparsity compression statistics to tensorboard and stdout.
     """
 
-    def _prepare_for_tensorboard(self, statistics: Union[MagnitudeSparsityStatistics, RBSparsityStatistics]):
+    def _prepare_for_tensorboard(self, nncf_stats: NNCFStatistics):
         base_prefix = '2.compression/statistics'
         detailed_prefix = '3.compression_details/statistics'
 
-        ms = statistics.model_statistics  # type: SparsifiedModelStatistics
-        tensorboard_statistics = {
+        if nncf_stats.magnitude_sparsity:
+            stats = nncf_stats.magnitude_sparsity
+        else:
+            stats = nncf_stats.rb_sparsity
+
+        ms = stats.model_statistics
+        tensorboard_stats = {
             f'{base_prefix}/sparsity_level_for_model': ms.sparsity_level,
             f'{base_prefix}/sparsity_level_for_sparsified_layers': ms.sparsity_level_for_layers,
         }
 
         for ls in ms.sparsified_layers_summary:
             layer_name, sparsity_level = ls.name, ls.sparsity_level
-            tensorboard_statistics[f'{detailed_prefix}/{layer_name}/sparsity_level'] = sparsity_level
+            tensorboard_stats[f'{detailed_prefix}/{layer_name}/sparsity_level'] = sparsity_level
 
-        return tensorboard_statistics
+        return tensorboard_stats

@@ -193,7 +193,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
     if is_main_process():
         statistics = compression_ctrl.statistics()
-        logger.info(statistics.as_str())
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -243,7 +243,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
         if is_main_process():
-            logger.info(statistics.as_str())
+            logger.info(statistics.to_str())
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
             checkpoint = {

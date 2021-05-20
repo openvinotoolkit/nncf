@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
 from beta.nncf.tensorflow.pruning.base_algorithm import BasePruningAlgoController
 from beta.nncf.tensorflow.pruning.callbacks import PruningStatisticsCallback
 from beta.nncf.tensorflow.sparsity.callbacks import SparsityStatisticsCallback

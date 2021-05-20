@@ -23,6 +23,7 @@ from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import SparsifiedLayerSummary
 from nncf.common.sparsity.statistics import SparsifiedModelStatistics
 from nncf.common.sparsity.statistics import RBSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -121,7 +122,7 @@ class RBSparsityController(BaseSparsityController):
     def freeze(self):
         self._loss.disable()
 
-    def statistics(self, quickly_collected_only: bool = False) -> RBSparsityStatistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         sparsity_levels = []
         mask_names = []
         weights_shapes = []
@@ -171,4 +172,8 @@ class RBSparsityController(BaseSparsityController):
         # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported
         masks_consistency = 1.0
 
-        return RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('rb_sparsity', stats)
+        return nncf_stats

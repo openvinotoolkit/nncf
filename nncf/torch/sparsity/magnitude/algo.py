@@ -24,6 +24,7 @@ from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.sparsity.statistics import LayerThreshold
 
 
@@ -55,8 +56,8 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
         self.set_sparsity_level(sparsity_init)
 
-    def statistics(self, quickly_collected_only: bool = False) -> MagnitudeSparsityStatistics:
-        model_statistics = super().statistics(quickly_collected_only)
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        model_statistics = self._calculate_sparsified_model_stats()
 
         threshold_statistics = []
         if self._mode == 'global':
@@ -70,7 +71,11 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
             threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
 
-        return MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('magnitude_sparsity', stats)
+        return nncf_stats
 
     def freeze(self):
         for layer in self.sparsified_module_info:

@@ -46,8 +46,8 @@ def test_magnitude_scheduler_can_do_epoch_step__with_norm():
     for expected_level, expected_threshold in zip(expected_levels, expected_thresholds):
         scheduler.epoch_step()
         assert compression_ctrl.scheduler.current_sparsity_level == expected_level
-        stats = compression_ctrl.statistics()
-        for layer_info in stats.thresholds:
+        nncf_stats = compression_ctrl.statistics()
+        for layer_info in nncf_stats.magnitude_sparsity.thresholds:
             assert layer_info.threshold == pytest.approx(expected_threshold, 0.01)
 
 
@@ -59,14 +59,14 @@ def test_magnitude_scheduler_can_do_epoch_step__with_last():
 
     scheduler.epoch_step(3)
     assert compression_ctrl.scheduler.current_sparsity_level == 0.9
-    stats = compression_ctrl.statistics()
-    for layer_info in stats.thresholds:
+    nncf_stats = compression_ctrl.statistics()
+    for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == pytest.approx(0.371, 0.01)
 
     scheduler.epoch_step()
     assert compression_ctrl.scheduler.current_sparsity_level == 0.9
-    stats = compression_ctrl.statistics()
-    for layer_info in stats.thresholds:
+    nncf_stats = compression_ctrl.statistics()
+    for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == pytest.approx(0.371, 0.01)
 
 

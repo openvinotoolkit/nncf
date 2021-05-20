@@ -413,7 +413,7 @@ index 0000000..d6b3887
 +        self.compression_ctrl.scheduler.epoch_step()
 +
 +    def before_run(self, runner):
-+        runner.logger.info(self.compression_ctrl.statistics().as_str())
++        runner.logger.info(self.compression_ctrl.statistics().to_str())
 +
 +
 diff --git a/mmdet/core/nncf/utils.py b/mmdet/core/nncf/utils.py

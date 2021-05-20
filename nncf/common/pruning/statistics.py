@@ -13,7 +13,7 @@
 
 from typing import List
 
-from nncf.api.compression import Statistics
+from nncf.api.statistics import Statistics
 from nncf.common.utils.helpers import create_table
 
 
@@ -65,7 +65,7 @@ class PrunedModelStatistics(Statistics):
         self.pruning_level = pruning_level
         self.pruned_layers_summary = pruned_layers_summary
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         model_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -113,7 +113,7 @@ class FilterPruningStatistics(Statistics):
         self.current_flops = current_flops
         self.flops_pruning_level = 1 - self.current_flops / self.full_flops
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         algorithm_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -123,7 +123,7 @@ class FilterPruningStatistics(Statistics):
         )
 
         pretty_string = (
-            f'{self.model_statistics.as_str()}\n\n'
+            f'{self.model_statistics.to_str()}\n\n'
             f'Statistics of the filter pruning algorithm:\n{algorithm_string}'
         )
         return pretty_string

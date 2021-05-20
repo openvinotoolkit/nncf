@@ -112,10 +112,10 @@ def test_hawq_manual_configs(manual_config_params):
     model = manual_config_params.create_model(config['model'])
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    statistics = compression_ctrl.statistics()
+    nncf_stats = compression_ctrl.statistics()
 
     expected = manual_config_params.bit_stats
-    actual = statistics.bitwidth_distribution_statistics
+    actual = nncf_stats.quantization.bitwidth_distribution_statistics
 
     assert expected.num_wq_per_bitwidth == actual.num_wq_per_bitwidth
     assert expected.num_aq_per_bitwidth == actual.num_aq_per_bitwidth
@@ -192,8 +192,8 @@ def test_quantization_configs__with_precisions_list():
         expected_bit = [ref_bit for (name, ref_bit) in ref_bits if name == str(key)][0]
         assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(key)
 
-    statistics = compression_ctrl.statistics()
-    actual = statistics.bitwidth_distribution_statistics
+    nncf_stats = compression_ctrl.statistics()
+    actual = nncf_stats.quantization.bitwidth_distribution_statistics
 
     expected = BitwidthDistributionStatistics(
         num_wq_per_bitwidth={4: 1, 2: 1},

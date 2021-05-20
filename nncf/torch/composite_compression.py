@@ -16,9 +16,9 @@ from typing import TypeVar
 import torch.nn
 from copy import deepcopy
 
-from nncf.api.composite_compression import CompositeCompressionAlgorithmBuilder
-from nncf.api.composite_compression import CompositeCompressionAlgorithmController
-from nncf.api.composite_compression import CompositeCompressionLoss
+from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
+from nncf.common.composite_compression import CompositeCompressionAlgorithmController
+from nncf.common.composite_compression import CompositeCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss

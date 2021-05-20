@@ -142,7 +142,7 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
 
         return 1 - nonzero / max(count, 1)
 
-    def statistics(self, quickly_collected_only: bool = False) -> SparsifiedModelStatistics:
+    def _calculate_sparsified_model_stats(self) -> SparsifiedModelStatistics:
         sparsified_layers_summary = []
         sparsified_weights_count = self.sparsified_weights_count
 

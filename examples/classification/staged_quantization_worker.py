@@ -204,7 +204,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     if is_main_process():
         statistics = compression_ctrl.statistics()
-        logger.info(statistics.as_str())
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -251,7 +251,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
         # portion of enabled quantizers)
         if is_main_process():
-            logger.info(statistics.as_str())
+            logger.info(statistics.to_str())
 
         optimizer_scheduler.epoch_step()
 

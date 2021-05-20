@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional
 
 from nncf import NNCFConfig
 from nncf.api.compression import Statistics
@@ -20,40 +20,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-
-ModelType = TypeVar('ModelType')
-
-
-class CompositeStatistics(Statistics):
-    """
-    The `CompositeStatistics` class stores a group of `Statistics` class
-    instances as a list of children that are treated the same way as a single
-    `Statistics` class instance.
-    """
-
-    def __init__(self):
-        self._child_statistics = []
-
-    @property
-    def child_statistics(self) -> List[Statistics]:
-        return self._child_statistics
-
-    def add(self, child_statistics: Statistics) -> None:
-        """
-        Add `Statistics` class instance to the list of children.
-
-        :param child_statistics: A `Statistics` class instance.
-        """
-        self._child_statistics.append(child_statistics)
-
-    def as_str(self) -> str:
-        """
-        Calls as_str() method for all children and returns a sum-up string.
-
-        :return: A representation of the statistics as a human-readable string.
-        """
-        pretty_string = '\n\n'.join([stats.as_str() for stats in self.child_statistics])
-        return pretty_string
+from nncf.api.compression import ModelType
+from nncf.common.statistics import NNCFStatistics
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -114,20 +82,6 @@ class CompositeCompressionLoss(CompressionLoss):
         for loss in self._child_losses:
             result_loss += loss()
         return result_loss
-
-    def statistics(self, quickly_collected_only: bool = False) -> CompositeStatistics:
-        """
-        Returns a `CompositeStatistics` class instance.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A `CompositeStatistics` class instance.
-        """
-        composite_statistics = CompositeStatistics()
-        for loss in self.child_losses:
-            composite_statistics.add(loss.statistics(quickly_collected_only))
-        return composite_statistics
 
 
 class CompositeCompressionScheduler(CompressionScheduler):
@@ -284,19 +238,23 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             composite_state.append(child_ctrl.get_state())
         return composite_state
 
-    def statistics(self, quickly_collected_only: bool = False) -> CompositeStatistics:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
-        Returns a `CompositeStatistics` class instance.
+        Returns a `NNCFStatistics` class instance.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
-        :return: A `CompositeStatistics` class instance.
+        :return: A `NNCFStatistics` class instance.
         """
-        composite_statistics = CompositeStatistics()
+        nncf_stats = NNCFStatistics()
+
         for ctrl in self.child_ctrls:
-            composite_statistics.add(ctrl.statistics(quickly_collected_only))
-        return composite_statistics
+            ctrl_stats = ctrl.statistics(quickly_collected_only)
+            for algorithm_name, stats in ctrl_stats:
+                nncf_stats.register(algorithm_name, stats)
+
+        return nncf_stats
 
     def prepare_for_export(self) -> None:
         """

@@ -148,7 +148,7 @@ def load_torch_model(config, cuda=False):
     if cuda:
         model = model.cuda()
         model = torch.nn.DataParallel(model)
-    print(compression_ctrl.statistics().as_str())
+    print(compression_ctrl.statistics().to_str())
     return model
 
 

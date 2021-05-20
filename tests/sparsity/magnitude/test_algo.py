@@ -43,8 +43,8 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     i = 0
 
-    stats = compression_ctrl.statistics()
-    for layer_info in stats.thresholds:
+    nncf_stats = compression_ctrl.statistics()
+    for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == approx(0.24, 0.1)
     # pylint: disable=protected-access
     assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
@@ -78,8 +78,8 @@ def test_magnitude_sparse_algo_sets_threshold(weight_importance, sparsity_level,
     if sparsity_level:
         compression_ctrl.set_sparsity_level(sparsity_level)
 
-    stats = compression_ctrl.statistics()
-    for layer_info in stats.thresholds:
+    nncf_stats = compression_ctrl.statistics()
+    for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == pytest.approx(threshold, 0.01)
 
 
@@ -250,10 +250,10 @@ def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
     compression_ctrl.set_sparsity_level(0.5, sparse_info_conv1[0])
 
     compression_ctrl.set_sparsity_level(0.3, sparse_info_conv2[0])
-    stats = compression_ctrl.statistics()
+    nncf_stats = compression_ctrl.statistics()
 
     expected = [(module_name_conv1, 0.3344823), (module_name_conv2, 0.2191864)]
-    for idx, layer_info in enumerate(stats.thresholds):
+    for idx, layer_info in enumerate(nncf_stats.magnitude_sparsity.thresholds):
         expected_name, expected_threshold = expected[idx]
         assert layer_info.name == expected_name
         assert pytest.approx(layer_info.threshold) == expected_threshold

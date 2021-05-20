@@ -41,6 +41,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.hardware.config import HWConfig
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.statistics import QuantizationStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.utils.logger import logger as nncf_logger
 from nncf.common.utils.os import safe_open
@@ -1345,7 +1346,7 @@ class QuantizationController(QuantizationControllerBase):
 
         return module_init_range_config
 
-    def statistics(self, quickly_collected_only=False):
+    def statistics(self, quickly_collected_only=False) -> NNCFStatistics:
         num_enabled_quantization = len([1 for q in self.all_quantizations.values() if q.is_enabled_quantization()])
         multiplier = 100 / len(self.all_quantizations)
         ratio_of_enabled_quantizations = num_enabled_quantization * multiplier
@@ -1354,7 +1355,10 @@ class QuantizationController(QuantizationControllerBase):
         if self._collect_compression_metrics and not quickly_collected_only:
             self.update_metric_store()
             stats = QuantizationStatistics(ratio_of_enabled_quantizations, **self.metric_store)
-        return stats
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('quantization', stats)
+        return nncf_stats
 
 
 class QuantizationDebugInterface(DebugInterface):

@@ -16,7 +16,6 @@ from typing import Dict
 import tensorflow as tf
 
 from nncf.api.compression import CompressionLoss
-from nncf.common.compression import StubStatistics
 
 
 class SparseLoss(CompressionLoss):
@@ -79,6 +78,3 @@ class SparseLoss(CompressionLoss):
             'disabled': bool(tf.keras.backend.eval(tf.cast(self.disabled, tf.bool))),
             'p': self.p
         }
-
-    def statistics(self, quickly_collected_only: bool = False) -> StubStatistics:
-        return StubStatistics()

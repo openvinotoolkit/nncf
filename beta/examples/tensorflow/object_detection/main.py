@@ -210,7 +210,7 @@ def train(train_step, test_step, eval_metric, train_dist_dataset, test_dist_data
         logger.info('Validation metric = {}'.format(test_metric_result))
 
         statistics = compression_ctrl.statistics()
-        logger.info(statistics.as_str())
+        logger.info(statistics.to_str())
         statistics = {
             f'compression/statistics/{name}': value for name, value in prepare_for_tensorboard(statistics).items()
         }
@@ -311,7 +311,7 @@ def run(config):
             config.print_freq)
 
     statistics = compression_ctrl.statistics()
-    logger.info(statistics.as_str())
+    logger.info(statistics.to_str())
     metric_result = evaluate(test_step, eval_metric, test_dist_dataset, num_test_batches, config.print_freq)
     logger.info('Validation metric = {}'.format(metric_result))
 

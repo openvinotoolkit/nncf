@@ -274,7 +274,7 @@ class BasePruningAlgoController(TFCompressionAlgorithmController):
         if pruning_flops_target:
             self.prune_flops = True
 
-    def statistics(self, quickly_collected_only: bool = False) -> PrunedModelStatistics:
+    def _calculate_pruned_model_stats(self) -> PrunedModelStatistics:
         pruning_rates = []
         mask_names = []
         weights_shapes = []

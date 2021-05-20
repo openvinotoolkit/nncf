@@ -15,24 +15,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, TypeVar, List, Tuple
 
 from nncf import NNCFConfig
+from nncf.api.statistics import Statistics
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.utils.ordered_enum import OrderedEnum
 
 ModelType = TypeVar('ModelType')
-
-
-class Statistics(ABC):
-    """
-    Contains a data collection and provides a way for its human-readable representation.
-    """
-
-    @abstractmethod
-    def as_str(self) -> str:
-        """
-        Returns a representation of the statistics as a human-readable string.
-
-        :return: A representation of the statistics as a human-readable string.
-        """
 
 
 class CompressionLoss(ABC):
@@ -50,17 +37,6 @@ class CompressionLoss(ABC):
         Calculates the compression loss value.
 
         :return: The compression loss value.
-        """
-
-    @abstractmethod
-    def statistics(self, quickly_collected_only: bool = False) -> Statistics:
-        """
-        Returns a `Statistics` class instance that contains compression loss statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A `Statistics` class instance that contains compression loss statistics.
         """
 
     @abstractmethod

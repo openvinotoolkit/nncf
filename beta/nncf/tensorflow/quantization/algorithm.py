@@ -40,7 +40,7 @@ from beta.nncf.tensorflow.utils.node import is_ignored
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.compression import StubStatistics
+from nncf.common.statistics import NNCFStatistics
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionLoss
 
@@ -248,5 +248,5 @@ class QuantizationController(TFCompressionAlgorithmController):
     def initialize(self, dataset=None, loss=None):
         self._initializer(self._model, dataset, loss)
 
-    def statistics(self, quickly_collected_only: bool = False) -> StubStatistics:
-        return StubStatistics()
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        return NNCFStatistics()

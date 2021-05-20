@@ -147,10 +147,11 @@ def test_quantization_share_and_bitwidth_distribution_stats(data):
     config['target_device'] = data.target_device
 
     ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
-    statistics = ctrl.statistics()
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = as_dict(getattr(statistics, attr_name))
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
         assert expected_value == actual_value
 
 
@@ -226,10 +227,11 @@ def test_memory_consumption_stats(data):
     config['target_device'] = data.target_device
 
     ctrl, _ = create_compressed_model(test_models.AlexNet(), config)
-    statistics = ctrl.statistics()
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = as_dict(getattr(statistics, attr_name))
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
         assert expected_value == pytest.approx(actual_value, rel=1e-2)
 
 
@@ -277,8 +279,9 @@ def test_quantization_configuration_stats(data):
     config['input_info']['sample_size'] = [2, 3, 299, 299]
 
     ctrl, _ = create_compressed_model(test_models.Inception3(aux_logits=True, transform_input=True), config)
-    statistics = ctrl.statistics()
+    nncf_stats = ctrl.statistics()
+    quantization_stats = nncf_stats.quantization
 
     for attr_name, expected_value in data.expected.items():
-        actual_value = as_dict(getattr(statistics, attr_name))
+        actual_value = as_dict(getattr(quantization_stats, attr_name))
         assert expected_value == actual_value

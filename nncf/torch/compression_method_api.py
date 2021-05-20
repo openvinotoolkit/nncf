@@ -34,7 +34,7 @@ from nncf.torch.structures import BNAdaptationInitArgs
 from nncf.torch.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
-from nncf.common.compression import StubStatistics
+
 
 ModelType = TypeVar('ModelType')
 
@@ -79,17 +79,6 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
 
         :return: The compression loss state.
         """
-
-    def statistics(self, quickly_collected_only: bool = False) -> StubStatistics:
-        """
-        Returns a `Statistics` class instance that contains compression loss statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A `Statistics` class instance that contains compression loss statistics.
-        """
-        return StubStatistics()
 
 
 class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):

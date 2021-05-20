@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from nncf.common.pruning.statistics import FilterPruningStatistics
+from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
 
 
@@ -20,17 +20,17 @@ class PruningStatisticsCallback(StatisticsCallback):
     Callback for logging pruning compression statistics to tensorboard and stdout.
     """
 
-    def _prepare_for_tensorboard(self, statistics: FilterPruningStatistics):
+    def _prepare_for_tensorboard(self, nncf_stats: NNCFStatistics):
         base_prefix = '2.compression/statistics'
         detailed_prefix = '3.compression_details/statistics'
 
-        ms = statistics.model_statistics  # type: SparsifiedModelStatistics
-        tensorboard_statistics = {
+        ms = nncf_stats.filter_pruning.model_statistics
+        tensorboard_stats = {
             f'{base_prefix}/pruning_level_for_model': ms.pruning_level,
         }
 
         for ls in ms.pruned_layers_summary:
             layer_name, pruning_level = ls.name, ls.filter_pruning_level
-            tensorboard_statistics[f'{detailed_prefix}/{layer_name}/pruning_level'] = pruning_level
+            tensorboard_stats[f'{detailed_prefix}/{layer_name}/pruning_level'] = pruning_level
 
-        return tensorboard_statistics
+        return tensorboard_stats

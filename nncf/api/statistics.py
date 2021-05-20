@@ -11,20 +11,18 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
-
-import tensorflow as tf
-
-from nncf.api.compression import CompressionLoss
+from abc import ABC, abstractmethod
 
 
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
+class Statistics(ABC):
+    """
+    Contains a data collection and provides a way for its human-readable representation.
+    """
 
-    def load_state(self, state: Dict[str, object]) -> None:
-        pass
+    @abstractmethod
+    def to_str(self) -> str:
+        """
+        Returns a representation of the statistics as a human-readable string.
 
-    def get_state(self) -> Dict[str, object]:
-        return {}
+        :return: A representation of the statistics as a human-readable string.
+        """

@@ -13,7 +13,7 @@
 
 from typing import Dict, Optional
 
-from nncf.api.compression import Statistics
+from nncf.api.statistics import Statistics
 from nncf.common.utils.helpers import create_table
 
 
@@ -50,7 +50,7 @@ class MemoryConsumptionStatistics(Statistics):
         self.max_compressed_activation_size = max_compressed_activation_size
         self.weight_memory_consumption_decrease = weight_memory_consumption_decrease
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         memory_consumption_string = create_table(
             header=['Statistic\'s name', 'Value'],
             rows=[
@@ -127,7 +127,7 @@ class QuantizationShareStatistics(Statistics):
         self.wq_counter = wq_counter
         self.aq_counter = aq_counter
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         mapping = [
             ('num_symmetric', 'Symmetric'),
             ('num_asymmetric', 'Asymmetric'),
@@ -175,7 +175,7 @@ class BitwidthDistributionStatistics(Statistics):
         self.num_wq_per_bitwidth = num_wq_per_bitwidth
         self.num_aq_per_bitwidth = num_aq_per_bitwidth
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         wq_total_num = sum(self.num_wq_per_bitwidth.values())
         aq_total_num = sum(self.num_aq_per_bitwidth.values())
         q_total_num = wq_total_num + aq_total_num
@@ -218,7 +218,7 @@ class QuantizationConfigurationStatistics(Statistics):
         self.quantized_edges_in_cfg = quantized_edges_in_cfg
         self.total_edges_in_cfg = total_edges_in_cfg
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         header = ['Statistic\'s name', 'Value']
         rows = [
             [
@@ -257,7 +257,7 @@ class QuantizationStatistics(Statistics):
         self.memory_consumption_statistics = memory_consumption_statistics
         self.quantization_configuration_statistics = quantization_configuration_statistics
 
-    def as_str(self) -> str:
+    def to_str(self) -> str:
         pretty_strings = []
 
         table_string = create_table(
@@ -275,7 +275,7 @@ class QuantizationStatistics(Statistics):
 
         for stats in statistics:
             if stats:
-                pretty_strings.append(stats.as_str())
+                pretty_strings.append(stats.to_str())
 
         pretty_string = '\n\n'.join(pretty_strings)
         return pretty_string
