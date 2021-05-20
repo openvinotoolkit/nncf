@@ -19,7 +19,7 @@ import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from nncf import nncf_model_input
+from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo

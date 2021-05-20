@@ -14,7 +14,7 @@
 # Do not remove - these imports are for testing purposes.
 #pylint:disable=unused-import
 import nncf
-from nncf import create_compressed_model
+from nncf.torch import create_compressed_model
 
 import sys
 

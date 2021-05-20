@@ -18,7 +18,7 @@ from torch import nn
 from torch.nn import Dropout
 from torch.nn import Parameter
 
-import nncf
+from nncf.torch import register_module
 
 
 class ModelWithDummyParameter(nn.Module):
@@ -44,7 +44,7 @@ class ManyNonEvalModules(ModelWithDummyParameter):
             x = F.relu(x)
             return x
 
-    @nncf.register_module()
+    @register_module()
     class CustomWeightModule(nn.Module):
         def __init__(self):
             super().__init__()

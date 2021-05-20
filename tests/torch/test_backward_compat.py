@@ -20,7 +20,7 @@ from examples.torch.common.distributed import configure_distributed
 from examples.torch.common.execution import ExecutionMode, prepare_model_for_execution, get_device
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.sample_config import SampleConfig
-from nncf import register_default_init_args
+from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
 from nncf.common.graph import MODEL_INPUT_OP_NAME
 from nncf.config import NNCFConfig

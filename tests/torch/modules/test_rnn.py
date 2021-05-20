@@ -27,7 +27,7 @@ from torch.autograd import Variable
 from torch.backends import cudnn
 from torch.nn.utils.rnn import PackedSequence
 
-from nncf import nncf_model_input
+from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.transform_graph import replace_modules
 from nncf.torch.layers import LSTMCellNNCF, NNCF_RNN, ITERATION_MODULES

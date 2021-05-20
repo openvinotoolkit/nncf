@@ -46,7 +46,7 @@ from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.checkpoint import save_checkpoint
-from nncf import create_compressed_model
+from nncf.torch import create_compressed_model
 from nncf.torch.utils import is_main_process
 
 

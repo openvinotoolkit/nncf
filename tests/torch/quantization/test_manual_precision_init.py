@@ -18,7 +18,7 @@ import pytest
 from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from examples.torch.common.model_loader import load_model
 from nncf import NNCFConfig
-from nncf import register_default_init_args
+from nncf.torch import register_default_init_args
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from tests.common.helpers import EXAMPLES_DIR

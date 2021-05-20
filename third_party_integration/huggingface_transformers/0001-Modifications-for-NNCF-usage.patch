@@ -54,7 +54,7 @@ index d9465c37..9da9d30f 100644
 +from transformers.trainer import get_train_dataloader_for_init
  
 +logger = logging.getLogger(__name__)
-+# from nncf import set_log_level
++# from nncf.torch import set_log_level
 +# set_log_level(logging.DEBUG)
  
  MODEL_CONFIG_CLASSES = list(MODEL_WITH_LM_HEAD_MAPPING.keys())
@@ -1136,7 +1136,7 @@ index 5b000c81..05df28a7 100644
  from torch.nn import CrossEntropyLoss
  from torch.nn import functional as F
  
-+from nncf import create_compressed_model
++from nncf.torch import create_compressed_model
 +
 +
  from .activations import get_activation

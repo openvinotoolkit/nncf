@@ -16,7 +16,7 @@ import torch.nn as nn
 import torch.nn.init as init
 
 from nncf.torch.utils import add_domain
-from nncf import register_module
+from nncf.torch import register_module
 
 
 @register_module(
