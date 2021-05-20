@@ -30,7 +30,7 @@ from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.algo_selector import ZeroCompressionLoss
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.api.compression import CompressionLoss
@@ -1232,10 +1232,10 @@ class QuantizationController(QuantizationControllerBase):
 
         self._model.rebuild_graph()
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         if self.is_staged_scheduler:
-            return self.scheduler.compression_level()
-        return CompressionLevel.FULL
+            return self.scheduler.compression_stage()
+        return CompressionStage.FULLY_COMPRESSED
 
     def init_precision(self,
                        precision_init_type: str,

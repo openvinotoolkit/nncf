@@ -17,7 +17,7 @@ import torch
 from nncf.graph.transformations.layout import PTTransformationLayout
 from nncf.nncf_network import NNCFNetwork
 
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionScheduler
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
@@ -54,12 +54,12 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
         self._loss = ZeroCompressionLoss(next(target_model.parameters()).device)
         self._scheduler = StubCompressionScheduler()
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         """
         Returns level of compression. Should be used on saving best checkpoints to distinguish between
         uncompressed, partially compressed and fully compressed models.
         """
-        return CompressionLevel.NONE
+        return CompressionStage.UNCOMPRESSED
 
     @property
     def loss(self) -> ZeroCompressionLoss:

@@ -17,7 +17,7 @@ import torch
 from texttable import Texttable
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.nncf_network import NNCFNetwork
 from nncf.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityAlgoController, SparseModuleInfo
@@ -115,12 +115,12 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
             all_weights.append(self._weight_importance_fn(minfo.module.weight).view(-1))
         return all_weights
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         if self._mode == 'local':
-            return CompressionLevel.FULL
+            return CompressionStage.FULLY_COMPRESSED
 
         if self.scheduler.current_sparsity_level == 0:
-            return CompressionLevel.NONE
+            return CompressionStage.UNCOMPRESSED
         if self.scheduler.current_sparsity_level >= self.scheduler.target_level:
-            return CompressionLevel.FULL
-        return CompressionLevel.PARTIAL
+            return CompressionStage.FULLY_COMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED
