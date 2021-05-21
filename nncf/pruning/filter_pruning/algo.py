@@ -21,7 +21,7 @@ from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
@@ -611,11 +611,11 @@ class FilterPruningController(BasePruningAlgoController):
         nncf_logger.info('Final Model Pruning Rate = %.3f', 1 - parameters_count_after / parameters_count_before)
         nncf_logger.info('Total MAC pruning level = %.3f', 1 - flops_after / flops)
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
         actual_pruning_level = self._pruning_rate
         if actual_pruning_level == 0:
-            return CompressionLevel.NONE
+            return CompressionStage.UNCOMPRESSED
         if actual_pruning_level >= target_pruning_level:
-            return CompressionLevel.FULL
-        return CompressionLevel.PARTIAL
+            return CompressionStage.FULLY_COMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED

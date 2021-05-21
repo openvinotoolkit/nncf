@@ -14,7 +14,7 @@ import logging
 
 from nncf.common.utils.registry import Registry
 from nncf.common.schedulers import BaseCompressionScheduler
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +71,11 @@ class StagedQuantizationScheduler(BaseCompressionScheduler):
     def _calc_density_level(self):
         raise NotImplementedError
 
-    def compression_level(self):
+    def compression_stage(self):
         is_activations_enabled = self.current_epoch >= self.activations_quant_start_epoch
         is_weights_enabled = self.current_epoch >= self.weights_quant_start_epoch
         if is_activations_enabled and is_weights_enabled:
-            return CompressionLevel.FULL
+            return CompressionStage.FULLY_COMPRESSED
         if not is_activations_enabled and not is_weights_enabled:
-            return CompressionLevel.NONE
-        return CompressionLevel.PARTIAL
+            return CompressionStage.UNCOMPRESSED
+        return CompressionStage.PARTIALLY_COMPRESSED

@@ -34,7 +34,7 @@ from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
@@ -303,7 +303,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
     metric = IoU(len(class_encoding), ignore_index=ignore_index)
 
     best_miou = -1
-    best_compression_level = CompressionLevel.NONE
+    best_compression_stage = CompressionStage.UNCOMPRESSED
     # Optionally resume from a checkpoint
     if resuming_checkpoint is not None:
         if optimizer is not None:
@@ -362,12 +362,12 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                 for i, (key, class_iou) in enumerate(zip(class_encoding.keys(), iou)):
                     config.tb.add_scalar("{}/mIoU_Cls{}_{}".format(config.dataset, i, key), class_iou, epoch)
 
-            compression_level = compression_ctrl.compression_level()
-            is_best_by_miou = miou > best_miou and compression_level == best_compression_level
-            is_best = is_best_by_miou or compression_level > best_compression_level
+            compression_stage = compression_ctrl.compression_stage()
+            is_best_by_miou = miou > best_miou and compression_stage == best_compression_stage
+            is_best = is_best_by_miou or compression_stage > best_compression_stage
             if is_best:
                 best_miou = miou
-            best_compression_level = max(compression_level, best_compression_level)
+            best_compression_stage = max(compression_stage, best_compression_stage)
 
             if config.metrics_dump is not None:
                 write_metrics(best_miou, config.metrics_dump)
@@ -385,7 +385,7 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             if is_main_process():
                 checkpoint_path = save_checkpoint(model,
                                                   optimizer, epoch, best_miou,
-                                                  compression_level,
+                                                  compression_stage,
                                                   compression_ctrl.scheduler, config)
 
                 make_additional_checkpoints(checkpoint_path, is_best, epoch, config)

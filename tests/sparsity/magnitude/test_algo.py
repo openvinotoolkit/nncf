@@ -16,7 +16,7 @@ import torch
 from copy import deepcopy
 from pytest import approx
 
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.layers import BinaryMask
 from nncf.sparsity.magnitude.algo import MagnitudeSparsityController
@@ -232,7 +232,7 @@ def test_create_magnitude_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': "magnitude_sparsity", "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
-    assert compression_ctrl.compression_level() == CompressionLevel.FULL
+    assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
 def test_magnitude_algo_can_calculate_correct_stats_for_local_mode():
     module_name_conv1 = 'MagnitudeTestModel/NNCFConv2d[conv1]'

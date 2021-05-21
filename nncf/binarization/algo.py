@@ -18,7 +18,7 @@ from texttable import Texttable
 from torch import nn
 
 from nncf.algo_selector import COMPRESSION_ALGORITHMS, ZeroCompressionLoss
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.binarization.layers import BINARIZATION_MODULES
@@ -137,8 +137,8 @@ class BinarizationController(QuantizationControllerBase):
     def init_range(self):
         pass
 
-    def compression_level(self) -> CompressionLevel:
-        return self.scheduler.compression_level()
+    def compression_stage(self) -> CompressionStage:
+        return self.scheduler.compression_stage()
 
     def _compute_and_display_flops_binarization_rate(self):
         net = self._model

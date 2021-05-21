@@ -27,7 +27,7 @@ from torch.nn import DataParallel
 from nncf import NNCFConfig
 from nncf.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.algo_selector import NoCompressionAlgorithmBuilder
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.checkpoint_loading import load_state
 from nncf.common.hardware.config import HWConfigType
 from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
@@ -108,10 +108,10 @@ class TestConfigCreator:
         return '_'.join(self._algorithm_sections)
 
 
-class CompressionLevelTestStruct:
-    def __init__(self, config_provider: 'TestConfigCreator', compression_levels: List[CompressionLevel]):
+class CompressionStageTestStruct:
+    def __init__(self, config_provider: 'TestConfigCreator', compression_stages: List[CompressionStage]):
         self.config_provider = config_provider
-        self.compression_levels = compression_levels
+        self.compression_stages = compression_stages
 
     def __str__(self):
         return str(self.config_provider)
@@ -122,94 +122,109 @@ magnitude_sparsity_params = {'schedule': 'multistep',
                              'multistep_steps': [1, 2],
                              'multistep_sparsity_levels': [0, 0.3, 0.5]}
 filter_pruning_params = {'schedule': 'exponential', 'num_init_steps': 0, 'pruning_steps': 3}
-FFF_levels = [CompressionLevel.FULL] * 3
-NPF_levels = [CompressionLevel.NONE, CompressionLevel.PARTIAL, CompressionLevel.FULL]
+FFF_levels = [CompressionStage.FULLY_COMPRESSED] * 3
+NPF_levels = [CompressionStage.UNCOMPRESSED, CompressionStage.PARTIALLY_COMPRESSED, CompressionStage.FULLY_COMPRESSED]
 LIST_OF_TEST_PARAMS = [
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('quantization'),
-        compression_levels=FFF_levels
+        compression_stages=FFF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params),
-        compression_levels=NPF_levels
+        compression_stages=NPF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('const_sparsity'),
-        compression_levels=FFF_levels
+        compression_stages=FFF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params),
-        compression_levels=NPF_levels
+        compression_stages=NPF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('rb_sparsity', {
             'sparsity_target': 0.61,
             'sparsity_target_epoch': 2,
         }),
-        compression_levels=NPF_levels
+        compression_stages=NPF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('filter_pruning', {
             'num_init_steps': 1,
             'pruning_steps': 2,
         }),
-        compression_levels=[CompressionLevel.NONE, CompressionLevel.FULL, CompressionLevel.FULL]
+        compression_stages=[CompressionStage.UNCOMPRESSED,
+                            CompressionStage.FULLY_COMPRESSED,
+                            CompressionStage.FULLY_COMPRESSED]
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('filter_pruning', filter_pruning_params),
-        compression_levels=NPF_levels
+        compression_stages=NPF_levels
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization'),
-        compression_levels=[CompressionLevel.PARTIAL] * 2 + [CompressionLevel.FULL],
+        compression_stages=[CompressionStage.PARTIALLY_COMPRESSED] * 2 + [CompressionStage.FULLY_COMPRESSED],
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params),
-        compression_levels=NPF_levels,
+        compression_stages=NPF_levels,
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('quantization', staged_quantization_params).add_algo(
             'filter_pruning', filter_pruning_params),
-        compression_levels=NPF_levels,
+        compression_stages=NPF_levels,
     ),
-    CompressionLevelTestStruct(
+    CompressionStageTestStruct(
         config_provider=TestConfigCreator().add_algo('magnitude_sparsity', magnitude_sparsity_params).add_algo(
             'quantization', staged_quantization_params).add_algo('filter_pruning', filter_pruning_params),
-        compression_levels=NPF_levels,
+        compression_stages=NPF_levels,
     ),
 ]
 
 
 @pytest.mark.parametrize('test_struct', LIST_OF_TEST_PARAMS, ids=[str(param) for param in LIST_OF_TEST_PARAMS])
-def test_can_get_compression_level(test_struct: CompressionLevelTestStruct):
-    config_provider, compression_levels = test_struct.config_provider, test_struct.compression_levels
+def test_can_get_compression_stage(test_struct: CompressionStageTestStruct):
+    config_provider, compression_stages = test_struct.config_provider, test_struct.compression_stages
     model = BasicConvTestModel()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config_provider.create())
     compression_scheduler = compression_ctrl.scheduler
-    assert compression_ctrl.compression_level() == compression_levels[0]
+    assert compression_ctrl.compression_stage() == compression_stages[0]
 
     compression_scheduler.epoch_step()
-    assert compression_ctrl.compression_level() == compression_levels[0]
+    assert compression_ctrl.compression_stage() == compression_stages[0]
 
     compression_scheduler.epoch_step()
-    assert compression_ctrl.compression_level() == compression_levels[1]
+    assert compression_ctrl.compression_stage() == compression_stages[1]
 
     compression_scheduler.epoch_step()
-    assert compression_ctrl.compression_level() == compression_levels[2]
+    assert compression_ctrl.compression_stage() == compression_stages[2]
 
 
 @pytest.mark.parametrize(('src', 'dst', 'ref'),
-                         (
-                             (CompressionLevel.NONE, CompressionLevel.NONE, CompressionLevel.NONE),
-                             (CompressionLevel.PARTIAL, CompressionLevel.PARTIAL, CompressionLevel.PARTIAL),
-                             (CompressionLevel.FULL, CompressionLevel.FULL, CompressionLevel.FULL),
-                             (CompressionLevel.NONE, CompressionLevel.PARTIAL, CompressionLevel.PARTIAL),
-                             (CompressionLevel.NONE, CompressionLevel.FULL, CompressionLevel.PARTIAL),
-                             (CompressionLevel.PARTIAL, CompressionLevel.FULL, CompressionLevel.PARTIAL))
+                            (
+                             (CompressionStage.UNCOMPRESSED,
+                              CompressionStage.UNCOMPRESSED,
+                              CompressionStage.UNCOMPRESSED),
+                             (CompressionStage.PARTIALLY_COMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED),
+                             (CompressionStage.FULLY_COMPRESSED,
+                              CompressionStage.FULLY_COMPRESSED,
+                              CompressionStage.FULLY_COMPRESSED),
+                             (CompressionStage.UNCOMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED),
+                             (CompressionStage.UNCOMPRESSED,
+                              CompressionStage.FULLY_COMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED),
+                             (CompressionStage.PARTIALLY_COMPRESSED,
+                              CompressionStage.FULLY_COMPRESSED,
+                              CompressionStage.PARTIALLY_COMPRESSED)
+                              )
                          )
-def test_combo_of_compression_levels(src, dst, ref):
+def test_combo_of_compression_stages(src, dst, ref):
     assert src + dst == ref
     assert dst + src == ref
     src_c = copy.deepcopy(src)
@@ -450,7 +465,7 @@ def test_compression_loss_gpu_device_compatibility(config):
 @pytest.mark.parametrize('algo_name, target_device',
                          list(itertools.product(
                              list(COMPRESSION_ALGORITHMS.registry_dict.keys()),
-                             list([x.value for x in HWConfigType]))))
+                             list(x.value for x in HWConfigType))))
 def test_target_device_is_propagated_to_algos(mocker, algo_name, target_device):
     if algo_name == NoCompressionAlgorithmBuilder.__name__:
         pytest.skip()

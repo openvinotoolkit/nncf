@@ -17,7 +17,7 @@ from copy import deepcopy
 from pytest import approx
 from torch import nn
 
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.config import NNCFConfig
 from nncf.module_operations import UpdateWeight
 from nncf.sparsity.rb.algo import RBSparsityController
@@ -231,4 +231,4 @@ def test_create_rb_algo_with_local_sparsity_mode():
     config = get_empty_config()
     config['compression'] = {'algorithm': 'rb_sparsity', "params": {"sparsity_level_setting_mode": 'local'}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
-    assert compression_ctrl.compression_level() == CompressionLevel.FULL
+    assert compression_ctrl.compression_stage() == CompressionStage.FULLY_COMPRESSED

@@ -14,7 +14,7 @@ from typing import Dict
 from typing import Set
 
 from nncf.algo_selector import ZeroCompressionLoss
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.compression_method_api import PTCompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
@@ -93,5 +93,5 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
         for collector in self.ip_vs_collector_dict.values():
             collector.disable()
 
-    def compression_level(self) -> CompressionLevel:
-        return CompressionLevel.FULL
+    def compression_stage(self) -> CompressionStage:
+        return CompressionStage.FULLY_COMPRESSED
