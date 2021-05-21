@@ -42,8 +42,6 @@ class NNCFNode:
         node_type = self.data.get(NNCFGraph.NODE_TYPE_ATTR)
         if node_type == 'InputLayer':
             return NNCFGraphNodeType.INPUT_NODE
-        if node_type == 'OutputLayer':
-            return NNCFGraphNodeType.OUTPUT_NODE
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property

@@ -185,7 +185,7 @@ def _prepare_shape(shape):
         return [shape]
     return shape
 
-
+# pylint: disable=too-many-branches
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
     model_config = model.get_config()
     raw_nodes = Dict()
@@ -262,7 +262,8 @@ def _update_graph_with_raw_nodes(graph: Union[nx.DiGraph, NNCFGraph],
             node_name = get_expanded_node_name(original_name, i, attributes['is_shared'])
             graph.add_node(node_name, original_name=original_name, **attributes)
 
-            if attributes['is_output']:
+            if attributes['is_output'] and isinstance(graph, NNCFGraph):
+                # Aligning the structure of auxiliary output nodes is only necessary for NNCFGraph
                 output_aux_node_name = PREFIX_AUXILIARY_OUTPUT_NODE + '_{}'.format(i)
                 node_attrs = {
                     NNCFGraph.NODE_TYPE_ATTR: NNCFGraphNodeType.OUTPUT_NODE,
