@@ -11,6 +11,7 @@
  limitations under the License.
 """
 import itertools
+import os
 from collections import Counter
 from copy import deepcopy
 from pathlib import Path
@@ -666,10 +667,9 @@ class TestInsertionPointGraph:
 
         path_to_dot_file = data_dir / '{}.dot'.format(dot_file_name)
 
-        # validate .dot file manually!
-        if not path_to_dot_file.exists():
-            if not data_dir.exists():
-                data_dir.mkdir(parents=True)
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            if not os.path.exists(str(data_dir)):
+                os.makedirs(str(data_dir))
             nx.drawing.nx_pydot.write_dot(merged_ip_graph, str(path_to_dot_file))
 
         load_graph = nx.drawing.nx_pydot.read_dot(str(path_to_dot_file))
