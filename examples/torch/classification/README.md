@@ -16,7 +16,7 @@ This sample demonstrates a DL model compression in case of an image-classificati
 To work with the sample you should install the corresponding Python package dependencies
 
 ```
-pip install -r examples/requirements.txt
+pip install -r examples/torch/requirements.txt
 ```
 
 ## Quantize FP32 Pretrained Model
@@ -30,7 +30,7 @@ To prepare the ImageNet dataset, refer to the following [tutorial](https://githu
 #### Run Classification Sample
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
-- Go to the `examples/classification` folder.
+- Go to the `examples/torch/classification` folder.
 - Run the following command to start compression with fine-tuning on GPUs:
     ```
     python main.py -m train --config configs/quantization/mobilenet_v2_imagenet_int8.json --data /data/imagenet/ --log-dir=../../results/quantization/mobilenet_v2_int8/
@@ -88,7 +88,7 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
 
 #### Binarization
 
-As an example of NNCF convolution binarization capabilities, you may use the configs in `examples/classification/configs/binarization` to binarize ResNet18. Use the same steps/command line parameters as for quantization (for best results, specify `--pretrained`), except for the actual binarization config path.
+As an example of NNCF convolution binarization capabilities, you may use the configs in `examples/torch/classification/configs/binarization` to binarize ResNet18. Use the same steps/command line parameters as for quantization (for best results, specify `--pretrained`), except for the actual binarization config path.
 
 ### Results for binarization
 |Model|Compression algorithm|Dataset|PyTorch compressed accuracy|NNCF config file|PyTorch Checkpoint|

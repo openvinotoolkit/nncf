@@ -14,7 +14,7 @@ This sample demonstrates DL model compression capabilities for semantic segmenta
 To work with the sample you should install the corresponding Python package dependencies
 
 ```
-pip install -r examples/requirements.txt
+pip install -r examples/torch/requirements.txt
 ```
 
 ## Quantize FP32 pretrained model
@@ -25,7 +25,7 @@ This scenario demonstrates quantization with fine-tuning of UNet on Mapillary Vi
 
 #### Run semantic segmentation sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
-- Navigate to the `examples/segmentation` folder
+- Navigate to the `examples/torch/segmentation` folder
 - Run the following command to start compression with fine-tuning on GPUs:
 `python main.py -m train --config configs/unet_mapillary_int8.json --data <path_to_dataset> --weights <path_to_fp32_model_checkpoint>`
 

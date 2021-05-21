@@ -14,7 +14,7 @@ This sample demonstrates DL model compression capabailites for object detection 
 To work with the sample you should install the corresponding Python package dependencies
 
 ```
-pip install -r examples/requirements.txt
+pip install -r examples/torch/requirements.txt
 ```
 
 ## Quantize FP32 pretrained model
@@ -25,7 +25,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 
 #### Run object detection sample
 - If you did not install the package then add the repository root folder to the `PYTHONPATH` environment variable
-- Navigate to the `examples/object_detection` folder
+- Navigate to the `examples/torch/object_detection` folder
 - Run the following command to start compression with fine-tuning on GPUs:
 `python main.py -m train --config configs/ssd300_vgg_int8_voc.json --data <path_to_dataset> --log-dir=../../results/quantization/ssd300_int8`
 It may take a few epochs to get the baseline accuracy results.
