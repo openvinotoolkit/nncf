@@ -67,7 +67,7 @@ QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
                 'wq_total_num': 8,
                 'aq_total_num': 8,
                 'wq_potential_num': 8,
-                'aq_potential_num': 14,
+                'aq_potential_num': 15,
                 'wq_counter': {
                     'num_symmetric': 8,
                     'num_asymmetric': 0,
@@ -106,7 +106,7 @@ QUANTIZATION_SHARE_AND_BITWIDTH_DISTR_STATS_TEST_CASES = [
                 'wq_total_num': 8,
                 'aq_total_num': 8,
                 'wq_potential_num': 8,
-                'aq_potential_num': 14,
+                'aq_potential_num': 15,
                 'wq_counter': {
                     'num_symmetric': 8,
                     'num_asymmetric': 0,
