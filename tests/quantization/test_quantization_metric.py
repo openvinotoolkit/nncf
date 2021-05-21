@@ -244,8 +244,8 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
         target_device='TRIAL',
         expected={
             'quantization_configuration_statistics': {
-                'quantized_edges_in_cfg': 169,
-                'total_edges_in_cfg': 170
+                'quantized_edges_in_cfg': 176,
+                'total_edges_in_cfg': 177
             }
         }
     ),
@@ -264,8 +264,8 @@ QUANTIZATION_CONFIGURATION_STATS_TEST_CASES = [
         target_device='TRIAL',
         expected={
             'quantization_configuration_statistics': {
-                'quantized_edges_in_cfg': 166,
-                'total_edges_in_cfg': 170
+                'quantized_edges_in_cfg': 173,
+                'total_edges_in_cfg': 177
             }
         }
     ),
