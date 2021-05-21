@@ -14,7 +14,6 @@
 from typing import Any, Dict, List, Optional
 
 from nncf import NNCFConfig
-from nncf.api.compression import Statistics
 from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
