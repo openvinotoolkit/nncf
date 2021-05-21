@@ -126,13 +126,13 @@ class PTOperatorSubtype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class InputNoopMetatype(PTOperatorMetatype):
     name = "input_noop"
-    external_op_names = [name, MODEL_INPUT_OP_NAME, NNCFGraphNodeType.INPUT_NODE]
+    external_op_names = [name, NNCFGraphNodeType.INPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()
 class OutputNoopMetatype(PTOperatorMetatype):
     name = "output_noop"
-    external_op_names = [name,  MODEL_OUTPUT_OP_NAME, NNCFGraphNodeType.OUTPUT_NODE]
+    external_op_names = [name, NNCFGraphNodeType.OUTPUT_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()

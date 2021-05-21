@@ -63,8 +63,8 @@ class NNCFNode:
 
 
 class NNCFGraphNodeType:
-    INPUT_NODE = 'input_node'
-    OUTPUT_NODE = 'output_node'
+    INPUT_NODE = MODEL_INPUT_OP_NAME
+    OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
 
 
 class NNCFGraph:

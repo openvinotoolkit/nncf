@@ -81,10 +81,6 @@ class PTNNCFNode(NNCFNode):
     @property
     def node_type(self):
         if self.ia_op_exec_context:
-            if self.ia_op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
-                return NNCFGraphNodeType.INPUT_NODE
-            if self.ia_op_exec_context.operator_name == MODEL_OUTPUT_OP_NAME:
-                return NNCFGraphNodeType.OUTPUT_NODE
             return self.ia_op_exec_context.operator_name
         return None
 
