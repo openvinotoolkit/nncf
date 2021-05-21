@@ -22,6 +22,8 @@ from typing import Any, Callable, Dict, Set, Tuple, Type
 import networkx as nx
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.quantization.structs import QuantizableModule
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerGroup

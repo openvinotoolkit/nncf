@@ -185,7 +185,7 @@ def _prepare_shape(shape):
         return [shape]
     return shape
 
-# pylint: disable=too-many-branches
+
 def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
     model_config = model.get_config()
     raw_nodes = Dict()
@@ -196,6 +196,10 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
         data_format = layer['config'].get('data_format')
         model_layer = model.get_layer(layer_name)
 
+        is_output = False
+        # pylint: disable=protected-access
+        if model_layer in model._output_layers:
+            is_output = True
         if layer['inbound_nodes']:
             is_shared = len(layer['inbound_nodes']) > 1
             for i, inbound_node in enumerate(layer['inbound_nodes']):
@@ -218,10 +222,8 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
                         parent_instance['out_ports'].add(parent_out_ports)
                     else:
                         parent_instance['out_ports'] = {parent_out_ports}
-                # pylint: disable=protected-access
-                if model_layer in model._output_layers:
-                    instance['is_output'] = True
-                    instance['output_shape'] = _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
+                instance['is_output'] = is_output
+                instance['output_shape'] = _prepare_shape(model_layer.inbound_nodes[i].output_shapes)
         else:
             instance = raw_nodes[layer_name][0]
             instance['type'] = layer_type
@@ -233,10 +235,8 @@ def _prepare_raw_nodes(model: tf.keras.Model) -> Dict:
             if layer_type in GENERAL_CONV_LAYERS:
                 module_attributes = _get_module_attributes(model_layer, instance)
                 instance.update({NNCFGraph.MODULE_ATTRIBUTES: module_attributes})
-            # pylint: disable=protected-access
-            if model_layer in model._output_layers:
-                instance['is_output'] = True
-                instance['output_shape'] = _prepare_shape(model_layer.output_shape)
+            instance['is_output'] = is_output
+            instance['output_shape'] = _prepare_shape(model_layer.output_shape)
 
     outputs = model_config['output_layers']
     raw_nodes = _process_outputs(outputs, raw_nodes)

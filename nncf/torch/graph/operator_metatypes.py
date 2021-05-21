@@ -14,9 +14,7 @@
 from copy import copy
 from typing import List, Optional, Type
 
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME, NNCFGraphNodeType
-
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import NNCFGraphNodeType
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry

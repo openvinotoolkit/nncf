@@ -28,12 +28,11 @@ from nncf.common.graph.graph import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.module_attributes import BaseModuleAttributes
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.torch.graph.graph_matching import Expression
 from nncf.torch.graph.graph_matching import NodeExpression
 from nncf.torch.graph.graph_matching import get_edge_boundaries
 from nncf.torch.graph.graph_matching import search_all
+
 
 
 # pylint: disable=too-many-public-methods
