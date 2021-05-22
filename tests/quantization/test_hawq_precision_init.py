@@ -39,30 +39,30 @@ from examples.classification.main import create_cifar
 from examples.common.sample_config import SampleConfig
 from examples.object_detection.models.ssd_vgg import SSD_VGG
 from nncf import register_default_init_args
-from nncf.checkpoint_loading import load_state
-from nncf.debug import set_debug_log_dir
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.debug import set_debug_log_dir
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.common.hardware.config import HWConfigType
-from nncf.initialization import default_criterion_fn
-from nncf.quantization.adjust_padding import add_adjust_padding_nodes
-from nncf.quantization.hessian_trace import HessianTraceEstimator
-from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.layers import QuantizerConfig
-from nncf.quantization.layers import QuantizersSwitcher
-from nncf.quantization.precision_init.compression_ratio import CompressionRatioCalculator
-from nncf.quantization.precision_init.hawq_debug import HAWQDebugger
-from nncf.quantization.precision_init.hawq_init import BitwidthAssignmentMode
-from nncf.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
-from nncf.quantization.precision_init.hawq_init import TraceOrderBitwidthMatcher
-from nncf.quantization.precision_init.perturbations import PerturbationObserver
-from nncf.quantization.precision_init.perturbations import Perturbations
-from nncf.quantization.precision_init.traces_order import TracesOrder
-from nncf.quantization.precision_init.traces_order import TracesPerLayer
-from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.structures import QuantizationPrecisionInitArgs
-from nncf.utils import get_all_modules_by_type
-from nncf.utils import safe_thread_call
+from nncf.torch.initialization import default_criterion_fn
+from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
+from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import QuantizerConfig
+from nncf.torch.quantization.layers import QuantizersSwitcher
+from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
+from nncf.torch.quantization.precision_init.hawq_debug import HAWQDebugger
+from nncf.torch.quantization.precision_init.hawq_init import BitwidthAssignmentMode
+from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitializer
+from nncf.torch.quantization.precision_init.hawq_init import TraceOrderBitwidthMatcher
+from nncf.torch.quantization.precision_init.perturbations import PerturbationObserver
+from nncf.torch.quantization.precision_init.perturbations import Perturbations
+from nncf.torch.quantization.precision_init.traces_order import TracesOrder
+from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
+from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.torch.structures import QuantizationPrecisionInitArgs
+from nncf.torch.utils import get_all_modules_by_type
+from nncf.torch.utils import safe_thread_call
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
@@ -352,7 +352,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
     config = register_default_init_args(config, train_loader, criterion)
 
-    mocked_trace = mocker.patch('nncf.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
+    mocked_trace = mocker.patch('nncf.torch.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
     pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
@@ -456,7 +456,7 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
         param.requires_grad = False
     first_conv = next(iter(get_all_modules_by_type(model, 'Conv2d').values()))
     first_conv.weight.requires_grad = True
-    ph_import = 'nncf.quantization.hessian_trace.ParameterHandler'
+    ph_import = 'nncf.torch.quantization.hessian_trace.ParameterHandler'
     sample_rademacher_patch = mocker.patch(f'{ph_import}.sample_rademacher_like_params', autospec=True)
     sample_normal_patch = mocker.patch(f'{ph_import}.sample_normal_like_params', autospec=True)
 
@@ -611,14 +611,15 @@ def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_be
                                                                  criterion=mocker.stub(),
                                                                  data_loader=mock_train_loader,
                                                                  device=device)])
-    mocker.patch('nncf.quantization.algo.QuantizationController.run_batchnorm_adaptation')
+    mocker.patch('nncf.torch.quantization.algo.QuantizationController.run_batchnorm_adaptation')
     mocked_calc_traces = mocker.patch(
-        'nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
+        'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer._calc_traces')
     stub = mocker.stub()
     stub.traces_order = TracesOrder([0])
     mocked_calc_traces.return_value = stub
 
-    mocked_method = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.' + method_name)
+    mocked_method = mocker.patch(
+        'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.' + method_name)
     mocked_method.return_value = None
 
     with expected_behavior:
@@ -764,7 +765,7 @@ RATIO_CALCULATOR_TEST_DESCS = [
 @pytest.mark.parametrize('desc', RATIO_CALCULATOR_TEST_DESCS, ids=map(str, RATIO_CALCULATOR_TEST_DESCS))
 def test_compression_ratio(desc, mocker):
     config = desc.create_config()
-    from nncf.quantization.algo import QuantizationBuilder
+    from nncf.torch.quantization.algo import QuantizationBuilder
     get_qsetyp_spy = mocker.spy(QuantizationBuilder, '_get_quantizer_setup')
     model, ctrl = create_compressed_model_and_algo_for_test(ConvLinear(), config)
 

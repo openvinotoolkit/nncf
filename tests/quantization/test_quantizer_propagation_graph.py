@@ -27,18 +27,18 @@ import pytest
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.graph import NNCFGraph
-from nncf.graph.operator_metatypes import CatMetatype
-from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.nncf_network import InsertionPointGraph
-from nncf.quantization.quantizer_propagation import PropagationPath
-from nncf.quantization.quantizer_propagation import QuantizationTrait
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
-from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.torch.graph.graph import NNCFGraph
+from nncf.torch.graph.operator_metatypes import CatMetatype
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.nncf_network import InsertionPointGraph
+from nncf.torch.quantization.quantizer_propagation import PropagationPath
+from nncf.torch.quantization.quantizer_propagation import QuantizationTrait
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
+from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.test_nncf_network import get_mock_nncf_node_attrs
 from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import get_two_branch_mock_model_graph

@@ -2,8 +2,8 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.common.utils.logger import logger as nncf_logger
-from nncf.structures import QuantizationRangeInitArgs
-from nncf.utils import get_all_modules_by_type
+from nncf.torch.structures import QuantizationRangeInitArgs
+from nncf.torch.utils import get_all_modules_by_type
 from tests.helpers import TwoConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import create_ones_mock_dataloader

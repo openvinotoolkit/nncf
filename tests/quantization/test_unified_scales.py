@@ -23,11 +23,11 @@ from onnx import numpy_helper
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfigType
-from nncf.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.quantization.layers import AsymmetricQuantizer
-from nncf.quantization.quantizer_id import NonWeightQuantizerId
-from nncf.quantization.quantizer_propagation import QuantizerPropagationSolver
+from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationSolver
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_nodes_by_type
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init

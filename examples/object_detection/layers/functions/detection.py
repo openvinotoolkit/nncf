@@ -14,8 +14,8 @@
 import torch
 from torch import nn
 
-from nncf.utils import no_jit_trace, add_domain
-from nncf.dynamic_graph.context import no_nncf_trace
+from nncf.torch.utils import no_jit_trace, add_domain
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 from ..box_utils import decode, nms
 

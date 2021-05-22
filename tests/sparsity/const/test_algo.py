@@ -14,10 +14,10 @@ import pytest
 import torch
 from copy import deepcopy
 
-from nncf.checkpoint_loading import load_state
-from nncf.module_operations import UpdateWeight
-from nncf.sparsity.const.algo import ConstSparsityController
-from nncf.sparsity.layers import BinaryMask
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.const.algo import ConstSparsityController
+from nncf.torch.sparsity.layers import BinaryMask
 from tests.quantization.test_functions import check_equal
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel
 from tests.helpers import BasicConvTestModel, get_empty_config, create_compressed_model_and_algo_for_test, \

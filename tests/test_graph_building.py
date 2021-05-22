@@ -19,13 +19,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from nncf import nncf_model_input
-from nncf.graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.dynamic_graph.context import get_current_context
-from nncf.dynamic_graph.context import no_nncf_trace
-from nncf.dynamic_graph.context import TracingContext
-from nncf.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.context import get_current_context
+from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.graph.graph_builder import GraphBuilder
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_compressed_graph import get_basic_quantization_config
 
@@ -74,8 +74,8 @@ def test_ambiguous_function():
 
 
 def test_forward_trace_functor():
-    from nncf.dynamic_graph.patch_pytorch import ForwardTraceOnly
-    from nncf.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
+    from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
+    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
 
     func = ForwardTraceOnly()
     shape1, shape2 = ([32, 1, 4, 8], [1, 8, 12, 16])

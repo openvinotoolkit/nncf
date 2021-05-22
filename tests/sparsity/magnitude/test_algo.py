@@ -17,10 +17,10 @@ from copy import deepcopy
 from pytest import approx
 
 from nncf.api.compression import CompressionStage
-from nncf.module_operations import UpdateWeight
-from nncf.sparsity.layers import BinaryMask
-from nncf.sparsity.magnitude.algo import MagnitudeSparsityController
-from nncf.sparsity.magnitude.functions import normed_magnitude
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.layers import BinaryMask
+from nncf.torch.sparsity.magnitude.algo import MagnitudeSparsityController
+from nncf.torch.sparsity.magnitude.functions import normed_magnitude
 from tests.quantization.test_functions import check_equal
 from tests.sparsity.const.test_algo import ref_mask_2, ref_mask_1
 from tests.sparsity.magnitude.test_helpers import MagnitudeTestModel, get_basic_magnitude_sparsity_config

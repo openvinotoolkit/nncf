@@ -35,7 +35,7 @@ from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode, \
     prepare_model_for_execution, start_worker
 from nncf.api.compression import CompressionStage
-from nncf.initialization import register_default_init_args
+from nncf.torch.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
@@ -46,7 +46,7 @@ from examples.semantic_segmentation.test import Test
 from examples.semantic_segmentation.train import Train
 from examples.semantic_segmentation.utils.checkpoint import save_checkpoint
 from nncf import create_compressed_model
-from nncf.utils import is_main_process
+from nncf.torch.utils import is_main_process
 
 
 def get_arguments_parser():

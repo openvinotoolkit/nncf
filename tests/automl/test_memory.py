@@ -18,7 +18,7 @@
 
 import numpy as np
 from numpy.testing import assert_allclose
-from nncf.automl.agent.ddpg.memory import Memory, SequentialMemory
+from nncf.torch.automl.agent.ddpg.memory import Memory, SequentialMemory
 
 
 WINDOW_LENGTH = 5

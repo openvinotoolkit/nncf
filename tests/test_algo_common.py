@@ -25,12 +25,12 @@ from torch import nn
 from torch.nn import DataParallel
 
 from nncf import NNCFConfig
-from nncf.algo_selector import COMPRESSION_ALGORITHMS
-from nncf.algo_selector import NoCompressionAlgorithmBuilder
+from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
+from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.api.compression import CompressionStage
-from nncf.checkpoint_loading import load_state
+from nncf.torch.checkpoint_loading import load_state
 from nncf.common.hardware.config import HWConfigType
-from nncf.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
+from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 from tests.helpers import BasicConvTestModel
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_empty_config

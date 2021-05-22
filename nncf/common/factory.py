@@ -17,7 +17,7 @@ from nncf.api.compression import ModelType
 from nncf.common.exporter import Exporter
 from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
-    from nncf.exporter import PTExporter
+    from nncf.torch.exporter import PTExporter
 elif __nncf_backend__ == 'TensorFlow':
     from beta.nncf.tensorflow.exporter import TFExporter
 

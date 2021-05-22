@@ -13,12 +13,12 @@
 
 import torch
 
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
 from nncf.common.hardware.config import HWConfig
-from nncf.nncf_network import  NNCFNetwork
-from nncf.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
-from nncf.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
+from nncf.torch.nncf_network import  NNCFNetwork
+from nncf.torch.quantization.algo import QuantizationBuilder, QuantizationController, QuantizerSetupGeneratorBase
+from nncf.torch.quantization.layers import SymmetricQuantizer, AsymmetricQuantizer, BaseQuantizer
 from nncf.common.quantization.structs import QuantizationMode
 
 from tests.quantization.test_quantization_helpers import get_quantization_config_without_range_init

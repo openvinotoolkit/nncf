@@ -4,7 +4,7 @@ import onnxruntime as rt
 import torch
 import torch.nn as nn
 
-from nncf.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
+from nncf.torch.quantization.layers import PTQuantizerSpec, QuantizationMode, SymmetricQuantizer, AsymmetricQuantizer
 from tests.helpers import TwoConvTestModel, create_compressed_model_and_algo_for_test, create_conv, get_nodes_by_type, \
     get_all_inputs_for_graph_node
 from tests.quantization.test_onnx_export import get_config_for_export_mode

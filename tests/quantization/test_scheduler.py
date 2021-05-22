@@ -15,10 +15,10 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from nncf import register_default_init_args
-from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.quantization.algo import QuantizationControllerBase
-from nncf.quantization.schedulers import StagedQuantizationScheduler
-from nncf.structures import QuantizationRangeInitArgs
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.quantization.algo import QuantizationControllerBase
+from nncf.torch.quantization.schedulers import StagedQuantizationScheduler
+from nncf.torch.structures import QuantizationRangeInitArgs
 from tests.helpers import create_compressed_model_and_algo_for_test, OnesDatasetMock
 from tests.quantization.test_algo_quantization import get_squeezenet_quantization_config
 from tests.test_models import squeezenet1_1

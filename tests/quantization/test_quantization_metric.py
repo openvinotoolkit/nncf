@@ -5,9 +5,9 @@ from pytest import approx
 
 from nncf import NNCFConfig
 from nncf import create_compressed_model
-from nncf.quantization.metrics import MemoryCostMetric
-from nncf.quantization.metrics import NetworkQuantizationShareMetric as NQSM
-from nncf.quantization.metrics import ShareEdgesQuantizedDataPath
+from nncf.torch.quantization.metrics import MemoryCostMetric
+from nncf.torch.quantization.metrics import NetworkQuantizationShareMetric as NQSM
+from nncf.torch.quantization.metrics import ShareEdgesQuantizedDataPath
 from tests import test_models
 
 

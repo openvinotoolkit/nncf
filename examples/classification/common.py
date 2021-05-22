@@ -1,7 +1,7 @@
 import torch.backends.cudnn as cudnn
 
 from examples.common.model_loader import load_resuming_model_state_dict_and_checkpoint_from_path
-from nncf.utils import manual_seed
+from nncf.torch.utils import manual_seed
 
 
 def set_seed(config):

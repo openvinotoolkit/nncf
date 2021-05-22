@@ -16,8 +16,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from nncf import register_default_init_args, NNCFConfig
-from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
+from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder, TensorStatisticsCollectionController
 
 from tests.helpers import TwoConvTestModel, BasicConvTestModel, create_compressed_model_and_algo_for_test, \
     OnesDatasetMock
@@ -88,15 +88,16 @@ def test_range_init_is_called(nncf_config_with_default_init_args,
     config = nncf_config_with_default_init_args
     model = BasicConvTestModel()
 
-    _ = mocker.patch('nncf.initialization.SimpleDataLoaderRunner.run')
+    _ = mocker.patch('nncf.torch.initialization.SimpleDataLoaderRunner.run')
     stat_builder_apply_to_spy = mocker.spy(TensorStatisticsCollectionBuilder, 'apply_to')
     stat_builder_build_controller_mm = mocker.patch(
-        'nncf.tensor_statistics.algo.TensorStatisticsCollectionBuilder.build_controller')
+        'nncf.torch.tensor_statistics.algo.TensorStatisticsCollectionBuilder.build_controller')
     stat_builder_build_controller_mm.return_value = TensorStatisticsCollectionController(None, {})
 
-    precision_init_spy = mocker.patch('nncf.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init',
-                                      autospec=True)  # autospec=True will patch the function as an instance method
-    bn_adaptation_spy = mocker.patch('nncf.initialization.DataLoaderBNAdaptationRunner.run')
+    precision_init_spy = mocker.patch(
+        'nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init',
+        autospec=True)  # autospec=True will patch the function as an instance method
+    bn_adaptation_spy = mocker.patch('nncf.torch.initialization.DataLoaderBNAdaptationRunner.run')
 
     #pylint:disable=protected-access
     def fn(self) -> SingleConfigQuantizerSetup:

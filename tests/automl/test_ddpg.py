@@ -15,8 +15,9 @@ import pytest
 import torch
 import numpy as np
 from torch.backends import cudnn
-from nncf.utils import manual_seed
-from nncf.automl.agent.ddpg.ddpg import DDPG
+
+from nncf.torch.utils import manual_seed
+from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 
 STUB = 0
 N_STATE = 5
@@ -106,7 +107,7 @@ TEST_REFERENCES = [
 def test_update_policy(test_vector, mocker, _seed):
     batch_size, discount, is_movingavg, ref_policy_loss, ref_value_loss = test_vector.values()
 
-    mocked_trace = mocker.patch('nncf.automl.agent.ddpg.memory.SequentialMemory.sample_and_split')
+    mocked_trace = mocker.patch('nncf.torch.automl.agent.ddpg.memory.SequentialMemory.sample_and_split')
     # state_batch, action_batch, reward_batch, next_state_batch, terminal_batch
     mocked_trace.return_value = (
         np.ones((batch_size, N_STATE)),

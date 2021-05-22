@@ -19,10 +19,10 @@ from torch import nn
 
 from nncf.api.compression import CompressionStage
 from nncf.config import NNCFConfig
-from nncf.module_operations import UpdateWeight
-from nncf.sparsity.rb.algo import RBSparsityController
-from nncf.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.rb.algo import RBSparsityController
+from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
+from nncf.torch.sparsity.rb.loss import SparseLoss, SparseLossForPerLayerSparsity
 from nncf.common.sparsity.schedulers import PolynomialSparsityScheduler
 from tests.helpers import MockModel, BasicConvTestModel, TwoConvTestModel, create_compressed_model_and_algo_for_test, \
     check_correct_nncf_modules_replacement, get_empty_config

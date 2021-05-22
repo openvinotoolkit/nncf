@@ -21,37 +21,37 @@ from typing import Tuple
 import networkx as nx
 import pytest
 import torch
-from nncf.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
 
-from nncf.graph.graph import PTNNCFGraph
-from nncf.graph.graph_builder import GraphBuilder
-from nncf.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
-from nncf.graph.operator_metatypes import ReshapeMetatype
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.operator_metatypes import InputNoopMetatype, OutputNoopMetatype
+from nncf.torch.graph.operator_metatypes import ReshapeMetatype
 from torch import nn
 
 from nncf import register_module
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.dynamic_graph.context import PreHookId
-from nncf.dynamic_graph.context import Scope
-from nncf.graph.graph import PTNNCFNode
-from nncf.graph.graph import NNCFGraph
-from nncf.graph.graph import NNCFNode
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.graph.transformations.layout import PTTransformationLayout
+from nncf.torch.dynamic_graph.context import PreHookId
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.graph.graph import PTNNCFNode
+from nncf.torch.graph.graph import NNCFGraph
+from nncf.torch.graph.graph import NNCFNode
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
-from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
-from nncf.layer_utils import _NNCFModuleMixin
-from nncf.module_operations import BaseOp
-from nncf.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
-from nncf.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
-from nncf.graph.transformations.commands import TransformationPriority
-from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.graph.transformations.commands import PTInsertionCommand
-from nncf.nncf_network import PTInsertionPoint
-from nncf.nncf_network import PTInsertionType
-from nncf.nncf_network import PTModelTransformer
-from nncf.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
+from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.module_operations import BaseOp
+from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+from nncf.torch.nncf_network import NNCFNetwork, InsertionPointGraph, InsertionPointGraphNodeType
+from nncf.torch.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.nncf_network import PTInsertionPoint
+from nncf.torch.nncf_network import PTInsertionType
+from nncf.torch.nncf_network import PTModelTransformer
+from nncf.torch.quantization.node_matcher import PTOperatorMetatypeNodeMatcher
 from tests.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.conftest import TEST_ROOT
 from tests.helpers import BasicConvTestModel
@@ -131,7 +131,7 @@ def test_custom_module_registering():
     model = TwoConvTestModelWithUserModule()
     nncf_model = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])  # type: NNCFNetwork
 
-    from nncf.layers import UNWRAPPED_USER_MODULES
+    from nncf.torch.layers import UNWRAPPED_USER_MODULES
     assert ModuleOfUser in UNWRAPPED_USER_MODULES.registry_dict.values()
 
     # pylint: disable=protected-access
@@ -598,7 +598,7 @@ class TestInsertionPointGraph:
                 assert pre_hook_ip.ia_op_exec_context == nncf_node.ia_op_exec_context
 
     def test_operator_metatype_marking(self):
-        from nncf.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
+        from nncf.torch.graph.operator_metatypes import Conv2dMetatype, BatchNormMetatype, RELUMetatype, \
             MaxPool2dMetatype, \
             ConvTranspose2dMetatype, DepthwiseConv2dSubtype, AddMetatype, AvgPool2dMetatype, LinearMetatype
         ref_scope_vs_metatype_dict = {

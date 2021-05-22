@@ -15,11 +15,11 @@ import torch
 import numpy as np
 
 from examples.common.optimizer import make_optimizer, get_parameter_groups
-from nncf.module_operations import UpdateWeight
-from nncf.pruning.filter_pruning.algo import FilterPruningController
-from nncf.pruning.filter_pruning.functions import l2_filter_norm
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock
-from nncf.pruning.filter_pruning.layers import apply_filter_binary_mask
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.pruning.filter_pruning.algo import FilterPruningController
+from nncf.torch.pruning.filter_pruning.functions import l2_filter_norm
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock
+from nncf.torch.pruning.filter_pruning.layers import apply_filter_binary_mask
 from nncf.common.pruning.schedulers import BaselinePruningScheduler
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import check_correct_nncf_modules_replacement

@@ -195,8 +195,8 @@ def test_can_resume_with_manual_init(mocker):
     config['target_device'] = 'TRIAL'
     config['compression']["activations"] = {"bits": 6}
 
-    from nncf.quantization.algo import QuantizationBuilder, QuantizationController
-    from nncf.quantization.precision_init.manual_init import ManualPrecisionInitializer
+    from nncf.torch.quantization.algo import QuantizationBuilder, QuantizationController
+    from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitializer
     parse_range_init = mocker.spy(QuantizationBuilder, '_parse_range_init_params')
     get_stats = mocker.spy(QuantizationBuilder, '_get_statistics_for_final_range_init')
     run_bn_adapt = mocker.spy(QuantizationController, 'run_batchnorm_adaptation')
