@@ -29,9 +29,13 @@ def extract_bn_adaptation_init_params(config: NNCFConfig) -> Dict[str, object]:
     params = config.get('initializer', {}).get('batchnorm_adaptation', {})
 
     try:
-        extra_config = config.get_extra_struct(BNAdaptationInitArgs)
+        args = config.get_extra_struct(BNAdaptationInitArgs)
     except KeyError:
-        extra_config = None
+        raise RuntimeError(
+            'Could not extract parameters for the creation of the batchnorm '
+            'adaptation algorithm because extra struct is not provided. '
+            'Refer to the `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class.') from None
 
-    params['extra_config'] = extra_config
+    params['data_loader'] = args.data_loader
+    params['device'] = args.device
     return params

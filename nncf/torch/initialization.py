@@ -10,9 +10,10 @@ from functools import partial
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from nncf.config.structure import BNAdaptationInitArgs
 from nncf.common.utils.progress_bar import ProgressBar
+from nncf.common.initialization import NNCFDataLoader
 from nncf.torch.structures import AutoQPrecisionInitArgs
-from nncf.torch.structures import PTBNAdaptationInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.structures import QuantizationRangeInitArgs
 from nncf.torch.utils import is_tensor
@@ -20,7 +21,7 @@ from nncf.torch.utils import objwalk
 from contextlib import contextmanager
 
 
-class InitializingDataLoader:
+class InitializingDataLoader(NNCFDataLoader):
     """
     This class wraps the torch.utils.data.DataLoader class,
     and defines methods to parse the general data loader output to
@@ -29,20 +30,18 @@ class InitializingDataLoader:
     certain compression algorithms.
     """
 
-    def __init__(self, regular_data_loader):
-        self.data_loader = regular_data_loader
-        self.batch_size = regular_data_loader.batch_size
+    def __init__(self, data_loader: DataLoader):
+        self._data_loader = data_loader
+
+    @property
+    def batch_size(self):
+        return self._data_loader.batch_size
 
     def __iter__(self):
-        self.data_loader_iter = iter(self.data_loader)
-        return self
-
-    def __next__(self) -> Any:
-        loaded_item = next(self.data_loader_iter)
-        return loaded_item
+        return iter(self._data_loader)
 
     def __len__(self):
-        return len(self.data_loader)
+        return len(self._data_loader)
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
         """Returns (args, kwargs) for the current model call to be made during the initialization process"""
@@ -255,8 +254,8 @@ def register_default_init_args(nncf_config: 'NNCFConfig',
                                device: str = None) -> 'NNCFConfig':
     nncf_config.register_extra_structs([QuantizationRangeInitArgs(data_loader=train_loader,
                                                                   device=device),
-                                        PTBNAdaptationInitArgs(data_loader=train_loader,
-                                                               device=device)])
+                                        BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader),
+                                                             device=device)])
 
     if criterion:
         if not criterion_fn:

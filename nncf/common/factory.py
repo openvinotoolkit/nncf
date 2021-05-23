@@ -15,7 +15,7 @@ from typing import Optional, List, Tuple, Any
 
 from nncf.api.compression import ModelType
 from nncf.common.exporter import Exporter
-from nncf.config.structure import BNAdaptationInitArgs
+from nncf.common.initialization import NNCFDataLoader
 
 from nncf.common.utils.backend import __nncf_backend__
 if __nncf_backend__ == 'Torch':
@@ -41,19 +41,22 @@ def create_exporter(model: ModelType,
     return exporter
 
 
-def create_bn_adaptation_algorithm_impl(num_bn_adaptation_samples: int,
-                                        num_bn_forget_samples: int,
-                                        extra_args: BNAdaptationInitArgs):
+def create_bn_adaptation_algorithm_impl(data_loader: NNCFDataLoader,
+                                        num_bn_adaptation_steps: int,
+                                        num_bn_forget_steps: int,
+                                        device: Optional[str] = None):
     """
     Factory for building a batchnorm adaptation algorithm implementation.
     """
     if __nncf_backend__ == 'Torch':
-        bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl(num_bn_adaptation_samples,
-                                                                          num_bn_forget_samples,
-                                                                          extra_args)
+        bn_adaptation_algorithm_impl = PTBatchnormAdaptationAlgorithmImpl(data_loader,
+                                                                          num_bn_adaptation_steps,
+                                                                          num_bn_forget_steps,
+                                                                          device)
     elif __nncf_backend__ == 'Tensorflow':
-        bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(num_bn_adaptation_samples,
-                                                                          num_bn_forget_samples,
-                                                                          extra_args)
+        bn_adaptation_algorithm_impl = TFBatchnormAdaptationAlgorithmImpl(data_loader,
+                                                                          num_bn_adaptation_steps,
+                                                                          num_bn_forget_steps,
+                                                                          device)
 
     return bn_adaptation_algorithm_impl

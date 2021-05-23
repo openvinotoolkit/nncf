@@ -14,8 +14,10 @@
 from typing import Optional
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 from nncf.api.compression import ModelType
-from nncf.config.structure import BNAdaptationInitArgs
+from nncf.common.initialization import NNCFDataLoader
 import nncf.common.factory as factory
 
 
@@ -26,15 +28,17 @@ class BatchnormAdaptationAlgorithmImpl(ABC):
     """
 
     def __init__(self,
-                 num_bn_adaptation_samples: int,
-                 num_bn_forget_samples: int,
-                 extra_args: BNAdaptationInitArgs):
+                 data_loader: NNCFDataLoader,
+                 num_bn_adaptation_steps: int,
+                 num_bn_forget_steps: int,
+                 device: Optional[str] = None):
         """
         Initializes the batch-norm adaptation algorithm implementation.
         """
-        self._num_bn_adaptation_samples = num_bn_adaptation_samples
-        self._num_bn_forget_samples = num_bn_forget_samples
-        self._extra_args = extra_args
+        self._data_loader = data_loader
+        self._num_bn_adaptation_steps = num_bn_adaptation_steps
+        self._num_bn_forget_steps = num_bn_forget_steps
+        self._device = device
 
     @abstractmethod
     def run(self, model: ModelType):
@@ -53,12 +57,14 @@ class BatchnormAdaptationAlgorithm:
     """
 
     def __init__(self,
+                 data_loader: NNCFDataLoader,
                  num_bn_adaptation_samples: int = 2000,
                  num_bn_forget_samples: int = 1000,
-                 extra_args: Optional[BNAdaptationInitArgs] = None):
+                 device: Optional[str] = None):
         """
         Initializes the batch-norm adaptation algorithm.
 
+        :param data_loader: NNCF data loader.
         :param num_bn_adaptation_samples: Number of samples from the training
             dataset to pass through the model at initialization in order to update
             batchnorm statistics of the original model. The actual number of samples
@@ -68,14 +74,18 @@ class BatchnormAdaptationAlgorithm:
             statistics of the original model (using large momentum value for rolling
             mean updates). The actual number of samples will be a closest multiple of
             the batch size.
-        :param extra_args: Additional parameters for initialization.
+        :param device:
         """
         if num_bn_adaptation_samples <= 0:
             raise ValueError('Number of adaptation samples must be > 0')
 
-        self._impl = factory.create_bn_adaptation_algorithm_impl(num_bn_adaptation_samples,
-                                                                 num_bn_forget_samples,
-                                                                 extra_args)
+        num_bn_adaptation_steps = np.ceil(num_bn_adaptation_samples / data_loader.batch_size)
+        num_bn_forget_steps = np.ceil(num_bn_forget_samples / data_loader.batch_size)
+
+        self._impl = factory.create_bn_adaptation_algorithm_impl(data_loader,
+                                                                 num_bn_adaptation_steps,
+                                                                 num_bn_forget_steps,
+                                                                 device)
 
     def run(self, model: ModelType):
         """
