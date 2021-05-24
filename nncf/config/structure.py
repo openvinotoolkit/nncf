@@ -37,6 +37,16 @@ class BNAdaptationInitArgs(NNCFExtraConfigStruct):
         :param device: Device to perform initialization at. Either 'cpu', 'cuda', or None (default); if None, will
             use the device of the model's parameters.
         """
+        self._data_loader = data_loader
+        self._device = device
+
+    @property
+    def data_loader(self) -> NNCFDataLoader:
+        return self._data_loader
+
+    @property
+    def device(self) -> str:
+        return self._device
 
     @classmethod
     def get_id(cls) -> str:

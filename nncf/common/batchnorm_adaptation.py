@@ -77,8 +77,8 @@ class BatchnormAdaptationAlgorithm:
             the batch size.
         :param device:
         """
-        if num_bn_adaptation_samples <= 0:
-            raise ValueError('Number of adaptation samples must be > 0')
+        if num_bn_adaptation_samples < 0:
+            raise ValueError('Number of adaptation samples must be >= 0')
 
         self._impl = None
         if data_loader:
