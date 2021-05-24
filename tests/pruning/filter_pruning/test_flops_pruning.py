@@ -103,8 +103,8 @@ def test_flops_calulation_for_spec_layers(model, all_weights, ref_full_flops, re
     assert compression_ctrl.full_flops == ref_full_flops
     assert compression_ctrl.current_flops == ref_current_flops
 
-    for i in range(len(ref_sizes)):
+    for i, ref_size in enumerate(ref_sizes):
         node = getattr(compressed_model, f"conv{i+1}")
         op = list(node.pre_ops.values())[0]
         mask = op.operand.binary_filter_pruning_mask
-        assert int(sum(mask)) == ref_sizes[i]
+        assert int(sum(mask)) == ref_size

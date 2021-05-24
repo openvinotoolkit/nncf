@@ -21,8 +21,8 @@ from tests.helpers import create_depthwise_conv
 
 
 class PruningTestModel(nn.Module):
-    CONV_SCOPE_1 = "1 PruningTestModel/NNCFConv2d[conv1]/conv2d"
-    CONV_SCOPE_2 = "3 PruningTestModel/NNCFConv2d[conv2]/conv2d"
+    CONV_SCOPE_1 = "1 PruningTestModel/NNCFConv2d[conv1]/conv2d_0"
+    CONV_SCOPE_2 = "3 PruningTestModel/NNCFConv2d[conv2]/conv2d_0"
     def __init__(self):
         super().__init__()
         self.conv1 = create_conv(1, 3, 2, 9, -2)

@@ -398,3 +398,8 @@ class Command(BaseCommand):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()  # See runs_subprocess_in_precommit for more info on why this is needed
         return super().run(timeout, assert_returncode_zero)
+
+
+def module_scope_from_node_name(name):
+    module_name = name.rsplit('/', 1)[0].split(' ', 1)[1]
+    return Scope.from_str(module_name)
