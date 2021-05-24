@@ -242,4 +242,4 @@ class StubCompressionScheduler(CompressionScheduler):
         pass
 
     def get_state(self) -> Dict[str, object]:
-        pass
+        return {}

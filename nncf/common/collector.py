@@ -11,20 +11,18 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
+from abc import ABC, abstractmethod
 
-import tensorflow as tf
-
-from nncf.api.compression import CompressionLoss
+from nncf.api.statistics import Statistics
 
 
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
+class StatisticsCollector(ABC):
+    """
+    Encapsulates the logic of the statistics collection.
+    """
 
-    def load_state(self, state: Dict[str, object]) -> None:
-        pass
-
-    def get_state(self) -> Dict[str, object]:
-        return {}
+    @abstractmethod
+    def collect(self) -> Statistics:
+        """
+        Collects statistics. The logic of the statistics collection should be implemented here.
+        """

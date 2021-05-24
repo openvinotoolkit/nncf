@@ -15,6 +15,7 @@ from typing import List
 import os
 import pytest
 
+from nncf.common.quantization.statistics import BitwidthDistributionStatistics
 from examples.common.model_loader import load_model
 from nncf import NNCFConfig
 from nncf import register_default_init_args
@@ -56,28 +57,48 @@ class ManualTestConfigTestParams(ManualConfigTestParamsBase):
 
 
 MANUAL_CONFIG_TEST_PARAMS = [
-    ManualSampleConfigTestParams(name="mobilenet_v2_imagenet_mixed_int_manual.json",
-                                 bit_stats=[['8', '23.077', '23.932', '47.009'],
-                                            ['4', '22.222', '30.769', '52.991']]),
-    ManualSampleConfigTestParams(name="mobilenet_v2_imagenet_mixed_int_manual_staged.json",
-                                 bit_stats=[['8', '23.077', '24.786', '47.863'],
-                                            ['4', '22.222', '29.915', '52.137']]),
-    ManualSampleConfigTestParams(name="resnet50_imagenet_mixed_int_manual.json",
-                                 bit_stats=[['8', '21.600', '23.200', '44.800'],
-                                            ['4', '21.600', '33.600', '55.200']]),
-    ManualSampleConfigTestParams(name="resnet50_imagenet_mixed_int_manual_staged.json",
-                                 bit_stats=[['8', '21.600', '28.000', '49.600'],
-                                            ['4', '21.600', '28.800', '50.400']]),
-    ManualSampleConfigTestParams(name="squeezenet1_1_imagenet_mixed_int_manual.json",
-                                 bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                            ['4', '24.528', '20.755', '45.283']]),
-    ManualSampleConfigTestParams(name="squeezenet1_1_imagenet_mixed_int_manual_staged.json",
-                                 bit_stats=[['8', '24.528', '30.189', '54.717'],
-                                            ['4', '24.528', '20.755', '45.283']]),
-    ManualTestConfigTestParams(name='resnet18_cifar10_mixed_int_manual.json',
-                               bit_stats=[['8', '27.907', '25.581', '53.488'],
-                                          ['2', '18.605', '0', '18.605'],
-                                          ['4', '2.326', '25.581', '27.907']])
+    ManualSampleConfigTestParams(
+        name='mobilenet_v2_imagenet_mixed_int_manual.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth=None, num_aq_per_bitwidth=None
+        )
+    ),
+    ManualSampleConfigTestParams(
+        name='mobilenet_v2_imagenet_mixed_int_manual_staged.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth=None, num_aq_per_bitwidth=None
+        )
+    ),
+    ManualSampleConfigTestParams(
+        name='resnet50_imagenet_mixed_int_manual.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={8: 27, 4: 27}, num_aq_per_bitwidth={8: 29, 4: 42}
+        )
+    ),
+    ManualSampleConfigTestParams(
+        name='resnet50_imagenet_mixed_int_manual_staged.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={8: 27, 4: 27}, num_aq_per_bitwidth={8: 35, 4: 36}
+        )
+    ),
+    ManualSampleConfigTestParams(
+        name='squeezenet1_1_imagenet_mixed_int_manual.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={8: 13, 4: 13}, num_aq_per_bitwidth={8: 16, 4: 11}
+        )
+    ),
+    ManualSampleConfigTestParams(
+        name='squeezenet1_1_imagenet_mixed_int_manual_staged.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={8: 13, 4: 13}, num_aq_per_bitwidth={8: 16, 4: 11}
+        )
+    ),
+    ManualTestConfigTestParams(
+        name='resnet18_cifar10_mixed_int_manual.json',
+        bit_stats=BitwidthDistributionStatistics(
+            num_wq_per_bitwidth={8: 12, 4: 1, 2: 8}, num_aq_per_bitwidth={8: 11, 4: 11}
+        )
+    ),
 ]
 
 
@@ -91,10 +112,13 @@ def test_hawq_manual_configs(manual_config_params):
     model = manual_config_params.create_model(config['model'])
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    nncf_stats = compression_ctrl.statistics()
 
-    table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
-    # pylint: disable=protected-access
-    assert table._rows == manual_config_params.bit_stats
+    expected = manual_config_params.bit_stats
+    actual = nncf_stats.quantization.bitwidth_distribution_statistics
+
+    assert expected.num_wq_per_bitwidth == actual.num_wq_per_bitwidth
+    assert expected.num_aq_per_bitwidth == actual.num_aq_per_bitwidth
 
 
 class ManualSingleConvTestParams:
@@ -168,12 +192,16 @@ def test_quantization_configs__with_precisions_list():
         expected_bit = [ref_bit for (name, ref_bit) in ref_bits if name == str(key)][0]
         assert quantizer.num_bits == expected_bit, 'Unexpected number of bits for {}'.format(key)
 
-    ref_rows = [['2', '20', '0', '20'],
-                ['4', '20', '0', '20'],
-                ['6', '0', '60', '60']]
-    table = compression_ctrl.non_stable_metric_collectors[0].get_bits_stat()
-    # pylint: disable=protected-access
-    assert table._rows == ref_rows
+    nncf_stats = compression_ctrl.statistics()
+    actual = nncf_stats.quantization.bitwidth_distribution_statistics
+
+    expected = BitwidthDistributionStatistics(
+        num_wq_per_bitwidth={4: 1, 2: 1},
+        num_aq_per_bitwidth={6: 3}
+    )
+
+    assert expected.num_wq_per_bitwidth == actual.num_wq_per_bitwidth
+    assert expected.num_aq_per_bitwidth == expected.num_aq_per_bitwidth
 
 
 def test_can_resume_with_manual_init(mocker):

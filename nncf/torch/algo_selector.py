@@ -25,6 +25,8 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.registry import Registry
+from nncf.common.statistics import NNCFStatistics
+
 
 COMPRESSION_ALGORITHMS = Registry('compression algorithm', add_name_as_attr=True)
 
@@ -68,3 +70,6 @@ class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     @property
     def scheduler(self) -> CompressionScheduler:
         return self._scheduler
+
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        return NNCFStatistics()

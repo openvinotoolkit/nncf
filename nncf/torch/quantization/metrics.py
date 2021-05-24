@@ -1,33 +1,47 @@
-import numpy as np
-import networkx as nx
+"""
+ Copyright (c) 2021 Intel Corporation
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+"""
+
+from typing import Dict
+from collections import Counter
+from collections import deque
 from copy import deepcopy
 
-from texttable import Texttable
-from collections import deque
+import numpy as np
+import networkx as nx
 
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.nncf_network import NNCFNetwork, PTNNCFGraph
 from nncf.torch.dynamic_graph.transform_graph import is_nncf_module
 from nncf.torch.quantization.quantizer_propagation import DEFAULT_QUANT_TRAIT_TO_OP_DICT, QuantizationTrait
-
-class BaseMetric:
-    def __init__(self):
-        pass
-
-    def collect(self):
-        pass
-
-    def get_metric_table(self):
-        pass
-
-class NetworkQuantizationShareMetricBuildTimeInfo:
-    def __init__(self, num_potential_quantized_activations: int,
-                 num_potential_quantized_weights: int):
-        self.num_potential_quantized_activations = num_potential_quantized_activations
-        self.num_potential_quantized_weights = num_potential_quantized_weights
+from nncf.torch.quantization.quantizer_id import WeightQuantizerId
+from nncf.torch.quantization.quantizer_id import NonWeightQuantizerId
+from nncf.torch.quantization.structs import WeightQuantizerInfo
+from nncf.torch.quantization.structs import NonWeightQuantizerInfo
+from nncf.common.collector import StatisticsCollector
+from nncf.common.quantization.statistics import QuantizationShareStatistics
+from nncf.common.quantization.statistics import QuantizersCounter
+from nncf.common.quantization.statistics import BitwidthDistributionStatistics
+from nncf.common.quantization.statistics import MemoryConsumptionStatistics
+from nncf.common.quantization.statistics import QuantizationConfigurationStatistics
 
 
-class NetworkQuantizationShareMetric(BaseMetric):
+class QuantizationShareBuildTimeInfo:
+    def __init__(self, aq_potential_num: int, wq_potential_num: int):
+        self.aq_potential_num = aq_potential_num
+        self.wq_potential_num = wq_potential_num
+
+
+class QuantizationShareStatisticsCollector(StatisticsCollector):
     """
     This is a metric representing the share of the model that has been quantized.
     It includes the calculation of the following numbers:
@@ -41,207 +55,130 @@ class NetworkQuantizationShareMetric(BaseMetric):
 
     * The maximum possible number of potential quantizers depends on the presence of ignored
     scopes and the mode of quantizer setup that is used at the time of collecting the metric.
-
     """
-    NAME_STR = 'NetworkQuantizationShare'
 
-    WEIGHTS_RATIO_STR = ' WQs / All placed WQs' # WQ - weight quantizer
-    ACTIVATIONS_RATIO_STR = ' AQs / All placed AQs' # AQ - activation quantizer
-    TOTAL_RATIO_STR = ' Qs (out of total placed)'
+    NAME_STR = 'quantization_share_statistics'
 
-    PARAMS_STR = 'Quantizer parameter'
-    SYMMETRIC_STR = 'Symmetric'
-    ASYMMETRIC_STR = 'Asymmetric'
-    PER_CHANNEL_STR = 'Per-channel'
-    SIGNED_STR = 'Signed'
-    PER_TENSOR_STR = 'Per-tensor'
-    UNSIGNED_STR = 'Unsigned'
-    SHARE_WEIGHT_QUANTIZERS_STR = 'Placed WQs / Potential WQs'
-    SHARE_ACTIVATION_QUANTIZERS_STR = 'Placed AQs / Potential AQs'
+    def __init__(self,
+                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo],
+                 build_time_info: QuantizationShareBuildTimeInfo):
+        self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
+        self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
+        self._info = build_time_info
 
-    def __init__(self, compressed_model,
-                 weights_quantizers,
-                 non_weights_quantizers,
-                 build_time_info: NetworkQuantizationShareMetricBuildTimeInfo):
-        super().__init__()
-        self._compressed_model = compressed_model
-        self.non_weights_quantizers = {k: v.quantizer_module_ref for k, v in non_weights_quantizers.items()}
-        self.weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
-        self._all_quantizations = {**self.weights_quantizers, **self.non_weights_quantizers}
-        self.header = [self.PARAMS_STR, self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR]
-        self.params = {self.PER_CHANNEL_STR, self.PER_TENSOR_STR, self.UNSIGNED_STR, self.SIGNED_STR,
-                       self.SYMMETRIC_STR, self.ASYMMETRIC_STR}
-        self.params_bits_stat = set()
-        self.num_potential_quantized_weights = build_time_info.num_potential_quantized_weights
-        self.num_potential_quantized_activations = build_time_info.num_potential_quantized_activations
-        self.num_placed_weight_quantizers = len(self.weights_quantizers)
-        self.num_placed_activation_quantizers = len(self.non_weights_quantizers)
-        self.num_all_potential_quantizer = self.num_potential_quantized_weights +\
-             self.num_potential_quantized_activations
-        self.stat = {}
-        self._ratio = {
-            self.WEIGHTS_RATIO_STR: len(self.weights_quantizers),
-            self.ACTIVATIONS_RATIO_STR: len(self.non_weights_quantizers),
-            self.TOTAL_RATIO_STR: len(self._all_quantizations)}
+    def collect(self) -> QuantizationShareStatistics:
+        """
+        Collects quantization share statistics.
+        """
+        all_quantizers = {**self._weight_quantizers, **self._non_weight_quantizers}
 
-    def collect(self):
-        for quantizer in self._all_quantizations.values():
-            self.params_bits_stat.add(quantizer.num_bits)
+        wq_counter = QuantizersCounter()
+        aq_counter = QuantizersCounter()
+        for qid, quantizer in all_quantizers.items():  # type: Tuple[QuantizerId, BaseQuantizer]
+            counter = wq_counter if qid in self._weight_quantizers else aq_counter
 
-        for h in self.header:
-            self.stat[h] = {}
-            for p in self.params:
-                self.stat[h][p] = 0
-            for p in self.params_bits_stat:
-                self.stat[h][p] = 0
-
-        for qid, quantizer in self._all_quantizations.items():  # type: Tuple[QuantizerId, BaseQuantizer]
-            num_bits = quantizer.num_bits
-            self.stat[self.TOTAL_RATIO_STR][num_bits] += 1
-            type_ = self.WEIGHTS_RATIO_STR if qid in self.weights_quantizers else self.ACTIVATIONS_RATIO_STR
-            self.stat[type_][num_bits] += 1
             if quantizer.per_channel:
-                self.stat[type_][self.PER_CHANNEL_STR] += 1
+                counter.num_per_channel += 1
             else:
-                self.stat[type_][self.PER_TENSOR_STR] += 1
+                counter.num_per_tensor += 1
+
             if quantizer.signed:
-                self.stat[type_][self.SIGNED_STR] += 1
+                counter.num_signed += 1
             else:
-                self.stat[type_][self.UNSIGNED_STR] += 1
+                counter.num_unsigned += 1
+
             if isinstance(quantizer, SymmetricQuantizer):
-                self.stat[type_][self.SYMMETRIC_STR] += 1
+                counter.num_symmetric += 1
             else:
-                self.stat[type_][self.ASYMMETRIC_STR] += 1
+                counter.num_asymmetric += 1
 
-    def _get_copy_statistics(self):
-        statistics = deepcopy(self.stat)
-        for h in self.header[1:]:
-            for key, _ in statistics[h].items():
-                try:
-                    statistics[h][key] /= self._ratio[h]
-                    statistics[h][key] *= 100
-                except ZeroDivisionError:
-                    statistics[h][key] = 0
-        return statistics
+        wq_total_num = len(self._weight_quantizers)
+        aq_total_num = len(self._non_weight_quantizers)
 
-    def get_metric_table(self):
-        table_with_bits_stats = Texttable()
-        table_with_other_stats = Texttable()
-        data = [['Metric type', 'Value']]
-        for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR):
-            for p in self.params:
-                try:
-                    row = ['{} '.format(p) + str(h), '{:.2f} % ({} / {}) '.format(\
-                        self.stat[h][p] / self._ratio[h] * 100, self.stat[h][p], self._ratio[h])]
-                except ZeroDivisionError:
-                    row = ['{} '.format(p) + h, 0]
-                data.append(row)
-        try:
-            row = [self.SHARE_WEIGHT_QUANTIZERS_STR, '{:.2f} % ({} / {}) '.format(\
-                   self.num_placed_weight_quantizers / self.num_potential_quantized_weights * 100,
-                   self.num_placed_weight_quantizers, self.num_potential_quantized_weights)]
-        except ZeroDivisionError:
-            row = [self.SHARE_WEIGHT_QUANTIZERS_STR, '{} % '.format(0)]
-
-        data.append(row)
-        try:
-            row = [self.SHARE_ACTIVATION_QUANTIZERS_STR, '{:.2f} % ({} / {}) '.format(\
-                   self.num_placed_activation_quantizers / self.num_potential_quantized_activations * 100,
-                   self.num_placed_activation_quantizers, self.num_potential_quantized_activations)]
-        except ZeroDivisionError:
-            row = [self.SHARE_ACTIVATION_QUANTIZERS_STR, '{} % '.format(0)]
-        data.append(row)
-
-        table_with_other_stats.add_rows(data)
-
-        data = [['Num bits (N)', 'N-bits WQs / Placed WQs', 'N-bits AQs / Placed AQs', 'N-bits Qs / Placed Qs']]
-        for p in self.params_bits_stat:
-            row = [p]
-            for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR):
-                try:
-                    row.append('{:.2f} % ({} / {}) '.format(\
-                        self.stat[h][p] / self._ratio[h] * 100, self.stat[h][p], self._ratio[h]))
-                except ZeroDivisionError:
-                    row.append(0)
-            data.append(row)
-        table_with_bits_stats.add_rows(data)
-
-        retval = {
-            "Share quantization statistics:" : table_with_other_stats,
-            "Bitwidth distribution:" : table_with_bits_stats
-        }
-        return retval
-
-    def get_bits_stat(self):
-        table = Texttable()
-        data = [['Num bits (N)', 'N-bits WQs / Placed Qs', 'N-bits AQs / Placed Qs', 'N-bits Qs / Placed Qs']]
-        for p in self.params_bits_stat:
-            row = [p]
-            for h in (self.WEIGHTS_RATIO_STR, self.ACTIVATIONS_RATIO_STR, self.TOTAL_RATIO_STR):
-                try:
-                    row.append(self.stat[h][p] / self._ratio[self.TOTAL_RATIO_STR] * 100)
-                except ZeroDivisionError:
-                    row.append(0)
-            data.append(row)
-        table.add_rows(data)
-        return table
+        return QuantizationShareStatistics(wq_total_num, aq_total_num, self._info.wq_potential_num,
+                                           self._info.aq_potential_num, wq_counter, aq_counter)
 
 
-class MemoryCostMetric(BaseMetric):
+class BitwidthDistributionStatisticsCollector(StatisticsCollector):
+    """
+    Collects bit width distribution statistics.
     """
 
+    NAME_STR = 'bitwidth_distribution_statistics'
+
+    def __init__(self,
+                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]):
+        """
+        Initializes collector of the bit width distribution statistics.
+        """
+        self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
+        self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
+
+    def collect(self) -> BitwidthDistributionStatistics:
+        """
+        Collects bit width distribution statistics.
+        """
+        all_quantizers = {**self._weight_quantizers, **self._non_weight_quantizers}
+        wq_bitwidths = []
+        aq_bitwidths = []
+        for qid, quantizer in all_quantizers.items():
+            if qid in self._weight_quantizers:
+                wq_bitwidths.append(quantizer.num_bits)
+            else:
+                aq_bitwidths.append(quantizer.num_bits)
+
+        return BitwidthDistributionStatistics(dict(Counter(wq_bitwidths)),
+                                              dict(Counter(aq_bitwidths)))
+
+
+class MemoryConsumptionStatisticsCollector(StatisticsCollector):
+    """
     This metric considers:
         - how many times memory consumption for network weights will decrease.
         - how many times memory consumption* for activations tensor will decrease.
 
     * Reflects host memory consumption, assuming only the final low-precision output activation tensors are stored
       in host memory (i.e. assuming intermediate accumulation results are only stored in device memory)
-
     """
-    PARAMS_STR = 'params'
-    NAME_STR = 'MemoryCost'
 
-    EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR = 'Memory consumption decrease for weights'
-    SIZE_MEMORY_FP_WEIGHTS_STR = 'Memory consumption for full-precision weights'
-    SIZE_MEMORY_COMPRESSED_WEIGHTS_STR = 'Memory consumption for quantized weights'
-    MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR =\
-         'Max memory consumption for an activation tensor in FP32 model'
-    MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR =\
-         'Max memory consumption for an activation tensor in compressed model'
+    NAME_STR = 'memory_consumption_statistics'
 
-    def __init__(self, compressed_model: NNCFNetwork, weights_quantizers, non_weight_quantizers):
-        super().__init__()
+    def __init__(self,
+                 compressed_model: NNCFNetwork,
+                 weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
+                 non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]):
+        """
+        Initializes collector of the memory consumption statistics.
+        """
         self._compressed_model = compressed_model
-        self._weights_quantizers = {k: v.quantizer_module_ref for k, v in weights_quantizers.items()}
+        self._weight_quantizers = {k: v.quantizer_module_ref for k, v in weight_quantizers.items()}
         self._non_weight_quantizers = {k: v.quantizer_module_ref for k, v in non_weight_quantizers.items()}
-        self.header = [self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR, self.SIZE_MEMORY_FP_WEIGHTS_STR,\
-             self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR,\
-             self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR,\
-             self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR]
-        self.stat = {}
 
-    def collect(self):
-        self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] = 0
-        self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] = 0
+    def collect(self) -> MemoryConsumptionStatistics:
+        stats = MemoryConsumptionStatistics()
+
         fp_num_bits = 32
         nncf_modules = self._compressed_model.get_nncf_modules()
 
         for scope_module, nncf_module in nncf_modules.items():
             count_el = np.prod(nncf_module.weight.shape)
-            self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] += count_el * fp_num_bits
-            status, quantizer = self._get_quantizer_for_scope(scope_module, self._weights_quantizers)
-            if status > 0:
+            stats.fp32_weight_size += count_el * fp_num_bits
+            status, quantizer = self._get_quantizer_for_scope(scope_module, self._weight_quantizers)
+            if status:
                 num_bits = quantizer.num_bits
-                self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] += count_el * num_bits
+                stats.quantized_weight_size += count_el * num_bits
             else:
-                self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] += count_el * fp_num_bits
+                stats.quantized_weight_size += count_el * fp_num_bits
+
         try:
-            self.stat[self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR] = self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] /\
-             self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR]
+            stats.weight_memory_consumption_decrease = stats.fp32_weight_size / stats.quantized_weight_size
         except ZeroDivisionError:
-            self.stat[self.EXPECTED_MEMORY_CONSUMPTION_DECREASE_STR] = 0
-        self.stat[self.SIZE_MEMORY_COMPRESSED_WEIGHTS_STR] /= 2**23
-        self.stat[self.SIZE_MEMORY_FP_WEIGHTS_STR] /= 2**23
+            stats.weight_memory_consumption_decrease = 0
+
+        stats.quantized_weight_size /= 2**23
+        stats.fp32_weight_size /= 2**23
 
         original_graph = deepcopy(self._compressed_model.get_original_graph())
 
@@ -270,20 +207,20 @@ class MemoryCostMetric(BaseMetric):
 
             shape = original_nx_graph.edges[u, v][PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
             u_node_scope_str = str(original_nx_graph.nodes[u][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR])
-            num_bits = self.get_precision_for_activation_tensor(u, v, original_nx_graph)
+            num_bits = self._get_precision_for_activation_tensor(u, v, original_nx_graph)
             original_nx_graph.edges[u, v]['precision'] = num_bits
             memory_consumption_fp_model[u_node_scope_str] = np.prod(shape) * fp_num_bits
             memory_consumption_compressed_model[u_node_scope_str] = np.prod(shape) * num_bits
-        try:
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] =\
-                max(memory_consumption_fp_model.values()) / 2**23
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] =\
-                max(memory_consumption_compressed_model.values()) / 2**23
-        except ValueError:
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_FP32_MODEL_STR] = 0
-            self.stat[self.MAX_MEMORY_CONSUMPTION_ACTIVATION_TENSOR_IN_COMPRESSED_MODEL_STR] = 0
 
-    def get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
+        try:
+            stats.max_fp32_activation_size = max(memory_consumption_fp_model.values()) / 2**23
+            stats.max_compressed_activation_size = max(memory_consumption_compressed_model.values()) / 2**23
+        except ValueError:
+            stats.max_fp32_activation_size = 0
+            stats.max_compressed_activation_size = 0
+        return stats
+
+    def _get_precision_for_activation_tensor(self, u_node, v_node, original_nx_graph):
         scope_u_node = original_nx_graph.nodes[u_node][PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR].scope_in_model
         # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
@@ -291,7 +228,7 @@ class MemoryCostMetric(BaseMetric):
              max([0] + [original_nx_graph.edges[pred_u_node, u_node]['precision'] for pred_u_node in pred_u_nodes])
         module = self._compressed_model.get_module_by_scope(scope_u_node)
         if is_nncf_module(module):
-            status, quantizer = self._get_quantizer_for_scope(scope_u_node, self._weights_quantizers)
+            status, quantizer = self._get_quantizer_for_scope(scope_u_node, self._weight_quantizers)
             if status:
                 precision = max(quantizer.num_bits, precision_enter_activation_tensor)
             else:
@@ -313,44 +250,29 @@ class MemoryCostMetric(BaseMetric):
                 return True, quantizer
         return False, None
 
-    def get_metric_table(self):
-        table = Texttable()
-        data = [['Metric type', 'Value']]
-        data.append([self.header[0], self.stat[self.header[0]]])
-        for h in self.header[1:]:
-            data.append([h + ' (Mbyte)', self.stat[h]])
-        table.add_rows(data)
 
-        retval = {"Memory consumption statistics:": table}
-        return retval
-
-
-class ShareEdgesQuantizedDataPath(BaseMetric):
+class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
     """
-
     This metric calculates the percentage of quantized edges relative to the total number of edges
     in the original network graph. "Quantized edge" is an edge representing a quantized activation tensor.
-
     """
-    NAME_STR = 'ShareEdgesQuantizedDataPath'
-    COUNT_QUANTIZED_EDGES_STR = 'Share edges of the quantized data path'
+
+    NAME_STR = 'quantization_configuration_statistics'
     QUANTIZED_EDGES_ATTR = 'quantized'
     PASSED_EDGES_ATTR = 'passed'
     NODES_GRAPH_ATTR = 'nodes'
     IS_MERGED_GRAPH_ATTR = 'is_merged'
 
     def __init__(self, compressed_model: NNCFNetwork, qctrl: 'QuantizationController'):
-        super().__init__()
         self._compressed_model = compressed_model
         self._qctrl = qctrl
-        self.stat = {}
+        self.stats = QuantizationConfigurationStatistics(0, 0)
 
-    def collect(self):
+    def collect(self) -> QuantizationConfigurationStatistics:
         # pylint: disable=too-many-branches
         merged_original_graph =\
             self.get_merged_original_graph_with_patterns(self._compressed_model.get_original_graph())
-        self.stat[self.COUNT_QUANTIZED_EDGES_STR] = 0
-        self.header = [self.COUNT_QUANTIZED_EDGES_STR]
+        self.stats.quantized_edges_in_cfg = 0
         nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
         nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)
         # pylint: disable=protected-access
@@ -363,7 +285,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
                 edge = merged_original_graph.edges[input_node, next_node_key]
                 edge[self.PASSED_EDGES_ATTR] = True
                 edge[self.QUANTIZED_EDGES_ATTR] = True
-                self.stat[self.COUNT_QUANTIZED_EDGES_STR] += 1
+                self.stats.quantized_edges_in_cfg += 1
                 queue.appendleft(next_node_key)
         visited_nodes = {}
         #pylint: disable=too-many-nested-blocks
@@ -414,16 +336,8 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
             else:
                 queue.appendleft(node_key)
         self.num_merged_original_graph_edges = len(merged_original_graph.edges)
-
-    def _get_copy_statistics(self):
-        statistics = deepcopy(self.stat)
-        try:
-            statistics[self.COUNT_QUANTIZED_EDGES_STR] /= self.num_merged_original_graph_edges
-            statistics[self.COUNT_QUANTIZED_EDGES_STR] *= 100
-        except ZeroDivisionError:
-            statistics[self.COUNT_QUANTIZED_EDGES_STR] = 0
-
-        return statistics
+        self.stats.total_edges_in_cfg = self.num_merged_original_graph_edges
+        return self.stats
 
     def _all_enter_edges_in_node_of_type(self, graph, node_key, type_edge):
         # pylint: disable=protected-access
@@ -445,21 +359,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
             edge[self.PASSED_EDGES_ATTR] = True
             queue.appendleft(next_node_key)
             if mark:
-                self.stat[self.COUNT_QUANTIZED_EDGES_STR] += 1
-
-    def get_metric_table(self):
-        table = Texttable()
-        data = [['Metric type', 'Value']]
-        try:
-            data.append([self.header[0], '{:.2f} % ({} / {})'.format(
-                self.stat[self.COUNT_QUANTIZED_EDGES_STR] / self.num_merged_original_graph_edges * 100,
-                self.stat[self.COUNT_QUANTIZED_EDGES_STR], self.num_merged_original_graph_edges)])
-        except ZeroDivisionError:
-            data.append([self.header[0], '{} % '.format(0)])
-        table.add_rows(data)
-
-        retval = {"Quantization configuration statistics:" : table}
-        return retval
+                self.stats.quantized_edges_in_cfg += 1
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         import nncf.torch.graph.patterns as p
@@ -513,7 +413,7 @@ class ShareEdgesQuantizedDataPath(BaseMetric):
             out_graph.add_node(node_key)
         for u, v in merged_original_graph.edges:
             edge = merged_original_graph.edges[u, v]
-            if edge[ShareEdgesQuantizedDataPath.QUANTIZED_EDGES_ATTR]:
+            if edge[ShareEdgesQuantizedDataPathStatisticsCollector.QUANTIZED_EDGES_ATTR]:
                 attrs = {"color": "blue"}
             out_graph.add_edge(u, v, **attrs)
         return out_graph

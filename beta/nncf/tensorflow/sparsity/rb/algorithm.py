@@ -11,15 +11,19 @@
  limitations under the License.
 """
 
-from tensorflow.python.keras.utils.layer_utils import count_params
 from typing import List
 
 import tensorflow as tf
+from tensorflow.python.keras.utils.layer_utils import count_params
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
 from nncf.common.sparsity.schedulers import SparsityScheduler
+from nncf.common.sparsity.statistics import SparsifiedLayerSummary
+from nncf.common.sparsity.statistics import SparsifiedModelStatistics
+from nncf.common.sparsity.statistics import RBSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
@@ -118,8 +122,7 @@ class RBSparsityController(BaseSparsityController):
     def freeze(self):
         self._loss.disable()
 
-    def raw_statistics(self):
-        raw_sparsity_statistics = {}
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         sparsity_levels = []
         mask_names = []
         weights_shapes = []
@@ -147,27 +150,30 @@ class RBSparsityController(BaseSparsityController):
         sparsity_rate_for_sparsified_modules = (total_sparsified_weights_number / total_weights_number).numpy()
         model_weights_number = count_params(self._model.weights) - total_weights_number
         sparsity_rate_for_model = (total_sparsified_weights_number / model_weights_number).numpy()
-        mean_sparse_prob = (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
-
-        raw_sparsity_statistics.update({
-            'sparsity_rate_for_sparsified_modules': sparsity_rate_for_sparsified_modules,
-            'sparsity_rate_for_model': sparsity_rate_for_model,
-            'mean_sparse_prob': mean_sparse_prob,
-            'target_sparsity_rate': self.loss.target_sparsity_rate,
-        })
+        mean_sparse_prob = 1.0 - (sparse_prob_sum / tf.cast(total_weights_number, tf.float32)).numpy()
 
         sparsity_levels = tf.keras.backend.batch_get_value(sparsity_levels)
         weights_percentages = [weights_number / total_weights_number * 100
                                for weights_number in weights_numbers]
         weights_percentages = tf.keras.backend.batch_get_value(weights_percentages)
         mask_sparsity = list(zip(mask_names, weights_shapes, sparsity_levels, weights_percentages))
-        raw_sparsity_statistics['sparsity_statistic_by_layer'] = []
-        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
-            raw_sparsity_statistics['sparsity_statistic_by_layer'].append({
-                'Name': mask_name,
-                'Weight\'s Shape': weights_shape,
-                'SR': sparsity_level,
-                '% weights': weights_percentage
-            })
 
-        return raw_sparsity_statistics
+        sparsified_layers_summary = []
+        for mask_name, weights_shape, sparsity_level, weights_percentage in mask_sparsity:
+            sparsified_layers_summary.append(
+                SparsifiedLayerSummary(mask_name, weights_shape, sparsity_level, weights_percentage)
+            )
+
+        model_statistics = SparsifiedModelStatistics(sparsity_rate_for_model,
+                                                     sparsity_rate_for_sparsified_modules,
+                                                     sparsified_layers_summary)
+
+        target_level = self.loss.target_sparsity_rate
+        # TODO(andrey-churkin): Should be calculated when the distributed mode will be supported
+        masks_consistency = 1.0
+
+        stats = RBSparsityStatistics(model_statistics, masks_consistency, target_level, mean_sparse_prob)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('rb_sparsity', stats)
+        return nncf_stats

@@ -11,20 +11,17 @@
  limitations under the License.
 """
 
-from typing import Any
-from typing import Dict
+from typing import List, Any
 
-import tensorflow as tf
-
-from nncf.api.compression import CompressionLoss
+from texttable import Texttable
 
 
-class TFZeroCompressionLoss(CompressionLoss):
-    def calculate(self, *args, **kwargs) -> Any:
-        return tf.constant(0.)
+def create_table(header: List[str], rows: List[List[Any]]) -> str:
+    """
+    Returns a string which represents a table with a header and rows.
 
-    def load_state(self, state: Dict[str, object]) -> None:
-        pass
-
-    def get_state(self) -> Dict[str, object]:
-        return {}
+    :param header: Table's header.
+    :param rows: Table's rows.
+    :return: A string which represents a table with a header and rows.
+    """
+    return Texttable().header(header).add_rows(rows, header=False).draw()

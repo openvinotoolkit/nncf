@@ -35,6 +35,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.datasets import CIFAR10, CIFAR100
 from torchvision.models import InceptionOutputs
 
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from examples.common.argparser import get_common_argument_parser
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, get_execution_mode, \
@@ -43,7 +44,7 @@ from examples.common.model_loader import load_model
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.sample_config import SampleConfig, create_sample_config
 from examples.common.utils import configure_logging, configure_paths, create_code_snapshot, \
-    print_args, make_additional_checkpoints, get_name, is_staged_quantization, print_statistics, \
+    print_args, make_additional_checkpoints, get_name, is_staged_quantization, \
     is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, MockDataset, configure_device
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
@@ -191,7 +192,8 @@ def main_worker(current_gpu, config: SampleConfig):
         cudnn.benchmark = True
 
     if is_main_process():
-        print_statistics(compression_ctrl.statistics())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -220,7 +222,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
 
         # compute compression algo statistics
-        stats = compression_ctrl.statistics()
+        statistics = compression_ctrl.statistics()
 
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
@@ -241,7 +243,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
         if is_main_process():
-            print_statistics(stats)
+            logger.info(statistics.to_str())
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_name(config) + '_last.pth')
             checkpoint = {
@@ -258,10 +260,9 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-            for key, value in stats.items():
-                if isinstance(value, (int, float)):
-                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
-                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+            for key, value in prepare_for_tensorboard(statistics).items():
+                config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
 def get_dataset(dataset_config, config, transform, is_train):
@@ -457,9 +458,9 @@ def train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compres
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
-                if isinstance(stat_value, (int, float)):
-                    config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
+            statistics = compression_ctrl.statistics(quickly_collected_only=True)
+            for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
 def validate(val_loader, model, criterion, config):

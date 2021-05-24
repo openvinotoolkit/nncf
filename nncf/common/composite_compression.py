@@ -11,7 +11,7 @@
  limitations under the License.
 """
 
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
@@ -19,8 +19,8 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
-
-ModelType = TypeVar('ModelType')
+from nncf.api.compression import ModelType
+from nncf.common.statistics import NNCFStatistics
 
 
 class CompositeCompressionLoss(CompressionLoss):
@@ -81,21 +81,6 @@ class CompositeCompressionLoss(CompressionLoss):
         for loss in self._child_losses:
             result_loss += loss()
         return result_loss
-
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        """
-        Traverses through all children and returns a sum-up dictionary of
-        printable statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
-        """
-        stats = {}
-        for loss in self._child_losses:
-            stats.update(loss.statistics(quickly_collected_only))
-        return stats
 
 
 class CompositeCompressionScheduler(CompressionScheduler):
@@ -252,20 +237,23 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             composite_state.append(child_ctrl.get_state())
         return composite_state
 
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
         """
-        Traverses through all children and returns a sum-up dictionary of
-        printable statistics.
+        Returns a `NNCFStatistics` class instance.
 
         :param quickly_collected_only: Enables collection of the statistics that
             don't take too much time to compute. Can be helpful for the case when
             need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
+        :return: A `NNCFStatistics` class instance.
         """
-        stats = {}
+        nncf_stats = NNCFStatistics()
+
         for ctrl in self.child_ctrls:
-            stats.update(ctrl.statistics(quickly_collected_only))
-        return stats
+            ctrl_stats = ctrl.statistics(quickly_collected_only)
+            for algorithm_name, stats in ctrl_stats:
+                nncf_stats.register(algorithm_name, stats)
+
+        return nncf_stats
 
     def prepare_for_export(self) -> None:
         """

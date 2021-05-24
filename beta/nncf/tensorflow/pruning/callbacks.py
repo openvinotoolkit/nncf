@@ -11,22 +11,26 @@
  limitations under the License.
 """
 
+from nncf.common.statistics import NNCFStatistics
 from beta.nncf.tensorflow.callbacks.statistics_callback import StatisticsCallback
-from beta.nncf.tensorflow.sparsity.utils import convert_raw_to_printable
-from beta.nncf.tensorflow.sparsity.utils import prepare_for_tensorboard
 
 
 class PruningStatisticsCallback(StatisticsCallback):
     """
-    Callback for logging cruning compression statistics to tensorboard and stdout
+    Callback for logging pruning compression statistics to tensorboard and stdout.
     """
 
-    def _prepare_for_tensorboard(self, raw_statistics: dict) -> dict:
-        prefix = 'pruning'
-        rate_abbreviation = 'PR'
-        return prepare_for_tensorboard(raw_statistics, prefix, rate_abbreviation)
+    def _prepare_for_tensorboard(self, nncf_stats: NNCFStatistics):
+        base_prefix = '2.compression/statistics'
+        detailed_prefix = '3.compression_details/statistics'
 
-    def _convert_raw_to_printable(self, raw_statistics: dict) -> dict:
-        prefix = 'pruning'
-        header = ['Name', 'Weight\'s Shape', 'Mask Shape', 'PR']
-        return convert_raw_to_printable(raw_statistics, prefix, header)
+        ms = nncf_stats.filter_pruning.model_statistics
+        tensorboard_stats = {
+            f'{base_prefix}/pruning_level_for_model': ms.pruning_level,
+        }
+
+        for ls in ms.pruned_layers_summary:
+            layer_name, pruning_level = ls.name, ls.filter_pruning_level
+            tensorboard_stats[f'{detailed_prefix}/{layer_name}/pruning_level'] = pruning_level
+
+        return tensorboard_stats

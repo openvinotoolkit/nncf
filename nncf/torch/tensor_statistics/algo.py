@@ -18,6 +18,7 @@ from nncf.api.compression import CompressionStage
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.common.schedulers import StubCompressionScheduler
+from nncf.common.statistics import NNCFStatistics
 from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -95,3 +96,6 @@ class TensorStatisticsCollectionController(PTCompressionAlgorithmController):
 
     def compression_stage(self) -> CompressionStage:
         return CompressionStage.FULLY_COMPRESSED
+
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        return NNCFStatistics()

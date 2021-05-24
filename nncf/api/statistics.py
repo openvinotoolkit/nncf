@@ -1,5 +1,5 @@
 """
- Copyright (c) 2020 Intel Corporation
+ Copyright (c) 2021 Intel Corporation
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -11,14 +11,18 @@
  limitations under the License.
 """
 
-from texttable import Texttable
-
-from nncf.common.utils.logger import logger as nncf_logger
+from abc import ABC, abstractmethod
 
 
-def print_statistics(stats, logger=nncf_logger):
-    for key, val in stats.items():
-        if isinstance(val, Texttable):
-            logger.info(key + '\n' + val.draw())
-        else:
-            logger.info("{}: {}".format(key, val))
+class Statistics(ABC):
+    """
+    Contains a data collection and provides a way for its human-readable representation.
+    """
+
+    @abstractmethod
+    def to_str(self) -> str:
+        """
+        Returns a representation of the statistics as a human-readable string.
+
+        :return: A representation of the statistics as a human-readable string.
+        """

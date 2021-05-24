@@ -14,7 +14,6 @@
 from typing import List
 
 import torch
-from texttable import Texttable
 
 from nncf.torch.algo_selector import COMPRESSION_ALGORITHMS
 from nncf.api.compression import CompressionStage
@@ -24,6 +23,9 @@ from nncf.torch.sparsity.base_algo import BaseSparsityAlgoBuilder, BaseSparsityA
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.functions import WEIGHT_IMPORTANCE_FUNCTIONS, calc_magnitude_binary_mask
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
+from nncf.common.statistics import NNCFStatistics
+from nncf.common.sparsity.statistics import LayerThreshold
 
 
 @COMPRESSION_ALGORITHMS.register('magnitude_sparsity')
@@ -54,26 +56,26 @@ class MagnitudeSparsityController(BaseSparsityAlgoController):
 
         self.set_sparsity_level(sparsity_init)
 
-    def statistics(self, quickly_collected_only=False):
-        stats = super().statistics(quickly_collected_only)
-        if self._mode == 'global':
-            stats['sparsity_threshold'] =\
-                 self._select_threshold(self.sparsity_rate_for_sparsified_modules(), self.sparsified_module_info)
-        else:
-            table = Texttable()
-            header = ["Name", "Per-layer sparsity threshold"]
-            data = [header]
+    def statistics(self, quickly_collected_only: bool = False) -> NNCFStatistics:
+        model_statistics = self._calculate_sparsified_model_stats()
 
-            for minfo in self.sparsified_module_info:
-                drow = {h: 0 for h in header}
-                drow["Name"] = minfo.module_name
-                drow['Per-layer sparsity threshold'] =\
-                     self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
-                row = [drow[h] for h in header]
-                data.append(row)
-            table.add_rows(data)
-            stats['sparsity_thresholds'] = table
-        return stats
+        threshold_statistics = []
+        if self._mode == 'global':
+            global_threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(),
+                                                      self.sparsified_module_info)
+        for minfo in self.sparsified_module_info:
+            if self._mode == 'global':
+                threshold = global_threshold
+            else:
+                threshold = self._select_threshold(self.sparsity_rate_for_sparsified_modules(minfo), [minfo])
+
+            threshold_statistics.append(LayerThreshold(minfo.module_name, threshold))
+
+        stats = MagnitudeSparsityStatistics(model_statistics, threshold_statistics)
+
+        nncf_stats = NNCFStatistics()
+        nncf_stats.register('magnitude_sparsity', stats)
+        return nncf_stats
 
     def freeze(self):
         for layer in self.sparsified_module_info:

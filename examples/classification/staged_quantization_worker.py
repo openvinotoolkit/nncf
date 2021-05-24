@@ -24,13 +24,14 @@ import torch.utils.data
 import torch.utils.data.distributed
 from torchvision.models import InceptionOutputs
 
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from examples.classification.main import create_data_loaders, validate, AverageMeter, accuracy, get_lr, \
     create_datasets, inception_criterion_fn
 from examples.common.example_logger import logger
 from examples.common.execution import ExecutionMode, prepare_model_for_execution
 from examples.common.model_loader import load_model
 from examples.common.utils import configure_logging, print_args, make_additional_checkpoints, get_name, \
-    print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
+    is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, configure_device
 from nncf.torch.binarization.algo import BinarizationController
 from nncf.api.compression import CompressionStage
 from nncf.torch.initialization import register_default_init_args, default_criterion_fn
@@ -202,7 +203,8 @@ def staged_quantization_main_worker(current_gpu, config):
         cudnn.benchmark = True
 
     if is_main_process():
-        print_statistics(compression_ctrl.statistics())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         validate(val_loader, model, criterion, config)
@@ -229,7 +231,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
                            optimizer_scheduler, kd_loss_calculator, compression_ctrl, epoch, config)
 
         # compute compression algo statistics
-        stats = compression_ctrl.statistics()
+        statistics = compression_ctrl.statistics()
 
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
@@ -249,7 +251,7 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
         # hence printing should happen before epoch_step, which may inform about state of the next epoch (e.g. next
         # portion of enabled quantizers)
         if is_main_process():
-            print_statistics(stats)
+            logger.info(statistics.to_str())
 
         optimizer_scheduler.epoch_step()
 
@@ -270,10 +272,9 @@ def train_staged(config, compression_ctrl, model, criterion, criterion_fn, optim
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
-            for key, value in stats.items():
-                if isinstance(value, (int, float)):
-                    config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
-                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
+            for key, value in prepare_for_tensorboard(statistics).items():
+                config.mlflow.safe_call('log_metric', 'compression/statistics/{0}'.format(key), value, epoch)
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
 def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criterion_fn, optimizer,
@@ -363,9 +364,9 @@ def train_epoch_staged(train_loader, batch_multiplier, model, criterion, criteri
             config.tb.add_scalar("train/top1", top1.avg, i + global_step)
             config.tb.add_scalar("train/top5", top5.avg, i + global_step)
 
-            for stat_name, stat_value in compression_ctrl.statistics(quickly_collected_only=True).items():
-                if isinstance(stat_value, (int, float)):
-                    config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
+            statistics = compression_ctrl.statistics(quickly_collected_only=True)
+            for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar('train/statistics/{}'.format(stat_name), stat_value, i + global_step)
 
 
 def get_wd(optimizer):

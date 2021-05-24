@@ -27,6 +27,7 @@ import torchvision.transforms as T
 from examples.common.sample_config import create_sample_config
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 import examples.semantic_segmentation.utils.data as data_utils
 import examples.semantic_segmentation.utils.loss_funcs as loss_funcs
 import examples.semantic_segmentation.utils.transforms as JT
@@ -39,7 +40,7 @@ from nncf.torch.initialization import register_default_init_args
 from examples.common.model_loader import load_model, load_resuming_model_state_dict_and_checkpoint_from_path
 from examples.common.optimizer import make_optimizer
 from examples.common.utils import configure_logging, configure_paths, make_additional_checkpoints, print_args, \
-    write_metrics, print_statistics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
+    write_metrics, is_pretrained_model_requested, log_common_mlflow_params, SafeMLFLow, \
     configure_device
 from examples.semantic_segmentation.metric import IoU
 from examples.semantic_segmentation.test import Test
@@ -344,9 +345,9 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
             config.tb.add_scalar("train/learning_rate", optimizer.param_groups[0]['lr'], epoch)
             config.tb.add_scalar("train/compression_loss", compression_ctrl.loss(), epoch)
 
-            for key, value in compression_ctrl.statistics(quickly_collected_only=True).items():
-                if isinstance(value, (int, float)):
-                    config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
+            statistics = compression_ctrl.statistics(quickly_collected_only=True)
+            for key, value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, epoch)
 
         if (epoch + 1) % config.save_freq == 0 or epoch + 1 == config.epochs:
             logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
@@ -389,7 +390,8 @@ def train(model, model_without_dp, compression_ctrl, train_loader, val_loader, c
                                                   compression_ctrl.scheduler, config)
 
                 make_additional_checkpoints(checkpoint_path, is_best, epoch, config)
-                print_statistics(compression_ctrl.statistics())
+                statistics = compression_ctrl.statistics()
+                logger.info(statistics.to_str())
 
     return model
 
@@ -523,7 +525,8 @@ def main_worker(current_gpu, config):
         logger.info("Saved to {}".format(config.to_onnx))
         return
     if is_main_process():
-        print_statistics(compression_ctrl.statistics())
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.to_str())
 
     if config.mode.lower() == 'test':
         logger.info(model)

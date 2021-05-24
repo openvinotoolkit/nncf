@@ -35,6 +35,7 @@ from nncf.torch.utils import should_consider_scope
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionLoss
 
+
 ModelType = TypeVar('ModelType')
 
 DOMAIN_CUSTOM_OPS_NAME = "org.openvinotoolkit"
@@ -79,24 +80,12 @@ class PTCompressionLoss(nn.Module, CompressionLoss):
         :return: The compression loss state.
         """
 
-    def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:
-        """
-        Returns a dictionary of printable statistics.
-
-        :param quickly_collected_only: Enables collection of the statistics that
-            don't take too much time to compute. Can be helpful for the case when
-            need to keep track of statistics on each training batch/step/iteration.
-        :return: A dictionary of printable statistics.
-        """
-        return {}
-
 
 class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
     """Serves as a handle to the additional modules, parameters and hooks inserted
     into the original uncompressed model in order to enable algorithm-specific compression.
     Hosts entities that are to be used during the training process, such as compression scheduler and
     compression loss."""
-
 
     def distributed(self):
         """
@@ -121,20 +110,6 @@ class PTCompressionAlgorithmController(BaseCompressionAlgorithmController):
         :return: The compression controller state.
         """
         return self.scheduler.get_state()
-
-    def statistics(self, quickly_collected_only=False):
-        """
-        Returns a dictionary of printable statistics.
-
-        :param quickly_collected_only: Enables collection the statistics that don't take
-            too much time to compute. Can be helpful for the case when need to keep track
-            statistics on each train batch/step/iteration.
-        :return: A dictionary of printable statistics.
-        """
-        stats = super().statistics(quickly_collected_only)
-        if hasattr(self._model, 'statistics'):
-            stats.update(self._model.statistics(quickly_collected_only))
-        return stats
 
     def run_batchnorm_adaptation(self, config):
         initializer_params = config.get("initializer", {})

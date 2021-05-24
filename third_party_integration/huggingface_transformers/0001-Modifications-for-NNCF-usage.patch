@@ -165,6 +165,7 @@ index 2bd4e90f..2b1a60e8 100644
  import numpy as np
  import torch
 +from nncf.structures import QuantizationRangeInitArgs
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
  from torch.utils.data.distributed import DistributedSampler
  from tqdm import tqdm, trange
@@ -260,10 +261,9 @@ index 2bd4e90f..2b1a60e8 100644
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
-+                            if isinstance(value, (int, float)):
-+                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
-+                                                     global_step)
++                        for key, value in prepare_for_tensorboard(compression_stats).items():
++                            tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
++                                                 global_step)
 +
                  # Save model checkpoint
                  if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
@@ -509,6 +509,7 @@ index c1db6fa3..ca44bd1c 100644
  import numpy as np
  import torch
 +from nncf.structures import QuantizationRangeInitArgs
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler
 +from torch import onnx
@@ -606,10 +607,9 @@ index c1db6fa3..ca44bd1c 100644
 +                    if compression_ctrl is not None:
 +                        tb_writer.add_scalar("compression_loss", compression_loss.item())
 +                        compression_stats = compression_ctrl.statistics()
-+                        for key, value in compression_stats.items():
-+                            if isinstance(value, (int, float)):
-+                                tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
-+                                                     global_step)
++                        for key, value in prepare_for_tensorboard(compression_stats).items():
++                            tb_writer.add_scalar("compression/statistics/{0}".format(key), value,
++                                                 global_step)
 +
                  if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                      # Save model checkpoint
@@ -1226,6 +1226,7 @@ index 067f793d..f9ccb762 100644
  import numpy as np
  import torch
 +from nncf.compression_method_api import PTCompressionAlgorithmController
++from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from packaging import version
  from torch import nn
  from torch.utils.data.dataloader import DataLoader
@@ -1302,9 +1303,8 @@ index 067f793d..f9ccb762 100644
 +                        if self.compression_ctrl is not None:
 +                            logs["compression_loss"] = self.compression_ctrl.loss()
 +                            compression_stats = self.compression_ctrl.statistics()
-+                            for key, value in compression_stats.items():
-+                                if isinstance(value, (int, float)):
-+                                    logs["compression/statistics/{0}".format(key)] = value
++                            for key, value in prepare_for_tensorboard(compression_stats).items():
++                                logs["compression/statistics/{0}".format(key)] = value
 +
                          self._log(logs)
  
