@@ -13,7 +13,7 @@
 import torch
 
 from nncf import NNCFConfig
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 
 
 def compare_multi_gpu_dump(config, dump_dir, get_path_by_rank_fn):

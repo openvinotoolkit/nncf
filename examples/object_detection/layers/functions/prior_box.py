@@ -19,7 +19,7 @@ from math import sqrt
 import torch
 from torch import nn
 
-from nncf.utils import add_domain
+from nncf.torch.utils import add_domain
 
 class PriorBox(nn.Module):
     def __init__(self, min_size, max_size, aspect_ratio, flip, clip, variance, step, offset,

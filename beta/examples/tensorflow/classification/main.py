@@ -21,7 +21,7 @@ import tensorflow_addons as tfa
 from tensorflow.python.keras.engine import data_adapter
 
 from nncf import AdaptiveCompressionTrainingLoop
-from nncf.structures import ModelEvaluationArgs
+from nncf.torch.structures import ModelEvaluationArgs
 from beta.nncf import create_compressed_model
 from beta.nncf import create_compression_callbacks
 from beta.nncf.helpers.utils import print_statistics
@@ -43,7 +43,6 @@ from beta.examples.tensorflow.common.utils import create_code_snapshot
 from beta.examples.tensorflow.common.utils import configure_paths
 from beta.examples.tensorflow.common.utils import get_saving_parameters
 from beta.examples.tensorflow.common.utils import write_metrics
-from beta.examples.tensorflow.common.utils import get_scheduler_state
 from beta.examples.tensorflow.common.utils import is_accuracy_aware_training
 
 

@@ -48,13 +48,11 @@ from examples.common.utils import configure_logging, configure_paths, create_cod
 from examples.common.utils import is_accuracy_aware_training
 from examples.common.utils import write_metrics
 from nncf import create_compressed_model
-from nncf.api.compression import CompressionLevel
-from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.initialization import register_default_init_args
-from nncf.initialization import default_criterion_fn
-from nncf.utils import safe_thread_call, is_main_process
 from nncf import AdaptiveCompressionTrainingLoop
-
+from nncf.api.compression import CompressionStage
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.initialization import register_default_init_args, default_criterion_fn
+from nncf.torch.utils import safe_thread_call, is_main_process
 from examples.classification.common import set_seed, load_resuming_checkpoint
 
 model_names = sorted(name for name in models.__dict__
@@ -245,7 +243,7 @@ def main_worker(current_gpu, config: SampleConfig):
 
 def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler, model_name, optimizer,
           train_loader, train_sampler, val_loader, best_acc1=0):
-    best_compression_level = CompressionLevel.NONE
+    best_compression_stage = CompressionStage.UNCOMPRESSED
     for epoch in range(config.start_epoch, config.epochs):
         # update compression scheduler state at the begin of the epoch
         compression_ctrl.scheduler.epoch_step()
@@ -267,16 +265,16 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
             # evaluate on validation set
             acc1, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
-        compression_level = compression_ctrl.compression_level()
-        # remember best acc@1, considering compression level. If current acc@1 less then the best acc@1, checkpoint
-        # still can be best if current compression level is bigger then best one. Compression levels in ascending
-        # order: NONE, PARTIAL, FULL.
-        is_best_by_accuracy = acc1 > best_acc1 and compression_level == best_compression_level
-        is_best = is_best_by_accuracy or compression_level > best_compression_level
+        compression_stage = compression_ctrl.compression_stage()
+        # remember best acc@1, considering compression stage. If current acc@1 less then the best acc@1, checkpoint
+        # still can be best if current compression stage is larger than the best one. Compression stages in ascending
+        # order: UNCOMPRESSED, PARTIALLY_COMPRESSED, FULLY_COMPRESSED.
+        is_best_by_accuracy = acc1 > best_acc1 and compression_stage == best_compression_stage
+        is_best = is_best_by_accuracy or compression_stage > best_compression_stage
         if is_best:
             best_acc1 = acc1
         config.mlflow.safe_call('log_metric', "best_acc1", best_acc1)
-        best_compression_level = max(compression_level, best_compression_level)
+        best_compression_stage = max(compression_stage, best_compression_stage)
         acc = best_acc1 / 100
         if config.metrics_dump is not None:
             write_metrics(acc, config.metrics_dump)
@@ -289,7 +287,7 @@ def train(config, compression_ctrl, model, criterion, criterion_fn, lr_scheduler
                 'arch': model_name,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
-                'compression_level': compression_level,
+                'compression_stage': compression_stage,
                 'acc1': acc1,
                 'optimizer': optimizer.state_dict(),
                 'scheduler': compression_ctrl.scheduler.get_state()

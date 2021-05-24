@@ -16,7 +16,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from examples.object_detection.layers import DetectionOutput, PriorBox
-from nncf.dynamic_graph.context import no_nncf_trace
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 
 class SSDDetectionOutput(nn.Module):

@@ -31,21 +31,21 @@ import torchvision
 
 from nncf import nncf_model_input
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.composite_compression import PTCompositeCompressionAlgorithmBuilder
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.dynamic_graph.graph_tracer import create_mock_tensor
-from nncf.graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.graph import PTNNCFGraph
-from nncf.graph.graph_builder import GraphBuilder
-from nncf.graph.version_agnostic_op_names import get_version_agnostic_name
+from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.torch.graph.graph import InputAgnosticOperationExecutionContext
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.hardware.config import HWConfigType
-from nncf.layers import LSTMCellNNCF
-from nncf.layers import NNCF_RNN
-from nncf.nncf_network import NNCFNetwork
-from nncf.quantization.quantizer_setup import SingleConfigQuantizerSetup
-from nncf.utils import get_all_modules_by_type
+from nncf.torch.layers import LSTMCellNNCF
+from nncf.torch.layers import NNCF_RNN
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
+from nncf.torch.utils import get_all_modules_by_type
 from tests import test_models
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.helpers import get_empty_config
@@ -318,7 +318,7 @@ class TestModelsGraph:
     )
     def test_sparse_network(self, desc: ModelDesc, algo):
         model = desc.model_builder()
-        from nncf.layers import NNCF_MODULES_MAP
+        from nncf.torch.layers import NNCF_MODULES_MAP
 
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = {"algorithm": algo}
@@ -344,7 +344,7 @@ class TestModelsGraph:
     def test_sparse_quantize_network(self, desc: ModelDesc):
         model = desc.model_builder()
 
-        from nncf.layers import NNCF_MODULES_MAP
+        from nncf.torch.layers import NNCF_MODULES_MAP
         config = get_empty_config(input_sample_sizes=desc.input_sample_sizes)
         config["compression"] = [
             {"algorithm": "rb_sparsity"},

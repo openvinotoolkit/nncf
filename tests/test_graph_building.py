@@ -19,13 +19,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from nncf import nncf_model_input
-from nncf.graph.graph import PTNNCFGraph
-from nncf.dynamic_graph.graph_tracer import ModelInputInfo
-from nncf.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.dynamic_graph.context import get_current_context
-from nncf.dynamic_graph.context import no_nncf_trace
-from nncf.dynamic_graph.context import TracingContext
-from nncf.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.context import get_current_context
+from nncf.torch.dynamic_graph.context import no_nncf_trace
+from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.graph.graph_builder import GraphBuilder
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.test_compressed_graph import get_basic_quantization_config
 
@@ -74,8 +74,8 @@ def test_ambiguous_function():
 
 
 def test_forward_trace_functor():
-    from nncf.dynamic_graph.patch_pytorch import ForwardTraceOnly
-    from nncf.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
+    from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
+    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor, TensorMeta
 
     func = ForwardTraceOnly()
     shape1, shape2 = ([32, 1, 4, 8], [1, 8, 12, 16])
@@ -166,14 +166,14 @@ def test_activation_shape_tracing(input_shape: Tuple):
     shape1 = (input_shape[0], ModelForTest.CONV1_OUT_CHANNELS, input_shape[2], input_shape[3])
     ref_node_ids_and_output_shapes = [
         # TODO: extend with checking input tensor size once proper input node marking is implemented
-        ("0 ModelForTest/Conv2d[conv1]/conv2d", [shape1]),
-        ("1 ModelForTest/BatchNorm2d[bn1]/batch_norm", [shape1]),
-        ("2 ModelForTest/ReLU[relu1]/RELU", [shape1, shape1]),
-        ("3 ModelForTest/max_pool2d", [(shape1[0], shape1[1],
+        ("0 ModelForTest/Conv2d[conv1]/conv2d_0", [shape1]),
+        ("1 ModelForTest/BatchNorm2d[bn1]/batch_norm_0", [shape1]),
+        ("2 ModelForTest/ReLU[relu1]/RELU_0", [shape1, shape1]),
+        ("3 ModelForTest/max_pool2d_0", [(shape1[0], shape1[1],
                                         shape1[2] // ModelForTest.MAXPOOL_SIZE,
                                         shape1[3] // ModelForTest.MAXPOOL_SIZE)]),
-        ("4 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d", [input_shape]),
-        ("5 ModelForTest/cat", [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS,
+        ("4 ModelForTest/ConvTranspose2d[convt1]/conv_transpose2d_0", [input_shape]),
+        ("5 ModelForTest/cat_0", [(input_shape[0], ModelForTest.CONV2_IN_CHANNELS,
                                  input_shape[2], input_shape[3])])
 
         # TODO: extend with checking output tensor size once proper output node marking is implemented

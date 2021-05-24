@@ -15,13 +15,13 @@ from copy import deepcopy
 import pytest
 
 from nncf import NNCFConfig
-from nncf.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.automl.environment.quantization_env import QuantizationEnv, ModelSizeCalculator, QuantizationEnvParams
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.common.hardware.config import HWConfigType, HWConfig
-from nncf.nncf_network import NNCFNetwork
-from nncf.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
-from nncf.quantization.precision_constraints import HardwareQuantizationConstraints
-from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.algo import ExperimentalQuantizationBuilder, PropagationBasedQuantizerSetupGenerator
+from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
+from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.helpers import create_ones_mock_dataloader, create_conv, BasicConvTestModel
 
 import torch

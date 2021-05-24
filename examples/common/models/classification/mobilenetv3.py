@@ -24,7 +24,7 @@
 import torch.nn as nn
 import math
 
-from nncf.dynamic_graph.patch_pytorch import register_operator
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 
 __all__ = ['mobilenetv3_Large', 'mobilenetv3']
 

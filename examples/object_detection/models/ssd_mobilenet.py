@@ -17,7 +17,7 @@ import torch.nn as nn
 from examples.common import restricted_pickle_module
 from examples.common.example_logger import logger
 from examples.object_detection.layers.modules.ssd_head import MultiOutputSequential, SSDDetectionOutput
-from nncf.checkpoint_loading import load_state
+from nncf.torch.checkpoint_loading import load_state
 
 
 def conv_bn(inp, oup, kernel, stride, padding):

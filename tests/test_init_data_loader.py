@@ -15,7 +15,7 @@ import pytest
 from math import ceil
 from tests.helpers import get_empty_config, create_ones_mock_dataloader
 
-from nncf.initialization import PartialDataLoader
+from nncf.torch.initialization import PartialDataLoader
 
 N_SAMPLE = 10
 VALID_RATIO = [0.0, 0.05, 0.2, 0.51, 0.89, 1.0]

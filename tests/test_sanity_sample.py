@@ -29,7 +29,7 @@ from examples.common.optimizer import get_default_weight_decay
 from examples.common.sample_config import SampleConfig
 from examples.common.utils import get_name
 from examples.common.utils import is_staged_quantization
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.config import NNCFConfig
@@ -228,10 +228,10 @@ def test_pretrained_model_train(config, tmp_path, multiprocessing_distributed, c
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if 'compression' in config['nncf_config']:
-        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+        allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
-        allowed_compression_levels = (CompressionLevel.NONE,)
-    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
+        allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
+    assert torch.load(last_checkpoint_path)['compression_stage'] in allowed_compression_stages
 
 
 def depends_on_pretrained_train(request, test_case_id: str, current_multiprocessing_distributed: bool):
@@ -311,10 +311,10 @@ def test_resume(request, config, tmp_path, multiprocessing_distributed, case_com
     last_checkpoint_path = os.path.join(checkpoint_save_dir, get_name(config_factory.config) + "_last.pth")
     assert os.path.exists(last_checkpoint_path)
     if 'compression' in config['nncf_config']:
-        allowed_compression_levels = (CompressionLevel.FULL, CompressionLevel.PARTIAL)
+        allowed_compression_stages = (CompressionStage.FULLY_COMPRESSED, CompressionStage.PARTIALLY_COMPRESSED)
     else:
-        allowed_compression_levels = (CompressionLevel.NONE,)
-    assert torch.load(last_checkpoint_path)['compression_level'] in allowed_compression_levels
+        allowed_compression_stages = (CompressionStage.UNCOMPRESSED,)
+    assert torch.load(last_checkpoint_path)['compression_stage'] in allowed_compression_stages
 
 
 @pytest.mark.dependency()
@@ -564,9 +564,9 @@ class HAWQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_hawq' + bs
 
     def setup_spy(self, mocker):
-        from nncf.quantization.init_precision import HAWQPrecisionInitializer
+        from nncf.torch.quantization.init_precision import HAWQPrecisionInitializer
         self.get_qsetup_spy = mocker.spy(HAWQPrecisionInitializer, "get_quantizer_setup_for_qconfig_sequence")
-        from nncf.quantization.hessian_trace import HessianTraceEstimator
+        from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
         self.hessian_trace_estimator_spy = mocker.spy(HessianTraceEstimator, "__init__")
 
     def validate_spy(self):
@@ -608,7 +608,7 @@ class AutoQDescriptor(TestCaseDescriptor):
         return super().__str__() + '_autoq' + sr + dd
 
     def setup_spy(self, mocker):
-        from nncf.quantization.algo import QuantizationBuilder
+        from nncf.torch.quantization.algo import QuantizationBuilder
         self.builder_spy = mocker.spy(QuantizationBuilder, 'build_controller')
 
     def validate_spy(self):

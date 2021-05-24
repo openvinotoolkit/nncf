@@ -1,19 +1,19 @@
 strict digraph  {
-"0 /nncf_model_input" [id=0, scope="", type=nncf_model_input];
-"1 GatherModel/where" [id=1, scope=GatherModel, type=where];
-"2 GatherModel/index_select" [id=2, scope=GatherModel, type=index_select];
-"3 GatherModel/index_select" [id=3, scope=GatherModel, type=index_select];
-"4 GatherModel/__getitem__" [id=4, scope=GatherModel, type=__getitem__];
-"5 /nncf_model_output" [id=5, scope="", type=nncf_model_output];
-"6 /nncf_model_output" [id=6, scope="", type=nncf_model_output];
-"7 /nncf_model_output" [id=7, scope="", type=nncf_model_output];
-"8 /nncf_model_output" [id=8, scope="", type=nncf_model_output];
-"0 /nncf_model_input" -> "1 GatherModel/where";
-"0 /nncf_model_input" -> "2 GatherModel/index_select";
-"0 /nncf_model_input" -> "3 GatherModel/index_select";
-"0 /nncf_model_input" -> "4 GatherModel/__getitem__";
-"1 GatherModel/where" -> "5 /nncf_model_output";
-"2 GatherModel/index_select" -> "6 /nncf_model_output";
-"3 GatherModel/index_select" -> "7 /nncf_model_output";
-"4 GatherModel/__getitem__" -> "8 /nncf_model_output";
+"0 /nncf_model_input_0" [id=0, scope="", type=nncf_model_input];
+"1 GatherModel/where_0" [id=1, scope=GatherModel, type=where];
+"2 GatherModel/index_select_0" [id=2, scope=GatherModel, type=index_select];
+"3 GatherModel/index_select_1" [id=3, scope=GatherModel, type=index_select];
+"4 GatherModel/__getitem___0" [id=4, scope=GatherModel, type=__getitem__];
+"5 /nncf_model_output_0" [id=5, scope="", type=nncf_model_output];
+"6 /nncf_model_output_1" [id=6, scope="", type=nncf_model_output];
+"7 /nncf_model_output_2" [id=7, scope="", type=nncf_model_output];
+"8 /nncf_model_output_3" [id=8, scope="", type=nncf_model_output];
+"0 /nncf_model_input_0" -> "1 GatherModel/where_0";
+"0 /nncf_model_input_0" -> "2 GatherModel/index_select_0";
+"0 /nncf_model_input_0" -> "3 GatherModel/index_select_1";
+"0 /nncf_model_input_0" -> "4 GatherModel/__getitem___0";
+"1 GatherModel/where_0" -> "5 /nncf_model_output_0";
+"2 GatherModel/index_select_0" -> "6 /nncf_model_output_1";
+"3 GatherModel/index_select_1" -> "7 /nncf_model_output_2";
+"4 GatherModel/__getitem___0" -> "8 /nncf_model_output_3";
 }

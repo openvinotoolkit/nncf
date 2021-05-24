@@ -1,3 +1,3 @@
-graft nncf/extensions
+graft nncf/torch/extensions
 graft nncf/common/hardware/config
 include LICENSE

@@ -30,8 +30,8 @@ from examples.common.distributed import DistributedSampler
 from examples.common.example_logger import logger
 from examples.common.execution import get_execution_mode
 from examples.common.execution import prepare_model_for_execution, start_worker
-from nncf.api.compression import CompressionLevel
-from nncf.initialization import register_default_init_args
+from nncf.api.compression import CompressionStage
+from nncf.torch.initialization import register_default_init_args
 from examples.common.optimizer import get_parameter_groups, make_optimizer
 from examples.common.utils import get_name, make_additional_checkpoints, print_statistics, configure_paths, \
     create_code_snapshot, is_on_first_rank, configure_logging, print_args, is_pretrained_model_requested, \
@@ -42,11 +42,11 @@ from examples.object_detection.dataset import detection_collate, get_testing_dat
 from examples.object_detection.eval import test_net
 from examples.object_detection.layers.modules import MultiBoxLoss
 from examples.object_detection.model import build_ssd
-from nncf import create_compressed_model, load_state
-from nncf.dynamic_graph.graph_tracer import create_input_infos
-from nncf.utils import is_main_process
+from nncf import create_compressed_model
+from nncf import load_state
 from nncf import AdaptiveCompressionTrainingLoop
-
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.utils import is_main_process
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -361,7 +361,7 @@ def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion,
     logger.info('Training {} on {} dataset...'.format(config.model, train_data_loader.dataset.name))
 
     best_mAp = 0
-    best_compression_level = CompressionLevel.NONE
+    best_compression_stage = CompressionStage.UNCOMPRESSED
     test_freq_in_epochs = max(config.test_interval // epoch_size, 1)
 
     max_epochs = config['max_iter'] // epoch_size

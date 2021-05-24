@@ -18,7 +18,7 @@ from functools import partial
 from openvino.inference_engine import IENetwork, IEPlugin, get_version
 
 from nncf.config import NNCFConfig
-from nncf.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from tools.ir_utils import get_ir_paths
 
 

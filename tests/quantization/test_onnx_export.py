@@ -16,10 +16,10 @@ import pytest
 import torch
 
 from nncf import NNCFConfig
-from nncf.quantization.layers import PTQuantizerSpec
-from nncf.quantization.layers import QUANTIZATION_MODULES
-from nncf.quantization.layers import QuantizationMode
-from nncf.quantization.layers import QuantizerExportMode
+from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import QUANTIZATION_MODULES
+from nncf.torch.quantization.layers import QuantizationMode
+from nncf.torch.quantization.layers import QuantizerExportMode
 from tests.test_helpers import TwoConvTestModel
 from tests.test_helpers import load_exported_onnx_version
 

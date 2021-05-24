@@ -89,6 +89,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.compression_rate_target = None
         self.was_compression_increased_on_prev_step = None
         self._compressed_training_history = []
+        self._best_checkpoints = {}
 
         self.training_epoch_count = 0
         self.cumulative_epoch_count = 0

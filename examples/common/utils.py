@@ -36,7 +36,7 @@ import mlflow
 import torch
 
 from examples.common.example_logger import logger as default_logger
-from nncf.utils import is_main_process
+from nncf.torch.utils import is_main_process
 
 # pylint: disable=import-error
 from returns.maybe import Maybe, Nothing

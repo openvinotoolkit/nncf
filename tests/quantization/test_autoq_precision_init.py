@@ -24,8 +24,8 @@ from torchvision.models import mobilenet_v2
 from torchvision.models import resnet50
 
 from nncf import register_default_init_args
-from nncf.module_operations import UpdatePaddingValue
-from nncf.utils import get_all_modules_by_type
+from nncf.torch.module_operations import UpdatePaddingValue
+from nncf.torch.utils import get_all_modules_by_type
 from tests.helpers import create_compressed_model_and_algo_for_test
 from tests.quantization.test_hawq_precision_init import BaseConfigBuilder
 from tests.quantization.test_hawq_precision_init import check_bitwidth_graph
@@ -144,11 +144,11 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
         dataset_dir = str(tmp_path)
     train_loader, _ = create_test_dataloaders(config, dataset_dir)
 
-    from nncf.automl.agent.ddpg.ddpg import DDPG
+    from nncf.torch.automl.agent.ddpg.ddpg import DDPG
     random_action_spy = mocker.spy(DDPG, 'random_action')
     select_action_spy = mocker.spy(DDPG, 'select_action')
 
-    from nncf.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
+    from nncf.torch.quantization.precision_init.autoq_init import AutoQPrecisionInitializer
     autoq_obj_init_spy = mocker.spy(AutoQPrecisionInitializer, '__init__')
     adjust_pad_creation_spy = mocker.spy(UpdatePaddingValue, '__init__')
 

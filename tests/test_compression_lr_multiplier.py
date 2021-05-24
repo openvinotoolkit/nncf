@@ -26,7 +26,7 @@ from torch.optim import SGD
 from torch.utils.data import DataLoader
 
 from nncf import NNCFConfig
-from nncf.layer_utils import CompressionParameter
+from nncf.torch.layer_utils import CompressionParameter
 from tests.helpers import create_initialized_compressed_model
 from tests.helpers import create_random_mock_dataloader
 from tests.helpers import check_equal
@@ -41,9 +41,9 @@ from tests.sparsity.rb.test_algo import get_basic_sparsity_config
 
 
 ALGO_NAME_TO_PATH_MAP = {
-    'quantization': 'nncf.quantization',
-    'rb_sparsity': 'nncf.sparsity.rb',
-    'binarization': 'nncf.binarization'
+    'quantization': 'nncf.torch.quantization',
+    'rb_sparsity': 'nncf.torch.sparsity.rb',
+    'binarization': 'nncf.torch.binarization'
 }
 
 

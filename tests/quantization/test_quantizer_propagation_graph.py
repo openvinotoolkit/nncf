@@ -27,18 +27,18 @@ import pytest
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.dynamic_graph.context import Scope
-from nncf.dynamic_graph.graph import InputAgnosticOperationExecutionContext
-from nncf.graph.graph import NNCFGraph
-from nncf.graph.operator_metatypes import CatMetatype
-from nncf.graph.transformations.commands import PTTargetPoint
-from nncf.nncf_network import InsertionPointGraph
-from nncf.quantization.quantizer_propagation import PropagationPath
-from nncf.quantization.quantizer_propagation import QuantizationTrait
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
-from nncf.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
-from nncf.quantization.quantizer_setup import MultiConfigQuantizationPoint
-from nncf.quantization.quantizer_setup import MultiConfigQuantizerSetup
+from nncf.torch.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.graph import InputAgnosticOperationExecutionContext
+from nncf.torch.graph.graph import NNCFGraph
+from nncf.torch.graph.operator_metatypes import CatMetatype
+from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.nncf_network import InsertionPointGraph
+from nncf.torch.quantization.quantizer_propagation import PropagationPath
+from nncf.torch.quantization.quantizer_propagation import QuantizationTrait
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraph as QPSG
+from nncf.torch.quantization.quantizer_propagation import QuantizerPropagationStateGraphNodeType
+from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from tests.test_nncf_network import get_mock_nncf_node_attrs
 from tests.test_nncf_network import get_nncf_graph_from_mock_nx_graph
 from tests.test_nncf_network import get_two_branch_mock_model_graph
@@ -69,7 +69,7 @@ class TestQuantizerPropagationStateGraph:
         ip_graph = InsertionPointGraph(get_two_branch_mock_model_graph())
         qpsg = QPSG(ip_graph)
 
-        qpsg.nodes['5 /F'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
+        qpsg.nodes['5 /F_0'][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
@@ -107,7 +107,7 @@ class TestQuantizerPropagationStateGraph:
     def test_add_propagating_quantizer(self, mock_qp_graph):
         ref_qconf_list = [QuantizerConfig(), QuantizerConfig(num_bits=6)]
 
-        target_node_key = "5 /F"
+        target_node_key = "5 /F_0"
         target_ip_node_key = InsertionPointGraph.get_pre_hook_node_key(target_node_key)
         prop_quant = mock_qp_graph.add_propagating_quantizer(ref_qconf_list, target_ip_node_key)
         assert prop_quant.potential_quant_configs == ref_qconf_list
@@ -141,23 +141,25 @@ class TestQuantizerPropagationStateGraph:
                                                         InsertionPointGraph.get_post_hook_node_key(target_node_key))
 
     START_IP_NODES_AND_PATHS_TO_DOMINATING_IP_NODES = [
-        # Non-branching case - starting from "4 /E" pre-hook
-        (InsertionPointGraph.get_pre_hook_node_key("4 /E"),
-         [[(InsertionPointGraph.get_post_hook_node_key("2 /C"), InsertionPointGraph.get_pre_hook_node_key("4 /E"))]]),
+        # Non-branching case - starting from "4 /E_0" pre-hook
+        (InsertionPointGraph.get_pre_hook_node_key("4 /E_0"),
+         [[(InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
+            InsertionPointGraph.get_pre_hook_node_key("4 /E_0"))]]),
 
-        # Non-branching case - starting from "2 /C" post-hook
-        (InsertionPointGraph.get_post_hook_node_key("2 /C"),
-         [[("2 /C", InsertionPointGraph.get_post_hook_node_key("2 /C")),
-           (InsertionPointGraph.get_pre_hook_node_key("2 /C"), "2 /C")]]),
+        # Non-branching case - starting from "2 /C_0" post-hook
+        (InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
+         [[("2 /C_0", InsertionPointGraph.get_post_hook_node_key("2 /C_0")),
+           (InsertionPointGraph.get_pre_hook_node_key("2 /C_0"), "2 /C_0")]]),
 
-        # Branching case - starting from "5 /F" pre-hook port 0
-        (InsertionPointGraph.get_pre_hook_node_key("5 /F"),
-         [[(InsertionPointGraph.get_post_hook_node_key("4 /E"), InsertionPointGraph.get_pre_hook_node_key("5 /F"))]]),
+        # Branching case - starting from "5 /F_0" pre-hook port 0
+        (InsertionPointGraph.get_pre_hook_node_key("5 /F_0"),
+         [[(InsertionPointGraph.get_post_hook_node_key("4 /E_0"),
+            InsertionPointGraph.get_pre_hook_node_key("5 /F_0"))]]),
 
-        # Branching case - starting from "5 /F" pre-hook port 1
-        (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
-         [[(InsertionPointGraph.get_post_hook_node_key("3 /D"),
-            InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1))]]),
+        # Branching case - starting from "5 /F_0" pre-hook port 1
+        (InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1),
+         [[(InsertionPointGraph.get_post_hook_node_key("3 /D_0"),
+            InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1))]]),
     ]
 
     @staticmethod
@@ -185,39 +187,39 @@ class TestQuantizerPropagationStateGraph:
 
     START_IP_NODES_AND_GROUPED_PATHS_TO_DOM_IP_NODES = [
         DomIPGroupedByUnifiedScalesTestStruct(
-            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("4 /E"),
+            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("4 /E_0"),
             ref_groups_vs_paths={
                 None: [
-                    [(InsertionPointGraph.get_post_hook_node_key("2 /C"),
-                      InsertionPointGraph.get_pre_hook_node_key("4 /E"))]
+                    [(InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
+                      InsertionPointGraph.get_pre_hook_node_key("4 /E_0"))]
                 ]
             }),
         DomIPGroupedByUnifiedScalesTestStruct(
-            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("2 /C"),
+            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
             ref_groups_vs_paths={
                 None: [
-                    [("2 /C", InsertionPointGraph.get_post_hook_node_key("2 /C")),
-                     (InsertionPointGraph.get_pre_hook_node_key("2 /C"), "2 /C")]
+                    [("2 /C_0", InsertionPointGraph.get_post_hook_node_key("2 /C_0")),
+                     (InsertionPointGraph.get_pre_hook_node_key("2 /C_0"), "2 /C_0")]
                 ]
             }
         ),
         DomIPGroupedByUnifiedScalesTestStruct(
-            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
+            start_ip_node_key=InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1),
             ref_groups_vs_paths={
                 None: [
-                    [(InsertionPointGraph.get_post_hook_node_key("3 /D"),
-                      InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1))]
+                    [(InsertionPointGraph.get_post_hook_node_key("3 /D_0"),
+                      InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1))]
                 ]
             }
         ),
         DomIPGroupedByUnifiedScalesTestStruct(
-            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("5 /F"),
+            start_ip_node_key=InsertionPointGraph.get_post_hook_node_key("5 /F_0"),
             ref_groups_vs_paths={
                 0: [
-                    [("5 /F", InsertionPointGraph.get_post_hook_node_key("5 /F")),
-                     (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1), "5 /F")],
-                    [("5 /F", InsertionPointGraph.get_post_hook_node_key("5 /F")),
-                     (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=0), "5 /F")],
+                    [("5 /F_0", InsertionPointGraph.get_post_hook_node_key("5 /F_0")),
+                     (InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1), "5 /F_0")],
+                    [("5 /F_0", InsertionPointGraph.get_post_hook_node_key("5 /F_0")),
+                     (InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=0), "5 /F_0")],
                 ]
             }
         )
@@ -251,17 +253,17 @@ class TestQuantizerPropagationStateGraph:
         assert processed_ref_groups == processed_test_groups
 
     START_TARGET_NODES = [
-        (InsertionPointGraph.get_pre_hook_node_key("7 /H"),
-         InsertionPointGraph.get_post_hook_node_key("6 /G")),
+        (InsertionPointGraph.get_pre_hook_node_key("7 /H_0"),
+         InsertionPointGraph.get_post_hook_node_key("6 /G_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("7 /H"),
-         InsertionPointGraph.get_pre_hook_node_key("5 /F")),
+        (InsertionPointGraph.get_pre_hook_node_key("7 /H_0"),
+         InsertionPointGraph.get_pre_hook_node_key("5 /F_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
-         InsertionPointGraph.get_pre_hook_node_key("3 /D")),
+        (InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1),
+         InsertionPointGraph.get_pre_hook_node_key("3 /D_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("5 /F"),
-         InsertionPointGraph.get_post_hook_node_key("1 /B")),
+        (InsertionPointGraph.get_pre_hook_node_key("5 /F_0"),
+         InsertionPointGraph.get_post_hook_node_key("1 /B_0")),
     ]
 
     @staticmethod
@@ -308,21 +310,21 @@ class TestQuantizerPropagationStateGraph:
             assert prop_quant.affected_ip_nodes == ref_affected_ip_nodes
 
     START_TARGET_ACCEPTING_NODES = [
-        (InsertionPointGraph.get_pre_hook_node_key("7 /H"),
-         InsertionPointGraph.get_pre_hook_node_key("6 /G"),
-         InsertionPointGraph.get_post_hook_node_key("6 /G")),
+        (InsertionPointGraph.get_pre_hook_node_key("7 /H_0"),
+         InsertionPointGraph.get_pre_hook_node_key("6 /G_0"),
+         InsertionPointGraph.get_post_hook_node_key("6 /G_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("6 /G"),
-         InsertionPointGraph.get_post_hook_node_key("5 /F"),
-         InsertionPointGraph.get_post_hook_node_key("5 /F")),
+        (InsertionPointGraph.get_pre_hook_node_key("6 /G_0"),
+         InsertionPointGraph.get_post_hook_node_key("5 /F_0"),
+         InsertionPointGraph.get_post_hook_node_key("5 /F_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("5 /F", in_port_id=1),
-         InsertionPointGraph.get_pre_hook_node_key("3 /D"),
-         InsertionPointGraph.get_post_hook_node_key("3 /D")),
+        (InsertionPointGraph.get_pre_hook_node_key("5 /F_0", in_port_id=1),
+         InsertionPointGraph.get_pre_hook_node_key("3 /D_0"),
+         InsertionPointGraph.get_post_hook_node_key("3 /D_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("3 /D"),
-         InsertionPointGraph.get_pre_hook_node_key("1 /B"),
-         InsertionPointGraph.get_post_hook_node_key("1 /B")),
+        (InsertionPointGraph.get_pre_hook_node_key("3 /D_0"),
+         InsertionPointGraph.get_pre_hook_node_key("1 /B_0"),
+         InsertionPointGraph.get_post_hook_node_key("1 /B_0")),
     ]
 
     @staticmethod
@@ -394,21 +396,21 @@ class TestQuantizerPropagationStateGraph:
         mock_qp_graph.skip_check = True
 
     START_TARGET_NODES_FOR_TWO_QUANTIZERS = [
-        (InsertionPointGraph.get_pre_hook_node_key("4 /E"),
-         InsertionPointGraph.get_post_hook_node_key("2 /C"),
-         InsertionPointGraph.get_pre_hook_node_key("7 /H"),
-         InsertionPointGraph.get_post_hook_node_key("6 /G")),
+        (InsertionPointGraph.get_pre_hook_node_key("4 /E_0"),
+         InsertionPointGraph.get_post_hook_node_key("2 /C_0"),
+         InsertionPointGraph.get_pre_hook_node_key("7 /H_0"),
+         InsertionPointGraph.get_post_hook_node_key("6 /G_0")),
 
-        (InsertionPointGraph.get_pre_hook_node_key("2 /C"),
-         InsertionPointGraph.get_post_hook_node_key("0 /A"),
-         InsertionPointGraph.get_pre_hook_node_key("7 /H"),
-         InsertionPointGraph.get_pre_hook_node_key("3 /D")),
+        (InsertionPointGraph.get_pre_hook_node_key("2 /C_0"),
+         InsertionPointGraph.get_post_hook_node_key("0 /A_0"),
+         InsertionPointGraph.get_pre_hook_node_key("7 /H_0"),
+         InsertionPointGraph.get_pre_hook_node_key("3 /D_0")),
 
         # Simulated quantizer merging result
-        (InsertionPointGraph.get_pre_hook_node_key("6 /G"),
-         InsertionPointGraph.get_pre_hook_node_key("4 /E"),
-         InsertionPointGraph.get_pre_hook_node_key("6 /G"),
-         InsertionPointGraph.get_post_hook_node_key("3 /D"))
+        (InsertionPointGraph.get_pre_hook_node_key("6 /G_0"),
+         InsertionPointGraph.get_pre_hook_node_key("4 /E_0"),
+         InsertionPointGraph.get_pre_hook_node_key("6 /G_0"),
+         InsertionPointGraph.get_post_hook_node_key("3 /D_0"))
     ]
 
     @staticmethod
@@ -478,24 +480,24 @@ class TestQuantizerPropagationStateGraph:
                 QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
     QUANTIZABLE_NODES_START_NODES_DOMINATED_NODES = [
-        (["3 /D", "4 /E", "5 /F"],
+        (["3 /D_0", "4 /E_0", "5 /F_0"],
          {
-             "1 /B": {"3 /D", "4 /E"},
-             InsertionPointGraph.get_pre_hook_node_key("1 /B"): {"3 /D", "4 /E"},
-             "4 /E": {"5 /F"},
-             InsertionPointGraph.get_post_hook_node_key("3 /D"): {"5 /F"},
-             "0 /A": {"3 /D", "4 /E"},
-             InsertionPointGraph.get_pre_hook_node_key("6 /G"): set()
+             "1 /B_0": {"3 /D_0", "4 /E_0"},
+             InsertionPointGraph.get_pre_hook_node_key("1 /B_0"): {"3 /D_0", "4 /E_0"},
+             "4 /E_0": {"5 /F_0"},
+             InsertionPointGraph.get_post_hook_node_key("3 /D_0"): {"5 /F_0"},
+             "0 /A_0": {"3 /D_0", "4 /E_0"},
+             InsertionPointGraph.get_pre_hook_node_key("6 /G_0"): set()
          }),
-        (["2 /C", "4 /E", "7 /H"],
+        (["2 /C_0", "4 /E_0", "7 /H_0"],
          {
-             InsertionPointGraph.get_pre_hook_node_key("2 /C"): {"2 /C"},
-             InsertionPointGraph.get_post_hook_node_key("2 /C"): {"4 /E"},
-             "3 /D": {"7 /H"},
+             InsertionPointGraph.get_pre_hook_node_key("2 /C_0"): {"2 /C_0"},
+             InsertionPointGraph.get_post_hook_node_key("2 /C_0"): {"4 /E_0"},
+             "3 /D_0": {"7 /H_0"},
 
              # corner case - has a branch without quantizers
-             InsertionPointGraph.get_pre_hook_node_key("1 /B"): {"2 /C", "7 /H"},
-             InsertionPointGraph.get_post_hook_node_key("7 /H"): set()
+             InsertionPointGraph.get_pre_hook_node_key("1 /B_0"): {"2 /C_0", "7 /H_0"},
+             InsertionPointGraph.get_post_hook_node_key("7 /H_0"): set()
          })
     ]
 
@@ -535,13 +537,13 @@ class TestQuantizerPropagationStateGraph:
     def get_model_graph() -> NNCFGraph:
         mock_graph = nx.DiGraph()
 
-        #      (0 /A)
+        #      (0 /A_0)
         #         |
-        #      (1 /B)
+        #      (1 /B_0)
         #    /        \
-        # (2 /C)     (3 /D)
+        # (2 /C_0)     (3 /D_0)
         #    |         |
-        # (5 /F)     (4 /E)
+        # (5 /F_0)     (4 /E_0)
         #
         #
 
@@ -572,11 +574,11 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '4 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '4 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()])
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E'),
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
 
@@ -584,14 +586,14 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '5 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '5 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()]),
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F'),
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /C'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /C_0'),
                     is_merged=True,
-                    prop_path=[(InsertionPointGraph.get_post_hook_node_key('1 /B'),
-                                InsertionPointGraph.get_pre_hook_node_key('2 /C'))]
+                    prop_path=[(InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
+                                InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))]
                 )
 
             ],
@@ -599,12 +601,12 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        InsertionPointGraph.get_pre_hook_node_key('1 /B'): (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        InsertionPointGraph.get_pre_hook_node_key('1 /B_0'): (QuantizationTrait.INPUTS_QUANTIZABLE,
                                                                             [QuantizerConfig()])
 
                     },
-                    starting_quantizer_ip_node=['4 /E', '5 /F'],
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=['4 /E_0', '5 /F_0'],
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
                 )
@@ -615,11 +617,11 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '4 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '4 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()])
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E'),
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
 
@@ -627,13 +629,13 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '5 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '5 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()]),
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F'),
-                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
                     is_merged=True,
-                    prop_path=[('1 /B', InsertionPointGraph.get_post_hook_node_key('1 /B'))]
+                    prop_path=[('1 /B_0', InsertionPointGraph.get_post_hook_node_key('1 /B_0'))]
                 )
 
             ],
@@ -641,12 +643,12 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '1 /B': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '1 /B_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()])
 
                     },
-                    starting_quantizer_ip_node=['4 /E', '5 /F'],
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=['4 /E_0', '5 /F_0'],
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
                 )
@@ -657,11 +659,11 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '4 /E': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '4 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()])
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E'),
-                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /E_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
 
@@ -669,14 +671,14 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '5 /F': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '5 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()]),
                     },
-                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F'),
-                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /C'),
+                    starting_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('5 /F_0'),
+                    target_node_for_quantizer=InsertionPointGraph.get_pre_hook_node_key('2 /C_0'),
                     is_merged=True,
-                    prop_path=[(InsertionPointGraph.get_post_hook_node_key('1 /B'),
-                                InsertionPointGraph.get_pre_hook_node_key('2 /C'))]
+                    prop_path=[(InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
+                                InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))]
                 )
 
             ],
@@ -684,12 +686,12 @@ class TestQuantizerPropagationStateGraph:
                 StateQuantizerTestStruct(
                     init_node_to_trait_and_configs_dict=
                     {
-                        '1 /B': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                        '1 /B_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                               [QuantizerConfig()])
 
                     },
-                    starting_quantizer_ip_node=['4 /E', '5 /F'],
-                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B'),
+                    starting_quantizer_ip_node=['4 /E_0', '5 /F_0'],
+                    target_node_for_quantizer=InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
                     is_merged=False,
                     prop_path=None
                 )
@@ -797,202 +799,202 @@ class TestRedundantQuantizerMerge:
 
     class NoConnectingPathsState0(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_pre_hook_node_key('3 /D'),
-            InsertionPointGraph.get_pre_hook_node_key('5 /F')
+            InsertionPointGraph.get_pre_hook_node_key('3 /D_0'),
+            InsertionPointGraph.get_pre_hook_node_key('5 /F_0')
         }
         operator_node_key_vs_trait_dict = {
-            '3 /D': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '5 /F': QuantizationTrait.INPUTS_QUANTIZABLE
+            '3 /D_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '5 /F_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('3 /D'))
+                                           InsertionPointGraph.get_pre_hook_node_key('3 /D_0'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                           InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             return qpsg
 
     class NoConnectingPathsState1(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_pre_hook_node_key('2 /C'),
-            InsertionPointGraph.get_pre_hook_node_key('5 /F')
+            InsertionPointGraph.get_pre_hook_node_key('2 /C_0'),
+            InsertionPointGraph.get_pre_hook_node_key('5 /F_0')
         }
         operator_node_key_vs_trait_dict = {
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '5 /F': QuantizationTrait.INPUTS_QUANTIZABLE
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '5 /F_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('2 /C'))
+                                           InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                           InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             return qpsg
 
     class NoConnectingPathsState2(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_pre_hook_node_key('1 /B'),
-            InsertionPointGraph.get_pre_hook_node_key('4 /E')
+            InsertionPointGraph.get_pre_hook_node_key('1 /B_0'),
+            InsertionPointGraph.get_pre_hook_node_key('4 /E_0')
         }
         operator_node_key_vs_trait_dict = {
-            '1 /B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '3 /D': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '1 /B_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '3 /D_0': QuantizationTrait.INPUTS_QUANTIZABLE,
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('1 /B'))
+                                           InsertionPointGraph.get_pre_hook_node_key('1 /B_0'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                           InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             return qpsg
 
     class NoConnectingPathsState3(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_post_hook_node_key('1 /B'),
-            InsertionPointGraph.get_pre_hook_node_key('4 /E')
+            InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
+            InsertionPointGraph.get_pre_hook_node_key('4 /E_0')
         }
         operator_node_key_vs_trait_dict = {
-            '1 /B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '3 /D': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '1 /B_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '3 /D_0': QuantizationTrait.INPUTS_QUANTIZABLE,
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('2 /C'))
+                                           InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('3 /D'))
+                                           InsertionPointGraph.get_pre_hook_node_key('3 /D_0'))
             qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig()],
                                                      [None, None],
-                                                     InsertionPointGraph.get_post_hook_node_key('1 /B'))
+                                                     InsertionPointGraph.get_post_hook_node_key('1 /B_0'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                           InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             return qpsg
 
     class BranchHandlingState0(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_pre_hook_node_key('8 /I', in_port_id=0),
-            InsertionPointGraph.get_pre_hook_node_key('8 /I', in_port_id=1),
-            InsertionPointGraph.get_pre_hook_node_key('2 /C'),
-            InsertionPointGraph.get_pre_hook_node_key('3 /D')
+            InsertionPointGraph.get_pre_hook_node_key('8 /I_0', in_port_id=0),
+            InsertionPointGraph.get_pre_hook_node_key('8 /I_0', in_port_id=1),
+            InsertionPointGraph.get_pre_hook_node_key('2 /C_0'),
+            InsertionPointGraph.get_pre_hook_node_key('3 /D_0')
         }
         operator_node_key_vs_trait_dict = {
-            '8 /I': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '6 /G': QuantizationTrait.NON_QUANTIZABLE,
+            '8 /I_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '6 /G_0': QuantizationTrait.NON_QUANTIZABLE,
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
-            # This case will fail if, after going depth-first through the '3 /D' branch of the graph,
+            # This case will fail if, after going depth-first through the '3 /D_0' branch of the graph,
             # the merge traversal function state is not reset (which is incorrect behavior)
-            # when starting to traverse the '2 /C' branch.
+            # when starting to traverse the '2 /C_0' branch.
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('8 /I', in_port_id=0))
+                                           InsertionPointGraph.get_pre_hook_node_key('8 /I_0', in_port_id=0))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('8 /I', in_port_id=1))
+                                           InsertionPointGraph.get_pre_hook_node_key('8 /I_0', in_port_id=1))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('2 /C'))
+                                           InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))
             qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('3 /D'))
+                                           InsertionPointGraph.get_pre_hook_node_key('3 /D_0'))
             return qpsg
 
     class MergeState0(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_post_hook_node_key('2 /C')
+            InsertionPointGraph.get_post_hook_node_key('2 /C_0')
         }
         operator_node_key_vs_trait_dict = {
-            '5 /F': QuantizationTrait.INPUTS_QUANTIZABLE
+            '5 /F_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                                  InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
 
             qpsg.propagate_quantizer_via_path(pq_1, [
-                (InsertionPointGraph.get_post_hook_node_key('2 /C'),
-                 InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                (InsertionPointGraph.get_post_hook_node_key('2 /C_0'),
+                 InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             ])
             _ = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                               InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                               InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             return qpsg
 
     class MergeState1(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_post_hook_node_key('1 /B')
+            InsertionPointGraph.get_post_hook_node_key('1 /B_0')
         }
         operator_node_key_vs_trait_dict = {
-            '1 /B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '3 /D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '4 /E': QuantizationTrait.INPUTS_QUANTIZABLE
+            '1 /B_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '3 /D_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '4 /E_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('2 /C'))
+                                           InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                           InsertionPointGraph.get_pre_hook_node_key('3 /D'))
+                                           InsertionPointGraph.get_pre_hook_node_key('3 /D_0'))
             qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig()],
                                                      [None, None],
-                                                     InsertionPointGraph.get_post_hook_node_key('1 /B'))
+                                                     InsertionPointGraph.get_post_hook_node_key('1 /B_0'))
             pq_3 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],  # sic!
-                                                  InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             # pq_3 should be considered redundant w.r.t the upstream per-tensor quantizer
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_pre_hook_node_key('3 /D'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                                   InsertionPointGraph.get_pre_hook_node_key('3 /D_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_3, path)
             return qpsg
 
     class NoRedundancyState0(RedundantQuantizerMergeTestStruct):
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_post_hook_node_key('2 /C'),
-            InsertionPointGraph.get_pre_hook_node_key('5 /F'),
+            InsertionPointGraph.get_post_hook_node_key('2 /C_0'),
+            InsertionPointGraph.get_pre_hook_node_key('5 /F_0'),
         }
         operator_node_key_vs_trait_dict = {
-            '5 /F': QuantizationTrait.INPUTS_QUANTIZABLE
+            '5 /F_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                                  InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
 
             qpsg.propagate_quantizer_via_path(pq_1, [
-                (InsertionPointGraph.get_post_hook_node_key('2 /C'),
-                 InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                (InsertionPointGraph.get_post_hook_node_key('2 /C_0'),
+                 InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             ])
             _ = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=6)],
-                                               InsertionPointGraph.get_pre_hook_node_key('5 /F'))
+                                               InsertionPointGraph.get_pre_hook_node_key('5 /F_0'))
             return qpsg
 
     class NoRedundancyState1(RedundantQuantizerMergeTestStruct):
 
         ref_remaining_pq_positions = {
-            InsertionPointGraph.get_post_hook_node_key('1 /B'),
-            InsertionPointGraph.get_pre_hook_node_key('3 /D')
+            InsertionPointGraph.get_post_hook_node_key('1 /B_0'),
+            InsertionPointGraph.get_pre_hook_node_key('3 /D_0')
         }
         operator_node_key_vs_trait_dict = {
-            '1 /B': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '2 /C': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '3 /D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '4 /E': QuantizationTrait.INPUTS_QUANTIZABLE
+            '1 /B_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '2 /C_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '3 /D_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '4 /E_0': QuantizationTrait.INPUTS_QUANTIZABLE
         }
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('2 /C'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('2 /C_0'))
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(per_channel=True)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('3 /D'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('3 /D_0'))
             qpsg.merge_quantizers_for_branching_node([pq_1, pq_2], [QuantizerConfig(per_channel=True)],
                                                      [None, None],
-                                                     InsertionPointGraph.get_post_hook_node_key('1 /B'))
+                                                     InsertionPointGraph.get_post_hook_node_key('1 /B_0'))
             pq_3 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                                  InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_pre_hook_node_key('3 /D'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('4 /E'))
+                                                   InsertionPointGraph.get_pre_hook_node_key('3 /D_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('4 /E_0'))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_3, path)
             return qpsg
@@ -1026,19 +1028,19 @@ class TestRedundantQuantizerMerge:
     def get_model_graph() -> NNCFGraph:
         mock_graph = nx.DiGraph()
 
-        #      (0 /A)
+        #      (0 /A_0)
         #        |
-        #      (1 /B)
+        #      (1 /B_0)
         #    /        \
-        # (2 /C)     (3 /D)
+        # (2 /C_0)     (3 /D_0)
         #   |          |
-        # (5 /F)     (4 /E)
+        # (5 /F_0)     (4 /E_0)
         #   |          |
-        # (6 /G)       |
+        # (6 /G_0)       |
         #   |          |
-        # (7 /H)       |
+        # (7 /H_0)       |
         #    \        /
-        #      (8 /I)
+        #      (8 /I_0)
         node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
         for node_key in node_keys:
             mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
@@ -1081,9 +1083,9 @@ class TestOutputQuantAsWeightsSetup:
 
     class LinearPropagation(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '5 F/F': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '5 F/F_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig()]}
 
@@ -1098,20 +1100,20 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()],
-                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C_0')
             return qpsg
 
     class LinearPropagationWithConfigSubspaceSelection(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '4 D/D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '4 D/D_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig(num_bits=6),
                                                                  QuantizerConfig(num_bits=8)]}
@@ -1127,20 +1129,20 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C_0')
             return qpsg
 
     class LinearPropagationWithFailedMerge(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '4 D/D': QuantizationTrait.QUANTIZATION_AGNOSTIC,
-            '8 G/G': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '2 C/C': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '4 D/D_0': QuantizationTrait.QUANTIZATION_AGNOSTIC,
+            '8 G/G_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '2 C/C_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('C'): [QuantizerConfig(num_bits=6),
                                                                  QuantizerConfig(num_bits=8)]}
@@ -1162,19 +1164,19 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=5)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                  InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G'))
+                                                   InsertionPointGraph.get_post_hook_node_key('2 C/C_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('6 G/G_0'))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '2 C/C_0')
             return qpsg
 
     class LinearPropagationWithUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '9 J/J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(num_bits=4)]}
 
@@ -1196,26 +1198,26 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=0), )
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=1), )
             qpsg.unify_pq_scales(pq_1, pq_2)
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=0))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I_0')
             return qpsg
 
     class BranchingPropagationWithUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
-            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '9 J/J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
                                            Scope.from_str('F'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)]}
@@ -1237,35 +1239,35 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=0), )
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=1), )
             qpsg.unify_pq_scales(pq_1, pq_2)
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=0))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I_0')
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=1))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_2, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F_0')
             return qpsg
 
     class BranchingPropagationWithPerChannelFiltering(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
-            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '9 J/J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC,
                                                                                  per_channel=True),
@@ -1292,36 +1294,36 @@ class TestOutputQuantAsWeightsSetup:
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
                                                    QuantizerConfig(num_bits=4)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=0), )
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4, per_channel=True),
                                                    QuantizerConfig(num_bits=4)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=1), )
             qpsg.unify_pq_scales(pq_1, pq_2)
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=0))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I_0')
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=1))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_2, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F_0')
             return qpsg
 
     class BranchingPropagationWithPerChannelFilteringAndUnifiedScales(OutputQuantAsWeightsSetupTestStruct):
         operator_node_key_vs_trait_dict = {
-            '9 J/J': QuantizationTrait.INPUTS_QUANTIZABLE,
-            '8 I/I': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
-            '5 F/F': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
+            '9 J/J_0': QuantizationTrait.INPUTS_QUANTIZABLE,
+            '8 I/I_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
+            '5 F/F_0': QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS
         }
         quantizable_modules_vs_qconfigs = {Scope.from_str('I'): [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
                                                                  QuantizerConfig(num_bits=6,
@@ -1359,30 +1361,30 @@ class TestOutputQuantAsWeightsSetup:
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
                                                    QuantizerConfig(num_bits=6, signedness_to_force=False)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=0), )
             pq_2 = qpsg.add_propagating_quantizer([QuantizerConfig(num_bits=4, per_channel=True),
                                                    QuantizerConfig(num_bits=4),
                                                    QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                  InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                             in_port_id=1), )
             qpsg.unify_pq_scales(pq_1, pq_2)
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('8 I/I_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=0))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_1, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_1, '8 I/I_0')
 
             paths = get_edge_paths_for_propagation(qpsg,
-                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F'),
-                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J',
+                                                   InsertionPointGraph.get_post_hook_node_key('5 F/F_0'),
+                                                   InsertionPointGraph.get_pre_hook_node_key('9 J/J_0',
                                                                                              in_port_id=1))
             path = paths[0]
             qpsg.propagate_quantizer_via_path(pq_2, path)
-            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F')
+            qpsg.mark_act_quantizer_as_dependent_on_weights(pq_2, '5 F/F_0')
             return qpsg
 
     OUTPUT_QUANT_AS_WEIGHTS_TEST_CASES = [
@@ -1410,20 +1412,20 @@ class TestOutputQuantAsWeightsSetup:
     def get_model_graph() -> NNCFGraph:
         mock_graph = nx.DiGraph()
 
-        #      (0 A/A)       (1 B/B)
+        #      (0 A/A_0)       (1 B/B_0)
         #        |             |
-        #      (2 C/C)         |
+        #      (2 C/C_0)       |
         #    /         \      /
-        # (3 D/D)       (4 E/E)
+        # (3 D/D_0)    (4 E/E_0)
         #   |             |
-        # (6 G/G)       (5 F/F)
+        # (6 G/G_0)    (5 F/F_0)
         #   |             |
-        # (7 H/H)         |
+        # (7 H/H_0)       |
         #   |             |
-        # (8 I/I)         |
+        # (8 I/I_0)       |
         #    \           /
         #     \         /
-        #       (9 J/J)
+        #       (9 J/J_0)
         node_keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
         for node_key in node_keys:
             mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key,

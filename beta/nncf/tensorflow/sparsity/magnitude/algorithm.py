@@ -106,7 +106,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         return MagnitudeSparsityController(model, self.config, self._op_names)
 
 
-@ADAPTIVE_COMPRESSION_CONTROLLERS.register('magnitude_sparsity')
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_magnitude_sparsity')
 class MagnitudeSparsityController(BaseSparsityController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted

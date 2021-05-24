@@ -86,7 +86,7 @@ Important points you should consider when training your networks with compressio
   - It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
 
 #### Step 4 (optional): Export the compressed model to ONNX
-After the compressed model has been fine-tuned to acceptable accuracy and compression levels, you can export it to ONNX format.
+After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it to ONNX format.
 Since export process is in general algorithm-specific, you have to call the compression controller's `export_model` method to properly export the model with compression specifics into ONNX:
 ```python
 compression_ctrl.export_model("./compressed_model.onnx")
@@ -107,14 +107,14 @@ It will attempt to load a PyTorch state dict into a model by first stripping the
 Depending on the value of the `is_resume` argument, it will then fail if an exact match could not be made (when `is_resume == True`), or load the matching layer parameters and print a warning listing the mismatches (when `is_resume == False`).
 `is_resume=False` is most commonly used if you want to load the starting weights from an uncompressed model into a compressed model, and `is_resume=True` is used when you want to evaluate a compressed checkpoint or resume compressed checkpoint training without changing the compression algorithm parameters.
 
-To save the best compressed checkpoint use `compression_ctrl.compression_level()` to distinguish between 3 possible
-levels of compression: `NONE`, `PARTIAL` and `FULL`. It is useful in case of `staged` compression. Model may achieve
+To save the best compressed checkpoint use `compression_ctrl.compression_stage()` to distinguish between 3 possible
+levels of compression: `UNCOMPRESSED`, `PARTIALLY_COMPRESSED` and `FULLY_COMPRESSED`. It is useful in case of `staged` compression. Model may achieve
 the best accuracy on earlier stages of compression - tuning without compression or with intermediate compression rate,
 but still fully compressed model with lower accuracy should be considered as the best compressed one.
-`NONE` means that no compression is applied for the model, for instance, in case of stage quantization - when all
-quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIAL` stands for the
+`UNCOMPRESSED` means that no compression is applied for the model, for instance, in case of stage quantization - when all
+quantization are disabled, or in case of sparsity - when current sparsity rate is zero. `PARTIALLY_COMPRESSED` stands for the
 compressed model which haven't reached final compression ratio yet, e.g. magnitude sparsity algorithm has learnt
-masking of 30% weights out of 51% of target rate. The controller returns `FULL` compression level when it finished
+masking of 30% weights out of 51% of target rate. The controller returns `FULLY_COMPRESSED` compression stage when it finished
 scheduling and tuning hyper parameters of the compression algorithm, for example when rb-sparsity method sets final
 target sparsity rate for the loss.
 

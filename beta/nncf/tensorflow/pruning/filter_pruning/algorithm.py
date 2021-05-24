@@ -86,7 +86,7 @@ class FilterPruningBuilder(BasePruningAlgoBuilder):
         return TFElementwise.get_all_op_aliases()
 
 
-@ADAPTIVE_COMPRESSION_CONTROLLERS.register('filter_pruning')
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_filter_pruning')
 class FilterPruningController(BasePruningAlgoController):
     """
     Serves as a handle to the additional modules, parameters and hooks inserted

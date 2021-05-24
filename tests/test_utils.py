@@ -2,11 +2,11 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.utils import training_mode_switcher
-from nncf.utils import save_module_state
-from nncf.utils import _ModuleState
-from nncf.layer_utils import CompressionParameter
-from nncf.initialization import DataLoaderBNAdaptationRunner
+from nncf.torch.utils import training_mode_switcher
+from nncf.torch.utils import save_module_state
+from nncf.torch.utils import _ModuleState
+from nncf.torch.layer_utils import CompressionParameter
+from nncf.torch.initialization import DataLoaderBNAdaptationRunner
 
 from tests.helpers import BasicConvTestModel, TwoConvTestModel, MockModel
 from tests.quantization.test_saturation_issue_export import DepthWiseConvTestModel, EightConvTestModel

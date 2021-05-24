@@ -17,8 +17,8 @@ import pytest
 import torch.nn.functional as F
 from torch.nn import Module, Conv2d, BatchNorm2d, ReLU, MaxPool2d, Sequential, AvgPool2d, init
 
-from nncf.graph.version_agnostic_op_names import VersionAgnosticNames
-from nncf.utils import get_all_modules_by_type, get_module_by_node_name, get_all_node_names, \
+from nncf.torch.graph.version_agnostic_op_names import VersionAgnosticNames
+from nncf.torch.utils import get_all_modules_by_type, get_module_by_node_name, get_all_node_names, \
     apply_by_node_name, set_module_by_node_name, parse_node_name
 
 
@@ -153,20 +153,20 @@ def test_set_module_by_node_name__for_nested_module():
 def test_get_all_nodes():
     model = ModelForTest()
     ref_list = [
-        'ModelForTest/Conv2d[conv1]/conv2d',
-        'ModelForTest/BatchNorm2d[bn1]/batch_norm',
-        'ModelForTest/ReLU/' + VersionAgnosticNames.RELU,
-        'ModelForTest/' + VersionAgnosticNames.RELU,
-        'ModelForTest/BatchNorm2d[bn2]/batch_norm',
-        'ModelForTest/Sequential[layer2]/Sequential[layer1]/Conv2d[conv01]/conv2d',
-        'ModelForTest/Sequential[layer2]/Sequential[layer1]/BatchNorm2d[norm01]/batch_norm',
-        'ModelForTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]/' + VersionAgnosticNames.RELU,
-        'ModelForTest/Sequential[layer2]/Sequential[layer1]/MaxPool2d[pool01]/max_pool2d',
-        'ModelForTest/Sequential[layer2]/Conv2d[conv02]/conv2d',
-        'ModelForTest/Sequential[layer2]/ReLU[relu02]/' + VersionAgnosticNames.RELU,
-        'ModelForTest/Sequential[layer2]/BatchNorm2d[norm02]/batch_norm',
-        'ModelForTest/Sequential[layer2]/MaxPool2d[pool02]/max_pool2d',
-        'ModelForTest/AvgPool2d[avgpool]/avg_pool2d'
+        'ModelForTest/Conv2d[conv1]/conv2d_0',
+        'ModelForTest/BatchNorm2d[bn1]/batch_norm_0',
+        'ModelForTest/ReLU/' + VersionAgnosticNames.RELU + '_0',
+        'ModelForTest/' + VersionAgnosticNames.RELU + '_0',
+        'ModelForTest/BatchNorm2d[bn2]/batch_norm_0',
+        'ModelForTest/Sequential[layer2]/Sequential[layer1]/Conv2d[conv01]/conv2d_0',
+        'ModelForTest/Sequential[layer2]/Sequential[layer1]/BatchNorm2d[norm01]/batch_norm_0',
+        'ModelForTest/Sequential[layer2]/Sequential[layer1]/ReLU[relu01]/' + VersionAgnosticNames.RELU + '_0',
+        'ModelForTest/Sequential[layer2]/Sequential[layer1]/MaxPool2d[pool01]/max_pool2d_0',
+        'ModelForTest/Sequential[layer2]/Conv2d[conv02]/conv2d_0',
+        'ModelForTest/Sequential[layer2]/ReLU[relu02]/' + VersionAgnosticNames.RELU + '_0',
+        'ModelForTest/Sequential[layer2]/BatchNorm2d[norm02]/batch_norm_0',
+        'ModelForTest/Sequential[layer2]/MaxPool2d[pool02]/max_pool2d_0',
+        'ModelForTest/AvgPool2d[avgpool]/avg_pool2d_0'
     ]
 
     act_list = get_all_node_names(model, (1, 1, 4, 4))

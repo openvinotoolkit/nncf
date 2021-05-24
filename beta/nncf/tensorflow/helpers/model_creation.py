@@ -14,7 +14,7 @@
 from beta.nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from beta.nncf.tensorflow.api.composite_compression import TFCompositeCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.helpers.utils import get_built_model
-from nncf.structures import ModelEvaluationArgs
+from nncf.torch.structures import ModelEvaluationArgs
 
 
 def create_compression_algorithm_builder(config):

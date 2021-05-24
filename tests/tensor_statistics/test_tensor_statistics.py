@@ -16,10 +16,10 @@ from typing import Dict, Type
 import pytest
 import torch
 
-from nncf.tensor_statistics.collectors import MinMaxStatisticCollector, TensorStatisticCollectorBase, ReductionShape, \
-    MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
+from nncf.torch.tensor_statistics.collectors import MinMaxStatisticCollector, TensorStatisticCollectorBase, \
+    ReductionShape, MeanMinMaxStatisticCollector, MedianMADStatisticCollector, PercentileStatisticCollector, \
     MeanPercentileStatisticCollector, StatisticsNotCollectedError, OfflineTensorStatisticCollector
-from nncf.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, MedianMADTensorStatistic, \
+from nncf.torch.tensor_statistics.statistics import TensorStatistic, MinMaxTensorStatistic, MedianMADTensorStatistic, \
     PercentileTensorStatistic
 
 

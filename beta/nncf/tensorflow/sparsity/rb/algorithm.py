@@ -85,7 +85,7 @@ class RBSparsityBuilder(TFCompressionAlgorithmBuilder):
         return RBSparsityController(model, self.config, self._op_names)
 
 
-@ADAPTIVE_COMPRESSION_CONTROLLERS.register('rb_sparsity')
+@ADAPTIVE_COMPRESSION_CONTROLLERS.register('tf_rb_sparsity')
 class RBSparsityController(BaseSparsityController):
     def __init__(self, target_model, config, op_names: List[str]):
         super().__init__(target_model, op_names)

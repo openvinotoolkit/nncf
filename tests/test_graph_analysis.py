@@ -12,10 +12,10 @@
 """
 from collections import Counter
 
-from nncf.graph.graph import PTNNCFGraph
-from nncf.graph.graph import NNCFGraphPatternIO
-from nncf.graph.graph import NNCFGraphEdge
-from nncf.graph.graph import PTNNCFNode
+from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.graph import NNCFGraphPatternIO
+from nncf.torch.graph.graph import NNCFGraphEdge
+from nncf.torch.graph.graph import PTNNCFNode
 
 
 def test_graph_pattern_io_building():

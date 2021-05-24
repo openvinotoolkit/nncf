@@ -15,10 +15,10 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.layers import NNCFConv2d, NNCFLinear, NNCFConvTranspose2d
-from nncf.module_operations import UpdateWeight
-from nncf.sparsity.rb.layers import RBSparsifyingWeight
-from nncf.sparsity.rb.loss import SparseLoss
+from nncf.torch.layers import NNCFConv2d, NNCFLinear, NNCFConvTranspose2d
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
+from nncf.torch.sparsity.rb.loss import SparseLoss
 
 
 class TestModel(nn.Module):

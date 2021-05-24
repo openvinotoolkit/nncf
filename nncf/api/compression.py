@@ -130,33 +130,33 @@ class CompressionScheduler(ABC):
         """
 
 
-class CompressionLevel(OrderedEnum):
+class CompressionStage(OrderedEnum):
     """
-    Specifies the compression level for the model.
+    Specifies the compression stage for the model.
     """
 
-    NONE = 0
-    PARTIAL = 1
-    FULL = 2
+    UNCOMPRESSED = 0
+    PARTIALLY_COMPRESSED = 1
+    FULLY_COMPRESSED = 2
 
-    def __add__(self, other: 'CompressionLevel') -> 'CompressionLevel':
+    def __add__(self, other: 'CompressionStage') -> 'CompressionStage':
         """
-        Defines compression level of a composite compression controller, consist of
-        two algorithms, where `self` is the compression level of the first algorithm
-        and other - compression level of the second one.
-            NONE    & NONE    = NONE
-            PARTIAL & PARTIAL = PARTIAL
-            FULL    & FULL    = FULL
-            NONE    & PARTIAL = PARTIAL
-            NONE    & FULL    = PARTIAL
-            PARTIAL & FULL    = PARTIAL
+        Defines compression stage of a composite compression controller, consist of
+        two algorithms, where `self` is the compression stage of the first algorithm
+        and other - compression stage of the second one.
+            UNCOMPRESSED    & UNCOMPRESSED    = UNCOMPRESSED
+            PARTIALLY_COMPRESSED & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
+            FULLY_COMPRESSED    & FULLY_COMPRESSED    = FULLY_COMPRESSED
+            UNCOMPRESSED    & PARTIALLY_COMPRESSED = PARTIALLY_COMPRESSED
+            UNCOMPRESSED    & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
+            PARTIALLY_COMPRESSED & FULLY_COMPRESSED    = PARTIALLY_COMPRESSED
 
-        :param other: An instance of another compression level.
-        :return: The common compression level of the two algorithms.
+        :param other: An instance of another compression stage.
+        :return: The common compression stage of the two algorithms.
         """
         if self == other:
             return self
-        return CompressionLevel.PARTIAL
+        return CompressionStage.PARTIALLY_COMPRESSED
 
 
 class CompressionAlgorithmController(ABC):
@@ -214,13 +214,13 @@ class CompressionAlgorithmController(ABC):
         :return: The compression controller state.
         """
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         """
-        Returns the compression level. Should be used on saving best checkpoints
+        Returns the compression stage. Should be used on saving best checkpoints
         to distinguish between uncompressed, partially compressed, and fully
         compressed models.
 
-        :return: The compression level of the target model.
+        :return: The compression stage of the target model.
         """
 
     def statistics(self, quickly_collected_only: bool = False) -> Dict[str, object]:

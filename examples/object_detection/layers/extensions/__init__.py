@@ -4,7 +4,7 @@ import torch
 
 from torch.utils.cpp_extension import load
 
-from nncf.extensions import CudaNotAvailableStub
+from nncf.torch.extensions import CudaNotAvailableStub
 
 ext_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 if torch.cuda.is_available():

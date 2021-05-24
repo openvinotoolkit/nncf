@@ -14,7 +14,7 @@
 from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import NNCFConfig
-from nncf.api.compression import CompressionLevel
+from nncf.api.compression import CompressionStage
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionAlgorithmBuilder
@@ -212,19 +212,19 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self._loss.add(child_ctrl.loss)
         self._scheduler.add(child_ctrl.scheduler)
 
-    def compression_level(self) -> CompressionLevel:
+    def compression_stage(self) -> CompressionStage:
         """
-        Returns the compression level. Should be used on saving best checkpoints
+        Returns the compression stage. Should be used on saving best checkpoints
         to distinguish between uncompressed, partially compressed, and fully
         compressed models.
 
-        :return: The compression level of the target model.
+        :return: The compression stage of the target model.
         """
         if not self.child_ctrls:
-            return CompressionLevel.NONE
+            return CompressionStage.UNCOMPRESSED
         result = None
         for ctrl in self.child_ctrls:
-            current_level = ctrl.compression_level()
+            current_level = ctrl.compression_stage()
             if not result:
                 result = current_level
             else:

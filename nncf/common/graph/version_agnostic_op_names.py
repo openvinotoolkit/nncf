@@ -29,7 +29,7 @@ def get_version_agnostic_name(version_specific_name: str):
     """
     def get_func_impl():
         if __nncf_backend__ == 'Torch':
-            from nncf.graph.version_agnostic_op_names \
+            from nncf.torch.graph.version_agnostic_op_names \
                 import get_version_agnostic_name as torch_fn_impl
             return torch_fn_impl
 

@@ -12,12 +12,12 @@
 """
 import pytest
 import torch
-from nncf.dynamic_graph.context import Scope
+from nncf.torch.dynamic_graph.context import Scope
 from torch import nn
 
-from nncf.layers import NNCFConv2d
-from nncf.module_operations import UpdateWeight
-from nncf.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask, \
+from nncf.torch.layers import NNCFConv2d
+from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.pruning.filter_pruning.layers import FilterPruningBlock, inplace_apply_filter_binary_mask, \
     apply_filter_binary_mask
 from tests.helpers import fill_conv_weight, fill_bias
 
