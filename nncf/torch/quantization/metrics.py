@@ -367,7 +367,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
         pattern = p.LINEAR_OPS + p.ANY_BN_ACT_COMBO | p.LINEAR_OPS + p.ELTWISE_UNIFORM_OPS
         # pylint: disable=protected-access
-        matches = search_all(original_graph._nx_graph, pattern)
+        matches, _ = search_all(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
         nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
         for match in matches:

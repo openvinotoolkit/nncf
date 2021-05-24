@@ -44,19 +44,45 @@ class Expression:
     def _iterate_alternatives(self, nodes):
         return powerset(nodes, min_r=1)
 
-    def match(self, nodes, graph):
+    def all_matches(self, nodes, graph):
         all_matches = []
         for n in self._iterate_alternatives(nodes):
             result = self._match(n, graph)
             if not result:
                 continue
 
-            n, following = result
-            following = list(following)
-            if not isinstance(n, list):
-                n = [n]
+            for res in result:
+                n, following = res
+            # following = list(following)
+            # if not isinstance(n, list):
+            #     n = [n]
 
-            all_matches.append((n, following))
+                all_matches.append(n)
+        if not all_matches:
+            return None
+        return all_matches
+
+    def match(self, nodes, graph):
+        all_matches = []
+        for n in self._iterate_alternatives(nodes):
+            result = self._match(n, graph)
+            if not result:
+                continue
+            if isinstance(result, list):
+                for result in result:
+                    n, following = result
+                    following = list(following)
+                    if not isinstance(n, list):
+                        n = [n]
+
+                    all_matches.append((n, following))
+            else:
+                n, following = result
+                following = list(following)
+                if not isinstance(n, list):
+                    n = [n]
+
+                all_matches.append((n, following))
         if not all_matches:
             return None, None
         return max(all_matches, key=lambda x: len(x[0]))
@@ -97,7 +123,6 @@ class AlternatingExpression(Expression):
             matched, following = ex.match(nodes, graph)
             if not matched:
                 continue
-
             if self.greedy_match:
                 return matched, following
 
@@ -106,7 +131,8 @@ class AlternatingExpression(Expression):
         if self.greedy_consume:
             if not all_matches:
                 return None
-            return max(all_matches, key=lambda x: len(x[0]))
+            # return max(all_matches, key=lambda x: len(x[0]))
+            return all_matches
         return None
 
     def __or__(self, other):
@@ -215,21 +241,61 @@ def get_edge_boundaries(match: List[str], graph: nx.DiGraph):
     return in_edge_boundary, out_edge_boundary
 
 
-def search_all(graph: nx.DiGraph, expression: Expression) -> List[List[str]]:
+# def remove_unneseccary_matches(match):
+#     # Breaking output edges
+#     for node_key in match[:-1]:
+#         succs = list(self._base_nx_graph.succ[node_key].keys())
+#         for succ_key in succs:
+#             if succ_key not in match:
+#                 return True
+#
+#     # Breaking input edges
+#     for node_key in match[1:]:
+#         preds = list(self._base_nx_graph.pred[node_key].keys())
+#         for pred_key in preds:
+#             if pred_key not in match:
+#                 return True
+#     return False
+
+from typing import Tuple
+def search_all(graph: nx.DiGraph, expression: Expression) -> Tuple[List[List[str]], List[List[str]]]:
     """Returns list of node key lists that match the expression."""
+    all_matches_res = []
     matches = []
     matched_nodes = set()
     weakly_subgraphs = [graph.subgraph(c) for c in nx.weakly_connected_components(graph)]
     for subgraph in weakly_subgraphs:
         dfs_order = nx.topological_sort(subgraph)
         for node in dfs_order:
-            match, _ = expression.match([node], graph)
-
             if node in matched_nodes:
                 continue
 
-            if match:
-                for mn in match:
+            all_matches = expression.all_matches([node], graph)
+
+            if all_matches is None:
+                continue
+
+            longest_match = sorted(all_matches, key=lambda x: len(x[0][0][0]), reverse=True)
+
+            if longest_match:
+                for mn in longest_match[0]:
                     matched_nodes.add(mn)
-                matches.append(match)
+                matches.append(longest_match[0])
+                all_matches_res.append(longest_match)
+    return matches, all_matches_res
+
+
+def search_elem_pattern(nodes: str, expression: Expression, graph: nx.DiGraph):
+    matches = []
+    matched_nodes = set()
+    for node in nodes:
+        match, _ = expression.match([node], graph)
+
+        if node in matched_nodes:
+            continue
+
+        if match:
+            for mn in match:
+                matched_nodes.add(mn)
+            matches.append(match)
     return matches

@@ -229,15 +229,13 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.torch.graph.graph_matching import search_all
-        matches = search_all(self._base_nx_graph, pattern)
-        for match in matches:
-            if len(match) == 1:
-                continue
+        from nncf.graph.graph_matching import search_all
+        matches, all_matches = search_all(self._base_nx_graph, pattern)
+        for match in all_matches:
+            longest_match = match[0]
 
-            input_node_key = match[0]
-            output_node_key = match[-1]
 
+            # from .graph.graph_matching import search_elem_pattern
             # If a subgraph has output edges in its middle, should skip merging it
             # Example (conv2d + BN + relu pattern):
             #       (conv2d)
@@ -256,10 +254,21 @@ class InsertionPointGraph(nx.DiGraph):
             #     \----(add)---/
             #            |
             #           ...
-            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(match)
-
+            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(longest_match)
             if has_breaking_output_edges:
+                for i in range(1, len(match)):
+                    longest_match = match[i]
+                    has_breaking_output_edges = self._base_graph_match_has_breaking_edges(longest_match)
+                    if has_breaking_output_edges:
+                        break
+
+            has_breaking_output_edges = self._base_graph_match_has_breaking_edges(longest_match)
+            if has_breaking_output_edges:
+                # Didn't find any pattern
                 continue
+
+            input_node_key = longest_match[0]
+            output_node_key = longest_match[-1]
 
             in_edges = list(self.in_edges(input_node_key))
             out_edges = list(self.out_edges(output_node_key))
@@ -276,7 +285,7 @@ class InsertionPointGraph(nx.DiGraph):
             merged_node_attrs = deepcopy(self.nodes[input_node_key])
             merged_node_attrs[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR] = set()
             merged_node_key = ""
-            for node_key in match:
+            for node_key in longest_match:
                 ip_node_keys = self.nodes[node_key][InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]
                 for ip_node_key in ip_node_keys:
                     should_keep_ip_node = False
