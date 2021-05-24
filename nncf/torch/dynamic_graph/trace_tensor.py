@@ -11,24 +11,23 @@
  limitations under the License.
 """
 
-from typing import Iterable
-from typing import List
-from typing import Optional
+from typing import Iterable, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
 
 
-
 class TensorMeta:
     @staticmethod
     def default_comparator(lhs: 'TensorMeta', rhs: 'TensorMeta'):
-        return lhs.index == rhs.index and lhs.creator_id == rhs.creator_id and lhs.shape[1:] == rhs.shape[1:]
+        return lhs.index == rhs.index and lhs.creator_id == rhs.creator_id and \
+               lhs.shape[1:] == rhs.shape[1:] and lhs.dtype == rhs.dtype
 
-    def __init__(self, creator_id, index, shape):
+    def __init__(self, creator_id: Optional[int], index: Optional[int], shape: Tuple[int, ...], dtype: torch.dtype):
         self.creator_id = creator_id
         self.index = index
         self.shape = tuple(int(dim) for dim in shape)  # Handle cases when shape is a tuple of Tensors
+        self.dtype = dtype
 
     def __eq__(self, other):
         if not isinstance(other, TensorMeta):
@@ -36,10 +35,11 @@ class TensorMeta:
         return self.default_comparator(self, other)
 
     def __hash__(self):
-        return hash((self.creator_id, self.index, self.shape))
+        return hash((self.creator_id, self.index, self.shape, self.dtype))
 
     def __str__(self):
-        return "C{}_I{}_".format(self.creator_id, self.index) + "S" + "x".join([str(s) for s in self.shape])
+        shape_str = 'x'.join([str(s) for s in self.shape])
+        return f'C{self.creator_id}_I{self.index}_S{shape_str}_T{self.dtype}'
 
 
 class TracedTensor(torch.Tensor):
@@ -69,13 +69,13 @@ class TracedTensor(torch.Tensor):
         __torch_function__ = torch._C._disabled_torch_function_impl
 
 
-def is_iterable(item):
+def is_iterable(item) -> bool:
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
     # pylint:disable=isinstance-second-argument-not-valid-type
     return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
 
 
-def flatten(items):
+def flatten(items: Iterable) -> Iterable:
     it = items.items() if hasattr(items, 'items') else iter(items)
     for item in it:
         if is_iterable(item):
@@ -85,7 +85,7 @@ def flatten(items):
             yield item
 
 
-def flatten_args(args, kwargs):
+def flatten_args(args: Tuple, kwargs: Dict) -> List:
     return list(flatten(args)) + list(flatten(kwargs))
 
 
@@ -93,23 +93,23 @@ def trace_tensors(operator_output, node: 'DynamicGraphNode'):
     if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
-            meta = TensorMeta(node.node_id, i, x.shape)
+            meta = TensorMeta(node.node_id, i, x.shape, x.dtype)
             output_.append(TracedTensor.from_torch_tensor(x, meta))
         return operator_output.__class__(output_)
     if isinstance(operator_output, torch.Tensor):
-        meta = TensorMeta(node.node_id, 0, operator_output.shape)
+        meta = TensorMeta(node.node_id, 0, operator_output.shape, operator_output.dtype)
         return TracedTensor.from_torch_tensor(operator_output, meta)
     raise ValueError("Unknown return type. Can not trace function call")
 
 
 def make_tensor_metas(inputs: 'OperatorInput') -> List[Optional[TensorMeta]]:
     tensor_metas = []
-    for i, node_input_index_entry in enumerate(inputs):
+    for node_input_index_entry in inputs:
         node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
             tensor_metas.append(node_input.tensor_meta)
-        elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
-            meta = TensorMeta(None, i, node_input.shape)
+        elif isinstance(node_input, torch.Tensor):
+            meta = TensorMeta(None, None, node_input.shape, node_input.dtype)
             tensor_metas.append(meta)
         else:
             tensor_metas.append(None)

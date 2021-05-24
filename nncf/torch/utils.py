@@ -235,8 +235,14 @@ iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 def is_tensor(obj):
     return isinstance(obj, torch.Tensor)
 
+
 def is_traced_tensor(obj):
     return isinstance(obj, TracedTensor)
+
+
+def is_dtype_float(dtype: torch.dtype) -> bool:
+    return torch.is_floating_point(torch.tensor((), dtype=dtype))
+
 
 def maybe_get_iterator(obj):
     it = None

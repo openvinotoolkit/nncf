@@ -385,9 +385,12 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph) -> PTNNCFGraph:
         for pred_idx, pred in enumerate(preds):
             in_edge = (pred, curr_node_key)
             _, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
-            mock_graph.add_edge_between_nncf_nodes(creator_id, node_id,
-                                                   [1, 1, 1, 1], pred_idx,
-                                                   dtype=Dtype.FLOAT)
+            mock_graph.add_edge(
+                creator_id, node_id,
+                tensor_shape=(1, 1, 1, 1),
+                tensor_dtype=Dtype.FLOAT,
+                input_port_id=pred_idx
+            )
 
         for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):
             edge_vs_output_idx_and_creator_id[out_edge] = (out_idx, node.node_id)
@@ -533,8 +536,9 @@ class TestInsertionPointGraph:
         ip_graph = InsertionPointGraph(mock_graph)
 
         nx_graph = mock_graph.get_nx_graph_copy()
-        ref_node_len = 3 * len(nx_graph.nodes)  # 2 additional nodes per each operator node
-        ref_edge_len = 3 * len(nx_graph.edges)
+        ref_node_len = len(nx_graph.nodes) + len(nx_graph.edges) + \
+                       (len(nx_graph.nodes) - len(NNCFGraph.get_output_nodes(mock_graph)))
+        ref_edge_len = 2 * len(nx_graph.edges) + (len(nx_graph.nodes) - len(NNCFGraph.get_output_nodes(mock_graph)))
 
         assert len(ip_graph.nodes) == ref_node_len
         assert len(ip_graph.edges) == ref_edge_len
@@ -545,11 +549,11 @@ class TestInsertionPointGraph:
             assert ip_graph_op_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR
             preds = list(ip_graph.predecessors(node_key))
             succs = list(ip_graph.successors(node_key))
-            assert len(succs) == 1
-            post_hook_ip_node_key = succs[0]
-            post_hook_ip_node = ip_graph.nodes[succs[0]]
-            post_hook_ip_node_type = post_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
-            assert post_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
+            assert len(succs) in [0, 1]
+            if len(succs) == 1:
+                post_hook_ip_node = ip_graph.nodes[succs[0]]
+                post_hook_ip_node_type = post_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
+                assert post_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
 
             pre_hook_ip_node_keys = preds
             for pre_hook_ip_node_key in pre_hook_ip_node_keys:
@@ -557,7 +561,7 @@ class TestInsertionPointGraph:
                 pre_hook_ip_node_type = pre_hook_ip_node[InsertionPointGraph.NODE_TYPE_NODE_ATTR]
                 assert pre_hook_ip_node_type == InsertionPointGraphNodeType.INSERTION_POINT
 
-            ref_associated_ip_node_keys_set = {*pre_hook_ip_node_keys, post_hook_ip_node_key}
+            ref_associated_ip_node_keys_set = {*pre_hook_ip_node_keys, *succs}
             assert ref_associated_ip_node_keys_set == ip_graph_op_node[
                 InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR]
             original_neighbours = nx_graph.neighbors(node_key)
@@ -597,10 +601,11 @@ class TestInsertionPointGraph:
             preds = list(ip_graph.predecessors(node_key))
             succs = list(ip_graph.successors(node_key))
 
-            post_hook_ip_node = ip_graph.nodes[succs[0]]
-            post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
-            assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
-            assert post_hook_ip.target_node_name == nncf_node.node_name
+            if len(succs) == 1:
+                post_hook_ip_node = ip_graph.nodes[succs[0]]
+                post_hook_ip = post_hook_ip_node[InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR]
+                assert post_hook_ip.target_type == TargetType.OPERATOR_POST_HOOK
+                assert post_hook_ip.ia_op_exec_context == nncf_node.node_name
 
             for pre_hook_ip_node_key in preds:
                 pre_hook_ip_node = ip_graph.nodes[pre_hook_ip_node_key]

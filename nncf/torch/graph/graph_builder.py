@@ -83,11 +83,11 @@ class GraphConverter:
                                      is_shared=is_shared)
 
         for dynamic_graph_edge in dynamic_graph.get_all_edges():
-            nncf_graph.add_edge_between_nncf_nodes(
+            nncf_graph.add_edge(
                 from_node_id=dynamic_graph_edge.from_node_id,
                 to_node_id=dynamic_graph_edge.to_node_id,
                 tensor_shape=dynamic_graph_edge.activation_shape,
                 input_port_id=dynamic_graph_edge.input_port_id,
-                dtype=Dtype.FLOAT
+                tensor_dtype=Dtype.FLOAT
             )
         return nncf_graph

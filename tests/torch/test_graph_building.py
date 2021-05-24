@@ -83,7 +83,7 @@ def test_forward_trace_functor():
 
     func = ForwardTraceOnly()
     shape1, shape2 = ([32, 1, 4, 8], [1, 8, 12, 16])
-    meta1, meta2 = (TensorMeta(5, 1, shape1), TensorMeta(3, 8, shape2))
+    meta1, meta2 = (TensorMeta(5, 1, shape1, torch.float), TensorMeta(3, 8, shape2, torch.float))
     input_tensor1 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape1), meta1)
     input_tensor2 = TracedTensor.from_torch_tensor(torch.Tensor(size=shape2), meta2)
 

@@ -12,12 +12,11 @@
 """
 import re
 from copy import deepcopy
-from typing import List
-
+from typing import List, Optional
 
 
 class ScopeElement:
-    def __init__(self, calling_module_class_name: str, calling_field_name: str = None):
+    def __init__(self, calling_module_class_name: str, calling_field_name: Optional[str] = None):
         self.calling_module_class_name = calling_module_class_name
         self.calling_field_name = calling_field_name
 
@@ -35,7 +34,7 @@ class ScopeElement:
         return hash((self.calling_module_class_name, self.calling_field_name))
 
     @staticmethod
-    def from_str(string: str):
+    def from_str(string: str) -> 'ScopeElement':
         matches = re.search(r"(.*)\[(.*)\]|(.*)", string)
         if matches is None:
             raise RuntimeError("Invalid scope element string")
@@ -47,7 +46,7 @@ class ScopeElement:
 
 
 class Scope:
-    def __init__(self, scope_elements: List[ScopeElement] = None):
+    def __init__(self, scope_elements: Optional[List[ScopeElement]] = None):
         if scope_elements is not None:
             self.scope_elements = scope_elements
         else:
@@ -56,13 +55,15 @@ class Scope:
     def __str__(self):
         return '/'.join([str(scope_el) for scope_el in self.scope_elements])
 
+    # TODO: if we want use __hash__ method we should make this class immutable
     def __hash__(self):
         return hash(str(self))
 
-    def __eq__(self, other: 'Scope'):
-        return self.scope_elements == other.scope_elements
+    def __eq__(self, other):
+        return isinstance(other, Scope) and \
+               self.scope_elements == other.scope_elements
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> ScopeElement:
         return self.scope_elements[key]
 
     def __contains__(self, item: 'Scope'):
@@ -74,11 +75,11 @@ class Scope:
                 return False
         return True
 
-    def __add__(self, rhs):
+    def __add__(self, rhs: 'Scope') -> 'Scope':
         init_list = self.scope_elements + rhs.scope_elements
         return Scope(init_list)
 
-    def copy(self):
+    def copy(self) -> 'Scope':
         return Scope(deepcopy(self.scope_elements))
 
     def push(self, scope_element: ScopeElement):

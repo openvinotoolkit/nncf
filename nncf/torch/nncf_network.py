@@ -129,6 +129,9 @@ class InsertionPointGraph(nx.DiGraph):
     IS_MERGED_NODE_ATTR = 'is_merged'
     MERGED_NNCF_NODE_LIST_NODE_ATTR = 'merged_node_list'
 
+    ACTIVATION_DTYPE_EDGE_ATTR = "dtype"
+    IN_PORT_ID_EDGE_ATTR = "in_port_id"
+
     PRE_HOOK_ID_PREFIX = "PRE HOOK "  # NB: Do not use colon (':') in node keys! Causes trouble for .dot file export.
     POST_HOOK_ID_PREFIX = "POST HOOK "
 
@@ -144,12 +147,16 @@ class InsertionPointGraph(nx.DiGraph):
                      InsertionPointGraph.IS_MERGED_NODE_ATTR: False}
             self.add_node(node_key, **attrs)
 
-        IN_PORT_ID_ATTR_NAME = "in_port_id"
         for edge in self._base_nx_graph.edges:
-            in_port_id = self._base_nx_graph.edges[edge][NNCFGraph.IN_PORT_NAME_EDGE_ATTR]
+            nncf_graph_edge_attrs = self._base_nx_graph.edges[edge]
             from_node, to_node = edge
-            attrs = {IN_PORT_ID_ATTR_NAME: in_port_id}
-            self.add_edge(from_node, to_node, **attrs)
+            ip_graph_edge_attrs = {
+                InsertionPointGraph.IN_PORT_ID_EDGE_ATTR:
+                    nncf_graph_edge_attrs[PTNNCFGraph.IN_PORT_NAME_EDGE_ATTR],
+                InsertionPointGraph.ACTIVATION_DTYPE_EDGE_ATTR:
+                    nncf_graph_edge_attrs[PTNNCFGraph.ACTIVATION_DTYPE_EDGE_ATTR]
+            }
+            self.add_edge(from_node, to_node, **ip_graph_edge_attrs)
 
         # TODO: Add insertion points for module pre- and post-ops.
         # Should roughly look so: first, determine subsets of nodes belonging to each
@@ -168,7 +175,7 @@ class InsertionPointGraph(nx.DiGraph):
             # a port ID attribute.
             in_edges = list(self.in_edges(operator_node_key))
             for edge in in_edges:
-                port_id = self.edges[edge][IN_PORT_ID_ATTR_NAME]
+                port_id = self.edges[edge][InsertionPointGraph.IN_PORT_ID_EDGE_ATTR]
                 from_node_key, to_node_key = edge
                 ip_node_key = self.get_pre_hook_node_key(str(operator_node_key), port_id)
 
@@ -179,12 +186,15 @@ class InsertionPointGraph(nx.DiGraph):
                     InsertionPointGraph.NODE_TYPE_NODE_ATTR: InsertionPointGraphNodeType.INSERTION_POINT,
                     InsertionPointGraph.INSERTION_POINT_DATA_NODE_ATTR: pre_hook_insertion_point,
                 }
-
                 self.add_node(ip_node_key, **pre_hook_ip_attrs)
 
+                pre_hook_in_edge_attrs = deepcopy(self.edges[edge])
+                pre_hook_in_edge_attrs[InsertionPointGraph.IN_PORT_ID_EDGE_ATTR] = 0
+                pre_hook_out_edge_attrs = deepcopy(self.edges[edge])
                 self.remove_edge(from_node_key, to_node_key)
-                self.add_edge(from_node_key, ip_node_key)
-                self.add_edge(ip_node_key, operator_node_key)
+                self.add_edge(from_node_key, ip_node_key, **pre_hook_in_edge_attrs)
+                self.add_edge(ip_node_key, operator_node_key, **pre_hook_out_edge_attrs)
+
                 operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             if original_node.node_type == 'chunk':
@@ -195,6 +205,10 @@ class InsertionPointGraph(nx.DiGraph):
                 continue
 
             # Post-hook insertion point nodes
+            out_edges = list(self.out_edges(operator_node_key))
+            if len(out_edges) == 0:
+                continue
+
             post_hook_insertion_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK,
                                                       target_node_name=original_node.node_name)
             post_hook_ip_attrs = {
@@ -203,18 +217,21 @@ class InsertionPointGraph(nx.DiGraph):
             }
             ip_node_key = self.get_post_hook_node_key(str(operator_node_key))
             self.add_node(ip_node_key, **post_hook_ip_attrs)
-            out_edges = list(self.out_edges(operator_node_key))
+
+            post_hook_in_edge_attrs = deepcopy(self.edges[out_edges[0]])
+            post_hook_in_edge_attrs[InsertionPointGraph.IN_PORT_ID_EDGE_ATTR] = 0
+            self.add_edge(operator_node_key, ip_node_key, **post_hook_in_edge_attrs)
+
             for out_edge in out_edges:
                 # Need to preserve original edge attributes in order not to lose
                 # input port ID information
-                original_edge_attrs = self.edges[out_edge]
+                post_hook_out_edge_attrs = deepcopy(self.edges[out_edge])
                 from_node_key, to_node_key = out_edge
                 self.remove_edge(from_node_key, to_node_key)
-                self.add_edge(ip_node_key, to_node_key, **original_edge_attrs)
+                self.add_edge(ip_node_key, to_node_key, **post_hook_out_edge_attrs)
                 # TODO: introduce separate insertion points for operator outputs if
                 # the outputs are semantically different
-            self.add_edge(operator_node_key, ip_node_key)
-            operator_node = self.nodes[operator_node_key]
+
             operator_node[InsertionPointGraph.ASSOCIATED_IP_NODE_KEYS_NODE_ATTR].add(ip_node_key)
 
             if original_node.node_type == MODEL_INPUT_OP_NAME:
@@ -312,7 +329,6 @@ class InsertionPointGraph(nx.DiGraph):
 
     def get_input_insertion_points(self) -> List[PTTargetPoint]:
         return self._input_ips
-
 
 
 class PTInsertionType(OrderedEnum):

@@ -18,6 +18,7 @@ from typing import Tuple
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
+import torch
 from torch import Tensor
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
@@ -109,8 +110,9 @@ class OperationExecutionContext:
             DefaultTensorMetaComparator()]
         self.input_matcher = input_matcher if input_matcher else DefaultInputsMatcher()
 
-    def __eq__(self, other: 'OperationExecutionContext'):
-        return (self.op_address == other.op_address) and \
+    def __eq__(self, other):
+        return isinstance(other, OperationExecutionContext) and \
+               self.op_address == other.op_address and \
                self.input_matcher(self.tensor_metas, other.tensor_metas, self.tm_comparators)
 
     def __hash__(self):
@@ -118,17 +120,15 @@ class OperationExecutionContext:
                      tuple(self.tensor_metas)))
 
     def __str__(self):
-        input_info_str = ""
+        input_info_str_parts = []
         for meta in self.tensor_metas:
-            if meta is None:
-                input_info_str += "N;"
-            else:
-                input_info_str += str(meta) + ";"
+            input_info_str_parts.append('N' if meta is None else str(meta))
 
-        return super().__str__() + '(' + input_info_str + ')'
+        input_info_str = ';'.join(input_info_str_parts)
+        return f'{super().__str__()}({input_info_str})'
 
     @property
-    def operator_name(self):
+    def operator_name(self) -> str:
         return self.op_address.operator_name
 
     @property
@@ -136,7 +136,7 @@ class OperationExecutionContext:
         return self.op_address.scope_in_model
 
     @property
-    def call_order(self):
+    def call_order(self) -> int:
         return self.op_address.call_order
 
 
@@ -151,8 +151,9 @@ class DynamicGraphNode:
         self.ignored_algorithms = ignored_algorithms
         self.is_in_iteration_scope = is_in_iteration_scope
 
-    def __eq__(self, other: 'DynamicGraphNode') -> bool:
-        return self.__dict__ == other.__dict__
+    def __eq__(self, other):
+        return isinstance(other, DynamicGraphNode) and \
+               self.__dict__ == other.__dict__
 
     def __str__(self):
         return self.node_key
@@ -160,10 +161,12 @@ class DynamicGraphNode:
 
 class DynamicGraphEdge:
     def __init__(self, from_node_id: int, to_node_id: int,
-                 activation_shape: List[int], input_port_id: int):
+                 activation_shape: Tuple[int, ...], activation_dtype: torch.dtype,
+                 input_port_id: int):
         self.from_node_id = from_node_id
         self.to_node_id = to_node_id
         self.activation_shape = activation_shape
+        self.activation_dtype = activation_dtype
         self.input_port_id = input_port_id
 
 
@@ -244,6 +247,7 @@ class DefaultScopeNodeMatcher:
             self._nx_graph.add_edge(parent, node_key)
             has_traced_inputs = True
             self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR] = info.shape
+            self._nx_graph.edges[parent, node_key][DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR] = info.dtype
             self._nx_graph.edges[parent, node_key][DynamicGraph.IN_PORT_NAME_EDGE_ATTR] = i
 
         nx_node_dict = self._nx_graph.nodes[node_key]
@@ -467,6 +471,7 @@ class DynamicGraph:
     LAYER_ATTRIBUTES = 'layer_attributes'
     OP_EXEC_CONTEXT_NODE_ATTR = 'op_exec_context'
     ACTIVATION_SHAPE_EDGE_ATTR = 'activation_shape'
+    ACTIVATION_DTYPE_EDGE_ATTR = 'activation_dtype'
     IN_PORT_NAME_EDGE_ATTR = 'in_port'
     IGNORED_ALGOS_NODE_ATTR = 'ignored_algos'
     IS_IN_ITERATION_SCOPE_NODE_ATTR = 'is_in_iteration_scope'
@@ -547,6 +552,7 @@ class DynamicGraph:
                 from_node_id=from_node_id,
                 to_node_id=to_node_id,
                 activation_shape=nx_edge_attrs[DynamicGraph.ACTIVATION_SHAPE_EDGE_ATTR],
+                activation_dtype=nx_edge_attrs[DynamicGraph.ACTIVATION_DTYPE_EDGE_ATTR],
                 input_port_id=nx_edge_attrs[DynamicGraph.IN_PORT_NAME_EDGE_ATTR])
 
             all_edges.append(dynamic_graph_edge)

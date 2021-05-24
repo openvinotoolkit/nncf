@@ -51,6 +51,7 @@ from nncf.torch.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.torch.quantization.quantizer_setup import QuantizationPointId
 from nncf.torch.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch.quantization.structs import UnifiedScaleType
+from nncf.torch.utils import is_dtype_float
 
 
 class QuantizationTrait(Enum):
@@ -1649,6 +1650,7 @@ class QuantizerPropagationSolver:
             iteration_counter += 1
 
         quant_prop_graph = self._filter_integer_input_quantizers(quant_prop_graph)
+        quant_prop_graph = self._filter_integer_tensor_quantizers(quant_prop_graph)
 
         if self._debug_interface is not None:
             self._debug_interface.visualize_quantizer_propagation(self, quant_prop_graph, "proposed")
@@ -1785,7 +1787,7 @@ class QuantizerPropagationSolver:
         # pylint:disable=too-many-branches
         # pylint:disable=too-many-statements
         curr_node_key = curr_prop_quantizer.current_location_node_key
-        curr_node = quant_prop_graph.nodes[curr_prop_quantizer.current_location_node_key]
+        curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
         assert curr_node_type == QuantizerPropagationStateGraphNodeType.INSERTION_POINT
 
@@ -1893,7 +1895,6 @@ class QuantizerPropagationSolver:
         for prop_quantizer in surviving_prop_quantizers:
             self._active_propagating_quantizers_queue.appendleft(prop_quantizer)
         return quant_prop_graph
-
 
     def get_allowed_quantizer_configs_for_operator(self, quant_det_id: OperatorMetatype) -> List[QuantizerConfig]:
         return self._operator_allowed_qconfigs_map[quant_det_id]
@@ -2563,5 +2564,31 @@ class QuantizerPropagationSolver:
         self._finished_propagating_quantizers = filtered_finished_pqs
         for integer_input_pq in integer_input_pqs:
             quant_prop_graph.remove_propagating_quantizer(integer_input_pq)
+
+        return quant_prop_graph
+
+    def _filter_integer_tensor_quantizers(self, quant_prop_graph: QuantizerPropagationStateGraph) -> \
+            QuantizerPropagationStateGraph:
+        nx.drawing.nx_pydot.write_dot(quant_prop_graph, '/home/alekseii/qpg.dot')
+        integer_tensor_propagating_quantizers = []
+        filtered_finished_propagating_quantizers = []
+
+        for pq in self._finished_propagating_quantizers:
+            pq_node_key = pq.current_location_node_key
+            pq_input_edges = quant_prop_graph.in_edges(pq_node_key)
+            pq_input_edges = list(pq_input_edges)
+            assert len(pq_input_edges) == 1
+
+            is_float_node = is_dtype_float(
+                dtype=quant_prop_graph.edges[pq_input_edges[0]][InsertionPointGraph.ACTIVATION_DTYPE_EDGE_ATTR]
+            )
+            if is_float_node:
+                filtered_finished_propagating_quantizers.append(pq)
+            else:
+                integer_tensor_propagating_quantizers.append(pq)
+
+        self._finished_propagating_quantizers = filtered_finished_propagating_quantizers
+        for integer_tensor_pq in integer_tensor_propagating_quantizers:
+            quant_prop_graph.remove_propagating_quantizer(integer_tensor_pq)
 
         return quant_prop_graph

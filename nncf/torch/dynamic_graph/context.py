@@ -70,13 +70,9 @@ class TracingContext:
         self._input_comparators_per_scope = []
 
     def __enter__(self):
-        global _CURRENT_CONTEXT
-        self._save_context = _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self
-        self._init_thread_local()
+        self.enter()
         if is_debug():
             self.reset_node_call_counters()
-
         return self
 
     def __exit__(self, *args):
@@ -351,6 +347,7 @@ def no_nncf_trace():
     else:
         yield
 
+
 @contextmanager
 def forward_nncf_trace():
     ctx = get_current_context()
@@ -362,5 +359,5 @@ def forward_nncf_trace():
         yield
 
 
-def get_current_context() -> TracingContext:
+def get_current_context() -> Optional[TracingContext]:
     return _CURRENT_CONTEXT

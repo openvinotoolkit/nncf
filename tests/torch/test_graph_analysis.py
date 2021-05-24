@@ -12,7 +12,8 @@
 """
 from collections import Counter
 
-from nncf.common.graph import NNCFGraphEdge
+from nncf.common.graph import NNCFNode
+from nncf.common.graph import NNCFEdge
 from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -46,12 +47,11 @@ def test_graph_pattern_io_building():
         graph.add_edge_between_nncf_nodes(edge[0], edge[1], [1,], None, dtype=Dtype.FLOAT)
 
     def make_mock_edge(from_id: int, to_id: int):
-
-        return NNCFGraphEdge(get_node(from_id),
-                             get_node(to_id), [1,])
-
-    def get_node(id_: int):
-        return graph.get_node_by_id(id_)
+        edge_attrs = {
+            PTNNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: [1,],
+            PTNNCFGraph.ACTIVATION_DTYPE_EDGE_ATTR: Dtype.FLOAT
+        }
+        return NNCFEdge(from_id, to_id, data=edge_attrs)
 
     ref_patterns_and_ios = [
         (['1', '2'], NNCFGraphPatternIO(input_edges=[],
