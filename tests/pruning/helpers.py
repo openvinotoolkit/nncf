@@ -12,7 +12,6 @@
 """
 
 import torch
-from nncf.torch.dynamic_graph.context import Scope
 from torch import nn
 
 from nncf.config import NNCFConfig
@@ -390,6 +389,27 @@ class PruningTestWideModelEltwise(nn.Module):
         x = self.conv2(x) + self.conv3(x)
         x = self.conv4(x)
         return x
+
+
+class PruningTestModelSharedConvs(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = create_conv(1, 512, 1, 1, 1)
+        for i in range(512):
+            self.conv1.weight.data[i] += i
+        self.conv2 = create_conv(512, 1024, 3, 1, 1)
+        self.conv3 = create_conv(1024, 1024, 1, 1, 1)
+        for i in range(1024):
+            self.conv2.weight.data[i] += i
+            self.conv3.weight.data[i] += i
+        self.maxpool = nn.MaxPool2d(2)
+
+    def forward(self, in1):
+        in1 = self.conv1(in1)
+        in2 = self.maxpool(in1)
+        out1 = self.conv2(in1)
+        out2 = self.conv2(in2)
+        return self.conv3(out1), self.conv3(out2)
 
 
 def get_basic_pruning_config(input_sample_size=None) -> NNCFConfig:
