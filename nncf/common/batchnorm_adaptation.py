@@ -129,4 +129,10 @@ class BatchnormAdaptationAlgorithm:
 
         :param model: A model for which the algorithm will be applied.
         """
-        self._impl.run(model)
+        if self._impl:
+            self._impl.run(model)
+        else:
+            nncf_logger.warning(
+                'Could not run batchnorm adaptation as the adaptation data loader is not provided as an extra struct. '
+                'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class.'
+            )
