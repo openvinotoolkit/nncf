@@ -18,6 +18,7 @@ import numpy as np
 
 from nncf.api.compression import ModelType
 from nncf.common.initialization import NNCFDataLoader
+from nncf.common.utils.logger import logger as nncf_logger
 import nncf.common.factory as factory
 
 
@@ -79,13 +80,15 @@ class BatchnormAdaptationAlgorithm:
         if num_bn_adaptation_samples <= 0:
             raise ValueError('Number of adaptation samples must be > 0')
 
-        num_bn_adaptation_steps = np.ceil(num_bn_adaptation_samples / data_loader.batch_size)
-        num_bn_forget_steps = np.ceil(num_bn_forget_samples / data_loader.batch_size)
+        self._impl = None
+        if data_loader:
+            num_bn_adaptation_steps = np.ceil(num_bn_adaptation_samples / data_loader.batch_size)
+            num_bn_forget_steps = np.ceil(num_bn_forget_samples / data_loader.batch_size)
 
-        self._impl = factory.create_bn_adaptation_algorithm_impl(data_loader,
-                                                                 num_bn_adaptation_steps,
-                                                                 num_bn_forget_steps,
-                                                                 device)
+            self._impl = factory.create_bn_adaptation_algorithm_impl(data_loader,
+                                                                     num_bn_adaptation_steps,
+                                                                     num_bn_forget_steps,
+                                                                     device)
 
     def run(self, model: ModelType):
         """
@@ -93,4 +96,10 @@ class BatchnormAdaptationAlgorithm:
 
         :param model: A model for which the algorithm will be applied.
         """
-        self._impl.run(model)
+        if self._impl:
+            self._impl.run(model)
+        else:
+            nncf_logger.warning(
+                'Could not run batchnorm adaptation as the adaptation data loader is not provided as an extra struct. '
+                'Refer to `NNCFConfig.register_extra_structs` and the `BNAdaptationInitArgs` class.'
+            )
