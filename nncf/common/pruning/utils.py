@@ -11,18 +11,17 @@
  limitations under the License.
 """
 
-from functools import partial
 import math
+
+from functools import partial
+from typing import Dict, List, Optional, Tuple, Type, Union
+
 import numpy as np
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.version_agnostic_op_names import get_version_agnostic_name
 from nncf.common.utils.registry import Registry
 
@@ -251,8 +250,10 @@ def get_cluster_next_nodes(graph: NNCFGraph, pruned_groups_info,
 
 def count_flops_for_nodes(graph: NNCFGraph,
                           input_shapes: Dict[str, tuple], output_shapes: Dict[str, tuple],
-                          conv_op_types: List[str], linear_op_types: List[str],
-                          input_channels: Dict[str, int] = None, output_channels: Dict[str, int] = None):
+                          conv_op_metatypes: List[Type[OperatorMetatype]],
+                          linear_op_metatypes: List[Type[OperatorMetatype]],
+                          input_channels: Dict[str, int] = None,
+                          output_channels: Dict[str, int] = None) -> Dict[str, float]:
     """
     Counts the number FLOPs in the model for convolution and fully connected layers.
 
@@ -261,8 +262,8 @@ def count_flops_for_nodes(graph: NNCFGraph,
                          fully connected layers. E.g {node_name: (height, width)}
     :param output_shapes: Dictionary of output dimension shapes for convolutions and
                           fully connected layers. E.g {node_name: (height, width)}
-    :param conv_op_types: List of framework specific types of convolutions
-    :param linear_op_types: List of framework specific types of linear/fully connected layers
+    :param conv_op_types: List of metatypes defining convolution operations.
+    :param linear_op_types: List of metatypes defining linear/fully connected operations.
     :param input_channels: Dictionary of input channels number in convolutions.
                            If not specified, taken from the graph. {node_name: channels_num}
     :param output_channels: Dictionary of output channels number in convolutions.
@@ -272,7 +273,7 @@ def count_flops_for_nodes(graph: NNCFGraph,
     flops = {}
     input_channels = input_channels or {}
     output_channels = output_channels or {}
-    for node in graph.get_nodes_by_types(conv_op_types):
+    for node in graph.get_nodes_by_metatypes(conv_op_metatypes):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
             else get_original_node_name(node.node_name)
         if name in flops:
@@ -282,7 +283,7 @@ def count_flops_for_nodes(graph: NNCFGraph,
         flops[name] = 2 * np.prod(node.module_attributes.kernel_size) * \
                       num_in_channels * num_out_channels * np.prod(output_shapes[name])
 
-    for node in graph.get_nodes_by_types(linear_op_types):
+    for node in graph.get_nodes_by_metatypes(linear_op_metatypes):
         name = node.ia_op_exec_context.scope_in_model if hasattr(node, 'ia_op_exec_context') \
             else get_original_node_name(node.node_name)
         flops[name] = 2 * np.prod(input_shapes[name]) * np.prod(output_shapes[name])

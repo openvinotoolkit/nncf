@@ -19,6 +19,7 @@ import tensorflow as tf
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFBatchNormalizationLayerMetatype
 from beta.nncf.tensorflow.graph.model_transformer import TFModelTransformer
 from beta.nncf.tensorflow.pruning.export_helpers import TFElementwise
 from beta.nncf.tensorflow.pruning.export_helpers import TFIdentityMaskForwardOps
@@ -27,10 +28,6 @@ from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionComma
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
 from beta.nncf.tensorflow.graph.utils import get_layer_identifier
 from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
-from beta.nncf.tensorflow.layers.common import BIAS_ATTR_NAME
-from beta.nncf.tensorflow.layers.common import LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import SPECIAL_LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.pruning.utils import get_filter_axis
 from beta.nncf.tensorflow.pruning.utils import get_filters_num
 from beta.nncf.tensorflow.pruning.utils import is_shared
@@ -133,12 +130,17 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
                 # Check that we need to prune weights in this op
                 assert self._is_pruned_layer(layer)
                 nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
-                for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                    attr_name = LAYERS_WITH_WEIGHTS[node.node_type][attr_name_key]
-                    if getattr(layer, attr_name) is not None:
-                        transformations.register(
-                            self._get_insertion_command_binary_mask(layer_name, attr_name)
-                        )
+                for weight_def in node.metatype.weight_definitions:
+                    transformations.register(
+                        self._get_insertion_command_binary_mask(
+                            layer_name, weight_def.weight_attr_name)
+                    )
+                if node.metatype.bias_attr_name is not None and \
+                        getattr(layer, node.metatype.bias_attr_name) is not None:
+                    transformations.register(
+                        self._get_insertion_command_binary_mask(
+                            layer_name, node.metatype.bias_attr_name)
+                    )
                 group_minfos.append(PrunedLayerInfo(layer_name, node.node_id))
 
             cluster = NodesCluster(i, group_minfos, [n.node_id for n in group.nodes])
@@ -150,11 +152,10 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
 
         # Add masks for all spec modules, because prunable batchnorm layers can be determines
         # at the moment of mask propagation
-        types_spec_layers = list(SPECIAL_LAYERS_WITH_WEIGHTS)
-        if not self._prune_batch_norms:
-            types_spec_layers.remove('BatchNormalization')
+        types_spec_layers = [TFBatchNormalizationLayerMetatype] \
+            if self._prune_batch_norms else []
 
-        spec_nodes = self._graph.get_nodes_by_types(types_spec_layers)
+        spec_nodes = self._graph.get_nodes_by_metatypes(types_spec_layers)
         for spec_node in spec_nodes:
             layer_name = get_layer_identifier(spec_node)
             if spec_node.data['output_mask'] is None:
@@ -165,11 +166,15 @@ class BasePruningAlgoBuilder(TFCompressionAlgorithmBuilder):
             if is_shared(spec_node):
                 shared_layers.add(layer_name)
             nncf_logger.info('Adding Weight Pruner in: %s', layer_name)
-            for attr_name_key in [WEIGHT_ATTR_NAME, BIAS_ATTR_NAME]:
-                attr_name = SPECIAL_LAYERS_WITH_WEIGHTS[spec_node.node_type][attr_name_key]
+            for weight_def in spec_node.metatype.weight_definitions:
                 transformations.register(
-                    self._get_insertion_command_binary_mask(layer_name, attr_name)
+                    self._get_insertion_command_binary_mask(
+                        layer_name, weight_def.weight_attr_name)
                 )
+            transformations.register(
+                self._get_insertion_command_binary_mask(
+                    layer_name, spec_node.metatype.bias_attr_name)
+            )
         return transformations
 
     def _get_insertion_command_binary_mask(self, layer_name, attr_name):

@@ -11,12 +11,12 @@
  limitations under the License.
 """
 
+from beta.nncf.tensorflow.graph.metatypes.common import ALL_LAYER_METATYPES_WITH_WEIGHTS
+from beta.nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.common import NORMALIZATION_LAYER_METATYPES
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
+from beta.nncf.tensorflow.graph.utils import unwrap_layer
 from beta.nncf.tensorflow.layers.operation import InputType
-from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
-from beta.nncf.tensorflow.layers.common import ALL_LAYERS_WITH_WEIGHTS
-from beta.nncf.tensorflow.layers.common import CHANNEL_AXES
-from beta.nncf.tensorflow.layers.common import GENERAL_CONV_LAYERS
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 
 
 def get_channel_size(input_shape, input_type, input_name, layer):
@@ -40,21 +40,23 @@ def get_data_format(layer):
 
 
 def get_input_channel_axis(layer):
-    original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
-    data_format = get_data_format(layer)
-    class_name = original_layer.__class__.__name__
-    if class_name in GENERAL_CONV_LAYERS:
+    original_layer = unwrap_layer(layer)
+    layer_metatype = get_keras_layer_metatype(original_layer, determine_subtype=False)
+    data_format = get_data_format(original_layer)
+    if layer_metatype in GENERAL_CONV_LAYER_METATYPES:
         return -1 if data_format == 'channels_last' else -1 - original_layer.rank
-    if class_name in ['BatchNormalization', 'LayerNormalization']:
+    if layer_metatype in NORMALIZATION_LAYER_METATYPES:
         return original_layer.axis
 
     return -1 if data_format == 'channels_last' else 1
 
 
 def get_weight_channel_axis(layer, weight_attr):
-    original_layer = layer.layer if isinstance(layer, NNCFWrapper) else layer
-    class_name = original_layer.__class__.__name__
-    if class_name in ALL_LAYERS_WITH_WEIGHTS \
-            and weight_attr == ALL_LAYERS_WITH_WEIGHTS[class_name][WEIGHT_ATTR_NAME]:
-        return ALL_LAYERS_WITH_WEIGHTS[class_name].get(CHANNEL_AXES, -1)
+    original_layer = unwrap_layer(layer)
+    layer_metatype = get_keras_layer_metatype(original_layer, determine_subtype=False)
+    if layer_metatype in ALL_LAYER_METATYPES_WITH_WEIGHTS:
+        for weight_def in layer_metatype.weight_definitions:
+            if weight_def.weight_attr_name == weight_attr:
+                return weight_def.channel_axes
+
     return -1

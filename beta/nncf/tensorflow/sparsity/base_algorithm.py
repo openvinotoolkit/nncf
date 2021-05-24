@@ -13,29 +13,34 @@
 
 from nncf.common.sparsity.controller import SparsityController
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmController
+from beta.nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
+from beta.nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
 from beta.nncf.tensorflow.sparsity.utils import strip_model_from_masks
 
-SPARSITY_LAYERS = {
-    'Conv1D': {'weight_attr_name': 'kernel'},
-    'Conv2D': {'weight_attr_name': 'kernel'},
-    'DepthwiseConv2D': {'weight_attr_name': 'depthwise_kernel'},
-    'Conv3D': {'weight_attr_name': 'kernel'},
-    'Conv2DTranspose': {'weight_attr_name': 'kernel'},
-    'Conv3DTranspose': {'weight_attr_name': 'kernel'},
-    'Dense': {'weight_attr_name': 'kernel'},
-    'SeparableConv1D': {'weight_attr_name': 'pointwise_kernel'},
-    'SeparableConv2D': {'weight_attr_name': 'pointwise_kernel'},
-    'Embedding': {'weight_attr_name': 'embeddings'},
-    'LocallyConnected1D': {'weight_attr_name': 'kernel'},
-    'LocallyConnected2D': {'weight_attr_name': 'kernel'}
-}
-
+SPARSITY_LAYERS = [
+    layer_metatypes.TFConv1DLayerMetatype,
+    layer_metatypes.TFConv2DLayerMetatype,
+    layer_metatypes.TFConv3DLayerMetatype,
+    layer_metatypes.TFDepthwiseConv1DSubLayerMetatype,
+    layer_metatypes.TFDepthwiseConv2DSubLayerMetatype,
+    layer_metatypes.TFDepthwiseConv3DSubLayerMetatype,
+    layer_metatypes.TFDepthwiseConv2DLayerMetatype,
+    layer_metatypes.TFConv1DTransposeLayerMetatype,
+    layer_metatypes.TFConv2DTransposeLayerMetatype,
+    layer_metatypes.TFConv3DTransposeLayerMetatype,
+    layer_metatypes.TFSeparableConv1DLayerMetatype,
+    layer_metatypes.TFSeparableConv2DLayerMetatype,
+    layer_metatypes.TFEmbeddingLayerMetatype,
+    layer_metatypes.TFLocallyConnected1DLayerMetatype,
+    layer_metatypes.TFLocallyConnected2DLayerMetatype,
+    layer_metatypes.TFDenseLayerMetatype
+]
 
 SPARSITY_TF_OPS = [
-    'Conv2D',
-    'Conv3D',
-    'DepthwiseConv2dNative',
-    'QuantizedConv2D'
+    op_metatypes.TFConv2DOpMetatype,
+    op_metatypes.TFConv3DOpMetatype,
+    op_metatypes.TFDepthwiseConv2dNativeOpMetatype,
+    op_metatypes.TFQuantizedConv2DOpMetatype,
 ]
 
 

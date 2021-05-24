@@ -26,8 +26,8 @@ from nncf.api.compression import CompressionLoss
 from beta.nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from beta.nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from beta.nncf.tensorflow.loss import TFZeroCompressionLoss
-from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nxmodel
-from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nxmodel
+from beta.nncf.tensorflow.graph.converter import convert_layer_graph_to_nncf_graph
+from beta.nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from beta.nncf.tensorflow.graph.transformations.commands import TFInsertionCommand
 from beta.nncf.tensorflow.graph.transformations.commands import TFLayerWeight
 from beta.nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
@@ -35,7 +35,6 @@ from beta.nncf.tensorflow.graph.utils import collect_wrapped_layers
 from beta.nncf.tensorflow.graph.utils import get_custom_layers
 from beta.nncf.tensorflow.graph.utils import get_original_name_and_instance_index
 from beta.nncf.tensorflow.graph.utils import get_weight_node_name
-from beta.nncf.tensorflow.layers.common import WEIGHT_ATTR_NAME
 from beta.nncf.tensorflow.sparsity.base_algorithm import BaseSparsityController
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_LAYERS
 from beta.nncf.tensorflow.sparsity.base_algorithm import SPARSITY_TF_OPS
@@ -54,39 +53,40 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
         self._op_names = []
 
     def get_transformation_layout(self, model):
-        nxmodel = convert_keras_model_to_nxmodel(model)
+        graph = convert_keras_model_to_nncf_graph(model)
         transformations = TFTransformationLayout()
         shared_nodes = set()
 
-        for node_name, node in nxmodel.nodes.items():
-            original_node_name, _ = get_original_name_and_instance_index(node_name)
-            if (node['type'] not in SPARSITY_LAYERS or
-                is_ignored(node_name, self.ignored_scopes) or
+        for node in graph.get_all_nodes():
+            original_node_name, _ = get_original_name_and_instance_index(node.node_name)
+            if (node.metatype not in SPARSITY_LAYERS or
+                is_ignored(node.node_name, self.ignored_scopes) or
                 original_node_name in shared_nodes):
                 continue
 
-            if node['is_shared']:
+            if node.data['is_shared']:
                 shared_nodes.add(original_node_name)
 
-            weight_attr_name = SPARSITY_LAYERS[node['type']][WEIGHT_ATTR_NAME]
-            op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
-            self._op_names.append(op_name)
+            for weight_def in node.metatype.weight_definitions:
+                op_name = self._get_sparsity_operation_name(node.node_name,
+                                                            weight_def.weight_attr_name)
+                self._op_names.append(op_name)
 
-            transformations.register(
-                TFInsertionCommand(
-                    target_point=TFLayerWeight(original_node_name, weight_attr_name),
-                    callable_object=BinaryMask(op_name),
-                    priority=TransformationPriority.SPARSIFICATION_PRIORITY
-                ))
+                transformations.register(
+                    TFInsertionCommand(
+                        target_point=TFLayerWeight(original_node_name, weight_def.weight_attr_name),
+                        callable_object=BinaryMask(op_name),
+                        priority=TransformationPriority.SPARSIFICATION_PRIORITY
+                    ))
 
         for layer in get_custom_layers(model):
-            nxmodel = convert_layer_graph_to_nxmodel(layer)
-            for node_name, node in nxmodel.nodes.items():
-                if (node['type'] in SPARSITY_TF_OPS and
-                    not is_ignored(node_name, self.ignored_scopes)):
+            layer_graph = convert_layer_graph_to_nncf_graph(layer)
+            for node in layer_graph.get_all_nodes():
+                if (node.metatype in SPARSITY_TF_OPS and
+                    not is_ignored(node.node_name, self.ignored_scopes)):
 
-                    weight_attr_name = get_weight_node_name(nxmodel, node_name)
-                    op_name = self._get_sparsity_operation_name(node_name, weight_attr_name)
+                    weight_attr_name = get_weight_node_name(layer_graph, node.node_name)
+                    op_name = self._get_sparsity_operation_name(node.node_name, weight_attr_name)
                     self._op_names.append(op_name)
 
                     transformations.register(

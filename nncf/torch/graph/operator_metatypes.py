@@ -19,8 +19,8 @@ from nncf.common.graph.module_attributes import ConvolutionModuleAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.torch.dynamic_graph.patch_pytorch import CustomTraceFunction
-from nncf.torch.dynamic_graph.patch_pytorch import ForwardTraceOnly
+from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
+from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
 from nncf.torch.graph.graph import ModuleAttributes
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
@@ -626,3 +626,30 @@ class CloneMetatype(PTOperatorMetatype):
 class PixelShuffleMetatype(PTOperatorMetatype):
     name = "pixel_shuffle"
     torch_nn_functional_patch_spec = PTPatchSpec([name])
+
+
+def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the operator metatypes.
+
+    :return: List of operator metatypes .
+    """
+    return list(PT_OPERATOR_METATYPES.registry_dict.values())
+
+
+def get_input_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the input operator metatypes.
+
+    :return: List of the input operator metatypes .
+    """
+    return [InputNoopMetatype]
+
+
+def get_output_metatypes() -> List[Type[OperatorMetatype]]:
+    """
+    Returns a list of the output operator metatypes.
+
+    :return: List of the output operator metatypes .
+    """
+    return [OutputNoopMetatype]

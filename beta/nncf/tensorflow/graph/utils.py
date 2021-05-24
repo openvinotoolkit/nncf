@@ -16,6 +16,8 @@ import inspect
 
 import tensorflow as tf
 
+from beta.nncf.tensorflow.graph.metatypes.keras_layers import TFNNCFWrapperLayerMetatype
+from beta.nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from beta.nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.common.graph import NNCFNode
 
@@ -125,12 +127,18 @@ def get_layer_to_graph_nodes_map(model, node_names):
     return layer_to_nodes_map
 
 
-def get_weight_node_name(nxgraph, node_name):
-    while list(nxgraph.predecessors(node_name)):
-        node_name = list(nxgraph.predecessors(node_name))[-1]
+def get_weight_node_name(graph, node_name):
+    while list(graph.nx_graph.predecessors(node_name)):
+        node_name = list(graph.nx_graph.predecessors(node_name))[-1]
     return node_name
 
 
 def get_layer_identifier(node: NNCFNode):
     layer_name, _ = get_original_name_and_instance_index(node.node_name)
     return layer_name
+
+def unwrap_layer(layer):
+    layer_metatype = get_keras_layer_metatype(layer, determine_subtype=False)
+    if layer_metatype == TFNNCFWrapperLayerMetatype:
+        return layer.layer
+    return layer

@@ -151,7 +151,8 @@ class PTNNCFGraph(NNCFGraph):
             PTNNCFGraph.NODE_TYPE_ATTR: nncf_node.node_type,
             PTNNCFGraph.ID_NODE_ATTR: node_id,
             PTNNCFGraph.KEY_NODE_ATTR: node_key,
-            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: nncf_node.ia_op_exec_context
+            PTNNCFGraph.IA_OP_EXEC_CONTEXT_NODE_ATTR: nncf_node.ia_op_exec_context,
+            PTNNCFGraph.METATYPE_ATTR: nncf_node.metatype
         }
         if nncf_node.module_attributes is not None:
             attrs[NNCFGraph.MODULE_ATTRIBUTES] = nncf_node.module_attributes

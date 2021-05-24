@@ -10,75 +10,22 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 """
-from copy import deepcopy
-from typing import Callable, List
+
+from typing import List
 
 import warnings
 
-from torch import Tensor
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
-from nncf.common.utils.os import safe_open
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor, flatten_args
-from nncf.torch.dynamic_graph.wrappers import wrap_operator, wrap_module_call, ignore_scope
-
 from nncf.common.utils.logger import logger
-
-
-class CustomTraceFunction:
-    def __call__(self, operator: Callable, *args, **kwargs):
-        raise NotImplementedError
-
-
-class ForwardTraceOnly(CustomTraceFunction):
-    def __call__(self, operator: Callable, *args, **kwargs):
-        """ This wrapper override will result in the operator not being added to graph,
-        but the result will still have TracedTensors with parent IDs left the same as in input.
-        Useful for operators which are not likely to be present in patterns considered for
-        compression, but still have to be accounted for so that the NNCF internal graph representation
-        does not become disjoint. """
-
-        result = operator(*args, **kwargs)
-
-        fargs = flatten_args(args, kwargs)
-        input_traced_tensor_indices = [i for i in range(len(fargs)) if isinstance(fargs[i], TracedTensor)]
-
-        if isinstance(result, (list, tuple)):
-            output_tensors_to_be_traced_indices = [i for i in range(len(result)) if
-                                                   isinstance(result[i], Tensor)]
-
-            was_tuple = isinstance(result, tuple)
-            result = list(result)
-            if len(input_traced_tensor_indices) == 1:
-                # Broadcast one and the same creator ID of input to all outputs
-                for out_idx in output_tensors_to_be_traced_indices:
-                    forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
-                    forwarded_meta.shape = tuple(result[out_idx].shape)
-                    result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                     forwarded_meta)
-            elif len(input_traced_tensor_indices) != len(output_tensors_to_be_traced_indices):
-                raise RuntimeError("Unable to forward trace through operator {} - "
-                                   "input and output tensor count mismatch!".format(operator.__name__))
-            else:
-                # Assume that output tensor order corresponds to input tensor order
-                for in_idx, out_idx in zip(input_traced_tensor_indices, output_tensors_to_be_traced_indices):
-                    forwarded_meta = deepcopy(fargs[in_idx].tensor_meta)
-                    forwarded_meta.shape = tuple(result[out_idx].shape)
-                    result[out_idx] = TracedTensor.from_torch_tensor(result[out_idx],
-                                                                     forwarded_meta)
-            if was_tuple:
-                result = tuple(result)
-        elif len(input_traced_tensor_indices) > 1:
-            raise RuntimeError("Unable to forward trace through operator {} - "
-                               "input and output tensor count mismatch!".format(operator.__name__))
-        elif input_traced_tensor_indices:
-            forwarded_meta = deepcopy(fargs[input_traced_tensor_indices[0]].tensor_meta)
-            forwarded_meta.shape = tuple(result.shape)
-            return TracedTensor.from_torch_tensor(result,
-                                                  forwarded_meta)
-        # No traced tensors in input, return a usual torch.Tensor as well
-        return result
+from nncf.common.utils.os import safe_open
+from nncf.torch.dynamic_graph.trace_functions import CustomTraceFunction
+from nncf.torch.dynamic_graph.trace_functions import ForwardTraceOnly
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.wrappers import ignore_scope
+from nncf.torch.dynamic_graph.wrappers import wrap_module_call
+from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
 class PatchedOperatorInfo:
@@ -171,8 +118,8 @@ def patch_torch_operators():
     # patch operators
     import torch.nn.functional as F
     import torch
-    from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
-    for op_meta_class in PT_OPERATOR_METATYPES.registry_dict.values():  # type: OperatorMetatype
+    from nncf.torch.graph.operator_metatypes import get_operator_metatypes
+    for op_meta_class in get_operator_metatypes():  # type: OperatorMetatype
         if op_meta_class.torch_nn_functional_patch_spec is not None:
             ps = op_meta_class.torch_nn_functional_patch_spec
             patch_namespace_by_patchspec(F, ps)
