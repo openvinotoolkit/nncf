@@ -124,11 +124,11 @@ Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintr
 
 - For classes from the typing module. You are explicitly allowed to import multiple specific classes on one line from the typing module.
   ```python
-  # Correct:
+  # Recommended:
   from typing import Any, Dict, Optional
   ```
   ```python
-  # Wrong:
+  # Try to avoid, but this is also applicable:
   from typing import Any 
   from typing import Dict
   from typing import Optional
