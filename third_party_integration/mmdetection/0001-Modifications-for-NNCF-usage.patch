@@ -426,8 +426,8 @@ index 0000000..c903a55
 +from collections import OrderedDict
 +
 +import torch
-+from nncf.initialization import InitializingDataLoader
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.torch.initialization import InitializingDataLoader
++from nncf.torch.structures import QuantizationRangeInitArgs
 +
 +from nncf import NNCFConfig
 +from nncf import load_state
@@ -535,7 +535,7 @@ index a5bb413..48332a8 100644
  import torch.nn as nn
  from mmcv.cnn import normal_init
  from mmcv.runner import force_fp32
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
  from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                          build_assigner, build_bbox_coder, build_sampler,
@@ -547,7 +547,7 @@ index de11e4a..0fcdc4d 100644
  from abc import ABCMeta, abstractmethod
 
  import torch.nn as nn
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 
  class BaseDenseHead(nn.Module, metaclass=ABCMeta):
@@ -619,7 +619,7 @@ index 0cba3cd..d41b158 100644
  from mmdet.core import mask_target
  from mmdet.models.builder import HEADS, build_loss
 
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 +
  BYTES_PER_FLOAT = 4
  # TODO: This memory limit may be too much or too little. It would be better to
@@ -648,7 +648,7 @@ index c530f2a..30d98a4 100644
 +++ b/mmdet/models/roi_heads/standard_roi_head.py
 @@ -1,4 +1,5 @@
  import torch
-+from nncf.dynamic_graph.context import no_nncf_trace
++from nncf.torch.dynamic_graph.context import no_nncf_trace
 
  from mmdet.core import bbox2result, bbox2roi, build_assigner, build_sampler
  from ..builder import HEADS, build_head, build_roi_extractor
