@@ -18,9 +18,9 @@ from pathlib import Path
 import tensorflow as tf
 import numpy as np
 
-from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from beta.nncf import create_compressed_model
 from beta.nncf.tensorflow.helpers.model_manager import TFOriginalModelManager
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 
 from beta.examples.tensorflow.common.argparser import get_common_argument_parser
 from beta.examples.tensorflow.common.distributed import get_distribution_strategy
