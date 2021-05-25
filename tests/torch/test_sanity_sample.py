@@ -63,7 +63,7 @@ class ConfigFactory:
 
 def create_command_line(args, sample_type):
     python_path = PROJECT_ROOT.as_posix()
-    executable = EXAMPLES_DIR.joinpath(sample_type, 'main.py').as_posix()
+    executable = EXAMPLES_DIR.joinpath('torch', sample_type, 'main.py').as_posix()
     cli_args = " ".join(key if (val is None or val is True) else "{} {}".format(key, val) for key, val in args.items())
     return "PYTHONPATH={path} {python_exe} {main_py} {args}".format(
         path=python_path, main_py=executable, args=cli_args, python_exe=sys.executable
@@ -79,14 +79,14 @@ DATASETS = {
 }
 
 CONFIGS = {
-    "classification": [TEST_ROOT.joinpath("data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
-                       TEST_ROOT.joinpath("data", "configs", "inception_v3_mock_dataset.json"),
-                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar100_bin_xnor.json"),
-                       TEST_ROOT.joinpath("data", "configs", "resnet18_cifar10_staged_quant.json"),
-                       TEST_ROOT.joinpath("data", "configs", "resnet18_pruning_magnitude.json")],
-    "semantic_segmentation": [TEST_ROOT.joinpath("data", "configs", "unet_camvid_int8.json"),
-                              TEST_ROOT.joinpath("data", "configs", "unet_camvid_rb_sparsity.json")],
-    "object_detection": [TEST_ROOT.joinpath("data", "configs", "ssd300_vgg_voc_int8.json")]
+    "classification": [TEST_ROOT.joinpath("torch", "data", "configs", "squeezenet1_1_cifar10_rb_sparsity_int8.json"),
+                       TEST_ROOT.joinpath("torch", "data", "configs", "inception_v3_mock_dataset.json"),
+                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar100_bin_xnor.json"),
+                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_cifar10_staged_quant.json"),
+                       TEST_ROOT.joinpath("torch", "data", "configs", "resnet18_pruning_magnitude.json")],
+    "semantic_segmentation": [TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_int8.json"),
+                              TEST_ROOT.joinpath("torch", "data", "configs", "unet_camvid_rb_sparsity.json")],
+    "object_detection": [TEST_ROOT.joinpath("torch", "data", "configs", "ssd300_vgg_voc_int8.json")]
 }
 
 BATCHSIZE_PER_GPU = {
@@ -101,12 +101,12 @@ DATASET_PATHS = {
             tempfile.gettempdir(), x) for x in DATASETS["classification"]
     },
     "semantic_segmentation": {
-        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("data", "mock_datasets",
+        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets",
                                                                                       "camvid"),
-        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("data", "mock_datasets", "camvid")
+        DATASETS["semantic_segmentation"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets", "camvid")
     },
     "object_detection": {
-        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT.joinpath("data", "mock_datasets", "voc")
+        DATASETS["object_detection"][0]: lambda dataset_root: TEST_ROOT.joinpath("torch", "data", "mock_datasets", "voc")
     },
 }
 
@@ -460,7 +460,7 @@ class TestCaseDescriptor:
         return self
 
     def get_config_path(self):
-        return TEST_ROOT.joinpath("data", "configs", "hawq", self.config_name)
+        return TEST_ROOT.joinpath("torch", "data", "configs", "hawq", self.config_name)
 
     def config(self, config_name: str):
         self.config_name = config_name
@@ -483,7 +483,7 @@ class TestCaseDescriptor:
 
     def mock_dataset(self, dataset_name: str):
         self.dataset_name = dataset_name
-        self.dataset_dir = TEST_ROOT.joinpath("data", "mock_datasets", dataset_name)
+        self.dataset_dir = TEST_ROOT.joinpath("torch", "data", "mock_datasets", dataset_name)
         return self
 
     def num_weight_quantizers(self, n: int):

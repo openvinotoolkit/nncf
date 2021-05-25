@@ -49,12 +49,12 @@ class ManualConfigTestParamsBase:
 
 class ManualSampleConfigTestParams(ManualConfigTestParamsBase):
     def _get_config_path(self):
-        return EXAMPLES_DIR.joinpath('classification', 'configs', 'mixed_precision') / self.name
+        return EXAMPLES_DIR.joinpath('torch', 'classification', 'configs', 'mixed_precision') / self.name
 
 
 class ManualTestConfigTestParams(ManualConfigTestParamsBase):
     def _get_config_path(self):
-        return TEST_ROOT.joinpath('data', 'configs', 'hawq') / self.name
+        return TEST_ROOT.joinpath('torch', 'data', 'configs', 'hawq') / self.name
 
 
 MANUAL_CONFIG_TEST_PARAMS = [

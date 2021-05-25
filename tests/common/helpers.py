@@ -13,7 +13,7 @@
 
 from pathlib import Path
 
-TEST_ROOT = Path(__file__).parent.absolute().parent.absolute()
+TEST_ROOT = Path(__file__).absolute().parents[1]
 PROJECT_ROOT = TEST_ROOT.parent.absolute()
 EXAMPLES_DIR = PROJECT_ROOT / 'examples'
 
