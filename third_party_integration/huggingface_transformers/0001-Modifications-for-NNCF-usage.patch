@@ -160,7 +160,7 @@ diff --git a/examples/question-answering/run_squad.py b/examples/question-answer
 index 2bd4e90f..2b1a60e8 100644
 --- a/examples/question-answering/run_squad.py
 +++ b/examples/question-answering/run_squad.py
-@@ -25,9 +25,11 @@ import timeit
+@@ -25,9 +25,12 @@ import timeit
  
  import numpy as np
  import torch
@@ -254,7 +254,7 @@ index 2bd4e90f..2b1a60e8 100644
                  model.zero_grad()
                  global_step += 1
  
-@@ -237,12 +257,20 @@ def train(args, train_dataset, model, tokenizer):
+@@ -237,12 +257,19 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
@@ -504,7 +504,7 @@ diff --git a/examples/text-classification/run_xnli.py b/examples/text-classifica
 index c1db6fa3..ca44bd1c 100644
 --- a/examples/text-classification/run_xnli.py
 +++ b/examples/text-classification/run_xnli.py
-@@ -25,8 +25,11 @@ import random
+@@ -25,8 +25,12 @@ import random
  
  import numpy as np
  import torch
@@ -600,7 +600,7 @@ index c1db6fa3..ca44bd1c 100644
                  global_step += 1
  
                  if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-@@ -202,13 +224,21 @@ def train(args, train_dataset, model, tokenizer):
+@@ -202,13 +224,20 @@ def train(args, train_dataset, model, tokenizer):
                      tb_writer.add_scalar("loss", (tr_loss - logging_loss) / args.logging_steps, global_step)
                      logging_loss = tr_loss
  
@@ -1221,7 +1221,7 @@ diff --git a/src/transformers/trainer.py b/src/transformers/trainer.py
 index 067f793d..f9ccb762 100644
 --- a/src/transformers/trainer.py
 +++ b/src/transformers/trainer.py
-@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+@@ -10,6 +10,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
  
  import numpy as np
  import torch
@@ -1296,7 +1296,7 @@ index 067f793d..f9ccb762 100644
                      self.global_step += 1
                      self.epoch = epoch + (step + 1) / len(epoch_iterator)
  
-@@ -531,6 +545,13 @@ class Trainer:
+@@ -531,6 +545,12 @@ class Trainer:
                          )
                          logging_loss = tr_loss
  
