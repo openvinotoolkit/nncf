@@ -346,6 +346,7 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     else:
         pregen_device = 'cpu'
 
+    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     criterion = nn.CrossEntropyLoss().cuda()
     if not dataset_dir:
         dataset_dir = str(tmp_path)
@@ -354,7 +355,6 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     mocked_trace = mocker.patch('nncf.torch.quantization.hessian_trace.HessianTraceEstimator.get_average_traces',
                                 autospec=True)
-    pregen_traces_for_all_layers = params.avg_traces_creator(model, pregen_device)
     ratio_list_spy = mocker.spy(HAWQPrecisionInitializer, 'get_compression_ratio_per_qconfig_sequence')
     chosen_index_spy = mocker.spy(HAWQPrecisionInitializer, 'choose_qconfig_sequence')
 
