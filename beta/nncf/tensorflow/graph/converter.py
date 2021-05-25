@@ -260,6 +260,8 @@ def _update_graph_with_raw_nodes(graph: Union[nx.DiGraph, NNCFGraph],
     for original_name, instances in raw_nodes.items():
         for i, attributes in instances.items():
             node_name = get_expanded_node_name(original_name, i, attributes['is_shared'])
+            if attributes['type'] == 'InputLayer' and isinstance(graph, NNCFGraph):
+                attributes['type'] = NNCFGraphNodeType.INPUT_NODE
             graph.add_node(node_name, original_name=original_name, **attributes)
 
             if attributes['is_output'] and isinstance(graph, NNCFGraph):

@@ -39,9 +39,6 @@ class NNCFNode:
 
     @property
     def node_type(self) -> str:
-        node_type = self.data.get(NNCFGraph.NODE_TYPE_ATTR)
-        if node_type == 'InputLayer':
-            return NNCFGraphNodeType.INPUT_NODE
         return self.data.get(NNCFGraph.NODE_TYPE_ATTR)
 
     @property

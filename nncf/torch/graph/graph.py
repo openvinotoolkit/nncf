@@ -34,7 +34,6 @@ from nncf.torch.graph.graph_matching import get_edge_boundaries
 from nncf.torch.graph.graph_matching import search_all
 
 
-
 # pylint: disable=too-many-public-methods
 
 
