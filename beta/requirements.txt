@@ -4,3 +4,4 @@ addict
 networkx
 texttable
 scipy>=1.3.2
+jstyleson>=0.0.2
