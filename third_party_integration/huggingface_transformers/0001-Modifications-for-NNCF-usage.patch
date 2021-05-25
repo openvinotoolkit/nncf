@@ -48,8 +48,8 @@ index d9465c37..9da9d30f 100644
  
 -logger = logging.getLogger(__name__)
 +from nncf import NNCFConfig
-+from nncf.structures import QuantizationRangeInitArgs
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.torch.initialization import InitializingDataLoader
 +from transformers.trainer import get_train_dataloader_for_init
  
 +logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ index 2bd4e90f..2b1a60e8 100644
  
  import numpy as np
  import torch
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.torch.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
  from torch.utils.data.distributed import DistributedSampler
@@ -178,7 +178,7 @@ index 2bd4e90f..2b1a60e8 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.initialization import InitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -433,8 +433,8 @@ index cf9b765a..957cdba2 100644
  
  import numpy as np
 +from nncf import NNCFConfig
-+from nncf.structures import QuantizationRangeInitArgs
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.structures import QuantizationRangeInitArgs
++from nncf.torch.initialization import InitializingDataLoader
  
  from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, EvalPrediction, GlueDataset
  from transformers import GlueDataTrainingArguments as DataTrainingArguments
@@ -508,7 +508,7 @@ index c1db6fa3..ca44bd1c 100644
  
  import numpy as np
  import torch
-+from nncf.structures import QuantizationRangeInitArgs
++from nncf.torch.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
  from torch.utils.data.distributed import DistributedSampler
@@ -522,7 +522,7 @@ index c1db6fa3..ca44bd1c 100644
      from tensorboardX import SummaryWriter
  
 +from nncf import NNCFConfig
-+from nncf.initialization import InitializingDataLoader
++from nncf.torch.initialization import InitializingDataLoader
  
  logger = logging.getLogger(__name__)
  
@@ -1225,7 +1225,7 @@ index 067f793d..f9ccb762 100644
  
  import numpy as np
  import torch
-+from nncf.compression_method_api import PTCompressionAlgorithmController
++from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
  from packaging import version
  from torch import nn
