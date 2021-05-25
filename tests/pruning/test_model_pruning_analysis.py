@@ -200,6 +200,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
         first_node_id = group_by_id[0]
         cluster = pruning_groups.get_cluster_by_node_id(first_node_id)
         cluster_node_ids = [n.node_id for n in cluster.nodes]
+        cluster_node_ids.sort()
 
         assert cluster_node_ids == group_by_id
 
