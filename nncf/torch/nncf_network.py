@@ -214,7 +214,7 @@ class InsertionPointGraph(nx.DiGraph):
         # pylint:disable=too-many-branches
         merged_ip_graph = deepcopy(self)
         pattern = self._get_mergeable_operator_patterns(hw_config, additional_patterns)
-        from nncf.graph.graph_matching import search_all
+        from nncf.torch.graph.graph_matching import search_all
         matches = search_all(self._base_nx_graph, pattern)
         for match in matches:
             if len(match) == 1:
