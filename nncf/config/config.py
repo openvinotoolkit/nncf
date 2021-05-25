@@ -12,25 +12,19 @@
 """
 
 import itertools
+
 from copy import deepcopy
 from pathlib import Path
 from typing import List, Type
 
 import jsonschema
+import jstyleson as json
 
+from nncf.common.utils.logger import logger
+from nncf.common.utils.os import safe_open
 from nncf.config.schema import ROOT_NNCF_CONFIG_SCHEMA
 from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.structure import NNCFExtraConfigStruct
-from nncf.common.utils.os import safe_open
-
-try:
-    import jstyleson as json
-except ImportError:
-    import json
-
-from addict import Dict
-
-from nncf.common.utils.logger import logger
 
 
 class NNCFConfig(dict):
@@ -38,7 +32,7 @@ class NNCFConfig(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__nncf_extra_structs = {}  # type: Dict[str, NNCFExtraConfigStruct]
+        self.__nncf_extra_structs = {}  # type: dict[str, NNCFExtraConfigStruct]
 
     @classmethod
     def from_dict(cls, nncf_dict):
