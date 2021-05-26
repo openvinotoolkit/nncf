@@ -95,7 +95,11 @@ class OperatorInput:
                     path_component, value = iterval
                     current_level_getters.append(partial(obj.__getitem__, path_component))
                     if not isinstance(obj, tuple):
-                        current_level_setters.append(partial(obj.__setitem__, path_component))
+                        # `range` objects, for instance, have no __setitem__ and should be disregarded
+                        if hasattr(obj, '__setitem__'):
+                            current_level_setters.append(partial(obj.__setitem__, path_component))
+                        else:
+                            current_level_setters.append(None)
                     else:
                         current_level_setters.append(TupleRebuildingSetter(idx, obj, previous_level_setter))
 
@@ -110,10 +114,10 @@ class OperatorInput:
                         # getter = partial(obj.__getitem__, path_component)
                         getter = current_level_getters[idx]
                         setter = current_level_setters[idx]
-
-                        out_entries_list.append(InputIndexEntry(leaf_entry_path,
-                                                                getter,
-                                                                setter))
+                        if setter is not None:  # see note above about non-settable objects
+                            out_entries_list.append(InputIndexEntry(leaf_entry_path,
+                                                                    getter,
+                                                                    setter))
 
                 memo.remove(id(obj))
             is_leaf = False
