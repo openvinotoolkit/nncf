@@ -33,7 +33,8 @@ LAYERS_WITH_WEIGHTS.update(KERAS_LAYERS_WITH_WEIGHTS)
 LAYERS_WITH_WEIGHTS.update(TF_LAYERS_WITH_WEIGHTS)
 
 SPECIAL_LAYERS_WITH_WEIGHTS = {
-    'BatchNormalization': {WEIGHT_ATTR_NAME: 'gamma', BIAS_ATTR_NAME: 'beta'}
+    'BatchNormalization': {WEIGHT_ATTR_NAME: 'gamma', BIAS_ATTR_NAME: 'beta'},
+    'SyncBatchNormalization': {WEIGHT_ATTR_NAME: 'gamma', BIAS_ATTR_NAME: 'beta'}
 }
 
 ALL_LAYERS_WITH_WEIGHTS = {}
