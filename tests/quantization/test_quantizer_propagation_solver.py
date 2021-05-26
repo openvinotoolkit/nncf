@@ -22,7 +22,7 @@ from unittest.mock import MagicMock
 import networkx as nx
 import pytest
 
-from nncf.common.graph.graph import MODEL_INPUT_OP_NAME
+from nncf.common.graph.graph import MODEL_INPUT_OP_NAME, NNCFGraphNodeType
 from nncf.common.graph.graph import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationMode
@@ -161,7 +161,8 @@ class TestQuantizerPropagationSolver:
         for op_meta in tested_op_metatypes:
             aliases = op_meta.get_all_aliases()
             for alias in aliases:
-                if alias in [MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME]:
+                if alias in [MODEL_INPUT_OP_NAME, MODEL_OUTPUT_OP_NAME,\
+                     NNCFGraphNodeType.INPUT_NODE, NNCFGraphNodeType.OUTPUT_NODE]:
                     continue  # makes sure that no input/output nodes end up in the middle of the raph
                 tested_op_names.append(get_version_agnostic_name(alias))
 

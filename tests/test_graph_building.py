@@ -11,6 +11,7 @@
  limitations under the License.
 """
 from copy import deepcopy
+from nncf.common.graph.graph import NNCFGraphNodeType
 from typing import List
 from typing import Tuple
 
@@ -370,3 +371,20 @@ class TestGraphStability:
 
         assert ref_original_graph == original_graph_with_dummy
         assert ref_compressed_graph == compressed_graph_with_dummy
+
+
+def test_struct_auxiliary_nodes_ptnncf_graph():
+    model = ModelForTest()
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
+
+    ptnncf_graph = compressed_model.get_graph()
+
+    input_nodes = ptnncf_graph.get_input_nodes()
+    output_nodes = ptnncf_graph.get_output_nodes()
+
+    assert len(input_nodes) == 1
+    assert len(output_nodes) == 1
+
+    assert input_nodes[0].node_type == NNCFGraphNodeType.INPUT_NODE
+    assert output_nodes[0].node_type == NNCFGraphNodeType.OUTPUT_NODE
