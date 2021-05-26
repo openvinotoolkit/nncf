@@ -11,6 +11,7 @@
  limitations under the License.
 """
 
+import pytest
 import networkx as nx
 
 from nncf.torch.graph.graph_matching import NodeExpression as N, search_all
@@ -46,6 +47,9 @@ def test_two_matched():
 
 
 def test_graph_branching():
+    # Skip a test because the new implementation of search_all() filters
+    # all breaking edges, therefore these patterns are not valid anymore
+    pytest.skip()
     g = nx.DiGraph()
     add_nodes(g, ['a', 'b', 'a', 'c'])
     g.add_edges_from([(1, 2), (1, 3), (2, 4), (3, 4)])
@@ -57,6 +61,9 @@ def test_graph_branching():
 
 
 def test_graph_branching_other_order():
+    # Skip a test because the new implementation of search_all() filters
+    # all breaking edges, therefore these patterns are not valid anymore
+    pytest.skip()
     g = nx.DiGraph()
     add_nodes(g, ['a', 'a', 'b', 'c'])
 
@@ -81,6 +88,9 @@ def test_alternating():
 
 
 def test_alternating_longest():
+    # Skip a test because the new implementation of search_all() filters
+    # all breaking edges, therefore these patterns are not valid anymore
+    pytest.skip()
     g = nx.DiGraph()
     #   b c
     # a     d

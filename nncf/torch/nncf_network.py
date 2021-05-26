@@ -219,24 +219,6 @@ class InsertionPointGraph(nx.DiGraph):
         for match in matches:
             if len(match) == 1:
                 continue
-            # If a subgraph has output edges in its middle, should skip merging it
-            # Example (conv2d + BN + relu pattern):
-            #       (conv2d)
-            #          |------\
-            #         (BN)    |
-            #          |      |
-            #        (RELU)   |
-            #          |      |
-            #        (cat)----/
-            #          |
-            #         ...
-
-            # Same for input edges (linear + add pattern):
-            # (linear)      (linear)
-            #     |            |
-            #     \----(add)---/
-            #            |
-            #           ...
 
             input_node_key = match[0]
             output_node_key = match[-1]

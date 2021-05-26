@@ -261,6 +261,12 @@ def find_whether_graph_match_has_breaking_edges(graph: nx.DiGraph, match):
     #          |
     #         ...
     # Breaking output edges
+    # Same for input edges (linear + add pattern):
+    # (linear)      (linear)
+    #     |            |
+    #     \----(add)---/
+    #            |
+    #           ...
     for node_key in match[:-1]:
         succs = list(graph.succ[node_key].keys())
         for succ_key in succs:
